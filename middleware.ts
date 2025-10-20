@@ -1,40 +1,101 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-  // Pour l'instant, redirige simplement vers /login si pas connecté
-  // et vers /app/formations si connecté
-  if (pathname === '/') {
-    // Vérifier s'il y a des cookies de session (approximation)
-    const hasSession = req.cookies.get('sb-access-token') || 
-                      req.cookies.get('sb:token') || 
-                      req.cookies.get('supabase-auth-token');
+  // Routes protégées par rôle
+  const protectedRoutes = ['/admin', '/formateur', '/tuteur', '/apprenant'];
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
-    if (hasSession) {
-      return NextResponse.redirect(new URL('/app/formations', req.url));
-    } else {
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
+  if (!isProtectedRoute) {
+    return NextResponse.next();
   }
 
-  // Protection des routes /app
-  if (pathname.startsWith('/app') && !pathname.startsWith('/app/login')) {
-    const hasSession = req.cookies.get('sb-access-token') || 
-                      req.cookies.get('sb:token') || 
-                      req.cookies.get('supabase-auth-token');
+  try {
+    // Créer le client Supabase pour le middleware
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            request.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          },
+          remove(name: string, options: any) {
+            request.cookies.set({
+              name,
+              value: '',
+              ...options,
+            });
+          },
+        },
+      }
+    );
 
-    if (!hasSession) {
-      const url = new URL('/login', req.url);
-      url.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(url);
+    // Vérifier la session
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.log('🔒 Middleware: User not authenticated, redirecting to login');
+      return NextResponse.redirect(new URL('/login', request.url));
     }
-  }
 
-  return NextResponse.next();
+    // Récupérer la dernière membership et le rôle
+    const { data: membership, error: membershipError } = await supabase
+      .from('org_memberships')
+      .select('role, organizations!inner(name, slug)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (membershipError || !membership) {
+      console.log('🔒 Middleware: No membership found, redirecting to unauthorized');
+      return NextResponse.redirect(new URL('/unauthorized', request.url));
+    }
+
+    const userRole = membership.role;
+    console.log(`🔒 Middleware: User ${user.email} has role ${userRole}`);
+
+    // Vérifier que le rôle correspond à la route
+    const roleRouteMap: Record<string, string> = {
+      'admin': '/admin',
+      'instructor': '/formateur',
+      'tutor': '/tuteur',
+      'learner': '/apprenant'
+    };
+
+    const expectedRoute = roleRouteMap[userRole];
+    const currentRoute = `/${pathname.split('/')[1]}`;
+
+    if (expectedRoute && currentRoute !== expectedRoute) {
+      console.log(`🔒 Middleware: Role mismatch. Expected ${expectedRoute}, got ${currentRoute}`);
+      return NextResponse.redirect(new URL(expectedRoute, request.url));
+    }
+
+    // Si le rôle correspond, autoriser l'accès
+    return NextResponse.next();
+
+  } catch (error) {
+    console.error('🔒 Middleware error:', error);
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 }
 
 export const config = {
-  matcher: ['/', '/app/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/formateur/:path*',
+    '/tuteur/:path*',
+    '/apprenant/:path*'
+  ]
 };

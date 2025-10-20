@@ -1,11 +1,34 @@
 'use client';
 
-import { inviteUserAction } from './actions';
+import { useState } from 'react';
 import { PageHeader } from '@/components/admin/PageHeader';
-import { Users, UserCheck, GraduationCap, BookOpen } from 'lucide-react';
-import InviteLearnerForm from './InviteLearnerForm';
+import { Users, UserCheck, GraduationCap, BookOpen, UserPlus } from 'lucide-react';
+import InviteLearnerModal from './InviteLearnerModal';
+import { inviteLearnerWithAssignments } from './invite-learner-with-assignments';
+import { toast } from 'sonner';
 
 export default function UtilisateursPage() {
+  const [showInviteModal, setShowInviteModal] = useState(false);
+
+  const handleInvite = async (data: {
+    email: string;
+    formationIds: string[];
+    testIds: string[];
+    resourceIds: string[];
+    pathwayIds: string[];
+  }) => {
+    console.log('🔍 UtilisateursPage: Inviting learner with data:', data);
+    
+    const result = await inviteLearnerWithAssignments(data);
+    
+    if (result.ok) {
+      toast.success('Apprenant invité avec succès !');
+    } else {
+      toast.error(`Erreur: ${result.error}`);
+      throw new Error(result.error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -13,44 +36,19 @@ export default function UtilisateursPage() {
         subtitle="Gérez les formateurs, tuteurs et apprenants de votre organisation"
       />
 
-      {/* Formulaire d'invitation */}
-      <div>
-        <h2 className="text-2xl font-semibold text-iris-grad">Inviter un utilisateur</h2>
-        <form action={inviteUserAction} className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3 glass p-4 rounded-2xl">
-          <input 
-            name="email" 
-            type="email" 
-            placeholder="email@exemple.com" 
-            className="h-11 rounded-xl bg-white/5 px-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-iris-500/50" 
-            required 
-          />
-          <select 
-            name="role" 
-            className="h-11 rounded-xl bg-white/5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-iris-500/50"
-          >
-            <option value="instructor">Formateur</option>
-            <option value="tutor">Tuteur</option>
-            <option value="learner">Apprenant</option>
-          </select>
-          <input 
-            name="org_id" 
-            type="text" 
-            placeholder="org_id" 
-            className="h-11 rounded-xl bg-white/5 px-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-iris-500/50" 
-            required 
-          />
-          <button className="btn-cta">Inviter</button>
-        </form>
-        <p className="text-xs opacity-70 mt-2">NB : Admin peut inviter Formateur/Tuteur. Formateur peut inviter Apprenant.</p>
-      </div>
-
-      {/* Formulaire d'invitation d'apprenant avec magic link */}
-      <div>
-        <h2 className="text-2xl font-semibold text-iris-grad">Inviter un apprenant (avec magic link)</h2>
-        <div className="mt-4">
-          <InviteLearnerForm />
+      {/* Bouton d'invitation principal */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-semibold text-iris-grad">Inviter un apprenant</h2>
+          <p className="text-white/70 mt-1">Créez un compte et assignez du contenu en une seule action</p>
         </div>
-        <p className="text-xs opacity-70 mt-2">Ce formulaire crée un utilisateur apprenant et envoie un magic link pour définir le mot de passe.</p>
+        <button
+          onClick={() => setShowInviteModal(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl transition-all duration-200 font-medium"
+        >
+          <UserPlus className="w-5 h-5" />
+          Inviter un apprenant
+        </button>
       </div>
 
       {/* Statistiques des utilisateurs */}
@@ -133,6 +131,13 @@ export default function UtilisateursPage() {
           ))}
         </div>
       </div>
+
+      {/* Modal d'invitation */}
+      <InviteLearnerModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onInvite={handleInvite}
+      />
     </div>
   );
 }

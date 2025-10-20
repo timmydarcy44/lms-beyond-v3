@@ -213,8 +213,8 @@ export default function Editor({ formation, selection }: EditorProps) {
   const ToolbarButton = ({ onClick, isActive, children, title }: { onClick: () => void; isActive?: boolean; children: React.ReactNode; title: string; }) => (
     <button
       onClick={onClick}
-      className={`p-2 rounded hover:bg-white/10 transition-colors ${
-        isActive ? 'bg-iris-500/20 text-iris-400' : 'text-white/70'
+      className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+        isActive ? 'bg-blue-100 text-blue-800' : 'text-gray-600'
       }`}
       title={title}
     >
@@ -224,29 +224,29 @@ export default function Editor({ formation, selection }: EditorProps) {
 
   if (!selection) {
     return (
-      <div className="glass rounded-2xl p-8 text-center">
-        <div className="text-white/50 text-lg mb-4">Sélectionnez un chapitre ou sous-chapitre pour commencer l'édition</div>
-        <div className="text-white/30 text-sm">Utilisez l'arborescence à gauche pour naviguer</div>
+      <div className="bg-white rounded-2xl p-8 text-center border border-gray-200">
+        <div className="text-gray-600 text-lg mb-4">Sélectionnez un chapitre ou sous-chapitre pour commencer l'édition</div>
+        <div className="text-gray-500 text-sm">Utilisez l'arborescence à gauche pour naviguer</div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="glass rounded-2xl p-8 text-center">
-        <div className="text-white/50 text-lg mb-4">Chargement du contenu...</div>
+      <div className="bg-white rounded-2xl p-8 text-center border border-gray-200">
+        <div className="text-gray-600 text-lg mb-4">Chargement du contenu...</div>
         <div className="animate-spin w-6 h-6 border-2 border-iris-400 border-t-transparent rounded-full mx-auto"></div>
       </div>
     );
   }
 
   return (
-    <div className="glass rounded-2xl overflow-hidden">
+    <div className="bg-white rounded-2xl overflow-hidden border border-gray-200">
       {/* Toolbar structuré */}
-      <div className="border-b border-white/10 p-4">
+      <div className="border-b border-gray-200 p-4">
         <div className="flex items-center gap-2 flex-wrap">
           {/* Section Formatage de base */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
             <ToolbarButton
               onClick={() => editor?.chain().focus().toggleBold().run()}
               isActive={editor?.isActive('bold')}
@@ -281,7 +281,7 @@ export default function Editor({ formation, selection }: EditorProps) {
           </div>
 
           {/* Section Titres */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
             <ToolbarButton
               onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
               isActive={editor?.isActive('heading', { level: 1 })}
@@ -308,7 +308,7 @@ export default function Editor({ formation, selection }: EditorProps) {
           </div>
 
           {/* Section Listes et blocs */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
             <ToolbarButton
               onClick={() => editor?.chain().focus().toggleBulletList().run()}
               isActive={editor?.isActive('bulletList')}
@@ -343,7 +343,7 @@ export default function Editor({ formation, selection }: EditorProps) {
           </div>
 
           {/* Section Liens et médias */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
             <ToolbarButton
               onClick={setLink}
               isActive={editor?.isActive('link')}
@@ -362,7 +362,7 @@ export default function Editor({ formation, selection }: EditorProps) {
           </div>
 
           {/* Section Couleurs */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
             <input
               type="color"
               onInput={(event: React.ChangeEvent<HTMLInputElement>) => editor?.chain().focus().setColor(event.target.value).run()}
@@ -379,11 +379,11 @@ export default function Editor({ formation, selection }: EditorProps) {
           </div>
 
           {/* Section IA */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
             <button
               onClick={handleGenerateAI}
               disabled={isGenerating}
-              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-all duration-200 font-medium text-sm"
+              className="flex items-center gap-2 px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg transition-all duration-200 font-medium text-sm"
             >
               {isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -395,7 +395,7 @@ export default function Editor({ formation, selection }: EditorProps) {
           </div>
 
           {/* Section Plein écran */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
             <ToolbarButton
               onClick={() => setShowModal(true)}
               title="Ouvrir l'éditeur en plein écran"

@@ -214,8 +214,8 @@ export default function EditorModal({ formation, selection, onClose }: EditorMod
   const ToolbarButton = ({ onClick, isActive, children, title }: { onClick: () => void; isActive?: boolean; children: React.ReactNode; title: string; }) => (
     <button
       onClick={onClick}
-      className={`p-2 rounded hover:bg-white/10 transition-colors ${
-        isActive ? 'bg-iris-500/20 text-iris-400' : 'text-white/70'
+      className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+        isActive ? 'bg-blue-100 text-blue-800' : 'text-gray-600'
       }`}
       title={title}
     >
@@ -226,12 +226,12 @@ export default function EditorModal({ formation, selection, onClose }: EditorMod
   if (!selection) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div className="glass rounded-2xl p-8 text-center max-w-md">
-          <div className="text-white/50 text-lg mb-4">Sélectionnez un chapitre ou sous-chapitre pour commencer l'édition</div>
-          <div className="text-white/30 text-sm">Utilisez l'arborescence à gauche pour naviguer</div>
+        <div className="bg-white rounded-2xl p-8 text-center max-w-md border border-gray-200">
+          <div className="text-gray-600 text-lg mb-4">Sélectionnez un chapitre ou sous-chapitre pour commencer l'édition</div>
+          <div className="text-gray-500 text-sm">Utilisez l'arborescence à gauche pour naviguer</div>
           <button
             onClick={onClose}
-            className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+            className="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors"
           >
             Fermer
           </button>
@@ -243,8 +243,8 @@ export default function EditorModal({ formation, selection, onClose }: EditorMod
   if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div className="glass rounded-2xl p-8 text-center">
-          <div className="text-white/50 text-lg mb-4">Chargement du contenu...</div>
+        <div className="bg-white rounded-2xl p-8 text-center border border-gray-200">
+          <div className="text-gray-600 text-lg mb-4">Chargement du contenu...</div>
           <div className="animate-spin w-6 h-6 border-2 border-iris-400 border-t-transparent rounded-full mx-auto"></div>
         </div>
       </div>
@@ -270,10 +270,10 @@ export default function EditorModal({ formation, selection, onClose }: EditorMod
           )}
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             title="Fermer"
           >
-            <X size={20} className="text-white/70" />
+            <X size={20} className="text-gray-600" />
           </button>
         </div>
       </div>
@@ -405,7 +405,7 @@ export default function EditorModal({ formation, selection, onClose }: EditorMod
           <button
             onClick={handleGenerateAI}
             disabled={isGenerating}
-            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-all duration-200 font-medium text-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg transition-all duration-200 font-medium text-sm"
           >
             {isGenerating ? (
               <Loader2 className="w-4 h-4 animate-spin" />

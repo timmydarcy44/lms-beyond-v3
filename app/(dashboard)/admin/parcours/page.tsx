@@ -3,34 +3,27 @@ import { GridCard } from '@/components/admin/GridCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { Plus, Search, GraduationCap } from 'lucide-react';
 
-export default function ParcoursPage() {
-  // Mock data pour l'instant
-  const parcours = [
-    {
-      id: '1',
-      title: 'Parcours Développeur Frontend',
-      description: 'Formation complète pour devenir développeur frontend',
-      cover_url: null,
-      items_count: 8,
-      duration: '40h',
-    },
-    {
-      id: '2',
-      title: 'Parcours Data Science',
-      description: 'Apprentissage des bases de la science des données',
-      cover_url: null,
-      items_count: 12,
-      duration: '60h',
-    },
-    {
-      id: '3',
-      title: 'Parcours UX/UI Design',
-      description: 'Design d\'interface et expérience utilisateur',
-      cover_url: null,
-      items_count: 6,
-      duration: '30h',
-    },
-  ];
+async function getPathways() {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/pathways`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch pathways:', response.statusText);
+      return [];
+    }
+    
+    const data = await response.json();
+    return data.pathways || [];
+  } catch (error) {
+    console.error('Error fetching pathways:', error);
+    return [];
+  }
+}
+
+export default async function ParcoursPage() {
+  const parcours = await getPathways();
 
   return (
     <div className="space-y-6">
@@ -81,7 +74,7 @@ export default function ParcoursPage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {parcours.map((parcours) => (
+          {parcours.map((parcours: any) => (
             <GridCard
               key={parcours.id}
               title={parcours.title}
@@ -89,22 +82,28 @@ export default function ParcoursPage() {
               image={parcours.cover_url || undefined}
               badges={[
                 {
-                  label: `${parcours.items_count} éléments`,
+                  label: `${parcours.pathway_items?.[0]?.count || 0} éléments`,
                   variant: 'default'
                 },
                 {
-                  label: parcours.duration,
-                  variant: 'success'
+                  label: parcours.published ? 'Publié' : 'Brouillon',
+                  variant: parcours.published ? 'success' : 'warning'
                 }
               ]}
               actions={
                 <div className="flex items-center gap-2">
-                  <button className="px-3 py-1 bg-iris-500/20 text-iris-400 text-sm rounded-lg hover:bg-iris-500/30 transition-colors">
+                  <a 
+                    href={`/admin/parcours/${parcours.id}`}
+                    className="px-3 py-1 bg-iris-500/20 text-iris-400 text-sm rounded-lg hover:bg-iris-500/30 transition-colors"
+                  >
                     Éditer
-                  </button>
-                  <button className="px-3 py-1 bg-white/10 text-white/70 text-sm rounded-lg hover:bg-white/20 transition-colors">
+                  </a>
+                  <a 
+                    href={`/admin/parcours/${parcours.id}/preview`}
+                    className="px-3 py-1 bg-white/10 text-white/70 text-sm rounded-lg hover:bg-white/20 transition-colors"
+                  >
                     Aperçu
-                  </button>
+                  </a>
                   <button className="p-1 text-white/50 hover:text-white/70 transition-colors">
                     <Plus className="h-4 w-4" />
                   </button>

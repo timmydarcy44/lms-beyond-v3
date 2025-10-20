@@ -8,11 +8,12 @@ export async function GET(req: Request) {
   if (!email) return NextResponse.json({ error: 'missing email' }, { status: 400 });
 
   const admin = supabaseAdmin();
-  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1, email });
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const user = data?.users?.find(u => u.email === email);
   return NextResponse.json({
     ok: !error,
-    found: !!data?.users?.length,
-    id: data?.users?.[0]?.id ?? null,
+    found: !!user,
+    id: user?.id ?? null,
     error: error?.message ?? null,
   });
 }

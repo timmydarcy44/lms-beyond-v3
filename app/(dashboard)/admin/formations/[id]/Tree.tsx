@@ -84,15 +84,15 @@ function SortableSection({
   const isExpanded = expandedSections.has(section.id);
 
   return (
-    <div ref={setNodeRef} style={style} className="border border-white/10 rounded-lg">
+    <div ref={setNodeRef} style={style} className="border border-gray-200 rounded-lg bg-white">
       {/* Section Header */}
-      <div className="flex items-center gap-2 p-3 bg-white/5 rounded-t-lg">
+      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-t-lg border border-gray-200">
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab hover:bg-white/10 rounded p-1"
+          className="cursor-grab hover:bg-gray-100 rounded p-1"
         >
-          <GripVertical size={16} className="text-white/50" />
+          <GripVertical size={16} className="text-gray-900/50" />
         </div>
         
         <button
@@ -109,11 +109,11 @@ function SortableSection({
             onChange={(e) => onSetEditingTitle(e.target.value)}
             onBlur={onFinishEditing}
             onKeyDown={(e) => e.key === 'Enter' && onFinishEditing()}
-            className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white"
+            className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-gray-900"
             autoFocus
           />
         ) : (
-          <span className="flex-1 text-white font-medium">{section.title}</span>
+          <span className="flex-1 text-gray-900 font-medium">{section.title}</span>
         )}
         
         <div className="flex items-center gap-1">
@@ -214,9 +214,9 @@ function SortableChapter({
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab hover:bg-white/10 rounded p-1"
+          className="cursor-grab hover:bg-gray-100 rounded p-1"
         >
-          <GripVertical size={12} className="text-white/40" />
+          <GripVertical size={12} className="text-gray-900/40" />
         </div>
         
         <button
@@ -233,12 +233,12 @@ function SortableChapter({
             onChange={(e) => onSetEditingTitle(e.target.value)}
             onBlur={onFinishEditing}
             onKeyDown={(e) => e.key === 'Enter' && onFinishEditing()}
-            className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm"
+            className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-gray-900 text-sm"
             autoFocus
           />
         ) : (
           <span 
-            className="flex-1 text-white/80 text-sm cursor-pointer hover:text-white"
+            className="flex-1 text-gray-900/80 text-sm cursor-pointer hover:text-gray-900"
             onClick={() => onSelect({ type: 'chapter', id: chapter.id, title: chapter.title })}
           >
             {chapter.title}
@@ -328,7 +328,7 @@ function SortableSubchapter({
         {...listeners}
         className="cursor-grab hover:bg-white/10 rounded p-1"
       >
-        <GripVertical size={10} className="text-white/30" />
+        <GripVertical size={10} className="text-gray-900/30" />
       </div>
       
       <div className="w-2 h-2 bg-white/30 rounded-full"></div>
@@ -340,12 +340,12 @@ function SortableSubchapter({
           onChange={(e) => onSetEditingTitle(e.target.value)}
           onBlur={onFinishEditing}
           onKeyDown={(e) => e.key === 'Enter' && onFinishEditing()}
-          className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs"
+          className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-gray-900 text-xs"
           autoFocus
         />
       ) : (
         <span 
-          className="flex-1 text-white/60 text-xs cursor-pointer hover:text-white/80"
+          className="flex-1 text-gray-900/60 text-xs cursor-pointer hover:text-gray-900/80"
           onClick={() => {
             onSelect({ 
               type: 'subchapter', 
@@ -601,13 +601,13 @@ export default function Tree({ formationId, sections: initialSections, chapters:
     <div className="space-y-4">
       {/* Header avec 3 CTA côte à côte */}
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-white">Structure de la formation</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Structure de la formation</h3>
         
         {/* 3 boutons CTA côte à côte */}
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={handleCreateSection}
-            className="btn-cta flex items-center gap-2 justify-center text-sm"
+            className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center"
           >
             <Plus size={14} />
             Section
@@ -616,7 +616,7 @@ export default function Tree({ formationId, sections: initialSections, chapters:
           <button
             onClick={() => setShowParentSelector({ type: 'chapter' })}
             disabled={sections.length === 0}
-            className="px-3 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center"
+            className="px-3 py-2 bg-blue-100 hover:bg-blue-200 disabled:bg-gray-100 disabled:cursor-not-allowed text-blue-800 rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center"
           >
             <Plus size={14} />
             Chapitre
@@ -625,7 +625,7 @@ export default function Tree({ formationId, sections: initialSections, chapters:
           <button
             onClick={() => setShowParentSelector({ type: 'subchapter' })}
             disabled={chapters.length === 0}
-            className="px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center"
+            className="px-3 py-2 bg-green-100 hover:bg-green-200 disabled:bg-gray-100 disabled:cursor-not-allowed text-green-800 rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center"
           >
             <Plus size={14} />
             Sous-chapitre

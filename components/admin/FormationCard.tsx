@@ -23,7 +23,6 @@ interface FormationCardProps {
     visibility_mode: 'private' | 'catalog_only' | 'public';
     published: boolean;
     updated_at: string;
-    theme?: string;
   };
 }
 
@@ -55,7 +54,8 @@ export default function FormationCard({ formation }: FormationCardProps) {
   const [showAssignModal, setShowAssignModal] = useState(false);
   
   const statusInfo = getStatusInfo(formation.published, formation.updated_at);
-  const themeInfo = formation.theme ? themes[formation.theme as keyof typeof themes] : null;
+  // Pour l'instant, pas de thème car la colonne n'existe pas encore
+  const themeInfo = null;
 
   const handleDelete = async () => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {

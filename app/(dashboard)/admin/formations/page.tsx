@@ -13,7 +13,7 @@ export default async function FormationsPage() {
   // NE PAS filtrer par org_id tant que le contexte d'org n'est pas fiable
   const { data, error } = await sb
     .from('formations')
-    .select('id, title, cover_url, visibility_mode, published, updated_at, org_id, theme')
+    .select('id, title, cover_url, visibility_mode, published, updated_at, org_id')
     .order('updated_at', { ascending: false });
 
   if (error) {

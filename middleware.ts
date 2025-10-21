@@ -5,6 +5,14 @@ import { createServerClient } from '@supabase/ssr';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Routes à exclure du middleware (login, auth, etc.)
+  const excludedRoutes = ['/login', '/auth', '/unauthorized', '/create-password', '/forgot-password', '/reset-password'];
+  const isExcludedRoute = excludedRoutes.some(route => pathname.startsWith(route));
+  
+  if (isExcludedRoute) {
+    return NextResponse.next();
+  }
+
   // Routes protégées par rôle
   const protectedRoutes = ['/admin', '/formateur', '/tuteur', '/apprenant'];
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));

@@ -24,7 +24,21 @@ export default async function FormationPreviewPage({ params }: FormationPreviewP
     .single();
 
   if (error || !formation) {
-    redirect('/admin/formations');
+    console.error('Error fetching formation:', error);
+    return (
+      <div className="min-h-screen bg-[#252525] text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-400 mb-4">Formation non trouvée</h1>
+          <p className="text-neutral-400 mb-6">Cette formation n'existe pas ou vous n'avez pas les permissions pour la voir.</p>
+          <Link
+            href="/admin/formations"
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 font-medium"
+          >
+            Retour aux formations
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   // Organiser la structure

@@ -22,7 +22,14 @@ export async function POST(req: NextRequest) {
     }
   );
 
+  // Déconnexion complète avec nettoyage des cookies
   await sb.auth.signOut();
-
-  return res;
+  
+  // Nettoyer explicitement les cookies de session
+  res.cookies.delete('sb-access-token');
+  res.cookies.delete('sb-refresh-token');
+  res.cookies.delete('supabase-auth-token');
+  
+  // Rediriger vers la page de login avec un paramètre pour forcer le refresh
+  return NextResponse.redirect(new URL('/login?logout=success', req.url));
 }

@@ -4,7 +4,8 @@ import Tree from './Tree';
 import Editor from './Editor';
 import PropertiesModal from './PropertiesModal';
 import PublicationControls from './PublicationControls';
-import { Settings } from 'lucide-react';
+import { Settings, Eye } from 'lucide-react';
+import Link from 'next/link';
 
 type Section = { id: string; title: string; position: number; };
 type Chapter = { id: string; section_id: string; title: string; position: number; };
@@ -76,6 +77,13 @@ export default function FormationBuilder({
             </div>
             
             <div className="flex items-center justify-center sm:justify-end gap-3 sm:gap-4">
+              <Link
+                href={`/admin/formations/${formation.id}/preview`}
+                className="p-2 sm:p-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                title="Prévisualiser la formation"
+              >
+                <Eye size={18} className="sm:w-5 sm:h-5" />
+              </Link>
               <button
                 onClick={() => setShowPropertiesModal(true)}
                 className="p-2 sm:p-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"

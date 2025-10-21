@@ -95,7 +95,7 @@ export default async function AdminDashboard() {
           <h3 className="text-lg font-semibold text-white mb-4">Accès rapides</h3>
           <div className="space-y-3">
             <Link
-              href="/admin/formations/new"
+              href={`/admin/${org.slug}/formations/new`}
               className="flex items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
             >
               <div className="p-2 bg-iris-500/20 rounded-lg mr-4">
@@ -108,7 +108,7 @@ export default async function AdminDashboard() {
             </Link>
 
             <Link
-              href="/admin/utilisateurs"
+              href={`/admin/${org.slug}/utilisateurs`}
               className="flex items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
             >
               <div className="p-2 bg-blush-500/20 rounded-lg mr-4">
@@ -121,7 +121,7 @@ export default async function AdminDashboard() {
             </Link>
 
             <Link
-              href="/admin/settings"
+              href={`/admin/${org.slug}/settings`}
               className="flex items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
             >
               <div className="p-2 bg-white/10 rounded-lg mr-4">

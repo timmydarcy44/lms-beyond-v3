@@ -14,25 +14,27 @@ export default async function AdminFormationsPage({
   if (!user) redirect('/login/admin');
 
   // Récupérer l'organisation par le slug
-  const { data: organization } = await sb
+  const { data: organization, error: orgError } = await sb
     .from('organizations')
     .select('id, name, slug')
     .eq('slug', orgSlug)
     .single();
 
-  if (!organization) {
+  if (orgError || !organization) {
+    console.error('Error fetching organization:', orgError);
     redirect('/admin');
   }
 
   // Vérifier que l'utilisateur est membre de cette organisation
-  const { data: membership } = await sb
+  const { data: membership, error: membershipError } = await sb
     .from('org_memberships')
     .select('role')
     .eq('user_id', user.id)
     .eq('org_id', organization.id)
     .single();
 
-  if (!membership) {
+  if (membershipError || !membership) {
+    console.error('Error fetching membership:', membershipError);
     redirect('/admin');
   }
 

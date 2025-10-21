@@ -6,11 +6,22 @@ import { getPrimaryRole } from '@/lib/roles';
 import AdminLayoutClient from '@/components/layout/AdminLayoutClient';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const sb = await supabaseServer();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect('/login/admin');
-  const role = await getPrimaryRole(user.id);
-  if (role !== 'admin') redirect('/unauthorized');
-  
-  return <AdminLayoutClient>{children}</AdminLayoutClient>;
+  try {
+    const sb = await supabaseServer();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) redirect('/login/admin');
+    
+    const role = await getPrimaryRole(user.id);
+    if (!role) {
+      console.error('No role found for user:', user.id);
+      redirect('/unauthorized');
+    }
+    
+    if (role !== 'admin') redirect('/unauthorized');
+    
+    return <AdminLayoutClient>{children}</AdminLayoutClient>;
+  } catch (error) {
+    console.error('Error in AdminLayout:', error);
+    redirect('/login/admin');
+  }
 }

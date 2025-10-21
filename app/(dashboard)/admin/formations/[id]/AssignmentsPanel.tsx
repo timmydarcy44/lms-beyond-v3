@@ -1,12 +1,26 @@
 'use client';
 import { useState, useEffect, useTransition } from 'react';
-import { Users, Plus, X, BookOpen } from 'lucide-react';
-import { assignToPathway, unassignFromPathway } from './actions';
+import { Users, Plus, X, BookOpen, GraduationCap, UserCheck } from 'lucide-react';
+import { assignContentAction } from './actions';
+import { toast } from 'sonner';
 
 interface AssignmentsPanelProps {
   formationId: string;
   orgId: string;
 }
+
+type Learner = {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+};
+
+type Group = {
+  id: string;
+  name: string;
+  description?: string;
+};
 
 type Pathway = {
   id: string;
@@ -14,84 +28,98 @@ type Pathway = {
   description?: string;
 };
 
-type PathwayItem = {
-  id: string;
-  pathway_id: string;
-  item_type: string;
-  item_id: string;
-  position: number;
-};
-
 export default function AssignmentsPanel({ formationId, orgId }: AssignmentsPanelProps) {
+  const [learners, setLearners] = useState<Learner[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [pathways, setPathways] = useState<Pathway[]>([]);
-  const [assignedPathways, setAssignedPathways] = useState<PathwayItem[]>([]);
+  const [assignedLearners, setAssignedLearners] = useState<string[]>([]);
+  const [assignedGroups, setAssignedGroups] = useState<string[]>([]);
+  const [assignedPathways, setAssignedPathways] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, startTransition] = useTransition();
 
-  // Charger les parcours et les assignations
+  // Charger les données
   useEffect(() => {
     const loadData = async () => {
       try {
-        // TODO: Remplacer par des appels API réels
-        // Pour l'instant, on simule des données
-        const mockPathways: Pathway[] = [
-          { id: '1', title: 'Parcours Marketing Digital', description: 'Formation complète en marketing digital' },
-          { id: '2', title: 'Parcours Management', description: 'Développement des compétences managériales' },
-          { id: '3', title: 'Parcours Ventes', description: 'Techniques de vente et négociation' },
-        ];
+        // Charger les apprenants
+        const learnersRes = await fetch(`/api/admin/contents?type=learners&orgId=${orgId}`);
+        const learnersData = await learnersRes.json();
+        setLearners(learnersData.contents || []);
 
-        const mockAssignments: PathwayItem[] = [
-          { id: '1', pathway_id: '1', item_type: 'formation', item_id: formationId, position: 0 },
-        ];
+        // Charger les groupes
+        const groupsRes = await fetch(`/api/admin/contents?type=groups&orgId=${orgId}`);
+        const groupsData = await groupsRes.json();
+        setGroups(groupsData.contents || []);
 
-        setPathways(mockPathways);
-        setAssignedPathways(mockAssignments);
+        // Charger les parcours
+        const pathwaysRes = await fetch(`/api/admin/contents?type=pathways&orgId=${orgId}`);
+        const pathwaysData = await pathwaysRes.json();
+        setPathways(pathwaysData.contents || []);
+
+        // Charger les assignations existantes
+        const assignmentsRes = await fetch(`/api/formations/${formationId}/assignments`);
+        const assignmentsData = await assignmentsRes.json();
+        
+        if (assignmentsData.assignments) {
+          setAssignedLearners(assignmentsData.assignments.learners || []);
+          setAssignedGroups(assignmentsData.assignments.groups || []);
+          setAssignedPathways(assignmentsData.assignments.pathways || []);
+        }
       } catch (error) {
         console.error('Erreur lors du chargement:', error);
+        toast.error('Erreur lors du chargement des données');
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [formationId]);
+  }, [formationId, orgId]);
 
-  const handleAssignToPathway = (pathwayId: string) => {
+  const handleAssign = (type: 'learner' | 'group' | 'pathway', id: string) => {
     startTransition(async () => {
       try {
-        await assignToPathway(pathwayId, formationId);
+        await assignContentAction(formationId, type, id, orgId);
+        
         // Mettre à jour l'état local
-        const pathway = pathways.find(p => p.id === pathwayId);
-        if (pathway) {
-          setAssignedPathways(prev => [...prev, {
-            id: Date.now().toString(),
-            pathway_id: pathwayId,
-            item_type: 'formation',
-            item_id: formationId,
-            position: assignedPathways.length
-          }]);
+        if (type === 'learner') {
+          setAssignedLearners(prev => [...prev, id]);
+        } else if (type === 'group') {
+          setAssignedGroups(prev => [...prev, id]);
+        } else if (type === 'pathway') {
+          setAssignedPathways(prev => [...prev, id]);
         }
+        
+        toast.success('Assignation réussie');
       } catch (error) {
         console.error('Erreur lors de l\'assignation:', error);
+        toast.error('Erreur lors de l\'assignation');
       }
     });
   };
 
-  const handleUnassignFromPathway = (pathwayId: string) => {
+  const handleUnassign = (type: 'learner' | 'group' | 'pathway', id: string) => {
     startTransition(async () => {
       try {
-        await unassignFromPathway(pathwayId, formationId);
+        await assignContentAction(formationId, type, id, orgId, true); // true = unassign
+        
         // Mettre à jour l'état local
-        setAssignedPathways(prev => prev.filter(a => a.pathway_id !== pathwayId));
+        if (type === 'learner') {
+          setAssignedLearners(prev => prev.filter(l => l !== id));
+        } else if (type === 'group') {
+          setAssignedGroups(prev => prev.filter(g => g !== id));
+        } else if (type === 'pathway') {
+          setAssignedPathways(prev => prev.filter(p => p !== id));
+        }
+        
+        toast.success('Désassignation réussie');
       } catch (error) {
         console.error('Erreur lors de la désassignation:', error);
+        toast.error('Erreur lors de la désassignation');
       }
     });
   };
-
-  const availablePathways = pathways.filter(p => 
-    !assignedPathways.some(a => a.pathway_id === p.id)
-  );
 
   if (loading) {
     return (
@@ -113,36 +141,44 @@ export default function AssignmentsPanel({ formationId, orgId }: AssignmentsPane
       </div>
 
       <div className="space-y-6">
-        {/* Parcours assignés */}
+        {/* Apprenants */}
         <div>
-          <h4 className="text-sm font-medium text-white mb-3">
-            <BookOpen className="h-4 w-4 inline mr-2" />
-            Parcours assignés
+          <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Apprenants ({assignedLearners.length})
           </h4>
           
-          {assignedPathways.length === 0 ? (
-            <div className="text-white/50 text-sm">Aucun parcours assigné</div>
+          {learners.length === 0 ? (
+            <div className="text-white/50 text-sm">Aucun apprenant disponible</div>
           ) : (
-            <div className="space-y-2">
-              {assignedPathways.map(assignment => {
-                const pathway = pathways.find(p => p.id === assignment.pathway_id);
-                if (!pathway) return null;
-                
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {learners.map(learner => {
+                const isAssigned = assignedLearners.includes(learner.id);
                 return (
-                  <div key={assignment.id} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
+                  <div key={learner.id} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
                     <div className="flex-1">
-                      <div className="text-white text-sm font-medium">{pathway.title}</div>
-                      {pathway.description && (
-                        <div className="text-white/50 text-xs">{pathway.description}</div>
-                      )}
+                      <div className="text-white text-sm font-medium">
+                        {learner.first_name && learner.last_name 
+                          ? `${learner.first_name} ${learner.last_name}`
+                          : learner.email
+                        }
+                      </div>
+                      <div className="text-white/50 text-xs">{learner.email}</div>
                     </div>
                     <button
-                      onClick={() => handleUnassignFromPathway(pathway.id)}
+                      onClick={() => isAssigned 
+                        ? handleUnassign('learner', learner.id)
+                        : handleAssign('learner', learner.id)
+                      }
                       disabled={pending}
-                      className="p-1 hover:bg-red-500/20 rounded text-red-400 transition-colors"
-                      title="Retirer du parcours"
+                      className={`p-2 rounded-lg transition-all duration-200 ${
+                        isAssigned
+                          ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
+                          : 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
+                      }`}
+                      title={isAssigned ? 'Retirer' : 'Assigner'}
                     >
-                      <X className="h-4 w-4" />
+                      {isAssigned ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                     </button>
                   </div>
                 );
@@ -151,59 +187,90 @@ export default function AssignmentsPanel({ formationId, orgId }: AssignmentsPane
           )}
         </div>
 
-        {/* Assigner à un parcours */}
-        {availablePathways.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-white mb-3">
-              <Plus className="h-4 w-4 inline mr-2" />
-              Assigner à un parcours
-            </h4>
-            
-            <div className="space-y-2">
-              {availablePathways.map(pathway => (
-                <div key={pathway.id} className="bg-white/5 rounded-lg p-3">
-                  <div className="text-white text-sm font-medium mb-1">{pathway.title}</div>
-                  {pathway.description && (
-                    <div className="text-white/50 text-xs mb-2">{pathway.description}</div>
-                  )}
-                  <button
-                    onClick={() => handleAssignToPathway(pathway.id)}
-                    disabled={pending}
-                    className="btn-cta text-xs"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Assigner
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Section Apprenants (placeholder) */}
+        {/* Groupes */}
         <div>
-          <h4 className="text-sm font-medium text-white mb-3">
-            <Users className="h-4 w-4 inline mr-2" />
-            Apprenants directs
+          <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Groupes ({assignedGroups.length})
           </h4>
-          <div className="text-white/50 text-sm">
-            Les assignations directes aux apprenants se font via les parcours.
-            <br />
-            <span className="text-xs">(Fonctionnalité à venir)</span>
-          </div>
+          
+          {groups.length === 0 ? (
+            <div className="text-white/50 text-sm">Aucun groupe disponible</div>
+          ) : (
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {groups.map(group => {
+                const isAssigned = assignedGroups.includes(group.id);
+                return (
+                  <div key={group.id} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
+                    <div className="flex-1">
+                      <div className="text-white text-sm font-medium">{group.name}</div>
+                      {group.description && (
+                        <div className="text-white/50 text-xs">{group.description}</div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => isAssigned 
+                        ? handleUnassign('group', group.id)
+                        : handleAssign('group', group.id)
+                      }
+                      disabled={pending}
+                      className={`p-2 rounded-lg transition-all duration-200 ${
+                        isAssigned
+                          ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
+                          : 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
+                      }`}
+                      title={isAssigned ? 'Retirer' : 'Assigner'}
+                    >
+                      {isAssigned ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Section Groupes (placeholder) */}
+        {/* Parcours */}
         <div>
-          <h4 className="text-sm font-medium text-white mb-3">
-            <Users className="h-4 w-4 inline mr-2" />
-            Groupes
+          <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Parcours ({assignedPathways.length})
           </h4>
-          <div className="text-white/50 text-sm">
-            L'assignation aux groupes se fait via les parcours.
-            <br />
-            <span className="text-xs">(Fonctionnalité à venir)</span>
-          </div>
+          
+          {pathways.length === 0 ? (
+            <div className="text-white/50 text-sm">Aucun parcours disponible</div>
+          ) : (
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {pathways.map(pathway => {
+                const isAssigned = assignedPathways.includes(pathway.id);
+                return (
+                  <div key={pathway.id} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
+                    <div className="flex-1">
+                      <div className="text-white text-sm font-medium">{pathway.title}</div>
+                      {pathway.description && (
+                        <div className="text-white/50 text-xs">{pathway.description}</div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => isAssigned 
+                        ? handleUnassign('pathway', pathway.id)
+                        : handleAssign('pathway', pathway.id)
+                      }
+                      disabled={pending}
+                      className={`p-2 rounded-lg transition-all duration-200 ${
+                        isAssigned
+                          ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
+                          : 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
+                      }`}
+                      title={isAssigned ? 'Retirer' : 'Assigner'}
+                    >
+                      {isAssigned ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {pending && (

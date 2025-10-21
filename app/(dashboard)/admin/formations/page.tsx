@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'; export const revalidate = 0;
 
 import { supabaseServer } from '@/lib/supabase/server';
-import { EmptyState } from '@/components/admin/EmptyState';
+import FormationCard from '@/components/admin/FormationCard';
 import { Plus, Search, Filter } from 'lucide-react';
 import Link from 'next/link';
 
@@ -13,7 +13,7 @@ export default async function FormationsPage() {
   // NE PAS filtrer par org_id tant que le contexte d'org n'est pas fiable
   const { data, error } = await sb
     .from('formations')
-    .select('id, title, cover_url, visibility_mode, published, updated_at, org_id')
+    .select('id, title, cover_url, visibility_mode, published, updated_at, org_id, theme')
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -82,43 +82,7 @@ export default async function FormationsPage() {
       {/* Grid des formations */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {data.map((formation) => (
-          <Link key={formation.id} href={`/admin/formations/${formation.id}`} className="glass rounded-2xl overflow-hidden hover:-translate-y-0.5 hover:shadow-elev-3 transition">
-            <div className="aspect-video bg-gradient-to-br from-iris-500/20 to-blush-500/20 flex items-center justify-center">
-              {formation.cover_url ? (
-                <img 
-                  src={formation.cover_url} 
-                  alt={formation.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-white/50 text-sm">Image de couverture</div>
-              )}
-            </div>
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  formation.published 
-                    ? 'bg-emerald-500/20 text-emerald-400' 
-                    : 'bg-orange-500/20 text-orange-400'
-                }`}>
-                  {formation.published ? 'Publié' : 'Brouillon'}
-                </span>
-                <span className="text-xs opacity-70">{formation.visibility_mode}</span>
-              </div>
-              <div className="text-xs opacity-50 mb-1">Org: {formation.org_id}</div>
-              <h3 className="font-semibold text-white mb-1">{formation.title}</h3>
-              <div className="flex items-center justify-between mt-3">
-                <span className="text-xs opacity-50">
-                  Modifié le {new Date(formation.updated_at).toLocaleDateString()}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button className="p-1 text-white/50 hover:text-white/70 transition-colors">
-                    <Filter className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </Link>
+          <FormationCard key={formation.id} formation={formation} />
         ))}
       </div>
     </div>

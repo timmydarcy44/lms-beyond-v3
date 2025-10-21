@@ -85,21 +85,25 @@ function SortableSection({
 
   return (
     <div ref={setNodeRef} style={style} className="border border-gray-200 rounded-lg bg-white">
-      {/* Section Header */}
-      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-t-lg border border-gray-200">
+      {/* Section Header avec gradient */}
+      <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg border border-blue-200">
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab hover:bg-gray-100 rounded p-1"
+          className="cursor-grab hover:bg-white/50 rounded p-1 transition-colors"
         >
-          <GripVertical size={16} className="text-gray-900/50" />
+          <GripVertical size={16} className="text-blue-600" />
         </div>
         
         <button
           onClick={() => onToggleSection(section.id)}
-          className="p-1 hover:bg-white/10 rounded"
+          className="p-1 hover:bg-white/50 rounded transition-colors"
         >
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          {isExpanded ? (
+            <ChevronDown size={16} className="text-blue-600" />
+          ) : (
+            <ChevronRight size={16} className="text-blue-600" />
+          )}
         </button>
         
         {editingNode?.type === 'section' && editingNode.id === section.id ? (
@@ -109,25 +113,27 @@ function SortableSection({
             onChange={(e) => onSetEditingTitle(e.target.value)}
             onBlur={onFinishEditing}
             onKeyDown={(e) => e.key === 'Enter' && onFinishEditing()}
-            className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-gray-900"
+            className="flex-1 bg-white border border-blue-300 rounded px-2 py-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             autoFocus
           />
         ) : (
-          <span className="flex-1 text-gray-900 font-medium">{section.title}</span>
+          <span className="flex-1 text-gray-900 font-semibold">{section.title}</span>
         )}
         
         <div className="flex items-center gap-1">
           <button
             onClick={() => onStartEditing('section', section.id, section.title)}
-            className="p-1 hover:bg-white/10 rounded"
+            className="p-1 hover:bg-white/50 rounded transition-colors"
+            title="Renommer"
           >
-            <Edit2 size={14} />
+            <Edit2 size={14} className="text-blue-600" />
           </button>
           <button
             onClick={() => onDelete('section', section.id)}
-            className="p-1 hover:bg-white/10 rounded text-red-400"
+            className="p-1 hover:bg-red-100 rounded transition-colors"
+            title="Supprimer"
           >
-            <Trash2 size={14} />
+            <Trash2 size={14} className="text-red-500" />
           </button>
         </div>
       </div>

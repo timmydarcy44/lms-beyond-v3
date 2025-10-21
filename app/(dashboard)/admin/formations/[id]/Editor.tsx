@@ -140,28 +140,11 @@ export default function Editor({ formation, selection }: EditorProps) {
     };
   }, [editor, selection, debouncedSave]);
 
-  const handleImageUpload = useCallback(async (file: File) => {
+  const handleImageUpload = useCallback(async (url: string) => {
     if (!editor) return;
     
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await fetch('/api/storage/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const { url } = await response.json();
-      
-      if (url) {
-        editor.chain().focus().setImage({ src: url }).run();
-        toast.success('Image insérée avec succès');
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'upload:', error);
-      toast.error('Erreur lors de l\'upload de l\'image');
-    }
+    editor.chain().focus().setImage({ src: url }).run();
+    toast.success('Image insérée avec succès');
   }, [editor]);
 
   const handleVideoInsert = () => {
@@ -420,7 +403,10 @@ export default function Editor({ formation, selection }: EditorProps) {
             <h3 className="text-lg font-semibold mb-4">Insérer une image</h3>
             <Uploader
               onImageUpload={handleImageUpload}
-              accept="image/*"
+              onVideoUpload={() => {}}
+              formationId={formation.id}
+              orgId={formation.org_id}
+              published={formation.published}
             />
             <button
               onClick={() => setShowImageModal(false)}

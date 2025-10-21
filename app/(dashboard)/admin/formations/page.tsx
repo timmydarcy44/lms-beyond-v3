@@ -4,20 +4,26 @@ import { supabaseServer } from '@/lib/supabase/server';
 import FormationCard from '@/components/admin/FormationCard';
 import { Plus, Search, Filter } from 'lucide-react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 export default async function FormationsPage() {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
 
-  // Récupérer l'organisation de l'utilisateur
-  const { data: userOrg } = await sb
+  // Récupérer toutes les organisations de l'utilisateur
+  const { data: memberships } = await sb
     .from('org_memberships')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single();
+    .select(`
+      organizations!inner(
+        id,
+        name,
+        slug
+      )
+    `)
+    .eq('user_id', user.id);
 
-  if (!userOrg) {
+  if (!memberships || memberships.length === 0) {
     return (
       <div className="space-y-6">
         <div className="mb-6 flex items-center justify-between">
@@ -31,11 +37,17 @@ export default async function FormationsPage() {
     );
   }
 
-  // Filtrer par organisation de l'utilisateur
+  // Si plusieurs organisations, rediriger vers la sélection
+  if (memberships.length > 1) {
+    redirect('/admin');
+  }
+
+  // Une seule organisation - récupérer ses formations
+  const orgId = (memberships[0] as any).organizations.id;
   const { data, error } = await sb
     .from('formations')
     .select('id, title, cover_url, visibility_mode, published, updated_at, org_id, theme')
-    .eq('org_id', userOrg.org_id)
+    .eq('org_id', orgId)
     .order('updated_at', { ascending: false });
 
   if (error) {

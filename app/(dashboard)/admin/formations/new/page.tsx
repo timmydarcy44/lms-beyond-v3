@@ -24,6 +24,7 @@ export default function NewFormationPage() {
   const [loading, setLoading] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('');
   const [coverPreview, setCoverPreview] = useState<string>('');
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -35,6 +36,14 @@ export default function NewFormationPage() {
       const formData = new FormData(e.currentTarget);
       formData.set('theme', selectedTheme);
       
+      // Upload de l'image si présente
+      if (coverFile) {
+        const uploadResult = await uploadCoverImage(coverFile);
+        if (uploadResult.ok) {
+          formData.set('cover_url', uploadResult.url);
+        }
+      }
+      
       const result = await createFormationAction(formData);
       if (result.ok) {
         // Rediriger vers la page de l'organisation si spécifiée
@@ -42,6 +51,7 @@ export default function NewFormationPage() {
         router.push(redirectUrl);
       } else {
         setErr('Erreur lors de la création');
+        setLoading(false);
       }
     }
     catch (e: any) { 
@@ -53,6 +63,7 @@ export default function NewFormationPage() {
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setCoverFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setCoverPreview(e.target?.result as string);
@@ -60,6 +71,30 @@ export default function NewFormationPage() {
       reader.readAsDataURL(file);
     }
   };
+
+  // Fonction d'upload d'image
+  async function uploadCoverImage(file: File) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bucket', 'lms-assets');
+      
+      const response = await fetch('/api/storage/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const result = await response.json();
+      if (result.ok) {
+        return { ok: true, url: result.publicUrl };
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      return { ok: false, error: error instanceof Error ? error.message : 'Upload failed' };
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#252525] text-white">
@@ -248,6 +283,7 @@ export default function NewFormationPage() {
           <div className="flex items-center justify-end gap-4">
             <button
               type="button"
+              onClick={() => router.back()}
               className="px-6 py-3 text-neutral-400 hover:text-white transition-colors"
             >
               Annuler

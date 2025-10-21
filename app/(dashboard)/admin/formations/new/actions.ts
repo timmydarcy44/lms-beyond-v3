@@ -20,7 +20,7 @@ export async function createFormationAction(form: FormData) {
   const visibility_mode = String(form.get('visibility_mode') || 'catalog_only') as any;
   const reading_mode = String(form.get('reading_mode') || 'free') as any;
   const published = form.get('published') === 'on';
-  const cover_url = String(form.get('cover_object_name') || '') || null;
+  const cover_url = String(form.get('cover_url') || '').trim() || null;
   const theme = String(form.get('theme') || '').trim() || null;
 
   const { data: inserted, error } = await sb

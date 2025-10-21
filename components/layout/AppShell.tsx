@@ -7,9 +7,11 @@ import Topbar from './Topbar';
 export default function AppShell({
   children,
   role,
+  currentOrg,
 }: {
   children: React.ReactNode;
   role: 'admin' | 'instructor' | 'tutor' | 'learner';
+  currentOrg?: string;
 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -38,7 +40,7 @@ export default function AppShell({
       }`}>
         {/* Sidebar sticky, pas d'espace inutile en haut */}
         <aside className="sticky top-0 h-svh overflow-y-auto border-r border-white/10 bg-white/5 backdrop-blur-md">
-          <Sidebar role={role} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+          <Sidebar role={role} collapsed={sidebarCollapsed} onToggle={toggleSidebar} currentOrg={currentOrg} />
         </aside>
 
         {/* Colonne contenu : topbar compacte + page content */}

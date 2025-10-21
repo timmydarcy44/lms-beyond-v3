@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'; export const revalidate = 0;
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { getPrimaryRole } from '@/lib/roles';
-import AppShell from '@/components/layout/AppShell';
+import AdminLayoutClient from '@/components/layout/AdminLayoutClient';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const sb = await supabaseServer();
@@ -11,5 +11,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user) redirect('/login/admin');
   const role = await getPrimaryRole(user.id);
   if (role !== 'admin') redirect('/unauthorized');
-  return <AppShell role="admin">{children}</AppShell>;
+  
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 }

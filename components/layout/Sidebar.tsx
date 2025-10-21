@@ -34,12 +34,22 @@ function NavItem({ href, icon: Icon, label, collapsed }: { href: string; icon: a
 export default function Sidebar({ 
   role, 
   collapsed, 
-  onToggle 
+  onToggle,
+  currentOrg
 }: { 
   role: 'admin' | 'instructor' | 'tutor' | 'learner';
   collapsed: boolean;
   onToggle: () => void;
+  currentOrg?: string;
 }) {
+  // URLs dynamiques basées sur l'organisation actuelle
+  const getOrgUrl = (path: string) => {
+    if (currentOrg && path !== '/admin') {
+      return `/admin/${currentOrg}${path.replace('/admin', '')}`;
+    }
+    return path;
+  };
+
   return (
     <div className="py-4">
       {/* Header avec bouton toggle */}
@@ -61,6 +71,9 @@ export default function Sidebar({
           )}
         </div>
         {!collapsed && <div className="text-xs opacity-70">Espace {role}</div>}
+        {!collapsed && currentOrg && (
+          <div className="text-xs opacity-50 mt-1">Org: {currentOrg}</div>
+        )}
       </div>
 
       {/* Bouton toggle pour mode collapsed */}
@@ -77,13 +90,13 @@ export default function Sidebar({
       )}
 
       <nav className="space-y-1">
-        <NavItem href="/admin" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} />
-        <NavItem href="/admin/formations" icon={BookOpen} label="Formations" collapsed={collapsed} />
-        <NavItem href="/admin/ressources" icon={Folder} label="Ressources" collapsed={collapsed} />
-        <NavItem href="/admin/tests" icon={FileCheck} label="Tests" collapsed={collapsed} />
-        <NavItem href="/admin/parcours" icon={Layers} label="Parcours" collapsed={collapsed} />
-        <NavItem href="/admin/utilisateurs" icon={Users} label="Utilisateurs" collapsed={collapsed} />
-        <NavItem href="/admin/settings" icon={Settings} label="Paramètres" collapsed={collapsed} />
+        <NavItem href={getOrgUrl('/admin')} icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} />
+        <NavItem href={getOrgUrl('/admin/formations')} icon={BookOpen} label="Formations" collapsed={collapsed} />
+        <NavItem href={getOrgUrl('/admin/ressources')} icon={Folder} label="Ressources" collapsed={collapsed} />
+        <NavItem href={getOrgUrl('/admin/tests')} icon={FileCheck} label="Tests" collapsed={collapsed} />
+        <NavItem href={getOrgUrl('/admin/parcours')} icon={Layers} label="Parcours" collapsed={collapsed} />
+        <NavItem href={getOrgUrl('/admin/utilisateurs')} icon={Users} label="Utilisateurs" collapsed={collapsed} />
+        <NavItem href={getOrgUrl('/admin/settings')} icon={Settings} label="Paramètres" collapsed={collapsed} />
       </nav>
     </div>
   );

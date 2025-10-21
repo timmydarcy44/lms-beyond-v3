@@ -1,5 +1,6 @@
 'use client';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import OrgSwitcher from '@/components/admin/OrgSwitcher';
 
 export default function Topbar() {
   const sb = supabaseBrowser();
@@ -13,12 +14,7 @@ export default function Topbar() {
       <div className="flex w-full items-center justify-between px-6">
         <h1 className="text-base font-semibold text-iris-grad">Administration</h1>
         <div className="flex items-center gap-3">
-          <a
-            href="/admin/formations/new"
-            className="btn-cta"
-          >
-            Nouvelle formation
-          </a>
+          <OrgSwitcher />
           <button onClick={signOut} className="rounded-xl px-3 h-9 bg-white/10 hover:bg-white/20 text-sm">
             Déconnexion
           </button>

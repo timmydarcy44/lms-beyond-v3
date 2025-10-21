@@ -10,10 +10,32 @@ export default async function FormationsPage() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
 
-  // NE PAS filtrer par org_id tant que le contexte d'org n'est pas fiable
+  // Récupérer l'organisation de l'utilisateur
+  const { data: userOrg } = await sb
+    .from('org_memberships')
+    .select('org_id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!userOrg) {
+    return (
+      <div className="space-y-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Formations</h2>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-neutral-400 mb-4">Aucune organisation associée à votre compte</p>
+          <p className="text-sm text-neutral-500">Contactez votre administrateur</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Filtrer par organisation de l'utilisateur
   const { data, error } = await sb
     .from('formations')
     .select('id, title, cover_url, visibility_mode, published, updated_at, org_id, theme')
+    .eq('org_id', userOrg.org_id)
     .order('updated_at', { ascending: false });
 
   if (error) {

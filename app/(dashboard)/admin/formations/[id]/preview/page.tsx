@@ -11,7 +11,37 @@ export default async function FormationPreviewPage({ params }: FormationPreviewP
   const { id } = await params;
   const sb = await supabaseServer();
   
-  // Récupérer les données de la formation
+  // Vérifier l'authentification
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) {
+    redirect('/login/admin');
+  }
+
+  // Récupérer l'organisation de l'utilisateur
+  const { data: userOrg } = await sb
+    .from('org_memberships')
+    .select('org_id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!userOrg) {
+    return (
+      <div className="min-h-screen bg-[#252525] text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-400 mb-4">Accès refusé</h1>
+          <p className="text-neutral-400 mb-6">Aucune organisation associée à votre compte.</p>
+          <Link
+            href="/admin/formations"
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 font-medium"
+          >
+            Retour aux formations
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  
+  // Récupérer les données de la formation avec vérification d'organisation
   const { data: formation, error } = await sb
     .from('formations')
     .select(`
@@ -21,6 +51,7 @@ export default async function FormationPreviewPage({ params }: FormationPreviewP
       subchapters:subchapters(id, chapter_id, title, position)
     `)
     .eq('id', id)
+    .eq('org_id', userOrg.org_id)
     .single();
 
   if (error || !formation) {

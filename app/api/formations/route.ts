@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, description, cover_url, visibility_mode, published } = body;
+    const { title, description, cover_url, visibility_mode, published, theme } = body;
 
     const { data, error } = await sb
       .from('formations')
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
         published: published || false,
         org_id: org.id,
         created_by: user.id,
+        theme: theme || null,
       })
       .select()
       .single();

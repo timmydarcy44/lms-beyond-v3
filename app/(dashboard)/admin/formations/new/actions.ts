@@ -21,6 +21,7 @@ export async function createFormationAction(form: FormData) {
   const reading_mode = String(form.get('reading_mode') || 'free') as any;
   const published = form.get('published') === 'on';
   const cover_url = String(form.get('cover_object_name') || '') || null;
+  const theme = String(form.get('theme') || '').trim() || null;
 
   const { data: inserted, error } = await sb
     .from('formations')
@@ -34,6 +35,7 @@ export async function createFormationAction(form: FormData) {
       published,
       status: published ? 'published' : 'draft',
       created_by: user.id,
+      theme,
     })
     .select('id')
     .single();

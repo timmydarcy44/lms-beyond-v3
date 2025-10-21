@@ -23,16 +23,20 @@ interface FormationCardProps {
     visibility_mode: 'private' | 'catalog_only' | 'public';
     published: boolean;
     updated_at: string;
+    theme?: string | null;
   };
 }
 
 const themes = {
-  business: { label: 'Business', color: 'bg-blue-500/20 text-blue-400' },
-  negociation: { label: 'Négociation', color: 'bg-green-500/20 text-green-400' },
-  management: { label: 'Management', color: 'bg-purple-500/20 text-purple-400' },
-  rh: { label: 'RH', color: 'bg-pink-500/20 text-pink-400' },
-  marketing: { label: 'Marketing', color: 'bg-orange-500/20 text-orange-400' },
-  vente: { label: 'Vente', color: 'bg-red-500/20 text-red-400' },
+  business: { label: 'Business', color: 'bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-600' },
+  negociation: { label: 'Négociation', color: 'bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-600' },
+  management: { label: 'Management', color: 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-600' },
+  rh: { label: 'RH', color: 'bg-gradient-to-r from-pink-500/20 to-pink-600/20 text-pink-600' },
+  marketing: { label: 'Marketing', color: 'bg-gradient-to-r from-orange-500/20 to-orange-600/20 text-orange-600' },
+  vente: { label: 'Vente', color: 'bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-600' },
+  // Thèmes iris/blush comme demandé
+  iris: { label: 'Iris', color: 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-600' },
+  blush: { label: 'Blush', color: 'bg-gradient-to-r from-rose-500/20 to-pink-500/20 text-rose-600' },
 };
 
 const getStatusInfo = (published: boolean, updatedAt: string) => {
@@ -54,8 +58,7 @@ export default function FormationCard({ formation }: FormationCardProps) {
   const [showAssignModal, setShowAssignModal] = useState(false);
   
   const statusInfo = getStatusInfo(formation.published, formation.updated_at);
-  // Pour l'instant, pas de thème car la colonne n'existe pas encore
-  const themeInfo = null;
+  const themeInfo = formation.theme ? themes[formation.theme as keyof typeof themes] : null;
 
   const handleDelete = async () => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
@@ -78,6 +81,14 @@ export default function FormationCard({ formation }: FormationCardProps) {
       <div className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 relative">
         {/* Image de couverture */}
         <div className="aspect-video bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 flex items-center justify-center relative overflow-hidden">
+          {/* Badge thème en haut à gauche */}
+          {themeInfo && (
+            <div className={`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${themeInfo.color} backdrop-blur-sm border-0`}>
+              <Tag size={12} className="inline mr-1" />
+              {themeInfo.label}
+            </div>
+          )}
+          
           {formation.cover_url ? (
             <img 
               src={formation.cover_url} 

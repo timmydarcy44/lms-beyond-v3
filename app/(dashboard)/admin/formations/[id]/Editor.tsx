@@ -113,12 +113,7 @@ export default function Editor({ formation, selection }: EditorProps) {
     if (!selection || !editor) return;
     
     setIsLoading(true);
-    loadRichContent({
-      orgId: formation.org_id,
-      formationId: formation.id,
-      chapterId: selection.type === 'chapter' ? selection.id : undefined,
-      subchapterId: selection.type === 'subchapter' ? selection.id : undefined,
-    }).then((content) => {
+    loadRichContent(selection.type, selection.id).then((content) => {
       if (content) {
         editor.commands.setContent(content);
       }

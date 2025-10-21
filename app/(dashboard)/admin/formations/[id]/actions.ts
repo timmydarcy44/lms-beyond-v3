@@ -364,3 +364,105 @@ export async function assignContentAction(contentId: string, contentType: 'forma
   console.log(`Assigning ${contentType} ${contentId} to ${targetType} ${targetId}`);
   return { ok: true };
 }
+
+// Assign formation content to learners, groups, or pathways
+export async function assignFormationContent(
+  formationId: string, 
+  targetType: 'learner' | 'group' | 'pathway', 
+  targetId: string, 
+  orgId: string,
+  unassign = false
+) {
+  const { sb, user } = await sbUser();
+  
+  // Vérifier les permissions sur la formation
+  await checkFormationPermissions(sb, user.id, formationId);
+
+  try {
+    if (targetType === 'learner') {
+      if (unassign) {
+        const { error } = await sb
+          .from('learner_assignments')
+          .delete()
+          .eq('learner_id', targetId)
+          .eq('content_id', formationId)
+          .eq('content_type', 'formation');
+        
+        if (error) throw error;
+      } else {
+        const { error } = await sb
+          .from('learner_assignments')
+          .upsert({
+            learner_id: targetId,
+            content_id: formationId,
+            content_type: 'formation',
+            assigned_by: user.id,
+            assigned_at: new Date().toISOString()
+          });
+        
+        if (error) throw error;
+      }
+    } else if (targetType === 'group') {
+      if (unassign) {
+        const { error } = await sb
+          .from('group_assignments')
+          .delete()
+          .eq('group_id', targetId)
+          .eq('content_id', formationId)
+          .eq('content_type', 'formation');
+        
+        if (error) throw error;
+      } else {
+        const { error } = await sb
+          .from('group_assignments')
+          .upsert({
+            group_id: targetId,
+            content_id: formationId,
+            content_type: 'formation',
+            assigned_by: user.id,
+            assigned_at: new Date().toISOString()
+          });
+        
+        if (error) throw error;
+      }
+    } else if (targetType === 'pathway') {
+      if (unassign) {
+        const { error } = await sb
+          .from('pathway_items')
+          .delete()
+          .eq('pathway_id', targetId)
+          .eq('content_id', formationId)
+          .eq('content_type', 'formation');
+        
+        if (error) throw error;
+      } else {
+        // Récupérer la position maximale pour ce parcours
+        const { data: maxPos } = await sb
+          .from('pathway_items')
+          .select('position')
+          .eq('pathway_id', targetId)
+          .order('position', { ascending: false })
+          .limit(1)
+          .single();
+
+        const { error } = await sb
+          .from('pathway_items')
+          .upsert({
+            pathway_id: targetId,
+            content_id: formationId,
+            content_type: 'formation',
+            position: (maxPos?.position || 0) + 1,
+            created_at: new Date().toISOString()
+          });
+        
+        if (error) throw error;
+      }
+    }
+
+    revalidatePath(`/admin/formations/${formationId}`);
+    return { ok: true };
+  } catch (error) {
+    console.error('Error in assignFormationContent:', error);
+    throw error;
+  }
+}

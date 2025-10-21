@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useTransition } from 'react';
 import { Users, Plus, X, BookOpen, GraduationCap, UserCheck } from 'lucide-react';
-import { assignContentAction } from './actions';
+import { assignFormationContent } from './actions';
 import { toast } from 'sonner';
 
 interface AssignmentsPanelProps {
@@ -80,7 +80,7 @@ export default function AssignmentsPanel({ formationId, orgId }: AssignmentsPane
   const handleAssign = (type: 'learner' | 'group' | 'pathway', id: string) => {
     startTransition(async () => {
       try {
-        await assignContentAction(formationId, type, id, orgId);
+        await assignFormationContent(formationId, type, id, orgId);
         
         // Mettre à jour l'état local
         if (type === 'learner') {
@@ -102,7 +102,7 @@ export default function AssignmentsPanel({ formationId, orgId }: AssignmentsPane
   const handleUnassign = (type: 'learner' | 'group' | 'pathway', id: string) => {
     startTransition(async () => {
       try {
-        await assignContentAction(formationId, type, id, orgId, true); // true = unassign
+        await assignFormationContent(formationId, type, id, orgId, true); // true = unassign
         
         // Mettre à jour l'état local
         if (type === 'learner') {

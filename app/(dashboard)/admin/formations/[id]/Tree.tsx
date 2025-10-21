@@ -607,25 +607,25 @@ export default function Tree({ formationId, sections: initialSections, chapters:
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={handleCreateSection}
-            className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center"
+            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
           >
             <Plus size={14} />
             Section
           </button>
           
-          <button
-            onClick={() => setShowParentSelector({ type: 'chapter' })}
-            disabled={sections.length === 0}
-            className="px-3 py-2 bg-blue-100 hover:bg-blue-200 disabled:bg-gray-100 disabled:cursor-not-allowed text-blue-800 rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center"
-          >
-            <Plus size={14} />
-            Chapitre
-          </button>
+    <button
+      onClick={() => setShowParentSelector({ type: 'chapter' })}
+      disabled={sections.length === 0}
+      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
+    >
+      <Plus size={14} />
+      Chapitre
+    </button>
           
           <button
             onClick={() => setShowParentSelector({ type: 'subchapter' })}
             disabled={chapters.length === 0}
-            className="px-3 py-2 bg-green-100 hover:bg-green-200 disabled:bg-gray-100 disabled:cursor-not-allowed text-green-800 rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center"
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
           >
             <Plus size={14} />
             Sous-chapitre

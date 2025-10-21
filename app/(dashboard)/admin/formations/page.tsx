@@ -44,17 +44,17 @@ export default async function FormationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-iris-grad">Formations</h2>
-          <p className="text-sm opacity-70">Toutes mes formations (créées par moi et celles de mes organisations)</p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-iris-grad">Formations</h2>
+          <p className="text-xs sm:text-sm opacity-70">Toutes mes formations (créées par moi et celles de mes organisations)</p>
         </div>
-        <Link href="/admin/formations/new" className="btn-cta-lg">Créer une formation</Link>
+        <Link href="/admin/formations/new" className="btn-cta-lg text-sm sm:text-base px-4 py-2 sm:px-6 sm:py-3">Créer une formation</Link>
       </div>
 
       {/* Barre d'actions */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+        <div className="flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
             <input
@@ -65,22 +65,24 @@ export default async function FormationsPage() {
           </div>
         </div>
 
-        <select className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-iris-500/50">
-          <option value="">Toutes les visibilités</option>
-          <option value="public">Public</option>
-          <option value="catalog_only">Catalogue uniquement</option>
-          <option value="private">Privé</option>
-        </select>
+        <div className="flex gap-3 sm:gap-4">
+          <select className="flex-1 sm:flex-none px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-iris-500/50 text-sm">
+            <option value="">Toutes les visibilités</option>
+            <option value="public">Public</option>
+            <option value="catalog_only">Catalogue uniquement</option>
+            <option value="private">Privé</option>
+          </select>
 
-        <select className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-iris-500/50">
-          <option value="">Tous les statuts</option>
-          <option value="published">Publié</option>
-          <option value="draft">Brouillon</option>
-        </select>
+          <select className="flex-1 sm:flex-none px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-iris-500/50 text-sm">
+            <option value="">Tous les statuts</option>
+            <option value="published">Publié</option>
+            <option value="draft">Brouillon</option>
+          </select>
+        </div>
       </div>
 
       {/* Grid des formations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {data.map((formation) => (
           <FormationCard key={formation.id} formation={formation} />
         ))}

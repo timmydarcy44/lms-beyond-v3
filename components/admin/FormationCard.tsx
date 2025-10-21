@@ -83,9 +83,10 @@ export default function FormationCard({ formation }: FormationCardProps) {
         <div className="aspect-video bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 flex items-center justify-center relative overflow-hidden">
           {/* Badge thème en haut à gauche */}
           {themeInfo && (
-            <div className={`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium ${themeInfo.color} backdrop-blur-sm border-0`}>
-              <Tag size={12} className="inline mr-1" />
-              {themeInfo.label}
+            <div className={`absolute top-2 left-2 sm:top-3 sm:left-3 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-xs font-medium ${themeInfo.color} backdrop-blur-sm border-0`}>
+              <Tag size={10} className="inline mr-1 sm:mr-1" />
+              <span className="hidden sm:inline">{themeInfo.label}</span>
+              <span className="sm:hidden">{themeInfo.label.slice(0, 3)}</span>
             </div>
           )}
           
@@ -99,8 +100,8 @@ export default function FormationCard({ formation }: FormationCardProps) {
             <div className="text-white/50 text-sm">Image de couverture</div>
           )}
           
-          {/* Overlay avec actions rapides */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+          {/* Overlay avec actions rapides - masqué sur mobile pour éviter les conflits de touch */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 hidden sm:flex">
             <div className="flex items-center gap-2">
               <button
                 onClick={(e) => {
@@ -137,36 +138,37 @@ export default function FormationCard({ formation }: FormationCardProps) {
         </div>
 
         {/* Contenu de la carte */}
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           {/* Badges de statut et thème */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2 sm:mb-3">
             <span className={`text-xs px-2 py-1 rounded-full ${statusInfo.color}`}>
               {statusInfo.label}
             </span>
             {themeInfo && (
-              <span className={`text-xs px-2 py-1 rounded-full ${themeInfo.color}`}>
+              <span className={`text-xs px-2 py-1 rounded-full ${themeInfo.color} hidden sm:inline`}>
                 {themeInfo.label}
               </span>
             )}
           </div>
 
           {/* Titre */}
-          <h3 className="font-semibold text-white mb-2 line-clamp-2 group-hover:text-blue-300 transition-colors">
+          <h3 className="font-semibold text-white mb-2 line-clamp-2 group-hover:text-blue-300 transition-colors text-sm sm:text-base">
             {formation.title}
           </h3>
 
           {/* Date de modification */}
-          <div className="flex items-center gap-1 text-xs text-white/50 mb-4">
+          <div className="flex items-center gap-1 text-xs text-white/50 mb-3 sm:mb-4">
             <Calendar className="h-3 w-3" />
-            Modifié le {new Date(formation.updated_at).toLocaleDateString()}
+            <span className="hidden sm:inline">Modifié le {new Date(formation.updated_at).toLocaleDateString()}</span>
+            <span className="sm:hidden">{new Date(formation.updated_at).toLocaleDateString()}</span>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
             <div className="flex items-center gap-2">
               <Link
                 href={`/admin/formations/${formation.id}`}
-                className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+                className="flex-1 sm:flex-none px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-xs sm:text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl text-center"
               >
                 <Edit className="h-3 w-3 inline mr-1" />
                 Modifier
@@ -174,7 +176,7 @@ export default function FormationCard({ formation }: FormationCardProps) {
               
               <Link
                 href={`/admin/formations/${formation.id}/preview`}
-                className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+                className="flex-1 sm:flex-none px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl text-center"
               >
                 <Eye className="h-3 w-3 inline mr-1" />
                 Prévisualiser

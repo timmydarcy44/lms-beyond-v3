@@ -13,40 +13,42 @@ export default function NewFormationPage() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="glass p-6 rounded-2xl max-w-3xl space-y-4">
-      <h1 className="text-2xl font-semibold text-iris-grad">Nouvelle formation</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:p-6">
+      <form onSubmit={onSubmit} className="glass p-4 sm:p-6 rounded-2xl max-w-3xl mx-auto space-y-4">
+        <h1 className="text-xl sm:text-2xl font-semibold text-iris-grad">Nouvelle formation</h1>
 
-      <input name="title" placeholder="Titre" required className="h-11 w-full rounded-xl bg-white/5 px-3" />
-      <textarea name="description" rows={4} placeholder="Description" className="w-full rounded-xl bg-white/5 px-3 py-2" />
+        <input name="title" placeholder="Titre" required className="h-11 w-full rounded-xl bg-white/5 px-3 text-sm sm:text-base" />
+        <textarea name="description" rows={4} placeholder="Description" className="w-full rounded-xl bg-white/5 px-3 py-2 text-sm sm:text-base" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <select name="visibility_mode" className="h-11 rounded-xl bg-white/5 px-3">
-          <option value="private">Privée</option>
-          <option value="catalog_only">Catalogue</option>
-          <option value="public">Publique</option>
-        </select>
-        <select name="reading_mode" className="h-11 rounded-xl bg-white/5 px-3">
-          <option value="free">Libre</option>
-          <option value="linear">Linéaire</option>
-        </select>
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <select name="visibility_mode" className="h-11 rounded-xl bg-white/5 px-3 text-sm sm:text-base">
+            <option value="private">Privée</option>
+            <option value="catalog_only">Catalogue</option>
+            <option value="public">Publique</option>
+          </select>
+          <select name="reading_mode" className="h-11 rounded-xl bg-white/5 px-3 text-sm sm:text-base">
+            <option value="free">Libre</option>
+            <option value="linear">Linéaire</option>
+          </select>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input 
-          name="theme" 
-          placeholder="Thème (ex: business, management, iris, blush...)" 
-          maxLength={64}
-          className="h-11 rounded-xl bg-white/5 px-3" 
-        />
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="published" /> <span>Publié</span>
-        </label>
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input 
+            name="theme" 
+            placeholder="Thème (ex: business, management, iris, blush...)" 
+            maxLength={64}
+            className="h-11 rounded-xl bg-white/5 px-3 text-sm sm:text-base" 
+          />
+          <label className="flex items-center gap-2 text-sm sm:text-base">
+            <input type="checkbox" name="published" /> <span>Publié</span>
+          </label>
+        </div>
 
-      <input name="cover_object_name" placeholder="object_name cover (optionnel)" className="h-11 w-full rounded-xl bg-white/5 px-3" />
+        <input name="cover_object_name" placeholder="object_name cover (optionnel)" className="h-11 w-full rounded-xl bg-white/5 px-3 text-sm sm:text-base" />
 
-      {err && <div className="text-red-400 text-sm">{err}</div>}
-      <button className="btn-cta-lg" disabled={loading}>{loading ? 'Création…' : 'Créer la formation'}</button>
-    </form>
+        {err && <div className="text-red-400 text-sm">{err}</div>}
+        <button className="btn-cta-lg w-full sm:w-auto text-sm sm:text-base px-4 py-2 sm:px-6 sm:py-3" disabled={loading}>{loading ? 'Création…' : 'Créer la formation'}</button>
+      </form>
+    </div>
   );
 }

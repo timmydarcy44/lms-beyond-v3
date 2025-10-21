@@ -610,31 +610,34 @@ export default function Tree({ formationId, sections: initialSections, chapters:
         <h3 className="text-lg font-semibold text-gray-900">Structure de la formation</h3>
         
         {/* 3 boutons CTA côte à côte */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <button
             onClick={handleCreateSection}
-            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-all duration-200 font-medium text-xs sm:text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
           >
-            <Plus size={14} />
-            Section
+            <Plus size={12} className="sm:w-3.5 sm:h-3.5" />
+            <span className="hidden sm:inline">Section</span>
+            <span className="sm:hidden">Nouvelle Section</span>
           </button>
           
-    <button
-      onClick={() => setShowParentSelector({ type: 'chapter' })}
-      disabled={sections.length === 0}
-      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
-    >
-      <Plus size={14} />
-      Chapitre
-    </button>
+          <button
+            onClick={() => setShowParentSelector({ type: 'chapter' })}
+            disabled={sections.length === 0}
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium text-xs sm:text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
+          >
+            <Plus size={12} className="sm:w-3.5 sm:h-3.5" />
+            <span className="hidden sm:inline">Chapitre</span>
+            <span className="sm:hidden">Nouveau Chapitre</span>
+          </button>
           
           <button
             onClick={() => setShowParentSelector({ type: 'subchapter' })}
             disabled={chapters.length === 0}
-            className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium text-xs sm:text-sm flex items-center gap-2 justify-center shadow-lg hover:shadow-xl"
           >
-            <Plus size={14} />
-            Sous-chapitre
+            <Plus size={12} className="sm:w-3.5 sm:h-3.5" />
+            <span className="hidden sm:inline">Sous-chapitre</span>
+            <span className="sm:hidden">Nouveau Sous-chapitre</span>
           </button>
         </div>
       </div>

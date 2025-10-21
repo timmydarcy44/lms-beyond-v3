@@ -1,6 +1,6 @@
 // app/(dashboard)/admin/[org]/formations/new/page.tsx
 import { redirect } from 'next/navigation';
-import { supabaseServer } from '@/lib/supabase/server';
+import { resolveOrgFromSlugOrThrow } from '@/lib/org-server';
 
 export default async function NewFormationPage({
   params,
@@ -8,33 +8,15 @@ export default async function NewFormationPage({
   params: Promise<{ org: string }>;
 }) {
   const { org: orgSlug } = await params;
-  const sb = await supabaseServer();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect('/login/admin');
-
-  // Vérifier l'organisation
-  const { data: organization } = await sb
-    .from('organizations')
-    .select('id, name, slug')
-    .eq('slug', orgSlug)
-    .single();
-
-  if (!organization) {
+  
+  try {
+    // Valider l'organisation et le membership
+    await resolveOrgFromSlugOrThrow(orgSlug);
+    
+    // Rediriger vers la page de création générale avec contexte d'organisation
+    redirect(`/admin/formations/new?org=${orgSlug}`);
+  } catch (error) {
+    // Si erreur (UNAUTH, ORG_NOT_FOUND, FORBIDDEN), rediriger vers /admin
     redirect('/admin');
   }
-
-  // Vérifier le membership
-  const { data: membership } = await sb
-    .from('org_memberships')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('org_id', organization.id)
-    .single();
-
-  if (!membership) {
-    redirect('/admin');
-  }
-
-  // Rediriger vers la page de création générale avec contexte d'organisation
-  redirect(`/admin/formations/new?org=${orgSlug}`);
 }

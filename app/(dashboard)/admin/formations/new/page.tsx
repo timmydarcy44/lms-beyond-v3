@@ -44,7 +44,7 @@ export default function NewFormationPage() {
         }
       }
       
-      const result = await createFormationAction(formData);
+      const result = await createFormationAction(formData, orgSlug || undefined);
       if (result.ok) {
         // Rediriger vers la page de l'organisation si spécifiée
         const redirectUrl = orgSlug ? `/admin/${orgSlug}/formations/${result.formation.id}` : `/admin/formations/${result.formation.id}`;

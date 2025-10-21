@@ -3,15 +3,25 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseServerActions } from '@/lib/supabase/server-actions';
-import { getDefaultOrgId } from '@/lib/org';
+import { resolveOrgFromSlugOrThrow } from '@/lib/org-server';
 
-export async function createFormationAction(form: FormData) {
+export async function createFormationAction(form: FormData, orgSlug?: string) {
   const sb = await supabaseServerActions();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
-  const orgId = await getDefaultOrgId();
-  if (!orgId) throw new Error('Aucune organisation associée à votre compte');
+  // Si orgSlug fourni, utiliser notre helper
+  let orgId: string;
+  if (orgSlug) {
+    const { orgId: resolvedOrgId } = await resolveOrgFromSlugOrThrow(orgSlug);
+    orgId = resolvedOrgId;
+  } else {
+    // Fallback pour compatibilité (à supprimer plus tard)
+    const { getDefaultOrgId } = await import('@/lib/org');
+    const defaultOrgId = await getDefaultOrgId();
+    if (!defaultOrgId) throw new Error('Aucune organisation associée à votre compte');
+    orgId = defaultOrgId;
+  }
 
   const title = String(form.get('title') || '').trim();
   if (!title) throw new Error('Titre obligatoire');

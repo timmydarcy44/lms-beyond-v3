@@ -1,7 +1,8 @@
 'use client';
 import { useState, useTransition } from 'react';
-import { Settings, Eye, EyeOff, BookOpen, Lock, Globe } from 'lucide-react';
+import { Settings, Eye, EyeOff, BookOpen, Lock, Globe, Users, GraduationCap, Route } from 'lucide-react';
 import { updateFormationReadingMode } from './actions';
+import AssignmentModal from '@/components/admin/AssignmentModal';
 
 type Formation = { 
   id: string; 
@@ -21,6 +22,10 @@ export default function PropertiesPanel({ formation }: PropertiesPanelProps) {
   const [visibilityMode, setVisibilityMode] = useState(formation.visibility_mode);
   const [published, setPublished] = useState(formation.published);
   const [pending, startTransition] = useTransition();
+  const [showAssignmentModal, setShowAssignmentModal] = useState<{
+    type: 'learner' | 'group' | 'pathway';
+    isOpen: boolean;
+  }>({ type: 'learner', isOpen: false });
 
   const handleSave = () => {
     startTransition(async () => {
@@ -30,6 +35,11 @@ export default function PropertiesPanel({ formation }: PropertiesPanelProps) {
         console.error('Erreur lors de la mise à jour:', error);
       }
     });
+  };
+
+  const handleAssign = async (targetType: string, targetId: string) => {
+    // TODO: Implémenter l'assignation
+    console.log('Assigning', targetType, targetId, 'to formation', formation.id);
   };
 
   const hasChanges = 
@@ -137,6 +147,38 @@ export default function PropertiesPanel({ formation }: PropertiesPanelProps) {
           </label>
         </div>
 
+        {/* Section Assignations */}
+        <div>
+          <label className="block text-sm font-medium text-white mb-3">
+            Assignations
+          </label>
+          <div className="space-y-3">
+            <button
+              onClick={() => setShowAssignmentModal({ type: 'learner', isOpen: true })}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all duration-200 font-medium"
+            >
+              <Users size={18} />
+              Assigner à des apprenants
+            </button>
+            
+            <button
+              onClick={() => setShowAssignmentModal({ type: 'group', isOpen: true })}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-200 font-medium"
+            >
+              <GraduationCap size={18} />
+              Assigner à des groupes
+            </button>
+            
+            <button
+              onClick={() => setShowAssignmentModal({ type: 'pathway', isOpen: true })}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-all duration-200 font-medium"
+            >
+              <Route size={18} />
+              Assigner à des parcours
+            </button>
+          </div>
+        </div>
+
         {/* Bouton de sauvegarde */}
         {hasChanges && (
           <button
@@ -152,6 +194,16 @@ export default function PropertiesPanel({ formation }: PropertiesPanelProps) {
           <div className="text-xs text-white/50 text-center">Mise à jour en cours…</div>
         )}
       </div>
+
+      {/* Modal d'assignation */}
+      <AssignmentModal
+        isOpen={showAssignmentModal.isOpen}
+        onClose={() => setShowAssignmentModal({ type: 'learner', isOpen: false })}
+        type={showAssignmentModal.type}
+        formationId={formation.id}
+        orgId={formation.org_id}
+        onAssign={handleAssign}
+      />
     </div>
   );
 }

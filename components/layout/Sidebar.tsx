@@ -1,8 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { LayoutDashboard, BookOpen, Layers, Folder, FileCheck, Users, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function NavItem({ href, icon: Icon, label, collapsed }: { href: string; icon: any; label: string; collapsed: boolean }) {
   const pathname = usePathname();
@@ -32,34 +31,50 @@ function NavItem({ href, icon: Icon, label, collapsed }: { href: string; icon: a
   );
 }
 
-export default function Sidebar({ role }: { role: 'admin' | 'instructor' | 'tutor' | 'learner' }) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  // Charger l'état depuis localStorage
-  useEffect(() => {
-    const savedState = localStorage.getItem('lms.sidebar');
-    if (savedState) {
-      setCollapsed(savedState === 'collapsed');
-    }
-  }, []);
-
-  // Sauvegarder l'état dans localStorage
-  useEffect(() => {
-    localStorage.setItem('lms.sidebar', collapsed ? 'collapsed' : 'expanded');
-  }, [collapsed]);
-
+export default function Sidebar({ 
+  role, 
+  collapsed, 
+  onToggle 
+}: { 
+  role: 'admin' | 'instructor' | 'tutor' | 'learner';
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <div className={`py-4 transition-[width] duration-300 ease-out ${
-      collapsed ? 'w-16' : 'w-72'
-    }`}>
+    <div className="py-4">
+      {/* Header avec bouton toggle */}
       <div className="px-4 pb-4">
-        <div className={`text-lg font-semibold text-iris-grad transition-all duration-300 ${
-          collapsed ? 'text-center' : ''
-        }`}>
-          {collapsed ? 'LMS' : 'LMS Admin'}
+        <div className="flex items-center justify-between">
+          <div className={`text-lg font-semibold text-iris-grad transition-all duration-300 ${
+            collapsed ? 'text-center w-full' : ''
+          }`}>
+            {collapsed ? 'LMS' : 'LMS Admin'}
+          </div>
+          {!collapsed && (
+            <button
+              onClick={onToggle}
+              className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+              title="Réduire la sidebar"
+            >
+              <ChevronLeft size={16} className="text-neutral-400" />
+            </button>
+          )}
         </div>
         {!collapsed && <div className="text-xs opacity-70">Espace {role}</div>}
       </div>
+
+      {/* Bouton toggle pour mode collapsed */}
+      {collapsed && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={onToggle}
+            className="w-full p-2 hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center"
+            title="Développer la sidebar"
+          >
+            <ChevronRight size={16} className="text-neutral-400" />
+          </button>
+        </div>
+      )}
 
       <nav className="space-y-1">
         <NavItem href="/admin" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} />

@@ -46,34 +46,34 @@ export default async function FormationsPage() {
     <div className="space-y-6">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-iris-grad">Formations</h2>
-          <p className="text-xs sm:text-sm opacity-70">Toutes mes formations (créées par moi et celles de mes organisations)</p>
+          <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Formations</h2>
+          <p className="text-xs sm:text-sm text-neutral-400">Toutes mes formations (créées par moi et celles de mes organisations)</p>
         </div>
-        <Link href="/admin/formations/new" className="btn-cta-lg text-sm sm:text-base px-4 py-2 sm:px-6 sm:py-3">Créer une formation</Link>
+        <Link href="/admin/formations/new" className="px-4 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl text-sm sm:text-base">Créer une formation</Link>
       </div>
 
       {/* Barre d'actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
         <div className="flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
             <input
               type="text"
               placeholder="Rechercher une formation..."
-              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-iris-500/50 focus:border-iris-500/50"
+              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
             />
           </div>
         </div>
 
         <div className="flex gap-3 sm:gap-4">
-          <select className="flex-1 sm:flex-none px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-iris-500/50 text-sm">
+          <select className="flex-1 sm:flex-none px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm">
             <option value="">Toutes les visibilités</option>
             <option value="public">Public</option>
             <option value="catalog_only">Catalogue uniquement</option>
             <option value="private">Privé</option>
           </select>
 
-          <select className="flex-1 sm:flex-none px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-iris-500/50 text-sm">
+          <select className="flex-1 sm:flex-none px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm">
             <option value="">Tous les statuts</option>
             <option value="published">Publié</option>
             <option value="draft">Brouillon</option>

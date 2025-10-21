@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Tree from './Tree';
 import Editor from './Editor';
 import PropertiesModal from './PropertiesModal';
@@ -30,6 +31,9 @@ export default function FormationBuilder({
   chapters: Chapter[]; 
   subchapters: Subchapter[];
 }) {
+  const searchParams = useSearchParams();
+  const orgSlug = searchParams.get('org');
+  
   const [selection, setSelection] = useState<{ type: 'chapter' | 'subchapter'; id: string; title: string; parentTitle?: string; } | null>(null);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
 
@@ -78,7 +82,7 @@ export default function FormationBuilder({
             
             <div className="flex items-center justify-center sm:justify-end gap-3 sm:gap-4">
               <Link
-                href={`/admin/formations/${formation.id}/preview`}
+                href={orgSlug ? `/admin/${orgSlug}/formations/${formation.id}/preview` : `/admin/formations/${formation.id}/preview`}
                 className="p-2 sm:p-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
                 title="Prévisualiser la formation"
               >

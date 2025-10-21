@@ -1,11 +1,19 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import FormationBuilder from './FormationBuilder';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic'; export const revalidate = 0;
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function Page({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ org?: string }>;
+}) {
   const sb = await supabaseServer();
   const { id: formationId } = await params;
+  const { org: orgSlug } = await searchParams;
 
   // Récupérer toutes les données en parallèle
   const [{ data: formation }, { data: sections }] = await Promise.all([
@@ -15,6 +23,20 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   if (!formation) {
     return <div className="text-red-400">Formation non trouvée</div>;
+  }
+
+  // Si un contexte d'organisation est fourni, vérifier la cohérence
+  if (orgSlug) {
+    const { data: organization } = await sb
+      .from('organizations')
+      .select('id, slug')
+      .eq('slug', orgSlug)
+      .single();
+
+    if (!organization || organization.id !== formation.org_id) {
+      console.error('Organization mismatch for formation');
+      redirect(`/admin/formations/${formationId}`);
+    }
   }
 
   // Récupérer les chapitres pour toutes les sections

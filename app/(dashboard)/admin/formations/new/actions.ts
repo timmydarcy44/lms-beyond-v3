@@ -43,5 +43,9 @@ export async function createFormationAction(form: FormData) {
   if (error) throw new Error(error.message || 'Échec de création');
 
   revalidatePath('/admin/formations');
-  redirect(`/admin/formations/${inserted.id}`);
+  
+  return {
+    ok: true,
+    formation: { id: inserted.id }
+  };
 }

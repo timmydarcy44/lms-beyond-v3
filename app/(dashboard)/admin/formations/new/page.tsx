@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createFormationAction } from './actions';
 import { Upload, Image, Eye, EyeOff, X } from 'lucide-react';
 
@@ -15,6 +16,10 @@ const themes = [
 ];
 
 export default function NewFormationPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const orgSlug = searchParams.get('org');
+  
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('');
@@ -29,7 +34,15 @@ export default function NewFormationPage() {
     try { 
       const formData = new FormData(e.currentTarget);
       formData.set('theme', selectedTheme);
-      await createFormationAction(formData); 
+      
+      const result = await createFormationAction(formData);
+      if (result.ok) {
+        // Rediriger vers la page de l'organisation si spécifiée
+        const redirectUrl = orgSlug ? `/admin/${orgSlug}/formations/${result.formation.id}` : `/admin/formations/${result.formation.id}`;
+        router.push(redirectUrl);
+      } else {
+        setErr('Erreur lors de la création');
+      }
     }
     catch (e: any) { 
       setErr(e?.message || 'Erreur inconnue'); 

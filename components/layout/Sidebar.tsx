@@ -44,6 +44,20 @@ export default function Sidebar({
 }) {
   // URLs dynamiques basées sur l'organisation actuelle
   const getOrgUrl = (path: string) => {
+    // Ne pas transformer les URLs qui n'ont pas de page correspondante avec organisation
+    const pathsWithoutOrgPages = [
+      '/admin/formations/new',
+      '/admin/parcours/new',
+      '/admin/ressources',
+      '/admin/tests',
+      '/admin/utilisateurs',
+      '/admin/settings'
+    ];
+    
+    if (pathsWithoutOrgPages.includes(path)) {
+      return path; // Garder l'URL originale
+    }
+    
     if (currentOrg && path !== '/admin') {
       return `/admin/${currentOrg}${path.replace('/admin', '')}`;
     }

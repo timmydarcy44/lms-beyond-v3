@@ -22,24 +22,24 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     }
 
     const body = await req.json();
-    const { learners, groups } = body;
+    const { learners, groups, pathways } = body;
 
-    // Vérifier que la ressource appartient à l'org
-    const { data: resource, error: resourceError } = await sb
-      .from('resources')
+    // Vérifier que la formation appartient à l'org
+    const { data: formation, error: formationError } = await sb
+      .from('formations')
       .select('id')
       .eq('id', params.id)
       .eq('org_id', org.id)
       .single();
 
-    if (resourceError || !resource) {
-      return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
+    if (formationError || !formation) {
+      return NextResponse.json({ error: 'Formation not found' }, { status: 404 });
     }
 
     // Assigner aux apprenants
     if (learners && learners.length > 0) {
       const learnerAssignments = learners.map((learnerId: string) => ({
-        resource_id: params.id,
+        formation_id: params.id,
         target_type: 'learner',
         target_id: learnerId,
         assigned_by: user.id,
@@ -47,9 +47,9 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       }));
 
       const { error: learnerError } = await admin
-        .from('resource_assignments')
+        .from('formation_assignments')
         .upsert(learnerAssignments, {
-          onConflict: 'resource_id,target_type,target_id'
+          onConflict: 'formation_id,target_type,target_id'
         });
 
       if (learnerError) {
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     // Assigner aux groupes
     if (groups && groups.length > 0) {
       const groupAssignments = groups.map((groupId: string) => ({
-        resource_id: params.id,
+        formation_id: params.id,
         target_type: 'group',
         target_id: groupId,
         assigned_by: user.id,
@@ -69,9 +69,9 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       }));
 
       const { error: groupError } = await admin
-        .from('resource_assignments')
+        .from('formation_assignments')
         .upsert(groupAssignments, {
-          onConflict: 'resource_id,target_type,target_id'
+          onConflict: 'formation_id,target_type,target_id'
         });
 
       if (groupError) {
@@ -80,9 +80,44 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       }
     }
 
+    // Ajouter aux parcours
+    if (pathways && pathways.length > 0) {
+      for (const pathwayId of pathways) {
+        // Vérifier que le parcours appartient à l'org
+        const { data: pathway, error: pathwayError } = await sb
+          .from('pathways')
+          .select('id')
+          .eq('id', pathwayId)
+          .eq('org_id', org.id)
+          .single();
+
+        if (pathwayError || !pathway) {
+          console.warn(`Pathway ${pathwayId} not found in org`);
+          continue;
+        }
+
+        // Ajouter la formation au parcours
+        const { error: pathwayItemError } = await admin
+          .from('pathway_items')
+          .upsert({
+            pathway_id: pathwayId,
+            content_id: params.id,
+            content_type: 'formation',
+            position: 1, // Position par défaut
+            created_at: new Date().toISOString()
+          }, {
+            onConflict: 'pathway_id,content_id,content_type'
+          });
+
+        if (pathwayItemError) {
+          console.error('Error adding formation to pathway:', pathwayItemError);
+        }
+      }
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('Error in resource assign API:', error);
+    console.error('Error in formation assign API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

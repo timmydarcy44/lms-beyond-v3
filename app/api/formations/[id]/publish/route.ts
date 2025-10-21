@@ -4,9 +4,9 @@ import { getCurrentOrgId } from '@/lib/org';
 
 export const runtime = 'nodejs';
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
+    const params = await context.params;
     const sb = await supabaseServer();
     const { data: { user } } = await sb.auth.getUser();
     
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { data, error } = await sb
       .from('formations')
       .update({ published: true })
-      .eq('id', id)
+      .eq('id', params.id)
       .eq('org_id', orgId)
       .select()
       .single();

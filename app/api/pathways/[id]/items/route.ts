@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getCurrentOrg } from '@/lib/org';
 
 export const runtime = 'nodejs';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const sb = await supabaseServer();
+    const admin = supabaseAdmin();
     const { data: { user } } = await sb.auth.getUser();
     
     if (!user) {
@@ -21,10 +24,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const body = await req.json();
     const { items } = body;
 
-    if (!Array.isArray(items)) {
-      return NextResponse.json({ error: 'Items must be an array' }, { status: 400 });
-    }
-
     // Vérifier que le parcours appartient à l'org
     const { data: pathway, error: pathwayError } = await sb
       .from('pathways')
@@ -37,29 +36,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Pathway not found' }, { status: 404 });
     }
 
-    // Supprimer les items existants
-    await sb
-      .from('pathway_items')
-      .delete()
-      .eq('pathway_id', params.id);
-
-    // Insérer les nouveaux items
-    if (items.length > 0) {
-      const pathwayItems = items.map((item: any, index: number) => ({
+    // Ajouter les items au parcours
+    if (items && items.length > 0) {
+      const pathwayItems = items.map((item: any) => ({
         pathway_id: params.id,
         content_id: item.content_id,
-        content_type: item.content_type, // 'formation', 'test', 'resource'
-        position: index + 1,
+        content_type: item.content_type,
+        position: item.position || 1,
         created_at: new Date().toISOString()
       }));
 
-      const { error: itemsError } = await sb
+      const { error: itemsError } = await admin
         .from('pathway_items')
-        .insert(pathwayItems);
+        .upsert(pathwayItems, {
+          onConflict: 'pathway_id,content_id,content_type'
+        });
 
       if (itemsError) {
-        console.error('Error inserting pathway items:', itemsError);
-        return NextResponse.json({ error: 'Failed to update pathway items' }, { status: 500 });
+        console.error('Error adding items to pathway:', itemsError);
+        return NextResponse.json({ error: 'Failed to add items to pathway' }, { status: 500 });
       }
     }
 

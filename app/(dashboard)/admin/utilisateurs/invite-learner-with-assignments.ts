@@ -5,8 +5,6 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { absoluteUrl } from '@/lib/url';
 import { revalidatePath } from 'next/cache';
 
-export const runtime = 'nodejs';
-
 interface InviteLearnerData {
   email: string;
   formationIds: string[];
@@ -50,7 +48,7 @@ export async function inviteLearnerWithAssignments(data: InviteLearnerData) {
     }
 
     const orgId = instructorMembership.org_id;
-    console.log(`🔍 inviteLearnerWithAssignments: Using org ${instructorMembership.organizations.name} (${orgId})`);
+    console.log(`🔍 inviteLearnerWithAssignments: Using org ${(instructorMembership.organizations as any).name} (${orgId})`);
 
     // 3. Créer ou récupérer l'utilisateur apprenant
     let learnerUser;
@@ -123,7 +121,7 @@ export async function inviteLearnerWithAssignments(data: InviteLearnerData) {
     }
 
     // 6. Créer un parcours "Starter Pack" si des formations sont assignées
-    let starterPackPathwayId = null;
+    let starterPackPathwayId: string | null = null;
     if (data.formationIds.length > 0) {
       const { data: pathway, error: pathwayError } = await supabase
         .from('pathways')

@@ -11,7 +11,7 @@ export default function TestInvitationPage() {
     setLoading(true);
     try {
       const result = await inviteLearnerWithAssignments({
-        learnerEmail: 'timdarcypro@gmail.com',
+        email: 'timdarcypro@gmail.com',
         formationIds: [],
         testIds: [],
         resourceIds: [],

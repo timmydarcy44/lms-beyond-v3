@@ -4,9 +4,9 @@ import { getCurrentOrgId } from '@/lib/org';
 
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
+    const params = await context.params;
     const sb = await supabaseServer();
     const { data: { user } } = await sb.auth.getUser();
     
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { data, error } = await sb
       .from('formations')
       .select('*')
-      .eq('id', id)
+      .eq('id', params.id)
       .eq('org_id', orgId)
       .single();
 
@@ -38,9 +38,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
+    const params = await context.params;
     const sb = await supabaseServer();
     const { data: { user } } = await sb.auth.getUser();
     
@@ -58,7 +58,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { data, error } = await sb
       .from('formations')
       .update(body)
-      .eq('id', id)
+      .eq('id', params.id)
       .eq('org_id', orgId)
       .select()
       .single();

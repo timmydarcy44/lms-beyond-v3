@@ -80,7 +80,7 @@ export async function getCurrentMembership(): Promise<UserWithMembership | null>
       };
     }
 
-    console.log(`🔍 getCurrentMembership: User ${user.email} has role ${membership.role} in org ${membership.organizations.name}`);
+    console.log(`🔍 getCurrentMembership: User ${user.email} has role ${membership.role} in org ${(membership.organizations as any).name}`);
 
     return {
       user: {
@@ -91,8 +91,8 @@ export async function getCurrentMembership(): Promise<UserWithMembership | null>
       membership: {
         role: membership.role as 'admin' | 'instructor' | 'tutor' | 'learner',
         org_id: membership.org_id,
-        org_name: membership.organizations.name,
-        org_slug: membership.organizations.slug
+        org_name: (membership.organizations as any).name,
+        org_slug: (membership.organizations as any).slug
       }
     };
   } catch (error) {

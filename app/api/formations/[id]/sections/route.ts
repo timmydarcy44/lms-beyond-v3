@@ -4,9 +4,10 @@ import { getCurrentOrgId } from '@/lib/org';
 
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id: formationId } = await params;
+    const params = await context.params;
+    const formationId = params.id;
     const sb = await supabaseServer();
     const { data: { user } } = await sb.auth.getUser();
     

@@ -4,8 +4,9 @@ import { getCurrentOrg } from '@/lib/org';
 
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const sb = await supabaseServer();
     const { data: { user } } = await sb.auth.getUser();
     
@@ -37,8 +38,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const sb = await supabaseServer();
     const { data: { user } } = await sb.auth.getUser();
     

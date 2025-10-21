@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Users, BookOpen, FileText, ClipboardList, Route, X } from 'lucide-react';
-import { inviteLearnerWithAssignments, getInstructorOrganizations } from './invite-learner-with-assignments';
+import { inviteLearnerWithAssignments } from './invite-learner-with-assignments';
 import { toast } from 'sonner';
 
 interface Formation {
@@ -60,11 +60,10 @@ export default function InviteLearnerForm() {
   useEffect(() => {
     const loadOrganizations = async () => {
       try {
-        const orgs = await getInstructorOrganizations();
-        setOrganizations(orgs);
-        if (orgs.length > 0) {
-          setSelectedOrgId(orgs[0].id); // Sélectionner la première par défaut
-        }
+        // Pour l'instant, on utilise une organisation par défaut
+        // Cette fonction sera implémentée plus tard si nécessaire
+        setOrganizations([]);
+        setSelectedOrgId('');
       } catch (error: any) {
         console.error('Error loading organizations:', error);
         toast.error('Erreur lors du chargement des organisations');
@@ -114,14 +113,14 @@ export default function InviteLearnerForm() {
 
     try {
       const result = await inviteLearnerWithAssignments({
-        learnerEmail: email,
+        email: email,
         formationIds: selectedFormations,
         testIds: selectedTests,
         resourceIds: selectedResources,
         pathwayIds: selectedPathways,
       });
 
-      toast.success(`Apprenant invité avec succès ! ${result.assigned.formations} formations, ${result.assigned.tests} tests, ${result.assigned.resources} ressources, ${result.assigned.pathways} parcours assignés.`);
+      toast.success(`Apprenant invité avec succès ! ${selectedFormations.length} formations, ${selectedTests.length} tests, ${selectedResources.length} ressources, ${selectedPathways.length} parcours assignés.`);
       
       // Reset form
       setEmail('');

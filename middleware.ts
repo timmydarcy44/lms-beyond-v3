@@ -3,6 +3,9 @@ import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
+  // TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG
+  return NextResponse.next();
+  
   const { pathname } = request.nextUrl;
 
   // Routes à exclure du middleware (login, auth, etc.)

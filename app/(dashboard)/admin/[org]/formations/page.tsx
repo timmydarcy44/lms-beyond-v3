@@ -14,7 +14,7 @@ export default async function AdminFormationsPage({
   
   try {
     // Valider l'organisation et récupérer le contexte
-    const { orgId, slug } = await resolveOrgFromSlugOrThrow(orgSlug);
+    const { orgId, slug, orgName } = await resolveOrgFromSlugOrThrow(orgSlug);
     
     const sb = await supabaseServer();
     
@@ -34,7 +34,7 @@ export default async function AdminFormationsPage({
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Formations - {slug}
+              Formations - {orgName}
             </h2>
             <p className="text-xs sm:text-sm text-neutral-400">Gérez les formations de votre organisation</p>
           </div>
@@ -142,6 +142,7 @@ export default async function AdminFormationsPage({
       </div>
     );
   } catch (error) {
+    console.error('Error in formations page:', error);
     // Si erreur (UNAUTH, ORG_NOT_FOUND, FORBIDDEN), rediriger vers /admin
     redirect('/admin');
   }

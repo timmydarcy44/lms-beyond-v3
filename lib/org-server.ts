@@ -4,8 +4,9 @@ import { supabaseServer } from '@/lib/supabase/server';
 export type OrgContext = {
   orgId: string;
   slug: string;
-  role: string;
+  orgName: string;
   userId: string;
+  role: string;
 };
 
 /**
@@ -17,36 +18,36 @@ export async function resolveOrgFromSlugOrThrow(slug: string): Promise<OrgContex
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('UNAUTH');
 
-  const { data, error } = await sb
+  const { data: org, error: orgErr } = await sb
     .from('organizations')
-    .select('id, slug')
+    .select('id, slug, name')
     .eq('slug', slug)
-    .limit(1)
     .maybeSingle();
   
-  if (error || !data) throw new Error('ORG_NOT_FOUND');
+  if (orgErr || !org) throw new Error('ORG_NOT_FOUND');
 
   const { data: mem, error: memErr } = await sb
     .from('org_memberships')
     .select('role')
-    .eq('org_id', data.id)
+    .eq('org_id', org.id)
     .eq('user_id', user.id)
     .maybeSingle();
   
   if (memErr || !mem) throw new Error('FORBIDDEN');
 
   return { 
-    orgId: data.id, 
-    slug: data.slug, 
-    role: mem.role, 
-    userId: user.id 
+    orgId: org.id, 
+    slug: org.slug, 
+    orgName: org.name, 
+    userId: user.id, 
+    role: mem.role 
   };
 }
 
 /**
  * Gets all organizations for the current user
  */
-export async function getUserOrganizations(): Promise<Array<{ id: string; slug: string; name: string }>> {
+export async function getUserOrganizations(): Promise<Array<{ id: string; slug: string; name: string; cover_url?: string }>> {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('UNAUTH');
@@ -57,7 +58,8 @@ export async function getUserOrganizations(): Promise<Array<{ id: string; slug: 
       organizations!inner(
         id,
         slug,
-        name
+        name,
+        cover_url
       )
     `)
     .eq('user_id', user.id);
@@ -65,12 +67,4 @@ export async function getUserOrganizations(): Promise<Array<{ id: string; slug: 
   if (error) throw new Error('Failed to fetch organizations');
 
   return data?.map((m: any) => m.organizations) || [];
-}
-
-/**
- * Gets the default organization for single-org users
- */
-export async function getDefaultOrgSlug(): Promise<string | null> {
-  const orgs = await getUserOrganizations();
-  return orgs.length === 1 ? orgs[0].slug : null;
 }

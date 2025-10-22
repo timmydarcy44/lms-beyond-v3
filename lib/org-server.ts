@@ -16,15 +16,22 @@ export type OrgContext = {
 export async function resolveOrgFromSlugOrThrow(slug: string): Promise<OrgContext> {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) throw new Error('UNAUTH');
+
+  if (!user) {
+    console.error('[org-resolve] UNAUTH', { slug });
+    throw new Error('UNAUTH');
+  }
 
   const { data: org, error: orgErr } = await sb
     .from('organizations')
     .select('id, slug, name')
     .eq('slug', slug)
     .maybeSingle();
-  
-  if (orgErr || !org) throw new Error('ORG_NOT_FOUND');
+
+  if (orgErr || !org) {
+    console.error('[org-resolve] ORG_NOT_FOUND', { slug, orgErr });
+    throw new Error('ORG_NOT_FOUND');
+  }
 
   const { data: mem, error: memErr } = await sb
     .from('org_memberships')
@@ -32,8 +39,11 @@ export async function resolveOrgFromSlugOrThrow(slug: string): Promise<OrgContex
     .eq('org_id', org.id)
     .eq('user_id', user.id)
     .maybeSingle();
-  
-  if (memErr || !mem) throw new Error('FORBIDDEN');
+
+  if (memErr || !mem) {
+    console.error('[org-resolve] FORBIDDEN', { slug, orgId: org.id, userId: user.id, memErr });
+    throw new Error('FORBIDDEN');
+  }
 
   return { 
     orgId: org.id, 

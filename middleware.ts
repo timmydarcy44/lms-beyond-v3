@@ -10,11 +10,20 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Laisse passer /admin (root) pour que la page server redirige vers /admin/[slug]
-  if (path === '/admin') return NextResponse.next();
-  if (path === '/formateur') return NextResponse.next();
-  if (path === '/tuteur') return NextResponse.next();
-  if (path === '/apprenant') return NextResponse.next();
+  // Laisse passer les routes dashboard root (ils décideront en Server Component)
+  if (path === '/admin' || path === '/formateur' || path === '/tuteur' || path === '/apprenant') {
+    return NextResponse.next();
+  }
+
+  // Laisse passer les routes select-org
+  if (path === '/admin/select-org' || path === '/formateur/select-org' || path === '/tuteur/select-org' || path === '/apprenant/select-org') {
+    return NextResponse.next();
+  }
+
+  // Laisse passer les routes [org] (contrôle fin côté Server Component)
+  if (path.match(/^\/(admin|formateur|tuteur|apprenant)\/[^\/]+/)) {
+    return NextResponse.next();
+  }
 
   // Pour toutes les autres routes, laisse passer
   return NextResponse.next();

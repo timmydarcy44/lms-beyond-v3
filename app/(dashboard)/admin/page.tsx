@@ -12,11 +12,11 @@ export default async function AdminIndex() {
 
   const { data } = await sb
     .from('org_memberships')
-    .select('organizations!inner(slug)')
+    .select('organizations!inner(slug,name)')
     .eq('user_id', user.id);
 
-  const slugs = (data || []).map((r: any) => r.organizations.slug);
-  if (slugs.length === 0) return <div className="p-6 text-neutral-300">Aucune organisation.</div>;
-  if (slugs.length === 1) redirect(`/admin/${slugs[0]}/formations`);
+  const orgs = (data || []).map((r: any) => r.organizations);
+  if (orgs.length === 0) return <div className="p-6 text-neutral-300">Aucune organisation associée.</div>;
+  if (orgs.length === 1) redirect(`/admin/${orgs[0].slug}/formations`);
   redirect('/admin/select-org');
 }

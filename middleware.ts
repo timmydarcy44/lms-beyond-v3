@@ -1,31 +1,23 @@
-import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function middleware(req: NextRequest) {
-  const url = new URL(req.url);
-  const path = url.pathname;
+export function middleware(req: NextRequest) {
+  const p = req.nextUrl.pathname;
 
-  // Laisse passer /login, /api, assets…
-  if (path.startsWith('/login') || path.startsWith('/api') || path.startsWith('/_next') || path.startsWith('/favicon')) {
+  // Toujours OK : login, api, assets, Next internals
+  if (
+    p.startsWith('/login') ||
+    p.startsWith('/api') ||
+    p.startsWith('/_next') ||
+    p.startsWith('/favicon') ||
+    p.startsWith('/public')
+  ) return NextResponse.next();
+
+  // Laisse passer /admin, /admin/select-org, /admin/[org]/**
+  if (p === '/admin' || p.startsWith('/admin/select-org') || /^\/admin\/[^\/]+/.test(p)) {
     return NextResponse.next();
   }
 
-  // Laisse passer les routes dashboard root (ils décideront en Server Component)
-  if (path === '/admin' || path === '/formateur' || path === '/tuteur' || path === '/apprenant') {
-    return NextResponse.next();
-  }
-
-  // Laisse passer les routes select-org
-  if (path === '/admin/select-org' || path === '/formateur/select-org' || path === '/tuteur/select-org' || path === '/apprenant/select-org') {
-    return NextResponse.next();
-  }
-
-  // Laisse passer les routes [org] (contrôle fin côté Server Component)
-  if (path.match(/^\/(admin|formateur|tuteur|apprenant)\/[^\/]+/)) {
-    return NextResponse.next();
-  }
-
-  // Pour toutes les autres routes, laisse passer
   return NextResponse.next();
 }
 

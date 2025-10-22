@@ -1,8 +1,7 @@
 // app/(dashboard)/admin/select-org/page.tsx - Netflix-style organization picker
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
-import { getUserOrganizations } from '@/lib/org-server';
-import OrgPicker from './OrgPicker';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,41 +11,36 @@ export default async function SelectOrgPage() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) redirect('/login/admin');
 
-  try {
-    // Récupérer les organisations de l'utilisateur
-    const organizations = await getUserOrganizations();
+  const { data } = await sb
+    .from('org_memberships')
+    .select('organizations!inner(slug,name)')
+    .eq('user_id', user.id);
 
-    if (organizations.length === 0) {
-      redirect('/admin'); // Rediriger vers le dispatcher qui gère le cas 0 org
-    }
+  const orgs = (data || []).map((r: any) => r.organizations);
+  if (orgs.length === 0) return <div className="p-6 text-neutral-300">Aucune organisation.</div>;
+  if (orgs.length === 1) redirect(`/admin/${orgs[0].slug}/formations`);
 
-    if (organizations.length === 1) {
-      // Une seule organisation - rediriger directement
-      const org = organizations[0];
-      redirect(`/admin/${org.slug}/dashboard`);
-    }
-
-    // Plusieurs organisations - afficher le picker
-    return (
-      <div className="min-h-screen bg-[#252525] text-white">
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
-              Choisissez votre organisation
-            </h1>
-            <p className="text-neutral-400 text-lg">
-              Sélectionnez l'organisation avec laquelle vous souhaitez travailler
-            </p>
-          </div>
-
-          {/* Picker Netflix-style */}
-          <OrgPicker organizations={organizations} />
-        </div>
+  return (
+    <div className="min-h-[calc(100vh-64px)] bg-[#252525] text-neutral-100 p-8">
+      <h1 className="text-2xl font-semibold mb-6">Choisissez une organisation</h1>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {orgs.map((o: any) => (
+          <Link
+            key={o.slug}
+            href={`/admin/${o.slug}/formations`}
+            className="group rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-elev-2 hover:-translate-y-1 transition-all"
+          >
+            <div className="aspect-[4/3] grid place-items-center bg-gradient-to-br from-iris-500/15 to-cyan-400/10">
+              <div className="text-xl font-semibold opacity-90 group-hover:opacity-100 transition">
+                {o.name}
+              </div>
+            </div>
+            <div className="px-4 py-3 text-sm text-neutral-300 bg-[#262626] border-t border-white/10">
+              Accéder à {o.slug}
+            </div>
+          </Link>
+        ))}
       </div>
-    );
-  } catch (error) {
-    console.error('Error in select-org page:', error);
-    redirect('/login/admin');
-  }
+    </div>
+  );
 }

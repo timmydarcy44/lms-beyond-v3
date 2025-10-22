@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronLeft, ChevronRight, LayoutDashboard, BookOpen, Layers, Folder, FileCheck, Users, Settings } from 'lucide-react';
+import { LogoutButton } from '../LogoutButton';
 
 function NavItem({ href, icon: Icon, label, collapsed }: { href: string; icon: any; label: string; collapsed: boolean }) {
   const pathname = usePathname();
@@ -65,7 +66,7 @@ export default function Sidebar({
   };
 
   return (
-    <div className="py-4">
+    <div className="py-4 flex flex-col h-full">
       {/* Header avec bouton toggle */}
       <div className="px-4 pb-4">
         <div className="flex items-center justify-between">
@@ -103,7 +104,8 @@ export default function Sidebar({
         </div>
       )}
 
-      <nav className="space-y-1">
+      {/* Navigation */}
+      <nav className="space-y-1 flex-1">
         <NavItem href={getOrgUrl('/admin')} icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} />
         <NavItem href={getOrgUrl('/admin/formations')} icon={BookOpen} label="Formations" collapsed={collapsed} />
         <NavItem href={getOrgUrl('/admin/ressources')} icon={Folder} label="Ressources" collapsed={collapsed} />
@@ -112,6 +114,11 @@ export default function Sidebar({
         <NavItem href={getOrgUrl('/admin/utilisateurs')} icon={Users} label="Utilisateurs" collapsed={collapsed} />
         <NavItem href={getOrgUrl('/admin/settings')} icon={Settings} label="Paramètres" collapsed={collapsed} />
       </nav>
+
+      {/* Bouton de déconnexion en bas */}
+      <div className="px-3 pt-4 border-t border-white/10">
+        <LogoutButton />
+      </div>
     </div>
   );
 }

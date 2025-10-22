@@ -48,23 +48,31 @@ export async function resolveOrgFromSlugOrThrow(slug: string): Promise<OrgContex
  * Gets all organizations for the current user
  */
 export async function getUserOrganizations(): Promise<Array<{ id: string; slug: string; name: string; cover_url?: string }>> {
-  const sb = await supabaseServer();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) throw new Error('UNAUTH');
+  try {
+    const sb = await supabaseServer();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) throw new Error('UNAUTH');
 
-  const { data, error } = await sb
-    .from('org_memberships')
-    .select(`
-      organizations!inner(
-        id,
-        slug,
-        name,
-        cover_url
-      )
-    `)
-    .eq('user_id', user.id);
+    const { data, error } = await sb
+      .from('org_memberships')
+      .select(`
+        organizations!inner(
+          id,
+          slug,
+          name,
+          cover_url
+        )
+      `)
+      .eq('user_id', user.id);
 
-  if (error) throw new Error('Failed to fetch organizations');
+    if (error) {
+      console.error('Error fetching organizations:', error);
+      throw new Error(`Failed to fetch organizations: ${error.message}`);
+    }
 
-  return data?.map((m: any) => m.organizations) || [];
+    return data?.map((m: any) => m.organizations) || [];
+  } catch (error) {
+    console.error('getUserOrganizations error:', error);
+    throw error;
+  }
 }

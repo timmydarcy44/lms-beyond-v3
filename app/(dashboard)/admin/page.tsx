@@ -4,11 +4,22 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { getUserOrganizations } from '@/lib/org-server';
 
 export default async function AdminIndex() {
-  const sb = await supabaseServer();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect('/login/admin');
-
   try {
+    const sb = await supabaseServer();
+    const { data: { user }, error: userError } = await sb.auth.getUser();
+    
+    if (userError) {
+      console.error('Auth error in admin dispatcher:', userError);
+      redirect('/login/admin');
+    }
+    
+    if (!user) {
+      console.log('No user found in admin dispatcher');
+      redirect('/login/admin');
+    }
+
+    console.log('Admin dispatcher - User:', user.email);
+
     // Récupérer les organisations de l'utilisateur
     const organizations = await getUserOrganizations();
 

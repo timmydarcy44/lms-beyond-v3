@@ -5,6 +5,11 @@ export async function getSingleOrg() {
   const id = process.env.SINGLE_ORG_ID || '';
   
   if (!slug && !id) {
+    // En développement, retourner une org mock pour éviter les erreurs
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[getSingleOrg] Variables d\'environnement manquantes, utilisation d\'une org mock');
+      return { orgId: 'mock-org-id', slug: 'mock-org' };
+    }
     throw new Error('SINGLE_ORG_{SLUG|ID} missing');
   }
 
@@ -22,6 +27,11 @@ export async function getSingleOrg() {
     .maybeSingle();
     
   if (error || !data) {
+    // En développement, retourner une org mock
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[getSingleOrg] Erreur Supabase, utilisation d\'une org mock:', error?.message);
+      return { orgId: 'mock-org-id', slug: slug || 'mock-org' };
+    }
     throw new Error(`Single org not found: ${error?.message || 'No data'}`);
   }
   

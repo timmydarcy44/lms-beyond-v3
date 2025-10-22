@@ -1,140 +1,137 @@
-import { getCurrentOrg } from '@/lib/org';
-import { PageHeader } from '@/components/admin/PageHeader';
-import { StatCard } from '@/components/admin/StatCard';
-import { Users, BookOpen, GraduationCap, FileText } from 'lucide-react';
-import Link from 'next/link';
+// app/(dashboard)/admin/[org]/dashboard/page.tsx
+import { redirect } from 'next/navigation';
+import { resolveOrgFromSlugOrThrow } from '@/lib/org-server';
+import { supabaseServer } from '@/lib/supabase/server';
 
-export default async function AdminDashboard() {
-  const org = await getCurrentOrg();
+export default async function AdminDashboardPage({
+  params,
+}: {
+  params: Promise<{ org: string }>;
+}) {
+  const { org: orgSlug } = await params;
+  
+  try {
+    // Valider l'organisation et récupérer le contexte
+    const { orgId, slug, orgName } = await resolveOrgFromSlugOrThrow(orgSlug);
+    
+    const sb = await supabaseServer();
+    
+    // Récupérer quelques statistiques pour le dashboard
+    const { data: formations } = await sb
+      .from('formations')
+      .select('id, title, published, created_at')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(5);
 
-  if (!org) {
-    // Pas d'org → propose un onboarding simple
+    const { data: members } = await sb
+      .from('org_memberships')
+      .select('id, role, users!inner(email)')
+      .eq('org_id', orgId)
+      .limit(5);
+
     return (
-      <div className="space-y-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-iris-grad">Bienvenue</h2>
-          <p className="mt-2 opacity-80">
-            Aucune organisation détectée pour votre compte. Créez-en une pour commencer.
-          </p>
-          <Link href="/admin/settings" className="btn-cta-lg mt-4 inline-flex">Créer mon organisation</Link>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            Dashboard - {orgName}
+          </h1>
+          <p className="text-neutral-400">Vue d'ensemble de votre organisation</p>
         </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Formations</h3>
+            <p className="text-3xl font-bold text-blue-400">{formations?.length || 0}</p>
+            <p className="text-sm text-neutral-400">Total créées</p>
+          </div>
+          
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Membres</h3>
+            <p className="text-3xl font-bold text-green-400">{members?.length || 0}</p>
+            <p className="text-sm text-neutral-400">Dans l'organisation</p>
+          </div>
+          
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Publiées</h3>
+            <p className="text-3xl font-bold text-purple-400">
+              {formations?.filter(f => f.published).length || 0}
+            </p>
+            <p className="text-sm text-neutral-400">Formations actives</p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Actions rapides</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <a
+              href={`/admin/${slug}/formations/new`}
+              className="p-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 text-center font-medium"
+            >
+              Nouvelle formation
+            </a>
+            <a
+              href={`/admin/${slug}/formations`}
+              className="p-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-200 text-center font-medium"
+            >
+              Gérer formations
+            </a>
+            <a
+              href={`/admin/${slug}/utilisateurs`}
+              className="p-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg transition-all duration-200 text-center font-medium"
+            >
+              Utilisateurs
+            </a>
+            <a
+              href={`/admin/${slug}/settings`}
+              className="p-4 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-lg transition-all duration-200 text-center font-medium"
+            >
+              Paramètres
+            </a>
+          </div>
+        </div>
+
+        {/* Recent Formations */}
+        {formations && formations.length > 0 && (
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Formations récentes</h3>
+            <div className="space-y-3">
+              {formations.map((formation: any) => (
+                <div key={formation.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-white">{formation.title}</h4>
+                    <p className="text-sm text-neutral-400">
+                      Créée le {new Date(formation.created_at).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      formation.published 
+                        ? 'bg-green-500/20 text-green-400' 
+                        : 'bg-orange-500/20 text-orange-400'
+                    }`}>
+                      {formation.published ? 'Publiée' : 'Brouillon'}
+                    </span>
+                    <a
+                      href={`/admin/${slug}/formations/${formation.id}`}
+                      className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors"
+                    >
+                      Modifier
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
+  } catch (error) {
+    console.error('Error in dashboard page:', error);
+    // Si erreur (UNAUTH, ORG_NOT_FOUND, FORBIDDEN), rediriger vers /admin
+    redirect('/admin');
   }
-
-  // Mock data pour l'instant - à remplacer par de vraies requêtes
-  const stats = {
-    formateurs: 12,
-    tuteurs: 8,
-    apprenants: 156,
-    formations: 24,
-  };
-
-  const recentActivity = [
-    { id: '1', action: 'Nouvelle formation créée', user: 'Marie Dubois', time: 'Il y a 2h' },
-    { id: '2', action: 'Utilisateur inscrit', user: 'Jean Martin', time: 'Il y a 4h' },
-    { id: '3', action: 'Formation publiée', user: 'Sophie Leroy', time: 'Il y a 6h' },
-    { id: '4', action: 'Test complété', user: 'Pierre Durand', time: 'Il y a 8h' },
-    { id: '5', action: 'Ressource ajoutée', user: 'Anna Petit', time: 'Il y a 12h' },
-  ];
-
-  return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Tableau de bord"
-        subtitle={`Vue d'ensemble de ${org.name || 'l\'organisation'}`}
-      />
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Formateurs"
-          value={stats.formateurs}
-          icon="users"
-          trend={{ value: 12, isPositive: true }}
-        />
-        <StatCard
-          title="Tuteurs"
-          value={stats.tuteurs}
-          icon="users"
-          trend={{ value: 5, isPositive: true }}
-        />
-        <StatCard
-          title="Apprenants"
-          value={stats.apprenants}
-          icon="graduation-cap"
-          trend={{ value: 8, isPositive: true }}
-        />
-        <StatCard
-          title="Formations"
-          value={stats.formations}
-          icon="book-open"
-          trend={{ value: 3, isPositive: true }}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Activité récente */}
-        <div className="glass p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-white mb-4">Activité récente</h3>
-          <div className="space-y-4">
-            {recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between py-3 border-b border-white/10 last:border-0">
-                <div>
-                  <p className="text-white font-medium">{activity.action}</p>
-                  <p className="text-white/70 text-sm">{activity.user}</p>
-                </div>
-                <span className="text-white/50 text-sm">{activity.time}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Accès rapides */}
-        <div className="glass p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-white mb-4">Accès rapides</h3>
-          <div className="space-y-3">
-            <Link
-              href={`/admin/${org.slug}/formations/new`}
-              className="flex items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
-            >
-              <div className="p-2 bg-iris-500/20 rounded-lg mr-4">
-                <BookOpen className="h-5 w-5 text-iris-400" />
-              </div>
-              <div>
-                <p className="font-medium text-white group-hover:text-iris-300">Créer une formation</p>
-                <p className="text-sm text-white/70">Nouvelle formation interactive</p>
-              </div>
-            </Link>
-
-            <Link
-              href={`/admin/${org.slug}/utilisateurs`}
-              className="flex items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
-            >
-              <div className="p-2 bg-blush-500/20 rounded-lg mr-4">
-                <Users className="h-5 w-5 text-blush-400" />
-              </div>
-              <div>
-                <p className="font-medium text-white group-hover:text-blush-300">Inviter un formateur</p>
-                <p className="text-sm text-white/70">Ajouter un nouvel instructeur</p>
-              </div>
-            </Link>
-
-            <Link
-              href={`/admin/${org.slug}/settings`}
-              className="flex items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
-            >
-              <div className="p-2 bg-white/10 rounded-lg mr-4">
-                <FileText className="h-5 w-5 text-white/70" />
-              </div>
-              <div>
-                <p className="font-medium text-white">Paramètres</p>
-                <p className="text-sm text-white/70">Configuration de l'organisation</p>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }

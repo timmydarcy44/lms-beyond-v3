@@ -37,7 +37,7 @@ export default async function AdminIndex() {
     if (organizations.length === 1) {
       // Une seule organisation - rediriger directement
       const org = organizations[0];
-      redirect(`/admin/${org.slug}/formations`);
+      redirect(`/admin/${org.slug}/dashboard`);
     }
 
     // Plusieurs organisations - rediriger vers le picker

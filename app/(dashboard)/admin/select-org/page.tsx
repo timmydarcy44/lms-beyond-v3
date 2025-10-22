@@ -20,7 +20,7 @@ export default async function SelectOrgPage() {
     if (organizations.length === 1) {
       // Une seule organisation - rediriger directement
       const org = organizations[0];
-      redirect(`/admin/${org.slug}/formations`);
+      redirect(`/admin/${org.slug}/dashboard`);
     }
 
     // Plusieurs organisations - afficher le picker

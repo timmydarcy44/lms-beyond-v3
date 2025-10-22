@@ -20,7 +20,7 @@ export default function OrgPicker({ organizations }: OrgPickerProps) {
   const [hoveredOrg, setHoveredOrg] = useState<string | null>(null);
 
   const handleOrgSelect = (org: Organization) => {
-    router.push(`/admin/${org.slug}/formations`);
+    router.push(`/admin/${org.slug}/dashboard`);
   };
 
   const handleSignOut = async () => {

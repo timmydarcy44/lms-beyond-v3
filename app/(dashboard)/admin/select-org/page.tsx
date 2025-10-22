@@ -4,6 +4,9 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { getUserOrganizations } from '@/lib/org-server';
 import OrgPicker from './OrgPicker';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function SelectOrgPage() {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();

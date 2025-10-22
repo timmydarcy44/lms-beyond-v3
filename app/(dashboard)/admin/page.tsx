@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { getUserOrganizations } from '@/lib/org-server';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function AdminIndex() {
   try {
     const sb = await supabaseServer();

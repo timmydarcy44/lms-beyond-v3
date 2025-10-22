@@ -3,15 +3,15 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseServerActions } from '@/lib/supabase/server-actions';
-import { resolveOrgFromSlugOrThrow } from '@/lib/org-server';
+import { getSingleOrg } from '@/lib/org-single';
 
-export async function createFormationAction(form: FormData, orgSlug: string) {
+export async function createFormationAction(form: FormData) {
   const sb = await supabaseServerActions();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
-  // Utiliser notre helper pour résoudre l'organisation
-  const { orgId } = await resolveOrgFromSlugOrThrow(orgSlug);
+  // Utiliser l'organisation unique
+  const { orgId } = await getSingleOrg();
 
   const title = String(form.get('title') || '').trim();
   if (!title) throw new Error('Titre obligatoire');

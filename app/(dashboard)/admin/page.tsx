@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
+import { getSingleOrg } from '@/lib/org-single';
 
 export default async function AdminIndex() {
   try {
@@ -16,27 +17,22 @@ export default async function AdminIndex() {
       redirect('/login/admin');
     }
 
-    const { data, error } = await sb
+    // Vérifier que l'utilisateur est admin de l'organisation unique
+    const { orgId } = await getSingleOrg();
+    const { data: membership, error: membershipError } = await sb
       .from('org_memberships')
-      .select('organizations!inner(slug,name)')
-      .eq('user_id', user.id);
+      .select('role')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (error) {
-      console.error('[admin/page] memberships error', error);
-      redirect('/login/admin');
+    if (membershipError || !membership || membership.role !== 'admin') {
+      console.error('[admin/page] Not admin or membership error:', membershipError);
+      redirect('/unauthorized');
     }
 
-    const orgs = (data || []).map((r: any) => r.organizations);
-    if (orgs.length === 0) {
-      return (
-        <div className="min-h-[60vh] grid place-items-center text-neutral-300">
-          Aucune organisation associée à votre compte.
-        </div>
-      );
-    }
-    if (orgs.length === 1) redirect(`/admin/${orgs[0].slug}/dashboard`);
-    // multi-org → vers la page choice SANS layout dashboard
-    redirect(`/admin/choice`);
+    // Rediriger vers le dashboard
+    redirect('/admin/dashboard');
   } catch (error) {
     console.error('[admin/page] Unexpected error:', error);
     redirect('/login/admin');

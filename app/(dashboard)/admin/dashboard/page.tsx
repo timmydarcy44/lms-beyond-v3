@@ -1,6 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 import { getSingleOrg } from '@/lib/org-single';
-import Link from 'next/link';
 
 function firstName(fullName?: string | null, email?: string | null) {
   if (fullName && fullName.trim()) return fullName.trim().split(/\s+/)[0];
@@ -12,9 +12,7 @@ export default async function AdminDashboard() {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   
-  if (!user) {
-    return <div className="p-6 text-neutral-300">Non connecté</div>;
-  }
+  if (!user) redirect('/login/admin');
 
   // Récupérer le prénom du profil utilisateur
   const { data: profile } = await sb
@@ -75,37 +73,37 @@ export default async function AdminDashboard() {
 
       {/* Actions rapides */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Link 
+        <a 
           href="/admin/formations/new"
           className="bg-gradient-to-r from-iris-500 to-cyan-400 text-white rounded-xl p-4 hover:opacity-90 transition"
         >
           <div className="font-semibold">Nouvelle Formation</div>
           <div className="text-sm opacity-90">Créer une formation</div>
-        </Link>
+        </a>
         
-        <Link 
+        <a 
           href="/admin/parcours/new"
           className="bg-gradient-to-r from-purple-500 to-pink-400 text-white rounded-xl p-4 hover:opacity-90 transition"
         >
           <div className="font-semibold">Nouveau Parcours</div>
           <div className="text-sm opacity-90">Créer un parcours</div>
-        </Link>
+        </a>
         
-        <Link 
+        <a 
           href="/admin/tests/new"
           className="bg-gradient-to-r from-green-500 to-emerald-400 text-white rounded-xl p-4 hover:opacity-90 transition"
         >
           <div className="font-semibold">Nouveau Test</div>
           <div className="text-sm opacity-90">Créer un test</div>
-        </Link>
+        </a>
         
-        <Link 
+        <a 
           href="/admin/ressources/new"
           className="bg-gradient-to-r from-orange-500 to-red-400 text-white rounded-xl p-4 hover:opacity-90 transition"
         >
           <div className="font-semibold">Nouvelle Ressource</div>
           <div className="text-sm opacity-90">Ajouter une ressource</div>
-        </Link>
+        </a>
       </div>
     </div>
   );

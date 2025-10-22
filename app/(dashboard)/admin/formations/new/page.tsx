@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createFormationAction } from './actions';
 import { Upload, Image, Eye, EyeOff, X } from 'lucide-react';
 
@@ -17,6 +17,8 @@ const themes = [
 
 export default function NewFormationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const orgSlug = searchParams.get('org');
   
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,10 +44,16 @@ export default function NewFormationPage() {
         }
       }
       
-      const result = await createFormationAction(formData);
+      if (!orgSlug) {
+        setErr('Organisation non spécifiée');
+        setLoading(false);
+        return;
+      }
+      
+      const result = await createFormationAction(formData, orgSlug);
       if (result.ok) {
         // Rediriger vers le builder de la formation
-        router.push(`/admin/formations/${result.formation.id}`);
+        router.push(`/admin/${orgSlug}/formations/${result.formation.id}`);
       } else {
         setErr('Erreur lors de la création');
         setLoading(false);

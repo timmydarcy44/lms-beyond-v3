@@ -1,39 +1,49 @@
 import { supabaseServer } from '@/lib/supabase/server';
 
 export async function getSingleOrg() {
-  const slug = process.env.SINGLE_ORG_SLUG || '';
-  const id = process.env.SINGLE_ORG_ID || '';
+  const slug = process.env.SINGLE_ORG_SLUG;
+  const id = process.env.SINGLE_ORG_ID;
   
   if (!slug && !id) {
-    // En développement, retourner une org mock pour éviter les erreurs
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[getSingleOrg] Variables d\'environnement manquantes, utilisation d\'une org mock');
-      return { orgId: 'mock-org-id', slug: 'mock-org' };
-    }
-    throw new Error('SINGLE_ORG_{SLUG|ID} missing');
+    throw new Error('SINGLE_ORG_SLUG or SINGLE_ORG_ID must be set in environment variables');
   }
 
-  // Si ID fourni → renvoyer directement
-  if (id) {
-    return { orgId: id, slug: slug || null };
-  }
-
-  // Sinon résoudre l'ID via le slug
   const sb = await supabaseServer();
-  const { data, error } = await sb
-    .from('organizations')
-    .select('id, slug')
-    .eq('slug', slug)
-    .maybeSingle();
+  const { data: { user } } = await sb.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Si on a un slug, chercher par slug
+  if (slug) {
+    const { data: org, error } = await sb
+      .from('organizations')
+      .select('id, slug, name')
+      .eq('slug', slug)
+      .single();
     
-  if (error || !data) {
-    // En développement, retourner une org mock
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[getSingleOrg] Erreur Supabase, utilisation d\'une org mock:', error?.message);
-      return { orgId: 'mock-org-id', slug: slug || 'mock-org' };
+    if (error || !org) {
+      throw new Error(`Organization with slug '${slug}' not found`);
     }
-    throw new Error(`Single org not found: ${error?.message || 'No data'}`);
+    
+    return org;
   }
   
-  return { orgId: data.id, slug: data.slug };
+  // Sinon chercher par ID
+  if (id) {
+    const { data: org, error } = await sb
+      .from('organizations')
+      .select('id, slug, name')
+      .eq('id', id)
+      .single();
+    
+    if (error || !org) {
+      throw new Error(`Organization with ID '${id}' not found`);
+    }
+    
+    return org;
+  }
+  
+  throw new Error('No organization identifier provided');
 }

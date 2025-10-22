@@ -1,45 +1,62 @@
-import { notFound, redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
-import { getSingleOrg } from '@/lib/org-single';
+import FormationBuilder from './FormationBuilder';
+import { redirect } from 'next/navigation';
 
-export default async function FormationBuilderPage({ 
-  params 
+export const dynamic = 'force-dynamic'; export const revalidate = 0;
+
+export default async function Page({ 
+  params, 
+  searchParams 
 }: { 
-  params: Promise<{ id: string }> 
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ org?: string }>;
 }) {
-  const { id } = await params;
   const sb = await supabaseServer();
-  const { data: { user } } = await sb.auth.getUser();
-  
-  if (!user) {
-    return <div className="p-6 text-neutral-300">Non connecté</div>;
+  const { id: formationId } = await params;
+  const { org: orgSlug } = await searchParams;
+
+  // Récupérer toutes les données en parallèle
+  const [{ data: formation }, { data: sections }] = await Promise.all([
+    sb.from('formations').select('id, title, reading_mode, visibility_mode, published, org_id').eq('id', formationId).single(),
+    sb.from('sections').select('id, title, position').eq('formation_id', formationId).order('position', { ascending:true })
+  ]);
+
+  if (!formation) {
+    return <div className="text-red-400">Formation non trouvée</div>;
   }
 
-  // Récupérer l'organisation unique
-  const { orgId } = await getSingleOrg();
+  // Si un contexte d'organisation est fourni, vérifier la cohérence
+  if (orgSlug) {
+    const { data: organization } = await sb
+      .from('organizations')
+      .select('id, slug')
+      .eq('slug', orgSlug)
+      .single();
 
-  // Vérifier que l'utilisateur est admin de cette organisation
-  const { data: membership, error: membershipError } = await sb
-    .from('org_memberships')
-    .select('role')
-    .eq('org_id', orgId)
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (membershipError || !membership || membership.role !== 'admin') {
-    return <div className="p-6 text-neutral-300">Accès refusé</div>;
+    if (!organization || organization.id !== formation.org_id) {
+      console.error('Organization mismatch for formation');
+      redirect(`/admin/formations/${formationId}`);
+    }
   }
 
-  // Récupérer la formation
-  const { data: formation } = await sb
-    .from('formations')
-    .select('id, org_id, title, status')
-    .eq('org_id', orgId)
-    .eq('id', id)
-    .maybeSingle();
+  // Récupérer les chapitres pour toutes les sections
+  const sectionIds = sections?.map(s => s.id) ?? [];
+  const { data: chapters } = sectionIds.length > 0 
+    ? await sb.from('chapters').select('id, section_id, title, position').in('section_id', sectionIds).order('position', { ascending:true })
+    : { data: [] };
 
-  if (!formation) notFound();
+  // Récupérer les sous-chapitres pour tous les chapitres
+  const chapterIds = chapters?.map(c => c.id) ?? [];
+  const { data: subchapters } = chapterIds.length > 0
+    ? await sb.from('subchapters').select('id, chapter_id, title, position').in('chapter_id', chapterIds).order('position', { ascending:true })
+    : { data: [] };
 
-  // Rediriger vers le builder général
-  redirect(`/admin/formations/${formation.id}`);
+  return (
+    <FormationBuilder
+      formation={formation}
+      sections={sections ?? []}
+      chapters={chapters ?? []}
+      subchapters={subchapters ?? []}
+    />
+  );
 }

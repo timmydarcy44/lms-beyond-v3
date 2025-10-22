@@ -1,44 +1,89 @@
-// app/(dashboard)/admin/formations/page.tsx
-import { supabaseServer } from '@/lib/supabase/server';
-import { Plus, Search, GraduationCap, Edit, Eye } from 'lucide-react';
-import Link from 'next/link';
-import { getSingleOrg } from '@/lib/org-single';
+export const dynamic = 'force-dynamic'; export const revalidate = 0;
 
-export default async function AdminFormationsPage() {
+import { supabaseServer } from '@/lib/supabase/server';
+import FormationCard from '@/components/admin/FormationCard';
+import { Plus, Search, Filter } from 'lucide-react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+export default async function FormationsPage() {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
-  
-  if (!user) {
-    return <div className="p-6 text-neutral-300">Non connecté</div>;
+  if (!user) return null;
+
+  // Récupérer toutes les organisations de l'utilisateur
+  const { data: memberships } = await sb
+    .from('org_memberships')
+    .select(`
+      organizations!inner(
+        id,
+        name,
+        slug
+      )
+    `)
+    .eq('user_id', user.id);
+
+  if (!memberships || memberships.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-semibold text-white">Formations</h2>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-neutral-400 mb-4">Aucune organisation associée à votre compte</p>
+          <p className="text-sm text-neutral-500">Contactez votre administrateur</p>
+        </div>
+      </div>
+    );
   }
 
-  // Récupérer l'organisation unique
-  const { orgId } = await getSingleOrg();
-  
-  // Récupérer les formations de cette organisation
-  const { data: formations, error } = await sb
+  // Si plusieurs organisations, rediriger vers la sélection
+  if (memberships.length > 1) {
+    redirect('/admin/select-org');
+  }
+
+  // Une seule organisation - récupérer ses formations
+  const orgId = (memberships[0] as any).organizations.id;
+  const { data, error } = await sb
     .from('formations')
     .select('id, title, cover_url, visibility_mode, published, updated_at, org_id, theme')
     .eq('org_id', orgId)
     .order('updated_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching formations:', error);
+    // Affiche l'erreur vraie pour debug
+    return (
+      <div className="space-y-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-iris-grad">Formations</h2>
+        </div>
+        <pre className="text-red-400 text-xs whitespace-pre-wrap bg-black/20 p-4 rounded">
+          {JSON.stringify(error, null, 2)}
+        </pre>
+      </div>
+    );
+  }
+
+  if (!data?.length) {
+    return (
+      <div className="space-y-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-iris-grad">Formations</h2>
+          <Link href="/admin/formations/new" className="btn-cta-lg">Créer une formation</Link>
+        </div>
+        <div className="opacity-70">Aucune formation trouvée.</div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-white">
-            Formations
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-400">Gérez vos formations</p>
+          <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Formations</h2>
+          <p className="text-xs sm:text-sm text-neutral-400">Toutes mes formations (créées par moi et celles de mes organisations)</p>
         </div>
-        <Link href="/admin/formations/new" className="px-4 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl text-sm sm:text-base flex items-center gap-2">
-          <Plus size={16} />
-          Nouvelle formation
-        </Link>
+        <Link href="/admin/formations/new" className="px-4 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl text-sm sm:text-base">Créer une formation</Link>
       </div>
 
       {/* Barre d'actions */}
@@ -56,86 +101,26 @@ export default async function AdminFormationsPage() {
 
         <div className="flex gap-3 sm:gap-4">
           <select className="flex-1 sm:flex-none px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm">
-            <option value="">Toutes les formations</option>
-            <option value="published">Publiées</option>
-            <option value="draft">Brouillons</option>
+            <option value="">Toutes les visibilités</option>
+            <option value="public">Public</option>
+            <option value="catalog_only">Catalogue uniquement</option>
+            <option value="private">Privé</option>
+          </select>
+
+          <select className="flex-1 sm:flex-none px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm">
+            <option value="">Tous les statuts</option>
+            <option value="published">Publié</option>
+            <option value="draft">Brouillon</option>
           </select>
         </div>
       </div>
 
       {/* Grid des formations */}
-      {!formations || formations.length === 0 ? (
-        <div className="text-center py-12">
-          <GraduationCap size={48} className="mx-auto text-neutral-400 mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">Aucune formation</h3>
-          <p className="text-neutral-400 mb-6">Créez votre première formation pour commencer.</p>
-          <Link
-            href="/admin/formations/new"
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 font-medium"
-          >
-            Créer une formation
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {formations.map((formation: any) => (
-            <div key={formation.id} className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 relative">
-              {/* Image de couverture */}
-              <div className="aspect-video bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 flex items-center justify-center relative overflow-hidden">
-                {formation.cover_url ? (
-                  <img 
-                    src={formation.cover_url} 
-                    alt={formation.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="text-white/50 text-sm">Image de couverture</div>
-                )}
-              </div>
-
-              {/* Contenu de la carte */}
-              <div className="p-3 sm:p-4">
-                {/* Badge de statut */}
-                <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    formation.published 
-                      ? 'bg-green-500/20 text-green-400' 
-                      : 'bg-orange-500/20 text-orange-400'
-                  }`}>
-                    {formation.published ? 'Publié' : 'Brouillon'}
-                  </span>
-                </div>
-
-                {/* Titre */}
-                <h3 className="font-semibold text-white mb-2 line-clamp-2 group-hover:text-blue-300 transition-colors text-sm sm:text-base">
-                  {formation.title}
-                </h3>
-
-                {/* Actions */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/admin/formations/${formation.id}`}
-                      className="flex-1 sm:flex-none px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-xs sm:text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl text-center"
-                    >
-                      <Edit className="h-3 w-3 inline mr-1" />
-                      Modifier
-                    </Link>
-                    
-                    <Link
-                      href={`/admin/formations/${formation.id}/preview`}
-                      className="flex-1 sm:flex-none px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl text-center"
-                    >
-                      <Eye className="h-3 w-3 inline mr-1" />
-                      Prévisualiser
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        {data.map((formation) => (
+          <FormationCard key={formation.id} formation={formation} />
+        ))}
+      </div>
     </div>
   );
 }

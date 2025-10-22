@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export function middleware() {
+  // Pas de logique de redirection ici pour /admin ou /login.
   return NextResponse.next();
 }
 

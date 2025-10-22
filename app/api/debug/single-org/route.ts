@@ -7,16 +7,13 @@ export async function GET() {
     const r = await getSingleOrg();
     return NextResponse.json({
       ok: true,
-      env: { 
-        slug: process.env.SINGLE_ORG_SLUG ?? null, 
-        id: process.env.SINGLE_ORG_ID ?? null 
+      env: {
+        slug: process.env.SINGLE_ORG_SLUG ?? null,
+        id: process.env.SINGLE_ORG_ID ?? null,
       },
-      resolved: r
+      resolved: r,
     });
   } catch (e: any) {
-    return NextResponse.json({ 
-      ok: false, 
-      error: e?.message 
-    }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e?.message }, { status: 500 });
   }
 }

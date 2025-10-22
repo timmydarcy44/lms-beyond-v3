@@ -44,7 +44,7 @@ export async function GET() {
       user: { id: user.id, email: user.email },
       organizations: orgs,
       orgCount: orgs.length,
-      shouldRedirect: orgs.length === 1 ? `/admin/${orgs[0].slug}/dashboard` : '/admin/choice'
+      shouldRedirect: orgs.length === 1 ? '/admin/dashboard' : '/admin/choice'
     });
 
   } catch (error) {

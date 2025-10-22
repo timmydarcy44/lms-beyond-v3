@@ -2,40 +2,51 @@ import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import Link from 'next/link';
 
-function firstNameOf(fullName?: string | null, email?: string | null) {
-  if (fullName && fullName.trim().length > 0) return fullName.trim().split(/\s+/)[0];
+function firstName(fullName?: string | null, email?: string | null) {
+  if (fullName && fullName.trim()) return fullName.trim().split(/\s+/)[0];
   if (email) return email.split('@')[0];
   return 'là';
 }
 
-export default async function OrgChoice() {
+export default async function OrgChoicePage() {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) redirect('/login/admin');
 
-  const { data: prof } = await sb
+  // le prénom doit venir du PROFIL DU USER CONNECTÉ, pas d'une autre personne
+  const { data: profile } = await sb
     .from('profiles')
     .select('full_name')
     .eq('id', user.id)
     .maybeSingle();
 
-  const { data } = await sb
+  const { data, error } = await sb
     .from('org_memberships')
     .select('organizations!inner(slug,name)')
     .eq('user_id', user.id);
 
+  if (error) {
+    console.error('[choice] memberships error', error);
+    redirect('/login/admin');
+  }
+
   const orgs = (data || []).map((r: any) => r.organizations);
-  if (orgs.length === 0) return <div className="min-h-screen grid place-items-center text-neutral-300">Aucune organisation associée.</div>;
+  if (orgs.length === 0) redirect('/admin');            // laisser le dispatcher gérer
   if (orgs.length === 1) redirect(`/admin/${orgs[0].slug}/dashboard`);
 
-  const firstName = firstNameOf(prof?.full_name, user.email || '');
+  const hello = firstName(profile?.full_name, user.email);
 
   return (
     <div className="min-h-screen bg-[#252525] text-neutral-100">
-      <div className="mx-auto max-w-5xl px-6 py-10">
-        <h1 className="text-2xl md:text-3xl font-semibold mb-8">
-          Bonjour <span className="bg-gradient-to-r from-iris-500 to-cyan-400 bg-clip-text text-transparent">{firstName}</span>
+      <div className="mx-auto max-w-5xl px-6 py-12">
+        <h1 className="text-3xl font-semibold mb-8">
+          Bonjour <span className="bg-gradient-to-r from-iris-500 to-cyan-400 bg-clip-text text-transparent">
+            {hello}
+          </span>
         </h1>
+
+        <p className="text-neutral-400 mb-6">Choisissez votre organisation :</p>
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {orgs.map((o: any) => (
             <Link

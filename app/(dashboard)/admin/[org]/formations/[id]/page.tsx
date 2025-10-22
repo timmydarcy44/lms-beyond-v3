@@ -1,8 +1,21 @@
 import { notFound, redirect } from 'next/navigation';
-import { resolveOrgFromSlugOrThrow } from '@/lib/org-server';
 import { supabaseServer } from '@/lib/supabase/server';
 
-export default async function FormationBuilderPage({ 
+async function resolveOrgFromSlugOrThrow(slug: string) {
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) throw new Error('UNAUTH');
+
+  const { data: org } = await sb.from('organizations').select('id,slug').eq('slug', slug).maybeSingle();
+  if (!org) throw new Error('ORG_NOT_FOUND');
+
+  const { data: mem } = await sb.from('org_memberships').select('role').eq('org_id', org.id).eq('user_id', user.id).maybeSingle();
+  if (!mem) throw new Error('FORBIDDEN');
+
+  return { orgId: org.id, userId: user.id, role: mem.role };
+}
+
+export default async function BuilderPage({ 
   params 
 }: { 
   params: Promise<{ org: string; id: string }> 
@@ -14,8 +27,8 @@ export default async function FormationBuilderPage({
   const { data: formation } = await sb
     .from('formations')
     .select('id, org_id, title, status')
-    .eq('id', id)
     .eq('org_id', ctx.orgId)
+    .eq('id', id)
     .maybeSingle();
 
   if (!formation) notFound();

@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 export function middleware(req: NextRequest) {
   const p = req.nextUrl.pathname;
 
+  // toujours ok
   if (
     p.startsWith('/login') ||
     p.startsWith('/api') ||
@@ -12,10 +13,12 @@ export function middleware(req: NextRequest) {
     p.startsWith('/public')
   ) return NextResponse.next();
 
-  // Laisse les pages serveur décider (pas de boucle)
-  if (p === '/admin' || p.startsWith('/admin/choice') || /^\/admin\/[^\/]+/.test(p)) {
-    return NextResponse.next();
-  }
+  // laisser les Server Components décider
+  if (
+    p === '/admin' ||
+    p.startsWith('/admin/choice') ||
+    /^\/admin\/[^\/]+/.test(p)
+  ) return NextResponse.next();
 
   return NextResponse.next();
 }

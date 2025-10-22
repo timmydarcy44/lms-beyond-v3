@@ -1,10 +1,21 @@
 import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '@/types/supabase'; // ajuste le chemin si besoin
+import { createServerClient } from '@supabase/ssr';
+import type { Database } from '@/types/supabase';
 
-// ✅ version correcte pour App Router
 export async function supabaseServer() {
   const cookieStore = cookies();
-  const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore });
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
+      },
+    }
+  );
   return supabase;
 }

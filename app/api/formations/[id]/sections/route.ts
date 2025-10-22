@@ -50,29 +50,61 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Failed to fetch sections' }, { status: 500 });
     }
 
+    // Types minimalistes locaux pour satisfaire TS sans tout refactorer
+    type ChapterLite = {
+      id: string;
+      position: number | null;
+      created_at: string | null;
+      // autres champs ignorés
+      [key: string]: any;
+    };
+
+    type SubchapterLite = {
+      id: string;
+      position: number | null;
+      created_at: string | null;
+      // autres champs ignorés
+      [key: string]: any;
+    };
+
     // Trier les chapitres par position
-    const sectionsWithSortedChapters = sections?.map(section => ({
-      ...section,
-      chapters: section.chapters
-        ?.sort((a, b) => {
+    const sectionsWithSortedChapters = sections?.map(section => {
+      const sortedChapters = (section.chapters as ChapterLite[] | null | undefined)
+        ?.slice()
+        .sort((a: ChapterLite, b: ChapterLite) => {
           // Tri par position si disponible, sinon par created_at
-          if (a.position !== null && b.position !== null) {
-            return a.position - b.position;
-          }
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        })
-        .map(chapter => ({
-          ...chapter,
-          subchapters: chapter.subchapters
-            ?.sort((a, b) => {
+          const pa = a?.position ?? Number.MAX_SAFE_INTEGER;
+          const pb = b?.position ?? Number.MAX_SAFE_INTEGER;
+          if (pa !== pb) return pa - pb;
+
+          const ca = a?.created_at ? Date.parse(a.created_at) : 0;
+          const cb = b?.created_at ? Date.parse(b.created_at) : 0;
+          return ca - cb; // (asc)
+        }) ?? [];
+
+      return {
+        ...section,
+        chapters: sortedChapters.map(chapter => {
+          const sortedSubchapters = (chapter.subchapters as SubchapterLite[] | null | undefined)
+            ?.slice()
+            .sort((a: SubchapterLite, b: SubchapterLite) => {
               // Tri par position si disponible, sinon par created_at
-              if (a.position !== null && b.position !== null) {
-                return a.position - b.position;
-              }
-              return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-            })
-        }))
-    }));
+              const pa = a?.position ?? Number.MAX_SAFE_INTEGER;
+              const pb = b?.position ?? Number.MAX_SAFE_INTEGER;
+              if (pa !== pb) return pa - pb;
+
+              const ca = a?.created_at ? Date.parse(a.created_at) : 0;
+              const cb = b?.created_at ? Date.parse(b.created_at) : 0;
+              return ca - cb; // (asc)
+            }) ?? [];
+
+          return {
+            ...chapter,
+            subchapters: sortedSubchapters,
+          };
+        }),
+      };
+    });
 
     return NextResponse.json(sectionsWithSortedChapters || []);
   } catch (error) {

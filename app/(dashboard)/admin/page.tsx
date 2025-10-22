@@ -1,9 +1,5 @@
-// app/(dashboard)/admin/page.tsx - Dispatcher vers page de choix d'organisation
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export default async function AdminIndex() {
   const sb = await supabaseServer();
@@ -16,8 +12,7 @@ export default async function AdminIndex() {
     .eq('user_id', user.id);
 
   const orgs = (data || []).map((r: any) => r.organizations);
-  if (orgs.length === 0) return <div className="p-6 text-neutral-300">Aucune organisation associée.</div>;
-  
-  // Toujours rediriger vers la page de choix pour un flux cohérent
-  redirect('/admin/select-org');
+  if (orgs.length === 0) return <div className="min-h-screen grid place-items-center text-neutral-300">Aucune organisation associée.</div>;
+  if (orgs.length === 1) redirect(`/admin/${orgs[0].slug}/dashboard`);
+  redirect('/admin/choice');
 }

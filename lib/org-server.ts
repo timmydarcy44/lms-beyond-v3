@@ -1,57 +1,26 @@
-// lib/org-server.ts - Server-only helper for organization resolution
 import { supabaseServer } from '@/lib/supabase/server';
 
-export type OrgContext = {
-  orgId: string;
-  slug: string;
-  orgName: string;
-  userId: string;
-  role: string;
-};
-
-/**
- * Resolves organization from slug and validates user membership
- * Throws errors for authentication, organization not found, or forbidden access
- */
-export async function resolveOrgFromSlugOrThrow(slug: string): Promise<OrgContext> {
+export async function resolveOrgFromSlugOrThrow(slug: string) {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
+  if (!user) throw new Error('UNAUTH');
 
-  if (!user) {
-    console.error('[org-resolve] UNAUTH', { slug });
-    throw new Error('UNAUTH');
-  }
-
-  const { data: org, error: orgErr } = await sb
+  const { data: org } = await sb
     .from('organizations')
     .select('id, slug, name')
     .eq('slug', slug)
     .maybeSingle();
+  if (!org) throw new Error('ORG_NOT_FOUND');
 
-  if (orgErr || !org) {
-    console.error('[org-resolve] ORG_NOT_FOUND', { slug, orgErr });
-    throw new Error('ORG_NOT_FOUND');
-  }
-
-  const { data: mem, error: memErr } = await sb
+  const { data: mem } = await sb
     .from('org_memberships')
     .select('role')
     .eq('org_id', org.id)
     .eq('user_id', user.id)
     .maybeSingle();
+  if (!mem) throw new Error('FORBIDDEN');
 
-  if (memErr || !mem) {
-    console.error('[org-resolve] FORBIDDEN', { slug, orgId: org.id, userId: user.id, memErr });
-    throw new Error('FORBIDDEN');
-  }
-
-  return { 
-    orgId: org.id, 
-    slug: org.slug, 
-    orgName: org.name, 
-    userId: user.id, 
-    role: mem.role 
-  };
+  return { orgId: org.id, slug: org.slug, orgName: org.name, role: mem.role, userId: user.id };
 }
 
 /**

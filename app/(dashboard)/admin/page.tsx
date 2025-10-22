@@ -1,4 +1,4 @@
-// app/(dashboard)/admin/page.tsx - Dispatcher vers 1 org ou picker
+// app/(dashboard)/admin/page.tsx - Dispatcher vers page de choix d'organisation
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 
@@ -17,6 +17,7 @@ export default async function AdminIndex() {
 
   const orgs = (data || []).map((r: any) => r.organizations);
   if (orgs.length === 0) return <div className="p-6 text-neutral-300">Aucune organisation associée.</div>;
-  if (orgs.length === 1) redirect(`/admin/${orgs[0].slug}/formations`);
+  
+  // Toujours rediriger vers la page de choix pour un flux cohérent
   redirect('/admin/select-org');
 }

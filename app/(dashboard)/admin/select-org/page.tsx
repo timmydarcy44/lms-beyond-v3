@@ -34,17 +34,21 @@ export default async function SelectOrgPage() {
     );
   }
   
-  if (orgs.length === 1) redirect(`/admin/${orgs[0].slug}/formations`);
+  // Toujours afficher la page de choix, même pour une seule organisation
+  // Cela permet un flux cohérent : Login → Choix → Dashboard
 
   return (
     <div className="min-h-screen bg-[#252525] text-white">
       {/* Header Netflix-style */}
       <div className="px-8 py-6">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-          Choisissez votre organisation
+          {orgs.length === 1 ? 'Votre organisation' : 'Choisissez votre organisation'}
         </h1>
         <p className="text-neutral-400 text-lg">
-          Sélectionnez l'organisation avec laquelle vous souhaitez travailler
+          {orgs.length === 1 
+            ? 'Accédez à votre espace de travail'
+            : 'Sélectionnez l\'organisation avec laquelle vous souhaitez travailler'
+          }
         </p>
       </div>
 

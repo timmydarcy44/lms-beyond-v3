@@ -26,7 +26,7 @@ export default async function AdminOrgLayout({
     .single();
 
   if (membershipError || !membership) {
-    redirect('/login/admin');
+    redirect('/admin'); // Rediriger vers le dispatcher au lieu de /login/admin
   }
 
   // Vérifier que l'utilisateur est admin

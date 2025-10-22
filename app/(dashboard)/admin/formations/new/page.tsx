@@ -44,11 +44,16 @@ export default function NewFormationPage() {
         }
       }
       
-      const result = await createFormationAction(formData, orgSlug || undefined);
+      if (!orgSlug) {
+        setErr('Organisation non spécifiée');
+        setLoading(false);
+        return;
+      }
+      
+      const result = await createFormationAction(formData, orgSlug);
       if (result.ok) {
-        // Rediriger vers la page de l'organisation si spécifiée
-        const redirectUrl = orgSlug ? `/admin/${orgSlug}/formations/${result.formation.id}` : `/admin/formations/${result.formation.id}`;
-        router.push(redirectUrl);
+        // Rediriger vers le builder de la formation
+        router.push(`/admin/${orgSlug}/formations/${result.formation.id}`);
       } else {
         setErr('Erreur lors de la création');
         setLoading(false);

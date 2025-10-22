@@ -33,9 +33,9 @@ export default async function AdminFormationsPage({
       <div className="space-y-6">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Formations - {orgName}
-            </h2>
+                    <h2 className="text-xl sm:text-2xl font-semibold text-white">
+                      Formations - {orgName}
+                    </h2>
             <p className="text-xs sm:text-sm text-neutral-400">Gérez les formations de votre organisation</p>
           </div>
           <Link href={`/admin/${orgSlug}/formations/new`} className="px-4 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl text-sm sm:text-base flex items-center gap-2">

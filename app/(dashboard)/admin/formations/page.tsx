@@ -27,7 +27,7 @@ export default async function FormationsPage() {
     return (
       <div className="space-y-6">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Formations</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold text-white">Formations</h2>
         </div>
         <div className="text-center py-12">
           <p className="text-neutral-400 mb-4">Aucune organisation associée à votre compte</p>
@@ -39,7 +39,7 @@ export default async function FormationsPage() {
 
   // Si plusieurs organisations, rediriger vers la sélection
   if (memberships.length > 1) {
-    redirect('/admin');
+    redirect('/admin/select-org');
   }
 
   // Une seule organisation - récupérer ses formations

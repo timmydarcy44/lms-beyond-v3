@@ -12,12 +12,10 @@ export default async function ChoicePage() {
       </main>
     );
   }
-
   const orgs = await getOrgsForUser(user.id);
   if (orgs.length === 1) {
     return <meta httpEquiv="refresh" content={`0;url=/admin/${orgs[0].slug}/dashboard`} />;
   }
-
   return (
     <main className="p-6">
       <h1 className="text-xl font-semibold mb-4">Choisissez une organisation</h1>

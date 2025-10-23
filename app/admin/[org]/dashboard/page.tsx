@@ -5,7 +5,7 @@ import { getOrgBySlug, getSessionUser, requireOrgAccess } from '@/lib/orgs';
 export const dynamic = 'force-dynamic';
 
 export default async function OrgDashboardPage(
-  { params }: { params: Promise<{ org: string }> } // Next 15
+  { params }: { params: Promise<{ org: string }> } // Next 15 : params = Promise
 ) {
   const { org } = await params;
 

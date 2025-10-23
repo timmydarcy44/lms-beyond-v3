@@ -1,4 +1,3 @@
-import { supabaseServer } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getSessionUser, getOrgsForUser } from '@/lib/orgs';
 
@@ -11,8 +10,6 @@ export default async function LoginAdminPage() {
     if (orgs.length) redirect(`/admin/${orgs[0].slug}/dashboard`);
     redirect('/choice');
   }
-
-  // … mets ton UI de connexion réelle ici
   return (
     <main className="min-h-dvh grid place-items-center p-6">
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/40 p-6">

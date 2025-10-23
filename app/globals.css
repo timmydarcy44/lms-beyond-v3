@@ -2,13 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* thème global minimal */
+/* Thème sombre minimal */
 :root { color-scheme: dark; }
 html, body { height: 100%; margin: 0; }
 body {
-  background: #0b0b0c;         /* gris très sombre */
-  color: #e5e7eb;              /* gris clair */
+  background: #0b0b0c;       /* très sombre */
+  color: #e5e7eb;            /* gris clair */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-a { color: #93c5fd; }          /* bleu clair pour les liens */
+a { color: #93c5fd; }        /* liens bleu clair */

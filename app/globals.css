@@ -1,8 +1,6 @@
-/* app/globals.css — minimal, compatible Tailwind aussi */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Si tu n'utilises pas Tailwind, ces 3 lignes seront simplement ignorées */
 :root { color-scheme: dark; }
 html, body { height: 100%; margin: 0; }

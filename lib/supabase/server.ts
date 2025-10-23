@@ -6,12 +6,6 @@ export async function supabaseServer() {
   return createServerClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set() {},
-        remove() {},
-      },
-    }
+    { cookies: { get: n => cookieStore.get(n)?.value, set(){}, remove(){} } }
   );
 }

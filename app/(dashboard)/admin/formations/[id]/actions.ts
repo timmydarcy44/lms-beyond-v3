@@ -1,31 +1,27 @@
 'use server';
 
-// --- Création : renvoient un objet avec id/title/position (number)
+/**
+ * Stubs robustes et compatibles pour remettre l'UI en route.
+ * Ils respectent les signatures positionnelles utilisées par les composants.
+ */
+
+function uid(prefix: string) {
+  const r = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`) as string;
+  return `${prefix}-${r}`;
+}
+
+// --- Créations : renvoient un objet avec id, title et position:number
 export async function createSection(formationId: string, title: string) {
-  return {
-    id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-sec`) as string,
-    title,
-    position: 0 as number, // ✅ number, plus "null"
-  };
+  return { id: uid('sec'), title, position: 0 };
 }
-
 export async function createChapter(sectionId: string, title: string) {
-  return {
-    id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-chap`) as string,
-    title,
-    position: 0 as number, // ✅ number
-  };
+  return { id: uid('chap'), title, position: 0 };
 }
-
 export async function createSubchapter(chapterId: string, title: string) {
-  return {
-    id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-sub`) as string,
-    title,
-    position: 0 as number, // ✅ number
-  };
+  return { id: uid('sub'), title, position: 0 };
 }
 
-// --- Renommage / suppression : ne renvoient rien (void)
+// --- Renommage / suppression : void
 export async function renameNode(
   type: 'section' | 'chapter' | 'subchapter',
   id: string,
@@ -42,6 +38,6 @@ export async function reorderSections(formationId: string, order: string[]): Pro
 export async function reorderChapters(sectionId: string, order: string[]): Promise<void> { /* no-op */ }
 export async function reorderSubchapters(chapterId: string, order: string[]): Promise<void> { /* no-op */ }
 
-// --- Déjà utilisés par d'autres composants
+// --- Déjà importées ailleurs
 export async function assignContentAction(..._args: any[]): Promise<void> { /* no-op */ }
 export async function updateFormationReadingMode(..._args: any[]): Promise<void> { /* no-op */ }

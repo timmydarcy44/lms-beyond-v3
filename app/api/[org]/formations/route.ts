@@ -1,22 +1,26 @@
+// app/api/[org]/formations/route.ts
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { getOrgBySlug, getSessionUser, requireOrgAccess } from '@/lib/orgs';
 
-export const runtime = 'nodejs';
+// Typage Next 15 : params est une Promise
+type Ctx = { params: Promise<{ org: string }> };
 
-export async function POST(req: NextRequest, context: { params: Promise<{ org: string }> }) {
+export async function POST(req: NextRequest, context: Ctx) {
   try {
     const { org } = await context.params;
     const sb = await supabaseServer();
     const user = await getSessionUser();
     
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ ok: false, error: 'UNAUTH' }, { status: 401 });
     }
 
     const orgRow = await getOrgBySlug(org);
     if (!orgRow) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+      return NextResponse.json({ ok: false, error: 'ORG_NOT_FOUND' }, { status: 404 });
     }
 
     await requireOrgAccess(user.id, orgRow.id);
@@ -41,12 +45,12 @@ export async function POST(req: NextRequest, context: { params: Promise<{ org: s
 
     if (error) {
       console.error('Error creating formation:', error);
-      return NextResponse.json({ error: 'Failed to create formation' }, { status: 500 });
+      return NextResponse.json({ ok: false, error: 'Failed to create formation' }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ok: true, data });
   } catch (error) {
     console.error('Error in formations API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ ok: false, error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,15 +1,14 @@
 import { redirect } from 'next/navigation';
-import { supabaseServer } from '@/lib/supabase/server';
-import { getSingleOrg } from '@/lib/org-single';
+import { getSessionUser, getOrgsForUser } from '@/lib/orgs';
 
 export const dynamic = 'force-dynamic';
 
 export default async function LoginAdminPage() {
-  const sb = await supabaseServer();
-  const { data: { user } } = await sb.auth.getUser();
+  const user = await getSessionUser();
   if (user) {
-    const { slug } = await getSingleOrg();
-    redirect('/admin/dashboard');
+    const orgs = await getOrgsForUser(user.id);
+    if (orgs.length) redirect(`/admin/${orgs[0].slug}/dashboard`);
+    redirect('/choice');
   }
   return (
     <main className="min-h-dvh grid place-items-center p-6">

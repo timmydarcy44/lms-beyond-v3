@@ -15,9 +15,7 @@ export default async function ChoicePage() {
 
   const orgs = await getOrgsForUser(user.id);
   if (orgs.length === 1) {
-    return (
-      <meta httpEquiv="refresh" content={`0;url=/admin/${orgs[0].slug}/dashboard`} />
-    );
+    return <meta httpEquiv="refresh" content={`0;url=/admin/${orgs[0].slug}/dashboard`} />;
   }
 
   return (

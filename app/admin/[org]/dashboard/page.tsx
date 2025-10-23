@@ -1,43 +1,37 @@
 import { notFound, redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { getOrgBySlug, getSessionUser, requireOrgAccess } from '@/lib/orgs';
-import { logServerError } from '@/lib/debug';
 
 export const dynamic = 'force-dynamic';
 
 export default async function OrgDashboardPage(
-  { params }: { params: Promise<{ org: string }> } // ✅ Next 15
+  { params }: { params: Promise<{ org: string }> } // Next 15
 ) {
-  const { org } = await params;                    // ✅ on attend la Promise
+  const { org } = await params;
 
-  try {
-    const user = await getSessionUser();
-    if (!user) redirect('/login/admin');
+  const user = await getSessionUser();
+  if (!user) redirect('/login/admin');
 
-    const orgRow = await getOrgBySlug(org);
-    if (!orgRow) notFound();
+  const orgRow = await getOrgBySlug(org);
+  if (!orgRow) notFound();
 
-    await requireOrgAccess(user.id, orgRow.id);
+  await requireOrgAccess(user.id, orgRow.id);
 
-    const sb = await supabaseServer();
-    const { data: formations, error } = await sb
-      .from('formations')
-      .select('id,title,updated_at')
-      .eq('org_id', orgRow.id)
-      .order('updated_at', { ascending: false });
-    if (error) throw new Error(error.message);
+  const sb = await supabaseServer();
+  const { data: formations, error } = await sb
+    .from('formations')
+    .select('id,title,updated_at')
+    .eq('org_id', orgRow.id)
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
 
-    return (
-      <main className="p-6">
-        <h1 className="text-xl font-semibold mb-4">Dashboard — {orgRow.name}</h1>
-        <ul className="space-y-1">
-          {(formations ?? []).map(f => <li key={f.id}>{f.title}</li>)}
-          {(!formations || formations.length === 0) && <li>Aucune formation</li>}
-        </ul>
-      </main>
-    );
-  } catch (e) {
-    logServerError('admin/[org]/dashboard', e, { org });
-    throw e;
-  }
+  return (
+    <main className="p-6">
+      <h1 className="text-xl font-semibold mb-4">Dashboard — {orgRow.name}</h1>
+      <ul className="space-y-1">
+        {(formations ?? []).map(f => <li key={f.id}>{f.title}</li>)}
+        {(!formations || formations.length === 0) && <li>Aucune formation</li>}
+      </ul>
+    </main>
+  );
 }

@@ -2,8 +2,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
 export async function supabaseServer() {
-  // cookies() peut être async selon ton runtime → on attend toujours
-  const cookieStore = await cookies();
+  const cookieStore = await cookies(); // Next 15: peut être async
 
   const supabase = createServerClient(
     process.env.SUPABASE_URL!,

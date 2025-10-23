@@ -1,114 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
-import { getCurrentOrgId } from '@/lib/org';
-
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  try {
-    const params = await context.params;
-    const formationId = params.id;
-    const sb = await supabaseServer();
-    const { data: { user } } = await sb.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+import { NextResponse } from 'next/server';
+import { supabaseServer } from '@/lib/supabase/server';
+import { getOrgBySlug, getSessionUser, requireOrgAccess } from '@/lib/orgs';
 
-    const orgId = await getCurrentOrgId();
-    if (!orgId) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 400 });
-    }
+type Ctx = { params: Promise<{ org: string; id: string }> };
 
-    // Charger les sections avec tri par position (fallback created_at)
-    const { data: sections, error: sectionsError } = await sb
-      .from('sections')
-      .select(`
-        id,
-        title,
-        position,
-        created_at,
-        chapters (
-          id,
-          title,
-          position,
-          created_at,
-          subchapters (
-            id,
-            title,
-            position,
-            created_at
-          )
-        )
-      `)
-      .eq('formation_id', formationId)
-      .order('position', { ascending: true })
-      .order('created_at', { ascending: true });
+export async function GET(_req: Request, context: Ctx) {
+  const { org, id } = await context.params;
 
-    if (sectionsError) {
-      console.error('Error fetching sections:', sectionsError);
-      return NextResponse.json({ error: 'Failed to fetch sections' }, { status: 500 });
-    }
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ ok:false, error:'UNAUTH' }, { status:401 });
 
-    // Types minimalistes locaux pour satisfaire TS sans tout refactorer
-    type ChapterLite = {
-      id: string;
-      position: number | null;
-      created_at: string | null;
-      // autres champs ignorés
-      [key: string]: any;
-    };
+  const orgRow = await getOrgBySlug(org);
+  if (!orgRow) return NextResponse.json({ ok:false, error:'ORG_NOT_FOUND' }, { status:404 });
 
-    type SubchapterLite = {
-      id: string;
-      position: number | null;
-      created_at: string | null;
-      // autres champs ignorés
-      [key: string]: any;
-    };
+  await requireOrgAccess(user.id, orgRow.id);
 
-    // Trier les chapitres par position
-    const sectionsWithSortedChapters = sections?.map(section => {
-      const sortedChapters = (section.chapters as ChapterLite[] | null | undefined)
-        ?.slice()
-        .sort((a: ChapterLite, b: ChapterLite) => {
-          // Tri par position si disponible, sinon par created_at
-          const pa = a?.position ?? Number.MAX_SAFE_INTEGER;
-          const pb = b?.position ?? Number.MAX_SAFE_INTEGER;
-          if (pa !== pb) return pa - pb;
+  const sb = await supabaseServer();
 
-          const ca = a?.created_at ? Date.parse(a.created_at) : 0;
-          const cb = b?.created_at ? Date.parse(b.created_at) : 0;
-          return ca - cb; // (asc)
-        }) ?? [];
+  // Exemple de tri typé pour éviter noImplicitAny
+  type ChapterLite = { id: string; position: number | null; created_at: string | null; [k: string]: any };
 
-      return {
-        ...section,
-        chapters: sortedChapters.map(chapter => {
-          const sortedSubchapters = (chapter.subchapters as SubchapterLite[] | null | undefined)
-            ?.slice()
-            .sort((a: SubchapterLite, b: SubchapterLite) => {
-              // Tri par position si disponible, sinon par created_at
-              const pa = a?.position ?? Number.MAX_SAFE_INTEGER;
-              const pb = b?.position ?? Number.MAX_SAFE_INTEGER;
-              if (pa !== pb) return pa - pb;
+  const { data: sections, error } = await sb
+    .from('sections')
+    .select('id,title,chapters(id,title,position,created_at)')
+    .eq('org_id', orgRow.id)
+    .eq('formation_id', id);
 
-              const ca = a?.created_at ? Date.parse(a.created_at) : 0;
-              const cb = b?.created_at ? Date.parse(b.created_at) : 0;
-              return ca - cb; // (asc)
-            }) ?? [];
+  if (error) return NextResponse.json({ ok:false, error: error.message }, { status:400 });
 
-          return {
-            ...chapter,
-            subchapters: sortedSubchapters,
-          };
-        }),
-      };
-    });
+  const payload = (sections ?? []).map((section: any) => {
+    const chapters = (section.chapters as ChapterLite[] | undefined)?.slice()?.sort(
+      (a: ChapterLite, b: ChapterLite) => {
+        const pa = a?.position ?? Number.MAX_SAFE_INTEGER;
+        const pb = b?.position ?? Number.MAX_SAFE_INTEGER;
+        if (pa !== pb) return pa - pb;
+        const ca = a?.created_at ? Date.parse(a.created_at) : 0;
+        const cb = b?.created_at ? Date.parse(b.created_at) : 0;
+        return ca - cb;
+      }
+    ) ?? [];
+    return { ...section, chapters };
+  });
 
-    return NextResponse.json(sectionsWithSortedChapters || []);
-  } catch (error) {
-    console.error('Error in sections API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  return NextResponse.json({ ok:true, data: payload });
 }

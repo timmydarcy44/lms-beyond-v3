@@ -18,7 +18,7 @@ export default async function DiagnosticPage() {
     console.log('[DIAGNOSTIC] User session result:', user ? 'User found' : 'No user');
     
     // Test 3: Organizations (only if user exists)
-    let orgs = [];
+    let orgs: Array<{ id: string; slug: string; name: string }> = [];
     if (user) {
       console.log('[DIAGNOSTIC] Testing organizations...');
       orgs = await getOrgsForUser(user.id);

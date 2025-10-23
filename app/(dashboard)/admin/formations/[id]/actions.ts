@@ -1,67 +1,47 @@
 'use server';
 
-/**
- * Stubs temporaires tolérants (acceptent tous les styles d'appel).
- * Objectif: remettre le build au vert sans changer les composants.
- */
-
-type Ok<T = unknown> = { ok: true; data?: T };
-type Fail = { ok: false; error: string };
-type Res<T = unknown> = Promise<Ok<T> | Fail>;
-
-// Helpers internes (no-op)
-function ok<T = unknown>(data?: T): Ok<T> { return { ok: true, data }; }
-
-// --- Création ---------------------------------------------------------------
-export async function createSection(..._args: any[]): Res<{ id: string }> {
-  return ok({ id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-sec`) as string });
-}
-export async function createChapter(..._args: any[]): Res<{ id: string }> {
-  return ok({ id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-chap`) as string });
-}
-export async function createSubchapter(..._args: any[]): Res<{ id: string }> {
-  return ok({ id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-sub`) as string });
+// --- Création : renvoient un objet avec id/title/position si nécessaire
+export async function createSection(formationId: string, title: string) {
+  return {
+    id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-sec`) as string,
+    title,
+    position: null as number | null,
+  };
 }
 
-// --- Edition / renommage / suppression -------------------------------------
-/**
- * Accepte:
- *  - renameNode({ org, id, title })
- *  - renameNode('section'|'chapter'|'subchapter', id, title)
- */
-export async function renameNode(..._args: any[]): Res {
-  return ok();
+export async function createChapter(sectionId: string, title: string) {
+  return {
+    id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-chap`) as string,
+    title,
+    position: null as number | null,
+  };
 }
 
-/**
- * Accepte:
- *  - deleteNode({ org, id, type })
- *  - deleteNode('section'|'chapter'|'subchapter', id)
- */
-export async function deleteNode(..._args: any[]): Res {
-  return ok();
+export async function createSubchapter(chapterId: string, title: string) {
+  return {
+    id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-sub`) as string,
+    title,
+    position: null as number | null,
+  };
 }
 
-// --- Réordonnancement -------------------------------------------------------
-/**
- * Accepte différents styles:
- *  - reorderSections({ org, formationId, order })
- *  - reorderSections(formationId, order)
- */
-export async function reorderSections(..._args: any[]): Res { return ok(); }
+// --- Renommage / suppression : ne renvoient rien (void)
+export async function renameNode(
+  type: 'section' | 'chapter' | 'subchapter',
+  id: string,
+  title: string
+): Promise<void> { /* no-op */ }
 
-/**
- *  - reorderChapters({ org, sectionId, order })
- *  - reorderChapters(sectionId, order)
- */
-export async function reorderChapters(..._args: any[]): Res { return ok(); }
+export async function deleteNode(
+  type: 'section' | 'chapter' | 'subchapter',
+  id: string
+): Promise<void> { /* no-op */ }
 
-/**
- *  - reorderSubchapters({ org, chapterId, order })
- *  - reorderSubchapters(chapterId, order)
- */
-export async function reorderSubchapters(..._args: any[]): Res { return ok(); }
+// --- Réordonnancement : void
+export async function reorderSections(formationId: string, order: string[]): Promise<void> { /* no-op */ }
+export async function reorderChapters(sectionId: string, order: string[]): Promise<void> { /* no-op */ }
+export async function reorderSubchapters(chapterId: string, order: string[]): Promise<void> { /* no-op */ }
 
-// --- Déjà utilisés ailleurs -------------------------------------------------
-export async function assignContentAction(..._args: any[]): Res { return ok(); }
-export async function updateFormationReadingMode(..._args: any[]): Res { return ok(); }
+// --- Déjà utilisés par d'autres composants
+export async function assignContentAction(..._args: any[]): Promise<void> { /* no-op */ }
+export async function updateFormationReadingMode(..._args: any[]): Promise<void> { /* no-op */ }

@@ -1,11 +1,11 @@
 'use server';
 
-// --- Création : renvoient un objet avec id/title/position si nécessaire
+// --- Création : renvoient un objet avec id/title/position (number)
 export async function createSection(formationId: string, title: string) {
   return {
     id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-sec`) as string,
     title,
-    position: null as number | null,
+    position: 0 as number, // ✅ number, plus "null"
   };
 }
 
@@ -13,7 +13,7 @@ export async function createChapter(sectionId: string, title: string) {
   return {
     id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-chap`) as string,
     title,
-    position: null as number | null,
+    position: 0 as number, // ✅ number
   };
 }
 
@@ -21,7 +21,7 @@ export async function createSubchapter(chapterId: string, title: string) {
   return {
     id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-sub`) as string,
     title,
-    position: null as number | null,
+    position: 0 as number, // ✅ number
   };
 }
 

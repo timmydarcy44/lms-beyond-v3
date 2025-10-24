@@ -1,70 +1,37 @@
-import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  content: [
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
+  darkMode: 'class',
+  content: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        /* Core tokens (shadcn-style) */
-        background: '#252525',                // bg-background
-        foreground: '#F1F5F9',                // text-foreground
-        card: '#2B2B2B',                      // bg-card
-        'card-foreground': '#F1F5F9',         // text-card-foreground
-        popover: '#2B2B2B',
-        'popover-foreground': '#F1F5F9',
-        primary: {                            // bg-primary / text-primary-foreground
-          DEFAULT: '#6366F1',
-          foreground: '#FFFFFF',
-        },
-        secondary: {
-          DEFAULT: '#1A1A1A',
-          foreground: '#E2E8F0',
-        },
-        muted: '#1A1A1A',                     // bg-muted
-        'muted-foreground': '#94A3B8',        // text-muted-foreground
-        accent: {
-          DEFAULT: '#1F2937',
-          foreground: '#F1F5F9',
-        },
-        destructive: {
-          DEFAULT: '#DC2626',
-          foreground: '#FFFFFF',
-        },
-        border: 'rgba(255,255,255,0.10)',     // border-border
-        input: 'rgba(255,255,255,0.10)',
-        ring: '#6366F1',                      // ring-*
-        /* Your existing palettes can stay here too (dark, neutral, iris, blush, etc.) */
-        dark: { base:'#252525', surface:'#2B2B2B', elevated:'#333333', muted:'#1A1A1A' },
-        iris: { 400:'#818CF8', 500:'#6366F1' }, 
-        blush:{ 400:'#F472B6', 500:'#EC4899' }, 
-        lime:{ 400:'#A3E635' }, 
-        cyan:{ 400:'#22D3EE' },
+        bg: '#0A0A0A',
+        surface: '#121212',
+        surfaceAlt: '#1A1A1A',
+        primary: '#E50914',   // accent "Netflix"
+        accent: '#1E90FF',    // action "Apple/Nike"
+        text: '#F5F5F5',
+        muted: '#A1A1AA',
+        border: '#27272A'
       },
-      borderRadius: {
-        lg: '12px',
-        xl: '16px',
-        '2xl': '24px',
-        '3xl': '32px',
+      borderRadius: { 
+        xl: '1rem', 
+        '2xl': '1.5rem' 
       },
       boxShadow: {
-        'elev-1': '0 1px 2px rgb(0 0 0 / 0.1)',
-        'elev-2': '0 4px 16px rgb(0 0 0 / 0.15)',
-        'elev-3': '0 8px 32px rgb(0 0 0 / 0.3)',
-        'glow-iris': '0 0 20px rgb(99 102 241 / 0.4)',
+        card: '0 12px 32px -8px rgba(0,0,0,.45)',
+        glow: '0 0 18px rgba(229,9,20,.35)'
       },
       fontFamily: {
-        sans: [
-          '-apple-system','BlinkMacSystemFont',"SF Pro Text","SF Pro Display",
-          "Segoe UI","Roboto","Inter","Helvetica Neue","Arial","sans-serif"
-        ],
+        sans: ['Inter', 'SF Pro Display', 'system-ui', 'sans-serif']
       },
-    },
+      transitionTimingFunction: { 
+        cine: 'cubic-bezier(.2,.8,.2,1)' 
+      },
+    }
   },
   plugins: [],
-}
+};
 
-export default config
+export default config;

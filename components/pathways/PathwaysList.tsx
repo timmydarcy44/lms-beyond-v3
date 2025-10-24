@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Calendar, BookOpen } from 'lucide-react';
+import { Plus, Calendar, BookOpen, Search } from 'lucide-react';
 import { usePathways, useCreatePathway, useDeletePathway } from '@/hooks/usePathways';
 import { useToast } from '@/components/toast';
 import Modal from '@/components/modal';
+import { Rail } from '@/components/cine/Rail';
+import { CardPoster } from '@/components/cine/CardPoster';
+import Button from '@/components/cine/Button';
 
 interface PathwaysListProps {
   org: string;
@@ -15,6 +18,7 @@ export default function PathwaysList({ org }: PathwaysListProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newPathwayTitle, setNewPathwayTitle] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const { data: pathwaysResponse, isLoading, error } = usePathways(org);
   const createPathway = useCreatePathway(org);
@@ -22,6 +26,18 @@ export default function PathwaysList({ org }: PathwaysListProps) {
   const { success, error: showError } = useToast();
 
   const pathways = pathwaysResponse?.data || [];
+  
+  // Filtrer les parcours selon la recherche
+  const filteredPathways = pathways.filter(pathway =>
+    pathway.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Grouper par catégories pour les rails
+  const recentPathways = filteredPathways
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, 6);
+
+  const allPathways = filteredPathways;
 
   const handleCreatePathway = async () => {
     if (!newPathwayTitle.trim()) return;
@@ -64,14 +80,22 @@ export default function PathwaysList({ org }: PathwaysListProps) {
     }
   };
 
+  const handlePathwayClick = (pathway: any) => {
+    // Navigation vers l'édition du parcours
+    window.location.href = `/admin/${org}/parcours/${pathway.id}`;
+  };
+
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 bg-white/5 rounded-lg animate-pulse" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-32 bg-white/5 rounded-lg animate-pulse" />
-          ))}
+      <div className="space-y-8">
+        <div className="h-8 bg-surfaceAlt rounded-lg animate-pulse" />
+        <div className="space-y-4">
+          <div className="h-6 bg-surfaceAlt rounded animate-pulse" />
+          <div className="flex gap-4 overflow-hidden">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="w-[220px] h-[320px] bg-surfaceAlt rounded-2xl animate-pulse" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -88,86 +112,76 @@ export default function PathwaysList({ org }: PathwaysListProps) {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
+      {/* Header avec recherche */}
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Parcours</h2>
-          <p className="text-sm text-neutral-400 mt-1">
+          <h2 className="text-2xl font-bold">Parcours</h2>
+          <p className="text-muted mt-1">
             Gérez les parcours d'apprentissage de votre organisation
           </p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium hover:bg-blue-600 transition-colors"
-        >
-          <Plus size={16} />
+        <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
+          <Plus size={16} className="mr-2" />
           Nouveau parcours
-        </button>
+        </Button>
       </div>
 
-      {pathways.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-white/10 p-12 text-center">
-          <BookOpen size={48} className="mx-auto text-neutral-400 mb-4" />
+      {/* Barre de recherche */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
+          <input
+            type="text"
+            placeholder="Rechercher un parcours..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-surfaceAlt border border-border rounded-xl text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/70"
+          />
+        </div>
+      </div>
+
+      {filteredPathways.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-12 text-center">
+          <BookOpen size={48} className="mx-auto text-muted mb-4" />
           <h3 className="text-lg font-medium mb-2">Aucun parcours</h3>
-          <p className="text-neutral-400 mb-4">
-            Créez votre premier parcours d'apprentissage pour commencer.
+          <p className="text-muted mb-4">
+            {searchQuery ? 'Aucun parcours ne correspond à votre recherche.' : 'Créez votre premier parcours d\'apprentissage pour commencer.'}
           </p>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium hover:bg-blue-600 transition-colors"
-          >
-            Créer un parcours
-          </button>
+          {!searchQuery && (
+            <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
+              Créer un parcours
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {pathways.map((pathway) => (
-            <div
-              key={pathway.id}
-              className="group rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-medium line-clamp-2">{pathway.title}</h3>
-                  <div className="flex items-center gap-1 text-xs text-neutral-400">
-                    <Calendar size={12} />
-                    {new Date(pathway.updated_at).toLocaleDateString()}
-                  </div>
-                </div>
-                
-                {pathway.description && (
-                  <p className="text-sm text-neutral-400 line-clamp-2 mb-3">
-                    {pathway.description}
-                  </p>
-                )}
+        <div className="space-y-8">
+          {/* Rail des parcours récents */}
+          {recentPathways.length > 0 && (
+            <Rail title="Récents">
+              {recentPathways.map((pathway) => (
+                <CardPoster
+                  key={pathway.id}
+                  title={pathway.title}
+                  subtitle={`Mis à jour ${new Date(pathway.updated_at).toLocaleDateString()}`}
+                  coverUrl={pathway.cover_url}
+                  onClick={() => handlePathwayClick(pathway)}
+                />
+              ))}
+            </Rail>
+          )}
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 rounded-md bg-white/10">
-                      {pathway.reading_mode === 'linear' ? 'Linéaire' : 'Libre'}
-                    </span>
-                    <span className="text-xs text-neutral-400">
-                      {pathway.pathway_items?.length || 0} élément{(pathway.pathway_items?.length || 0) > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link
-                      href={`/admin/${org}/parcours/${pathway.id}`}
-                      className="rounded-md px-2 py-1 text-xs hover:bg-white/10 transition-colors"
-                    >
-                      Modifier
-                    </Link>
-                    <button
-                      onClick={() => handleDeletePathway(pathway.id, pathway.title)}
-                      className="rounded-md px-2 py-1 text-xs hover:bg-red-500/20 hover:text-red-300 transition-colors"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+          {/* Rail de tous les parcours */}
+          <Rail title="Tous les parcours">
+            {allPathways.map((pathway) => (
+              <CardPoster
+                key={pathway.id}
+                title={pathway.title}
+                subtitle={`${pathway.pathway_items?.length || 0} éléments`}
+                coverUrl={pathway.cover_url}
+                onClick={() => handlePathwayClick(pathway)}
+              />
+            ))}
+          </Rail>
         </div>
       )}
 
@@ -189,26 +203,27 @@ export default function PathwaysList({ org }: PathwaysListProps) {
               value={newPathwayTitle}
               onChange={(e) => setNewPathwayTitle(e.target.value)}
               placeholder="Ex: Formation complète React"
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-border bg-surfaceAlt px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/70"
               autoFocus
             />
           </div>
           
           <div className="flex items-center justify-end gap-3">
-            <button
+            <Button
               onClick={() => setIsCreateModalOpen(false)}
-              className="rounded-lg px-4 py-2 text-sm hover:bg-white/10 transition-colors"
+              variant="ghost"
               disabled={isCreating}
             >
               Annuler
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleCreatePathway}
               disabled={!newPathwayTitle.trim() || isCreating}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              loading={isCreating}
+              variant="primary"
             >
-              {isCreating ? 'Création...' : 'Créer'}
-            </button>
+              Créer
+            </Button>
           </div>
         </div>
       </Modal>

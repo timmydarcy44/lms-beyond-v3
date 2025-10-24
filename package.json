@@ -8,7 +8,10 @@
     "test": "vitest run",
     "test:ui": "vitest",
     "test:api": "vitest run tests/api",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:prodcheck": "next build",
+    "deploy:prod": "vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod",
+    "smoke": "bash scripts/smoke.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

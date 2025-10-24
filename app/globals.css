@@ -8,12 +8,21 @@ html {
 }
 
 body { 
-  @apply bg-bg text-text antialiased; 
+  background-color: #0A0A0A;
+  color: #F5F5F5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Focus visible pour accessibilité */
 a, button { 
-  @apply outline-none focus-visible:ring-2 focus-visible:ring-accent/70 rounded-md; 
+  outline: none;
+}
+
+a:focus-visible, button:focus-visible {
+  outline: 2px solid rgba(30, 144, 255, 0.7);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 /* Utilitaires pour le design cinématographique */

@@ -1,3 +1,5 @@
+'use client';
+
 import { Hero } from "@/components/cine/Hero";
 import { Rail } from "@/components/cine/Rail";
 import { CardPoster } from "@/components/cine/CardPoster";

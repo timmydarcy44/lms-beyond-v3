@@ -29,13 +29,18 @@ SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
+# Supabase Service Role (SERVEUR UNIQUEMENT)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
 # Monitoring (optionnel)
 SENTRY_DSN=https://xxx@sentry.io/xxx
 SENTRY_ORG=your-org
 SENTRY_PROJECT=lms
 
-# Logs
+# Logs et Rate Limiting
 LOG_LEVEL=info
+RATE_LIMIT_MAX=60
+RATE_LIMIT_WINDOW_MS=60000
 ```
 
 **Preview :**
@@ -90,11 +95,14 @@ supabase db diff
 
 #### **1. Déploiement initial**
 ```bash
+# Pull des variables de production
+vercel pull --yes --environment=production
+
 # Build local pour vérifier
-npm run build
+vercel build --prod
 
 # Déploiement
-vercel --prod
+vercel deploy --prebuilt --prod
 
 # Vérifier les logs
 vercel logs --follow
@@ -107,6 +115,10 @@ vercel logs --follow
 
 # Tests E2E sur production
 npm run test:e2e -- --config=playwright.prod.config.ts
+
+# Test Sentry (optionnel)
+curl https://your-app.vercel.app/api/_boom
+# Vérifier dans le dashboard Sentry
 ```
 
 ### **Monitoring**

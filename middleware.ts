@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 
-const WINDOW_MS = 60_000; // 1 minute
-const MAX = 60; // 60 req/min/IP
+const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000"); // 1 minute
+const MAX = parseInt(process.env.RATE_LIMIT_MAX || "60"); // 60 req/min/IP
 const store = new Map<string, { count: number; ts: number }>();
 
 export function middleware(req: Request) {
   const url = new URL(req.url);
-  
+
   // Only apply rate limiting to API routes
   if (!url.pathname.startsWith("/api/")) {
     return NextResponse.next();
@@ -26,7 +26,14 @@ export function middleware(req: Request) {
     if (cur.count > MAX) {
       return NextResponse.json(
         { ok: false, error: "RATE_LIMIT", code: "429" },
-        { status: 429 }
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': MAX.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(now + WINDOW_MS).toISOString(),
+          }
+        }
       );
     }
   }

@@ -1,65 +1,85 @@
-import { notFound, redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
-import { getOrgBySlug, getSessionUser, requireOrgAccess } from '@/lib/orgs';
+import { getSingleOrg } from '@/lib/org-single';
+import { Rail } from '@/components/cine/Rail';
+import { CardPoster } from '@/components/cine/CardPoster';
 
 export const dynamic = 'force-dynamic';
 
-export default async function OrgDashboardPage({
-  params,
-}: {
-  params: Promise<{ org: string }>;
-}) {
-  const { org } = await params;
-  const user = await getSessionUser();
-  if (!user) redirect('/login/admin');
-
-  const orgRow = await getOrgBySlug(org);
-  if (!orgRow) notFound();
-  await requireOrgAccess(user.id, orgRow.id);
-
+export default async function AdminDashboardPage() {
   const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  
+  if (!user) redirect('/login/admin');
+  
+  const { orgId } = await getSingleOrg();
+  
   const { data: formations } = await sb
     .from('formations')
     .select('id,title,cover_url,updated_at')
-    .eq('org_id', orgRow.id)
+    .eq('org_id', orgId)
     .order('updated_at', { ascending: false });
 
+  const { data: pathways } = await sb
+    .from('pathways')
+    .select('id,title,cover_url,updated_at')
+    .eq('org_id', orgId)
+    .order('updated_at', { ascending: false });
+
+  const handleFormationClick = (id: string) => {
+    window.location.href = `/admin/formations/${id}`;
+  };
+
+  const handlePathwayClick = (id: string) => {
+    window.location.href = `/admin/parcours/${id}`;
+  };
+
   return (
-    <>
-      <h2 className="mb-4 text-xl font-semibold">Dashboard — {orgRow.name}</h2>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {(formations ?? []).map((f) => (
-          <a
-            key={f.id}
-            href={`/admin/${org}/formations/${f.id}`}
-            className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
-          >
-            <div className="aspect-video bg-black/30">
-              {f.cover_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.cover_url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-neutral-400">
-                  Pas de cover
-                </div>
-              )}
-            </div>
-            <div className="p-4">
-              <div className="line-clamp-2 text-sm font-medium text-white">{f.title}</div>
-              <div className="mt-1 text-xs text-neutral-400">
-                {f.updated_at ? new Date(f.updated_at).toLocaleDateString() : '—'}
-              </div>
-            </div>
-          </a>
-        ))}
-
-        {(!formations || formations.length === 0) && (
-          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-neutral-400">
-            Aucune formation pour le moment.
-          </div>
-        )}
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold text-text">Dashboard</h2>
+        <p className="text-muted mt-1">Vue d'ensemble de votre organisation</p>
       </div>
-    </>
+
+      {/* Formations récentes */}
+      {formations && formations.length > 0 && (
+        <Rail title="Formations récentes">
+          {formations.slice(0, 6).map((formation) => (
+            <CardPoster
+              key={formation.id}
+              title={formation.title}
+              subtitle={`Mis à jour ${new Date(formation.updated_at).toLocaleDateString()}`}
+              coverUrl={formation.cover_url || undefined}
+              onClick={() => handleFormationClick(formation.id)}
+            />
+          ))}
+        </Rail>
+      )}
+
+      {/* Parcours récents */}
+      {pathways && pathways.length > 0 && (
+        <Rail title="Parcours récents">
+          {pathways.slice(0, 6).map((pathway) => (
+            <CardPoster
+              key={pathway.id}
+              title={pathway.title}
+              subtitle={`Mis à jour ${new Date(pathway.updated_at).toLocaleDateString()}`}
+              coverUrl={pathway.cover_url || undefined}
+              onClick={() => handlePathwayClick(pathway.id)}
+            />
+          ))}
+        </Rail>
+      )}
+
+      {/* État vide */}
+      {(!formations || formations.length === 0) && (!pathways || pathways.length === 0) && (
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+          <div className="text-muted">
+            <h3 className="text-lg font-medium mb-2">Aucun contenu</h3>
+            <p>Créez votre première formation ou parcours pour commencer.</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

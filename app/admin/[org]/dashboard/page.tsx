@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
-import { getSingleOrg } from '@/lib/org-single';
 import { Rail } from '@/components/cine/Rail';
 import { CardPoster } from '@/components/cine/CardPoster';
 
@@ -12,7 +11,23 @@ export default async function AdminDashboardPage() {
   
   if (!user) redirect('/login/admin');
   
-  const { orgId } = await getSingleOrg();
+  // Pour la démo, on utilise un orgId fixe ou on récupère le premier disponible
+  const { data: orgs } = await sb
+    .from('organizations')
+    .select('id')
+    .limit(1);
+  
+  const orgId = orgs?.[0]?.id;
+  if (!orgId) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+        <div className="text-muted">
+          <h3 className="text-lg font-medium mb-2">Aucune organisation</h3>
+          <p>Créez une organisation pour commencer.</p>
+        </div>
+      </div>
+    );
+  }
   
   const { data: formations } = await sb
     .from('formations')

@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
-import { getSingleOrg } from '@/lib/org-single';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +8,6 @@ export default async function LoginAdminPage() {
   const { data: { user } } = await sb.auth.getUser();
   
   if (user) {
-    const { slug } = await getSingleOrg();
     redirect('/admin/dashboard');
   }
   

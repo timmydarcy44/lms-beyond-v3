@@ -4,8 +4,8 @@ export function ok<T>(data: T, init: number | ResponseInit = 200) {
   return NextResponse.json({ ok: true, data }, typeof init === "number" ? { status: init } : init);
 }
 
-export function bad(message = "BAD_REQUEST", status = 400) {
-  return NextResponse.json({ ok: false, error: message }, { status });
+export function bad(message = "BAD_REQUEST", status = 400, code?: string) {
+  return NextResponse.json({ ok: false, error: message, code: code || String(status) }, { status });
 }
 
 export function unAuth(message = "UNAUTH") { 

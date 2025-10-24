@@ -1,46 +1,64 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000"); // 1 minute
-const MAX = parseInt(process.env.RATE_LIMIT_MAX || "60"); // 60 req/min/IP
-const store = new Map<string, { count: number; ts: number }>();
-
-export function middleware(req: Request) {
-  const url = new URL(req.url);
-
-  // Only apply rate limiting to API routes
-  if (!url.pathname.startsWith("/api/")) {
-    return NextResponse.next();
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // 1. Redirection /login/admin -> /login
+  if (pathname === '/login/admin') {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
-  const key = `${ip}:${url.pathname}:${req.method}`;
-  const now = Date.now();
-  const cur = store.get(key);
-
-  if (!cur || now - cur.ts > WINDOW_MS) {
-    // New window or first request
-    store.set(key, { count: 1, ts: now });
-  } else {
-    // Within window, increment counter
-    cur.count++;
-    if (cur.count > MAX) {
-      return NextResponse.json(
-        { ok: false, error: "RATE_LIMIT", code: "429" },
-        { 
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': MAX.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(now + WINDOW_MS).toISOString(),
-          }
-        }
-      );
+  
+  // 2. Redirection /admin -> org par défaut ou org-picker
+  if (pathname === '/admin') {
+    const singleOrgSlug = process.env.SINGLE_ORG_SLUG;
+    if (singleOrgSlug) {
+      return NextResponse.redirect(new URL(`/admin/${singleOrgSlug.toLowerCase()}`, request.url));
+    }
+    return NextResponse.redirect(new URL('/org-picker', request.url));
+  }
+  
+  // 3. Normalisation des slugs en minuscule (308 redirect)
+  const orgMatch = pathname.match(/^\/(admin|app)\/([^\/]+)/);
+  if (orgMatch) {
+    const [, prefix, orgSlug] = orgMatch;
+    if (orgSlug !== orgSlug.toLowerCase()) {
+      const normalizedPath = pathname.replace(`/${orgSlug}`, `/${orgSlug.toLowerCase()}`);
+      return NextResponse.redirect(new URL(normalizedPath, request.url), 308);
     }
   }
-
+  
+  // 4. Validation des slugs d'org
+  const orgPathMatch = pathname.match(/^\/(admin|app)\/([^\/]+)/);
+  if (orgPathMatch) {
+    const [, prefix, orgSlug] = orgPathMatch;
+    
+    // Slug vide ou invalide -> 404
+    if (!orgSlug || orgSlug.length === 0 || orgSlug.includes('/')) {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+    
+    // Vérifier si l'utilisateur est authentifié
+    const authToken = request.cookies.get('sb-access-token')?.value;
+    if (!authToken) {
+      // Non authentifié -> redirect vers login avec org et next
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('org', orgSlug);
+      loginUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(loginUrl, 302);
+    }
+  }
+  
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: [
+    '/login/admin',
+    '/admin',
+    '/admin/:path*',
+    '/app/:path*',
+    '/org-picker',
+    '/switch-org'
+  ]
 };

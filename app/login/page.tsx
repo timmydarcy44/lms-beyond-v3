@@ -1,132 +1,155 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
+import { sbClient } from "@/lib/supabase/client";
 import Button from "@/components/cine/Button";
 
 function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const sp = useSearchParams();
-  const org = sp.get("org") || process.env.NEXT_PUBLIC_DEFAULT_ORG || "";
-  const next = sp.get("next") || (org ? `/admin/${org}` : "/org-picker");
-  
-  // Vérifier les variables d'environnement
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    return (
-      <main className="min-h-screen grid place-items-center bg-bg text-text p-6">
-        <div className="w-[380px] bg-surface p-6 rounded-xl border border-border text-center">
-          <h1 className="text-xl font-semibold mb-4 text-red-400">Configuration manquante</h1>
-          <p className="text-muted mb-4">
-            Les variables d'environnement Supabase ne sont pas configurées.
-          </p>
-          <div className="text-sm text-muted space-y-1">
-            <p>NEXT_PUBLIC_SUPABASE_URL: {supabaseUrl ? '✅' : '❌'}</p>
-            <p>NEXT_PUBLIC_SUPABASE_ANON_KEY: {supabaseKey ? '✅' : '❌'}</p>
-          </div>
-        </div>
-      </main>
-    );
-  }
-  
-  const supabase = createClientComponentClient({
-    supabaseUrl,
-    supabaseKey
-  });
   const router = useRouter();
+  const org = (sp.get("org") || process.env.NEXT_PUBLIC_DEFAULT_ORG || "")
+    .toLowerCase()
+    .trim();
+  const next = sp.get("next") || (org ? `/admin/${org}` : "/org-picker");
 
-  async function submit(e: React.FormEvent) {
+  const [mode, setMode] = useState<"password" | "magic">("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function loginPassword(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    
+    setMsg(null);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { 
-          emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` 
-        },
-      });
-      
-      if (error) {
-        setError(error.message);
-      } else {
-        setSent(true);
-      }
+      const sb = sbClient();
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return setMsg(error.message);
+      router.push(next);
     } catch (err) {
-      setError('Une erreur inattendue s\'est produite');
+      setMsg('Une erreur inattendue s\'est produite');
     } finally {
       setLoading(false);
     }
   }
 
-  if (sent) {
-    return (
-      <main className="min-h-screen grid place-items-center bg-bg text-text p-6">
-        <div className="w-[380px] bg-surface p-6 rounded-xl border border-border text-center">
-          <h1 className="text-xl font-semibold mb-4">Lien envoyé !</h1>
-          <p className="text-muted mb-4">
-            Un lien de connexion a été envoyé à <strong>{email}</strong>
-          </p>
-          <p className="text-sm text-muted">
-            Vérifiez votre boîte mail et cliquez sur le lien pour vous connecter.
-          </p>
-        </div>
-      </main>
-    );
+  async function loginMagic(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setMsg(null);
+    try {
+      const sb = sbClient();
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(
+            next
+          )}`,
+        },
+      });
+      setMsg(error ? error.message : "Lien envoyé. Vérifie ta boîte mail.");
+    } catch (err) {
+      setMsg('Une erreur inattendue s\'est produite');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main className="min-h-screen grid place-items-center bg-bg text-text p-6">
-      <form onSubmit={submit} className="w-[380px] space-y-6 bg-surface p-6 rounded-xl border border-border">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-2">Connexion</h1>
-          <p className="text-muted">Entrez votre email pour recevoir un lien de connexion</p>
+    <main className="min-h-screen grid place-items-center bg-bg text-text p-4">
+      <div className="w-full max-w-md bg-surface border border-border rounded-xl p-6 space-y-4">
+        <h1 className="text-2xl font-semibold">Connexion</h1>
+
+        <div className="flex gap-2 text-sm">
+          <button
+            type="button"
+            className={`px-3 py-1 rounded-lg transition-colors ${
+              mode === "password" ? "bg-accent text-white" : "bg-bg border border-border text-text hover:bg-surfaceAlt"
+            }`}
+            onClick={() => setMode("password")}
+          >
+            Mot de passe
+          </button>
+          <button
+            type="button"
+            className={`px-3 py-1 rounded-lg transition-colors ${
+              mode === "magic" ? "bg-accent text-white" : "bg-bg border border-border text-text hover:bg-surfaceAlt"
+            }`}
+            onClick={() => setMode("magic")}
+          >
+            Lien magique
+          </button>
         </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="email" className="block text-sm font-medium">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email" 
-            required 
-            value={email} 
-            onChange={e => setEmail(e.target.value)}
-            className="w-full h-11 rounded-lg bg-bg border border-border px-3 outline-none focus:ring-2 focus:ring-accent/70 text-text placeholder:text-muted"
-            placeholder="votre@email.com"
-          />
-        </div>
-        
-        {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-        
-        <Button 
-          type="submit"
-          disabled={loading} 
-          loading={loading}
-          variant="primary"
-          className="w-full"
+
+        <form
+          onSubmit={mode === "password" ? loginPassword : loginMagic}
+          className="space-y-3"
         >
-          {loading ? "Envoi..." : "Recevoir un lien magique"}
-        </Button>
-        
-        {org && (
-          <p className="text-xs text-muted text-center">
-            Vous serez redirigé vers l'organisation <code className="bg-bg px-1 rounded">{org}</code>
-          </p>
-        )}
-      </form>
+          <label className="block text-sm">
+            E-mail
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full h-11 rounded-lg bg-bg border border-border px-3 outline-none focus:ring-2 focus:ring-accent/70 text-text placeholder:text-muted"
+              placeholder="votre@email.com"
+            />
+          </label>
+
+          {mode === "password" && (
+            <>
+              <label className="block text-sm">
+                Mot de passe
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 w-full h-11 rounded-lg bg-bg border border-border px-3 outline-none focus:ring-2 focus:ring-accent/70 text-text placeholder:text-muted"
+                  placeholder="••••••••"
+                />
+              </label>
+              <div className="flex justify-between text-sm">
+                <a
+                  href={`/signup?org=${org}&next=${encodeURIComponent(next)}`}
+                  className="text-accent hover:text-accent/80 transition-colors"
+                >
+                  Créer un compte
+                </a>
+                <a
+                  href={`/forgot?org=${org}&next=${encodeURIComponent(next)}`}
+                  className="text-accent hover:text-accent/80 transition-colors"
+                >
+                  Mot de passe oublié
+                </a>
+              </div>
+            </>
+          )}
+
+          {msg && (
+            <div className={`p-3 rounded-lg text-sm ${
+              msg.includes('envoyé') || msg.includes('créé') 
+                ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+                : 'bg-red-500/10 border border-red-500/20 text-red-400'
+            }`}>
+              {msg}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={loading}
+            loading={loading}
+            variant="primary"
+            className="w-full"
+          >
+            {loading ? "..." : mode === "password" ? "Se connecter" : "Envoyer le lien"}
+          </Button>
+        </form>
+      </div>
     </main>
   );
 }
@@ -134,12 +157,12 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen grid place-items-center bg-bg text-text p-6">
-        <div className="w-[380px] bg-surface p-6 rounded-xl border border-border text-center">
-          <div className="animate-pulse">
-            <div className="h-6 bg-surfaceAlt rounded mb-4"></div>
-            <div className="h-4 bg-surfaceAlt rounded mb-2"></div>
-            <div className="h-4 bg-surfaceAlt rounded mb-4"></div>
+      <main className="min-h-screen grid place-items-center bg-bg text-text p-4">
+        <div className="w-full max-w-md bg-surface border border-border rounded-xl p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-6 bg-surfaceAlt rounded"></div>
+            <div className="h-11 bg-surfaceAlt rounded"></div>
+            <div className="h-11 bg-surfaceAlt rounded"></div>
             <div className="h-11 bg-surfaceAlt rounded"></div>
           </div>
         </div>

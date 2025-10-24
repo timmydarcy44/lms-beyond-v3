@@ -6,7 +6,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
-import { createSection, createChapter, createSubchapter, renameNode, deleteNode, reorderSections, reorderChapters, reorderSubchapters } from '@/app/(dashboard)/admin/formations/[id]/actions';
+import { createSection, createChapter, createSubchapter, renameNode, deleteNode, reorderSections, reorderChapters, reorderSubchapters } from '@/app/admin/[org]/formations/[id]/actions';
 
 interface Section {
   id: string;

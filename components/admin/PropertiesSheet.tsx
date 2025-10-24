@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Settings, Users, User } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { assignContentAction, updateFormationReadingMode } from '@/app/(dashboard)/admin/formations/[id]/actions';
+import { assignContentAction, updateFormationReadingMode } from '@/app/admin/[org]/formations/[id]/actions';
 
 interface PropertiesSheetProps {
   isOpen: boolean;

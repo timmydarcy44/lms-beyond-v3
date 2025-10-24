@@ -9,23 +9,61 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const sp = useSearchParams();
   const org = sp.get("org") || process.env.NEXT_PUBLIC_DEFAULT_ORG || "";
   const next = sp.get("next") || (org ? `/admin/${org}` : "/org-picker");
-  const supabase = createClientComponentClient();
+  
+  // Vérifier les variables d'environnement
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return (
+      <main className="min-h-screen grid place-items-center bg-bg text-text p-6">
+        <div className="w-[380px] bg-surface p-6 rounded-xl border border-border text-center">
+          <h1 className="text-xl font-semibold mb-4 text-red-400">Configuration manquante</h1>
+          <p className="text-muted mb-4">
+            Les variables d'environnement Supabase ne sont pas configurées.
+          </p>
+          <div className="text-sm text-muted space-y-1">
+            <p>NEXT_PUBLIC_SUPABASE_URL: {supabaseUrl ? '✅' : '❌'}</p>
+            <p>NEXT_PUBLIC_SUPABASE_ANON_KEY: {supabaseKey ? '✅' : '❌'}</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+  
+  const supabase = createClientComponentClient({
+    supabaseUrl,
+    supabaseKey
+  });
   const router = useRouter();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { 
-        emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` 
-      },
-    });
-    setLoading(false);
-    if (!error) setSent(true);
+    setError("");
+    
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { 
+          emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` 
+        },
+      });
+      
+      if (error) {
+        setError(error.message);
+      } else {
+        setSent(true);
+      }
+    } catch (err) {
+      setError('Une erreur inattendue s\'est produite');
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (sent) {
@@ -66,6 +104,12 @@ function LoginForm() {
             placeholder="votre@email.com"
           />
         </div>
+        
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+            {error}
+          </div>
+        )}
         
         <Button 
           type="submit"

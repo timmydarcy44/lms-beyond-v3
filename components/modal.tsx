@@ -80,10 +80,11 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
       {/* Modal */}
       <div
         ref={modalRef}
-        className={`relative w-full ${sizeClasses[size]} rounded-lg border border-white/10 bg-neutral-900 shadow-xl`}
+        className={`relative w-full ${sizeClasses[size]} rounded-2xl border border-white/10 bg-neutral-900 shadow-xl`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        aria-describedby="modal-description"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 p-4">
@@ -92,7 +93,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 hover:bg-white/10 transition-colors"
+            className="rounded-lg p-1 hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Fermer"
           >
             <X size={20} />

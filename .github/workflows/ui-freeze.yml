@@ -1,0 +1,58 @@
+name: UI Freeze Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes on frozen files
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Base: $BASE_SHA"
+          echo "Head: $HEAD_SHA"
+
+          FROZEN=$(cat <<'EOF'
+          app/(private)/dashboard/page.tsx
+          components/dashboard/Hero.tsx
+          components/dashboard/QuickCreateCarousel.tsx
+          components/layout/Sidebar.tsx
+          app/(private)/dashboard/_components/StatCard.tsx
+          app/globals.css
+          tailwind.config.ts
+          EOF
+          )
+
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          BLOCK=0
+          for f in $FROZEN; do
+            if echo "$CHANGED" | grep -Fxq "$f"; then
+              echo "::error file=$f::Frozen UI file changed. Ask PO approval or add label 'allow-ui-change'."
+              BLOCK=1
+            fi
+          done
+
+          # Allow override only if the PR has label 'allow-ui-change'
+          if [ "$BLOCK" -eq 1 ]; then
+            LABELS_URL="${{ github.event.pull_request.issue_url }}/labels"
+            AUTH="Authorization: token ${{ secrets.GITHUB_TOKEN }}"
+            HAS_LABEL=$(curl -s -H "$AUTH" "$LABELS_URL" | jq -r '.[].name' | grep -Fx "allow-ui-change" || true)
+            if [ -z "$HAS_LABEL" ]; then
+              echo "No 'allow-ui-change' label present. Failing."
+              exit 1
+            else
+              echo "Override allowed by label 'allow-ui-change'."
+            fi
+          fi
+

@@ -1,0 +1,9 @@
+# Dashboard UI freeze — requires PO approval
+app/(private)/dashboard/page.tsx     @timmy-darcy-e442a532
+components/dashboard/Hero.tsx          @timmy-darcy-e442a532
+components/dashboard/QuickCreateCarousel.tsx  @timmy-darcy-e442a532
+components/layout/Sidebar.tsx          @timmy-darcy-e442a532
+app/(private)/dashboard/_components/StatCard.tsx      @timmy-darcy-e442a532
+styles/globals.css                      @timmy-darcy-e442a532
+tailwind.config.ts                      @timmy-darcy-e442a532
+

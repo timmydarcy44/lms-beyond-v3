@@ -1,15 +1,18 @@
-import "./globals.css";
-import Providers from "../providers";
+import type { Metadata } from 'next';
+import './globals.css';
 
-export const metadata = { title: "LMS", description: "Multi-org LMS" };
+export const metadata: Metadata = {
+  title: 'LMS — Dashboard',
+  description: 'LMS minimal et extensible'
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className="dark">
-      <body className="min-h-dvh bg-bg text-text antialiased">
-        <Providers>
+    <html lang="fr" suppressHydrationWarning>
+      <body className="min-h-dvh" style={{ background:'#0A0A0A', color:'#E5E7EB', fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, sans-serif' }}>
+        <main style={{ padding:'20px 24px', maxWidth: 1200, margin:'0 auto' }}>
           {children}
-        </Providers>
+        </main>
       </body>
     </html>
   );

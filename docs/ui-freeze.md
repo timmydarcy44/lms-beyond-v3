@@ -34,3 +34,6 @@ Pour revenir à l'état gelé :
 git checkout ui-freeze-2025-10-26
 ```
 
+
+
+

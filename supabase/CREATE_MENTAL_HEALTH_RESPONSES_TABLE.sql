@@ -142,3 +142,4 @@ COMMENT ON COLUMN public.mental_health_responses.response_value IS 'Réponse tex
 COMMENT ON COLUMN public.mental_health_responses.response_data IS 'Données structurées pour réponses complexes';
 
 
+

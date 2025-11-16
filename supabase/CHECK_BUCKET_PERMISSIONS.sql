@@ -46,3 +46,4 @@ WHERE bucket_id = 'public'
 GROUP BY split_part(name, '/', 2)
 ORDER BY pdf_count DESC;
 
+

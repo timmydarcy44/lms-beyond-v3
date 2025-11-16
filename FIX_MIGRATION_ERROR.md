@@ -89,3 +89,4 @@ La colonne `creator_id` peut être **nullable** (peut être NULL) dans cette ver
 
 
 
+

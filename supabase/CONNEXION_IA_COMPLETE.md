@@ -135,3 +135,4 @@ Pour chaque interaction, les données suivantes sont stockées dans `ai_interact
 - ✅ Gestion d'erreurs complète
 
 
+

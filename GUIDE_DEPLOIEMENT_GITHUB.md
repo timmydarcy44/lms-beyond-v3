@@ -112,3 +112,4 @@ Pour vérifier que le code est bien sur GitHub :
 ### Erreur : "nothing to commit"
 → Vérifiez que vous avez des fichiers à commiter avec `git status`
 
+

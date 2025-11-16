@@ -60,3 +60,4 @@ L'onglet "Historique" affiche les **prompts réellement envoyés** à l'IA lors 
 - **Onglet "Historique"** = Prompts réellement envoyés (ce qui A ÉTÉ envoyé)
 
 
+

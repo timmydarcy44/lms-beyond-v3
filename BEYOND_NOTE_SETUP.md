@@ -47,3 +47,4 @@ Après avoir exécuté les scripts, vérifiez dans la console du navigateur que 
 - Si le bucket n'existe pas, l'upload échouera avec un message explicite
 
 
+

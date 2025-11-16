@@ -108,3 +108,4 @@ Body: { "documentIds": ["id1", "id2", ...] }
 5. ⏳ Vérifier les logs pour voir si la génération est déclenchée
 6. ⏳ Régénérer les PDFs manquants si nécessaire
 
+

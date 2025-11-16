@@ -116,3 +116,4 @@ ORDER BY policyname;
 RAISE NOTICE '✓ Policies enrollments corrigées pour supporter les formateurs avec role dans profiles';
 
 
+

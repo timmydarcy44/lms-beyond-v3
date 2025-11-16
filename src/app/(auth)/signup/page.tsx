@@ -37,7 +37,7 @@ const signupSchema = z
     password: z.string().min(6, { message: "Mot de passe trop court" }),
     confirmPassword: z.string(),
     role: z.enum(["apprenant", "formateur", "tuteur"], {
-      errorMap: () => ({ message: "Rôle invalide" }),
+      message: "Rôle invalide",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {

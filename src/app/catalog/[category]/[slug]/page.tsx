@@ -199,18 +199,18 @@ export default async function LearnerDetailPage({ params }: LearnerDetailPagePro
         <div className="space-y-6 rounded-3xl border border-white/10 bg-black/40 p-6">
           <h2 className="text-lg font-semibold text-white">Structure du programme</h2>
           {info.trailerUrl ? (
-            <video controls poster={info.thumbnail} className="h-52 w-full rounded-2xl object-cover">
+            <video controls poster={info.backgroundImage || undefined} className="h-52 w-full rounded-2xl object-cover">
               <source src={info.trailerUrl} type="video/mp4" />
             </video>
-          ) : (
+          ) : info.backgroundImage ? (
             <Image
-              src={info.thumbnail}
+              src={info.backgroundImage}
               alt={`${info.title} thumbnail`}
               width={640}
               height={360}
               className="h-52 w-full rounded-2xl object-cover"
             />
-          )}
+          ) : null}
           <ul className="space-y-4 text-sm text-white/80">
             {info.modules.map((module) => (
               <li key={module.id} className="flex items-start justify-between gap-4 rounded-2xl bg-white/5 px-4 py-3">

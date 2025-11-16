@@ -1,0 +1,491 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-delay {
+  animation: fadeIn 0.6s ease-out 0.3s forwards;
+  opacity: 0;
+}
+
+/* Animations pour la simulation media training */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-40px) translateX(-10px);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translateY(-20px) translateX(5px);
+    opacity: 0.6;
+  }
+}
+
+.animate-float {
+  animation: float linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 90%, 100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  95% {
+    opacity: 0.3;
+    transform: scaleY(0.1);
+  }
+}
+
+.animate-blink {
+  animation: blink 3s ease-in-out infinite;
+}
+
+.soft-skills-monochrome {
+  background-color: #050505 !important;
+  color: #f5f5f5 !important;
+}
+
+.soft-skills-monochrome * {
+  color: inherit;
+}
+
+.soft-skills-monochrome [class*="bg-white"],
+.soft-skills-monochrome [class*="bg-[#"] {
+  background-color: #111214 !important;
+  color: inherit !important;
+}
+
+.soft-skills-monochrome [class*="text-[#"],
+.soft-skills-monochrome [class*="text-white"],
+.soft-skills-monochrome [class*="text-rose"],
+.soft-skills-monochrome [class*="text-emerald"],
+.soft-skills-monochrome [class*="text-green"],
+.soft-skills-monochrome [class*="text-red"],
+.soft-skills-monochrome [class*="text-amber"] {
+  color: inherit !important;
+}
+
+.soft-skills-monochrome [class*="border-[#"],
+.soft-skills-monochrome [class*="border-white"],
+.soft-skills-monochrome [class*="border-rose"],
+.soft-skills-monochrome [class*="border-amber"],
+.soft-skills-monochrome [class*="border-green"] {
+  border-color: #2a2a2d !important;
+}
+
+.soft-skills-monochrome [class*="bg-[#c91459]"],
+.soft-skills-monochrome [class*="hover:bg-[#b2124f]"],
+.soft-skills-monochrome [class*="hover:bg-[#c91459]/40"],
+.soft-skills-monochrome button[class*="bg-"],
+.soft-skills-monochrome a[class*="bg-"] {
+  background-color: #f5f5f5 !important;
+  color: #050505 !important;
+  border-color: #2a2a2d !important;
+}
+
+.soft-skills-monochrome [class*="shadow-[0_30px_70px_rgba(201,20,89,0.2)]"],
+.soft-skills-monochrome [class*="shadow-[0_25px_65px_rgba(201,20,89,0.18)]"] {
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6) !important;
+}
+
+.soft-skills-monochrome [class*="shadow-[0_12px_32px_rgba(201,20,89,0.08)]"] {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dyslexia-letter-marker {
+  display: inline-block;
+  padding: 0 0.05em;
+  margin: 0 0.01em;
+  border-radius: 0.25em;
+  background-color: rgba(251, 191, 36, 0.15);
+}
+
+.dyslexia-letter-b,
+.dyslexia-letter-p,
+.dyslexia-letter-n,
+.dyslexia-letter-m,
+.dyslexia-letter-d,
+.dyslexia-letter-q,
+.dyslexia-letter-u {
+  background-color: rgba(251, 191, 36, 0.15);
+}
+
+.dyslexia-letter-marker:hover {
+  transform: scale(1.5);
+}
+
+/* Gradient radial pour effet de lumière */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Mode Dyslexie - Police Open-Dyslexic */
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/gh/antijingoist/opendyslexic@master/OpenDyslexic-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/gh/antijingoist/opendyslexic@master/OpenDyslexic-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Mode Dyslexie - Variables CSS par défaut */
+:root {
+  --dyslexia-letter-spacing: 0.15em;
+  --dyslexia-line-height: 2;
+  --dyslexia-word-spacing: 0.3em;
+  --dyslexia-font-family: 'OpenDyslexic', sans-serif;
+  --dyslexia-contrast: 1;
+}
+
+/* Mode Dyslexie - Styles pour améliorer la lisibilité */
+.dyslexia-mode {
+  font-family: var(--dyslexia-font-family) !important;
+  letter-spacing: var(--dyslexia-letter-spacing) !important;
+  line-height: var(--dyslexia-line-height) !important;
+  word-spacing: var(--dyslexia-word-spacing) !important;
+  filter: contrast(var(--dyslexia-contrast));
+}
+
+.dyslexia-mode * {
+  font-family: var(--dyslexia-font-family) !important;
+  letter-spacing: var(--dyslexia-letter-spacing) !important;
+  line-height: var(--dyslexia-line-height) !important;
+  word-spacing: var(--dyslexia-word-spacing) !important;
+}
+
+.dyslexia-mode p,
+.dyslexia-mode span,
+.dyslexia-mode div,
+.dyslexia-mode h1,
+.dyslexia-mode h2,
+.dyslexia-mode h3,
+.dyslexia-mode h4,
+.dyslexia-mode h5,
+.dyslexia-mode h6,
+.dyslexia-mode li,
+.dyslexia-mode td,
+.dyslexia-mode th,
+.dyslexia-mode a,
+.dyslexia-mode button,
+.dyslexia-mode input,
+.dyslexia-mode textarea,
+.dyslexia-mode label {
+  font-family: var(--dyslexia-font-family) !important;
+  letter-spacing: var(--dyslexia-letter-spacing) !important;
+  line-height: var(--dyslexia-line-height) !important;
+  word-spacing: var(--dyslexia-word-spacing) !important;
+}
+
+/* Mettre en évidence les lettres confusantes (b, d, p, q, m, n, u) - Approche CSS pure */
+/* Utiliser des effets visuels globaux pour améliorer la lisibilité sans manipulation DOM */
+.dyslexia-highlight-letters.dyslexia-mode {
+  /* Augmenter le contraste et la netteté pour améliorer la distinction des lettres */
+  filter: contrast(1.15) brightness(1.05);
+}
+
+.dyslexia-highlight-letters.dyslexia-mode p,
+.dyslexia-highlight-letters.dyslexia-mode span,
+.dyslexia-highlight-letters.dyslexia-mode div,
+.dyslexia-highlight-letters.dyslexia-mode li,
+.dyslexia-highlight-letters.dyslexia-mode td,
+.dyslexia-highlight-letters.dyslexia-mode th,
+.dyslexia-highlight-letters.dyslexia-mode h1,
+.dyslexia-highlight-letters.dyslexia-mode h2,
+.dyslexia-highlight-letters.dyslexia-mode h3,
+.dyslexia-highlight-letters.dyslexia-mode h4,
+.dyslexia-highlight-letters.dyslexia-mode h5,
+.dyslexia-highlight-letters.dyslexia-mode h6 {
+  /* Utiliser une ombre de texte subtile pour améliorer la distinction des lettres */
+  text-shadow: 
+    0.5px 0 0 currentColor,
+    -0.5px 0 0 currentColor,
+    0 0.5px 0 currentColor,
+    0 -0.5px 0 currentColor;
+  /* Augmenter légèrement le poids de la police pour les lettres confusantes */
+  font-weight: 500;
+  /* Améliorer la netteté du texte */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Souligner les sons complexes (ch, ph, th, ou, au, eau, etc.) - Approche CSS pure */
+/* Utiliser un effet de soulignement global pour améliorer la reconnaissance des sons */
+.dyslexia-underline-sounds.dyslexia-mode p,
+.dyslexia-underline-sounds.dyslexia-mode span,
+.dyslexia-underline-sounds.dyslexia-mode div,
+.dyslexia-underline-sounds.dyslexia-mode li,
+.dyslexia-underline-sounds.dyslexia-mode td,
+.dyslexia-underline-sounds.dyslexia-mode th {
+  /* Utiliser un effet de bordure inférieure pour simuler un soulignement */
+  border-bottom: 1px solid rgba(100, 200, 255, 0.3);
+  padding-bottom: 1px;
+  /* Améliorer la lisibilité avec un léger contraste */
+  filter: contrast(1.1);
+}
+
+/* Mode Focus Pomodoro */
+.pomodoro-focus-mode {
+  overflow: hidden !important;
+}
+
+.pomodoro-focus-mode * {
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Exception : le timer Pomodoro doit rester cliquable */
+.pomodoro-focus-mode [data-pomodoro-timer],
+.pomodoro-focus-mode [data-pomodoro-timer] * {
+  pointer-events: auto !important;
+}
+
+.pomodoro-focus-mode input,
+.pomodoro-focus-mode textarea,
+.pomodoro-focus-mode [contenteditable="true"] {
+  user-select: text;
+}
+
+/* Animations blob pour landing page */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Custom colors for landing page */
+:root {
+  --lavender-50: #f5f3ff;
+  --lavender-100: #ede9fe;
+  --lavender-200: #ddd6fe;
+  --lavender-300: #c4b5fd;
+  --beyond-black: #0B0B0C;
+  --beyond-cream: #F8F9FB;
+  --beyond-blue: #99A7FF;
+  --beyond-lavender: #D1D5FF;
+}
+
+.bg-lavender-50 {
+  background-color: var(--lavender-50);
+}
+
+.bg-lavender-200 {
+  background-color: var(--lavender-200);
+}
+
+.text-lavender-300 {
+  color: var(--lavender-300);
+}

@@ -96,6 +96,8 @@ export type LearnerModule = {
   id: string;
   title: string;
   lessons?: LearnerLesson[];
+  description?: string;
+  length?: string;
 };
 
 export type LearnerLesson = {

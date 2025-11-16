@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
               level,
               notification_type,
               alert_date: new Date().toISOString(),
+            },
           })
           .select()
           .single();

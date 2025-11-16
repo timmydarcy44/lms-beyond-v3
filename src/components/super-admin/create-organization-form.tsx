@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createOrganizationAction } from "@/app/super/organisations/new/actions";
+import { createOrganizationWithAdminAction } from "@/app/super/organisations/new/actions";
 import { toast } from "sonner";
 import { Loader2, Plus, X } from "lucide-react";
 
@@ -43,7 +43,7 @@ export function CreateOrganizationForm() {
     setIsLoading(true);
 
     try {
-      const result = await createOrganizationAction({
+      const result = await createOrganizationWithAdminAction({
         name,
         slug: slug || undefined,
         description: description || undefined,

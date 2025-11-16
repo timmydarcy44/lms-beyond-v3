@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getOrganizationDetails } from "@/lib/queries/super-admin";
+import { getOrganizationFullDetails } from "@/lib/queries/super-admin";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Users, UserPlus, Edit } from "lucide-react";
@@ -10,7 +10,7 @@ export default async function OrganizationDetailsPage({
 }: {
   params: { orgId: string };
 }) {
-  const orgDetails = await getOrganizationDetails(params.orgId);
+  const orgDetails = await getOrganizationFullDetails(params.orgId);
 
   if (!orgDetails) {
     notFound();

@@ -239,6 +239,7 @@ export default async function AdminFormationDetailPage({ params }: AdminFormatio
               ...card,
               cta: card.cta ?? undefined,
               meta: card.meta ?? undefined,
+              progress: card.progress ?? undefined,
             }))} 
             accent="learner" 
           />

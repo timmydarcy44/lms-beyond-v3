@@ -1,0 +1,12 @@
+-- Vérifier la structure de la table organizations
+SELECT 
+    column_name,
+    data_type,
+    is_nullable,
+    column_default
+FROM information_schema.columns
+WHERE table_name = 'organizations'
+ORDER BY ordinal_position;
+
+
+

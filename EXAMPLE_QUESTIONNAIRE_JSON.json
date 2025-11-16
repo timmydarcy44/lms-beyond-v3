@@ -1,0 +1,178 @@
+{
+  "title": "Questionnaire de santé mentale - Joueurs PSG",
+  "description": "Évaluation du bien-être et du stress des joueurs du centre de formation",
+  "questions": [
+    {
+      "id": "q-1",
+      "question_text": "Comment vous sentez-vous aujourd'hui ?",
+      "question_type": "single_choice",
+      "is_required": true,
+      "options": [
+        { "label": "Très bien", "value": "very_good", "points": 10 },
+        { "label": "Bien", "value": "good", "points": 7 },
+        { "label": "Moyen", "value": "average", "points": 4 },
+        { "label": "Mal", "value": "bad", "points": 1 }
+      ],
+      "scoring": {
+        "enabled": true,
+        "weight": 1
+      }
+    },
+    {
+      "id": "q-2",
+      "question_text": "Êtes-vous stressé actuellement ?",
+      "question_type": "single_choice",
+      "is_required": true,
+      "options": [
+        { "label": "Non, pas du tout", "value": "no_stress", "points": 10 },
+        { "label": "Oui, par le match de demain", "value": "stress_match", "points": 5 },
+        { "label": "Oui, par ma vie personnelle", "value": "stress_perso", "points": 5 },
+        { "label": "Oui, les deux", "value": "stress_both", "points": 2 }
+      ],
+      "scoring": {
+        "enabled": true,
+        "weight": 1.5
+      },
+      "conditional_logic": {
+        "depends_on": null,
+        "conditions": []
+      }
+    },
+    {
+      "id": "q-3",
+      "question_text": "Question de suivi - Stress match",
+      "question_type": "single_choice",
+      "is_required": false,
+      "conditional_logic": {
+        "depends_on": "q-2",
+        "conditions": [
+          {
+            "value": "stress_match",
+            "show": true,
+            "follow_up_questions": [
+              {
+                "question_text": "Qu'est-ce qui vous stresse le plus concernant le match de demain ?",
+                "question_type": "single_choice",
+                "options": [
+                  { "label": "Ma performance individuelle", "value": "performance", "points": 3 },
+                  { "label": "La pression des supporters", "value": "pressure", "points": 4 },
+                  { "label": "Les attentes de l'entraîneur", "value": "expectations", "points": 5 },
+                  { "label": "La peur de blessure", "value": "injury", "points": 6 }
+                ]
+              },
+              {
+                "question_text": "Avez-vous préparé quelque chose pour gérer ce stress ?",
+                "question_type": "single_choice",
+                "options": [
+                  { "label": "Oui, j'ai un plan", "value": "yes_plan", "points": 8 },
+                  { "label": "Non, je ne sais pas comment faire", "value": "no_plan", "points": 2 }
+                ]
+              }
+            ]
+          },
+          {
+            "value": "stress_perso",
+            "show": true,
+            "follow_up_questions": [
+              {
+                "question_text": "Quel aspect de votre vie personnelle vous préoccupe le plus ?",
+                "question_type": "single_choice",
+                "options": [
+                  { "label": "La famille", "value": "family", "points": 3 },
+                  { "label": "Les finances", "value": "finance", "points": 4 },
+                  { "label": "La santé", "value": "health", "points": 5 },
+                  { "label": "Les relations", "value": "relationships", "points": 4 }
+                ]
+              },
+              {
+                "question_text": "Avez-vous quelqu'un à qui parler de cela ?",
+                "question_type": "single_choice",
+                "options": [
+                  { "label": "Oui, j'ai du soutien", "value": "yes_support", "points": 8 },
+                  { "label": "Non, je me sens seul", "value": "no_support", "points": 2 }
+                ]
+              }
+            ]
+          },
+          {
+            "value": "stress_both",
+            "show": true,
+            "follow_up_questions": [
+              {
+                "question_text": "Qu'est-ce qui vous stresse le plus : le match ou votre vie personnelle ?",
+                "question_type": "single_choice",
+                "options": [
+                  { "label": "Le match", "value": "match_more", "points": 3 },
+                  { "label": "La vie personnelle", "value": "perso_more", "points": 3 },
+                  { "label": "Les deux de manière égale", "value": "both_equal", "points": 2 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "q-4",
+      "question_text": "Sur une échelle de 1 à 10, comment évaluez-vous votre niveau de confiance ?",
+      "question_type": "likert",
+      "is_required": true,
+      "likert_scale": {
+        "min": 1,
+        "max": 10,
+        "labels": {
+          "1": "Très faible",
+          "5": "Moyen",
+          "10": "Très élevé"
+        }
+      },
+      "scoring": {
+        "enabled": true,
+        "points": {
+          "1": 0, "2": 1, "3": 2, "4": 3, "5": 4,
+          "6": 5, "7": 6, "8": 7, "9": 8, "10": 9
+        },
+        "weight": 1
+      }
+    },
+    {
+      "id": "q-5",
+      "question_text": "Dormez-vous bien la nuit ?",
+      "question_type": "single_choice",
+      "is_required": true,
+      "options": [
+        { "label": "Très bien", "value": "very_well", "points": 10 },
+        { "label": "Bien", "value": "well", "points": 7 },
+        { "label": "Moyennement", "value": "average", "points": 4 },
+        { "label": "Mal", "value": "bad", "points": 1 }
+      ],
+      "scoring": {
+        "enabled": true,
+        "weight": 1
+      }
+    }
+  ],
+  "scoring_config": {
+    "enabled": true,
+    "max_score": 100,
+    "categories": [
+      {
+        "name": "Bien-être général",
+        "questions": ["q-1", "q-4", "q-5"],
+        "weight": 1
+      },
+      {
+        "name": "Stress lié au match",
+        "questions": ["q-2", "q-3"],
+        "weight": 1.5
+      },
+      {
+        "name": "Stress personnel",
+        "questions": ["q-2", "q-3"],
+        "weight": 1.5
+      }
+    ]
+  }
+}
+
+

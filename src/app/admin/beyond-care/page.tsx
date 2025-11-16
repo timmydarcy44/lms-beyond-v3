@@ -19,13 +19,7 @@ export default async function AdminBeyondCarePage() {
   }
 
   return (
-    <AdminPageScaffold
-      title="Beyond Care"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/admin" },
-        { label: "Beyond Care" },
-      ]}
-    >
+    <AdminPageScaffold title="Beyond Care">
       <AdminBeyondCareDashboard />
     </AdminPageScaffold>
   );

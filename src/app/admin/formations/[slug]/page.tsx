@@ -238,6 +238,7 @@ export default async function AdminFormationDetailPage({ params }: AdminFormatio
             cards={related.map(card => ({
               ...card,
               cta: card.cta ?? undefined,
+              meta: card.meta ?? undefined,
             }))} 
             accent="learner" 
           />

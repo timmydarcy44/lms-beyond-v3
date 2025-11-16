@@ -9,6 +9,8 @@ import {
   getLearnerContentDetail,
   isLearnerCategory,
   type LearnerCategory,
+  type LearnerLesson,
+  type LearnerModule,
 } from "@/lib/queries/apprenant";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 
@@ -212,7 +214,7 @@ export default async function LearnerDetailPage({ params }: LearnerDetailPagePro
             />
           ) : null}
           <ul className="space-y-4 text-sm text-white/80">
-            {info.modules.map((module) => (
+            {info.modules.map((module: LearnerModule) => (
               <li key={module.id} className="flex items-start justify-between gap-4 rounded-2xl bg-white/5 px-4 py-3">
                 <div>
                   <p className="font-medium text-white">{module.title}</p>
@@ -244,7 +246,7 @@ export default async function LearnerDetailPage({ params }: LearnerDetailPagePro
               {module.description ? <p className="mt-3 text-sm text-white/70">{module.description}</p> : null}
               {module.lessons?.length ? (
                 <ul className="mt-4 space-y-2 text-sm text-white/80">
-                  {module.lessons.map((lesson) => {
+                  {module.lessons.map((lesson: LearnerLesson) => {
                     const lessonHref = `${card.href}/play/${lesson.id}`;
                     return (
                       <li key={lesson.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">

@@ -69,6 +69,10 @@ export async function createLearnerAction(formData: FormData) {
     redirect(`/admin/apprenants/new?error=${encodeURIComponent("La configuration Supabase est incomplète")}`);
   }
 
+  if (!supabase) {
+    redirect(`/admin/apprenants/new?error=${encodeURIComponent("La configuration Supabase est incomplète")}`);
+  }
+
   try {
     const inviteResponse = await supabase.auth.admin.inviteUserByEmail(email, {
       data: {

@@ -85,3 +85,4 @@ Une fois la table créée, les fonctionnalités suivantes seront disponibles :
 4. ✅ **Sauvegarde automatique** - Les préférences sont sauvegardées dans Supabase
 
 
+

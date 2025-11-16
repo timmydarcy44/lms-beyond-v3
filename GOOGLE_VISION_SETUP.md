@@ -100,3 +100,4 @@ Voir [la page de tarification](https://cloud.google.com/vision/pricing) pour plu
 - Pour les PDFs très complexes, l'extraction peut échouer
 
 
+

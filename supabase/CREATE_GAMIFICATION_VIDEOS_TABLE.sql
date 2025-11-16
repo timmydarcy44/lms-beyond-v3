@@ -94,3 +94,4 @@ COMMENT ON COLUMN gamification_videos.storage_path IS 'Chemin du fichier dans Su
 COMMENT ON COLUMN gamification_videos.scenario_context IS 'Contexte d''utilisation (ex: media-training-psg, interview-scenario-1)';
 
 
+

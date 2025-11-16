@@ -51,3 +51,4 @@ COMMENT ON POLICY "Public can view gamification videos" ON storage.objects IS
 'Permet à tous de visualiser les vidéos de gamification (si bucket public)';
 
 
+

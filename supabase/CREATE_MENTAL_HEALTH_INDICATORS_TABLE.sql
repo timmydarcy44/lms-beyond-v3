@@ -137,3 +137,4 @@ COMMENT ON COLUMN public.mental_health_indicators.indicator_value IS 'Valeur de 
 COMMENT ON COLUMN public.mental_health_indicators.week_start_date IS 'Date de début de la semaine pour l''agrégation';
 
 
+

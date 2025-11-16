@@ -76,3 +76,4 @@ Une fois le script exécuté :
 **Note** : Si vous avez déjà exécuté ce script et obtenez une erreur de duplication, c'est normal. Le script utilise `DROP POLICY IF EXISTS` et `ON CONFLICT DO NOTHING` pour éviter les erreurs.
 
 
+

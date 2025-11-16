@@ -125,3 +125,4 @@ const hasGamification = await hasUserFeature("gamification");
 - Les métadonnées permettent de stocker des informations supplémentaires (plan, prix, etc.)
 
 
+

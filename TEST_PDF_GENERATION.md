@@ -39,3 +39,4 @@ Body: {}
 4. **Vérifier le bucket** dans Supabase Dashboard
 5. **Tester l'endpoint de régénération** si nécessaire
 
+

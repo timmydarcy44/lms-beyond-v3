@@ -44,3 +44,4 @@ WHERE p.email = 'timmydarcy44@gmail.com';
 RAISE NOTICE '✓ Rôles corrigés dans org_memberships pour les formateurs';
 
 
+

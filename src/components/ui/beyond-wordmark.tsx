@@ -31,3 +31,4 @@ export function BeyondWordmark({ className, size = "md" }: BeyondWordmarkProps) 
 }
 
 
+

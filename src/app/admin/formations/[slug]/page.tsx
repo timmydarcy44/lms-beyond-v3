@@ -8,6 +8,7 @@ import {
   getLearnerContentDetail,
   type LearnerCategory,
   type LearnerLesson,
+  type LearnerModule,
 } from "@/lib/queries/apprenant";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 
@@ -176,7 +177,7 @@ export default async function AdminFormationDetailPage({ params }: AdminFormatio
               />
             ) : null}
             <ul className="space-y-4 text-sm text-white/80">
-              {info.modules.map((module) => (
+              {info.modules.map((module: LearnerModule) => (
                 <li key={module.id} className="flex items-start justify-between gap-4 rounded-2xl bg-white/5 px-4 py-3">
                   <div>
                     <p className="font-medium text-white">{module.title}</p>

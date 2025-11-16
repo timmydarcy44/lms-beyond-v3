@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getUserDetails } from "@/lib/queries/super-admin";
+import { getUserFullDetails } from "@/lib/queries/super-admin";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, User, Mail, Building2, Edit } from "lucide-react";
@@ -10,7 +10,7 @@ export default async function UserDetailsPage({
 }: {
   params: { userId: string };
 }) {
-  const userDetails = await getUserDetails(params.userId);
+  const userDetails = await getUserFullDetails(params.userId);
 
   if (!userDetails) {
     notFound();

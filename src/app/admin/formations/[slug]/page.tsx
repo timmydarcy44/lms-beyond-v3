@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   getLearnerContentDetail,
   type LearnerCategory,
+  type LearnerLesson,
 } from "@/lib/queries/apprenant";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 
@@ -207,7 +208,7 @@ export default async function AdminFormationDetailPage({ params }: AdminFormatio
                 {module.description ? <p className="mt-3 text-sm text-white/70">{module.description}</p> : null}
                 {module.lessons?.length ? (
                   <ul className="mt-4 space-y-2 text-sm text-white/80">
-                    {module.lessons.map((lesson) => {
+                    {module.lessons.map((lesson: LearnerLesson) => {
                       const lessonHref = `${card.href}/play/${lesson.id}`;
                       return (
                         <li key={lesson.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">

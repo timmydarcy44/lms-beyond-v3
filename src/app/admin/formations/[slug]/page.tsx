@@ -233,7 +233,14 @@ export default async function AdminFormationDetailPage({ params }: AdminFormatio
         </section>
 
         {related.length > 0 && (
-          <SectionSlider title="Vous aimerez aussi" cards={related} accent="learner" />
+          <SectionSlider 
+            title="Vous aimerez aussi" 
+            cards={related.map(card => ({
+              ...card,
+              cta: card.cta ?? undefined,
+            }))} 
+            accent="learner" 
+          />
         )}
       </div>
     </LearningSessionTracker>

@@ -5,7 +5,7 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 export type KpiCard = {
   label: string;
   value: number;
-  hint?: string;
+  hint: string;
   trend?: "up" | "down" | null;
 };
 
@@ -53,7 +53,7 @@ export const KPIGrid = ({ kpis }: KPIGridProps) => {
               ) : item.trend === "down" ? (
                 <TrendingDown className="h-4 w-4 text-rose-400" />
               ) : null}
-              <span>{item.hint ?? "Objectif mensuel"}</span>
+              <span>{item.hint}</span>
             </div>
             </div>
           );

@@ -48,6 +48,10 @@ export async function createGroupAction(formData: FormData) {
     redirect(`/admin/groupes/new?error=${encodeURIComponent("La configuration Supabase est incomplète")}`);
   }
 
+  if (!supabase) {
+    redirect(`/admin/groupes/new?error=${encodeURIComponent("La configuration Supabase est incomplète")}`);
+  }
+
   try {
     const groupInsert = await supabase
       .from("groups")

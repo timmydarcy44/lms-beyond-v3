@@ -6,7 +6,7 @@ export type KpiCard = {
   label: string;
   value: number;
   hint: string;
-  trend?: "up" | "down" | null;
+  trend?: string | null;
 };
 
 type KPIGridProps = {

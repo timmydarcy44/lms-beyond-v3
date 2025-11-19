@@ -51,6 +51,7 @@ import {
 
 import { Sparkles } from "lucide-react";
 import { ChapterGenerationModal } from "@/components/formateur/ai/chapter-generation-modal";
+import { SubchapterGenerationModal } from "@/components/formateur/ai/subchapter-generation-modal";
 import { CourseStructureGeneratorModal } from "@/components/formateur/ai/course-structure-generator-modal";
 import { toast } from "sonner";
 import { RichTextEditor } from "./rich-text-editor";
@@ -809,6 +810,7 @@ function EditorPanel({ courseId }: { courseId?: string }) {
     );
   } else if (selection.type === "subchapter" && nodes.subchapter) {
     const meta = CONTENT_TYPE_MAP[nodes.subchapter.type];
+    const [showSubchapterModal, setShowSubchapterModal] = useState(false);
     content = (
       <EditorLayout
         title="Éditeur de sous-chapitre"
@@ -816,6 +818,23 @@ function EditorPanel({ courseId }: { courseId?: string }) {
         accent={meta.accent}
         summaryPlaceholder="Décrivez l'expérience, les actions ou les livrables de ce sous-chapitre."
       >
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => setShowSubchapterModal(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#00F5A0] via-[#00D9F5] to-[#0068F5] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-black shadow-[0_8px_24px_rgba(0,213,245,0.4)] hover:opacity-90"
+          >
+            <Sparkles className="h-3 w-3" /> Créer le sous-chapitre avec Beyond AI
+          </Button>
+        </div>
+        <SubchapterGenerationModal
+          open={showSubchapterModal}
+          onOpenChange={setShowSubchapterModal}
+          sectionId={selection.sectionId}
+          chapterId={selection.chapterId}
+          subchapterId={selection.subchapterId}
+          chapterTitle={nodes.chapter?.title}
+        />
         <Input
           value={nodes.subchapter.title}
           onChange={(event) =>

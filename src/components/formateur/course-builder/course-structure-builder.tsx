@@ -655,6 +655,7 @@ function EditorPanel({ courseId }: { courseId?: string }) {
   const updateSubchapter = useCourseBuilder((state) => state.updateSubchapter);
   const addChapter = useCourseBuilder((state) => state.addChapter);
   const [showChapterModal, setShowChapterModal] = useState(false);
+  const [showSubchapterModal, setShowSubchapterModal] = useState(false);
   const [isGeneratingFlashcards, startFlashcardsTransition] = useTransition();
 
   const nodes = useMemo(() => {

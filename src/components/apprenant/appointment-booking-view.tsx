@@ -69,6 +69,7 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
             firstName: nameParts[0] || "",
             lastName: nameParts.slice(1).join(" ") || "",
             classe: "",
+            notes: "",
           });
         }
       }

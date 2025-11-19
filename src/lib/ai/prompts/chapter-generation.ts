@@ -28,7 +28,7 @@ Génère un chapitre de formation complet et structuré au format JSON suivant :
 {
   "title": "Titre du chapitre (accrocheur et clair, en casse phrase)",
   "summary": "Résumé pédagogique de 3 à 4 phrases expliquant l'objectif, les bénéfices pour l'apprenant et le livrable attendu",
-  "content": "Contenu détaillé du chapitre en markdown. Doit comporter au minimum 600 mots et être structuré avec plusieurs sections (##) et sous-sections (###). Chaque section contient : une introduction, des points clés en listes, au moins un exemple concret, des conseils pratiques, et une mini-activité ou question de réflexion.",
+  "content": "Contenu détaillé du chapitre en HTML. Doit comporter au minimum 600 mots et être structuré avec une hiérarchie claire de titres et sous-titres. Chaque section contient : une introduction, des points clés en listes numérotées ou à puces, au moins un exemple concret, des conseils pratiques, et une mini-activité ou question de réflexion.",
   "duration": "Durée estimée (ex: '45 min', '1h30') cohérente avec la densité du contenu",
   "type": "video" | "text" | "document",
   "suggestedSubchapters": [
@@ -41,16 +41,49 @@ Génère un chapitre de formation complet et structuré au format JSON suivant :
   ]
 }
 
+IMPORTANT - Structure HTML requise pour le contenu :
+- Utilise des balises HTML sémantiques : <h2> pour les titres de sections principales, <h3> pour les sous-sections, <h4> pour les sous-sous-sections
+- Utilise <ol> avec <li> pour les listes numérotées (1, 2, 3...) quand il y a un ordre logique ou des étapes
+- Utilise <ul> avec <li> pour les listes à puces quand l'ordre n'est pas important
+- Utilise <p> pour les paragraphes de texte
+- Utilise <strong> pour mettre en évidence les mots-clés importants
+- Utilise <em> pour l'emphase
+- Structure claire avec une hiérarchie : H2 > H3 > H4
+
+Exemple de structure attendue :
+<h2>1. Introduction</h2>
+<p>Texte d'introduction...</p>
+
+<h3>1.1. Objectifs de cette section</h3>
+<ol>
+  <li>Premier objectif</li>
+  <li>Deuxième objectif</li>
+  <li>Troisième objectif</li>
+</ol>
+
+<h2>2. Concepts clés</h2>
+<p>Texte explicatif...</p>
+
+<h3>2.1. Premier concept</h3>
+<p>Explication...</p>
+<ul>
+  <li>Point important 1</li>
+  <li>Point important 2</li>
+</ul>
+
 Le contenu doit être :
 - Pédagogique et actionnable
-- Structuré avec des sections claires (utilise ## pour les sections principales et ### pour les sous-sections)
-- Au minimum 4 sections principales : Introduction, Développement / Concepts clés, Mise en pratique / Études de cas, Synthèse & Plan d'action
-- Chaque section doit inclure des listes à puces ou numérotées avec des points concrets, des exemples ou mini-cas, et une recommandation à mettre en œuvre
-- Ajouter une section finale "Plan d'action" avec 3 à 5 étapes concrètes à réaliser par l'apprenant
+- Structuré avec une hiérarchie claire de titres (H2 pour sections principales, H3 pour sous-sections, H4 si nécessaire)
+- Au minimum 4 sections principales numérotées : 1. Introduction, 2. Développement / Concepts clés, 3. Mise en pratique / Études de cas, 4. Synthèse & Plan d'action
+- Chaque section doit inclure des listes numérotées (ol) pour les étapes/points ordonnés et des listes à puces (ul) pour les points non ordonnés
+- Utiliser des numéros dans les titres (1., 2., 3., etc.) pour les sections principales et des sous-numéros (1.1., 1.2., etc.) pour les sous-sections
+- Chaque section doit contenir : une introduction, des points clés en listes, au moins un exemple concret, des conseils pratiques, et une mini-activité ou question de réflexion
+- Ajouter une section finale "4. Plan d'action" avec une liste numérotée de 3 à 5 étapes concrètes à réaliser par l'apprenant
 - Utiliser des connecteurs logiques, un ton motivant et professionnel
 - Adapter les titres et résumés en casse phrase (pas de Title Case)
 - Adapté au contexte de la formation mentionné
 - Rédigé en français
+- Format HTML valide (pas de markdown, directement du HTML)
 
 Réponds uniquement avec le JSON, sans texte additionnel.`;
 }

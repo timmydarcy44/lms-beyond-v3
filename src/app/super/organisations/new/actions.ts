@@ -43,6 +43,10 @@ export async function createOrganizationWithAdminAction(input: CreateOrganizatio
   // Utiliser le service role client pour créer des utilisateurs
   const { getServiceRoleClient } = await import("@/lib/supabase/server");
   const serviceClient = getServiceRoleClient();
+  if (!serviceClient) {
+    return { success: false, error: "Service role client non disponible" };
+  }
+  const client = serviceClient!;
 
   try {
     const { data: authData } = await supabase.auth.getUser();
@@ -116,7 +120,7 @@ export async function createOrganizationWithAdminAction(input: CreateOrganizatio
       if (existingAdmin) {
         adminUserId = existingAdmin.id;
         // Mettre à jour le profil
-        await serviceClient
+        await client
           .from("profiles")
           .update({
             full_name: adminFullName,
@@ -148,7 +152,7 @@ export async function createOrganizationWithAdminAction(input: CreateOrganizatio
           adminUserId = inviteResponse.user.id;
 
           // Créer le profil
-          await serviceClient.from("profiles").insert({
+          await client.from("profiles").insert({
             id: adminUserId,
             email: input.admin.email,
             full_name: adminFullName,
@@ -160,7 +164,7 @@ export async function createOrganizationWithAdminAction(input: CreateOrganizatio
 
       // Ajouter l'admin à l'organisation
       if (adminUserId) {
-        await serviceClient.from("org_memberships").upsert({
+        await client.from("org_memberships").upsert({
           org_id: organization.id,
           user_id: adminUserId,
           role: "admin",
@@ -203,7 +207,7 @@ export async function createOrganizationWithAdminAction(input: CreateOrganizatio
 
             userId = authUser.user.id;
 
-            await serviceClient.from("profiles").insert({
+            await client.from("profiles").insert({
               id: userId,
               email: member.email,
               full_name: member.fullName,
@@ -216,7 +220,7 @@ export async function createOrganizationWithAdminAction(input: CreateOrganizatio
         }
 
         if (userId) {
-          await serviceClient.from("org_memberships").insert({
+          await client.from("org_memberships").insert({
             org_id: organization.id,
             user_id: userId,
             role: member.role,

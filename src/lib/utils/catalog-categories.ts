@@ -10,6 +10,12 @@ export async function getCategoriesForSuperAdmin(): Promise<{
   allowCustom: boolean;
 }> {
   const supabase = await getServerClient();
+  if (!supabase) {
+    return {
+      defaultCategories: ["Ressources humaines", "Intelligence artificielle", "Business", "Marketing", "Soft skills", "Pédagogie"],
+      allowCustom: true,
+    };
+  }
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

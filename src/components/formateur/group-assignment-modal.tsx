@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BookOpen, FileText, Layers, PenTool, Loader2, Check, Users } from "lucide-react";
+import { BookOpen, FileText, Layers, PenTool, Loader2, Check, Users, UserPlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -431,6 +431,7 @@ export function GroupAssignmentModal({
     </Dialog>
   );
 }
+
 
 
 

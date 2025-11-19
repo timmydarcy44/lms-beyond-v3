@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { SuperAdminHeaderApple } from "@/components/super-admin/super-admin-header-apple";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClientOrFallback, getServiceRoleClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -73,7 +74,7 @@ export default async function SuperAdminParcoursPage() {
     }
 
     const fallback = await fallbackQuery;
-    paths = fallback.data ?? [];
+    paths = (fallback.data ?? []).map((p: any) => ({ ...p, updated_at: p.updated_at || p.created_at || new Date().toISOString() }));
     error = fallback.error ?? null;
   } else if (error?.code === "22P02") {
     console.warn("[super-admin/parcours] Invalid UUID in filter, fetching without owner filter");

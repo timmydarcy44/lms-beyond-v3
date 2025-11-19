@@ -17,11 +17,18 @@ export default async function SuperAdminStudioPage() {
 
   const studioItems = [
     {
+      title: "Formations",
+      description: "Créer et gérer vos formations pour les catalogues",
+      icon: BookOpen,
+      href: "/super/studio/formations",
+      color: "from-blue-500 to-cyan-500",
+    },
+    {
       title: "Modules",
       description: "Gérer tous les modules (formations) de toutes les organisations",
       icon: BookOpen,
       href: "/super/studio/modules",
-      color: "from-blue-500 to-cyan-500",
+      color: "from-indigo-500 to-purple-500",
     },
     {
       title: "Parcours",

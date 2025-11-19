@@ -98,13 +98,13 @@ export function FormationsCardsClient({ courses, statusConfig }: FormationsCards
     }
   };
 
-  const handleAssignToPath = async (content: { courseIds: string[]; testIds: string[]; resourceIds: string[] }) => {
+  const handleAssignToPath = async (content: { courseIds: string[]; testIds: string[]; resourceIds: string[] }): Promise<void> => {
     if (!selectedPath || !selectedCourse) return;
     // Ajouter le cours sélectionné à la liste (s'il n'est pas déjà présent)
     const courseIds = content.courseIds.includes(selectedCourse)
       ? content.courseIds
       : [selectedCourse, ...content.courseIds];
-    return await addContentToPath(selectedPath, {
+    await addContentToPath(selectedPath, {
       ...content,
       courseIds,
     });
@@ -254,7 +254,7 @@ export function FormationsCardsClient({ courses, statusConfig }: FormationsCards
               setSelectedCourse(null);
             }
           }}
-          group={selectedGroup}
+          group={selectedGroup as any}
           content={{
             courses: selectedCourse ? [{ id: selectedCourse, title: courses.find((c) => c.id === selectedCourse)?.title || "Formation", status: courses.find((c) => c.id === selectedCourse)?.status || "published" }] : [],
             paths: paths.map((p) => ({ id: p.id, title: p.title, status: p.status })),

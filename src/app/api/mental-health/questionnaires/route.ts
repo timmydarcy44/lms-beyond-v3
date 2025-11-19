@@ -117,17 +117,25 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const isSuper = await isUserSuperAdmin();
-    const supabase = isSuper ? getServiceRoleClient() : await getServerClient();
-
+    const supabase = await getServerClient();
     if (!supabase) {
+      return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+    const isSuper = await isUserSuperAdmin(user.id);
+    const clientToUse = isSuper ? getServiceRoleClient() : supabase;
+
+    if (!clientToUse) {
       return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
     }
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get("org_id");
 
-    let query = supabase
+    let query = clientToUse
       .from("mental_health_questionnaires")
       .select(`
         *,

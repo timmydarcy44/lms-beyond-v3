@@ -272,7 +272,7 @@ export function TestQuestionBuilder({ questions, onChange, onAddQuestion }: Test
       </Card>
 
       <Dialog open={Boolean(editingQuestion)} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-5xl max-h-[95vh] border-white/10 bg-[#06070d]/95 text-white flex flex-col overflow-hidden">
+        <DialogContent className="max-w-6xl max-h-[95vh] border-white/10 bg-[#06070d]/95 text-white flex flex-col overflow-hidden">
           {editingQuestion ? (
             <>
               <DialogHeader className="flex-shrink-0 pb-4 border-b border-white/10">
@@ -281,7 +281,7 @@ export function TestQuestionBuilder({ questions, onChange, onAddQuestion }: Test
               
               {/* Contenu scrollable */}
               <div 
-                className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-6"
+                className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-6 py-4"
                 style={{
                   scrollbarWidth: 'thin',
                   scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
@@ -392,9 +392,9 @@ export function TestQuestionBuilder({ questions, onChange, onAddQuestion }: Test
               </div>
 
               {(editingQuestion.type === 'multiple' || editingQuestion.type === 'single') && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs uppercase tracking-[0.3em] text-white/50">Réponses</p>
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/50">Réponses possibles</p>
                     <Button
                       type="button"
                       variant="ghost"
@@ -404,71 +404,77 @@ export function TestQuestionBuilder({ questions, onChange, onAddQuestion }: Test
                       Ajouter une option
                     </Button>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {(editingQuestion.options ?? []).map((option, index) => (
                       <div
                         key={option.id}
-                        className="flex flex-col gap-3 rounded-2xl border border-white/15 bg-black/30 px-4 py-3 sm:flex-row sm:items-center"
+                        className="flex flex-col gap-4 rounded-2xl border border-white/15 bg-black/30 p-5"
                       >
-                        <div className="flex items-center gap-3 sm:flex-1">
-                          <Badge className="rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/60">
+                        <div className="flex items-start gap-4">
+                          <Badge className="mt-1 rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/60 flex-shrink-0">
                             {index + 1}
                           </Badge>
-                          <Input
-                            value={option.value}
-                            onChange={(event) => {
-                              const next = (editingQuestion.options ?? []).map((opt) =>
-                                opt.id === option.id ? { ...opt, value: event.target.value } : opt,
-                              );
-                              updateOptions(editingQuestion.id, next);
-                            }}
-                            className="border-white/15 bg-black/40 text-sm text-white placeholder:text-white/40"
-                          />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className={cn(
-                              'rounded-full border px-3 py-1 text-xs uppercase tracking-[0.3em] transition',
-                              option.correct
-                                ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-200'
-                                : 'border-white/20 text-white/60 hover:bg-white/10',
-                            )}
-                            onClick={() => toggleCorrect(option.id)}
-                          >
-                            Bonne réponse
-                          </Button>
-                          {/* Champ de points pour chaque option */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-white/50 whitespace-nowrap">Points:</label>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.5"
-                              value={option.points ?? (option.correct ? editingQuestion.score : 0)}
-                              onChange={(event) => {
-                                const next = (editingQuestion.options ?? []).map((opt) =>
-                                  opt.id === option.id 
-                                    ? { ...opt, points: Number(event.target.value) || 0 }
-                                    : opt,
-                                );
-                                updateOptions(editingQuestion.id, next);
-                              }}
-                              className="w-20 border-white/15 bg-black/40 text-sm text-white text-center"
-                              placeholder="0"
-                            />
+                          <div className="flex-1 space-y-3">
+                            <div>
+                              <label className="mb-2 block text-xs uppercase tracking-[0.3em] text-white/50">Texte de la réponse</label>
+                              <Textarea
+                                value={option.value}
+                                onChange={(event) => {
+                                  const next = (editingQuestion.options ?? []).map((opt) =>
+                                    opt.id === option.id ? { ...opt, value: event.target.value } : opt,
+                                  );
+                                  updateOptions(editingQuestion.id, next);
+                                }}
+                                className="min-h-[100px] border-white/15 bg-black/40 text-sm text-white placeholder:text-white/40 resize-y"
+                                placeholder="Saisissez le texte de la réponse..."
+                              />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className={cn(
+                                  'rounded-full border px-4 py-2 text-xs uppercase tracking-[0.3em] transition',
+                                  option.correct
+                                    ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-200'
+                                    : 'border-white/20 text-white/60 hover:bg-white/10',
+                                )}
+                                onClick={() => toggleCorrect(option.id)}
+                              >
+                                {option.correct ? '✓ Bonne réponse' : 'Marquer comme bonne réponse'}
+                              </Button>
+                              {/* Champ de points pour chaque option */}
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs text-white/50 whitespace-nowrap">Points:</label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.5"
+                                  value={option.points ?? (option.correct ? editingQuestion.score : 0)}
+                                  onChange={(event) => {
+                                    const next = (editingQuestion.options ?? []).map((opt) =>
+                                      opt.id === option.id 
+                                        ? { ...opt, points: Number(event.target.value) || 0 }
+                                        : opt,
+                                    );
+                                    updateOptions(editingQuestion.id, next);
+                                  }}
+                                  className="w-24 border-white/15 bg-black/40 text-sm text-white text-center"
+                                  placeholder="0"
+                                />
+                              </div>
+                              {(editingQuestion.options ?? []).length > 2 ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="rounded-full border border-red-400/30 px-4 py-2 text-xs uppercase tracking-[0.3em] text-red-400/70 hover:bg-red-500/10"
+                                  onClick={() => removeOption(option.id)}
+                                >
+                                  Retirer
+                                </Button>
+                              ) : null}
+                            </div>
                           </div>
-                          {(editingQuestion.options ?? []).length > 2 ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="rounded-full border border-white/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white/60 hover:bg-white/10"
-                              onClick={() => removeOption(option.id)}
-                            >
-                              Retirer
-                            </Button>
-                          ) : null}
                         </div>
                       </div>
                     ))}

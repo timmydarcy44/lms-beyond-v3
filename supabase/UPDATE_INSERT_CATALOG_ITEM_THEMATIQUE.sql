@@ -106,3 +106,4 @@ COMMENT ON FUNCTION public.insert_catalog_item IS 'Insert a catalog item (Super 
 
 
 
+

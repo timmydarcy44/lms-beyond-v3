@@ -18,6 +18,9 @@ export async function GET(
 
     const { pageId } = await params;
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data, error } = await supabase
       .from("cms_pages")
       .select("*")
@@ -65,6 +68,9 @@ export async function PUT(
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data, error } = await supabase
       .from("cms_pages")
       .update({
@@ -112,6 +118,9 @@ export async function PATCH(
     const body = await request.json();
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data, error } = await supabase
       .from("cms_pages")
       .update({
@@ -149,6 +158,9 @@ export async function DELETE(
 
     const { pageId } = await params;
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { error } = await supabase
       .from("cms_pages")
       .delete()

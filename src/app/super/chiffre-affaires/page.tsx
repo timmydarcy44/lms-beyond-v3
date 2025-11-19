@@ -15,6 +15,8 @@ function formatCurrency(value: number): string {
   });
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function ChiffreAffairesPage() {
   const supabase = await getServiceRoleClientOrFallback();
 

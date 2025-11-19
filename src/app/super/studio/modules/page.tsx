@@ -92,7 +92,7 @@ export default async function SuperAdminModulesPage() {
             </p>
           </div>
           <Link
-            href="/super/studio/modules/new"
+            href="/super/studio/modules/new/choose"
             className="flex items-center gap-2 rounded-full bg-white/10 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/20"
           >
             <Plus className="h-4 w-4" />

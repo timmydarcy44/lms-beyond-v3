@@ -38,13 +38,15 @@ export default async function AdminRessourceDetailPage({ params }: AdminRessourc
       <div className="space-y-8">
         <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/60 shadow-[0_40px_140px_rgba(249,115,22,0.25)]">
           <div className="absolute inset-0">
-            <Image
-              src={info.backgroundImage}
-              alt={info.title}
-              fill
-              priority
-              className="object-cover"
-            />
+            {info.backgroundImage && (
+              <Image
+                src={info.backgroundImage}
+                alt={info.title}
+                fill
+                priority
+                className="object-cover"
+              />
+            )}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(67,20,7,0.85),_transparent_60%)]" />
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-orange-900/40 to-black/75" />
           </div>
@@ -80,12 +82,22 @@ export default async function AdminRessourceDetailPage({ params }: AdminRessourc
         </section>
 
         {related.length > 0 && (
-          <SectionSlider title="Vous aimerez aussi" cards={related} accent="learner" />
+          <SectionSlider 
+            title="Vous aimerez aussi" 
+            cards={related.map(card => ({ 
+              ...card, 
+              cta: card.cta ?? undefined,
+              meta: card.meta ?? undefined,
+              progress: card.progress ?? undefined,
+            }))} 
+            accent="learner" 
+          />
         )}
       </div>
     </LearningSessionTracker>
   );
 }
+
 
 
 

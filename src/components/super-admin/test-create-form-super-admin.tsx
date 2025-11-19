@@ -19,22 +19,6 @@ import { CategorySelectField } from "./category-select-field";
 
 import type { TestBuilderQuestion } from "@/types/test-builder";
 
-const INITIAL_QUESTIONS: Omit<TestBuilderQuestion, "id">[] = [
-  {
-    title: "Nouvelle question",
-    type: "multiple",
-    context: "",
-    options: [
-      { id: nanoid(), value: "Option 1", correct: true },
-      { id: nanoid(), value: "Option 2", correct: false },
-    ],
-    score: 1,
-    feedback: "",
-    status: "draft",
-    aiGenerated: false,
-  },
-];
-
 export function TestCreateFormSuperAdmin() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -51,9 +35,8 @@ export function TestCreateFormSuperAdmin() {
   const [adaptiveMode, setAdaptiveMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [questions, setQuestions] = useState<TestBuilderQuestion[]>(() =>
-    INITIAL_QUESTIONS.map((question) => ({ ...question, id: nanoid() })),
-  );
+  // Commencer avec un tableau vide - les formateurs créent leurs propres questions
+  const [questions, setQuestions] = useState<TestBuilderQuestion[]>([]);
 
   const handleAddBlankQuestion = () => {
     setQuestions((prev) => [

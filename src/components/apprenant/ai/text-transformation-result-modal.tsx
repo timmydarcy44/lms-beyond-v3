@@ -88,7 +88,7 @@ export function TextTransformationResultModal({
 
   const renderStructuredText = (text: string) => {
     const lines = text.split(/\r?\n/);
-    const elements: JSX.Element[] = [];
+    const elements: React.ReactElement[] = [];
 
     lines.forEach((rawLine, index) => {
       const line = rawLine.trim();

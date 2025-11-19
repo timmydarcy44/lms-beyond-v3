@@ -29,6 +29,10 @@ export async function createUserAction(input: CreateUserInput): Promise<{
 
   // Utiliser le service role client pour créer des utilisateurs
   const serviceClient = getServiceRoleClient();
+  if (!serviceClient) {
+    return { success: false, error: "Service role client non disponible" };
+  }
+  const client = serviceClient!;
 
   try {
     // Vérifier si l'utilisateur existe déjà
@@ -43,13 +47,13 @@ export async function createUserAction(input: CreateUserInput): Promise<{
     if (existingProfile) {
       userId = existingProfile.id;
       // Mettre à jour le rôle si nécessaire
-      await serviceClient
+      await client
         .from("profiles")
         .update({ role: input.role, full_name: input.fullName })
         .eq("id", userId);
     } else {
       // Créer l'utilisateur via Supabase Auth
-      const { data: authUser, error: authError } = await serviceClient.auth.admin.createUser({
+      const { data: authUser, error: authError } = await client.auth.admin.createUser({
         email: input.email,
         email_confirm: false, // Nécessitera confirmation email
         user_metadata: {
@@ -69,7 +73,7 @@ export async function createUserAction(input: CreateUserInput): Promise<{
       userId = authUser.user.id;
 
       // Créer le profil
-      const { error: profileError } = await serviceClient.from("profiles").insert({
+      const { error: profileError } = await client.from("profiles").insert({
         id: userId,
         email: input.email,
         full_name: input.fullName,
@@ -88,7 +92,7 @@ export async function createUserAction(input: CreateUserInput): Promise<{
     // Assigner aux organisations si fournies
     if (input.organizationIds && input.organizationIds.length > 0) {
       for (const orgId of input.organizationIds) {
-        const { error: membershipError } = await serviceClient.from("org_memberships").upsert({
+        const { error: membershipError } = await client.from("org_memberships").upsert({
           org_id: orgId,
           user_id: userId,
           role: input.role,

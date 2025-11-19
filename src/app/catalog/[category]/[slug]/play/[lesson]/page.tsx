@@ -47,10 +47,10 @@ export default async function LearnerPlayPage({ params }: LearnerPlayPageProps) 
     notFound();
   }
 
-  const activeModule = modules.find((module) => module.lessons?.some((item) => item.id === activeLesson.id));
+  const activeModule = modules.find((module) => module.lessons?.some((item: { id: string }) => item.id === activeLesson.id));
   // Utiliser videoUrl du lesson si disponible, sinon trailerUrl du detail
   const videoSrc = activeLesson.videoUrl || detail.trailerUrl || undefined;
-  const activeIndex = allLessons.findIndex((item) => item.id === activeLesson.id);
+  const activeIndex = allLessons.findIndex((item: { id: string }) => item.id === activeLesson.id);
   const previousLesson = activeIndex > 0 ? allLessons[activeIndex - 1] : null;
   const nextLesson = activeIndex >= 0 && activeIndex < allLessons.length - 1 ? allLessons[activeIndex + 1] : null;
   const flashcards = activeLesson.flashcards ?? [];

@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { getServerClient } from "@/lib/supabase/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-11-20.acacia",
-});
-
 export const dynamic = 'force-dynamic';
+
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+  try {
+    const Stripe = require("stripe").default;
+    return new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-11-20.acacia" as any,
+    });
+  } catch (error) {
+    console.error("[stripe] Error initializing Stripe:", error);
+    return null;
+  }
+}
 
 /**
  * Crée une session Stripe Checkout pour plusieurs items du panier
@@ -14,6 +24,9 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -46,6 +59,15 @@ export async function POST(request: NextRequest) {
       },
       quantity: 1,
     }));
+
+    // Vérifier que Stripe est configuré
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: "Stripe n'est pas configuré" },
+        { status: 503 }
+      );
+    }
 
     // Créer la session de paiement Stripe
     const session = await stripe.checkout.sessions.create({
@@ -87,6 +109,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
 
 

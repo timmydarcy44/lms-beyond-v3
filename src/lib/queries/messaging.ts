@@ -190,6 +190,19 @@ export async function getLearnerMessages(): Promise<Message[]> {
       const resolvedSenderName =
         senderInfo?.name || metadataSenderName || "Utilisateur";
 
+      // Déterminer si le message est lu
+      // Pour les messages envoyés, ils sont toujours considérés comme lus
+      // Pour les messages reçus, on vérifie le champ read dans message_recipients
+      // Si read est null/undefined/false, le message est non lu
+      let isRead: boolean;
+      if (isSentByUser) {
+        isRead = true; // Les messages envoyés sont toujours lus
+      } else {
+        // Pour les messages reçus, vérifier le statut read dans message_recipients
+        // Si recipient n'existe pas ou read est false/null, le message est non lu
+        isRead = recipient?.read === true;
+      }
+
       return {
         id: msg.id,
         sender_id: msg.sender_id,
@@ -206,7 +219,7 @@ export async function getLearnerMessages(): Promise<Message[]> {
           senderName: resolvedSenderName,
         },
         created_at: msg.created_at,
-        read: isSentByUser ? true : (recipient?.read || false), // Les messages envoyés sont considérés comme lus
+        read: isRead,
         read_at: isSentByUser ? msg.created_at : recipient?.read_at,
         // Ajouter un flag pour savoir si le message a été envoyé par l'utilisateur actuel
         is_sent: isSentByUser,
@@ -294,12 +307,44 @@ export async function getLearnerConversations(): Promise<Conversation[]> {
 
   // Obtenir l'ID de l'utilisateur actuel pour déterminer l'auteur des messages
   let currentUserId: string | null = null;
+  let supabase: any = null;
   try {
-    const supabase = await getServerClient();
+    supabase = await getServerClient();
     const { data: authData } = await supabase?.auth.getUser() || {};
     currentUserId = authData?.user?.id || null;
   } catch {
     // Ignorer les erreurs d'authentification
+  }
+
+  // Précharger tous les destinataires pour les messages envoyés qui n'ont pas de recipientId dans metadata
+  const messagesNeedingRecipient = messages.filter((msg) => {
+    const messageAny = msg as Message & { is_sent?: boolean };
+    const isSentByCurrentUser = messageAny.is_sent || (currentUserId && msg.sender_id === currentUserId);
+    const recipientId = (msg.metadata as any)?.recipientId;
+    return isSentByCurrentUser && (!recipientId || recipientId === currentUserId);
+  });
+
+  const recipientMap = new Map<string, string>();
+  if (messagesNeedingRecipient.length > 0 && supabase) {
+    try {
+      const messageIds = messagesNeedingRecipient.map((msg) => msg.id);
+      const { data: recipients } = await supabase
+        .from("message_recipients")
+        .select("message_id, recipient_id")
+        .in("message_id", messageIds)
+        .neq("recipient_id", currentUserId || "");
+
+      if (recipients) {
+        // Pour chaque message, prendre le premier destinataire (normalement il n'y en a qu'un)
+        recipients.forEach((r: any) => {
+          if (!recipientMap.has(r.message_id)) {
+            recipientMap.set(r.message_id, r.recipient_id);
+          }
+        });
+      }
+    } catch (error) {
+      console.error("[messaging] Error preloading recipients:", error);
+    }
   }
 
   for (const message of messages) {
@@ -324,7 +369,18 @@ export async function getLearnerConversations(): Promise<Conversation[]> {
     let conversationId: string;
     if (isSentByCurrentUser) {
       // Message envoyé : récupérer le destinataire depuis metadata
-      conversationId = (message.metadata as any)?.recipientId || message.sender_id;
+      conversationId = (message.metadata as any)?.recipientId;
+      
+      // Si recipientId n'est pas dans metadata ou est invalide, utiliser le map préchargé
+      if (!conversationId || conversationId === currentUserId) {
+        conversationId = recipientMap.get(message.id) || "";
+      }
+      
+      // Si toujours pas de conversationId valide, utiliser sender_id comme fallback (mais ce ne devrait pas arriver)
+      if (!conversationId || conversationId === currentUserId) {
+        conversationId = message.sender_id;
+      }
+      
       console.log("[messaging] Message sent by user, conversationId (recipient):", conversationId);
     } else {
       // Message reçu : l'expéditeur est l'autre partie
@@ -339,14 +395,27 @@ export async function getLearnerConversations(): Promise<Conversation[]> {
         currentUserId,
         messageId: message.id,
         isSentByCurrentUser,
+        metadata: message.metadata,
+        recipientFromMap: recipientMap.get(message.id),
+        messageType: message.type,
       });
-      // Essayer de récupérer le destinataire depuis message_recipients ou metadata
-      const recipientId = (message.metadata as any)?.recipientId;
-      if (recipientId && recipientId !== currentUserId) {
-        conversationId = recipientId;
-        console.log("[messaging] Fixed conversationId from metadata:", conversationId);
+      
+      // Pour les consignes, il peut arriver qu'elles soient envoyées sans destinataire spécifique
+      // Dans ce cas, on peut les ignorer car elles ne font pas partie d'une conversation
+      if (message.type === "consigne") {
+        console.log("[messaging] Skipping consigne message without valid recipient:", message.id);
+        continue;
+      }
+      
+      // Dernière tentative : utiliser le map préchargé
+      const recipientFromMap = recipientMap.get(message.id);
+      if (recipientFromMap && recipientFromMap !== currentUserId) {
+        conversationId = recipientFromMap;
+        console.log("[messaging] Fixed conversationId from preloaded map:", conversationId);
       } else {
-        console.error("[messaging] Cannot fix conversationId, skipping message");
+        // Si c'est un message envoyé sans destinataire valide, on peut l'ignorer
+        // (cela peut arriver pour des messages mal formés ou des consignes)
+        console.warn("[messaging] Cannot fix conversationId, skipping message. Message ID:", message.id, "Type:", message.type);
         continue; // Skip ce message car on ne peut pas déterminer l'autre partie
       }
     }
@@ -409,10 +478,9 @@ export async function getLearnerConversations(): Promise<Conversation[]> {
       id: message.id,
       author: author,
       content: message.content,
-      subject: message.subject || null,
       sentAt: new Date(message.created_at),
       type: message.type === "consigne" ? "consigne" : "message",
-    });
+    } as any);
 
     // Compter les non lus (seulement pour les messages reçus)
     if (!isSentByCurrentUser && !message.read) {

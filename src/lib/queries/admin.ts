@@ -454,7 +454,7 @@ export const getAdminGroups = async (): Promise<AdminGroup[]> => {
       id: group.id,
       name: group.name || "Groupe sans nom",
       memberCount: memberCounts.get(group.id) || 0,
-      orgName: group.organization?.name ?? null,
+      orgName: (group.organization as { name?: string })?.name ?? null,
     }));
   } catch (error) {
     console.warn("[admin|getAdminGroups] Supabase error, returning fallback", error);
@@ -480,6 +480,11 @@ export const getAdminAssignableCatalog = async (): Promise<AdminAssignableCatalo
     supabase = getServiceRoleClient();
   } catch (error) {
     console.warn("[admin|getAdminAssignableCatalog] Service client unavailable", error);
+    return fallbackAssignableCatalog;
+  }
+
+  if (!supabase) {
+    console.warn("[admin|getAdminAssignableCatalog] Service client is null");
     return fallbackAssignableCatalog;
   }
 

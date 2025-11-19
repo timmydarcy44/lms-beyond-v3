@@ -48,7 +48,7 @@ export default async function LearnerFormationsPage() {
     >
       <div className="space-y-12">
         <header className="space-y-6">
-          <p className="max-w-3xl text-sm text-white/60">
+          <p className="max-w-3xl text-sm text-slate-600 dark:text-white/60">
             Explorez les expériences immersives imaginées par Timmy Darcy. Chaque programme mixe neurosciences, design émotionnel et pédagogie expérientielle pour propulser vos parcours d&apos;apprentissage.
           </p>
         </header>
@@ -108,13 +108,13 @@ export default async function LearnerFormationsPage() {
                 <Link
                   key={item.slug}
                   href={item.href}
-                  className="group flex min-h-[140px] flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 transition duration-300 hover:border-white/30 hover:bg-white/10"
+                  className="group flex min-h-[140px] flex-col justify-between overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4 transition duration-300 hover:border-slate-300 dark:hover:border-white/30 hover:bg-slate-100 dark:hover:bg-white/10"
                 >
-                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40">
+                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-white/40">
                     <span>{item.meta ?? "Parcours"}</span>
                     <span>{item.cta ?? "Découvrir"}</span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white group-hover:text-white">{item.title}</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white group-hover:text-slate-950 dark:group-hover:text-white">{item.title}</h3>
                 </Link>
               ))}
             </aside>

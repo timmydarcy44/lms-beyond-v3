@@ -186,7 +186,9 @@ export function QuickActionsPanel({ organizationId, organizationName }: QuickAct
                           e.stopPropagation();
                           e.preventDefault();
                           console.log("[QuickActionsPanel] Navigating to:", child.href);
-                          router.push(child.href);
+                          if (child.href) {
+                            router.push(child.href);
+                          }
                         }}
                         className="w-full text-left block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors group"
                         style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}

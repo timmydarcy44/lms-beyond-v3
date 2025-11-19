@@ -1,14 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { env } from "@/lib/env";
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
-type HeaderList = Awaited<ReturnType<typeof headers>>;
 
 const buildClient = async (url: string, anonKey: string) => {
   const cookieStore: CookieStore = await cookies();
-  const headerList: HeaderList = await headers();
 
   return createServerClient(url, anonKey, {
     cookies: {
@@ -22,7 +20,6 @@ const buildClient = async (url: string, anonKey: string) => {
         cookieStore.delete({ name, ...options });
       },
     },
-    headers: headerList,
   });
 };
 

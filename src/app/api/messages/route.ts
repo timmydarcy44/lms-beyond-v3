@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,17 +93,27 @@ export async function POST(request: NextRequest) {
 
     console.log("[messages] Message created:", message.id);
 
-    // Créer l'entrée dans message_recipients pour le formateur
-    const { error: recipientError } = await supabase
+    // Créer l'entrée dans message_recipients pour le destinataire
+    // Utiliser le service role client pour bypasser RLS si nécessaire
+    const serviceClient = getServiceRoleClient();
+    const clientToUse = serviceClient || supabase;
+    
+    const { error: recipientError } = await clientToUse
       .from("message_recipients")
       .insert({
         message_id: message.id,
         recipient_id: recipientId,
-        read: false,
+        read: false, // Le message est non lu par défaut
       });
 
     if (recipientError) {
       console.error("[messages] Error creating recipient:", recipientError);
+      console.error("[messages] Recipient error details:", {
+        code: recipientError.code,
+        message: recipientError.message,
+        details: recipientError.details,
+        hint: recipientError.hint,
+      });
       // On retourne quand même un succès partiel car le message est créé
       return NextResponse.json(
         { 
@@ -116,7 +126,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[messages] Message sent successfully");
+    console.log("[messages] Message sent successfully, recipient entry created:", {
+      messageId: message.id,
+      recipientId: recipientId,
+      read: false,
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BookOpen, Loader2, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -69,8 +69,25 @@ export function TestCourseAssignmentSection({
     }
   }, [selectedCourseId]);
 
+  // Appeler onAssignmentChange uniquement quand les valeurs changent réellement
+  // Utiliser useRef pour éviter les boucles infinies
+  const prevAssignmentRef = useRef<string>("");
+  
   useEffect(() => {
-    if (onAssignmentChange && selectedCourseId) {
+    if (!onAssignmentChange) return;
+    
+    const currentAssignment = JSON.stringify({
+      courseId: selectedCourseId,
+      sectionId: selectedSectionId || undefined,
+      chapterId: selectedChapterId || undefined,
+      subchapterId: selectedSubchapterId || undefined,
+      positionAfterId: positionAfterId || undefined,
+      positionType: positionAfterId ? positionType : undefined,
+    });
+    
+    // Ne déclencher que si l'assignation a réellement changé
+    if (currentAssignment !== prevAssignmentRef.current && selectedCourseId) {
+      prevAssignmentRef.current = currentAssignment;
       onAssignmentChange({
         courseId: selectedCourseId,
         sectionId: selectedSectionId || undefined,
@@ -80,7 +97,7 @@ export function TestCourseAssignmentSection({
         positionType: positionAfterId ? positionType : undefined,
       });
     }
-  }, [selectedCourseId, selectedSectionId, selectedChapterId, selectedSubchapterId, positionAfterId, positionType, onAssignmentChange]);
+  }, [selectedCourseId, selectedSectionId, selectedChapterId, selectedSubchapterId, positionAfterId, positionType]);
 
   const loadCourses = async () => {
     setIsLoadingCourses(true);
@@ -141,12 +158,12 @@ export function TestCourseAssignmentSection({
               <Loader2 className="h-4 w-4 animate-spin text-white/60" />
             </div>
           ) : (
-            <Select value={selectedCourseId} onValueChange={handleCourseChange}>
+            <Select value={selectedCourseId || "none"} onValueChange={handleCourseChange}>
               <SelectTrigger className="border-white/15 bg-black/40 text-sm text-white">
                 <SelectValue placeholder="Sélectionnez une formation (optionnel)" />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-white/20">
-                <SelectItem value="" className="text-white">Aucune formation</SelectItem>
+                <SelectItem value="none" className="text-white">Aucune formation</SelectItem>
                 {courses.map((course) => (
                   <SelectItem key={course.id} value={course.id} className="text-white">
                     {course.title}
@@ -169,12 +186,12 @@ export function TestCourseAssignmentSection({
                 {/* Sélection de la section */}
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-[0.3em] text-white/50">Section (optionnel)</Label>
-                  <Select value={selectedSectionId} onValueChange={setSelectedSectionId}>
+                  <Select value={selectedSectionId || "none"} onValueChange={(value) => setSelectedSectionId(value === "none" ? "" : value)}>
                     <SelectTrigger className="border-white/15 bg-black/40 text-sm text-white">
                       <SelectValue placeholder="Sélectionnez une section" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-white/20">
-                      <SelectItem value="" className="text-white">Aucune section spécifique</SelectItem>
+                      <SelectItem value="none" className="text-white">Aucune section spécifique</SelectItem>
                       {courseStructure.map((section) => (
                         <SelectItem key={section.id} value={section.id} className="text-white">
                           {section.title}
@@ -185,15 +202,15 @@ export function TestCourseAssignmentSection({
                 </div>
 
                 {/* Sélection du chapitre */}
-                {selectedSectionId && courseStructure.find((s) => s.id === selectedSectionId)?.chapters.length > 0 && (
+                {selectedSectionId && courseStructure.find((s) => s.id === selectedSectionId)?.chapters && courseStructure.find((s) => s.id === selectedSectionId)!.chapters.length > 0 && (
                   <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-[0.3em] text-white/50">Chapitre (optionnel)</Label>
-                    <Select value={selectedChapterId} onValueChange={setSelectedChapterId}>
+                    <Select value={selectedChapterId || "none"} onValueChange={(value) => setSelectedChapterId(value === "none" ? "" : value)}>
                       <SelectTrigger className="border-white/15 bg-black/40 text-sm text-white">
                         <SelectValue placeholder="Sélectionnez un chapitre" />
                       </SelectTrigger>
                       <SelectContent className="bg-gray-800 border-white/20">
-                        <SelectItem value="" className="text-white">Aucun chapitre spécifique</SelectItem>
+                        <SelectItem value="none" className="text-white">Aucun chapitre spécifique</SelectItem>
                         {courseStructure
                           .find((s) => s.id === selectedSectionId)
                           ?.chapters.map((chapter) => (

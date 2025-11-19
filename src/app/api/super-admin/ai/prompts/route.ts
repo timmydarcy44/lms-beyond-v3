@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest) {
     // Vérifier si le prompt existe déjà
     const { data: existing } = await supabase
       .from("ai_prompts")
-      .select("id")
+      .select("id, prompt_location, feature_name, endpoint, description")
       .eq("feature_id", featureId)
       .single();
 
@@ -94,10 +94,10 @@ export async function PUT(request: NextRequest) {
         .from("ai_prompts")
         .update({
           prompt_template: prompt,
-          prompt_location: promptLocation || existing.prompt_location,
-          feature_name: featureName || existing.feature_name,
-          endpoint: endpoint || existing.endpoint,
-          description: description || existing.description,
+          prompt_location: promptLocation || (existing as any).prompt_location,
+          feature_name: featureName || (existing as any).feature_name,
+          endpoint: endpoint || (existing as any).endpoint,
+          description: description || (existing as any).description,
           updated_by: authData.user.id,
           updated_at: new Date().toISOString(),
         })

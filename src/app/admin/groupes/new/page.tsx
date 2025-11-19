@@ -121,8 +121,8 @@ export default async function AdminCreateGroupPage({ searchParams }: { searchPar
                           <p className="text-xs text-white/50">{learner.email ?? "-"}</p>
                         </div>
                       </div>
-                      {learner.groups.length ? (
-                        <Badge className="bg-white/10 text-white/70">{learner.groups.length} groupe(s)</Badge>
+                      {((learner as any).groups?.length ?? 0) > 0 ? (
+                        <Badge className="bg-white/10 text-white/70">{((learner as any).groups?.length ?? 0)} groupe(s)</Badge>
                       ) : null}
                     </label>
                   ))}

@@ -32,7 +32,7 @@ export function AdminGroupsView({ groups, flash }: AdminGroupsViewProps) {
     return groups.filter((group) => {
       return (
         group.name.toLowerCase().includes(lc) ||
-        group.members.some((member) => member.name.toLowerCase().includes(lc)) ||
+        ((group as any).members?.some((member: any) => member.name?.toLowerCase().includes(lc)) ?? false) ||
         (group.orgName ?? "").toLowerCase().includes(lc)
       );
     });
@@ -106,24 +106,24 @@ export function AdminGroupsView({ groups, flash }: AdminGroupsViewProps) {
                     <div>
                       <h3 className="text-lg font-semibold text-white">{group.name}</h3>
                       <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-                        Référent · {group.ownerName ?? "-"}
+                        Référent · {(group as any).ownerName ?? "-"}
                       </p>
                       {group.orgName ? (
                         <p className="text-xs uppercase tracking-[0.3em] text-white/30">Organisation · {group.orgName}</p>
                       ) : null}
                     </div>
                     <Badge className="rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/70">
-                      {group.members.length} apprenant(s)
+                      {((group as any).members?.length ?? 0)} apprenant(s)
                     </Badge>
                   </div>
-                  {group.description ? <p className="text-sm text-white/60">{group.description}</p> : null}
+                  {(group as any).description ? <p className="text-sm text-white/60">{(group as any).description}</p> : null}
                   <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-white/60">
                     <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">Membres</p>
                     <div className="flex flex-wrap gap-2">
-                      {group.members.length === 0 ? (
+                      {((group as any).members?.length ?? 0) === 0 ? (
                         <span className="text-white/40">Aucun membre</span>
                       ) : (
-                        group.members.map((member) => (
+                        ((group as any).members ?? []).map((member: any) => (
                           <span key={member.id} className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">
                             {member.name}
                           </span>
@@ -132,7 +132,7 @@ export function AdminGroupsView({ groups, flash }: AdminGroupsViewProps) {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-white/60">
-                    <span>{group.sessions ?? 0} sessions planifiées</span>
+                    <span>{((group as any).sessions ?? 0)} sessions planifiées</span>
                     <button className="rounded-full border border-white/30 px-3 py-1 uppercase tracking-[0.3em] text-white/70 transition hover:border-white hover:text-white">
                       Gérer
                     </button>

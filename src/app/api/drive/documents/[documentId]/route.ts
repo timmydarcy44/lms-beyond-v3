@@ -73,7 +73,7 @@ export async function PATCH(
     if (status !== undefined) {
       updateData.status = status;
       updateData.shared_with = sharedWith;
-      if (status === "shared" && !document.submitted_at) {
+      if (status === "shared" && !(document as any).submitted_at) {
         updateData.submitted_at = new Date().toISOString();
       }
     }

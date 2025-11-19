@@ -142,7 +142,7 @@ export async function getSuperAdminStats(): Promise<SuperAdminStats> {
   
   if (!supabase) {
     console.error("[super-admin] Supabase client is null");
-    throw new Error("Supabase client unavailable");
+    return getEmptyStats();
   }
   
   if (isAdmin) {
@@ -517,6 +517,10 @@ export async function getOrganizationLogo(orgId: string): Promise<string | null>
       if (!supabase) return null;
     }
   } else if (!supabase) {
+    return null;
+  }
+
+  if (!supabase) {
     return null;
   }
 
@@ -1256,6 +1260,9 @@ export async function getOrganizationActivity(orgId: string): Promise<Organizati
   }
 
   try {
+    if (!supabase) {
+      return [];
+    }
     const activities: OrganizationActivity[] = [];
 
     // Récupérer les membres récemment ajoutés (via org_memberships.created_at)
@@ -1689,35 +1696,51 @@ export async function getSuperAdminPathBuilderLibrary(): Promise<FormateurConten
     let coursesResult = initialCoursesResult;
     if (coursesResult.error?.code === "57014") {
       console.warn("[super-admin/path-builder] courses query timed out, retrying with created_at ordering");
-      coursesResult = await supabase
+      const retryResult = await supabase
         .from("courses")
         .select("id, title, status, cover_image, builder_snapshot, created_at")
         .order("created_at", { ascending: false })
         .limit(60);
+      coursesResult = {
+        ...retryResult,
+        data: retryResult.data?.map((c: any) => ({ ...c, updated_at: c.created_at })) ?? null,
+      } as any;
     } else if (coursesResult.error?.code === "42703") {
       console.warn("[super-admin/path-builder] courses updated_at missing, retrying without column");
-      coursesResult = await supabase
+      const retryResult2 = await supabase
         .from("courses")
         .select("id, title, status, cover_image, created_at")
         .order("created_at", { ascending: false })
         .limit(60);
+      coursesResult = {
+        ...retryResult2,
+        data: retryResult2.data?.map((c: any) => ({ ...c, updated_at: c.created_at })) ?? null,
+      } as any;
     }
 
     let testsResult = initialTestsResult;
     if (testsResult.error?.code === "57014") {
       console.warn("[super-admin/path-builder] tests query timed out, retrying with created_at ordering");
-      testsResult = await supabase
+      const retryTestsResult = await supabase
         .from("tests")
         .select("id, title, description, status, created_at")
         .order("created_at", { ascending: false })
         .limit(60);
+      testsResult = {
+        ...retryTestsResult,
+        data: retryTestsResult.data?.map((t: any) => ({ ...t, updated_at: t.created_at })) ?? null,
+      } as any;
     } else if (testsResult.error?.code === "42703") {
       console.warn("[super-admin/path-builder] tests updated_at missing, retrying without column");
-      testsResult = await supabase
+      const retryTestsResult = await supabase
         .from("tests")
         .select("id, title, description, status, created_at")
         .order("created_at", { ascending: false })
         .limit(60);
+      testsResult = {
+        ...retryTestsResult,
+        data: retryTestsResult.data?.map((t: any) => ({ ...t, updated_at: t.created_at })) ?? null,
+      } as any;
     }
 
     let resourcesResult = await supabase
@@ -1728,7 +1751,7 @@ export async function getSuperAdminPathBuilderLibrary(): Promise<FormateurConten
 
     if (resourcesResult.error?.code === "42703") {
       console.warn("[super-admin/path-builder] resources table missing resource_type/updated_at, falling back", resourcesResult.error);
-      resourcesResult = await supabase
+      const retryResourcesResult = await supabase
         .from("resources")
         .select("id, title, cover_url, thumbnail_url, published, type, kind, status, created_at")
         .order("created_at", { ascending: false })

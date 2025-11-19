@@ -28,19 +28,64 @@ export default async function ApprenantDashboardPage() {
       <LearnerHero hero={data.hero} previews={data.formations.slice(0, 4)} />
 
       {data.continueWatching.length > 0 && (
-        <SectionSlider title="Reprendre" cards={data.continueWatching} accent="learner" />
+        <SectionSlider 
+          title="Reprendre" 
+          cards={data.continueWatching.map(card => ({ 
+            ...card, 
+            cta: card.cta ?? undefined,
+            meta: card.meta ?? undefined,
+            progress: card.progress ?? undefined,
+          }))} 
+          accent="learner" 
+        />
       )}
       {data.parcours.length > 0 && (
-        <SectionSlider title="Parcours" cards={data.parcours} accent="learner" />
+        <SectionSlider 
+          title="Parcours" 
+          cards={data.parcours.map(card => ({ 
+            ...card, 
+            cta: card.cta ?? undefined,
+            meta: card.meta ?? undefined,
+            progress: card.progress ?? undefined,
+          }))} 
+          accent="learner" 
+        />
       )}
       {data.formations.length > 0 && (
-        <SectionSlider title="Formations" cards={data.formations} accent="learner" />
+        <SectionSlider 
+          title="Formations" 
+          cards={data.formations.map(card => ({ 
+            ...card, 
+            cta: card.cta ?? undefined,
+            meta: card.meta ?? undefined,
+            progress: card.progress ?? undefined,
+          }))} 
+          accent="learner" 
+        />
       )}
       {data.ressources.length > 0 && (
-        <SectionSlider title="Ressources" cards={data.ressources} accent="learner" />
+        <SectionSlider 
+          title="Ressources" 
+          cards={data.ressources.map(card => ({ 
+            ...card, 
+            cta: card.cta ?? undefined,
+            meta: card.meta ?? undefined,
+            progress: card.progress ?? undefined,
+          }))} 
+          accent="learner" 
+        />
       )}
       {data.tests.length > 0 && (
-        <SectionSlider title="Tests" cards={data.tests} accent="learner" />
+        <SectionSlider 
+          title="Tests" 
+          cards={data.tests.map(card => ({ 
+            ...card, 
+            cta: card.cta ?? undefined,
+            meta: card.meta ?? undefined,
+            progress: card.progress ?? undefined,
+          }))} 
+          accent="learner" 
+        />
       )}
     </DashboardShell>
   );

@@ -435,15 +435,137 @@ export const getFormateurTests = async (): Promise<FormateurTestListItem[]> => {
     if (!userId) return [];
 
     // Récupérer les tests du formateur
-    const { data: testsData, error: testsError } = await supabase
-      .from("tests")
-      .select("id, title, description, status, updated_at, created_at, owner_id, type")
-      .or(`owner_id.eq.${userId},creator_id.eq.${userId}`)
-      .order("updated_at", { ascending: false })
-      .limit(100);
+    // Utiliser deux requêtes séparées pour éviter les problèmes avec .or() et RLS
+    // Ne sélectionner que les colonnes qui existent réellement
+    const [testsByOwner, testsByCreator] = await Promise.all([
+      supabase
+        .from("tests")
+        .select("id, title, description, status, updated_at, created_at, owner_id, created_by")
+        .eq("owner_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("tests")
+        .select("id, title, description, status, updated_at, created_at, owner_id, created_by")
+        .eq("created_by", userId)
+        .order("updated_at", { ascending: false })
+        .limit(100),
+    ]);
 
-    if (testsError) throw testsError;
-    if (!testsData || testsData.length === 0) return [];
+    // Essayer aussi avec creator_id si la colonne existe (gérer l'erreur séparément)
+    let testsByCreatorId = { data: null as any, error: null as any };
+    try {
+      const result = await supabase
+        .from("tests")
+        .select("id, title, description, status, updated_at, created_at, owner_id, created_by")
+        .eq("creator_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(100);
+      testsByCreatorId = result;
+    } catch (error) {
+      // Ignorer l'erreur si la colonne creator_id n'existe pas
+      console.log("[formateur] creator_id column may not exist, skipping:", error);
+    }
+
+    // Log pour déboguer AVANT de vérifier les erreurs
+    console.log("[formateur] Tests récupérés:", {
+      userId,
+      byOwner: {
+        count: testsByOwner.data?.length || 0,
+        error: testsByOwner.error ? {
+          message: testsByOwner.error.message,
+          code: testsByOwner.error.code,
+          details: testsByOwner.error.details,
+          hint: testsByOwner.error.hint,
+        } : null,
+      },
+      byCreator: {
+        count: testsByCreator.data?.length || 0,
+        error: testsByCreator.error ? {
+          message: testsByCreator.error.message,
+          code: testsByCreator.error.code,
+          details: testsByCreator.error.details,
+          hint: testsByCreator.error.hint,
+        } : null,
+      },
+      byCreatorId: {
+        count: testsByCreatorId.data?.length || 0,
+        error: testsByCreatorId.error ? {
+          message: testsByCreatorId.error.message,
+          code: testsByCreatorId.error.code,
+          details: testsByCreatorId.error.details,
+          hint: testsByCreatorId.error.hint,
+        } : null,
+      },
+    });
+
+    // Combiner et dédupliquer les résultats
+    const allTests = [
+      ...(testsByOwner.data || []),
+      ...(testsByCreator.data || []),
+      ...(testsByCreatorId.data || []),
+    ];
+    
+    const uniqueTests = Array.from(
+      new Map(allTests.map(t => [t.id, t])).values()
+    );
+
+    const testsData = uniqueTests;
+    
+    // Ne considérer comme erreur que les erreurs réelles (pas les colonnes inexistantes, pas les objets vides)
+    const realErrors = [
+      testsByOwner.error,
+      testsByCreator.error,
+      testsByCreatorId.error && testsByCreatorId.error.code !== '42703' ? testsByCreatorId.error : null,
+    ].filter(err => {
+      // Filtrer les erreurs vides ou null
+      if (!err) return false;
+      // Vérifier si l'erreur a au moins un message ou un code
+      const hasContent = (err as any).message || (err as any).code || (err as any).details || (err as any).hint;
+      return hasContent;
+    });
+
+    if (realErrors.length > 0) {
+      // Sérialiser les erreurs pour éviter les objets vides
+      const serializedErrors = realErrors.map(err => {
+        if (!err) return null;
+        try {
+          const errorObj = err as any;
+          return {
+            message: errorObj.message || String(err),
+            code: errorObj.code,
+            details: errorObj.details,
+            hint: errorObj.hint,
+            raw: JSON.stringify(err, Object.getOwnPropertyNames(err)),
+          };
+        } catch (e) {
+          return { message: String(err), serializationError: String(e) };
+        }
+      }).filter(Boolean);
+      
+      if (serializedErrors.length > 0) {
+        console.error("[formateur] Erreur lors de la récupération des tests:", {
+          errors: serializedErrors,
+          userId,
+          testsFound: testsData.length,
+        });
+        
+        // Ne pas throw si on a au moins quelques résultats
+        if (testsData.length === 0) {
+          const firstError = serializedErrors[0];
+          const errorToThrow = new Error(firstError?.message || "Erreur lors de la récupération des tests");
+          (errorToThrow as any).code = firstError?.code;
+          throw errorToThrow;
+        } else {
+          console.warn("[formateur] Erreurs partielles mais certains tests récupérés, continuation...");
+        }
+      }
+    }
+    
+    if (!testsData || testsData.length === 0) {
+      console.log("[formateur] Aucun test trouvé pour l'utilisateur:", userId);
+      return [];
+    }
 
     // Récupérer les tentatives pour chaque test (si la table test_attempts existe)
     const testIds = testsData.map((t) => t.id);
@@ -473,7 +595,7 @@ export const getFormateurTests = async (): Promise<FormateurTestListItem[]> => {
         id: String(test.id),
         title: test.title || "Test sans titre",
         status,
-        type: test.type || "Quiz",
+        type: "Quiz", // Type par défaut car la colonne type n'existe pas dans la table
         attempts: stats.count,
         averageScore,
         lastUpdated: test.updated_at || test.created_at || new Date().toISOString(),
@@ -535,7 +657,7 @@ export const getFormateurLearners = async (): Promise<FormateurLearner[]> => {
         .from("profiles")
         .select("id, full_name, email")
         .eq("role", "learner")
-        .order("full_name", { ascending: true, nullsLast: true })
+        .order("full_name", { ascending: true })
         .limit(500);
 
       if (error || !data) {
@@ -698,12 +820,12 @@ export const getFormateurLearners = async (): Promise<FormateurLearner[]> => {
 
     // Dédupliquer par ID (un apprenant peut être dans plusieurs organisations)
     const uniqueLearners = Array.from(
-      new Map(learners.map((l) => [l.id, l])).values()
+      new Map(learners.map((l: any) => [l.id, l])).values()
     );
 
     console.log("[formateur] Returning unique learners:", uniqueLearners.length);
     console.log("[formateur] Unique learners details:", JSON.stringify(uniqueLearners, null, 2));
-    return uniqueLearners;
+    return uniqueLearners as FormateurLearner[];
   } catch (error) {
     console.error("[formateur] Error fetching learners:", error);
     return [];
@@ -785,7 +907,7 @@ export const getCourseEnrollments = async (courseId: string): Promise<CourseEnro
 
     if (error || !data) return [];
 
-    return data.map((e) => ({
+    return data.map((e: any) => ({
       user_id: e.user_id,
       full_name: e.profiles?.full_name ?? null,
       email: e.profiles?.email ?? null,
@@ -1295,10 +1417,10 @@ export const getFormateurContentLibrary = async (): Promise<FormateurContentLibr
           byCreator: resourcesByCreator?.data?.length ?? 0,
           byOrg: resourcesByOrg?.data?.length ?? 0,
           errors: {
-            byCreatedBy: resourcesByCreatedBy?.error?.message,
-            byOwner: resourcesByOwner?.error?.message,
-            byCreator: resourcesByCreator?.error?.message,
-            byOrg: resourcesByOrg?.error?.message,
+            byCreatedBy: (resourcesByCreatedBy?.error as any)?.message,
+            byOwner: (resourcesByOwner?.error as any)?.message,
+            byCreator: (resourcesByCreator?.error as any)?.message,
+            byOrg: (resourcesByOrg?.error as any)?.message,
           },
         });
         
@@ -1306,7 +1428,7 @@ export const getFormateurContentLibrary = async (): Promise<FormateurContentLibr
         const resourceIds = [
           ...(resourcesByCreatedBy?.data?.map((r) => r.id) ?? []),
           ...(resourcesByOwner?.data?.map((r) => r.id) ?? []),
-          ...(resourcesByCreator?.data?.map((r) => r.id) ?? []),
+          ...(resourcesByCreator?.data?.map((r: any) => r.id) ?? []),
           ...(resourcesByOrg?.data?.map((r) => r.id) ?? []),
         ];
         
@@ -1894,14 +2016,39 @@ export const getFormateurDriveDocumentById = async (
           return null;
         }
         
-        documentData = essentialQuery.data;
-        // Ajouter updated_at manuellement si nécessaire
-        if (!documentData.updated_at) {
-          documentData.updated_at = new Date().toISOString();
+        const essential = essentialQuery.data;
+        if (essential) {
+          documentData = {
+            ...essential,
+            content: null,
+            summary: null,
+            ai_usage_score: null,
+            word_count: null,
+            deposited_at: null,
+            submitted_at: null,
+            is_read: false,
+            updated_at: new Date().toISOString(),
+          } as any;
+        } else {
+          documentData = null;
         }
         documentError = null;
       } else {
-        documentData = minimalQuery.data;
+        const minimal = minimalQuery.data;
+        if (minimal) {
+          documentData = {
+            ...minimal,
+            content: null,
+            summary: null,
+            ai_usage_score: null,
+            word_count: null,
+            deposited_at: null,
+            submitted_at: null,
+            is_read: false,
+          } as any;
+        } else {
+          documentData = null;
+        }
         documentError = null;
       }
     }
@@ -1957,9 +2104,9 @@ export const getFormateurDriveDocumentById = async (
     const isLearner = learnerIds.includes(authorId || "");
 
     // Calculer isLate (seulement si due_at existe)
-    const isLate = documentData.due_at
-      ? new Date(documentData.due_at) < new Date() &&
-        (!documentData.submitted_at || new Date(documentData.submitted_at) > new Date(documentData.due_at))
+    const isLate = (documentData as any).due_at
+      ? new Date((documentData as any).due_at) < new Date() &&
+        (!documentData.submitted_at || new Date(documentData.submitted_at) > new Date((documentData as any).due_at))
       : false;
 
     // Formater les dates
@@ -1978,8 +2125,8 @@ export const getFormateurDriveDocumentById = async (
       author: author?.full_name || author?.email || "Auteur inconnu",
       authorRole: isLearner ? "Apprenant" : author?.email ? "Apprenant" : "Auteur",
       authorEmail: author?.email || "",
-      depositedAt: formatDate(documentData.deposited_at || documentData.created_at || documentData.updated_at),
-      dueAt: documentData.due_at ? formatDate(documentData.due_at) : null,
+      depositedAt: formatDate(documentData.deposited_at || (documentData as any).created_at || documentData.updated_at),
+      dueAt: (documentData as any).due_at ? formatDate((documentData as any).due_at) : null,
       aiUsageScore: Number(documentData.ai_usage_score || 0),
       wordCount: Number(documentData.word_count || 0),
       summary: documentData.summary || null,

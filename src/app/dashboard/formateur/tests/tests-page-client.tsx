@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useState } from "react";
@@ -28,6 +29,7 @@ type TestsPageClientProps = {
 };
 
 export function TestsPageClient({ initialTests }: TestsPageClientProps) {
+  const router = useRouter();
   const [testsLibrary, setTestsLibrary] = useState<FormateurTestListItem[]>(initialTests);
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set());
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
@@ -99,8 +101,11 @@ export function TestsPageClient({ initialTests }: TestsPageClientProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button asChild className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white">
-            <Link href="/dashboard/formateur/tests/new">Créer un test</Link>
+          <Button 
+            className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white"
+            onClick={() => router.push("/dashboard/formateur/tests/new")}
+          >
+            Créer un test
           </Button>
           <Button
             variant="ghost"
@@ -300,18 +305,55 @@ export function TestsPageClient({ initialTests }: TestsPageClientProps) {
             testTitle={selectedTest.title}
             courses={courses}
             onAssign={async (assignment) => {
-              const response = await fetch("/api/tests/assign-to-course", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  testId: selectedTest.id,
-                  ...assignment,
-                }),
-              });
+              try {
+                const response = await fetch("/api/tests/assign-to-course", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    testId: selectedTest.id,
+                    ...assignment,
+                  }),
+                });
 
-              if (!response.ok) {
+                if (!response.ok) {
+                  let errorData;
+                  try {
+                    const text = await response.text();
+                    try {
+                      errorData = JSON.parse(text);
+                    } catch {
+                      errorData = { error: text || `Erreur HTTP ${response.status}: ${response.statusText}` };
+                    }
+                  } catch {
+                    errorData = { error: `Erreur HTTP ${response.status}: ${response.statusText}` };
+                  }
+                  
+                  const errorMessage = errorData.error || "Erreur lors de l'assignation";
+                  const errorDetails = errorData.details ? `\n${errorData.details}` : "";
+                  
+                  console.error("Erreur lors de l'assignation du test à la formation:", {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorData,
+                    testId: selectedTest.id,
+                    assignment,
+                  });
+                  
+                  throw new Error(`${errorMessage}${errorDetails}`);
+                }
+                
                 const data = await response.json();
-                throw new Error(data.error || "Erreur lors de l'assignation");
+                toast.success("Test assigné avec succès", {
+                  description: "Le test a été correctement positionné dans la formation.",
+                });
+                setAssignmentModalOpen(false);
+              } catch (error) {
+                console.error("Erreur lors de l'assignation:", error);
+                const errorMessage = error instanceof Error ? error.message : "Erreur lors de l'assignation";
+                toast.error("Erreur lors de l'assignation", {
+                  description: errorMessage,
+                });
+                throw error; // Re-throw pour que le modal puisse gérer l'erreur
               }
             }}
           />

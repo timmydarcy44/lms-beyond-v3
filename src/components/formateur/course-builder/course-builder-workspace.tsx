@@ -195,7 +195,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
       <div className="space-y-6">
         {isMounted && isHydrated ? (
           <>
-            <CourseStructureBuilder previewHref={previewHref} />
+            <CourseStructureBuilder previewHref={previewHref} courseId={savedCourseId || courseId || undefined} />
             <CourseResourcesManager />
           </>
         ) : (

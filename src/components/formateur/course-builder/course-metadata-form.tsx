@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 
-export function CourseMetadataForm() {
+function CourseMetadataFormContent() {
   const searchParams = useSearchParams();
   const general = useCourseBuilder((state) => state.snapshot.general);
   const updateGeneral = useCourseBuilder((state) => state.updateGeneral);
@@ -100,18 +100,6 @@ export function CourseMetadataForm() {
             placeholder="https://storage.googleapis.com/..."
             value={general.trailerUrl}
             onChange={(value) => updateGeneral({ trailerUrl: value })}
-          />
-          <InputField
-            label="Badge — titre"
-            placeholder="Badge Neuro Insights"
-            value={general.badgeLabel}
-            onChange={(value) => updateGeneral({ badgeLabel: value })}
-          />
-          <InputField
-            label="Badge — description"
-            placeholder="Atteste de votre maîtrise des leviers attentionnels et émotionnels."
-            value={general.badgeDescription}
-            onChange={(value) => updateGeneral({ badgeDescription: value })}
           />
         </CardContent>
       </Card>
@@ -294,6 +282,14 @@ function ObjectiveChip({ value, onRemove }: { value: string; onRemove: () => voi
         ✕
       </button>
     </div>
+  );
+}
+
+export function CourseMetadataForm() {
+  return (
+    <Suspense fallback={null}>
+      <CourseMetadataFormContent />
+    </Suspense>
   );
 }
 

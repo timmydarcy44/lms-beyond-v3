@@ -34,9 +34,20 @@ ${chapterContext ? `Contexte du chapitre : ${JSON.stringify(chapterContext)}` : 
 
 Le sous-chapitre doit être :
 - Cohérent avec le chapitre parent
-- Complet et détaillé
-- Pédagogiquement structuré
-- Adapté au format choisi (vidéo, texte, document, audio)`;
+- Complet et détaillé (minimum 300 mots)
+- Pédagogiquement structuré avec une hiérarchie claire
+- Adapté au format choisi (vidéo, texte, document, audio)
+
+IMPORTANT - Structure HTML requise pour le contenu :
+- Utilise des balises HTML sémantiques : <h2> pour les titres de sections principales, <h3> pour les sous-sections, <h4> pour les sous-sous-sections
+- Utilise <ol> avec <li> pour les listes numérotées (1, 2, 3...) quand il y a un ordre logique ou des étapes
+- Utilise <ul> avec <li> pour les listes à puces quand l'ordre n'est pas important
+- Utilise <p> pour les paragraphes de texte
+- Utilise <strong> pour mettre en évidence les mots-clés importants
+- Utilise <em> pour l'emphase
+- Structure claire avec une hiérarchie : H2 > H3 > H4
+- Utiliser des numéros dans les titres (1., 2., 3., etc.) pour les sections principales et des sous-numéros (1.1., 1.2., etc.) pour les sous-sections
+- Format HTML valide (pas de markdown, directement du HTML)`;
 
     // Schéma JSON pour le sous-chapitre
     const schema = {
@@ -69,6 +80,7 @@ Schéma JSON attendu : ${JSON.stringify(schema.parameters)}`;
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }
+
 
 
 

@@ -40,6 +40,12 @@ export async function updateOrganizationAction(input: UpdateOrganizationInput): 
     serviceClient = supabase;
   }
 
+  if (!serviceClient) {
+    return { success: false, error: "Service role client non disponible" };
+  }
+  
+  const client = serviceClient!;
+
   try {
     // Générer le slug si non fourni mais que le nom a changé
     let finalSlug = input.slug;
@@ -108,7 +114,7 @@ export async function updateOrganizationAction(input: UpdateOrganizationInput): 
     }
 
     // Mettre à jour l'organisation
-    const { error: orgError } = await serviceClient
+    const { error: orgError } = await client
       .from("organizations")
       .update(updateData)
       .eq("id", input.organizationId);
@@ -128,7 +134,7 @@ export async function updateOrganizationAction(input: UpdateOrganizationInput): 
         .limit(1);
 
       if (adminMemberships && adminMemberships.length > 0) {
-        await serviceClient
+        await client
           .from("profiles")
           .update({ organization_logo: input.logo })
           .eq("id", adminMemberships[0].user_id);
@@ -143,7 +149,7 @@ export async function updateOrganizationAction(input: UpdateOrganizationInput): 
         .limit(1);
 
       if (adminMemberships && adminMemberships.length > 0) {
-        await serviceClient
+        await client
           .from("profiles")
           .update({ organization_logo: null })
           .eq("id", adminMemberships[0].user_id);
@@ -194,9 +200,15 @@ export async function removeMemberAction(input: RemoveMemberInput): Promise<{
     serviceClient = supabase;
   }
 
+  if (!serviceClient) {
+    return { success: false, error: "Service role client non disponible" };
+  }
+  
+  const client = serviceClient!;
+
   try {
     // Retirer le membre de l'organisation
-    const { error } = await serviceClient
+    const { error } = await client
       .from("org_memberships")
       .delete()
       .eq("org_id", input.organizationId)

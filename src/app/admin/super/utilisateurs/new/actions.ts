@@ -29,6 +29,9 @@ export async function createUserAction(input: CreateUserInput): Promise<{
 
   // Utiliser le service role client pour créer des utilisateurs
   const serviceClient = getServiceRoleClient();
+  if (!serviceClient) {
+    return { success: false, error: "Service role client non disponible" };
+  }
 
   try {
     // Vérifier si l'utilisateur existe déjà

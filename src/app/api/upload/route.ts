@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!bucketName || uploadResult.error) {
-      console.error("[api/upload] Erreur upload:", uploadError || uploadResult.error);
+    if (!bucketName || (uploadResult && uploadResult.error)) {
+      console.error("[api/upload] Erreur upload:", uploadError || uploadResult?.error);
       
       // Si aucun bucket n'est disponible, convertir l'image en base64 comme fallback
       const arrayBuffer = await file.arrayBuffer();

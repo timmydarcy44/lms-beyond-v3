@@ -15,7 +15,18 @@ type LessonFlashcardsProps = {
 };
 
 export function LessonFlashcardsPanel({ flashcards }: LessonFlashcardsProps) {
-  const sanitized = useMemo(() => flashcards.filter((card) => card.question && card.answer), [flashcards]);
+  // Adapter les flashcards : utiliser front/back ou question/answer
+  const sanitized = useMemo(() => {
+    return flashcards.filter((card) => {
+      const hasQuestion = (card as any).question || (card as any).front;
+      const hasAnswer = (card as any).answer || (card as any).back;
+      return hasQuestion && hasAnswer;
+    }).map((card) => ({
+      ...card,
+      question: (card as any).question || (card as any).front,
+      answer: (card as any).answer || (card as any).back,
+    }));
+  }, [flashcards]);
   const [index, setIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const { resolvedTheme } = useTheme();
@@ -101,12 +112,12 @@ export function LessonFlashcardsPanel({ flashcards }: LessonFlashcardsProps) {
                 showAnswer ? (isLight ? "text-slate-700" : "text-white/85") : isLight ? "text-slate-900" : "text-white",
               )}
             >
-              {showAnswer ? current.answer : current.question}
+              {showAnswer ? (current as any).answer : (current as any).question}
             </p>
-            {current.tags?.length ? (
+            {(current as any).tags?.length ? (
               <div className={cn("flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.25em]", isLight ? "text-slate-400" : "text-white/50")}
               >
-                {current.tags.map((tag) => (
+                {((current as any).tags ?? []).map((tag: any) => (
                   <span
                     key={tag}
                     className={cn(
@@ -117,18 +128,18 @@ export function LessonFlashcardsPanel({ flashcards }: LessonFlashcardsProps) {
                     {tag}
                   </span>
                 ))}
-                {current.difficulty ? (
+                {(current as any).difficulty ? (
                   <span
                     className={cn(
                       "rounded-full border px-3 py-1",
                       isLight ? "border-slate-300 text-slate-600" : "border-white/10 text-white/60",
                     )}
                   >
-                    {current.difficulty}
+                    {(current as any).difficulty}
                   </span>
                 ) : null}
               </div>
-            ) : current.difficulty ? (
+            ) : (current as any).difficulty ? (
               <div className={cn("text-[11px] uppercase tracking-[0.25em]", isLight ? "text-slate-400" : "text-white/50")}
               >
                 <span
@@ -137,7 +148,7 @@ export function LessonFlashcardsPanel({ flashcards }: LessonFlashcardsProps) {
                     isLight ? "border-slate-300 text-slate-600" : "border-white/10 text-white/60",
                   )}
                 >
-                  {current.difficulty}
+                  {(current as any).difficulty}
                 </span>
               </div>
             ) : null}

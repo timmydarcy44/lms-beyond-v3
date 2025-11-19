@@ -26,6 +26,9 @@ export default async function FormateurCoursePreviewPage({ params }: PageProps) 
 
   const serviceClient = await getServiceRoleClientOrFallback();
 
+  if (!serviceClient) {
+    notFound();
+  }
   const [{ data: authData }, { data: course, error: courseError }] = await Promise.all([
     supabase.auth.getUser(),
     serviceClient

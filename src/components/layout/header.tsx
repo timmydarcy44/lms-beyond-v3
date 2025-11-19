@@ -226,6 +226,7 @@ export const DashboardHeader = ({
           </Link>
         </Button>
         <Button
+          asChild
           variant="ghost"
           size="icon"
           className={cn(
@@ -235,9 +236,11 @@ export const DashboardHeader = ({
                 ? "text-slate-600 hover:bg-slate-100"
                 : "text-white hover:bg-white/10",
           )}
-          aria-label="Profil"
+          aria-label="Mon compte"
         >
-          <UserCircle2 className="h-6 w-6" />
+          <Link href="/dashboard/mon-compte">
+            <UserCircle2 className="h-6 w-6" />
+          </Link>
         </Button>
         {onToggleSidebar ? (
           <Button

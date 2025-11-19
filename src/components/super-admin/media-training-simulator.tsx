@@ -292,14 +292,14 @@ export function MediaTrainingSimulator() {
           };
           
           const playerUrl = fixUrl(
-            anyPlayerVideo?.public_url || playerVideo?.public_url,
-            anyPlayerVideo?.storage_path || playerVideo?.storage_path
+            anyPlayerVideo?.public_url,
+            anyPlayerVideo?.storage_path
           );
           
           setVideos({
-            journalist: fixUrl(journalistVideo?.public_url, journalistVideo?.storage_path),
-            player: playerUrl,
-            background: fixUrl(backgroundVideo?.public_url, backgroundVideo?.storage_path),
+            journalist: fixUrl(journalistVideo?.public_url, journalistVideo?.storage_path) ?? undefined,
+            player: playerUrl ?? undefined,
+            background: fixUrl(backgroundVideo?.public_url, backgroundVideo?.storage_path) ?? undefined,
           });
           
           console.log("[media-training-simulator] Videos set:", {

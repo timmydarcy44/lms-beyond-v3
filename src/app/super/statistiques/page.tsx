@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSuperAdminStats } from "@/lib/queries/super-admin";
 
+export const dynamic = 'force-dynamic';
+
 export default async function StatisticsPage() {
   const stats = await getSuperAdminStats();
 

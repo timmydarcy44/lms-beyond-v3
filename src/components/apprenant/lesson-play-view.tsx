@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
-import { LessonFlashcardsPanel } from '@/components/apprenant/lesson-flashcards';
+import { FlashcardsActivation } from '@/components/apprenant/flashcards-activation';
 import { LessonSmartAssist } from '@/components/apprenant/lesson-smart-assist';
 import { LearningStrategyModal } from '@/components/apprenant/learning-strategy-modal';
 import { usePomodoro } from '@/components/apprenant/pomodoro-provider';
@@ -21,6 +21,7 @@ import {
   Headphones,
   PenSquare,
   PlayCircle,
+  ClipboardCheck,
 } from 'lucide-react';
 import type {
   LearnerDetail,
@@ -28,6 +29,9 @@ import type {
   LearnerLesson,
   LearnerModule,
 } from '@/lib/queries/apprenant';
+import TestFlow from '@/app/dashboard/tests/[slug]/test-flow';
+import type { TestQuestion } from '@/hooks/use-test-sessions';
+import { toast } from 'sonner';
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -107,7 +111,12 @@ const stripYoutubeLinkFromContent = (content: string, url: string): string => {
   return updated.trim();
 };
 
-const getLessonIcon = (type?: string) => {
+const getLessonIcon = (type?: string, kind?: string) => {
+  // Les tests ont une icône spéciale
+  if (kind === "test" || type === "test") {
+    return ClipboardCheck;
+  }
+  
   switch ((type ?? "").toLowerCase()) {
     case "video":
       return PlayCircle;
@@ -153,7 +162,12 @@ export function LessonPlayView({
   const [focusMode, setFocusMode] = useState(false);
   const [showLearningStrategyModal, setShowLearningStrategyModal] = useState(false);
   const [showMobileOutline, setShowMobileOutline] = useState(false);
+  const [testStarted, setTestStarted] = useState(false);
+  const [testQuestions, setTestQuestions] = useState<any[]>([]);
+  const [isLoadingTest, setIsLoadingTest] = useState(false);
   const { state: pomodoroState } = usePomodoro();
+  
+  const isTest = (activeLesson as any).kind === "test" || activeLesson.type === "test";
   
   // Le mode focus est géré automatiquement par PomodoroFocusManager
   // On garde focusMode pour l'affichage local (masquer les flashcards, etc.)
@@ -164,18 +178,18 @@ export function LessonPlayView({
 
   const lessonHref = useMemo(() => (lessonId: string) => `${cardHref}/play/${lessonId}`, [cardHref]);
 
-  const rawContent = activeLesson.content || activeLesson.description || '';
+  const rawContent = (activeLesson as any).content || (activeLesson as any).description || '';
 
   const { normalizedVideoSrc, sanitizedContent } = useMemo(() => {
     const urlsInContent = rawContent ? rawContent.match(/https?:\/\/[^\s"'<>]+/g) ?? [] : [];
-    const youtubeUrls = urlsInContent.filter((url) => Boolean(extractYouTubeId(url)));
+    const youtubeUrls = urlsInContent.filter((url: string) => Boolean(extractYouTubeId(url)));
 
     let candidateUrl = videoSrc ?? null;
     let cleanedContent = rawContent;
 
     if (youtubeUrls.length > 0) {
       cleanedContent = youtubeUrls.reduce(
-        (acc, url) => stripYoutubeLinkFromContent(acc, url),
+        (acc: string, url: string) => stripYoutubeLinkFromContent(acc, url),
         cleanedContent,
       );
       if (!candidateUrl) {
@@ -256,6 +270,7 @@ export function LessonPlayView({
       <div className="space-y-4">
         {modules.map((module) => {
           const isModuleActive = module.id === activeModule?.id;
+          const isTestsModule = module.id === "tests" || module.title === "Tests" || module.title === "TESTS";
           return (
             <div
               key={module.id}
@@ -263,17 +278,32 @@ export function LessonPlayView({
                 'space-y-2 rounded-2xl border border-white/5 p-3 transition-colors',
                 isModuleActive &&
                   'border-[#FF512F]/50 bg-gradient-to-r from-[#FF512F]/20 via-[#DD2476]/15 to-transparent shadow-lg shadow-[#DD2476]/20',
+                // Style spécial pour le module "Tests" : bordure bleue
+                isTestsModule && !isModuleActive &&
+                  'border-[#00C6FF]/30 bg-gradient-to-r from-[#00C6FF]/10 via-[#0072FF]/5 to-transparent',
+                isTestsModule && isModuleActive &&
+                  'border-[#00C6FF]/50 bg-gradient-to-r from-[#00C6FF]/20 via-[#0072FF]/15 to-transparent shadow-lg shadow-[#00C6FF]/20',
               )}
             >
               <div className="flex items-center justify-between text-xs uppercase tracking-wide text-white/50">
-                <span className="text-white/70">{module.title}</span>
-                <span>{module.length}</span>
+                <span className={cn(
+                  "text-white/70",
+                  isTestsModule && "text-[#00C6FF] font-semibold"
+                )}>
+                  {module.title}
+                </span>
+                <span className={cn(
+                  isTestsModule && "text-[#00C6FF]/80"
+                )}>
+                  {module.length}
+                </span>
               </div>
               <ul className="space-y-2">
                 {module.lessons?.map((moduleLesson) => {
                   const isActive = moduleLesson.id === activeLesson.id;
                   const isSubchapter = moduleLesson.kind === "subchapter";
-                  const LessonIcon = getLessonIcon(moduleLesson.type);
+                  const isTest = (moduleLesson as any).kind === "test" || moduleLesson.type === "test";
+                  const LessonIcon = getLessonIcon(moduleLesson.type, moduleLesson.kind);
                   return (
                     <li key={moduleLesson.id}>
                       <Link
@@ -286,6 +316,9 @@ export function LessonPlayView({
                           isActive &&
                             "border-transparent bg-gradient-to-r from-[#FF512F]/80 via-[#DD2476]/70 to-[#DD2476]/60 text-white shadow-md shadow-[#DD2476]/40",
                           isSubchapter && !isActive && "border-white/10 bg-white/5/30",
+                          // Style spécial pour les tests : bordure bleue et fond bleu
+                          isTest && !isActive && "border-[#00C6FF]/40 bg-gradient-to-r from-[#00C6FF]/15 via-[#0072FF]/10 to-transparent hover:border-[#00C6FF]/60 hover:from-[#00C6FF]/20 hover:via-[#0072FF]/15",
+                          isTest && isActive && "border-[#00C6FF]/60 bg-gradient-to-r from-[#00C6FF]/30 via-[#0072FF]/25 to-[#0072FF]/20 shadow-md shadow-[#00C6FF]/40",
                         )}
                       >
                         <div className="flex items-start gap-3">
@@ -294,20 +327,36 @@ export function LessonPlayView({
                               "mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-white/60 transition-colors",
                               isSubchapter ? "border border-white/25 bg-transparent text-white/55" : "",
                               isActive && "text-white",
+                              // Style spécial pour l'icône des tests : bleu
+                              isTest && !isActive && "text-[#00C6FF]",
+                              isTest && isActive && "text-[#00C6FF]",
                             )}
                           >
                             <LessonIcon className={cn("h-3.5 w-3.5", isSubchapter && "h-3 w-3")} aria-hidden="true" />
                           </div>
-                          <div className="space-y-1">
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2">
                             <span
                               className={cn(
                                 "block font-medium leading-tight",
                                 isSubchapter ? "text-white/80" : "text-white",
+                                  isTest && "text-white",
                               )}
                             >
                               {moduleLesson.title}
+                              </span>
+                              {isTest && (
+                                <span className="inline-flex items-center rounded-full border border-[#00C6FF]/40 bg-[#00C6FF]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#00C6FF]">
+                                  Évaluation
+                                </span>
+                              )}
+                            </div>
+                            <span className={cn(
+                              "text-xs",
+                              isTest ? "text-[#00C6FF]/80" : "text-white/55"
+                            )}>
+                              {moduleLesson.duration}
                             </span>
-                            <span className="text-xs text-white/55">{moduleLesson.duration}</span>
                           </div>
                         </div>
                       </Link>
@@ -419,8 +468,63 @@ export function LessonPlayView({
         </div>
         )}
 
-        {/* Afficher le contenu textuel formaté (toujours, même avec vidéo) */}
-        {hasTextContent ? (
+        {/* Afficher le test si c'est une évaluation */}
+        {isTest ? (
+          <div className="space-y-6 rounded-3xl border border-white/10 bg-black/35 p-8">
+            {!testStarted ? (
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-white">Contenu du chapitre</h3>
+                  <p className="text-white/80">
+                    Ce test a pour objectif d'évaluer votre compréhension du contenu que vous venez de voir.
+                  </p>
+                </div>
+                <div className="flex justify-center">
+                  <Button
+                    onClick={async () => {
+                      setIsLoadingTest(true);
+                      try {
+                        // Extraire l'ID du test depuis activeLesson.id (format: "test-{id}")
+                        const testId = activeLesson.id.replace(/^test-/, '');
+                        
+                        // Récupérer les questions du test
+                        const response = await fetch(`/api/tests/${testId}`);
+                        if (!response.ok) {
+                          throw new Error("Impossible de charger le test");
+                        }
+                        const data = await response.json();
+                        const test = data.test;
+                        
+                        if (test && test.questions && Array.isArray(test.questions)) {
+                          setTestQuestions(test.questions);
+                          setTestStarted(true);
+                        } else {
+                          throw new Error("Aucune question trouvée dans ce test");
+                        }
+                      } catch (error) {
+                        console.error("Erreur lors du chargement du test:", error);
+                        alert("Erreur lors du chargement du test. Veuillez réessayer.");
+                      } finally {
+                        setIsLoadingTest(false);
+                      }
+                    }}
+                    disabled={isLoadingTest}
+                    className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {isLoadingTest ? "Chargement..." : "Démarrer l'évaluation"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <TestFlowInline
+                testId={activeLesson.id.replace(/^test-/, '')}
+                title={activeLesson.title}
+                questions={testQuestions}
+                onClose={() => setTestStarted(false)}
+              />
+            )}
+          </div>
+        ) : hasTextContent ? (
         <LessonSmartAssist
           hideAssistantPanel={isFocus}
           courseId={courseId}
@@ -470,7 +574,7 @@ export function LessonPlayView({
           </div>
         )}
 
-        {!isFocus ? <LessonFlashcardsPanel flashcards={flashcards} /> : null}
+        {!isFocus ? <FlashcardsActivation flashcards={flashcards} /> : null}
 
         {/* Learning Strategy Modal */}
         <LearningStrategyModal
@@ -527,5 +631,169 @@ export function LessonPlayView({
   }
 
   return renderLayout(false);
+}
+
+// Composant inline pour afficher le test dans la leçon
+function TestFlowInline({
+  testId,
+  title,
+  questions,
+  onClose,
+}: {
+  testId: string;
+  title: string;
+  questions: any[];
+  onClose: () => void;
+}) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Utiliser useEffect pour masquer la sidebar quand le test est en plein écran
+  // DOIT être appelé à chaque render, pas conditionnellement
+  useEffect(() => {
+    if (!isFullscreen) return;
+    
+    // Masquer la sidebar
+    const sidebarElements = document.querySelectorAll('[class*="sidebar"], aside, [id*="sidebar"]');
+    sidebarElements.forEach((el) => {
+      (el as HTMLElement).style.display = 'none';
+    });
+    
+    // Ajouter une classe au body pour le style global
+    document.body.classList.add('test-fullscreen-mode');
+    
+    return () => {
+      // Restaurer la sidebar quand on quitte le mode plein écran
+      sidebarElements.forEach((el) => {
+        (el as HTMLElement).style.display = '';
+      });
+      document.body.classList.remove('test-fullscreen-mode');
+    };
+  }, [isFullscreen]);
+
+  // Convertir les questions du format base de données au format TestQuestion
+  const convertedQuestions: TestQuestion[] = useMemo(() => {
+    return questions.map((q: any, index: number) => {
+      // Convertir les options au bon format
+      let formattedOptions: { value: string; label: string }[] = [];
+      
+      if (q.options && Array.isArray(q.options)) {
+        formattedOptions = q.options.map((opt: any) => {
+          // Si l'option est déjà au format { value, label }, l'utiliser tel quel
+          if (opt.label && opt.value) {
+            return { value: opt.value, label: opt.label };
+          }
+          // Sinon, convertir depuis { id, value, correct, points } vers { value, label }
+          return {
+            value: opt.value || opt.id || String(index),
+            label: opt.value || opt.label || `Option ${index + 1}`,
+          };
+        });
+      }
+
+      return {
+        id: q.id || `q-${index}`,
+        title: q.title || q.question || "Question sans titre",
+        type: q.type || "multiple",
+        options: formattedOptions,
+        helper: q.helper || q.help || undefined,
+        score: q.score || 1,
+      };
+    });
+  }, [questions]);
+
+  if (convertedQuestions.length === 0) {
+    return (
+      <div className="py-12 text-center text-white/60">
+        <p>Aucune question disponible pour ce test.</p>
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          className="mt-4 rounded-full border border-white/20 text-white/80 hover:bg-white/10"
+        >
+          Retour
+        </Button>
+      </div>
+    );
+  }
+
+  // Mode plein écran focus (comme pomodoro)
+  if (isFullscreen) {
+    return (
+      <div 
+        className="fixed inset-0 z-[99999] flex flex-col bg-gradient-to-br from-black via-[#0A0A0A] to-[#1A1A1A] overflow-hidden"
+        style={{ 
+          position: 'fixed',
+          left: 0, 
+          right: 0, 
+          top: 0, 
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          margin: 0,
+          padding: 0,
+          zIndex: 99999,
+        }}
+      >
+        <style jsx global>{`
+          /* Masquer la sidebar et autres éléments lors du mode plein écran */
+          body.test-fullscreen-mode [class*="sidebar"],
+          body.test-fullscreen-mode [id*="sidebar"],
+          body.test-fullscreen-mode aside:not(.test-content) {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          
+          /* S'assurer que le contenu principal n'a pas de margin-left */
+          body.test-fullscreen-mode main,
+          body.test-fullscreen-mode [class*="main"] {
+            margin-left: 0 !important;
+            padding-left: 0 !important;
+          }
+        `}</style>
+        <div className="test-content w-full h-full">
+          <TestFlow
+            slug={testId}
+            title={title}
+            questions={convertedQuestions}
+            summary="Évaluation de votre compréhension du contenu"
+            onClose={() => setIsFullscreen(false)}
+            fullscreen={true}
+            className="flex-1 w-full h-full"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold text-white">{title}</h3>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIsFullscreen(true)}
+            className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white hover:opacity-90"
+          >
+            Démarrer l'évaluation
+          </Button>
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            className="rounded-full border border-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/80 hover:bg-white/10"
+          >
+            Fermer
+          </Button>
+        </div>
+      </div>
+      <div className="rounded-3xl border border-white/10 bg-black/35 p-8 text-center text-white/60">
+        <p className="mb-4">Prêt à commencer l'évaluation ?</p>
+        <p className="text-sm text-white/40">
+          Cliquez sur "Démarrer l'évaluation" pour entrer en mode focus et répondre aux questions.
+        </p>
+      </div>
+    </div>
+  );
 }
 

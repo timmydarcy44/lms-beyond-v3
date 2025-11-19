@@ -454,7 +454,7 @@ export async function POST(request: NextRequest) {
       documentId: document.id,
       document: {
         id: document.id,
-        title: document.title || document.name,
+        title: document.title || (document as any).name || "",
         createdAt: document.submitted_at || document.updated_at,
       },
     });

@@ -55,6 +55,7 @@ import { CourseStructureGeneratorModal } from "@/components/formateur/ai/course-
 import { toast } from "sonner";
 import { RichTextEditor } from "./rich-text-editor";
 import { MediaUploader } from "./media-uploader";
+import { FlashcardsManager } from "./flashcards-manager";
 
 type ContentTypeOption = {
   value: BuilderContentType;
@@ -74,7 +75,7 @@ const CONTENT_TYPE_MAP = Object.fromEntries(
   CONTENT_TYPE_OPTIONS.map((option) => [option.value, option]),
 );
 
-export function CourseStructureBuilder({ previewHref }: { previewHref?: string }) {
+export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?: string; courseId?: string }) {
   const sections = useCourseBuilder((state) => state.snapshot.sections);
   const selection = useCourseBuilder((state) => state.selection);
   const addSection = useCourseBuilder((state) => state.addSection);
@@ -119,7 +120,8 @@ export function CourseStructureBuilder({ previewHref }: { previewHref?: string }
 
     if (!activeData) return;
 
-    handleDragActive(activeData, overData);
+    // Gérer le drag and drop ici
+    // TODO: Implémenter handleDragActive si nécessaire
   };
 
   const getTargetSectionId = () => {
@@ -250,7 +252,7 @@ export function CourseStructureBuilder({ previewHref }: { previewHref?: string }
             </DndContext>
           </div>
 
-          <EditorPanel />
+          <EditorPanel courseId={courseId} />
         </div>
       </CardContent>
       <CourseStructureGeneratorModal
@@ -645,7 +647,7 @@ function SubchapterRow({
   );
 }
 
-function EditorPanel() {
+function EditorPanel({ courseId }: { courseId?: string }) {
   const sections = useCourseBuilder((state) => state.snapshot.sections);
   const selection = useCourseBuilder((state) => state.selection);
   const updateChapter = useCourseBuilder((state) => state.updateChapter);
@@ -708,29 +710,42 @@ function EditorPanel() {
                     body: JSON.stringify({
                       chapterContent: nodes.chapter!.content,
                       chapterTitle: nodes.chapter!.title || "Chapitre",
+                      chapterId: nodes.chapter!.id, // ID local du chapitre
+                      courseId: courseId, // ID du cours pour sauvegarder les flashcards
                     }),
                   });
 
                   if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || "Erreur lors de la génération");
+                    const errorData = await response.json().catch(() => ({ error: "Erreur inconnue" }));
+                    const errorMessage = errorData.error || "Erreur lors de la génération";
+                    const errorDetails = errorData.details ? `\n${errorData.details}` : "";
+                    throw new Error(`${errorMessage}${errorDetails}`);
                   }
 
                   const data = await response.json();
 
                   if (!data.success || !data.flashcards) {
-                    throw new Error("Réponse invalide de l'API");
+                    throw new Error(data.error || "Réponse invalide de l'API");
                   }
 
-                  toast.success(`${data.flashcards.length} flashcard(s) générée(s)`, {
-                    description: "Les flashcards doivent être ajoutées manuellement dans le système.",
-                  });
+                  if (data.saved && data.savedCount > 0) {
+                    toast.success(`${data.flashcards.length} flashcard(s) générée(s) et sauvegardée(s)`, {
+                      description: `${data.savedCount} flashcard(s) ont été automatiquement ajoutées au chapitre.`,
+                    });
+                  } else {
+                    toast.success(`${data.flashcards.length} flashcard(s) générée(s)`, {
+                      description: "Les flashcards ont été générées mais n'ont pas pu être sauvegardées automatiquement.",
+                    });
+                  }
 
-                  // TODO: Sauvegarder les flashcards dans la base de données
                   console.log("Generated flashcards:", data.flashcards);
                 } catch (error) {
                   console.error("[ai] Error generating flashcards", error);
-                  toast.error(error instanceof Error ? error.message : "Erreur lors de la génération");
+                  const errorMessage = error instanceof Error ? error.message : "Erreur lors de la génération";
+                  toast.error("Erreur lors de la création des flashcards", {
+                    description: errorMessage,
+                    duration: 5000,
+                  });
                 }
               });
             }}
@@ -787,6 +802,9 @@ function EditorPanel() {
             placeholder="Insérez ici votre script, vos ressources, les consignes détaillées ou tout contenu textuel."
           />
         )}
+
+        {/* Gestionnaire de flashcards */}
+        <FlashcardsManager courseId={courseId} chapterId={nodes.chapter?.id} />
       </EditorLayout>
     );
   } else if (selection.type === "subchapter" && nodes.subchapter) {
@@ -859,6 +877,9 @@ function EditorPanel() {
             placeholder="Contenu détaillé, script, liens vers ressources, instructions pas-à-pas."
           />
         )}
+
+        {/* Gestionnaire de flashcards */}
+        <FlashcardsManager courseId={courseId} chapterId={nodes.chapter?.id} />
       </EditorLayout>
     );
   }

@@ -7,10 +7,11 @@ export default async function DashboardPage() {
   const session = await getSession();
   
   if (!session) {
+    console.log("[dashboard] No session found, redirecting to /login");
     redirect("/login");
   }
 
-  console.log(`[dashboard] User ${session.email} with role: ${session.role}`);
+  console.log(`[dashboard] User ${session.email} (${session.id}) with role: ${session.role}, fullName: ${session.fullName}`);
 
   // Vérifier si l'utilisateur est super admin
   const isSuper = await isSuperAdmin();

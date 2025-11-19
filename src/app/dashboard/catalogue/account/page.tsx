@@ -10,6 +10,9 @@ export const revalidate = 0;
 
 export default async function NoSchoolAccountPage() {
   const supabase = await getServerClient();
+  if (!supabase) {
+    redirect("/login?redirect=/dashboard/catalogue/account");
+  }
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

@@ -20,7 +20,9 @@ export const useUserRole = (options?: UseUserRoleOptions) => {
     setIsMounted(true);
   }, []);
 
-  return useQuery({
+  // Utiliser useQuery avec enabled pour gérer le cas où QueryClient n'est pas disponible
+  // Si enabled est false, useQuery ne s'exécutera pas et retournera des valeurs par défaut
+  const queryResult = useQuery({
     queryKey: ["user", "role"],
     queryFn: async (): Promise<UserRole | null> => {
       // Si le provider n'est pas disponible ou pas encore monté, retourner null
@@ -54,8 +56,16 @@ export const useUserRole = (options?: UseUserRoleOptions) => {
       return data?.role ?? null;
     },
     staleTime: 5 * 60 * 1000,
-    enabled: (options?.enabled ?? true) && isMounted && !!supabase,
+    enabled: (options?.enabled ?? true) && isMounted && !!supabase && typeof window !== "undefined",
+    retry: false, // Ne pas réessayer en cas d'erreur
   });
+
+  // Si QueryClient n'est pas disponible, retourner des valeurs par défaut
+  if (typeof window === "undefined") {
+    return { data: null, isLoading: false, error: null } as any;
+  }
+
+  return queryResult;
 };
 
 

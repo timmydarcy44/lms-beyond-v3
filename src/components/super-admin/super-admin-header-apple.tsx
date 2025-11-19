@@ -25,10 +25,12 @@ import {
   Brain,
   TrendingUp,
   Globe,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertsBadge } from "./alerts-badge";
+import { useSupabase } from "@/components/providers/supabase-provider";
 
 type NavItem = {
   label: string;
@@ -41,10 +43,10 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/super" },
   {
-    label: "Studio",
-    href: "/super/studio",
-    children: [
-      { label: "Modules", href: "/super/studio/modules/new", icon: "modules" },
+      label: "Studio",
+      href: "/super/studio",
+      children: [
+        { label: "Modules", href: "/super/studio/modules/new/choose", icon: "modules" },
       { label: "Parcours", href: "/super/studio/parcours/new", icon: "parcours" },
       { label: "Ressources", href: "/super/studio/ressources/new", icon: "ressources" },
       { label: "Tests", href: "/super/studio/tests/new", icon: "tests" },
@@ -93,6 +95,21 @@ const NAV_ITEMS: NavItem[] = [
 export function SuperAdminHeaderApple() {
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const supabase = useSupabase();
+
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      if (!supabase) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    };
+    fetchUserEmail();
+  }, [supabase]);
+
+  const isContentin = userEmail === "contentin.cabinet@gmail.com";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-xl">
@@ -272,6 +289,22 @@ export function SuperAdminHeaderApple() {
                 </Link>
               );
             })}
+            {/* Agenda - uniquement pour contentin.cabinet@gmail.com */}
+            {isContentin && (
+              <Link
+                href="/super/agenda"
+                className={cn(
+                  "px-4 py-2 text-[13px] font-normal transition-colors flex items-center gap-1.5",
+                  pathname === "/super/agenda" || pathname?.startsWith("/super/agenda/")
+                    ? "text-gray-900"
+                    : "text-gray-700 hover:text-gray-900",
+                )}
+                style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                <span>Agenda</span>
+              </Link>
+            )}
           </div>
 
           {/* Right side - Alertes, Messagerie et Déconnexion */}

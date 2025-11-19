@@ -135,7 +135,7 @@ export function MindmapViewer({ data }: { data: any }) {
           zoomable
           collapsible={false}
           enableLegacyTransitions
-          allowForeignObjects
+          {...({ allowForeignObjects: true } as any)}
           renderCustomNodeElement={renderNode}
           styles={{
             links: {

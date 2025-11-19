@@ -28,6 +28,11 @@ export async function getCatalogItems(
 ): Promise<CatalogItem[]> {
   const supabase = await getServerClient();
 
+  if (!supabase) {
+    console.warn("[catalogue] Supabase client is null");
+    return [];
+  }
+
   // Construire la requête avec filtrage par audience si c'est un apprenant
   let query = supabase
     .from("catalog_items")
@@ -46,7 +51,7 @@ export async function getCatalogItems(
     query = query.or("target_audience.eq.apprenant,target_audience.eq.all");
   }
   // Sinon, montrer les items pour pro ou tous publics (formateurs, admins, tuteurs)
-  else if (userRole && userRole !== "learner") {
+  else if (userRole && (userRole === "admin" || userRole === "instructor" || userRole === "tutor")) {
     query = query.or("target_audience.eq.pro,target_audience.eq.all");
   }
 
@@ -224,8 +229,8 @@ export async function getCatalogItems(
             }
             
             // Récupérer le slug du course pour les redirections
-            if (courseData?.slug) {
-              (item as any).course_slug = courseData.slug;
+            if ((courseData as any)?.slug) {
+              (item as any).course_slug = (courseData as any).slug;
             }
           }
         } catch (e) {
@@ -259,7 +264,11 @@ export async function getCatalogItems(
               .maybeSingle();
             
             if (!testMinErr && testMinimal) {
-              testData = testMinimal;
+              testData = {
+                ...testMinimal,
+                hero_image_url: null,
+                thumbnail_url: null,
+              } as any;
             }
           }
           
@@ -304,7 +313,10 @@ export async function getCatalogItems(
               .maybeSingle();
             
             if (!resourceMinErr && resourceMinimal) {
-              resourceData = resourceMinimal;
+              resourceData = {
+                ...resourceMinimal,
+                hero_image_url: null,
+              } as any;
             }
           }
           
@@ -357,6 +369,10 @@ export async function getCatalogItemById(
   organizationId?: string
 ): Promise<(CatalogItem & { course?: any; test?: any; slug?: string }) | null> {
   const supabase = await getServerClient();
+
+  if (!supabase) {
+    return null;
+  }
 
   // Récupérer l'item du catalogue avec creator_id
   let { data: item, error: itemError } = await supabase
@@ -610,6 +626,10 @@ export async function getCatalogItemAccess(
   organizationId: string
 ): Promise<"pending_payment" | "purchased" | "manually_granted" | "free" | null> {
   const supabase = await getServerClient();
+
+  if (!supabase) {
+    return null;
+  }
 
   const { data: access } = await supabase
     .from("catalog_access")

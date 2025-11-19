@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
     
     // Récupérer l'utilisateur depuis la session Next.js
     const serverClient = await getServerClient();
+    if (!serverClient) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user }, error: userError } = await serverClient.auth.getUser();
     
     if (userError || !user) {

@@ -109,19 +109,13 @@ export function CatalogQuickActions() {
       
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
         {actions.map((action) => {
-          const Component = action.href ? Link : 'div';
-          const props = action.href 
-            ? { href: action.href, className: "group relative h-[400px] overflow-hidden rounded-2xl cursor-pointer transition-transform duration-300 hover:scale-[1.02] border border-gray-200 shadow-sm" }
-            : { 
-                onClick: action.onClick,
-                className: "group relative h-[400px] overflow-hidden rounded-2xl cursor-pointer transition-transform duration-300 hover:scale-[1.02] border border-gray-200 shadow-sm"
-              };
-          
-          return (
-            <Component
-              key={action.id}
-              {...props}
-            >
+          if (action.href) {
+            return (
+              <Link
+                key={action.id}
+                href={action.href}
+                className="group relative h-[400px] overflow-hidden rounded-2xl cursor-pointer transition-transform duration-300 hover:scale-[1.02] border border-gray-200 shadow-sm"
+              >
               {/* Image de fond */}
               <div className="absolute inset-0">
                 <Image
@@ -161,8 +155,57 @@ export function CatalogQuickActions() {
                   </div>
                 </div>
               </div>
-            </Component>
-          );
+            </Link>
+            );
+          } else {
+            return (
+              <div
+                key={action.id}
+                onClick={action.onClick}
+                className="group relative h-[400px] overflow-hidden rounded-2xl cursor-pointer transition-transform duration-300 hover:scale-[1.02] border border-gray-200 shadow-sm"
+              >
+              {/* Image de fond */}
+              <div className="absolute inset-0">
+                <Image
+                  src={action.image}
+                  alt={action.title}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                {/* Overlay sombre pour la lisibilité du texte */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+              </div>
+
+              {/* Contenu texte superposé - style Apple */}
+              <div className="absolute inset-0 z-10 flex flex-col justify-end p-6">
+                {/* Badge discret en haut */}
+                <div className="mb-2">
+                  <span className="text-xs font-medium uppercase tracking-wider text-white/70">
+                    {action.id === "module" ? "Formation" : action.id === "modify-module" ? "Modification" : action.id === "parcours" ? "Parcours" : action.id === "ressource" ? "Ressource" : "Évaluation"}
+                  </span>
+                </div>
+                {/* Titre principal - style Apple */}
+                <h3 className="text-2xl font-bold text-white mb-2 leading-tight">
+                  {action.title}
+                </h3>
+                {/* Description - style Apple */}
+                <p className="text-sm text-white/90 leading-relaxed mb-4">
+                  {action.description}
+                </p>
+                {/* Bouton + style Apple */}
+                <div className="flex items-center justify-end">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-all group-hover:bg-black/60">
+                    {action.id === "modify-module" ? (
+                      <Edit className="h-5 w-5 text-white" />
+                    ) : (
+                      <Plus className="h-5 w-5 text-white" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            );
+          }
         })}
       </div>
 

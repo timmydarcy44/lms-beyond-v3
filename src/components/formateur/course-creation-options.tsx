@@ -80,7 +80,9 @@ export function CourseCreationOptions() {
       } else if (selectedMethod === "ai") {
         // Traiter le PDF avec OpenAI
         const formData = new FormData();
-        formData.append("file", uploadedFile);
+        if (uploadedFile) {
+          formData.append("file", uploadedFile);
+        }
         formData.append("title", title);
 
         const response = await fetch("/api/courses/generate-structure-from-pdf", {

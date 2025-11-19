@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { LearnerHero as LearnerHeroType, LearnerCard } from "@/lib/queries/apprenant";
 
-const NAV_ITEMS = ["Accueil", "Formations", "Tests", "Drive", "Ma liste"]; // display only
+const NAV_ITEMS: string[] = []; // display only - tous les onglets retirés
 
 type TodoTask = {
   id: string;
@@ -207,30 +207,32 @@ export const LearnerHero = ({ hero, previews }: LearnerHeroProps) => {
       )}
 
       <div className="relative z-10 flex flex-col gap-8 px-6 py-10 md:px-12 md:py-16">
-        <nav className="flex flex-wrap items-center gap-6 text-sm font-medium text-white/85">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onMouseEnter={() => setActiveNav(item)}
-              className="relative pb-1 transition hover:text-white"
-            >
-              {item}
-              <AnimatePresence>
-                {activeNav === item ? (
-                  <motion.span
-                    layoutId="nav-underline"
-                    className="absolute bottom-0 left-0 h-[2px] w-full rounded-full bg-[linear-gradient(135deg,#EF4444,#3B82F6)]"
-                    initial={{ opacity: 0, scaleX: 0 }}
-                    animate={{ opacity: 1, scaleX: 1 }}
-                    exit={{ opacity: 0, scaleX: 0 }}
-                    transition={{ duration: 0.2 }}
-                  />
-                ) : null}
-              </AnimatePresence>
-            </button>
-          ))}
-        </nav>
+        {NAV_ITEMS.length > 0 && (
+          <nav className="flex flex-wrap items-center gap-6 text-sm font-medium text-white/85">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onMouseEnter={() => setActiveNav(item)}
+                className="relative pb-1 transition hover:text-white"
+              >
+                {item}
+                <AnimatePresence>
+                  {activeNav === item ? (
+                    <motion.span
+                      layoutId="nav-underline"
+                      className="absolute bottom-0 left-0 h-[2px] w-full rounded-full bg-[linear-gradient(135deg,#EF4444,#3B82F6)]"
+                      initial={{ opacity: 0, scaleX: 0 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      exit={{ opacity: 0, scaleX: 0 }}
+                      transition={{ duration: 0.2 }}
+                    />
+                  ) : null}
+                </AnimatePresence>
+              </button>
+            ))}
+          </nav>
+        )}
 
         <div className="space-y-4 text-white md:max-w-3xl">
           {hero.badge ? (

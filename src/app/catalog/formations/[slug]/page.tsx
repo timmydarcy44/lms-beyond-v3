@@ -52,13 +52,12 @@ export default async function FormationDetailPage({
     <LearningSessionTracker
       contentType={contentType}
       contentId={card.id}
-      contentTitle={info.title}
     >
-      <DashboardShell
-        title={info.title}
-        breadcrumbs={breadcrumbs}
-        className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A]"
-      >
+      <div className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A]">
+        <DashboardShell
+          title={info.title}
+          breadcrumbs={breadcrumbs}
+        >
         {/* Hero Section */}
         <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/60 shadow-[0_40px_140px_rgba(221,36,118,0.35)]">
           <div className="absolute inset-0">
@@ -137,9 +136,19 @@ export default async function FormationDetailPage({
 
         {/* Contenu similaire */}
         {related.length > 0 && (
-          <SectionSlider title="Vous aimerez aussi" cards={related} accent="learner" />
+          <SectionSlider 
+            title="Vous aimerez aussi" 
+            cards={related.map(card => ({ 
+              ...card, 
+              cta: card.cta ?? undefined,
+              meta: card.meta ?? undefined,
+              progress: card.progress ?? undefined,
+            }))} 
+            accent="learner" 
+          />
         )}
-      </DashboardShell>
+        </DashboardShell>
+      </div>
     </LearningSessionTracker>
   );
 }

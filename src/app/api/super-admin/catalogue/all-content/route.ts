@@ -10,6 +10,9 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -17,30 +20,32 @@ export async function GET(request: NextRequest) {
     }
 
     // Récupérer tous les contenus créés par le Super Admin depuis les tables directes
+    // TypeScript assertion: supabase est vérifié non-null ci-dessus
+    const supabaseClient = supabase!;
     const [modulesResult, testsResult, resourcesResult, pathsResult] = await Promise.all([
       // Modules (courses)
-      supabase
+      supabaseClient
         .from("courses")
         .select("id, title, description, cover_image, slug, created_at, updated_at, builder_snapshot")
         .eq("creator_id", user.id)
         .order("created_at", { ascending: false }),
       
       // Tests
-      supabase
+      supabaseClient
         .from("tests")
         .select("id, title, description, duration, created_at, updated_at, published, cover_image, hero_image_url, thumbnail_url, price, category")
         .eq("creator_id", user.id)
         .order("created_at", { ascending: false }),
       
       // Ressources - récupérer aussi file_url pour les images
-      supabase
+      supabaseClient
         .from("resources")
         .select("id, title, description, kind, created_at, updated_at, published, thumbnail_url, cover_url, hero_image_url, price, category, file_url")
         .eq("created_by", user.id)
         .order("created_at", { ascending: false }),
       
       // Parcours (paths)
-      supabase
+      supabaseClient
         .from("paths")
         .select("id, title, description, created_at, updated_at, published")
         .eq("creator_id", user.id)
@@ -73,7 +78,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Chercher l'item dans catalog_items pour obtenir l'ID du catalogue
-        const { data: catalogItem } = await supabase
+        const { data: catalogItem } = await supabaseClient
           .from("catalog_items")
           .select("id")
           .eq("content_id", module.id)

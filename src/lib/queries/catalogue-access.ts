@@ -11,6 +11,10 @@ export async function getOrganizationCatalogAccess(organizationId: string): Prom
 }> {
   const supabase = await getServerClient();
 
+  if (!supabase) {
+    return { courses: [], paths: [], resources: [], tests: [] };
+  }
+
   const { data: accesses, error } = await supabase
     .from("catalog_access")
     .select(`
@@ -68,6 +72,10 @@ export async function hasCatalogAccess(
   contentType: "module" | "parcours" | "ressource" | "test"
 ): Promise<boolean> {
   const supabase = await getServerClient();
+
+  if (!supabase) {
+    return false;
+  }
 
   const { data: access, error } = await supabase
     .from("catalog_access")

@@ -314,10 +314,6 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
                   thumbnailUrl={heroImage}
                   size="lg"
                   className="px-8 py-6 text-lg font-medium rounded-full shadow-lg transition-all hover:shadow-xl"
-                  style={{
-                    backgroundColor: primaryColor,
-                    color: '#FFFFFF',
-                  }}
                 />
               )}
             </div>

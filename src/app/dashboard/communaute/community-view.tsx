@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Paperclip, PhoneCall, Search, Send, Video, Wifi, FileText, MessageSquarePlus, Bell } from "lucide-react";
+import { Paperclip, PhoneCall, Search, Send, Video, Wifi, FileText, MessageSquarePlus, Bell, Trash2, MoreVertical } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,13 @@ import { useCommunityConversations, type Conversation } from "@/hooks/use-commun
 import { ContactSelector } from "@/components/messaging/contact-selector";
 import { NewMessageModal } from "@/components/messaging/new-message-modal";
 import type { Contact } from "@/lib/queries/contacts";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const bubbleVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -64,6 +71,7 @@ export default function CommunityView({ initialConversations, availableContacts 
   const [filter, setFilter] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [incomingMessage, setIncomingMessage] = useState<{
@@ -80,6 +88,53 @@ export default function CommunityView({ initialConversations, availableContacts 
   useEffect(() => {
     setUnreadTotal(unreadCount);
   }, [unreadCount, setUnreadTotal]);
+
+  // Fonction pour supprimer une conversation
+  const handleDeleteConversation = async (conversationId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.")) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/messages/conversation/${conversationId}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors de la suppression");
+      }
+
+      // Retirer la conversation de la liste
+      const updatedConversations = conversations.filter((conv) => conv.id !== conversationId);
+      setConversations(updatedConversations);
+
+      // Si la conversation supprimée était active, sélectionner la première conversation disponible
+      if (activeConversationId === conversationId) {
+        if (updatedConversations.length > 0) {
+          setActiveConversation(updatedConversations[0].id);
+        } else {
+          setActiveConversation("");
+        }
+      }
+
+      toast.success("Conversation supprimée", {
+        description: "La conversation a été supprimée avec succès.",
+      });
+
+      // Recharger la page pour synchroniser avec le serveur
+      router.refresh();
+    } catch (error) {
+      console.error("[community-view] Error deleting conversation:", error);
+      toast.error("Erreur", {
+        description: error instanceof Error ? error.message : "Impossible de supprimer la conversation.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Polling pour vérifier les nouveaux messages toutes les 10 secondes
   useEffect(() => {
@@ -221,8 +276,14 @@ export default function CommunityView({ initialConversations, availableContacts 
     </AnimatePresence>
   );
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (eventOrForm: React.FormEvent<HTMLFormElement> | HTMLFormElement) => {
+    let form: HTMLFormElement;
+    if (eventOrForm instanceof HTMLFormElement) {
+      form = eventOrForm;
+    } else {
+      eventOrForm.preventDefault();
+      form = eventOrForm.currentTarget as HTMLFormElement;
+    }
     
     // Déterminer le destinataire : soit depuis la conversation active, soit depuis le contact sélectionné
     const recipientId = activeConversation?.id || selectedContactId;
@@ -516,7 +577,10 @@ export default function CommunityView({ initialConversations, availableContacts 
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
                       if (message.trim()) {
-                        handleSubmit(event.currentTarget.form as HTMLFormElement);
+                        const form = event.currentTarget.closest('form') as HTMLFormElement;
+                        if (form) {
+                          handleSubmit(form);
+                        }
                       }
                     }
                   }}
@@ -660,6 +724,28 @@ export default function CommunityView({ initialConversations, availableContacts 
               <Button variant="ghost" size="icon" className="rounded-full border border-white/20 text-white hover:bg-white/10">
                 <Video className="h-4 w-4" />
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full border border-white/20 text-white hover:bg-white/10"
+                    disabled={isDeleting}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="border-white/10 bg-[#1a1a1a] text-white">
+                  <DropdownMenuItem
+                    onClick={() => handleDeleteConversation(activeConversation.id)}
+                    className="cursor-pointer text-red-400 focus:bg-red-500/20 focus:text-red-300"
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {isDeleting ? "Suppression..." : "Supprimer la conversation"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -754,7 +840,10 @@ export default function CommunityView({ initialConversations, availableContacts 
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
                     if (message.trim() && (activeConversation || selectedContactId)) {
-                      handleSubmit(event.currentTarget.form as HTMLFormElement);
+                      const form = event.currentTarget.closest('form') as HTMLFormElement;
+                      if (form) {
+                        handleSubmit(form);
+                      }
                     }
                   }
                 }}

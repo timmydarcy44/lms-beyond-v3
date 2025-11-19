@@ -279,7 +279,7 @@ export function CatalogViewAppleTV() {
             }
             onItemClick={(item) => {
               // Rediriger vers la page de détail du contenu
-              window.location.href = `/dashboard/catalogue/${item.item_type}/${item.id}`;
+              window.location.href = `/dashboard/catalogue/${(item as any).item_type}/${item.id}`;
             }}
           />
         ) : null}
@@ -344,7 +344,7 @@ export function CatalogViewAppleTV() {
               title={selectedCategory}
               items={itemsByCategory[selectedCategory]}
               onItemClick={(item) => {
-                window.location.href = `/dashboard/catalogue/${item.item_type}/${item.id}`;
+                window.location.href = `/dashboard/catalogue/${(item as any).item_type}/${item.id}`;
               }}
             />
           )}

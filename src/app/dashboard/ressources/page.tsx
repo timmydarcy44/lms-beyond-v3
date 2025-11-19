@@ -31,7 +31,7 @@ export default async function LearnerResourcesPage() {
   }, {} as Record<string, typeof data.ressources>);
 
   data.ressources.forEach((resource) => {
-    const type = guessResourceType(resource.title, resource.meta, resource.contentType);
+    const type = guessResourceType(resource.title, resource.meta ?? undefined, (resource as any).contentType);
     resourcesByType[type] = [...(resourcesByType[type] ?? []), resource];
   });
 
@@ -152,15 +152,15 @@ export default async function LearnerResourcesPage() {
                       <div className="mt-auto grid grid-cols-2 gap-3">
                         <ResourcePreviewButton
                           title={resource.title}
-                          contentType={guessResourceType(resource.title, resource.meta, resource.contentType)}
-                          contentUrl={resource.contentUrl}
+                          contentType={guessResourceType(resource.title, resource.meta ?? undefined, (resource as any).contentType)}
+                          contentUrl={(resource as any).contentUrl}
                         />
                         <Button
                           asChild
                           variant="outline"
                           className="rounded-full border-white/25 bg-white/5 px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 hover:border-white/40 hover:text-white"
                         >
-                          <a href={resource.downloadUrl ?? resource.contentUrl ?? resource.href} target="_blank" rel="noreferrer">
+                          <a href={(resource as any).downloadUrl ?? (resource as any).contentUrl ?? resource.href} target="_blank" rel="noreferrer">
                             Télécharger
                           </a>
                         </Button>

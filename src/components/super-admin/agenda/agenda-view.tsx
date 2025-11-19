@@ -145,7 +145,15 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
       // Générer tous les créneaux de 30 minutes pour la journée
       // Matin : 9h, 9h30, 10h, 10h30, 11h, 11h30, 12h (pas 12h30 - pause déjeuner)
       // Après-midi : 13h, 13h30, 14h, 14h30, 15h, 15h30, 16h, 16h30
-      const slotsToCreate = [];
+      const slotsToCreate: Array<{
+        super_admin_id: string;
+        start_time: string;
+        end_time: string;
+        duration_minutes: number;
+        is_available: boolean;
+        is_recurring: boolean;
+        recurring_pattern: string | null;
+      }> = [];
       
       // Créneaux du matin (9h à 12h)
       const morningSlots = [

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { CourseValidationWorkspace } from "@/components/formateur/course-builder/course-validation-workspace";
+import { CourseValidationWorkspace } from "@/components/super-admin/course-validation-workspace";
 
 export default async function SuperAdminNewFormationValidatePage() {
   const hasAccess = await isSuperAdmin();

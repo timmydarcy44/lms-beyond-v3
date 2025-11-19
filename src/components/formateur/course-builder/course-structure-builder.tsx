@@ -811,7 +811,6 @@ function EditorPanel({ courseId }: { courseId?: string }) {
     );
   } else if (selection.type === "subchapter" && nodes.subchapter) {
     const meta = CONTENT_TYPE_MAP[nodes.subchapter.type];
-    const [showSubchapterModal, setShowSubchapterModal] = useState(false);
     content = (
       <EditorLayout
         title="Éditeur de sous-chapitre"

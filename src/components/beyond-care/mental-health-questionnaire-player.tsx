@@ -411,7 +411,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
       if (exportResult.analysis_summary) {
         sectionTitle("Analyse personnalisée");
         const summaryLines = doc.splitTextToSize(exportResult.analysis_summary, width - 144);
-        summaryLines.forEach((line) => {
+        summaryLines.forEach((line: string) => {
           ensureSpace(16);
           doc.text(line, 72, pageY);
           pageY += 16;
@@ -445,7 +445,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
             const detail = (exportResult.analysis_details as Record<string, any> | undefined)?.[key];
             const message = detail?.message ?? scoreToMessage(key, value as number);
             const detailLines = doc.splitTextToSize(message, width - 188);
-            detailLines.forEach((line) => {
+            detailLines.forEach((line: string) => {
               ensureSpace(14);
               doc.text(line, 90, pageY);
               pageY += 14;
@@ -455,7 +455,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
               doc.setTextColor(secondaryText.r, secondaryText.g, secondaryText.b);
               detail.recommendations.slice(0, 3).forEach((rec: string) => {
                 const recLines = doc.splitTextToSize(`• ${rec}`, width - 208);
-                recLines.forEach((line) => {
+                recLines.forEach((line: string) => {
                   ensureSpace(14);
                   doc.text(line, 100, pageY);
                   pageY += 14;
@@ -476,7 +476,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
         sectionTitle("Recommandations globales");
         globalRecs.slice(0, 6).forEach((rec) => {
           const lines = doc.splitTextToSize(`• ${rec}`, width - 160);
-          lines.forEach((line) => {
+          lines.forEach((line: string) => {
             ensureSpace(14);
             doc.text(line, 82, pageY);
             pageY += 14;
@@ -506,7 +506,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
           doc.setTextColor(brandText.r, brandText.g, brandText.b);
           if (entry.question) {
             const questionLines = doc.splitTextToSize(entry.question, width - 192);
-            questionLines.forEach((line) => {
+            questionLines.forEach((line: string) => {
               ensureSpace(14);
               doc.text(line, 88, pageY + 20);
               pageY += 14;
@@ -518,7 +518,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
           doc.setFont("helvetica", "bold");
           const answerText = `${entry.choice}${typeof entry.points === "number" ? ` · ${entry.points} pts` : ""}`;
           const answerLines = doc.splitTextToSize(answerText, width - 192);
-          answerLines.forEach((line) => {
+          answerLines.forEach((line: string) => {
             doc.text(line, 88, pageY + 22);
             pageY += 14;
           });
@@ -547,7 +547,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
           doc.setTextColor(brandText.r, brandText.g, brandText.b);
           if (item.question) {
             const questionLines = doc.splitTextToSize(item.question, width - 192);
-            questionLines.forEach((line) => {
+            questionLines.forEach((line: string) => {
               ensureSpace(14);
               doc.text(line, 88, pageY + 20);
               pageY += 14;
@@ -557,7 +557,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
           }
 
           const answerLines = doc.splitTextToSize(item.answer, width - 192);
-          answerLines.forEach((line) => {
+          answerLines.forEach((line: string) => {
             doc.text(line, 88, pageY + 22);
             pageY += 14;
           });

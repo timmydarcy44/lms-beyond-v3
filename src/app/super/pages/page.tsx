@@ -11,6 +11,9 @@ export default async function PagesPage() {
   }
 
   const supabase = await getServerClient();
+  if (!supabase) {
+    redirect("/dashboard");
+  }
   const { data: pages, error } = await supabase
     .from("cms_pages")
     .select("*")
@@ -36,6 +39,7 @@ export default async function PagesPage() {
     </div>
   );
 }
+
 
 
 

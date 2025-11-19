@@ -41,21 +41,23 @@ export default async function LearnerParcoursIndexPage() {
                   <Link key={parcours.id} href={parcours.href} className="group">
                     <Card className="overflow-hidden border-white/10 bg-white/5 text-white transition hover:border-white/25 hover:bg-white/10">
                       <div className="relative h-48 w-full">
-                        <Image
-                          src={parcours.image}
-                          alt={parcours.title}
-                          fill
-                          className="object-cover opacity-85 transition group-hover:scale-105 group-hover:opacity-100"
-                          sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
-                        />
+                        {parcours.image && (
+                          <Image
+                            src={parcours.image}
+                            alt={parcours.title}
+                            fill
+                            className="object-cover opacity-85 transition group-hover:scale-105 group-hover:opacity-100"
+                            sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+                          />
+                        )}
                       </div>
                       <CardContent className="space-y-4 p-5">
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/45">
                             <span>{parcours.meta ?? "Parcours immersif"}</span>
-                            {parcours.badge ? (
+                            {(parcours as any).badge ? (
                               <Badge className="rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/70">
-                                {parcours.badge}
+                                {(parcours as any).badge}
                               </Badge>
                             ) : null}
                           </div>
@@ -92,7 +94,16 @@ export default async function LearnerParcoursIndexPage() {
                 Voir la bibliothèque complète
               </Button>
             </div>
-            <SectionSlider title="Parcours à explorer" cards={curated} accent="learner" />
+            <SectionSlider 
+              title="Parcours à explorer" 
+              cards={curated.map(card => ({ 
+                ...card, 
+                cta: card.cta ?? undefined,
+                meta: card.meta ?? undefined,
+                progress: card.progress ?? undefined,
+              }))} 
+              accent="learner" 
+            />
           </section>
         ) : null}
       </div>

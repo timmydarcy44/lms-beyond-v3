@@ -21,6 +21,9 @@ export default async function ResourceEditPage({ params }: ResourceEditPageProps
   const supabase = await getServiceRoleClientOrFallback();
 
   // Récupérer la ressource
+  if (!supabase) {
+    redirect("/dashboard");
+  }
   const { data: resource, error } = await supabase
     .from("resources")
     .select("*")
@@ -38,6 +41,7 @@ export default async function ResourceEditPage({ params }: ResourceEditPageProps
     </div>
   );
 }
+
 
 
 

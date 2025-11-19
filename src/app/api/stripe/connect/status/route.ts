@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -51,6 +54,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
 
 

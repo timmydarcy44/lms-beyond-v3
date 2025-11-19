@@ -47,7 +47,7 @@ export function AdminLearnersView({ learners, flash }: AdminLearnersViewProps) {
 
     const groupSet = new Set<string>();
     learners.forEach((learner) => {
-      learner.groups.forEach((group) => groupSet.add(group.name));
+      ((learner as any).groups ?? []).forEach((group: any) => groupSet.add(group.name));
     });
 
     return [
@@ -63,9 +63,9 @@ export function AdminLearnersView({ learners, flash }: AdminLearnersViewProps) {
     const lc = query.toLowerCase();
     return learners.filter((learner) => {
       return (
-        learner.fullName.toLowerCase().includes(lc) ||
+        (learner.fullName ?? "").toLowerCase().includes(lc) ||
         (learner.email ?? "").toLowerCase().includes(lc) ||
-        learner.groups.some((group) => group.name.toLowerCase().includes(lc))
+        ((learner as any).groups ?? []).some((group: any) => group.name?.toLowerCase().includes(lc))
       );
     });
   }, [learners, query]);
@@ -157,8 +157,8 @@ export function AdminLearnersView({ learners, flash }: AdminLearnersViewProps) {
                 {filteredLearners.map((learner) => {
                   const status = learner.status ?? "actif";
                   const badge = STATUS_BADGE[status];
-                  const createdAt = learner.createdAt
-                    ? new Date(learner.createdAt).toLocaleDateString("fr-FR")
+                  const createdAt = (learner as any).createdAt
+                    ? new Date((learner as any).createdAt).toLocaleDateString("fr-FR")
                     : "-";
 
                   return (
@@ -166,7 +166,7 @@ export function AdminLearnersView({ learners, flash }: AdminLearnersViewProps) {
                       <td className="px-5 py-4 text-sm font-semibold text-white">{learner.fullName}</td>
                       <td className="px-5 py-4 text-xs text-white/60">{learner.email ?? "-"}</td>
                       <td className="px-5 py-4 text-xs text-white/60">
-                        {learner.groups.length === 0 ? "-" : learner.groups.map((group) => group.name).join(", ")}
+                        {((learner as any).groups?.length ?? 0) === 0 ? "-" : ((learner as any).groups ?? []).map((group: any) => group.name).join(", ")}
                       </td>
                       <td className="px-5 py-4">
                         <Badge className={`${badge.tone} px-3 py-1 text-[10px] uppercase tracking-[0.3em]`}>

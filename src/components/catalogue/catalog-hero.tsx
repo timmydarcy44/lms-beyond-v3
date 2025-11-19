@@ -67,16 +67,17 @@ export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
       <div className="absolute inset-0">
                {hasHeroImage ? (
                  <>
-                   {(() => {
-                     const isGif = currentItem.hero_image_url.toLowerCase().endsWith('.gif') || 
-                                   currentItem.hero_image_url.includes('data:image/gif') || 
-                                   currentItem.hero_image_url.includes('.gif?') ||
-                                   currentItem.hero_image_url.includes('/gif');
+                   {currentItem.hero_image_url && (() => {
+                     const heroUrl = currentItem.hero_image_url;
+                     const isGif = heroUrl.toLowerCase().endsWith('.gif') || 
+                                   heroUrl.includes('data:image/gif') || 
+                                   heroUrl.includes('.gif?') ||
+                                   heroUrl.includes('/gif');
                      
-                     if (currentItem.hero_image_url.startsWith('data:image/') || isGif) {
+                     if (heroUrl.startsWith('data:image/') || isGif) {
                        return (
                          <img
-                           src={currentItem.hero_image_url}
+                           src={heroUrl}
                            alt={currentItem.title}
                            className="h-full w-full object-cover"
                          />
@@ -85,14 +86,14 @@ export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
                      
                      return (
                        <Image
-                         src={currentItem.hero_image_url}
+                         src={heroUrl}
                          alt={currentItem.title}
                          fill
                          className="object-cover"
                          priority
-                         unoptimized={currentItem.hero_image_url.includes('istockphoto') || 
-                                       currentItem.hero_image_url.includes('localhost') || 
-                                       currentItem.hero_image_url.includes('supabase')}
+                         unoptimized={heroUrl.includes('istockphoto') || 
+                                       heroUrl.includes('localhost') || 
+                                       heroUrl.includes('supabase')}
                        />
                      );
                    })()}

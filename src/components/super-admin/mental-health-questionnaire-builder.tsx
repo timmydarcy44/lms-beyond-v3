@@ -324,8 +324,9 @@ export function MentalHealthQuestionnaireBuilder({ orgId }: Props) {
         ...question,
         id: question.id || nanoid(),
         order_index: index,
+        is_required: question.is_required ?? false,
       })),
-    }));
+    }) as MentalQuestionnaireDraft);
 
     toast.success("Questionnaire importé", {
       description: "Vous pouvez encore le modifier avant de l'enregistrer",

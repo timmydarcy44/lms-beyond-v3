@@ -124,7 +124,7 @@ export function RessourcesPageClient({ initialResources }: RessourcesPageClientP
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {resources.map((resource) => {
               const typeStyle = typeStyles[resource.type] ?? { label: resource.type ?? "Ressource", tone: "bg-white/10 text-white/80" };
-              const isPublished = resource.published || resource.status === "published";
+              const isPublished = (resource as any).published || resource.status === "published";
               const statusClass = statusTone[resource.status] ?? "text-white/60";
               return (
                 <article
@@ -145,14 +145,14 @@ export function RessourcesPageClient({ initialResources }: RessourcesPageClientP
                         {typeStyle.label}
                       </Badge>
                       <span className="text-xs uppercase tracking-[0.3em] text-white/70">
-                        {formatDistanceToNow(new Date(resource.updatedAt ?? Date.now()), { addSuffix: true, locale: fr })}
+                        {formatDistanceToNow(new Date((resource as any).updatedAt ?? Date.now()), { addSuffix: true, locale: fr })}
                       </span>
                     </div>
                   </div>
                   <div className="flex flex-1 flex-col gap-4 px-6 py-5">
                     <div className="space-y-2">
                       <h2 className="text-lg font-semibold text-white line-clamp-2">{resource.title}</h2>
-                      <p className="text-sm text-white/60 line-clamp-3">{resource.description ?? "Description en cours de rédaction."}</p>
+                      <p className="text-sm text-white/60 line-clamp-3">{(resource as any).description ?? "Description en cours de rédaction."}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
                       <span className="rounded-full border border-white/15 px-3 py-1">

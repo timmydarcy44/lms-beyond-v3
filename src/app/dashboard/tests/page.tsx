@@ -76,7 +76,7 @@ export default async function LearnerTestsPage() {
                   </h1>
                   {spotlight.meta ? <p className="text-sm text-white/70">{spotlight.meta}</p> : null}
                   <p className="max-w-2xl text-base text-white/70">
-                    Explorez votre profil pédagogique avec une expérience immersive inspirée de Typeform : transitions fluides, focus plein écran, feedback immédiat. Chaque réponse nourrit votre tableau de bord personnel.
+                    Explorez votre profil pédagogique avec une expérience immersive : transitions fluides, focus plein écran, feedback immédiat. Chaque réponse nourrit votre tableau de bord personnel.
                   </p>
                 </div>
 
@@ -119,11 +119,30 @@ export default async function LearnerTestsPage() {
 
         <LatestTestResults />
 
-        <SectionSlider title="Tests recommandés" cards={recommended} accent="learner" />
+        <SectionSlider 
+          title="Tests recommandés" 
+          cards={recommended.map(card => ({ 
+            ...card, 
+            cta: card.cta ?? undefined,
+            meta: card.meta ?? undefined,
+            progress: card.progress ?? undefined,
+          }))} 
+          accent="learner" 
+        />
 
         <div className="space-y-8">
           {focusGroups.map((group) => (
-            <SectionSlider key={group.label} title={`Focus ${group.label}`} cards={group.cards} accent="learner" />
+            <SectionSlider 
+              key={group.label} 
+              title={`Focus ${group.label}`} 
+              cards={group.cards.map(card => ({ 
+                ...card, 
+                cta: card.cta ?? undefined,
+                meta: card.meta ?? undefined,
+                progress: card.progress ?? undefined,
+              }))} 
+              accent="learner" 
+            />
           ))}
         </div>
 

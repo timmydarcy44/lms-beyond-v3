@@ -4,6 +4,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PdfViewer } from "@/components/formateur/drive/pdf-viewer";
 import { getFormateurDriveDocumentById } from "@/lib/queries/formateur";
 
 type PageProps = {
@@ -50,18 +51,12 @@ export default async function DriveDocumentPreviewPage({ params }: PageProps) {
             <CardTitle className="text-lg font-semibold">Prévisualisation PDF</CardTitle>
           </CardHeader>
           <CardContent className="h-[70vh] overflow-hidden rounded-3xl bg-black/50 p-4">
-            {document.fileUrl && document.fileUrl.trim() ? (
-              <iframe
-                src={`${document.fileUrl}#zoom=120`}
-                title={document.title}
-                className="h-full w-full rounded-2xl border-0"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-white/60">
-                <p>Aucun fichier disponible pour la prévisualisation</p>
-                <p className="mt-2 text-xs text-white/40">Ce document n'a pas de fichier PDF associé</p>
-              </div>
-            )}
+            <PdfViewer
+              fileUrl={document.fileUrl}
+              documentTitle={document.title}
+              documentId={document.id}
+              className="h-full"
+            />
           </CardContent>
         </Card>
 

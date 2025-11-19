@@ -94,7 +94,7 @@ export function CatalogView() {
           <CatalogHero
             items={featuredItems}
             onItemClick={(item) => {
-              window.location.href = `/dashboard/catalogue/${item.item_type}/${item.id}`;
+              window.location.href = `/dashboard/catalogue/${(item as any).item_type}/${item.id}`;
             }}
           />
         ) : catalogItems.length > 0 ? (
@@ -175,7 +175,7 @@ export function CatalogView() {
               title={selectedCategory}
               items={itemsByCategory[selectedCategory]}
               onItemClick={(item) => {
-                window.location.href = `/dashboard/catalogue/${item.item_type}/${item.id}`;
+                window.location.href = `/dashboard/catalogue/${(item as any).item_type}/${item.id}`;
               }}
             />
           )}

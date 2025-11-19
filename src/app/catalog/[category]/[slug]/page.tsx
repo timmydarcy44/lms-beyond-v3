@@ -142,9 +142,11 @@ export default async function LearnerDetailPage({ params }: LearnerDetailPagePro
               <p className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-white/80">
                 {card.meta ?? "Disponible immédiatement"}
               </p>
-              <p className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-white/80">
-                {info.objectives[0]}
-              </p>
+              {info.objectives && info.objectives.length > 0 && (
+                <p className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-white/80">
+                  {info.objectives[0]}
+                </p>
+              )}
               {info.badge?.description ? (
                 <p className="rounded-2xl border border-amber-200/30 bg-amber-500/10 px-4 py-3 text-amber-100">
                   {info.badge.description}
@@ -270,7 +272,16 @@ export default async function LearnerDetailPage({ params }: LearnerDetailPagePro
       </section>
 
       {related.length ? (
-        <SectionSlider title="Vous aimerez aussi" cards={related} accent="learner" />
+        <SectionSlider 
+          title="Vous aimerez aussi" 
+          cards={related.map(card => ({ 
+            ...card, 
+            cta: card.cta ?? undefined,
+            meta: card.meta ?? undefined,
+            progress: card.progress ?? undefined,
+          }))} 
+          accent="learner" 
+        />
       ) : null}
     </DashboardShell>
     </LearningSessionTracker>

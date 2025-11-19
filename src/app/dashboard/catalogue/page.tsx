@@ -2,6 +2,7 @@ import { CatalogViewAppleTV } from "@/components/catalogue/catalog-view-apple-tv
 import { BrandingProvider } from "@/components/super-admin/branding-provider";
 import { getSuperAdminBranding } from "@/lib/queries/super-admin-branding";
 import { getServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,6 +10,9 @@ export const revalidate = 0;
 export default async function NoSchoolPage() {
   // Récupérer le branding pour le catalogue
   const supabase = await getServerClient();
+  if (!supabase) {
+    redirect("/login?redirect=/dashboard/catalogue");
+  }
   const { data: { user } } = await supabase.auth.getUser();
   
   let branding = null;

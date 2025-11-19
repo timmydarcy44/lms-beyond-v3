@@ -104,8 +104,9 @@ export function MentalHealthQuestionnaire({
             processedQuestionIds.add(question.id);
 
             // Traiter les questions de suivi (follow-up) si présentes
-            if (matchingCondition.follow_up_questions && matchingCondition.follow_up_questions.length > 0) {
-              matchingCondition.follow_up_questions.forEach((followUp: any, followUpIndex: number) => {
+            const followUpQuestions = (matchingCondition as any).follow_up_questions;
+            if (followUpQuestions && followUpQuestions.length > 0) {
+              followUpQuestions.forEach((followUp: any, followUpIndex: number) => {
                 const followUpQuestion: Question = {
                   id: `${question.id}-followup-${followUpIndex}`,
                   question_text: followUp.question_text,

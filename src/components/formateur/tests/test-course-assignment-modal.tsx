@@ -174,7 +174,7 @@ export function TestCourseAssignmentModal({
                     <SelectValue placeholder="Sélectionnez une section" />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-800 border-white/20">
-                    <SelectItem value="" className="text-white">Aucune section spécifique</SelectItem>
+                    <SelectItem value="none" className="text-white">Aucune section spécifique</SelectItem>
                     {courseStructure.map((section) => (
                       <SelectItem key={section.id} value={section.id} className="text-white">
                         {section.title}
@@ -185,7 +185,7 @@ export function TestCourseAssignmentModal({
               </div>
 
               {/* Sélection du chapitre */}
-              {selectedSectionId && courseStructure.find((s) => s.id === selectedSectionId)?.chapters.length > 0 && (
+              {selectedSectionId && courseStructure.find((s) => s.id === selectedSectionId)?.chapters && courseStructure.find((s) => s.id === selectedSectionId)!.chapters.length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-white">Chapitre (optionnel)</Label>
                   <Select value={selectedChapterId} onValueChange={setSelectedChapterId}>
@@ -193,7 +193,7 @@ export function TestCourseAssignmentModal({
                       <SelectValue placeholder="Sélectionnez un chapitre" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-white/20">
-                      <SelectItem value="" className="text-white">Aucun chapitre spécifique</SelectItem>
+                      <SelectItem value="none" className="text-white">Aucun chapitre spécifique</SelectItem>
                       {courseStructure
                         .find((s) => s.id === selectedSectionId)
                         ?.chapters.map((chapter) => (
@@ -298,6 +298,7 @@ export function TestCourseAssignmentModal({
     </Dialog>
   );
 }
+
 
 
 

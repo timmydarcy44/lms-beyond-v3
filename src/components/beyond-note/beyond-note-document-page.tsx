@@ -351,7 +351,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                   onClick={() => {
                     const blob = new Blob([currentText || result], { type: 'text/plain' });
                     const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
+                    const link = (document as any).createElement('a');
                     link.href = url;
                     link.download = `${currentAction || 'document'}-${document.file_name}.txt`;
                     link.click();

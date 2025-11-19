@@ -124,7 +124,13 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getServiceRoleClientOrFallback();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const sessionClient = await getServerClient();
+    if (!sessionClient) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user } } = await sessionClient.auth.getUser();
 
     switch (action) {
@@ -204,6 +210,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = await getServiceRoleClientOrFallback();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
 
     switch (action) {
       case "remove_from_path": {

@@ -12,7 +12,7 @@ export interface SessionUser {
   avatarUrl: string | null;
 }
 
-export const getSession = cache(async () => {
+export const getSession = async () => {
   const supabase = await getServerClient();
   if (!supabase) {
     console.warn("[session] Supabase indisponible, retour null");
@@ -25,6 +25,9 @@ export const getSession = cache(async () => {
   if (!user) {
     return null;
   }
+
+  // Log pour debug
+  console.log(`[session] Fetching session for user: ${user.email} (${user.id})`);
 
   let { data: profile, error } = await supabase
     .from("profiles")
@@ -105,23 +108,23 @@ export const getSession = cache(async () => {
   }
 
   // Convertir le rôle de la DB (anglais) vers le frontend (français)
-  // Priorité : profiles.role > org_memberships.role
-  // Le rôle dans profiles est le rôle principal de l'utilisateur
+  // Priorité ABSOLUE : profiles.role > org_memberships.role
+  // Le rôle dans profiles est le rôle principal de l'utilisateur et doit TOUJOURS être utilisé s'il existe
   let dbRole: DatabaseRole;
   
-  // Utiliser le rôle de profiles en priorité s'il existe
-  if (profile.role && profile.role !== null && profile.role !== "") {
+  // Utiliser le rôle de profiles en priorité ABSOLUE s'il existe
+  if (profile.role && profile.role !== null && profile.role !== "" && profile.role !== "null") {
     dbRole = profile.role as DatabaseRole;
-    console.log(`[session] Using profiles role: "${profile.role}"`);
+    console.log(`[session] ✅ Using profiles role (PRIORITY): "${profile.role}" for ${user.email}`);
   } else if (membership?.role) {
-    // Fallback : utiliser org_memberships.role si profiles.role est vide
+    // Fallback : utiliser org_memberships.role SEULEMENT si profiles.role est vraiment vide/null
     // Mapping des rôles de org_memberships (peut être "learner" au lieu de "student")
     const membershipRole = membership.role === "learner" ? "student" : membership.role;
     dbRole = membershipRole as DatabaseRole;
-    console.log(`[session] Using org_memberships role as fallback: "${membership.role}" → "${membershipRole}"`);
+    console.log(`[session] ⚠️ Using org_memberships role as fallback (profiles.role was empty): "${membership.role}" → "${membershipRole}" for ${user.email}`);
   } else {
     // Si pas de rôle défini, on default à student
-    console.warn(`[session] Profile ${profile.id} has no role set. Defaulting to student.`);
+    console.warn(`[session] ⚠️ Profile ${profile.id} (${user.email}) has no role set. Defaulting to student.`);
     dbRole = "student";
   }
   
@@ -130,14 +133,23 @@ export const getSession = cache(async () => {
   // Debug: logger le mapping pour diagnostiquer
   console.log(`[session] Role mapping for ${user.email}: Profile="${profile.role}", Membership="${membership?.role}", Final DB="${dbRole}" → Frontend="${frontendRole}"`);
 
-  return {
+  const sessionData = {
     id: profile.id,
     email: profile.email,
     role: frontendRole,
     fullName: profile.full_name,
     avatarUrl: profile.avatar_url,
   } satisfies SessionUser;
-});
+
+  console.log(`[session] Session data for ${user.email}:`, {
+    id: sessionData.id,
+    email: sessionData.email,
+    role: sessionData.role,
+    fullName: sessionData.fullName,
+  });
+
+  return sessionData;
+};
 
 export const requireSession = cache(async () => {
   const session = await getSession();

@@ -412,19 +412,62 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
       .limit(10);
 
     const tests: LearnerCard[] = [];
+    
+    // Récupérer les tests depuis les tentatives
     if (!testError && testAttempts) {
       for (const attempt of testAttempts) {
         const test = (attempt as any).tests;
-        if (test && test.published) {
+        if (test && (test.published || test.status === "published")) {
           tests.push({
             id: test.id,
             title: test.title || "Test sans titre",
-            slug: test.id,
-            href: `/dashboard/apprenant/tests/${test.id}`,
+            slug: test.slug || test.id,
+            href: `/dashboard/tests/${test.slug || test.id}`,
             image: test.hero_image_url || test.cover_image || test.thumbnail_url || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
             meta: test.description || null,
             cta: "Passer le test",
           });
+        }
+      }
+    }
+
+    // Récupérer aussi les tests assignés aux formations auxquelles l'apprenant est inscrit
+    if (formations.length > 0) {
+      const courseIds = formations.map(f => f.id);
+      const { data: courseTests, error: courseTestsError } = await supabase
+        .from("course_tests")
+        .select(`
+          test_id,
+          course_id,
+          tests (
+            id,
+            title,
+            description,
+            slug,
+            status,
+            hero_image_url,
+            cover_image,
+            thumbnail_url
+          )
+        `)
+        .in("course_id", courseIds);
+
+      if (!courseTestsError && courseTests) {
+        const testIdsInAttempts = new Set(tests.map(t => t.id));
+        for (const courseTest of courseTests) {
+          const test = (courseTest as any).tests;
+          if (test && test.status === "published" && !testIdsInAttempts.has(test.id)) {
+            tests.push({
+              id: test.id,
+              title: test.title || "Test sans titre",
+              slug: test.slug || test.id,
+              href: `/dashboard/tests/${test.slug || test.id}`,
+              image: test.hero_image_url || test.cover_image || test.thumbnail_url || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
+              meta: test.description || null,
+              cta: "Passer le test",
+            });
+            testIdsInAttempts.add(test.id);
+          }
         }
       }
     }
@@ -546,8 +589,9 @@ export async function getLearnerContentDetail(
             section.chapters.forEach((chapter: any) => {
               // Le chapitre lui-même peut être une lesson s'il a du contenu ou un titre
               if (chapter.content || chapter.title || chapter.videoUrl || chapter.mediaUrl) {
+                const chapterId = chapter.id || `chapter-${chapter.title || Date.now()}`;
                 lessons.push({
-                  id: chapter.id || `chapter-${chapter.title || Date.now()}`,
+                  id: chapterId,
                   title: chapter.title || "Sans titre",
                   type: chapter.type || (chapter.videoUrl || chapter.mediaUrl ? "video" : "document"),
                   description: chapter.content || chapter.description || chapter.summary,
@@ -588,12 +632,234 @@ export async function getLearnerContentDetail(
         });
       }
 
+      // Récupérer les tests assignés à cette formation via course_tests
+      const { data: courseTests, error: courseTestsError } = await supabase
+        .from("course_tests")
+        .select(`
+          test_id,
+          section_id,
+          chapter_id,
+          subchapter_id,
+          local_section_id,
+          local_chapter_id,
+          local_subchapter_id,
+          local_position_after_id,
+          position_after_id,
+          position_type,
+          order_index,
+          tests (
+            id,
+            title,
+            description,
+            slug,
+            duration,
+            status
+          )
+        `)
+        .eq("course_id", course.id)
+        .order("order_index", { ascending: true });
+
+      if (!courseTestsError && courseTests && courseTests.length > 0) {
+        // Ajouter les tests aux modules appropriés
+        courseTests.forEach((courseTest: any) => {
+          const test = courseTest.tests;
+          if (!test || test.status !== "published") return;
+
+          const testLesson: LearnerLesson = {
+            id: `test-${test.id}`,
+            title: test.title || "Test",
+            type: "test",
+            description: test.description || null,
+            duration: test.duration || "10 min",
+            kind: "test" as any,
+            // Le href sera construit par lessonHref dans le composant pour rester dans le contexte de la formation
+          } as LearnerLesson & { href?: string };
+
+          // Utiliser les IDs locaux (nanoids) pour le positionnement dans le builder_snapshot
+          // Les IDs locaux correspondent aux IDs dans le snapshot JSON
+          const targetSectionId = courseTest.local_section_id || courseTest.section_id;
+          const targetChapterId = courseTest.local_chapter_id || courseTest.chapter_id;
+          const targetSubchapterId = courseTest.local_subchapter_id || courseTest.subchapter_id;
+          const targetPositionAfterId = courseTest.local_position_after_id || courseTest.position_after_id;
+
+          // Si le test est assigné à une section spécifique
+          if (targetSectionId) {
+            const targetModule = modules.find((m) => m.id === targetSectionId);
+            if (targetModule) {
+              // Si assigné à un chapitre spécifique
+              if (targetChapterId) {
+                // Trouver la lesson correspondant au chapitre
+                const chapterIndex = targetModule.lessons?.findIndex(
+                  (l) => l.id === targetChapterId
+                );
+                if (chapterIndex !== undefined && chapterIndex >= 0 && targetModule.lessons) {
+                  // Si positionné après un élément spécifique
+                  if (targetPositionAfterId) {
+                    const afterIndex = targetModule.lessons.findIndex(
+                      (l) => l.id === targetPositionAfterId
+                    );
+                    if (afterIndex >= 0) {
+                      targetModule.lessons.splice(afterIndex + 1, 0, testLesson);
+                    } else {
+                      // Insérer après le chapitre
+                      targetModule.lessons.splice(chapterIndex + 1, 0, testLesson);
+                    }
+                  } else {
+                    // Insérer après le chapitre
+                    targetModule.lessons.splice(chapterIndex + 1, 0, testLesson);
+                  }
+                } else if (targetSubchapterId) {
+                  // Si assigné à un sous-chapitre, trouver le sous-chapitre
+                  const subchapterIndex = targetModule.lessons?.findIndex(
+                    (l) => l.id === targetSubchapterId
+                  );
+                  if (subchapterIndex !== undefined && subchapterIndex >= 0 && targetModule.lessons) {
+                    if (targetPositionAfterId) {
+                      const afterIndex = targetModule.lessons.findIndex(
+                        (l) => l.id === targetPositionAfterId
+                      );
+                      if (afterIndex >= 0) {
+                        targetModule.lessons.splice(afterIndex + 1, 0, testLesson);
+                      } else {
+                        targetModule.lessons.splice(subchapterIndex + 1, 0, testLesson);
+                      }
+                    } else {
+                      targetModule.lessons.splice(subchapterIndex + 1, 0, testLesson);
+                    }
+                  } else {
+                    // Ajouter à la fin du module
+                    if (!targetModule.lessons) targetModule.lessons = [];
+                    targetModule.lessons.push(testLesson);
+                  }
+                } else {
+                  // Ajouter à la fin du module
+                  if (!targetModule.lessons) targetModule.lessons = [];
+                  targetModule.lessons.push(testLesson);
+                }
+              } else {
+                // Test assigné à la section mais pas à un chapitre spécifique
+                if (!targetModule.lessons) targetModule.lessons = [];
+                if (targetPositionAfterId) {
+                  const afterIndex = targetModule.lessons.findIndex(
+                    (l) => l.id === targetPositionAfterId
+                  );
+                  if (afterIndex >= 0) {
+                    targetModule.lessons.splice(afterIndex + 1, 0, testLesson);
+                  } else {
+                    // Ajouter selon order_index ou à la fin
+                    if (courseTest.order_index !== undefined && courseTest.order_index < targetModule.lessons.length) {
+                      targetModule.lessons.splice(courseTest.order_index, 0, testLesson);
+                    } else {
+                      targetModule.lessons.push(testLesson);
+                    }
+                  }
+                } else {
+                  // Ajouter selon order_index ou à la fin
+                  if (courseTest.order_index !== undefined && courseTest.order_index < targetModule.lessons.length) {
+                    targetModule.lessons.splice(courseTest.order_index, 0, testLesson);
+                  } else {
+                    targetModule.lessons.push(testLesson);
+                  }
+                }
+              }
+            } else {
+              // Si la section n'existe pas dans le snapshot, ajouter au premier module ou créer un module "Tests"
+              if (modules.length > 0) {
+                if (!modules[0].lessons) modules[0].lessons = [];
+                modules[0].lessons.push(testLesson);
+              } else {
+                modules.push({
+                  id: "tests",
+                  title: "Tests",
+                  lessons: [testLesson],
+                });
+              }
+            }
+          } else {
+            // Test assigné au cours sans section spécifique - créer un module "Tests" ou ajouter au premier module
+            let testsModule = modules.find((m) => m.id === "tests" || m.title === "Tests");
+            if (!testsModule) {
+              testsModule = {
+                id: "tests",
+                title: "Tests",
+                lessons: [],
+              };
+              modules.push(testsModule);
+            }
+            if (!testsModule.lessons) testsModule.lessons = [];
+            if (targetPositionAfterId) {
+              const afterIndex = testsModule.lessons.findIndex(
+                (l) => l.id === targetPositionAfterId
+              );
+              if (afterIndex >= 0) {
+                testsModule.lessons.splice(afterIndex + 1, 0, testLesson);
+              } else {
+                testsModule.lessons.push(testLesson);
+              }
+            } else if (courseTest.order_index !== undefined && courseTest.order_index < testsModule.lessons.length) {
+              testsModule.lessons.splice(courseTest.order_index, 0, testLesson);
+            } else {
+              testsModule.lessons.push(testLesson);
+            }
+          }
+        });
+      }
+
       // Si pas de modules depuis builder_snapshot, créer un module par défaut
       if (modules.length === 0) {
         modules.push({
           id: "default",
           title: "Contenu",
           lessons: [],
+        });
+      }
+
+      // Charger les flashcards du cours depuis la base de données
+      const { data: flashcardsData, error: flashcardsError } = await supabase
+        .from("flashcards")
+        .select("id, front, back, course_id, chapter_id")
+        .eq("course_id", course.id)
+        .order("created_at", { ascending: true });
+
+      if (flashcardsError) {
+        console.error("[apprenant] Error loading flashcards:", flashcardsError);
+      }
+
+      // Mapper les flashcards aux lessons appropriées
+      if (flashcardsData && flashcardsData.length > 0) {
+        flashcardsData.forEach((flashcard) => {
+          const learnerFlashcard: LearnerFlashcard = {
+            id: flashcard.id,
+            front: flashcard.front,
+            back: flashcard.back,
+          };
+
+          // Si la flashcard est associée à un chapitre spécifique
+          if (flashcard.chapter_id) {
+            // Trouver toutes les lessons qui correspondent à ce chapter_id
+            modules.forEach((module) => {
+              module.lessons?.forEach((lesson) => {
+                if (lesson.id === flashcard.chapter_id || lesson.parentChapterId === flashcard.chapter_id) {
+                  const lessonWithFlashcards = lesson as LearnerLesson & { flashcards?: LearnerFlashcard[] };
+                  if (!lessonWithFlashcards.flashcards) {
+                    lessonWithFlashcards.flashcards = [];
+                  }
+                  lessonWithFlashcards.flashcards.push(learnerFlashcard);
+                }
+              });
+            });
+          } else {
+            // Flashcard associée au cours entier, l'ajouter à toutes les lessons
+            modules.forEach((module) => {
+              module.lessons?.forEach((lesson) => {
+                const lessonWithFlashcards = lesson as LearnerLesson & { flashcards?: LearnerFlashcard[] };
+                if (!lessonWithFlashcards.flashcards) {
+                  lessonWithFlashcards.flashcards = [];
+                }
+                lessonWithFlashcards.flashcards.push(learnerFlashcard);
+              });
+            });
+          }
         });
       }
 

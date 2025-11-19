@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,10 @@ type TestExperienceProps = {
 
 export default function TestExperience({ card, detail, questions }: TestExperienceProps) {
   const [isActive, setIsActive] = useState(false);
+  const [showIntroduction, setShowIntroduction] = useState(false);
+  const [canAccess, setCanAccess] = useState<boolean | null>(null);
+  const [isCheckingPrerequisites, setIsCheckingPrerequisites] = useState(false);
+  const [prerequisiteError, setPrerequisiteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isActive) {
@@ -36,6 +41,47 @@ export default function TestExperience({ card, detail, questions }: TestExperien
 
   const handleClose = () => {
     setIsActive(false);
+    setShowIntroduction(false);
+  };
+
+  const checkPrerequisites = async () => {
+    setIsCheckingPrerequisites(true);
+    setPrerequisiteError(null);
+    
+    try {
+      const response = await fetch(`/api/tests/${card.id}/prerequisites`);
+      const data = await response.json();
+      
+      if (data.canAccess) {
+        setCanAccess(true);
+        setShowIntroduction(true);
+      } else {
+        setCanAccess(false);
+        setPrerequisiteError(
+          data.missingCount 
+            ? `Vous devez compléter ${data.missingCount} chapitre(s) avant de pouvoir passer cette évaluation.`
+            : "Vous devez compléter tous les chapitres précédents avant de pouvoir passer cette évaluation."
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification des prérequis:", error);
+      setPrerequisiteError("Erreur lors de la vérification. Veuillez réessayer.");
+      setCanAccess(false);
+    } finally {
+      setIsCheckingPrerequisites(false);
+    }
+  };
+
+  const handleStartTest = () => {
+    if (canAccess === null) {
+      checkPrerequisites();
+    } else if (canAccess) {
+      if (!showIntroduction) {
+        setShowIntroduction(true);
+      } else {
+        setIsActive(true);
+      }
+    }
   };
 
   return (
@@ -59,11 +105,15 @@ export default function TestExperience({ card, detail, questions }: TestExperien
             </div>
             <div className="flex flex-wrap gap-3 pt-4">
               <Button
-                onClick={() => setIsActive(true)}
-                className="rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-6 text-xs font-semibold uppercase tracking-[0.35em] text-white hover:opacity-90"
+                onClick={handleStartTest}
+                disabled={isCheckingPrerequisites}
+                className="rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-6 text-xs font-semibold uppercase tracking-[0.35em] text-white hover:opacity-90 disabled:opacity-50"
               >
-                Commencer le test
+                {isCheckingPrerequisites ? "Vérification..." : canAccess === false ? "Prérequis non remplis" : "Commencer le test"}
               </Button>
+              {prerequisiteError && (
+                <p className="w-full text-sm text-red-400">{prerequisiteError}</p>
+              )}
               <Button
                 variant="ghost"
                 className="rounded-full border border-white/25 bg-white/10 px-6 text-xs font-semibold uppercase tracking-[0.35em] text-white/80 hover:border-white/40 hover:text-white"
@@ -73,13 +123,15 @@ export default function TestExperience({ card, detail, questions }: TestExperien
             </div>
           </div>
           <div className="relative min-h-[280px]">
-            <Image
-              src={detail.backgroundImage}
-              alt={detail.title}
-              fill
-              className="object-cover object-center"
-              sizes="(min-width: 1024px) 40vw, 100vw"
-            />
+            {detail.backgroundImage && (
+              <Image
+                src={detail.backgroundImage}
+                alt={detail.title}
+                fill
+                className="object-cover object-center"
+                sizes="(min-width: 1024px) 40vw, 100vw"
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
           </div>
         </div>
@@ -100,7 +152,7 @@ export default function TestExperience({ card, detail, questions }: TestExperien
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-white/80">Objectifs pédagogiques</h3>
               <ul className="space-y-2 text-sm text-white/60">
-                {detail.objectives.map((objective) => (
+                {detail.objectives?.map((objective) => (
                   <li key={objective} className="flex items-start gap-2">
                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#FF512F]" />
                     <span>{objective}</span>
@@ -108,11 +160,11 @@ export default function TestExperience({ card, detail, questions }: TestExperien
                 ))}
               </ul>
             </div>
-            {detail.skills.length ? (
+            {detail.skills && detail.skills.length > 0 ? (
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-white/80">Compétences développées</h3>
                 <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.3em] text-white/50">
-                  {detail.skills.map((skill) => (
+                  {detail.skills?.map((skill) => (
                     <Badge key={skill} variant="outline" className="rounded-full border-white/30 text-white/70">
                       {skill}
                     </Badge>
@@ -141,19 +193,81 @@ export default function TestExperience({ card, detail, questions }: TestExperien
               </p>
             </div>
             <ul className="space-y-2 text-sm text-white/60">
-              <li>• Interface inspirée de Typeform, transitions fluides</li>
+              <li>• Interface immersive avec transitions fluides</li>
               <li>• Feedback immédiat et sauvegarde automatique dans votre espace "Mon compte"</li>
               <li>• Résultats partagés prochainement avec votre formateur, admin et tuteur</li>
             </ul>
             <Button
-              onClick={() => setIsActive(true)}
-              className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-6 text-xs font-semibold uppercase tracking-[0.35em] text-white hover:opacity-90"
+              onClick={handleStartTest}
+              disabled={isCheckingPrerequisites || canAccess === false}
+              className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-6 text-xs font-semibold uppercase tracking-[0.35em] text-white hover:opacity-90 disabled:opacity-50"
             >
-              Lancer en plein écran
+              {isCheckingPrerequisites ? "Vérification..." : canAccess === false ? "Prérequis non remplis" : "Lancer en plein écran"}
             </Button>
           </CardContent>
         </Card>
       </section>
+
+      {/* Introduction/Présentation du questionnaire */}
+      {showIntroduction && !isActive ? (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-br from-black/95 via-[#030303]/95 to-[#06040C]/95 backdrop-blur-xl">
+          <div className="mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-center px-6 py-16 text-white">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="w-full space-y-8 text-center"
+            >
+              <div className="space-y-4">
+                <h2 className="text-4xl font-bold md:text-5xl">{detail.title}</h2>
+                <p className="text-lg text-white/70">{detail.description}</p>
+              </div>
+              
+              <div className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 text-left">
+                <div>
+                  <h3 className="mb-4 text-xl font-semibold">Informations sur l'évaluation</h3>
+                  <ul className="space-y-3 text-sm text-white/80">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#00C6FF]" />
+                      <span><strong>Nombre de questions :</strong> {questions.length}</span>
+                    </li>
+                    {detail.meta && detail.meta.length > 0 && (
+                      <li className="flex items-start gap-3">
+                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#00C6FF]" />
+                        <span><strong>Durée estimée :</strong> {detail.meta[0]}</span>
+                      </li>
+                    )}
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#00C6FF]" />
+                      <span>Les réponses sont enregistrées automatiquement</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#00C6FF]" />
+                      <span>Vous pouvez naviguer entre les questions</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button
+                  onClick={() => setIsActive(true)}
+                  className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white hover:opacity-90"
+                >
+                  Commencer l'évaluation
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleClose}
+                  className="rounded-full border border-white/20 px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white/80 hover:border-white/40 hover:text-white"
+                >
+                  Retour
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      ) : null}
 
       {isActive ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-br from-black/95 via-[#030303]/95 to-[#06040C]/95 backdrop-blur-xl">
@@ -175,6 +289,7 @@ export default function TestExperience({ card, detail, questions }: TestExperien
     </div>
   );
 }
+
 
 
 

@@ -16,8 +16,14 @@ export async function DELETE(
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const serviceClient = getServiceRoleClient();
     const clientToUse = serviceClient || supabase;
+    if (!clientToUse) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
 
     // Vérifier que l'item existe et appartient au Super Admin connecté
     const { data: { user } } = await supabase.auth.getUser();
@@ -68,6 +74,7 @@ export async function DELETE(
     }, { status: 500 });
   }
 }
+
 
 
 

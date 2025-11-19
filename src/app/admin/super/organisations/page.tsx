@@ -4,6 +4,8 @@ import { getAllOrganizations } from "@/lib/queries/super-admin";
 import Link from "next/link";
 import { Plus, Building2, Users, Calendar } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function OrganizationsPage() {
   const organizations = await getAllOrganizations();
 

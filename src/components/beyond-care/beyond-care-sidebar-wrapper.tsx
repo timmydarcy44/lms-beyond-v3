@@ -76,9 +76,9 @@ export function BeyondCareSidebarWrapper({ isOpen, role }: BeyondCareSidebarWrap
     return null;
   }
 
+  // TypeScript sait que role ne peut pas être "formateur" ici à cause du return null plus haut
   const href = 
     role === "admin" ? "/admin/beyond-care" :
-    role === "formateur" ? "/dashboard/formateur/beyond-care" :
     "/dashboard/apprenant/beyond-care";
 
   return <BeyondCareSidebarItem href={href} isOpen={isOpen} role={role} />;

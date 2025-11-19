@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   HardDrive,
@@ -34,6 +35,7 @@ import { BeyondCareSidebarWrapper } from "@/components/beyond-care/beyond-care-s
 import { BeyondNoteSidebarWrapper } from "@/components/beyond-note/beyond-note-sidebar-wrapper";
 import { useCommunityConversations } from "@/hooks/use-community-conversations";
 import { useUserRole } from "@/hooks/use-user-role";
+import { databaseToFrontendRole, type DatabaseRole } from "@/lib/utils/role-mapping";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -49,14 +51,56 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
   const unreadMessages = useCommunityConversations((state) => state.unreadTotal);
-  const { data: userRole } = useUserRole();
+  const { data: userRoleDB, isLoading: isLoadingRole } = useUserRole();
 
-  const roleForNav = userRole ?? (isTutorArea ? "tutor" : isFormateurArea ? "instructor" : "learner");
-  const isInstructor = roleForNav === "instructor";
-  const isTutorRole = roleForNav === "tutor";
+  // Debug: log unread messages count
+  useEffect(() => {
+    if (unreadMessages > 0) {
+      console.log("[sidebar] Unread messages count:", unreadMessages);
+    }
+  }, [unreadMessages]);
+
+  // Convertir le rôle DB (anglais) en rôle frontend (français)
+  // Le hook useUserRole retourne le rôle de la DB (instructor, student, etc.)
+  let roleForNav: "formateur" | "apprenant" | "admin" | "tuteur";
+  
+  if (userRoleDB) {
+    // Convertir le rôle DB en rôle frontend
+    roleForNav = databaseToFrontendRole(userRoleDB as DatabaseRole);
+    console.log("[sidebar] User role from DB:", userRoleDB, "→ Frontend:", roleForNav);
+  } else if (!isLoadingRole) {
+    // Fallback basé sur le pathname seulement si le rôle n'est pas encore chargé
+    // Mais on évite de changer le rôle si on est en train de charger
+    if (isTutorArea) {
+      roleForNav = "tuteur";
+    } else if (isFormateurArea) {
+      roleForNav = "formateur";
+    } else {
+      roleForNav = "apprenant";
+    }
+    console.log("[sidebar] Using pathname-based fallback role:", roleForNav, "pathname:", pathname);
+  } else {
+    // Pendant le chargement, utiliser le pathname comme fallback temporaire
+    if (isTutorArea) {
+      roleForNav = "tuteur";
+    } else if (isFormateurArea) {
+      roleForNav = "formateur";
+    } else {
+      roleForNav = "apprenant";
+    }
+  }
+
+  const isInstructor = roleForNav === "formateur";
+  const isTutorRole = roleForNav === "tuteur";
   const isAdminRole = roleForNav === "admin";
 
   const navItems = useMemo(() => {
+    // Si le rôle n'est pas encore chargé, retourner un tableau vide pour éviter les liens incorrects
+    // Le fallback basé sur le pathname sera utilisé pour déterminer le rôle temporairement
+    if (isLoadingRole && !userRoleDB) {
+      console.log("[sidebar] Role is loading, using pathname-based navigation items");
+    }
+
     if (isTutorRole) {
       return [
         { label: "Mes alternants", icon: Users, href: "/dashboard/tuteur" },
@@ -135,16 +179,16 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
     ];
 
     return baseItems;
-  }, [isInstructor, isTutorRole, isAdminRole]);
+  }, [isInstructor, isTutorRole, isAdminRole, isLoadingRole, userRoleDB]);
 
   // Ajouter Beyond Care après No School si l'accès est disponible
   // (sera géré par le composant BeyondCareSidebarWrapper qui vérifie l'accès)
 
   // Déterminer le rôle pour Beyond Care et Beyond Note
   const beyondCareRole =
-    roleForNav === "admin" ? "admin" : roleForNav === "instructor" ? "formateur" : "apprenant";
+    roleForNav === "admin" ? "admin" : roleForNav === "formateur" ? "formateur" : "apprenant";
   const beyondNoteRole =
-    roleForNav === "admin" ? "admin" : roleForNav === "instructor" ? "formateur" : "apprenant";
+    roleForNav === "admin" ? "admin" : roleForNav === "formateur" ? "formateur" : "apprenant";
 
   return (
     <>
@@ -252,7 +296,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                               {item.label}
                             </span>
                             {displayUnread > 0 && (
-                              <span className="ml-auto rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm shadow-[#ff512f]/40">
+                              <span className="ml-auto inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white shadow-md ring-1 ring-white/20">
                                 {displayUnread > 99 ? "99+" : displayUnread}
                               </span>
                             )}
@@ -389,7 +433,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                       )}
                     />
                     {!isOpen && showBadge ? (
-                      <span className="absolute right-3 top-2 inline-flex h-3 w-3 items-center justify-center rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] text-[9px] font-semibold text-white shadow-[0_0_6px_rgba(221,36,118,0.6)]">
+                      <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-lg ring-2 ring-white dark:ring-gray-900">
                         {showBadge > 9 ? "9+" : showBadge}
                       </span>
                     ) : null}
@@ -402,7 +446,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                       >
                         <span className="flex-1">{item.label}</span>
                         {showBadge ? (
-                          <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-1 text-[10px] font-semibold text-white shadow-sm shadow-[#ff512f]/40">
+                          <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-md ring-1 ring-white/20">
                             {showBadge > 99 ? "99+" : showBadge}
                           </span>
                         ) : null}

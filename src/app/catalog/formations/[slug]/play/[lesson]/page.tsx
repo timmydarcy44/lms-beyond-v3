@@ -31,9 +31,9 @@ export default async function FormationLessonPlayPage({
     notFound();
   }
 
-  const activeModule = modules.find((module) => module.lessons?.some((item) => item.id === activeLesson.id));
+  const activeModule = modules.find((module) => module.lessons?.some((item: { id: string }) => item.id === activeLesson.id));
   const videoSrc = activeLesson.videoUrl || detail.trailerUrl || undefined;
-  const activeIndex = allLessons.findIndex((item) => item.id === activeLesson.id);
+  const activeIndex = allLessons.findIndex((item: { id: string }) => item.id === activeLesson.id);
   const previousLesson = activeIndex > 0 ? allLessons[activeIndex - 1] : null;
   const nextLesson = activeIndex >= 0 && activeIndex < allLessons.length - 1 ? allLessons[activeIndex + 1] : null;
   const flashcards = activeLesson.flashcards ?? [];
@@ -44,12 +44,12 @@ export default async function FormationLessonPlayPage({
 
   return (
     <DyslexiaModeProvider>
-      <DashboardShell
-        title={activeLesson.title}
-        breadcrumbs={breadcrumbs}
-        className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A]"
-        initialCollapsed={true}
-      >
+      <div className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A]">
+        <DashboardShell
+          title={activeLesson.title}
+          breadcrumbs={breadcrumbs}
+          initialCollapsed={true}
+        >
         <LessonPlayView
           detail={detail}
           modules={modules}
@@ -63,7 +63,8 @@ export default async function FormationLessonPlayPage({
           courseId={card.id}
           courseTitle={card.title}
         />
-      </DashboardShell>
+        </DashboardShell>
+      </div>
     </DyslexiaModeProvider>
   );
 }

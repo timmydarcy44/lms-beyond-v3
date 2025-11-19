@@ -82,9 +82,9 @@ export function ParcoursCardsClient({ paths, statusConfig, learners, groups, con
     setIsContentModalOpen(true);
   };
 
-  const handleAssignContentToPath = async (content: { courseIds: string[]; testIds: string[]; resourceIds: string[] }) => {
+  const handleAssignContentToPath = async (content: { courseIds: string[]; testIds: string[]; resourceIds: string[] }): Promise<void> => {
     if (!selectedPath) return;
-    return await addContentToPath(selectedPath, content);
+    await addContentToPath(selectedPath, content);
   };
 
   return (
@@ -206,7 +206,7 @@ export function ParcoursCardsClient({ paths, statusConfig, learners, groups, con
                     {learner.full_name
                       ? learner.full_name
                           .split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .join("")
                           .toUpperCase()
                           .slice(0, 2)

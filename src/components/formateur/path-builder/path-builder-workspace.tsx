@@ -197,7 +197,7 @@ export function PathBuilderWorkspace({
         title: course.title,
         subtitle: course.category,
         meta: course.duration,
-        image: course.coverImage,
+        image: course.coverImage ?? undefined,
         badge: course.status === "published" ? "Publié" : "Brouillon",
         accent: "course",
       })),
@@ -212,7 +212,7 @@ export function PathBuilderWorkspace({
       library.tests.map((test) => ({
         id: test.id,
         title: test.title,
-        subtitle: test.description,
+        subtitle: test.description ?? undefined,
         meta: test.duration,
         badge: test.status === "published" ? "Publié" : "Brouillon",
         image: defaultTestImage,

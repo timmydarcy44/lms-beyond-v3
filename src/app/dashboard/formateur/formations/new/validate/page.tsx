@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, X, GripVertical, Trash2, Edit2 } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
@@ -10,7 +10,7 @@ import { CourseBuilderSection } from "@/types/course-builder";
 import { cn } from "@/lib/utils";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 
-export default function CourseValidationPage() {
+function CourseValidationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const hydrate = useCourseBuilder((state) => state.hydrateFromSnapshot);
@@ -377,6 +377,15 @@ export default function CourseValidationPage() {
     </DashboardShell>
   );
 }
+
+export default function CourseValidationPage() {
+  return (
+    <Suspense fallback={null}>
+      <CourseValidationContent />
+    </Suspense>
+  );
+}
+
 
 
 

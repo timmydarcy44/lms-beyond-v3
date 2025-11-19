@@ -18,6 +18,9 @@ export default async function SuperLayout({
 
   // Récupérer le branding côté serveur
   const supabase = await getServerClient();
+  if (!supabase) {
+    return null;
+  }
   const { data: authData } = await supabase.auth.getUser();
   const branding = authData?.user?.id 
     ? await getSuperAdminBranding(authData.user.id)

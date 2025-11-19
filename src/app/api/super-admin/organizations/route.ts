@@ -10,6 +10,9 @@ export async function GET() {
     }
 
     const supabase = await getServiceRoleClientOrFallback();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
 
     const { data: organizations, error } = await supabase
       .from("organizations")

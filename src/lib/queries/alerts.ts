@@ -31,6 +31,10 @@ export async function getSuperAdminAlerts(): Promise<Alert[]> {
     return [];
   }
 
+  if (!supabase) {
+    return [];
+  }
+
   const alerts: Alert[] = [];
 
   try {
@@ -38,16 +42,17 @@ export async function getSuperAdminAlerts(): Promise<Alert[]> {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    // Vérifier l'activité via login_events pour les membres
+    const { data: recentLogins } = await supabase
+      .from("login_events")
+      .select("user_id, created_at")
+      .gte("created_at", thirtyDaysAgo.toISOString());
+
     const { data: allOrgs } = await supabase
       .from("organizations")
       .select("id, name, created_at");
 
     if (allOrgs) {
-      // Vérifier l'activité via login_events pour les membres
-      const { data: recentLogins } = await supabase
-        .from("login_events")
-        .select("user_id, created_at")
-        .gte("created_at", thirtyDaysAgo.toISOString());
 
       const activeUserIds = new Set(recentLogins?.map(l => l.user_id) || []);
 
@@ -85,7 +90,7 @@ export async function getSuperAdminAlerts(): Promise<Alert[]> {
 
     if (allUsers && recentLogins) {
       const userLastLogin = new Map<string, Date>();
-      recentLogins.forEach(login => {
+      recentLogins?.forEach((login: { user_id: string; created_at: string }) => {
         const existing = userLastLogin.get(login.user_id);
         const loginDate = new Date(login.created_at);
         if (!existing || loginDate > existing) {
@@ -166,6 +171,7 @@ export async function getAlertCount(): Promise<number> {
   const alerts = await getSuperAdminAlerts();
   return alerts.filter(a => a.severity === "high" || a.severity === "medium").length;
 }
+
 
 
 

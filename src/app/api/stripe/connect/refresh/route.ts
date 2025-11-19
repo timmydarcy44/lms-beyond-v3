@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { getServerClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-11-20.acacia",
-});
-
 export const dynamic = 'force-dynamic';
+
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+  try {
+    const Stripe = require("stripe").default;
+    return new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-11-20.acacia" as any,
+    });
+  } catch (error) {
+    console.error("[stripe] Error initializing Stripe:", error);
+    return null;
+  }
+}
 
 /**
  * Rafraîchit le lien d'autorisation Stripe Connect si l'utilisateur n'a pas terminé l'onboarding
@@ -20,6 +30,9 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -35,6 +48,15 @@ export async function GET(request: NextRequest) {
 
     if (!account) {
       return NextResponse.json({ error: "Aucun compte Stripe Connect trouvé" }, { status: 404 });
+    }
+
+    // Vérifier que Stripe est configuré
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: "Stripe n'est pas configuré" },
+        { status: 503 }
+      );
     }
 
     // Créer un nouveau lien d'autorisation
@@ -56,6 +78,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
 
 

@@ -59,23 +59,20 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error("[beyond-note/upload] Upload error:", uploadError);
       console.error("[beyond-note/upload] Upload error message:", uploadError.message);
-      console.error("[beyond-note/upload] Upload error statusCode:", uploadError.statusCode);
+      // Note: StorageError doesn't have statusCode property
       
       // Si le bucket n'existe pas, retourner une erreur explicite
       if (uploadError.message?.includes("Bucket not found") || 
-          uploadError.message?.includes("not found") ||
-          uploadError.statusCode === "404") {
+          uploadError.message?.includes("not found")) {
         return NextResponse.json({ 
           error: "Le bucket de stockage 'beyond-note' n'existe pas. Veuillez le créer dans Supabase Dashboard > Storage.",
           details: uploadError.message,
-          statusCode: uploadError.statusCode
         }, { status: 404 });
       }
       
       return NextResponse.json({ 
         error: uploadError.message || "Erreur lors de l'upload",
         details: uploadError.message,
-        statusCode: uploadError.statusCode
       }, { status: 500 });
     }
     console.log("[beyond-note/upload] File uploaded successfully:", uploadData);

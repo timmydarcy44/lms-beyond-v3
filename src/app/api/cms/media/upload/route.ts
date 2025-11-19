@@ -46,6 +46,9 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
 
     // Générer un nom de fichier unique
     const timestamp = Date.now();
@@ -120,6 +123,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
 
 

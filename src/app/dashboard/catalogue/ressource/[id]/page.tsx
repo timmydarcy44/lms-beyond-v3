@@ -172,10 +172,6 @@ export default async function CatalogResourceDetailPage({ params }: PageProps) {
                     thumbnailUrl={heroImage}
                     size="lg"
                     className="px-8 py-6 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all"
-                    style={{
-                      backgroundColor: primaryColor,
-                      color: '#FFFFFF',
-                    }}
                   />
                 )}
               </div>

@@ -76,14 +76,21 @@ export async function POST(request: NextRequest) {
     }
 
     const prompt = getPromptForAction(action as AIAction, text);
+    if (!prompt) {
+      return NextResponse.json({ error: "Erreur lors de la génération du prompt" }, { status: 400 });
+    }
 
     // Utiliser Anthropic en priorité, OpenAI en fallback
-    let result: string;
+    let result: string | null;
 
     try {
-      result = await generateTextWithAnthropic(prompt, {
+      result = await generateTextWithAnthropic(prompt, undefined, {
         maxTokens: 4000,
       });
+      
+      if (!result) {
+        throw new Error("Aucun résultat de Anthropic");
+      }
     } catch (anthropicError) {
       console.warn("[beyond-note/ai-action] Anthropic failed, trying OpenAI:", anthropicError);
       
@@ -119,6 +126,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
 
 

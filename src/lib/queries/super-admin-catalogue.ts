@@ -27,6 +27,10 @@ export async function getCatalogItemsByCreatorEmail(
 ): Promise<CatalogItemForSuperAdmin[]> {
   const supabase = await getServiceRoleClientOrFallback();
 
+  if (!supabase) {
+    return [];
+  }
+
   // D'abord, récupérer l'ID de l'utilisateur depuis son email
   const { data: creatorProfile, error: profileError } = await supabase
     .from("profiles")
@@ -62,6 +66,10 @@ export async function getCatalogItemsByCreatorEmail(
  */
 export async function getCatalogItemsForSuperAdmin(): Promise<CatalogItemForSuperAdmin[]> {
   const supabase = await getServiceRoleClientOrFallback();
+
+  if (!supabase) {
+    return [];
+  }
 
   // Récupérer tous les items actifs du catalogue
   const { data: items, error } = await supabase

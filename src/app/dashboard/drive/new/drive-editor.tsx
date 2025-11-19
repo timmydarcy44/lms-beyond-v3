@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlignCenter,
@@ -40,18 +40,15 @@ import { toast } from "sonner";
 const DEFAULT_CONTENT = "<p>Commencez votre document avec une accroche percutante…</p>";
 
 type FormattingCommand = {
-  icon: JSX.Element;
+  icon: React.ReactElement;
   label: string;
   action: () => void;
 };
 
-export default function DriveEditor() {
+function DriveEditorContent({ consigneId, messageId }: { consigneId: string | null; messageId: string | null }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const addDocument = useDriveDocuments((state) => state.addDocument);
 
-  const consigneId = searchParams.get("consigne");
-  const messageId = searchParams.get("message");
   const [isLoadingConsigne, setIsLoadingConsigne] = useState(!!consigneId);
   const [consigneData, setConsigneData] = useState<{ title: string; content: string } | null>(null);
 
@@ -519,6 +516,22 @@ function ToolbarButton({ label, onClick, children }: { label: string; onClick: (
     >
       {children}
     </button>
+  );
+}
+
+function DriveEditorWithParams() {
+  const searchParams = useSearchParams();
+  const consigneId = searchParams.get("consigne");
+  const messageId = searchParams.get("message");
+  
+  return <DriveEditorContent consigneId={consigneId} messageId={messageId} />;
+}
+
+export default function DriveEditor() {
+  return (
+    <Suspense fallback={null}>
+      <DriveEditorWithParams />
+    </Suspense>
   );
 }
 

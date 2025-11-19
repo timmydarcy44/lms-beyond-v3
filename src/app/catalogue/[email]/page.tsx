@@ -19,6 +19,9 @@ export default async function PublicCatalogPage({ params }: PublicCatalogPagePro
   
   // Récupérer le Super Admin par email
   const supabase = await getServerClient();
+  if (!supabase) {
+    notFound();
+  }
   const { data: profile } = await supabase
     .from("profiles")
     .select("id")

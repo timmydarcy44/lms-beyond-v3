@@ -9,6 +9,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ items: [] });
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -34,6 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ items: [] });
   }
 }
+
 
 
 

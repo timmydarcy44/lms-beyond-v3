@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { getServerClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-11-20.acacia",
-});
-
 export const dynamic = 'force-dynamic';
+
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+  try {
+    const Stripe = require("stripe").default;
+    return new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-11-20.acacia" as any,
+    });
+  } catch (error) {
+    console.error("[stripe] Error initializing Stripe:", error);
+    return null;
+  }
+}
 
 /**
  * Initie le processus de connexion Stripe Connect pour un Super Admin
@@ -21,6 +31,9 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -40,6 +53,15 @@ export async function GET(request: NextRequest) {
         account_id: existingAccount.stripe_account_id,
         connected: true,
       });
+    }
+
+    // Vérifier que Stripe est configuré
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: "Stripe n'est pas configuré" },
+        { status: 503 }
+      );
     }
 
     // Créer un nouveau compte Express Stripe Connect
@@ -90,6 +112,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
 
 

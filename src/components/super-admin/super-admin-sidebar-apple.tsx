@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Building2,
@@ -20,8 +20,10 @@ import {
   BookOpen,
   Store,
   Gamepad2,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSupabase } from "@/components/providers/supabase-provider";
 
 type NavItem = {
   label: string;
@@ -37,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Palette,
     href: "/super/studio",
     children: [
+      { label: "Formations", icon: BookOpen, href: "/super/studio/formations" },
       { label: "Modules", icon: BookOpen, href: "/super/studio/modules" },
     ],
   },
@@ -66,6 +69,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Paramètres", icon: Settings, href: "/super/parametres" },
 ];
 
+// Agenda uniquement pour contentin.cabinet@gmail.com
+const AGENDA_ITEM: NavItem = { label: "Agenda", icon: Calendar, href: "/super/agenda" };
+
 type SuperAdminSidebarAppleProps = {
   open?: boolean;
   onToggle?: () => void;
@@ -75,6 +81,21 @@ export function SuperAdminSidebarApple({ open: controlledOpen, onToggle }: Super
   const [internalOpen, setInternalOpen] = useState(true);
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const supabase = useSupabase();
+
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      if (!supabase) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    };
+    fetchUserEmail();
+  }, [supabase]);
+
+  const isContentin = userEmail === "contentin.cabinet@gmail.com";
 
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const handleToggle = () => {
@@ -198,6 +219,21 @@ export function SuperAdminSidebarApple({ open: controlledOpen, onToggle }: Super
             </Link>
           );
         })}
+        {/* Agenda - uniquement pour contentin.cabinet@gmail.com */}
+        {isContentin && (
+          <Link
+            href={AGENDA_ITEM.href}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
+              pathname === AGENDA_ITEM.href || pathname?.startsWith(AGENDA_ITEM.href + "/")
+                ? "bg-white/10 text-white"
+                : "text-gray-400 hover:bg-gray-900 hover:text-white",
+            )}
+          >
+            <Calendar className="h-5 w-5 shrink-0" />
+            {isOpen && <span>{AGENDA_ITEM.label}</span>}
+          </Link>
+        )}
       </nav>
 
       {/* Footer */}

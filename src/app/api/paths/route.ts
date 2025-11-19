@@ -96,7 +96,8 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Pour la mise à jour, on garde creator_id et owner_id existants
-      pathData.owner_id = existingPath.owner_id || user.id;
+      // existingPath est vérifié non-null ci-dessus si pathId existe
+      pathData.owner_id = existingPath?.owner_id || user.id;
     }
 
     let result;

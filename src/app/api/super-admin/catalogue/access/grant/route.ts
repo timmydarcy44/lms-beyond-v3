@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getServiceRoleClientOrFallback();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

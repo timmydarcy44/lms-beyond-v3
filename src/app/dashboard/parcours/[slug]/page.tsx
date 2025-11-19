@@ -50,7 +50,7 @@ const clampProgress = (value: number) => Math.min(100, Math.max(0, Math.round(va
 const buildColumnItems = (cards: LearnerCard[], accent: ColumnItem["accent"], fallbackMeta: string): ColumnItem[] =>
   cards.slice(0, 4).map((card) => ({
     title: card.title,
-    href: card.href,
+    href: (card as any).href || `/dashboard/parcours/${card.slug}`,
     meta: card.meta ?? fallbackMeta,
     progress: clampProgress(card.progress ?? 0),
     accent,
@@ -150,7 +150,7 @@ export default async function LearnerParcoursDetail({
   const formationItems = pathContent && pathContent.courses.length > 0
     ? pathContent.courses.map((course) => ({
       title: course.title,
-      href: course.href,
+      href: (course as any).href || `/catalog/formations/${course.slug}`,
       meta: "Formation en ligne",
       progress: 0, // TODO: récupérer la progression depuis course_progress
       accent: "formations" as const,
@@ -160,8 +160,8 @@ export default async function LearnerParcoursDetail({
   const testItems = pathContent && pathContent.tests.length > 0
     ? pathContent.tests.map((test) => ({
       title: test.title,
-      href: test.href,
-      meta: test.description || "Évaluation",
+      href: (test as any).href || `/catalog/tests/${test.slug}`,
+      meta: (test as any).description || "Évaluation",
       progress: 0, // TODO: récupérer la progression depuis test_attempts
       accent: "tests" as const,
     }))
@@ -170,8 +170,8 @@ export default async function LearnerParcoursDetail({
   const resourceItems = pathContent && pathContent.resources.length > 0
     ? pathContent.resources.map((resource) => ({
       title: resource.title,
-      href: resource.href,
-      meta: resource.type ? `Ressource ${resource.type}` : "Ressource complémentaire",
+      href: (resource as any).href || `/catalog/ressources/${resource.slug}`,
+      meta: (resource as any).type ? `Ressource ${(resource as any).type}` : "Ressource complémentaire",
       progress: 0, // TODO: récupérer la progression depuis resource_views
       accent: "ressources" as const,
     }))
@@ -209,20 +209,22 @@ export default async function LearnerParcoursDetail({
           <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#1d4ed8]/30 via-[#0f172a]/70 to-transparent p-8 shadow-[0_40px_120px_-40px_rgba(29,78,216,0.45)]">
             <div className="absolute inset-0">
               <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/55 to-transparent" />
-              <Image
-                src={heroCover}
-                alt={parcoursCard.title}
-                fill
-                className="object-cover object-center opacity-60"
-                sizes="(min-width: 1024px) 60vw, 100vw"
-              />
+              {heroCover && (
+                <Image
+                  src={heroCover}
+                  alt={parcoursCard.title}
+                  fill
+                  className="object-cover object-center opacity-60"
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                />
+              )}
             </div>
 
             <div className="relative flex h-full flex-col justify-between gap-8">
               <div className="space-y-4">
-                {parcoursCard.badge ? (
+                {(parcoursCard as any).badge ? (
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
-                    <span>{parcoursCard.badge}</span>
+                    <span>{(parcoursCard as any).badge}</span>
                   </div>
                 ) : null}
                 <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">{parcoursCard.title}</h1>

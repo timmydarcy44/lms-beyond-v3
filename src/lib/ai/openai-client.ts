@@ -46,13 +46,33 @@ export async function generateText(prompt: string, options?: { model?: string; m
   }
 }
 
-export async function generateJSON(prompt: string, schema?: any): Promise<any | null> {
+export async function generateJSON(
+  prompt: string, 
+  schema?: any,
+  systemPrompt?: string
+): Promise<any | null> {
   const client = getOpenAIClient();
   if (!client) {
     return null;
   }
 
   try {
+    // Construire le prompt système
+    let fullSystemPrompt = systemPrompt || "";
+    
+    if (schema) {
+      const schemaStr = JSON.stringify(schema.parameters || schema);
+      const schemaInstruction = `Tu dois répondre UNIQUEMENT avec un JSON valide respectant ce schéma : ${schemaStr}. Ne réponds avec AUCUN texte avant ou après le JSON.`;
+      
+      if (fullSystemPrompt) {
+        fullSystemPrompt = `${fullSystemPrompt}\n\n${schemaInstruction}`;
+      } else {
+        fullSystemPrompt = schemaInstruction;
+      }
+    } else if (!fullSystemPrompt) {
+      fullSystemPrompt = "Tu dois répondre UNIQUEMENT avec un JSON valide. Ne réponds avec AUCUN texte avant ou après le JSON.";
+    }
+
     // Utiliser json_object comme format par défaut (plus compatible)
     // json_schema nécessite un modèle spécifique qui pourrait ne pas être disponible
     const response = await client.chat.completions.create({
@@ -60,9 +80,7 @@ export async function generateJSON(prompt: string, schema?: any): Promise<any | 
       messages: [
         {
           role: "system",
-          content: schema
-            ? `Tu dois répondre UNIQUEMENT avec un JSON valide respectant ce schéma : ${JSON.stringify(schema.parameters || schema)}. Ne réponds avec AUCUN texte avant ou après le JSON.`
-            : "Tu dois répondre UNIQUEMENT avec un JSON valide. Ne réponds avec AUCUN texte avant ou après le JSON.",
+          content: fullSystemPrompt,
         },
         {
           role: "user",
@@ -113,8 +131,8 @@ export async function generateSpeech(
       model,
       voice,
       input: text,
-      format,
-    });
+      ...(format !== "mp3" ? { response_format: format } : {}),
+    } as any);
 
     // In Node.js SDK, response is a Web API Response-like object
     const arrayBuffer = await response.arrayBuffer();

@@ -34,7 +34,7 @@ const questionVariants = {
     scale: 1,
     transition: {
       duration: 0.45,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
     },
   },
   exit: {
@@ -43,7 +43,7 @@ const questionVariants = {
     scale: 0.98,
     transition: {
       duration: 0.3,
-      ease: [0.7, 0, 0.84, 0],
+      ease: [0.7, 0, 0.84, 0] as [number, number, number, number],
     },
   },
 };
@@ -58,6 +58,8 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  // État local pour les réponses texte (pour validation immédiate)
+  const [localTextAnswers, setLocalTextAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (questions.length) {
@@ -66,8 +68,21 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
   }, [slug, startSession, title, questions.length]);
 
   const currentQuestion = questions[currentIndex];
-
   const answers = session?.answers ?? {};
+
+  // Synchroniser l'état local avec les réponses du store quand on change de question
+  useEffect(() => {
+    if (currentQuestion && currentQuestion.type === "text") {
+      const storeValue = answers[currentQuestion.id];
+      // Si on a une valeur dans le store mais pas dans l'état local, la synchroniser
+      if (storeValue && typeof storeValue === "string" && !localTextAnswers[currentQuestion.id]) {
+        setLocalTextAnswers((prev) => ({
+          ...prev,
+          [currentQuestion.id]: storeValue,
+        }));
+      }
+    }
+  }, [currentQuestion?.id, currentQuestion?.type, answers, currentQuestion]);
   const answeredCount = useMemo(
     () =>
       Object.entries(answers).reduce((count, [key, value]) => {
@@ -94,6 +109,15 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
 
   const handleSingleSelect = (questionId: string, optionValue: string) => {
     recordAnswer(slug, questionId, optionValue);
+    // Navigation automatique après sélection (avec délai pour l'animation)
+    setTimeout(() => {
+      if (currentIndex < questions.length - 1) {
+        setCurrentIndex((index) => Math.min(index + 1, questions.length - 1));
+      } else {
+        // Dernière question, finaliser
+        goNext();
+      }
+    }, 300);
   };
 
   const handleMultipleSelect = (questionId: string, optionValue: string) => {
@@ -102,6 +126,7 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
       ? existing.filter((value) => value !== optionValue)
       : [...existing, optionValue];
     recordAnswer(slug, questionId, next);
+    // Pour les questions multiples, on n'avance pas automatiquement car l'utilisateur peut vouloir sélectionner plusieurs réponses
   };
 
   const handleScaleChange = (questionId: string, value: number) => {
@@ -109,10 +134,24 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
   };
 
   const handleTextChange = (questionId: string, value: string) => {
+    // Mettre à jour l'état local immédiatement pour la validation
+    setLocalTextAnswers((prev) => ({ ...prev, [questionId]: value }));
     recordAnswer(slug, questionId, value);
   };
 
   const ensureAnswered = (question: TestQuestion): boolean => {
+    // Pour les questions texte, utiliser l'état local pour une validation immédiate
+    if (question.type === "text") {
+      const localValue = localTextAnswers[question.id];
+      const storeValue = answers[question.id];
+      // Prioriser la valeur locale (plus récente) puis la valeur du store
+      // Si localValue est une chaîne (même vide), l'utiliser, sinon utiliser storeValue
+      const textValue = (typeof localValue === "string" 
+        ? localValue 
+        : (typeof storeValue === "string" ? storeValue : "")).trim();
+      return textValue.length >= 3;
+    }
+    
     const value = answers[question.id];
     if (question.type === "multiple") {
       return Array.isArray(value) && value.length > 0;
@@ -123,16 +162,19 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
     if (question.type === "scale") {
       return typeof value === "number" && !Number.isNaN(value);
     }
-    if (question.type === "text") {
-      return typeof value === "string" && value.trim().length >= 3;
-    }
     return false;
   };
 
   const goNext = async () => {
     if (!currentQuestion) return;
+    
+    // Vérifier la réponse
     if (!ensureAnswered(currentQuestion)) {
-      toast.error("Merci de répondre avant de continuer ✍️");
+      if (currentQuestion.type === "text") {
+        toast.error("Votre réponse doit contenir au moins 3 caractères ✍️");
+      } else {
+        toast.error("Merci de répondre avant de continuer ✍️");
+      }
       return;
     }
     if (currentIndex === questions.length - 1) {
@@ -198,12 +240,28 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs uppercase tracking-[0.35em] text-white/70">
               <ListChecks className="h-4 w-4" /> Résultats sauvegardés
             </div>
-            <div className="space-y-3">
-              <h2 className="text-3xl font-semibold">Score {session.score}/100</h2>
-              <p className="text-sm text-white/80">
-                Vos réponses sont prêtes à être synchronisées avec Supabase. Elles alimenteront prochainement votre espace "Mon compte" et les dashboards formateur, admin & tuteur.
-              </p>
-              <p className="text-xs uppercase tracking-[0.35em] text-white/60">Terminé le {completionDelay}</p>
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="mb-4 inline-flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#00C6FF] to-[#0072FF] text-3xl font-bold text-white shadow-lg shadow-[#00C6FF]/30">
+                  {session.score}
+                </div>
+                <h2 className="text-4xl font-bold">Score : {session.score}/100</h2>
+                <p className="mt-2 text-lg text-white/70">
+                  {session.score >= 85 
+                    ? "Excellent ! Vous maîtrisez parfaitement le sujet." 
+                    : session.score >= 70 
+                    ? "Très bien ! Vous avez une bonne compréhension."
+                    : session.score >= 55
+                    ? "Bien ! Continuez à vous améliorer."
+                    : "À renforcer. N'hésitez pas à revoir les chapitres."}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <p className="text-sm text-white/80">
+                  Vos réponses sont enregistrées et synchronisées. Elles sont disponibles dans votre espace "Mon compte" et partagées avec votre formateur, admin et tuteur.
+                </p>
+                <p className="mt-4 text-xs uppercase tracking-[0.35em] text-white/60">Terminé le {completionDelay}</p>
+              </div>
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-white/80">Résumé</p>
@@ -251,15 +309,30 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
   const progressValue = (answeredCount / questions.length) * 100;
 
   return (
-    <div className={cn("space-y-8", fullscreen && "min-h-[80vh]", className)}>
-      <div className="flex items-center justify-between gap-4">
-        <Button
-          variant="ghost"
-          onClick={goPrevious}
-          className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/60 hover:border-white/30 hover:text-white"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> {currentIndex === 0 ? "Retour" : "Précédent"}
-        </Button>
+    <div className={cn(
+      "space-y-8",
+      fullscreen ? "min-h-screen flex flex-col w-full max-w-none ml-0" : "min-h-[80vh]",
+      className
+    )}>
+      <div className={cn(
+        "flex items-center justify-between gap-4",
+        fullscreen && "px-6 pt-6 w-full max-w-none"
+      )}>
+        {fullscreen ? (
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/50">
+            <span>Mode Focus</span>
+            <span>•</span>
+            <span>Évaluation en cours</span>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            onClick={goPrevious}
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/60 hover:border-white/30 hover:text-white"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> {currentIndex === 0 ? "Retour" : "Précédent"}
+          </Button>
+        )}
         <div className="flex flex-1 flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-white/60">
             <span>
@@ -271,7 +344,10 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#131313] via-[#0B0B0B] to-[#050505]">
+      <div className={cn(
+        "relative overflow-hidden bg-gradient-to-br from-[#131313] via-[#0B0B0B] to-[#050505]",
+        fullscreen ? "flex-1 flex flex-col rounded-none w-full max-w-none" : "rounded-3xl border border-white/10"
+      )}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentQuestion?.id}
@@ -279,10 +355,12 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
             initial="initial"
             animate="animate"
             exit="exit"
-            className="space-y-10 p-10 text-white"
+            className={cn(
+              "space-y-10 text-white flex-1 flex flex-col",
+              fullscreen ? "p-12" : "p-10"
+            )}
           >
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.35em] text-white/50">Immersif • Typeform style</p>
               <h2 className="text-3xl font-semibold leading-tight md:text-4xl">{currentQuestion?.title}</h2>
               {currentQuestion?.helper ? (
                 <p className="max-w-2xl text-sm text-white/60">{currentQuestion.helper}</p>
@@ -290,17 +368,33 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
             </div>
 
             {currentQuestion ? (
-              <QuestionRenderer
-                question={currentQuestion}
-                answer={answers[currentQuestion.id]}
-                onSelectSingle={handleSingleSelect}
-                onSelectMultiple={handleMultipleSelect}
-                onScaleChange={handleScaleChange}
-                onTextChange={handleTextChange}
-              />
+              <div className="flex-1 flex flex-col">
+                <QuestionRenderer
+                  question={currentQuestion}
+                  answer={currentQuestion.type === "text" 
+                    ? (localTextAnswers[currentQuestion.id] || answers[currentQuestion.id] || "")
+                    : answers[currentQuestion.id]}
+                  onSelectSingle={handleSingleSelect}
+                  onSelectMultiple={handleMultipleSelect}
+                  onScaleChange={handleScaleChange}
+                  onTextChange={handleTextChange}
+                />
+              </div>
             ) : null}
 
-            <div className="flex flex-wrap justify-end gap-3">
+            <div className={cn(
+              "flex flex-wrap justify-end gap-3 mt-auto",
+              fullscreen && "pt-8 border-t border-white/10"
+            )}>
+              {fullscreen && currentIndex > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={goPrevious}
+                  className="rounded-full border border-white/15 bg-white/5 px-6 py-2 text-xs uppercase tracking-[0.35em] text-white/60 hover:border-white/30 hover:text-white"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Précédent
+                </Button>
+              )}
               <Button
                 onClick={goNext}
                 disabled={isSubmitting}
@@ -413,16 +507,26 @@ function QuestionRenderer({
     );
   }
 
+  const textValue = typeof answer === "string" ? answer : "";
+  const trimmedLength = textValue.trim().length;
+  
   return (
     <div className="space-y-3">
       <textarea
         rows={5}
         className="w-full resize-none rounded-2xl border border-white/15 bg-white/5 p-4 text-sm text-white placeholder:text-white/40 focus:border-white/50 focus:outline-none"
-        value={typeof answer === "string" ? answer : ""}
+        value={textValue}
         onChange={(event) => onTextChange(question.id, event.target.value)}
         placeholder={question.placeholder ?? "Expliquez votre réponse"}
       />
-      <p className="text-xs text-white/40">Minimum 3 caractères</p>
+      <p className={cn(
+        "text-xs",
+        trimmedLength >= 3 ? "text-white/60" : "text-white/40"
+      )}>
+        {trimmedLength < 3 
+          ? `Minimum 3 caractères (${trimmedLength}/3)` 
+          : "Réponse valide"}
+      </p>
     </div>
   );
 }

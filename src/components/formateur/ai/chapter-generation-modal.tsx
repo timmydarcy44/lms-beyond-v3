@@ -74,13 +74,19 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
           toast.success("Chapitre mis à jour avec succès");
         } else {
           // Créer un nouveau chapitre
-          addChapter(sectionId, {
-            title,
-            summary,
-            content,
-            duration,
-            type: type as "video" | "text" | "document",
-          });
+          addChapter(sectionId);
+          // Mettre à jour le chapitre nouvellement créé
+          const newChapterId = useCourseBuilder.getState().snapshot.sections
+            .find((s) => s.id === sectionId)?.chapters[0]?.id;
+          if (newChapterId) {
+            updateChapter(sectionId, newChapterId, {
+              title,
+              summary,
+              content,
+              duration,
+              type: type as "video" | "text" | "document",
+            });
+          }
           toast.success("Chapitre généré avec succès");
         }
 
@@ -161,6 +167,7 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
     </Dialog>
   );
 }
+
 
 
 

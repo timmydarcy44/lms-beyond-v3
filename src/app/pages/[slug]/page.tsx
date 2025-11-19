@@ -11,6 +11,12 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await getServerClient();
+  if (!supabase) {
+    return {
+      title: "Page non trouvée",
+      description: "",
+    };
+  }
   
   const { data: page } = await supabase
     .from("cms_pages")
@@ -34,6 +40,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function CMSPage({ params }: PageProps) {
   const { slug } = await params;
   const supabase = await getServerClient();
+  if (!supabase) {
+    notFound();
+  }
 
   const { data: page, error } = await supabase
     .from("cms_pages")

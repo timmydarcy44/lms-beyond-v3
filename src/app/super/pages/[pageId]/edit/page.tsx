@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient } from "@/lib/supabase/server";
 import { GridPageBuilder } from "@/components/super-admin/cms/grid-page-builder";
@@ -16,6 +16,9 @@ export default async function EditPagePage({ params }: EditPageProps) {
 
   const { pageId } = await params;
   const supabase = await getServerClient();
+  if (!supabase) {
+    notFound();
+  }
   const { data: page, error } = await supabase
     .from("cms_pages")
     .select("*")

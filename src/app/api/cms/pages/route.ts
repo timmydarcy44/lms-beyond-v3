@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data, error } = await supabase
       .from("cms_pages")
       .insert({
@@ -66,6 +69,9 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data, error } = await supabase
       .from("cms_pages")
       .select("*")

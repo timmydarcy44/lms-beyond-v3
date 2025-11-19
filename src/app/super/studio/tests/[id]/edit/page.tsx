@@ -26,6 +26,9 @@ export default async function TestEditPage({ params }: TestEditPageProps) {
   let error: any = null;
 
   // Essayer d'abord avec toutes les colonnes
+  if (!supabase) {
+    redirect("/dashboard");
+  }
   const { data: testData, error: testError } = await supabase
     .from("tests")
     .select("*")

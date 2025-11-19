@@ -144,7 +144,7 @@ export function BeyondNotePageContent() {
   const handleCameraCapture = async () => {
     try {
       // Vérifier si on est sur mobile avec accès à l'appareil photo
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      if (typeof navigator !== "undefined" && typeof navigator.mediaDevices !== "undefined" && typeof navigator.mediaDevices.getUserMedia === "function") {
         // Sur mobile, utiliser l'attribut capture pour ouvrir directement l'appareil photo
         const input = document.createElement("input");
         input.type = "file";

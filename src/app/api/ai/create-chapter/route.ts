@@ -9,9 +9,13 @@ import { logAIInteraction } from "@/lib/ai/ai-interaction-logger";
  * Différent de generate-chapter qui utilise OpenAI
  */
 export async function POST(request: NextRequest) {
+  let prompt: string | undefined;
+  let courseContext: string | undefined;
+  
   try {
     const body = await request.json();
-    const { prompt, courseContext } = body;
+    prompt = body.prompt;
+    courseContext = body.courseContext;
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length < 10) {
       return NextResponse.json({ error: "Le prompt doit contenir au moins 10 caractères" }, { status: 400 });
@@ -107,7 +111,7 @@ Schéma JSON attendu : ${JSON.stringify(schema.parameters)}`;
           featureId: "create-chapter",
           featureName: "Création de chapitre",
           promptUsed: "",
-          promptVariables: { prompt, courseContext },
+          promptVariables: { prompt: prompt || "", courseContext: courseContext || "" },
           success: false,
           errorMessage: error instanceof Error ? error.message : String(error),
         });

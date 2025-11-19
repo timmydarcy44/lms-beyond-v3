@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
 
     // Récupérer l'utilisateur depuis la session Next.js (plus fiable)
     const serverClient = await getServerClient();
+    if (!serverClient) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user }, error: userError } = await serverClient.auth.getUser();
     
     if (userError || !user) {
@@ -27,6 +30,9 @@ export async function GET(request: NextRequest) {
 
     // Utiliser le service role client pour récupérer les contenus (bypass RLS)
     const supabase = await getServiceRoleClientOrFallback();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
 
     let content = [];
 

@@ -207,10 +207,21 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Générer un slug à partir du titre
+      const slug = title
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
       // Créer le test
       const testData: any = {
         title: title.trim(),
-        creator_id: user.id,
+        slug: `${slug || 'test'}-${Date.now()}`, // Générer un slug unique
+        created_by: user.id, // Utiliser created_by (colonne standard Supabase)
+        creator_id: user.id, // Aussi définir creator_id si la colonne existe
+        owner_id: user.id, // S'assurer que owner_id est aussi défini pour la requête
         status: published ? "published" : "draft",
         org_id: userOrgId, // Toujours défini maintenant
       };

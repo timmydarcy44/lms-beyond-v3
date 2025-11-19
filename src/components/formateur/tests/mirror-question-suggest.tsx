@@ -61,7 +61,7 @@ export function MirrorQuestionSuggest({
       const result = await generateMirrorQuestion({
         question: question.title,
         category: question.category,
-        type: question.type,
+        type: question.type as "single" | "multiple" | "likert" | "scale",
         options: question.options?.map((opt) => ({
           value: opt.value,
           points: opt.points,
@@ -69,7 +69,13 @@ export function MirrorQuestionSuggest({
         context: question.context,
       });
 
-      setSuggestedMirror(result);
+      setSuggestedMirror({
+        title: result.mirror_question,
+        is_positive: result.is_positive ?? false,
+        options: result.options,
+        confidence: result.confidence ?? 0,
+        explanation: result.explanation,
+      });
       setEditedTitle(result.mirror_question);
       setIsEditing(false);
     } catch (error) {

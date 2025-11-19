@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await getServiceRoleClientOrFallback();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     let content: any = null;
 
     switch (type) {
@@ -51,7 +54,8 @@ export async function GET(request: NextRequest) {
         break;
       }
       case "paths": {
-        const { data: path, error: pathError } = await supabase
+        const supabaseClient = supabase!;
+        const { data: path, error: pathError } = await supabaseClient
           .from("paths")
           .select("id, title, description, builder_snapshot")
           .eq("id", contentId)
@@ -78,7 +82,8 @@ export async function GET(request: NextRequest) {
         break;
       }
       case "resources": {
-        const { data: resource, error: resourceError } = await supabase
+        const supabaseClient = supabase!;
+        const { data: resource, error: resourceError } = await supabaseClient
           .from("resources")
           .select("id, title, description")
           .eq("id", contentId)
@@ -104,7 +109,8 @@ export async function GET(request: NextRequest) {
         break;
       }
       case "tests": {
-        const { data: test, error: testError } = await supabase
+        const supabaseClient = supabase!;
+        const { data: test, error: testError } = await supabaseClient
           .from("tests")
           .select("id, title, description")
           .eq("id", contentId)

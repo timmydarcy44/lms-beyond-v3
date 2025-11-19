@@ -19,6 +19,9 @@ export async function restrictOrganizationAction(
   const serviceClient = getServiceRoleClient();
 
   try {
+    if (!serviceClient) {
+      return { success: false, error: "Service role client non disponible" };
+    }
     // Mettre à jour le statut de restriction
     // Note: Il faudrait ajouter une colonne `is_restricted` ou `status` dans la table organizations
     // Pour l'instant, on utilise un champ metadata ou on crée la colonne
@@ -57,6 +60,9 @@ export async function deleteOrganizationAction(
   }
 
   const serviceClient = getServiceRoleClient();
+  if (!serviceClient) {
+    return { success: false, error: "Service role client non disponible" };
+  }
 
   try {
     // Supprimer les membres de l'organisation
@@ -85,6 +91,7 @@ export async function deleteOrganizationAction(
     return { success: false, error: "Une erreur inattendue est survenue" };
   }
 }
+
 
 
 

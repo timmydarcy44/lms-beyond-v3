@@ -573,29 +573,41 @@ function EditorPanel() {
                     body: JSON.stringify({
                       chapterContent: nodes.chapter!.content,
                       chapterTitle: nodes.chapter!.title || "Chapitre",
+                      chapterId: nodes.chapter!.id, // Passer l'ID du chapitre pour sauvegarder
                     }),
                   });
 
                   if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || "Erreur lors de la génération");
+                    const errorData = await response.json().catch(() => ({ error: "Erreur inconnue" }));
+                    const errorMessage = errorData.error || "Erreur lors de la génération";
+                    const errorDetails = errorData.details ? `\n${errorData.details}` : "";
+                    throw new Error(`${errorMessage}${errorDetails}`);
                   }
 
                   const data = await response.json();
 
                   if (!data.success || !data.flashcards) {
-                    throw new Error("Réponse invalide de l'API");
+                    throw new Error(data.error || "Réponse invalide de l'API");
                   }
 
-                  toast.success(`${data.flashcards.length} flashcard(s) générée(s)`, {
-                    description: "Les flashcards doivent être ajoutées manuellement dans le système.",
-                  });
+                  if (data.saved && data.savedCount > 0) {
+                    toast.success(`${data.flashcards.length} flashcard(s) générée(s) et sauvegardée(s)`, {
+                      description: `${data.savedCount} flashcard(s) ont été automatiquement ajoutées au chapitre.`,
+                    });
+                  } else {
+                    toast.success(`${data.flashcards.length} flashcard(s) générée(s)`, {
+                      description: "Les flashcards ont été générées mais n'ont pas pu être sauvegardées automatiquement.",
+                    });
+                  }
 
-                  // TODO: Sauvegarder les flashcards dans la base de données
                   console.log("Generated flashcards:", data.flashcards);
                 } catch (error) {
                   console.error("[ai] Error generating flashcards", error);
-                  toast.error(error instanceof Error ? error.message : "Erreur lors de la génération");
+                  const errorMessage = error instanceof Error ? error.message : "Erreur lors de la génération";
+                  toast.error("Erreur lors de la création des flashcards", {
+                    description: errorMessage,
+                    duration: 5000,
+                  });
                 }
               });
             }}

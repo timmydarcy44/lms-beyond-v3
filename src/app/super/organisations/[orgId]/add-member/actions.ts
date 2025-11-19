@@ -26,6 +26,9 @@ export async function addMemberToOrganizationAction(input: AddMemberInput): Prom
   }
 
   const serviceClient = getServiceRoleClient();
+  if (!serviceClient) {
+    return { success: false, error: "Service role client non disponible" };
+  }
 
   try {
     // Vérifier si l'utilisateur existe déjà
@@ -124,6 +127,7 @@ export async function addMemberToOrganizationAction(input: AddMemberInput): Prom
     return { success: false, error: "Une erreur inattendue est survenue" };
   }
 }
+
 
 
 

@@ -7,6 +7,9 @@ import { getStripeClient } from "@/lib/stripe/client";
 export async function getStripeConnectAccount(userId: string): Promise<string | null> {
   try {
     const supabase = await getServerClient();
+    if (!supabase) {
+      return null;
+    }
     const { data: account } = await supabase
       .from("stripe_connect_accounts")
       .select("stripe_account_id, charges_enabled")

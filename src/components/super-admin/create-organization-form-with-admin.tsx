@@ -366,7 +366,7 @@ export function CreateOrganizationFormWithAdmin() {
         </Button>
         <Button
           type="submit"
-          disabled={isLoading || !name || (admin.email && (!admin.firstName || !admin.lastName))}
+          disabled={isLoading || !name || (!!admin.email && (!admin.firstName || !admin.lastName))}
           className="bg-black text-white hover:bg-gray-900 h-11 px-6"
         >
           {isLoading ? (
@@ -382,6 +382,7 @@ export function CreateOrganizationFormWithAdmin() {
     </form>
   );
 }
+
 
 
 

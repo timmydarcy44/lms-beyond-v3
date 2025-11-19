@@ -27,3 +27,4 @@ COMMENT ON COLUMN catalog_items.thematique IS 'Thématique du contenu (RH, BTS, 
 
 
 
+

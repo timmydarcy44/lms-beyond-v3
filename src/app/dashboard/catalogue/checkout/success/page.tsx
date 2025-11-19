@@ -1,14 +1,24 @@
 import { notFound, redirect } from "next/navigation";
 import { getServerClient } from "@/lib/supabase/server";
 import { CheckoutSuccessClient } from "@/components/catalogue/checkout-success-client";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-11-20.acacia",
-});
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+  try {
+    const Stripe = require("stripe").default;
+    return new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-11-20.acacia" as any,
+    });
+  } catch (error) {
+    console.error("[stripe] Error initializing Stripe:", error);
+    return null;
+  }
+}
 
 type PageProps = {
   searchParams: Promise<{ session_id?: string }>;
@@ -33,6 +43,14 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
   }
 
   try {
+    // Vérifier que Stripe est configuré
+    const stripe = getStripeClient();
+    if (!stripe) {
+      // Si Stripe n'est pas configuré, rediriger vers le catalogue
+      console.warn("[checkout/success] Stripe n'est pas configuré, redirection vers le catalogue");
+      redirect("/dashboard/catalogue");
+    }
+
     // Récupérer la session Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 

@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { getServerClient } from "@/lib/supabase/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-11-20.acacia",
-});
-
 export const dynamic = 'force-dynamic';
+
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+  try {
+    const Stripe = require("stripe").default;
+    return new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-11-20.acacia" as any,
+    });
+  } catch (error) {
+    console.error("[stripe] Error initializing Stripe:", error);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,12 +32,24 @@ export async function POST(request: NextRequest) {
 
     // Récupérer l'utilisateur
     const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json(
         { error: "Non authentifié" },
         { status: 401 }
+      );
+    }
+
+    // Vérifier que Stripe est configuré
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: "Stripe n'est pas configuré" },
+        { status: 503 }
       );
     }
 
@@ -66,6 +88,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
 
 

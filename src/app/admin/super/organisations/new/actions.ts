@@ -34,6 +34,9 @@ export async function createOrganizationAction(input: CreateOrganizationInput): 
   // Utiliser le service role client pour créer des utilisateurs
   const { getServiceRoleClient } = await import("@/lib/supabase/server");
   const serviceClient = getServiceRoleClient();
+  if (!serviceClient) {
+    return { success: false, error: "Service role client non disponible" };
+  }
 
   try {
     const { data: authData } = await supabase.auth.getUser();

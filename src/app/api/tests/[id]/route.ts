@@ -2,6 +2,63 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { calculateTestDuration, formatTestDuration } from "@/lib/utils/test-duration";
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    console.log("[api/tests/[id]] Récupération du test:", id);
+    
+    const supabase = await getServerClient();
+    if (!supabase) {
+      console.error("[api/tests/[id]] Supabase non configuré");
+      return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
+    }
+
+    // Vérifier l'authentification
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error("[api/tests/[id]] Erreur d'authentification:", authError);
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
+    // Utiliser le service role client pour bypasser RLS si disponible
+    const serviceClient = getServiceRoleClient();
+    const clientToUse = serviceClient || supabase;
+
+    // Récupérer le test avec toutes ses données
+    const { data: test, error: testError } = await clientToUse
+      .from("tests")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (testError) {
+      console.error("[api/tests/[id]] Erreur lors de la récupération:", testError);
+      return NextResponse.json({ 
+        error: "Erreur lors de la récupération",
+        details: testError.message 
+      }, { status: 500 });
+    }
+
+    if (!test) {
+      return NextResponse.json({ 
+        error: "Test introuvable" 
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({ test });
+
+  } catch (error) {
+    console.error("[api/tests/[id]] Erreur inattendue:", error);
+    return NextResponse.json({ 
+      error: "Erreur serveur", 
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -151,13 +208,17 @@ export async function PATCH(
           
           // Mettre à jour questions séparément si nécessaire
           if (updateData.questions && Array.isArray(updateData.questions)) {
-            await clientToUse
-              .from("tests")
-              .update({ questions: updateData.questions })
-              .eq("id", id)
-              .catch((err) => {
-                console.error("[api/tests/[id]] Erreur mise à jour questions:", err);
-              });
+            try {
+              const { error } = await clientToUse
+                .from("tests")
+                .update({ questions: updateData.questions })
+                .eq("id", id);
+              if (error) {
+                console.error("[api/tests/[id]] Erreur mise à jour questions:", error);
+              }
+            } catch (err) {
+              console.error("[api/tests/[id]] Erreur mise à jour questions:", err);
+            }
           }
         } else {
           lastError = result2.error;
@@ -231,15 +292,19 @@ export async function PATCH(
       }
       
       if (Object.keys(catalogUpdate).length > 0) {
-        await clientToUse
-          .from("catalog_items")
-          .update(catalogUpdate)
-          .eq("id", catalogItem.id)
-          .catch((err) => {
-            console.error("[api/tests/[id]] Erreur mise à jour catalog_items:", err);
-          });
-        
-        console.log(`[api/tests/[id]] ✓ Catalog item mis à jour:`, catalogUpdate);
+        try {
+          const { error } = await clientToUse
+            .from("catalog_items")
+            .update(catalogUpdate)
+            .eq("id", catalogItem.id);
+          if (error) {
+            console.error("[api/tests/[id]] Erreur mise à jour catalog_items:", error);
+          } else {
+            console.log(`[api/tests/[id]] ✓ Catalog item mis à jour:`, catalogUpdate);
+          }
+        } catch (err) {
+          console.error("[api/tests/[id]] Erreur mise à jour catalog_items:", err);
+        }
       }
     }
 

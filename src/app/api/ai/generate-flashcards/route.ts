@@ -111,14 +111,53 @@ Chaque flashcard doit avoir :
     }
 
     // Sauvegarder les flashcards dans la base de données si courseId est fourni
-    // On utilise courseId car chapterId peut être un ID local (nanoid) qui n'existe pas encore en base
+    // Essayer de trouver l'UUID du chapitre si chapterId est fourni
     let savedFlashcards = [];
+    let actualChapterId: string | null = null;
+    
+    if (courseId && typeof courseId === "string" && chapterId) {
+      // Vérifier si chapterId est un UUID ou un ID local
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(chapterId)) {
+        actualChapterId = chapterId;
+      } else {
+        // C'est un ID local, essayer de trouver l'UUID correspondant dans le snapshot
+        try {
+          const { data: course } = await supabase
+            .from("courses")
+            .select("builder_snapshot")
+            .eq("id", courseId)
+            .single();
+
+          if (course?.builder_snapshot) {
+            const snapshot = course.builder_snapshot as any;
+            for (const section of snapshot.sections || []) {
+              for (const chapter of section.chapters || []) {
+                if (chapter.id === chapterId) {
+                  // Si le chapitre a un dbId, l'utiliser
+                  if (chapter.dbId) {
+                    actualChapterId = chapter.dbId;
+                  } else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chapter.id)) {
+                    actualChapterId = chapter.id;
+                  }
+                  break;
+                }
+              }
+              if (actualChapterId) break;
+            }
+          }
+        } catch (findError) {
+          console.warn("[ai/generate-flashcards] Could not find chapter UUID for local ID:", chapterId, findError);
+        }
+      }
+    }
+    
     if (courseId && typeof courseId === "string") {
       try {
         // Préparer les données pour l'insertion
         const flashcardsToInsert = result.flashcards.map((flashcard: any) => ({
           course_id: courseId,
-          chapter_id: null, // On laisse null car chapterId peut être un ID local
+          chapter_id: actualChapterId, // Utiliser l'UUID du chapitre si trouvé, sinon null
           front: flashcard.question || "",
           back: flashcard.answer || "",
         }));

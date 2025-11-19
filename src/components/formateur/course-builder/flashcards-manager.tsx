@@ -41,13 +41,42 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
     
     setIsLoading(true);
     try {
+      let actualChapterId: string | null = null;
+
+      // Si chapterId est fourni, vérifier si c'est un UUID ou un ID local
+      if (chapterId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(chapterId)) {
+          // C'est déjà un UUID de la DB
+          actualChapterId = chapterId;
+        } else {
+          // C'est un ID local (nanoid), essayer de trouver l'UUID correspondant
+          try {
+            const findResponse = await fetch("/api/chapters/find-by-local-id", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ courseId, localChapterId: chapterId }),
+            });
+            
+            if (findResponse.ok) {
+              const findData = await findResponse.json();
+              if (findData.chapterId) {
+                actualChapterId = findData.chapterId;
+              }
+            }
+          } catch (findError) {
+            console.warn("[flashcards] Could not find chapter UUID for local ID:", chapterId);
+            // Si on ne trouve pas l'UUID, on charge toutes les flashcards du cours
+            // (le chapitre n'est peut-être pas encore sauvegardé)
+          }
+        }
+      }
+
       const params = new URLSearchParams();
-      if (courseId) params.append("courseId", courseId);
-      // Note: chapterId peut être un ID local (nanoid) du builder, pas un UUID de la DB
-      // On ne l'utilise que si c'est un UUID valide (format UUID)
-      // Sinon, on récupère toutes les flashcards du cours
-      if (chapterId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chapterId)) {
-        params.append("chapterId", chapterId);
+      params.append("courseId", courseId);
+      // Ne charger que les flashcards du chapitre spécifique si on a un UUID
+      if (actualChapterId) {
+        params.append("chapterId", actualChapterId);
       }
 
       const response = await fetch(`/api/flashcards?${params.toString()}`);
@@ -57,7 +86,18 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       }
 
       const data = await response.json();
-      setFlashcards(data.flashcards || []);
+      // Filtrer les flashcards pour ne garder que celles du chapitre actuel
+      // (au cas où actualChapterId serait null, on ne veut pas afficher toutes les flashcards)
+      let filteredFlashcards = data.flashcards || [];
+      if (actualChapterId) {
+        filteredFlashcards = filteredFlashcards.filter((f: any) => f.chapter_id === actualChapterId);
+      } else if (chapterId) {
+        // Si on a un chapterId local mais pas d'UUID, ne rien afficher
+        // (le chapitre n'est pas encore sauvegardé, donc pas de flashcards)
+        filteredFlashcards = [];
+      }
+      
+      setFlashcards(filteredFlashcards);
     } catch (error) {
       console.error("Error loading flashcards:", error);
       const errorMessage = error instanceof Error ? error.message : "Erreur lors du chargement";
@@ -77,12 +117,39 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
 
     setIsSaving(true);
     try {
+      // Trouver l'UUID du chapitre si chapterId est un ID local
+      let actualChapterId: string | null = null;
+      if (chapterId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(chapterId)) {
+          actualChapterId = chapterId;
+        } else {
+          // C'est un ID local, essayer de trouver l'UUID correspondant
+          try {
+            const findResponse = await fetch("/api/chapters/find-by-local-id", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ courseId, localChapterId: chapterId }),
+            });
+            
+            if (findResponse.ok) {
+              const findData = await findResponse.json();
+              if (findData.chapterId) {
+                actualChapterId = findData.chapterId;
+              }
+            }
+          } catch (findError) {
+            console.warn("[flashcards] Could not find chapter UUID for local ID:", chapterId);
+          }
+        }
+      }
+
       const response = await fetch("/api/flashcards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           courseId,
-          chapterId: chapterId || null,
+          chapterId: actualChapterId || null,
           front: "Question",
           back: "Réponse",
         }),

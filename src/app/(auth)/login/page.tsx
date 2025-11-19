@@ -77,13 +77,21 @@ function LoginForm() {
     setError(null);
     
     if (!supabase) {
-      setError("Supabase n'est pas configuré. Vérifiez les variables d'environnement.");
+      const errorMsg = "Supabase n'est pas configuré. Vérifiez les variables d'environnement sur Vercel.";
+      setError(errorMsg);
       console.error("[login] Supabase provider not available");
+      console.error("[login] Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel environment variables");
+      toast.error("Erreur de configuration", {
+        description: "Les variables d'environnement Supabase ne sont pas configurées. Vérifiez Vercel.",
+      });
       return;
     }
 
     try {
-      console.log("[login] Attempting sign in with Supabase");
+      console.log("[login] Attempting sign in with Supabase for:", values.email);
+      console.log("[login] Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ Set" : "❌ Missing");
+      console.log("[login] Supabase Anon Key:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? `✅ Set (${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length} chars)` : "❌ Missing");
+      
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
@@ -92,10 +100,15 @@ function LoginForm() {
       console.debug("[login] signIn response:", {
         hasUser: !!data?.user,
         hasSession: !!data?.session,
-        authError,
+        authError: authError ? {
+          message: authError.message,
+          status: authError.status,
+          name: authError.name,
+        } : null,
       });
 
       if (authError) {
+        console.error("[login] Auth error:", authError);
         setError(authError.message || "Erreur de connexion");
         toast.error("Erreur de connexion", {
           description: authError.message,
@@ -104,11 +117,15 @@ function LoginForm() {
       }
 
       if (data?.user) {
+        console.log("[login] ✅ Sign in succeeded for:", data.user.email);
         toast.success("Connexion réussie !");
         console.log("[login] Sign in succeeded, redirecting to /loading");
         // Rediriger vers la page de chargement qui affichera "Bonjour (prénom)" puis redirigera vers le dashboard
         router.push("/loading");
         router.refresh(); // Forcer le rafraîchissement pour récupérer la session
+      } else {
+        console.warn("[login] ⚠️ Sign in returned no user data");
+        setError("Aucune donnée utilisateur reçue");
       }
     } catch (err) {
       console.error("[login] Unexpected error during sign in:", err);

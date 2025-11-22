@@ -68,9 +68,17 @@ const specialitesWithIcons = [
 
 export function JessicaContentinHeader() {
   const pathname = usePathname();
-  const isRessourcesPage = pathname === "/jessica-contentin/ressources";
+  const isRessourcesPage = pathname === "/ressources" || pathname === "/jessica-contentin/ressources";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [isAppDomain, setIsAppDomain] = useState(false);
+  
+  useEffect(() => {
+    // Détecter si on est sur app.jessicacontentin.fr
+    if (typeof window !== 'undefined') {
+      setIsAppDomain(window.location.hostname === 'app.jessicacontentin.fr');
+    }
+  }, []);
   
   // Initialiser l'URL de l'image hero
   const [heroImageSrc, setHeroImageSrc] = useState(() => {
@@ -104,7 +112,7 @@ export function JessicaContentinHeader() {
     },
     {
       label: "Ressources",
-      href: "/jessica-contentin/ressources",
+      href: isAppDomain ? "/ressources" : "https://app.jessicacontentin.fr/ressources",
     },
   ];
 
@@ -253,18 +261,18 @@ export function JessicaContentinHeader() {
         <section className="relative w-full h-[calc(100vh-4rem)] min-h-[600px] overflow-hidden rounded-2xl shadow-lg">
         <div className="absolute inset-0">
           <div className="relative w-full h-full">
-            <img
+            <Image
               src={heroImageSrc || HERO_IMAGE_FALLBACK}
               alt="Hero image - Femme rayonnante avec bracelets et tissu"
-              className="absolute inset-0 w-full h-full object-cover rounded-2xl"
+              fill
+              priority
+              quality={85}
+              className="object-cover rounded-2xl"
+              sizes="100vw"
+              unoptimized={heroImageSrc?.includes('supabase') ? false : true}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 console.error("[jessica-contentin-header] ❌ Error loading image:", target.src);
-                console.error("[jessica-contentin-header] Status:", (e.nativeEvent as any).target?.status);
-                console.error("[jessica-contentin-header] Possible causes:");
-                console.error("  1. Policy RLS not created - Check Supabase Dashboard > Storage > Policies");
-                console.error("  2. Bucket not public - Check bucket settings");
-                console.error("  3. File name mismatch - Verify exact filename in Supabase Storage");
                 if (heroImageSrc !== HERO_IMAGE_FALLBACK) {
                   console.log("[jessica-contentin-header] Switching to fallback image");
                   setHeroImageSrc(HERO_IMAGE_FALLBACK);
@@ -338,6 +346,7 @@ export function JessicaContentinHeader() {
                   loop
                   muted
                   playsInline
+                  preload="metadata"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                   onError={(e) => {
                     console.error("[Header] Erreur lors du chargement de la vidéo IMG_7452.mp4:", e);
@@ -372,16 +381,16 @@ export function JessicaContentinHeader() {
                 className="group relative overflow-hidden rounded-xl bg-white border border-[#E6D9C6] hover:border-[#C6A664] hover:shadow-lg transition-all block"
               >
               <div className="relative h-48 overflow-hidden">
-                <img
+                <Image
                   src={getSupabaseStorageUrl("Jessica CONTENTIN", "IMG_8896.jpeg") || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80"}
                   alt="Formations"
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-110"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  unoptimized={false}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     console.error("[Header] Erreur lors du chargement de l'image IMG_8896.jpeg:", target.src);
-                    if (!target.src.includes('unsplash')) {
-                      target.src = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80";
-                    }
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -409,19 +418,20 @@ export function JessicaContentinHeader() {
               whileHover={{ scale: 1.05, y: -5 }}
             >
               <Link
-                href="/jessica-contentin/ressources"
+                href={isAppDomain ? "/ressources" : "https://app.jessicacontentin.fr/ressources"}
                 className="group relative overflow-hidden rounded-xl bg-white border border-[#E6D9C6] hover:border-[#C6A664] hover:shadow-lg transition-all block"
               >
               <div className="relative h-48 overflow-hidden">
-                <img
+                <Image
                   src={getSupabaseStorageUrl("Jessica CONTENTIN", "cta/ressources.jpg") || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80"}
                   alt="Ressources"
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-110"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  unoptimized={false}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    if (!target.src.includes('unsplash')) {
-                      target.src = "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80";
-                    }
+                    console.error("[Header] Erreur lors du chargement de l'image ressources.jpg:", target.src);
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />

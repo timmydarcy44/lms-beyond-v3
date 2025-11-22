@@ -1,0 +1,451 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { ChevronDown, Menu, X, Heart, Brain, Users, BookOpen, Shield, Target, Lightbulb, Baby, GraduationCap, BookMarked } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { env } from "@/lib/env";
+import { motion } from "framer-motion";
+
+// Fonction pour construire l'URL Supabase Storage
+function getSupabaseStorageUrl(bucket: string, path: string): string {
+  // Utiliser la même méthode que le client Supabase pour obtenir l'URL
+  const supabaseUrl = 
+    env.supabaseUrl || 
+    (typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) ||
+    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
+  
+  if (!supabaseUrl) {
+    console.warn("[jessica-contentin-header] NEXT_PUBLIC_SUPABASE_URL not found");
+    return "";
+  }
+  
+  // Encoder le bucket et le chemin pour gérer les espaces
+  const encodedBucket = encodeURIComponent(bucket);
+  const pathParts = path.split('/');
+  const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
+  
+  const fullUrl = `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
+  return fullUrl;
+}
+
+// Chemin de l'image dans Supabase Storage
+// Nom exact du fichier confirmé : "Copie de Copie de Copie de Copie de Sans titre.png"
+const HERO_IMAGE_PATH = "Copie de Copie de Copie de Copie de Sans titre.png"; // À la racine du bucket
+
+// IMPORTANT: Le bucket dans Supabase s'appelle "Jessica CONTENTIN" (avec un espace)
+// L'URL de l'image confirme que le bucket ID est "Jessica CONTENTIN"
+const BUCKET_NAME = "Jessica CONTENTIN"; // Nom exact du bucket avec l'espace
+
+// Construire l'URL au moment du rendu (pas au niveau du module pour avoir accès aux variables d'environnement)
+const getHeroImageSrc = () => {
+  const url = getSupabaseStorageUrl(BUCKET_NAME, HERO_IMAGE_PATH);
+  if (url) {
+    console.log("[jessica-contentin-header] Hero image URL:", url);
+  }
+  return url || "";
+};
+
+const HERO_IMAGE_FALLBACK = "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80";
+
+const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
+
+const specialitesWithIcons = [
+  { label: "Gestion de la confiance en soi", href: "/specialites/confiance-en-soi", icon: Heart },
+  { label: "Gestion du stress", href: "/specialites/gestion-stress", icon: Brain },
+  { label: "Accompagnement TND", href: "/specialites/tnd", icon: Users },
+  { label: "Guidance parentale", href: "/specialites/guidance-parentale", icon: Baby },
+  { label: "Tests de connaissance de soi", href: "/specialites/tests", icon: BookOpen },
+  { label: "Harcèlement Scolaire", href: "/specialites/harcelement", icon: Shield },
+  { label: "Orientation scolaire", href: "/specialites/orientation", icon: Target },
+  { label: "Thérapie psycho-émotionnelle", href: "/specialites/therapie", icon: Lightbulb },
+  { label: "Neuroéducation", href: "/specialites/neuroeducation", icon: GraduationCap },
+  { label: "Stratégie d'apprentissage", href: "/specialites/strategie-apprentissage", icon: BookMarked },
+];
+
+export function JessicaContentinHeader() {
+  const pathname = usePathname();
+  const isRessourcesPage = pathname === "/jessica-contentin/ressources";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  
+  // Initialiser l'URL de l'image hero
+  const [heroImageSrc, setHeroImageSrc] = useState(() => {
+    const src = getHeroImageSrc();
+    if (src) {
+      console.log("[jessica-contentin-header] ✅ Hero image URL from Supabase:", src);
+    } else {
+      console.warn("[jessica-contentin-header] ⚠️ Could not generate Supabase URL, using fallback");
+      console.warn("[jessica-contentin-header] NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ Found" : "❌ Not found");
+    }
+    return src || HERO_IMAGE_FALLBACK;
+  });
+
+  const menuItems = [
+    {
+      label: "A propos",
+      href: "/a-propos",
+    },
+    {
+      label: "Consultations",
+      href: "/consultations",
+    },
+    {
+      label: "Spécialités",
+      href: "/specialites",
+      submenu: specialitesWithIcons,
+    },
+    {
+      label: "Orientation",
+      href: "/orientation",
+    },
+    {
+      label: "Ressources",
+      href: "/jessica-contentin/ressources",
+    },
+  ];
+
+  return (
+    <>
+      <div className="mx-4 mt-4">
+        <header className="sticky top-4 z-50 bg-[#F8F5F0]/90 backdrop-blur-md border-b border-[#E6D9C6]/50 rounded-2xl shadow-lg">
+        <nav className="mx-auto max-w-7xl px-6">
+          <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex items-center">
+            <span
+              className="text-xl font-semibold text-[#2F2A25]"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+              }}
+            >
+              Jessica Contentin
+            </span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center gap-1">
+            {menuItems.map((item) => (
+              <div
+                key={item.href}
+                className="relative group"
+                onMouseEnter={() => item.submenu && setActiveDropdown(item.href)}
+                onMouseLeave={() => setActiveDropdown(null)}
+              >
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-1 px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg transition-colors hover:bg-[#E6D9C6]/50",
+                    activeDropdown === item.href && "bg-[#E6D9C6]/50"
+                  )}
+                >
+                  {item.label}
+                  {item.submenu && <ChevronDown className="h-4 w-4" />}
+                </Link>
+
+                {/* Dropdown Menu avec icônes et colonnes */}
+                {item.submenu && activeDropdown === item.href && (
+                  <div className="absolute left-0 top-full mt-2 w-[900px] rounded-xl bg-[#F8F5F0] border border-[#E6D9C6] shadow-lg py-4">
+                    <div className="grid grid-cols-3 gap-4 px-4">
+                      {item.submenu.map((subItem) => {
+                        const Icon = subItem.icon;
+                        return (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#E6D9C6]/50 transition-colors group"
+                          >
+                            <div className="p-1.5 bg-[#E6D9C6]/30 rounded-lg group-hover:bg-[#C6A664]/20 transition-colors">
+                              <Icon className="h-4 w-4 text-[#C6A664]" />
+                            </div>
+                            <span className="text-sm text-[#2F2A25] font-medium">{subItem.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Button */}
+          <div className="hidden lg:flex items-center gap-4">
+            <Button
+              asChild
+              className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-6"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+              }}
+            >
+              <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                Prendre rendez-vous
+              </a>
+            </Button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="lg:hidden p-2 text-[#2F2A25]"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-[#E6D9C6] py-4">
+            <div className="flex flex-col gap-2">
+              {menuItems.map((item) => (
+                <div key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="block px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
+                    onClick={() => !item.submenu && setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                  {item.submenu && (
+                    <div className="pl-6 mt-1 space-y-1">
+                      {item.submenu.map((subItem) => {
+                        const Icon = subItem.icon;
+                        return (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            <Icon className="h-4 w-4 text-[#C6A664]" />
+                            {subItem.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <Button
+                asChild
+                className="mt-4 bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                }}
+              >
+                <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                  Prendre rendez-vous
+                </a>
+              </Button>
+            </div>
+          </div>
+        )}
+        </nav>
+      </header>
+      </div>
+
+      {/* Hero Section avec image - Masquer sur la page ressources */}
+      {!isRessourcesPage && (
+      <div className="mx-4 mb-4">
+        <section className="relative w-full h-[calc(100vh-4rem)] min-h-[600px] overflow-hidden rounded-2xl shadow-lg">
+        <div className="absolute inset-0">
+          <div className="relative w-full h-full">
+            <img
+              src={heroImageSrc || HERO_IMAGE_FALLBACK}
+              alt="Hero image - Femme rayonnante avec bracelets et tissu"
+              className="absolute inset-0 w-full h-full object-cover rounded-2xl"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                console.error("[jessica-contentin-header] ❌ Error loading image:", target.src);
+                console.error("[jessica-contentin-header] Status:", (e.nativeEvent as any).target?.status);
+                console.error("[jessica-contentin-header] Possible causes:");
+                console.error("  1. Policy RLS not created - Check Supabase Dashboard > Storage > Policies");
+                console.error("  2. Bucket not public - Check bucket settings");
+                console.error("  3. File name mismatch - Verify exact filename in Supabase Storage");
+                if (heroImageSrc !== HERO_IMAGE_FALLBACK) {
+                  console.log("[jessica-contentin-header] Switching to fallback image");
+                  setHeroImageSrc(HERO_IMAGE_FALLBACK);
+                }
+              }}
+              onLoad={() => {
+                console.log("[jessica-contentin-header] ✅ Image loaded successfully from:", heroImageSrc);
+              }}
+            />
+          </div>
+          {/* Overlay pour améliorer la lisibilité */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/30" />
+        </div>
+        
+        {/* Contenu aligné à gauche sur l'image */}
+        <div className="relative z-10 h-full flex flex-col items-start justify-center px-6 lg:px-16">
+          <div className="text-left max-w-2xl">
+            <h1
+              className="text-5xl lg:text-7xl font-bold text-white mb-8 leading-tight"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                textShadow: '0 2px 20px rgba(0,0,0,0.3)',
+              }}
+            >
+              Ensemble, révélons votre potentiel
+            </h1>
+            <Button
+              asChild
+              size="lg"
+              className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-8 py-6 text-lg shadow-xl"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+              }}
+            >
+              <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                Prendre rendez-vous
+              </a>
+            </Button>
+          </div>
+        </div>
+      </section>
+      </div>
+      )}
+
+      {/* Ligne de flottaison avec 3 CTA avec images - Masquer sur la page ressources */}
+      {!isRessourcesPage && (
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="bg-[#F8F5F0] border-b border-[#E6D9C6] mx-4 mb-4 rounded-2xl overflow-hidden"
+      >
+        <div className="mx-auto max-w-7xl px-6 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+            >
+              <Link
+                href="/consultations"
+                className="group relative overflow-hidden rounded-xl bg-white border border-[#E6D9C6] hover:border-[#C6A664] hover:shadow-lg transition-all block"
+              >
+              <div className="relative h-48 overflow-hidden">
+                <video
+                  src={getSupabaseStorageUrl("Jessica CONTENTIN", "IMG_7452.mp4")}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  onError={(e) => {
+                    console.error("[Header] Erreur lors du chargement de la vidéo IMG_7452.mp4:", e);
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              </div>
+              <div className="p-6 flex flex-col items-center">
+                <div className="p-3 bg-[#E6D9C6]/30 rounded-full mb-3 group-hover:bg-[#C6A664]/20 transition-colors">
+                  <Heart className="h-6 w-6 text-[#C6A664]" />
+                </div>
+                <span
+                  className="text-lg font-semibold text-[#2F2A25]"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                  }}
+                >
+                  Consultations
+                </span>
+              </div>
+            </Link>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+            >
+              <Link
+                href="/specialites"
+                className="group relative overflow-hidden rounded-xl bg-white border border-[#E6D9C6] hover:border-[#C6A664] hover:shadow-lg transition-all block"
+              >
+              <div className="relative h-48 overflow-hidden">
+                <img
+                  src={getSupabaseStorageUrl("Jessica CONTENTIN", "IMG_8896.jpeg") || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80"}
+                  alt="Formations"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    console.error("[Header] Erreur lors du chargement de l'image IMG_8896.jpeg:", target.src);
+                    if (!target.src.includes('unsplash')) {
+                      target.src = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80";
+                    }
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              </div>
+              <div className="p-6 flex flex-col items-center">
+                <div className="p-3 bg-[#E6D9C6]/30 rounded-full mb-3 group-hover:bg-[#C6A664]/20 transition-colors">
+                  <Brain className="h-6 w-6 text-[#C6A664]" />
+                </div>
+                <span
+                  className="text-lg font-semibold text-[#2F2A25]"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                  }}
+                >
+                  Formations
+                </span>
+              </div>
+            </Link>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+            >
+              <Link
+                href="/jessica-contentin/ressources"
+                className="group relative overflow-hidden rounded-xl bg-white border border-[#E6D9C6] hover:border-[#C6A664] hover:shadow-lg transition-all block"
+              >
+              <div className="relative h-48 overflow-hidden">
+                <img
+                  src={getSupabaseStorageUrl("Jessica CONTENTIN", "cta/ressources.jpg") || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80"}
+                  alt="Ressources"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('unsplash')) {
+                      target.src = "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80";
+                    }
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              </div>
+              <div className="p-6 flex flex-col items-center">
+                <div className="p-3 bg-[#E6D9C6]/30 rounded-full mb-3 group-hover:bg-[#C6A664]/20 transition-colors">
+                  <BookOpen className="h-6 w-6 text-[#C6A664]" />
+                </div>
+                <span
+                  className="text-lg font-semibold text-[#2F2A25]"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                  }}
+                >
+                  Ressources
+                </span>
+              </div>
+            </Link>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+      )}
+    </>
+  );
+}
+

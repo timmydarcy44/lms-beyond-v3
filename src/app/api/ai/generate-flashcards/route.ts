@@ -152,6 +152,8 @@ Chaque flashcard doit avoir :
       }
     }
     
+    // TOUJOURS sauvegarder les flashcards en DB, même si le chapitre n'a pas d'UUID
+    // Elles seront mises à jour plus tard quand le chapitre sera sauvegardé
     if (courseId && typeof courseId === "string") {
       try {
         // Préparer les données pour l'insertion
@@ -173,7 +175,7 @@ Chaque flashcard doit avoir :
           // Ne pas échouer complètement si la sauvegarde échoue, on retourne quand même les flashcards générées
         } else {
           savedFlashcards = insertedFlashcards || [];
-          console.log(`[ai] Successfully saved ${savedFlashcards.length} flashcards to database`);
+          console.log(`[ai] Successfully saved ${savedFlashcards.length} flashcards to database with chapter_id: ${actualChapterId || 'null'}`);
         }
       } catch (saveError) {
         console.error("[ai] Error saving flashcards:", saveError);
@@ -200,7 +202,9 @@ Chaque flashcard doit avoir :
       success: true, 
       flashcards: result.flashcards,
       saved: savedFlashcards.length > 0,
-      savedCount: savedFlashcards.length
+      savedCount: savedFlashcards.length,
+      savedFlashcards: savedFlashcards, // Retourner les flashcards sauvegardées avec leurs IDs
+      chapterId: actualChapterId // Retourner l'UUID du chapitre si trouvé
     });
   } catch (error) {
     console.error("[ai] Error in generate-flashcards", error);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ type CourseBuilderWorkspaceProps = {
 
 export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: CourseBuilderWorkspaceProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const reset = useCourseBuilder((state) => state.reset);
   const hydrate = useCourseBuilder((state) => state.hydrateFromSnapshot);
   const getSnapshot = useCourseBuilder((state) => state.getSnapshot);
@@ -105,16 +106,35 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
         description: data.message,
       });
       
+      // Détecter le contexte (Super Admin ou Formateur) basé sur l'URL actuelle
+      const isSuperAdminContext = pathname?.includes('/super/studio/modules') || false;
+      const isFormationContext = pathname?.includes('/super/studio/formations') || false;
+      
       // Si c'était une création, rediriger vers l'URL avec l'ID pour les prochaines fois
       if (!currentCourseId && newCourseId) {
-        const newUrl = `/dashboard/formateur/formations/${newCourseId}/structure`;
+        let newUrl: string;
+        if (isSuperAdminContext) {
+          newUrl = `/super/studio/modules/${newCourseId}/structure`;
+        } else if (isFormationContext) {
+          newUrl = `/super/studio/formations/${newCourseId}/structure`;
+        } else {
+          newUrl = `/dashboard/formateur/formations/${newCourseId}/structure`;
+        }
         router.replace(newUrl);
       }
 
-      // Rediriger vers la liste des formations après publication
+      // Rediriger vers la liste après publication
       if (status === "published") {
         setTimeout(() => {
-          router.push("/dashboard/formateur/formations");
+          let redirectUrl: string;
+          if (isSuperAdminContext) {
+            redirectUrl = "/super/studio/modules";
+          } else if (isFormationContext) {
+            redirectUrl = "/super/studio/formations";
+          } else {
+            redirectUrl = "/dashboard/formateur/formations";
+          }
+          router.push(redirectUrl);
           router.refresh();
         }, 1500);
       }
@@ -158,7 +178,11 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
               disabled={isSaving || isPublishing}
               className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 hover:border-white/40 hover:text-white"
             >
-              <Link href="/dashboard/formateur/formations/new">Retour infos</Link>
+              <Link href={pathname?.includes('/super/studio/modules') 
+                ? "/super/studio/modules/new/metadata" 
+                : pathname?.includes('/super/studio/formations')
+                ? "/super/studio/formations/new/metadata"
+                : "/dashboard/formateur/formations/new"}>Retour infos</Link>
             </Button>
             <Button
               onClick={() => handleSave("draft")}

@@ -28,11 +28,13 @@ export function CatalogTopNav({
   const { branding } = useBranding();
   const { isAuthenticated, loading: authLoading } = useCatalogAuth();
   
-  // Couleurs chaudes du branding
-  const bgColor = branding?.background_color || '#F5F0E8';
-  const textColor = branding?.text_primary_color || '#5D4037';
-  const textSecondaryColor = branding?.text_secondary_color || '#8B6F47';
-  const primaryColor = branding?.primary_color || '#8B6F47';
+  // Couleurs du branding - Style Netflix (fond noir par défaut)
+  // Détecter si c'est contentin (beige) ou tim (noir)
+  const isContentin = branding?.background_color === '#F5F0E8' || branding?.background_color === '#F8F9FB';
+  const bgColor = isContentin ? (branding?.background_color || '#F5F0E8') : (branding?.background_color || '#000000');
+  const textColor = isContentin ? (branding?.text_primary_color || '#5D4037') : (branding?.text_primary_color || '#ffffff');
+  const textSecondaryColor = isContentin ? (branding?.text_secondary_color || '#8B6F47') : (branding?.text_secondary_color || '#b3b3b3');
+  const primaryColor = isContentin ? (branding?.primary_color || '#8B6F47') : (branding?.primary_color || '#e50914'); // Rouge Netflix
   const platformName = branding?.platform_name || 'Beyond';
 
   const categories = [
@@ -56,24 +58,28 @@ export function CatalogTopNav({
 
   return (
     <>
-      {/* Barre de navigation horizontale en haut - Style Apple (adapté au branding) */}
+      {/* Barre de navigation horizontale en haut - Style Netflix (transparent) */}
       <nav 
-        className="sticky top-0 z-50 w-full"
-        style={{ backgroundColor: bgColor, color: textColor }}
+        className="absolute top-0 left-0 right-0 z-50 w-full transition-all duration-300"
+        style={{ 
+          backgroundColor: isContentin ? `${bgColor}E6` : 'rgba(0, 0, 0, 0.4)',
+          color: textColor,
+          backdropFilter: isContentin ? 'blur(10px)' : 'blur(10px)',
+        }}
       >
         <div className="mx-auto max-w-[1440px] px-6">
           <div className="flex h-[44px] items-center justify-center relative">
-            {/* Logo Beyond en petit à gauche - SF Pro */}
+            {/* Logo Beyond agrandi à gauche - Style Netflix */}
             <Link 
               href="/dashboard/catalogue" 
-              className="absolute left-6 flex items-center"
+              className="absolute left-6"
               style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
             >
               <span 
-                className="text-[17px] font-normal tracking-tight"
-                style={{ color: textColor }}
+                className="text-[28px] font-semibold tracking-tight leading-none"
+                style={{ color: '#ffffff' }}
               >
-                {platformName}
+                Beyond
               </span>
             </Link>
 
@@ -93,7 +99,7 @@ export function CatalogTopNav({
                     pathname?.includes(link.href) ? "opacity-100" : "opacity-80"
                   )}
                   style={{ 
-                    color: textColor,
+                    color: '#ffffff', // Toujours blanc pour les onglets
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}
                   onMouseEnter={(e) => {
@@ -164,45 +170,70 @@ export function CatalogTopNav({
                       href={`/login?redirect=${encodeURIComponent(pathname || '/dashboard/catalogue')}`}
                       className="px-4 py-1.5 text-[12px] font-medium rounded-full transition-all"
                       style={{
-                        backgroundColor: primaryColor,
+                        backgroundColor: '#e50914', // Rouge Netflix
                         color: '#FFFFFF',
                         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '0.9';
+                        e.currentTarget.style.backgroundColor = '#f40612';
                         e.currentTarget.style.transform = 'scale(1.05)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.backgroundColor = '#e50914';
                         e.currentTarget.style.transform = 'scale(1)';
                       }}
                     >
                       Se connecter
                     </Link>
                   ) : (
-                    <Link
-                      href="/dashboard/catalogue/account"
-                      className="px-4 py-1.5 text-[12px] font-medium rounded-full transition-all flex items-center gap-1.5"
-                      style={{
-                        backgroundColor: `${primaryColor}15`,
-                        color: primaryColor,
-                        border: `1px solid ${primaryColor}40`,
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = primaryColor;
-                        e.currentTarget.style.color = '#FFFFFF';
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = `${primaryColor}15`;
-                        e.currentTarget.style.color = primaryColor;
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                    >
-                      <User className="h-3.5 w-3.5" />
-                      Mon compte
-                    </Link>
+                    <>
+                      <Link
+                        href="/dashboard/catalogue/account"
+                        className="px-4 py-1.5 text-[12px] font-medium rounded-full transition-all flex items-center gap-1.5"
+                        style={{
+                          backgroundColor: '#e50914', // Rouge Netflix
+                          color: '#ffffff',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f40612';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#e50914';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        <User className="h-3.5 w-3.5" />
+                        Mon compte
+                      </Link>
+                      
+                      {/* Beyond Connect CTA - Bordures bleues, fond transparent */}
+                      <Link
+                        href="/dashboard/catalogue/connect"
+                        className="px-4 py-1.5 text-[12px] font-medium rounded-full transition-all ml-2"
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: '2px solid #3b82f6',
+                          color: '#3b82f6',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#2563eb';
+                          e.currentTarget.style.color = '#2563eb';
+                          e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#3b82f6';
+                          e.currentTarget.style.color = '#3b82f6';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        Beyond Connect
+                      </Link>
+                    </>
                   )}
                 </>
               )}

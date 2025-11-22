@@ -1,22 +1,28 @@
 import { redirect } from "next/navigation";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { AppointmentBookingView } from "@/components/apprenant/appointment-booking-view";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function ReservationPage() {
-  const supabase = await getServerClient();
+  // Utiliser le service role client pour bypass RLS et permettre l'accès public
+  const supabase = getServiceRoleClient() || await getServerClient();
   if (!supabase) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-gray-600">Service de réservation temporairement indisponible</p>
+      </div>
+    );
   }
 
   // Récupérer l'ID du super admin contentin.cabinet@gmail.com
+  // Utiliser le service role pour bypass RLS si nécessaire
   const { data: contentinProfile } = await supabase
     .from("profiles")
     .select("id")
     .eq("email", "contentin.cabinet@gmail.com")
-    .single();
+    .maybeSingle();
 
   if (!contentinProfile) {
     return (

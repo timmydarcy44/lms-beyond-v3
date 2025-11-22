@@ -24,6 +24,7 @@ type SubchapterGenerationModalProps = {
   chapterId: string;
   subchapterId?: string; // Si défini, met à jour le sous-chapitre existant
   chapterTitle?: string; // Titre du chapitre parent pour le contexte
+  courseId?: string; // ID du cours pour la sauvegarde automatique
 };
 
 export function SubchapterGenerationModal({
@@ -33,11 +34,13 @@ export function SubchapterGenerationModal({
   chapterId,
   subchapterId,
   chapterTitle,
+  courseId,
 }: SubchapterGenerationModalProps) {
   const [prompt, setPrompt] = useState("");
   const [isPending, startTransition] = useTransition();
   const updateSubchapter = useCourseBuilder((state) => state.updateSubchapter);
   const addSubchapter = useCourseBuilder((state) => state.addSubchapter);
+  const getSnapshot = useCourseBuilder((state) => state.getSnapshot);
 
   const handleGenerate = () => {
     if (!prompt.trim() || prompt.trim().length < 10) {
@@ -81,15 +84,19 @@ export function SubchapterGenerationModal({
             duration,
             type: type as "video" | "text" | "document" | "audio",
           });
-          toast.success("Sous-chapitre mis à jour avec succès");
         } else {
           // Créer un nouveau sous-chapitre
           addSubchapter(sectionId, chapterId);
-          // Mettre à jour le sous-chapitre nouvellement créé
-          const newSubchapterId = useCourseBuilder
+          // Attendre un peu pour que le state soit mis à jour
+          await new Promise(resolve => setTimeout(resolve, 50));
+          // Mettre à jour le sous-chapitre nouvellement créé (le dernier dans le tableau)
+          const section = useCourseBuilder
             .getState()
-            .snapshot.sections.find((s) => s.id === sectionId)
-            ?.chapters.find((c) => c.id === chapterId)?.subchapters[0]?.id;
+            .snapshot.sections.find((s) => s.id === sectionId);
+          const chapter = section?.chapters.find((c) => c.id === chapterId);
+          const subchapters = chapter?.subchapters || [];
+          // Utiliser le dernier sous-chapitre créé (celui qui vient d'être ajouté)
+          const newSubchapterId = subchapters.length > 0 ? subchapters[subchapters.length - 1]?.id : null;
           if (newSubchapterId) {
             updateSubchapter(sectionId, chapterId, newSubchapterId, {
               title,
@@ -98,8 +105,51 @@ export function SubchapterGenerationModal({
               duration,
               type: type as "video" | "text" | "document" | "audio",
             });
+          } else {
+            toast.error("Erreur : impossible de trouver le sous-chapitre créé");
+            setPrompt("");
+            onOpenChange(false);
+            return;
           }
-          toast.success("Sous-chapitre généré avec succès");
+        }
+
+        // Sauvegarder automatiquement si courseId est disponible
+        if (courseId) {
+          try {
+            const snapshot = getSnapshot();
+            if (snapshot.general.title && snapshot.general.title.trim()) {
+              const saveResponse = await fetch("/api/courses", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  snapshot,
+                  status: "draft",
+                  courseId: courseId,
+                }),
+              });
+
+              if (saveResponse.ok) {
+                console.log("[ai] Course auto-saved successfully");
+                toast.success(subchapterId ? "Sous-chapitre mis à jour et sauvegardé" : "Sous-chapitre généré et sauvegardé");
+              } else {
+                console.error("[ai] Auto-save failed:", await saveResponse.json());
+                toast.success(subchapterId ? "Sous-chapitre mis à jour" : "Sous-chapitre généré", {
+                  description: "La sauvegarde automatique a échoué, veuillez sauvegarder manuellement",
+                });
+              }
+            } else {
+              toast.success(subchapterId ? "Sous-chapitre mis à jour" : "Sous-chapitre généré", {
+                description: "Veuillez définir un titre pour la formation avant de sauvegarder",
+              });
+            }
+          } catch (saveError) {
+            console.error("[ai] Auto-save error:", saveError);
+            toast.success(subchapterId ? "Sous-chapitre mis à jour" : "Sous-chapitre généré", {
+              description: "La sauvegarde automatique a échoué, veuillez sauvegarder manuellement",
+            });
+          }
+        } else {
+          toast.success(subchapterId ? "Sous-chapitre mis à jour" : "Sous-chapitre généré");
         }
 
         setPrompt("");

@@ -54,6 +54,8 @@ export type CourseBuilderGeneralInfo = {
   badgeImage?: string;
   target_audience?: "pro" | "apprenant" | "all";
   price?: number;
+  assignment_type?: "no_school" | "organization";
+  assigned_organization_id?: string;
 };
 
 export type CourseBuilderSnapshot = {

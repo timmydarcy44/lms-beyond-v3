@@ -26,9 +26,13 @@ export default async function SuperLayout({
     ? await getSuperAdminBranding(authData.user.id)
     : null;
 
+  // Vérifier si c'est contentin.cabinet@gmail.com
+  const { data: { user } } = await supabase.auth.getUser();
+  const isContentin = user?.email === "contentin.cabinet@gmail.com";
+
   return (
     <BrandingProvider initialBranding={branding}>
-      <div className="min-h-screen bg-white">
+      <div className={`min-h-screen ${isContentin ? "bg-[#F5F5DC]" : "bg-white"}`}>
         <SuperAdminHeaderApple />
         {children}
       </div>

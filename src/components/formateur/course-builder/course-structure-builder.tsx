@@ -734,10 +734,26 @@ function EditorPanel({ courseId }: { courseId?: string }) {
                     toast.success(`${data.flashcards.length} flashcard(s) générée(s) et sauvegardée(s)`, {
                       description: `${data.savedCount} flashcard(s) ont été automatiquement ajoutées au chapitre.`,
                     });
+                    // Déclencher un événement pour afficher les flashcards immédiatement
+                    window.dispatchEvent(new CustomEvent('flashcards-created', { 
+                      detail: { 
+                        flashcards: data.flashcards,
+                        savedFlashcards: data.savedFlashcards || [],
+                        chapterId: data.chapterId
+                      } 
+                    }));
                   } else {
                     toast.success(`${data.flashcards.length} flashcard(s) générée(s)`, {
-                      description: "Les flashcards ont été générées mais n'ont pas pu être sauvegardées automatiquement.",
+                      description: "Les flashcards ont été générées mais seront sauvegardées quand le chapitre sera enregistré.",
                     });
+                    // Afficher quand même les flashcards même si elles ne sont pas sauvegardées
+                    window.dispatchEvent(new CustomEvent('flashcards-created', { 
+                      detail: { 
+                        flashcards: data.flashcards,
+                        savedFlashcards: [],
+                        chapterId: null
+                      } 
+                    }));
                   }
 
                   console.log("Generated flashcards:", data.flashcards);
@@ -763,6 +779,7 @@ function EditorPanel({ courseId }: { courseId?: string }) {
             onOpenChange={setShowChapterModal}
             sectionId={selection.sectionId}
             chapterId={selection.type === "chapter" ? selection.chapterId : undefined}
+            courseId={courseId}
           />
         )}
         <Input
@@ -834,6 +851,7 @@ function EditorPanel({ courseId }: { courseId?: string }) {
           chapterId={selection.chapterId}
           subchapterId={selection.subchapterId}
           chapterTitle={nodes.chapter?.title}
+          courseId={courseId}
         />
         <Input
           value={nodes.subchapter.title}

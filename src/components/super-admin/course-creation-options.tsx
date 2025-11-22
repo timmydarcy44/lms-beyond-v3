@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, FileText, Copy, ArrowRight, Loader2 } from "lucide-react";
+import { Sparkles, Copy, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,15 +18,18 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-type CreationMethod = "zero" | "paste" | "ai" | null;
+type CreationMethod = "zero" | "prompt" | null;
 
-export function SuperAdminCourseCreationOptions() {
+type SuperAdminCourseCreationOptionsProps = {
+  assignmentType?: "no_school" | "organization";
+};
+
+export function SuperAdminCourseCreationOptions({ assignmentType }: SuperAdminCourseCreationOptionsProps = {}) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [selectedMethod, setSelectedMethod] = useState<CreationMethod>(null);
-  const [pasteContent, setPasteContent] = useState("");
+  const [promptContent, setPromptContent] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
 
   const handleMethodSelect = (method: CreationMethod) => {
@@ -40,83 +43,74 @@ export function SuperAdminCourseCreationOptions() {
 
     if (selectedMethod === "zero") {
       // Workflow : aller directement aux métadonnées
-      // Vérifier si on vient de /modules ou /formations
-      const isFromModules = window.location.pathname.includes("/modules");
-      const basePath = isFromModules ? "/super/studio/modules" : "/super/studio/formations";
-      router.push(`${basePath}/new/metadata?title=${encodeURIComponent(title)}`);
+      const params = new URLSearchParams({
+        title: title,
+      });
+      if (assignmentType) {
+        params.append("assignment_type", assignmentType);
+      }
+      router.push(`/super/studio/modules/new/metadata?${params.toString()}`);
       return;
     }
 
-    if (selectedMethod === "paste" && !pasteContent.trim()) {
+    if (selectedMethod === "prompt" && !promptContent.trim()) {
       setShowErrorDialog(true);
       return;
     }
 
-    if (selectedMethod === "ai" && !uploadedFile) {
-      setShowErrorDialog(true);
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      let structure = null;
-
-      if (selectedMethod === "paste") {
-        // Traiter le contenu collé
+    if (selectedMethod === "prompt") {
+      setIsProcessing(true);
+      try {
+        // Traiter le prompt avec l'IA
         const response = await fetch("/api/courses/generate-structure", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include", // Inclure les cookies pour l'authentification
           body: JSON.stringify({
             title,
-            content: pasteContent,
-            method: "paste",
+            content: promptContent,
+            method: "prompt",
           }),
         });
 
         if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: "Erreur inconnue" }));
+          console.error("[course-creation] API Error:", {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+          });
+          
+          if (response.status === 401) {
+            // Rediriger vers la page de connexion si non authentifié
+            window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+            return;
+          }
+          
           setShowErrorDialog(true);
+          setIsProcessing(false);
           return;
         }
 
-        structure = await response.json();
-      } else if (selectedMethod === "ai") {
-        // Traiter le PDF avec OpenAI
-        const formData = new FormData();
-        if (uploadedFile) {
-          formData.append("file", uploadedFile);
-        }
-        formData.append("title", title);
-
-        const response = await fetch("/api/courses/generate-structure-from-pdf", {
-          method: "POST",
-          body: formData,
+        const structure = await response.json();
+        
+        // Rediriger vers la page de validation avec la structure pour permettre l'édition
+        const params = new URLSearchParams({
+          title: title,
+          method: "prompt",
+          structure: JSON.stringify(structure),
         });
-
-        if (!response.ok) {
-          setShowErrorDialog(true);
-          return;
+        if (assignmentType) {
+          params.append("assignment_type", assignmentType);
         }
 
-        structure = await response.json();
+        router.push(`/super/studio/modules/new/validate?${params.toString()}`);
+      } catch (error) {
+        console.error("[course-creation] Error:", error);
+        setShowErrorDialog(true);
+        setIsProcessing(false);
       }
-
-      // Rediriger vers la page de validation avec la structure
-      // Vérifier si on vient de /modules ou /formations
-      const isFromModules = window.location.pathname.includes("/modules");
-      const basePath = isFromModules ? "/super/studio/modules" : "/super/studio/formations";
-      const params = new URLSearchParams({
-        title: title,
-        method: selectedMethod || "",
-        structure: JSON.stringify(structure),
-      });
-
-      router.push(`${basePath}/new/validate?${params.toString()}`);
-    } catch (error) {
-      console.error("[course-creation] Error:", error);
-      setShowErrorDialog(true);
-    } finally {
-      setIsProcessing(false);
+      return;
     }
   };
 
@@ -145,7 +139,7 @@ export function SuperAdminCourseCreationOptions() {
 
           <div className="space-y-4">
             <Label className="text-gray-700">Méthode de création</Label>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               {/* Créer à partir de zéro */}
               <button
                 onClick={() => handleMethodSelect("zero")}
@@ -184,13 +178,13 @@ export function SuperAdminCourseCreationOptions() {
                 </div>
               </button>
 
-              {/* Coller du contenu */}
+              {/* À partir d'un prompt */}
               <button
-                onClick={() => handleMethodSelect("paste")}
+                onClick={() => handleMethodSelect("prompt")}
                 className={cn(
                   "group relative overflow-hidden rounded-2xl border p-6 text-left transition-all duration-300",
                   "hover:scale-[1.02] hover:shadow-xl",
-                  selectedMethod === "paste"
+                  selectedMethod === "prompt"
                     ? "border-purple-500/50 bg-gradient-to-br from-purple-500/20 via-pink-500/15 to-transparent shadow-lg shadow-purple-500/20"
                     : "border-gray-200 bg-white hover:border-gray-300"
                 )}
@@ -199,102 +193,44 @@ export function SuperAdminCourseCreationOptions() {
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "rounded-xl p-2",
-                      selectedMethod === "paste" ? "bg-purple-500/20" : "bg-gray-100"
-                    )}>
-                      <FileText className={cn(
-                        "h-5 w-5",
-                        selectedMethod === "paste" ? "text-purple-400" : "text-gray-600"
-                      )} />
-                    </div>
-                    <span className={cn(
-                      "text-sm font-semibold",
-                      selectedMethod === "paste" ? "text-white" : "text-gray-900"
-                    )}>
-                      Coller du contenu
-                    </span>
-                  </div>
-                  <p className={cn(
-                    "text-sm leading-relaxed",
-                    selectedMethod === "paste" ? "text-white/80" : "text-gray-600"
-                  )}>
-                    Collez votre contenu et laissez l&apos;IA structurer votre formation
-                  </p>
-                </div>
-              </button>
-
-              {/* Importer un PDF */}
-              <button
-                onClick={() => handleMethodSelect("ai")}
-                className={cn(
-                  "group relative overflow-hidden rounded-2xl border p-6 text-left transition-all duration-300",
-                  "hover:scale-[1.02] hover:shadow-xl",
-                  selectedMethod === "ai"
-                    ? "border-orange-500/50 bg-gradient-to-br from-orange-500/20 via-red-500/15 to-transparent shadow-lg shadow-orange-500/20"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                )}
-              >
-                <div className="relative z-10 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "rounded-xl p-2",
-                      selectedMethod === "ai" ? "bg-orange-500/20" : "bg-gray-100"
+                      selectedMethod === "prompt" ? "bg-purple-500/20" : "bg-gray-100"
                     )}>
                       <Sparkles className={cn(
                         "h-5 w-5",
-                        selectedMethod === "ai" ? "text-orange-400" : "text-gray-600"
+                        selectedMethod === "prompt" ? "text-purple-400" : "text-gray-600"
                       )} />
                     </div>
                     <span className={cn(
                       "text-sm font-semibold",
-                      selectedMethod === "ai" ? "text-white" : "text-gray-900"
+                      selectedMethod === "prompt" ? "text-white" : "text-gray-900"
                     )}>
-                      Importer un PDF
+                      À partir d&apos;un prompt
                     </span>
                   </div>
                   <p className={cn(
                     "text-sm leading-relaxed",
-                    selectedMethod === "ai" ? "text-white/80" : "text-gray-600"
+                    selectedMethod === "prompt" ? "text-white/80" : "text-gray-600"
                   )}>
-                    Importez un PDF et laissez l&apos;IA créer la structure automatiquement
+                    Décrivez votre formation et laissez l&apos;IA créer la structure automatiquement
                   </p>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Champs conditionnels selon la méthode */}
-          {selectedMethod === "paste" && (
+          {/* Champ conditionnel pour le prompt */}
+          {selectedMethod === "prompt" && (
             <div className="space-y-2">
-              <Label htmlFor="paste-content" className="text-gray-700">
-                Collez votre contenu
+              <Label htmlFor="prompt-content" className="text-gray-700">
+                Décrivez votre formation
               </Label>
               <textarea
-                id="paste-content"
-                value={pasteContent}
-                onChange={(e) => setPasteContent(e.target.value)}
-                placeholder="Collez ici le contenu de votre formation..."
+                id="prompt-content"
+                value={promptContent}
+                onChange={(e) => setPromptContent(e.target.value)}
+                placeholder="Ex: Une formation sur les bases de ChatGPT pour débutants, avec 3 chapitres : introduction, utilisation pratique, cas d'usage..."
                 className="min-h-[200px] w-full rounded-lg border border-gray-300 bg-white p-4 text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
-            </div>
-          )}
-
-          {selectedMethod === "ai" && (
-            <div className="space-y-2">
-              <Label htmlFor="pdf-upload" className="text-gray-700">
-                Importer un PDF
-              </Label>
-              <div className="flex items-center gap-4">
-                <input
-                  id="pdf-upload"
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
-                  className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
-                />
-                {uploadedFile && (
-                  <span className="text-sm text-gray-600">{uploadedFile.name}</span>
-                )}
-              </div>
             </div>
           )}
 

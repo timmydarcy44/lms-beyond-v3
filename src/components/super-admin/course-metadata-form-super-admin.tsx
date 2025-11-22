@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,12 @@ import { useCourseBuilder } from "@/hooks/use-course-builder";
 import { ImageUploadModal } from "./image-upload-modal";
 import { VideoUploadModal } from "./video-upload-modal";
 import { OpenBadgeModal } from "./open-badge-modal";
-import { BadgeCheck, Image as ImageIcon, Video as VideoIcon, Plus } from "lucide-react";
+import { BadgeCheck, Image as ImageIcon, Video as VideoIcon, Plus, ExternalLink } from "lucide-react";
 import { calculateCourseDuration } from "@/lib/utils/course-duration";
+import { useSupabase } from "@/components/providers/supabase-provider";
 
 export function CourseMetadataFormSuperAdmin() {
+  const searchParams = useSearchParams();
   const snapshot = useCourseBuilder((state) => state.snapshot);
   const general = snapshot.general;
   const updateGeneral = useCourseBuilder((state) => state.updateGeneral);
@@ -32,6 +35,55 @@ export function CourseMetadataFormSuperAdmin() {
   const [isBadgeImageModalOpen, setIsBadgeImageModalOpen] = useState(false);
   const [objectiveDraft, setObjectiveDraft] = useState("");
   const [skillDraft, setSkillDraft] = useState("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const supabase = useSupabase();
+  
+  // Récupérer assignment_type depuis l'URL ou le snapshot
+  const assignmentTypeFromUrl = searchParams.get("assignment_type") as "no_school" | "organization" | null;
+  const [assignmentType, setAssignmentType] = useState<"no_school" | "organization">(
+    assignmentTypeFromUrl || general.assignment_type || "no_school"
+  );
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>(
+    general.assigned_organization_id || ""
+  );
+  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+
+  // Récupérer l'email de l'utilisateur pour détecter contentin
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      if (!supabase) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    };
+    fetchUserEmail();
+  }, [supabase]);
+
+  const isContentin = userEmail === "contentin.cabinet@gmail.com";
+
+  // Initialiser l'assignation depuis l'URL, le snapshot ou par défaut
+  useEffect(() => {
+    // Priorité : URL > Snapshot > Défaut
+    const finalAssignmentType = assignmentTypeFromUrl || general.assignment_type || "no_school";
+    
+    if (finalAssignmentType !== assignmentType) {
+      setAssignmentType(finalAssignmentType);
+    }
+    
+    if (general.assigned_organization_id) {
+      setSelectedOrganizationId(general.assigned_organization_id);
+    }
+    
+    // Si assignment_type vient de l'URL ou n'est pas défini, mettre à jour le snapshot
+    if (assignmentTypeFromUrl || !general.assignment_type) {
+      updateGeneral({ 
+        assignment_type: finalAssignmentType,
+        target_audience: finalAssignmentType === "no_school" ? "apprenant" : (general.target_audience || "all"),
+      });
+    }
+  }, [assignmentTypeFromUrl, general.assignment_type, general.assigned_organization_id, general.target_audience, assignmentType, updateGeneral]);
 
   // Calculer automatiquement la durée lorsque le contenu change
   useEffect(() => {
@@ -46,6 +98,26 @@ export function CourseMetadataFormSuperAdmin() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(snapshot.sections)]);
+
+  // Charger les organisations si "Organisation" est sélectionné
+  useEffect(() => {
+    if (assignmentType === "organization" && organizations.length === 0 && !loadingOrgs) {
+      setLoadingOrgs(true);
+      fetch("/api/super-admin/organizations")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.organizations) {
+            setOrganizations(data.organizations);
+          }
+        })
+        .catch((error) => {
+          console.error("[course-metadata] Error loading organizations:", error);
+        })
+        .finally(() => {
+          setLoadingOrgs(false);
+        });
+    }
+  }, [assignmentType, organizations.length, loadingOrgs]);
 
   return (
     <div className="space-y-6">
@@ -260,23 +332,129 @@ export function CourseMetadataFormSuperAdmin() {
             value={general.badgeDescription}
             onChange={(value) => updateGeneral({ badgeDescription: value })}
           />
-          <div className="md:col-span-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="uppercase tracking-[0.3em] bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium mb-2">Public cible *</span>
-              <SelectField
-                value={general.target_audience || "pro"}
-                onChange={(value) => updateGeneral({ target_audience: value as "pro" | "apprenant" | "all" })}
-                options={[
-                  { value: "pro", label: "Professionnels (CFA, entreprises, formateurs)" },
-                  { value: "apprenant", label: "Apprenants (étudiants)" },
-                  { value: "all", label: "Tous publics" },
-                ]}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Cette option détermine qui peut voir ce module dans le catalogue.
-              </p>
-            </label>
-          </div>
+          {/* Afficher le champ "Assignation" seulement si on ne vient pas d'un CTA spécifique ET si ce n'est pas contentin */}
+          {!assignmentTypeFromUrl && !isContentin && (
+            <div className="md:col-span-2">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="uppercase tracking-[0.3em] bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium mb-2">Assignation *</span>
+                <SelectField
+                  value={assignmentType}
+                  onChange={(value) => {
+                    const newType = value as "no_school" | "organization";
+                    setAssignmentType(newType);
+                    // Sauvegarder dans le snapshot
+                    updateGeneral({ 
+                      assignment_type: newType,
+                      assigned_organization_id: newType === "no_school" ? undefined : selectedOrganizationId || undefined,
+                    });
+                    if (newType === "no_school") {
+                      setSelectedOrganizationId("");
+                      // Si No School, forcer target_audience à "apprenant" pour publication automatique
+                      updateGeneral({ target_audience: "apprenant" });
+                    }
+                  }}
+                  options={[
+                    { value: "no_school", label: "No School (Catalogue public)" },
+                    { value: "organization", label: "Organisation" },
+                  ]}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {assignmentType === "no_school" 
+                    ? "La formation sera publiée automatiquement dans le catalogue Beyond No School."
+                    : "Sélectionnez l'organisation à laquelle assigner cette formation."}
+                </p>
+              </label>
+            </div>
+          )}
+          
+          {/* Message informatif pour contentin */}
+          {isContentin && (
+            <div className="md:col-span-2">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  Cette formation sera automatiquement ajoutée à vos ressources Jessica Contentin.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Afficher le sélecteur d'organisation seulement si assignment_type=organization */}
+          {assignmentType === "organization" && (
+            <div className="md:col-span-2">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="uppercase tracking-[0.3em] bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium mb-2">Organisation *</span>
+                {loadingOrgs ? (
+                  <div className="bg-gray-50 border-black h-10 rounded animate-pulse" />
+                ) : (
+                  <SelectField
+                    value={selectedOrganizationId}
+                    onChange={(value) => {
+                      setSelectedOrganizationId(value);
+                      // Sauvegarder dans le snapshot
+                      updateGeneral({ 
+                        assigned_organization_id: value || undefined,
+                      });
+                    }}
+                    options={[
+                      { value: "", label: "Sélectionner une organisation..." },
+                      ...organizations.map((org) => ({
+                        value: org.id,
+                        label: org.name,
+                      })),
+                    ]}
+                  />
+                )}
+                {assignmentTypeFromUrl && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cette formation sera assignée à l'organisation sélectionnée.
+                  </p>
+                )}
+              </label>
+            </div>
+          )}
+          
+          {/* Afficher le champ "Public cible" seulement si ce n'est pas No School (pré-configuré) */}
+          {assignmentType !== "no_school" && (
+            <div className="md:col-span-2">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="uppercase tracking-[0.3em] bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium mb-2">Public cible *</span>
+                <SelectField
+                  value={general.target_audience || "pro"}
+                  onChange={(value) => updateGeneral({ target_audience: value as "pro" | "apprenant" | "all" })}
+                  options={[
+                    { value: "pro", label: "Professionnels (CFA, entreprises, formateurs)" },
+                    { value: "apprenant", label: "Apprenants (étudiants)" },
+                    { value: "all", label: "Tous publics" },
+                  ]}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Cette option détermine qui peut voir ce module dans le catalogue.
+                </p>
+              </label>
+            </div>
+          )}
+          
+          {/* Message informatif pour Beyond No School */}
+          {assignmentType === "no_school" && assignmentTypeFromUrl && (
+            <div className="md:col-span-2">
+              <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4">
+                <p className="text-sm text-blue-900 font-medium mb-1">
+                  📚 Formation pour Beyond No School
+                </p>
+                <p className="text-xs text-blue-700">
+                  Cette formation sera automatiquement publiée dans le catalogue Beyond No School avec le public cible "Apprenants" lors de la publication.
+                </p>
+                <Link 
+                  href="/dashboard/catalogue" 
+                  target="_blank"
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 underline font-medium mt-2"
+                >
+                  Voir le catalogue Beyond No School
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -496,15 +674,17 @@ function SelectField({
   value,
   onChange,
   options,
+  disabled,
 }: {
   label?: string;
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
+  disabled?: boolean;
 }) {
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="bg-gray-50 border-black text-gray-900">
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className="bg-gray-50 border-black text-gray-900" disabled={disabled}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent className="bg-white border-black">

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useCourseBuilder } from "@/hooks/use-course-builder";
 
 type Flashcard = {
   id: string;
@@ -24,21 +25,151 @@ type FlashcardsManagerProps = {
 
 export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProps) {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [localFlashcards, setLocalFlashcards] = useState<Flashcard[]>([]); // Flashcards créées localement (pas encore en DB avec chapter_id)
   const [isLoading, setIsLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFront, setEditFront] = useState("");
   const [editBack, setEditBack] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Utiliser le snapshot du store pour trouver l'UUID du chapitre
+  const snapshot = useCourseBuilder((state) => state.snapshot);
+
+  // Clé pour le localStorage
+  const localStorageKey = courseId && chapterId ? `flashcards-${courseId}-${chapterId}` : null;
+
+  // Charger les flashcards locales depuis le localStorage au montage
+  // IMPORTANT: Recharger à chaque changement de chapitre pour avoir les bonnes flashcards
+  useEffect(() => {
+    if (localStorageKey && chapterId) {
+      try {
+        const stored = localStorage.getItem(localStorageKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Filtrer pour ne garder que celles du chapitre actuel (sécurité supplémentaire)
+            const filtered = parsed.filter((f: any) => (f.chapter_id as any) === chapterId);
+            console.log("[FlashcardsManager] Loading local flashcards from localStorage for chapter:", chapterId, "count:", filtered.length);
+            setLocalFlashcards(filtered);
+          } else {
+            setLocalFlashcards([]);
+          }
+        } else {
+          setLocalFlashcards([]);
+        }
+      } catch (error) {
+        console.warn("[FlashcardsManager] Error loading from localStorage:", error);
+        setLocalFlashcards([]);
+      }
+    } else {
+      setLocalFlashcards([]);
+    }
+  }, [localStorageKey, chapterId]);
+
+  // Sauvegarder les flashcards locales dans le localStorage
+  useEffect(() => {
+    if (localStorageKey && localFlashcards.length > 0) {
+      try {
+        localStorage.setItem(localStorageKey, JSON.stringify(localFlashcards));
+        console.log("[FlashcardsManager] Saved local flashcards to localStorage:", localFlashcards.length);
+      } catch (error) {
+        console.warn("[FlashcardsManager] Error saving to localStorage:", error);
+      }
+    } else if (localStorageKey && localFlashcards.length === 0) {
+      // Nettoyer le localStorage si plus de flashcards locales
+      localStorage.removeItem(localStorageKey);
+    }
+  }, [localStorageKey, localFlashcards]);
 
   useEffect(() => {
     if (courseId) {
+      // Réinitialiser les flashcards de la DB quand on change de chapitre
+      setFlashcards([]);
       loadFlashcards();
+      // Les flashcards locales sont chargées depuis le localStorage dans un autre useEffect
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, chapterId, snapshot]);
+
+  // Écouter les événements de création de flashcards pour les afficher immédiatement
+  useEffect(() => {
+    if (!courseId || !chapterId) return;
+    
+    const handleFlashcardsCreated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log("[FlashcardsManager] Event received: flashcards created", customEvent.detail);
+      const eventDetail = customEvent.detail || {};
+      const savedFlashcards = eventDetail.savedFlashcards || [];
+      const createdFlashcards = eventDetail.flashcards || [];
+      
+      // Si les flashcards ont été sauvegardées en DB, les utiliser directement
+      if (savedFlashcards.length > 0) {
+        console.log("[FlashcardsManager] Flashcards were saved to DB, using saved flashcards:", savedFlashcards.length);
+        // Les flashcards sauvegardées seront chargées depuis la DB dans loadFlashcards
+        // Pas besoin de les stocker localement
+      } else if (createdFlashcards.length > 0) {
+        // Si les flashcards n'ont pas été sauvegardées (pas d'UUID de chapitre), les stocker localement
+        const flashcardsWithChapter = createdFlashcards.map((f: any, index: number) => ({
+          id: f.id || `temp-${Date.now()}-${index}`,
+          front: f.question || f.front || "",
+          back: f.answer || f.back || "",
+          course_id: courseId,
+          chapter_id: chapterId, // Stocker le chapterId local pour référence
+          created_at: new Date().toISOString(),
+        }));
+        
+        console.log("[FlashcardsManager] Storing local flashcards for chapter:", chapterId, "count:", flashcardsWithChapter.length);
+        setLocalFlashcards((prev) => {
+          // IMPORTANT: Ne garder QUE les flashcards du chapitre actuel
+          // Réinitialiser complètement si on change de chapitre
+          const existing = prev.filter((f: any) => (f.chapter_id as any) === chapterId);
+          // Éviter les doublons en vérifiant les IDs
+          const existingIds = new Set(existing.map((f: any) => f.id));
+          const newFlashcards = flashcardsWithChapter.filter((f: any) => !existingIds.has(f.id));
+          const result = [...existing, ...newFlashcards];
+          console.log("[FlashcardsManager] Adding new local flashcards:", newFlashcards.length, "existing:", existing.length, "total:", result.length);
+          return result;
+        });
+      }
+      
+      // Recharger aussi depuis la DB après un délai
+      setTimeout(() => {
+        console.log("[FlashcardsManager] Reloading flashcards from DB after creation...");
+        loadFlashcards();
+      }, 1500);
+    };
+
+    window.addEventListener('flashcards-created', handleFlashcardsCreated);
+    return () => {
+      window.removeEventListener('flashcards-created', handleFlashcardsCreated);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId, chapterId]);
 
+  // Log pour déboguer
+  useEffect(() => {
+    console.log("[FlashcardsManager] Rendered with:", JSON.stringify({ 
+      courseId, 
+      chapterId, 
+      flashcardsCount: flashcards.length,
+      localFlashcardsCount: localFlashcards.length,
+      totalFlashcards: flashcards.length + localFlashcards.length,
+      isLoading,
+      hasFlashcards: flashcards.length > 0 || localFlashcards.length > 0
+    }, null, 2));
+    if (flashcards.length > 0 || localFlashcards.length > 0) {
+      console.log("[FlashcardsManager] Flashcards from DB:", flashcards.map((f: any) => ({ id: f.id, front: f.front.substring(0, 50), chapter_id: f.chapter_id })));
+      console.log("[FlashcardsManager] Local flashcards:", localFlashcards.map((f: any) => ({ id: f.id, front: f.front.substring(0, 50), chapter_id: f.chapter_id })));
+    }
+  }, [courseId, chapterId, flashcards.length, localFlashcards.length, isLoading, flashcards, localFlashcards]);
+
   const loadFlashcards = async () => {
-    if (!courseId) return;
+    if (!courseId) {
+      console.log("[FlashcardsManager] No courseId, skipping load");
+      return;
+    }
     
+    console.log("[FlashcardsManager] Loading flashcards...", { courseId, chapterId });
     setIsLoading(true);
     try {
       let actualChapterId: string | null = null;
@@ -49,9 +180,12 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
         if (uuidRegex.test(chapterId)) {
           // C'est déjà un UUID de la DB
           actualChapterId = chapterId;
+          console.log("[FlashcardsManager] chapterId is already a UUID:", actualChapterId);
         } else {
           // C'est un ID local (nanoid), essayer de trouver l'UUID correspondant
+          console.log("[FlashcardsManager] chapterId is local ID, trying to find UUID...", chapterId);
           try {
+            // Méthode 1: Utiliser l'API find-by-local-id
             const findResponse = await fetch("/api/chapters/find-by-local-id", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -62,12 +196,39 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
               const findData = await findResponse.json();
               if (findData.chapterId) {
                 actualChapterId = findData.chapterId;
+                console.log("[FlashcardsManager] Found UUID via API:", actualChapterId);
               }
             }
+            
+            // Si l'API n'a pas trouvé, essayer de chercher dans le snapshot du store Zustand
+            if (!actualChapterId && snapshot) {
+              try {
+                for (const section of snapshot.sections || []) {
+                  for (const chapter of section.chapters || []) {
+                    if (chapter.id === chapterId) {
+                      // Si le chapitre a un dbId, l'utiliser
+                      if ((chapter as any).dbId) {
+                        actualChapterId = (chapter as any).dbId;
+                        console.log("[FlashcardsManager] Found UUID via Zustand snapshot (dbId):", actualChapterId);
+                      } else if (uuidRegex.test(chapter.id)) {
+                        actualChapterId = chapter.id;
+                        console.log("[FlashcardsManager] Found UUID via Zustand snapshot (id):", actualChapterId);
+                      }
+                      break;
+                    }
+                  }
+                  if (actualChapterId) break;
+                }
+              } catch (snapshotError) {
+                console.warn("[FlashcardsManager] Error checking Zustand snapshot:", snapshotError);
+              }
+            }
+            
+            if (!actualChapterId) {
+              console.log("[FlashcardsManager] No UUID found for local ID, chapter may not be saved yet");
+            }
           } catch (findError) {
-            console.warn("[flashcards] Could not find chapter UUID for local ID:", chapterId);
-            // Si on ne trouve pas l'UUID, on charge toutes les flashcards du cours
-            // (le chapitre n'est peut-être pas encore sauvegardé)
+            console.warn("[FlashcardsManager] Error finding chapter UUID:", findError);
           }
         }
       }
@@ -77,6 +238,9 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       // Ne charger que les flashcards du chapitre spécifique si on a un UUID
       if (actualChapterId) {
         params.append("chapterId", actualChapterId);
+        console.log("[FlashcardsManager] Loading flashcards for chapter:", actualChapterId);
+      } else {
+        console.log("[FlashcardsManager] Loading all flashcards for course (no chapter UUID)");
       }
 
       const response = await fetch(`/api/flashcards?${params.toString()}`);
@@ -86,18 +250,53 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       }
 
       const data = await response.json();
-      // Filtrer les flashcards pour ne garder que celles du chapitre actuel
-      // (au cas où actualChapterId serait null, on ne veut pas afficher toutes les flashcards)
+      console.log("[FlashcardsManager] API response:", { 
+        totalFlashcards: data.flashcards?.length || 0,
+        flashcards: data.flashcards?.map((f: any) => ({ id: f.id, chapter_id: f.chapter_id }))
+      });
+      
+      // IMPORTANT: Filtrer les flashcards pour ne garder QUE celles du chapitre actuel
       let filteredFlashcards = data.flashcards || [];
       if (actualChapterId) {
+        // Si on a un UUID, filtrer strictement par chapter_id
         filteredFlashcards = filteredFlashcards.filter((f: any) => f.chapter_id === actualChapterId);
-      } else if (chapterId) {
-        // Si on a un chapterId local mais pas d'UUID, ne rien afficher
-        // (le chapitre n'est pas encore sauvegardé, donc pas de flashcards)
+        console.log("[FlashcardsManager] Filtered flashcards for chapter UUID:", actualChapterId, "->", filteredFlashcards.length, "flashcards");
+      } else {
+        // Si on n'a pas d'UUID, NE PAS charger les flashcards de la DB avec chapter_id null
+        // Car elles peuvent appartenir à d'autres chapitres non sauvegardés
+        // On utilisera uniquement les flashcards locales pour ce chapitre
+        console.log("[FlashcardsManager] No UUID found, not loading flashcards from DB (will use local flashcards only)");
         filteredFlashcards = [];
       }
       
+      console.log("[FlashcardsManager] Setting flashcards from DB:", filteredFlashcards.length);
       setFlashcards(filteredFlashcards);
+      
+      // Nettoyer les flashcards locales qui sont maintenant en DB
+      if (filteredFlashcards.length > 0 && localFlashcards.length > 0) {
+        const dbFlashcardIds = new Set(filteredFlashcards.map((f: any) => f.id));
+        setLocalFlashcards((prev) => {        
+          // Filtrer pour ne garder que celles du chapitre actuel ET qui ne sont pas en DB
+          const filtered = prev.filter((f: any) =>
+            chapterId && 
+            (f.chapter_id as any) === chapterId && 
+            !dbFlashcardIds.has(f.id)
+          );
+          // Sauvegarder dans localStorage
+          if (localStorageKey) {
+            try {
+              if (filtered.length > 0) {
+                localStorage.setItem(localStorageKey, JSON.stringify(filtered));
+              } else {
+                localStorage.removeItem(localStorageKey);
+              }
+            } catch (error) {
+              console.warn("[FlashcardsManager] Error updating localStorage:", error);
+            }
+          }
+          return filtered;
+        });
+      }
     } catch (error) {
       console.error("Error loading flashcards:", error);
       const errorMessage = error instanceof Error ? error.message : "Erreur lors du chargement";
@@ -305,13 +504,17 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-white/60" />
+            <span className="ml-2 text-sm text-white/60">Chargement des flashcards...</span>
           </div>
-        ) : flashcards.length === 0 ? (
+        ) : (flashcards.length === 0 && localFlashcards.length === 0) ? (
           <div className="py-8 text-center text-sm text-white/60">
-            Aucune flashcard. Cliquez sur "Ajouter" pour en créer une.
+            <p>Aucune flashcard.</p>
+            <p className="mt-2 text-xs text-white/40">
+              {chapterId ? "Les flashcards apparaîtront ici une fois le chapitre sauvegardé." : "Cliquez sur 'Ajouter' pour en créer une."}
+            </p>
           </div>
         ) : (
-          flashcards.map((flashcard) => (
+          [...flashcards, ...localFlashcards.filter((f: any) => chapterId && (f.chapter_id as any) === chapterId)].map((flashcard) => (
             <div
               key={flashcard.id}
               className="rounded-2xl border border-white/10 bg-black/35 p-4"

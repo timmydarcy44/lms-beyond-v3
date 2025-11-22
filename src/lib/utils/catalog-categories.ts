@@ -61,6 +61,7 @@ export async function getCategoriesForSuperAdmin(): Promise<{
       "Marketing",
       "Soft skills",
       "Pédagogie",
+      "Bac+2",
     ],
     allowCustom: true,
   };

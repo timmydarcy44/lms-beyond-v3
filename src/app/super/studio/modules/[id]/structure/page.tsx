@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClientOrFallback, getServiceRoleClient } from "@/lib/supabase/server";
 import { getCourseBuilderSnapshot } from "@/lib/queries/formateur";
-import { CourseBuilderWorkspaceSuperAdmin } from "@/components/super-admin/course-builder-workspace-super-admin";
+import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/course-builder-workspace";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -111,22 +111,23 @@ export default async function SuperAdminModuleStructurePage({ params }: PageProp
   const snapshot = await getCourseBuilderSnapshot(courseId);
 
   return (
-    <>
-      <div className="mb-6">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
-          Modifier la structure du module
-        </h1>
-        <p className="text-gray-600 text-sm" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
-          Modifiez la structure de votre module : sections, chapitres et contenus pédagogiques.
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#0f0f0f]">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold text-white mb-2" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+            Modifier la structure du module
+          </h1>
+          <p className="text-gray-400 text-sm" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+            Modifiez la structure de votre module : sections, chapitres et contenus pédagogiques.
+          </p>
+        </div>
+        <CourseBuilderWorkspace 
+          initialData={snapshot || undefined}
+          previewHref={`/super/studio/modules/${courseId}/preview`}
+          courseId={courseId}
+        />
       </div>
-      <CourseBuilderWorkspaceSuperAdmin 
-        initialData={snapshot || undefined}
-        previewHref={`/super/studio/modules/${courseId}/preview`}
-        courseId={courseId}
-        initialCourseId={courseId}
-      />
-    </>
+    </div>
   );
 }
 

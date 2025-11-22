@@ -7,13 +7,40 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await getServerClient();
     if (!supabase) {
+      console.error("[api/courses/generate-structure] Supabase client unavailable");
       return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    // Vérifier les cookies de la requête pour le debugging
+    const cookies = request.headers.get("cookie");
+    console.log("[api/courses/generate-structure] Request cookies present:", !!cookies);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.error("[api/courses/generate-structure] Auth error:", {
+        message: authError.message,
+        status: authError.status,
+        name: authError.name,
+      });
+      return NextResponse.json({ 
+        error: "Erreur d'authentification",
+        details: authError.message 
+      }, { status: 401 });
     }
+    
+    if (!user) {
+      console.warn("[api/courses/generate-structure] No user found in session", {
+        hasCookies: !!cookies,
+        cookieLength: cookies?.length || 0,
+      });
+      return NextResponse.json({ 
+        error: "Non authentifié",
+        details: "Aucun utilisateur trouvé dans la session. Veuillez vous reconnecter."
+      }, { status: 401 });
+    }
+    
+    console.log("[api/courses/generate-structure] Authenticated user:", user.id, user.email);
 
     const body = await request.json();
     const { title, content, method } = body;
@@ -110,6 +137,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
     );
   }
 }
+
 
 
 

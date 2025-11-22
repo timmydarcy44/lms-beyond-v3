@@ -38,10 +38,11 @@ export default async function SuperAdminModulesPage() {
     redirect("/login");
   }
 
+  // Filtrer uniquement les modules créés par cet utilisateur (pas ceux d'autres super admins)
   const { data: modulesData } = await supabase
     .from("courses")
     .select("id, title, status, cover_image, created_at, updated_at, creator_id")
-    .eq("creator_id", user.id)
+    .or(`creator_id.eq.${user.id},owner_id.eq.${user.id}`)
     .order("updated_at", { ascending: false })
     .limit(100);
 

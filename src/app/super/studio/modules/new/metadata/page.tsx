@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { CourseMetadataWorkspace } from "@/components/formateur/course-builder/course-metadata-workspace";
+import { CourseMetadataWorkspaceSuperAdmin } from "@/components/super-admin/course-metadata-workspace-super-admin";
 
 export default async function SuperAdminNewModuleMetadataPage() {
   const hasAccess = await isSuperAdmin();
@@ -19,7 +19,7 @@ export default async function SuperAdminNewModuleMetadataPage() {
           Configurez les informations de base de votre module
         </p>
       </div>
-      <CourseMetadataWorkspace />
+      <CourseMetadataWorkspaceSuperAdmin />
     </main>
   );
 }

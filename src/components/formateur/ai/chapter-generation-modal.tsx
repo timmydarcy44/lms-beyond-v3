@@ -22,13 +22,15 @@ type ChapterGenerationModalProps = {
   onOpenChange: (open: boolean) => void;
   sectionId: string;
   chapterId?: string; // Si défini, met à jour le chapitre existant
+  courseId?: string; // ID du cours pour la sauvegarde automatique
 };
 
-export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterId }: ChapterGenerationModalProps) {
+export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterId, courseId }: ChapterGenerationModalProps) {
   const [prompt, setPrompt] = useState("");
   const [isPending, startTransition] = useTransition();
   const updateChapter = useCourseBuilder((state) => state.updateChapter);
   const addChapter = useCourseBuilder((state) => state.addChapter);
+  const getSnapshot = useCourseBuilder((state) => state.getSnapshot);
 
   const handleGenerate = () => {
     if (!prompt.trim() || prompt.trim().length < 10) {
@@ -60,10 +62,11 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
           throw new Error("Réponse invalide de l'API");
         }
 
-        const { title, summary, content, duration, type, suggestedSubchapters } = data.chapter;
+        const { title, summary, content, duration, type } = data.chapter;
 
         if (chapterId) {
-          // Mettre à jour le chapitre existant
+          // Mettre à jour le chapitre existant avec le contenu généré
+          console.log("[ai] Updating existing chapter:", { sectionId, chapterId, title });
           updateChapter(sectionId, chapterId, {
             title,
             summary,
@@ -71,14 +74,19 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
             duration,
             type: type as "video" | "text" | "document",
           });
-          toast.success("Chapitre mis à jour avec succès");
         } else {
           // Créer un nouveau chapitre
           addChapter(sectionId);
-          // Mettre à jour le chapitre nouvellement créé
-          const newChapterId = useCourseBuilder.getState().snapshot.sections
-            .find((s) => s.id === sectionId)?.chapters[0]?.id;
+          // Attendre un peu pour que le state soit mis à jour
+          await new Promise(resolve => setTimeout(resolve, 50));
+          // Mettre à jour le chapitre nouvellement créé (le dernier dans le tableau)
+          const section = useCourseBuilder.getState().snapshot.sections
+            .find((s) => s.id === sectionId);
+          const chapters = section?.chapters || [];
+          // Utiliser le dernier chapitre créé (celui qui vient d'être ajouté)
+          const newChapterId = chapters.length > 0 ? chapters[chapters.length - 1]?.id : null;
           if (newChapterId) {
+            console.log("[ai] Updating new chapter:", { sectionId, newChapterId, title, allChapterIds: chapters.map(c => c.id) });
             updateChapter(sectionId, newChapterId, {
               title,
               summary,
@@ -86,15 +94,51 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
               duration,
               type: type as "video" | "text" | "document",
             });
+          } else {
+            toast.error("Erreur : impossible de trouver le chapitre créé");
+            setPrompt("");
+            onOpenChange(false);
+            return;
           }
-          toast.success("Chapitre généré avec succès");
         }
 
-        // Si des sous-chapitres sont suggérés, on peut les proposer
-        if (suggestedSubchapters && suggestedSubchapters.length > 0) {
-          toast.info(`${suggestedSubchapters.length} sous-chapitre(s) suggéré(s)`, {
-            description: "Vous pouvez les ajouter manuellement dans l'éditeur",
-          });
+        // Sauvegarder automatiquement si courseId est disponible
+        if (courseId) {
+          try {
+            const snapshot = getSnapshot();
+            if (snapshot.general.title && snapshot.general.title.trim()) {
+              const saveResponse = await fetch("/api/courses", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  snapshot,
+                  status: "draft",
+                  courseId: courseId,
+                }),
+              });
+
+              if (saveResponse.ok) {
+                console.log("[ai] Course auto-saved successfully");
+                toast.success(chapterId ? "Contenu du chapitre généré et sauvegardé" : "Chapitre généré et sauvegardé");
+              } else {
+                console.error("[ai] Auto-save failed:", await saveResponse.json());
+                toast.success(chapterId ? "Contenu du chapitre généré" : "Chapitre généré", {
+                  description: "La sauvegarde automatique a échoué, veuillez sauvegarder manuellement",
+                });
+              }
+            } else {
+              toast.success(chapterId ? "Contenu du chapitre généré" : "Chapitre généré", {
+                description: "Veuillez définir un titre pour la formation avant de sauvegarder",
+              });
+            }
+          } catch (saveError) {
+            console.error("[ai] Auto-save error:", saveError);
+            toast.success(chapterId ? "Contenu du chapitre généré" : "Chapitre généré", {
+              description: "La sauvegarde automatique a échoué, veuillez sauvegarder manuellement",
+            });
+          }
+        } else {
+          toast.success(chapterId ? "Contenu du chapitre généré" : "Chapitre généré");
         }
 
         setPrompt("");
@@ -115,7 +159,7 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
             Créer un chapitre avec Beyond AI
           </DialogTitle>
           <DialogDescription className="text-white/70">
-            Décrivez le chapitre que vous souhaitez créer. L'IA génèrera le titre, le résumé, le contenu et suggérera des sous-chapitres.
+            Décrivez le chapitre que vous souhaitez créer. L'IA génèrera le titre, le résumé et le contenu du chapitre.
           </DialogDescription>
         </DialogHeader>
 

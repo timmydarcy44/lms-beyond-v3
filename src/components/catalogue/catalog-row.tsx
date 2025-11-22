@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { ChevronLeft, ChevronRight, Lock, Check, Play, Headphones, Video, FileText, BookOpen, ClipboardCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Check, Play, Headphones, Video, FileText, BookOpen, ClipboardCheck, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CatalogCardImage } from "./catalog-card-image";
@@ -24,6 +24,7 @@ type CatalogItem = {
   access_status?: "pending_payment" | "purchased" | "manually_granted" | "free";
   course_slug?: string | null;
   kind?: string | null; // Pour les ressources : "pdf", "video", "audio"
+  content_format?: "text" | "audio" | "video" | null; // Format principal pour les modules
 };
 
 type CatalogRowProps = {
@@ -32,8 +33,17 @@ type CatalogRowProps = {
   onItemClick: (item: CatalogItem) => void;
 };
 
-// Fonction pour obtenir l'icône selon le type
+// Fonction pour obtenir l'icône selon le type et le format
 function getItemIcon(item: CatalogItem) {
+  // Pour les modules, utiliser le format (text, audio, video)
+  if (item.item_type === "module") {
+    if (item.content_format === "text") return Pencil;
+    if (item.content_format === "audio") return Headphones;
+    if (item.content_format === "video") return Play;
+    // Par défaut, si pas de format spécifié, utiliser texte
+    return Pencil;
+  }
+  
   // Pour les ressources, vérifier le kind précisément
   if (item.item_type === "ressource") {
     const kind = item.kind?.toLowerCase();
@@ -43,7 +53,7 @@ function getItemIcon(item: CatalogItem) {
     // Par défaut pour les ressources
     return FileText;
   }
-  if (item.item_type === "module") return BookOpen;
+  
   if (item.item_type === "parcours") return BookOpen;
   if (item.item_type === "test") return ClipboardCheck;
   return FileText;
@@ -148,11 +158,11 @@ export function CatalogRow({ title, items, onItemClick }: CatalogRowProps) {
           }}
         >
           {items.map((item) => {
+            // Les formations ne sont accessibles qu'après paiement d'abonnement
+            // Pas d'accès gratuit, même si is_free est true
             const hasAccess =
               item.access_status === "purchased" ||
-              item.access_status === "manually_granted" ||
-              item.access_status === "free" ||
-              item.is_free;
+              item.access_status === "manually_granted";
 
             const ItemIcon = getItemIcon(item);
             // Utiliser le prix réel de l'item, pas is_free qui peut être incorrect
@@ -192,17 +202,7 @@ export function CatalogRow({ title, items, onItemClick }: CatalogRowProps) {
                       : "bg-gradient-to-t from-black via-black/20 to-transparent opacity-0 group-hover:opacity-100"
                   )} />
 
-                  {/* Badge de prix en haut à droite */}
-                  <div className="absolute top-2 right-2 z-10">
-                    <span 
-                      className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md shadow-lg"
-                      style={{
-                        backgroundColor: isFree ? '#c39765' : `${primaryColor}CC`,
-                      }}
-                    >
-                      {isFree ? 'OFFERT' : `${displayPrice.toFixed(2)}€`}
-                    </span>
-                  </div>
+                  {/* Badge de prix en haut à droite - Retiré selon demande */}
 
 
                   {/* Contenu au survol - Style Apple TV */}
@@ -232,19 +232,15 @@ export function CatalogRow({ title, items, onItemClick }: CatalogRowProps) {
                     </div>
                   </div>
 
-                  {/* Badge de type avec icône en bas à gauche */}
+                  {/* Badge de format avec icône en bas à gauche - Seulement l'icône, pas de texte */}
                   <div className="absolute bottom-2 left-2 z-10">
                     <span 
-                      className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur-md shadow-lg"
+                      className="flex items-center justify-center rounded-full w-8 h-8 text-white backdrop-blur-md shadow-lg"
                       style={{
-                        backgroundColor: `${primaryColor}CC`,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
                       }}
                     >
-                      <ItemIcon className="h-3.5 w-3.5" />
-                      {/* Pour les ressources, afficher le type (audio/video/pdf) au lieu de "ressource" */}
-                      {item.item_type === "ressource" && item.kind 
-                        ? item.kind.toUpperCase() 
-                        : item.item_type}
+                      <ItemIcon className="h-4 w-4" />
                     </span>
                   </div>
                 </div>
@@ -259,15 +255,15 @@ export function CatalogRow({ title, items, onItemClick }: CatalogRowProps) {
                     {item.title}
                   </h3>
                   
-                  {/* Thématique/Catégorie toujours visible */}
+                  {/* Thématique/Catégorie toujours visible - En blanc */}
                   {(item.thematique || item.category) && (
                     <div className="mb-2">
                       <span 
                         className="inline-block rounded-full px-3 py-1 text-xs font-medium"
                         style={{
-                          backgroundColor: `${primaryColor}15`,
-                          color: primaryColor,
-                          border: `1px solid ${primaryColor}30`,
+                          backgroundColor: 'transparent',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
                         }}
                       >
                         {item.thematique || item.category}
@@ -275,19 +271,9 @@ export function CatalogRow({ title, items, onItemClick }: CatalogRowProps) {
                     </div>
                   )}
                   
-                  {/* Prix et CTA */}
-                  <div className="flex items-center justify-between gap-2">
-                    {/* Prix */}
-                    <span 
-                      className="text-xs font-bold"
-                      style={{ 
-                        color: isFree ? '#c39765' : primaryColor 
-                      }}
-                    >
-                      {isFree ? 'Offert' : `${displayPrice.toFixed(2)}€`}
-                    </span>
-                    
-                    {/* CTA "Ajouter à ma liste" ou "Accéder" */}
+                  {/* CTA uniquement */}
+                  <div className="flex items-center justify-end gap-2">
+                    {/* CTA "Accéder" - Contour blanc, fond transparent, texte blanc */}
                     {hasAccess ? (
                       <Button
                         onClick={(e) => {
@@ -295,10 +281,18 @@ export function CatalogRow({ title, items, onItemClick }: CatalogRowProps) {
                           onItemClick(item);
                         }}
                         size="sm"
+                        variant="outline"
                         className="text-xs"
                         style={{
-                          backgroundColor: primaryColor,
-                          color: '#FFFFFF',
+                          backgroundColor: 'transparent',
+                          borderColor: '#ffffff',
+                          color: '#ffffff',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                       >
                         <Play className="h-3 w-3 mr-1" />

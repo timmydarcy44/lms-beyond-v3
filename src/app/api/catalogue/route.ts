@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCatalogItems } from "@/lib/queries/catalogue";
 import { getServerClient } from "@/lib/supabase/server";
 
+const TIM_SUPER_ADMIN_ID = "60c88469-3c53-417f-a81d-565a662ad2f5";
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await getServerClient();
@@ -78,6 +80,52 @@ export async function GET(request: NextRequest) {
     // Pour les utilisateurs B2C, déterminer leur Super Admin via catalog_access
     // OU si c'est un Super Admin qui prévisualise son catalogue
     // Utiliser resolvedSuperAdminId si fourni via query params, sinon déterminer
+    if (!resolvedSuperAdminId && userId) {
+      // Pour les apprenants B2C, trouver leur Super Admin via catalog_access
+      const { data: access } = await supabase
+        .from("catalog_access")
+        .select("catalog_item_id, catalog_items!inner(creator_id)")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+      
+      if (access && (access as any).catalog_items?.creator_id) {
+        resolvedSuperAdminId = (access as any).catalog_items.creator_id;
+        console.log("[api/catalogue] Determined Super Admin from catalog_access:", resolvedSuperAdminId);
+      }
+    }
+    
+    // Si toujours pas de Super Admin, utiliser Tim par défaut pour Beyond No School
+    if (!resolvedSuperAdminId) {
+      // Pour Beyond No School, utiliser Tim par défaut
+      // Vérifier si Tim existe dans les super_admins
+      const { data: timSuperAdmin } = await supabase
+        .from("super_admins")
+        .select("user_id")
+        .eq("user_id", TIM_SUPER_ADMIN_ID)
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      if (timSuperAdmin) {
+        resolvedSuperAdminId = TIM_SUPER_ADMIN_ID;
+        console.log("[api/catalogue] Using Tim as default Super Admin for Beyond No School:", resolvedSuperAdminId);
+      } else {
+        // Fallback : essayer de trouver via les catalog_items les plus récents
+        const { data: recentItems } = await supabase
+          .from("catalog_items")
+          .select("creator_id")
+          .eq("is_active", true)
+          .eq("target_audience", "apprenant")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (recentItems?.creator_id) {
+          resolvedSuperAdminId = recentItems.creator_id;
+          console.log("[api/catalogue] Determined Super Admin from recent catalog_items:", resolvedSuperAdminId);
+        }
+      }
+    }
     let finalSuperAdminId: string | undefined = resolvedSuperAdminId;
     
     if (!finalSuperAdminId) {
@@ -109,11 +157,35 @@ export async function GET(request: NextRequest) {
         }
       }
     }
+    
+    // IMPORTANT: Si toujours pas de superAdminId et qu'on est sur Beyond No School (catalogue public),
+    // forcer l'ID de Tim pour éviter de montrer les formations d'autres super admins
+    if (!finalSuperAdminId && !user) {
+      // Catalogue public sans authentification - utiliser Tim par défaut pour Beyond No School
+      finalSuperAdminId = TIM_SUPER_ADMIN_ID;
+      console.log("[api/catalogue] Public access - forcing Tim as default Super Admin for Beyond No School");
+    }
 
+    console.log("[api/catalogue] Final params:", {
+      organizationId,
+      userRole,
+      userId,
+      finalSuperAdminId,
+    });
+    
     const items = await getCatalogItems(organizationId, userRole, userId, finalSuperAdminId);
 
     console.log("[api/catalogue] Final superAdminId:", finalSuperAdminId);
     console.log("[api/catalogue] Items count:", items?.length || 0);
+    if (items && items.length > 0) {
+      console.log("[api/catalogue] First item:", {
+        id: items[0].id,
+        title: items[0].title,
+        category: items[0].category,
+        target_audience: (items[0] as any).target_audience,
+        is_active: (items[0] as any).is_active,
+      });
+    }
 
     return NextResponse.json({ items: items || [] }, { status: 200 });
   } catch (error) {

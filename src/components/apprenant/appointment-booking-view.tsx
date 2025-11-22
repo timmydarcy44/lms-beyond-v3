@@ -5,6 +5,7 @@ import { Calendar, Clock, CheckCircle2, Loader2, ChevronLeft, ChevronRight } fro
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday, isPast, addWeeks, subWeeks, getDay } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -31,8 +32,26 @@ interface TimeSlot {
 }
 
 export function AppointmentBookingView({ superAdminId }: { superAdminId: string }) {
-  const supabase = useSupabase();
+  // Utiliser useSupabase si disponible (dans un contexte avec provider), sinon créer un client anonyme
+  let contextSupabase: any = null;
+  try {
+    contextSupabase = useSupabase();
+  } catch (e) {
+    // Pas de provider, on créera un client anonyme
+  }
+  
+  const [supabase, setSupabase] = useState<any>(contextSupabase);
   const router = useRouter();
+  
+  // Si pas de provider, créer un client anonyme
+  useEffect(() => {
+    if (!supabase && typeof window !== 'undefined') {
+      const client = createSupabaseBrowserClient();
+      if (client) {
+        setSupabase(client);
+      }
+    }
+  }, []);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [existingSlots, setExistingSlots] = useState<any[]>([]);
@@ -47,6 +66,7 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
   const [bookingForm, setBookingForm] = useState({
     firstName: "",
     lastName: "",
+    email: "",
     classe: "",
     notes: "",
   });
@@ -68,6 +88,7 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
           setBookingForm({
             firstName: nameParts[0] || "",
             lastName: nameParts.slice(1).join(" ") || "",
+            email: profile?.email || "",
             classe: "",
             notes: "",
           });
@@ -106,10 +127,10 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
         .lte("start_time", endOfWeekDate.toISOString())
         .order("start_time", { ascending: true });
 
-      // Récupérer les rendez-vous déjà pris
+      // Récupérer les rendez-vous déjà pris (y compris ceux sans learner_id pour les réservations anonymes)
       const { data: appointmentsData } = await supabase
         .from("appointments")
-        .select("slot_id, start_time, status")
+        .select("slot_id, start_time, status, learner_id")
         .eq("super_admin_id", superAdminId)
         .in("status", ["pending", "confirmed"])
         .gte("start_time", startOfWeekDate.toISOString())
@@ -117,6 +138,13 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
 
       console.log("[booking] Fetched slots:", slotsData?.length || 0, "slots");
       console.log("[booking] Fetched appointments:", appointmentsData?.length || 0, "appointments");
+      console.log("[booking] Appointments details:", appointmentsData?.map((apt: any) => ({
+        id: apt.id,
+        slot_id: apt.slot_id,
+        start_time: apt.start_time,
+        status: apt.status,
+        learner_id: apt.learner_id
+      })));
       setExistingSlots(slotsData || []);
       setExistingAppointments(appointmentsData || []);
     } catch (error) {
@@ -167,7 +195,17 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
 
     const now = new Date();
     
-    // Créer des sets pour les créneaux réservés
+    // Créer des sets pour les créneaux réservés (par slot_id ET par start_time pour plus de précision)
+    const takenSlotIds = new Set(
+      existingAppointments
+        .filter((apt) => {
+          const aptDate = new Date(apt.start_time);
+          return isSameDay(aptDate, day) && (apt.status === "pending" || apt.status === "confirmed");
+        })
+        .map((apt) => apt.slot_id)
+        .filter((id): id is string => id !== null)
+    );
+    
     const takenTimes = new Set(
       existingAppointments
         .filter((apt) => {
@@ -190,8 +228,10 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
       // Vérifier si le créneau est passé
       const isPast = slotStart < now;
       
-      // Vérifier si le créneau est réservé
-      const isTaken = takenTimes.has(slotStartNormalized.toISOString());
+      // Vérifier si le créneau est réservé (par slot_id OU par start_time)
+      const isTakenBySlotId = takenSlotIds.has(slot.id);
+      const isTakenByTime = takenTimes.has(slotStartNormalized.toISOString());
+      const isTaken = isTakenBySlotId || isTakenByTime;
       
       return {
         start: slotStart,
@@ -201,19 +241,16 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
       };
     }).sort((a, b) => a.start.getTime() - b.start.getTime());
 
-    console.log("[booking] Time slots for", format(day, "yyyy-MM-dd"), ":", timeSlots.length, "available:", timeSlots.filter(s => s.available).length);
-    return timeSlots;
+    // Filtrer pour ne retourner que les créneaux disponibles
+    const availableSlots = timeSlots.filter(s => s.available);
+    console.log("[booking] Time slots for", format(day, "yyyy-MM-dd"), ":", timeSlots.length, "total,", availableSlots.length, "available");
+    return availableSlots;
   };
 
   const handleSlotSelect = (slot: TimeSlot, day: Date) => {
     if (!slot.available) return;
     
-    if (!user) {
-      toast.error("Veuillez vous connecter pour réserver un créneau");
-      router.push("/login?redirect=/reservation");
-      return;
-    }
-
+    // Permettre la réservation sans authentification
     setSelectedSlot(slot);
     setSelectedDay(day);
     setShowBookingDialog(true);
@@ -222,8 +259,8 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
   const handleBooking = async () => {
     if (!supabase || !selectedSlot || !selectedDay) return;
 
-    if (!bookingForm.firstName || !bookingForm.lastName || !bookingForm.classe) {
-      toast.error("Veuillez remplir tous les champs obligatoires");
+    if (!bookingForm.firstName || !bookingForm.lastName || !bookingForm.email || !bookingForm.classe) {
+      toast.error("Veuillez remplir tous les champs obligatoires (Prénom, Nom, Email, Classe)");
       return;
     }
 
@@ -237,43 +274,64 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
         throw new Error("Aucun créneau disponible pour cette date");
       }
 
-      // Créer le rendez-vous
-      const { data: appointment, error: appointmentError } = await supabase
-        .from("appointments")
-        .insert({
+      // Créer le rendez-vous via l'API route pour bypass RLS
+      // (nécessaire pour les réservations anonymes)
+      const createResponse = await fetch("/api/appointments/create-anonymous", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           super_admin_id: superAdminId,
-          learner_id: user.id,
           slot_id: slotId,
           start_time: selectedSlot.start.toISOString(),
           end_time: selectedSlot.end.toISOString(),
-          status: "confirmed",
           subject: `${bookingForm.firstName} ${bookingForm.lastName} - ${bookingForm.classe}`,
           learner_notes: bookingForm.notes 
-            ? `${bookingForm.notes}\n\nClasse: ${bookingForm.classe}`
-            : `Classe: ${bookingForm.classe}`,
-        })
-        .select()
-        .single();
+            ? `${bookingForm.notes}\n\nClasse: ${bookingForm.classe}\nEmail: ${bookingForm.email}`
+            : `Classe: ${bookingForm.classe}\nEmail: ${bookingForm.email}`,
+          notes: `Email: ${bookingForm.email}\nClasse: ${bookingForm.classe}\n\n${bookingForm.notes || ""}`,
+          email: bookingForm.email,
+        }),
+      });
 
-      if (appointmentError) throw appointmentError;
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json();
+        console.error("[booking] Error creating appointment:", errorData);
+        throw new Error(errorData.error || "Erreur lors de la création du rendez-vous");
+      }
+
+      const { appointment } = await createResponse.json();
+
+      console.log("[booking] ✅ Appointment created successfully:", {
+        id: appointment.id,
+        slot_id: appointment.slot_id,
+        super_admin_id: appointment.super_admin_id,
+        learner_id: appointment.learner_id,
+        start_time: appointment.start_time,
+        status: appointment.status
+      });
 
       // Envoyer une notification par email à contentin.cabinet@gmail.com
-      const response = await fetch("/api/agenda/notify-admin", {
+      const notifyResponse = await fetch("/api/agenda/notify-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           appointmentId: appointment.id,
           learnerName: `${bookingForm.firstName} ${bookingForm.lastName}`,
-          learnerEmail: user.email,
+          learnerEmail: bookingForm.email || user?.email || null, // Utiliser l'email du formulaire ou celui de l'utilisateur connecté
           appointmentTime: selectedSlot.start.toISOString(),
           subject: `${bookingForm.firstName} ${bookingForm.lastName} - ${bookingForm.classe}`,
           notes: `Classe: ${bookingForm.classe}`,
         }),
       });
 
-      if (!response.ok) {
+      if (!notifyResponse.ok) {
         console.error("Error sending notification to admin");
       }
+
+      // Rafraîchir la liste des créneaux disponibles après la réservation
+      await fetchAvailableSlots();
 
       // Rediriger vers la page de remerciement
       const firstName = bookingForm.firstName;
@@ -444,6 +502,18 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
               </div>
 
               <div>
+                <Label htmlFor="email" className="text-amber-900">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={bookingForm.email}
+                  onChange={(e) => setBookingForm({ ...bookingForm, email: e.target.value })}
+                  placeholder="votre.email@exemple.com"
+                  className="mt-1 border-amber-300 bg-white text-amber-900 placeholder:text-amber-400"
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="classe" className="text-amber-900">Classe *</Label>
                 <Select
                   value={bookingForm.classe}
@@ -483,7 +553,7 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
                 setShowBookingDialog(false);
                 setSelectedSlot(null);
                 setSelectedDay(null);
-                setBookingForm({ ...bookingForm, classe: "", notes: "" });
+                setBookingForm({ ...bookingForm, email: "", classe: "", notes: "" });
               }}
               disabled={isBooking}
               className="border-amber-300 text-amber-900 hover:bg-amber-100"

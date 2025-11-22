@@ -1,14 +1,23 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSuperAdminStats, getTrends, getTopPerformers } from "@/lib/queries/super-admin";
 import { getTrainingSectorNews } from "@/lib/queries/news";
-import { Building2, Users, Activity, Plus, ChevronRight, ExternalLink, Newspaper, TrendingUp, Award, AlertTriangle, Target, Clock, CheckCircle2 } from "lucide-react";
+import { Building2, Users, Activity, Plus, ChevronRight, ExternalLink, Newspaper, TrendingUp, Award, AlertTriangle, Target, Clock, CheckCircle2, Globe, BookOpen, Store } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { TrendChart } from "@/components/super-admin/trend-chart";
+import { getServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function SuperDashboard() {
+  const supabase = await getServerClient();
+  if (!supabase) {
+    redirect("/login");
+  }
+  const { data: { user } } = await supabase.auth.getUser();
+  const isContentin = user?.email === "contentin.cabinet@gmail.com";
+
   const [stats, news, trends30d, topPerformers] = await Promise.all([
     getSuperAdminStats(),
     getTrainingSectorNews(),
@@ -16,7 +25,36 @@ export default async function SuperDashboard() {
     getTopPerformers(),
   ]);
 
-  const quickActions = [
+  // Actions rapides pour contentin.cabinet@gmail.com
+  const contentinQuickActions = [
+    {
+      title: "Créer une formation",
+      description: "Créer une nouvelle formation pour votre catalogue",
+      href: "/super/studio/modules/new/choose",
+      image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80",
+      icon: BookOpen,
+      color: "from-blue-500/20 via-blue-400/30 to-transparent",
+    },
+    {
+      title: "Mon catalogue",
+      description: "Gérer et visualiser votre catalogue de formations",
+      href: "/super/catalogue",
+      image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80",
+      icon: Store,
+      color: "from-purple-500/20 via-purple-400/30 to-transparent",
+    },
+    {
+      title: "Gérer mon site",
+      description: "Personnaliser le site jessica-contentin.fr",
+      href: "/super/pages",
+      image: "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=800&q=80",
+      icon: Globe,
+      color: "from-green-500/20 via-green-400/30 to-transparent",
+    },
+  ];
+
+  // Actions rapides pour les autres super admins
+  const defaultQuickActions = [
     {
       title: "Créer une Organisation",
       description: "Initialiser une nouvelle structure organisationnelle",
@@ -41,7 +79,25 @@ export default async function SuperDashboard() {
       icon: Users,
       color: "from-green-500/20 via-green-400/30 to-transparent",
     },
+    {
+      title: "Créer une formation pour Beyond No School",
+      description: "Créer une formation qui sera automatiquement intégrée au catalogue Beyond No School",
+      href: "/super/studio/modules/new/choose?assignment_type=no_school",
+      image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80",
+      icon: Building2,
+      color: "from-orange-500/20 via-orange-400/30 to-transparent",
+    },
+    {
+      title: "Créer une formation pour une organisation",
+      description: "Créer une formation assignée à une organisation spécifique",
+      href: "/super/studio/modules/new/choose?assignment_type=organization",
+      image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
+      icon: Building2,
+      color: "from-indigo-500/20 via-indigo-400/30 to-transparent",
+    },
   ];
+
+  const quickActions = isContentin ? contentinQuickActions : defaultQuickActions;
 
   return (
     <div className="space-y-8">
@@ -51,12 +107,12 @@ export default async function SuperDashboard() {
           Dashboard
         </h1>
         <p className="text-sm text-gray-600 text-center">
-          Vue d'ensemble du système
+          {isContentin ? "Gestion de votre catalogue et de votre site" : "Vue d'ensemble du système"}
         </p>
       </div>
 
       {/* Actions Rapides - Style Apple */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid gap-4 ${isContentin ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"}`}>
         {quickActions.map((action) => {
           return (
             <Link key={action.href} href={action.href}>
@@ -102,7 +158,8 @@ export default async function SuperDashboard() {
         })}
       </div>
 
-      {/* KPI Cards - Métriques de Base */}
+      {/* KPI Cards - Métriques de Base - Masquer pour contentin */}
+      {!isContentin && (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-gray-200 bg-gradient-to-br from-white to-blue-50/30 shadow-sm">
           <CardHeader className="pb-3">
@@ -170,8 +227,10 @@ export default async function SuperDashboard() {
           </CardContent>
         </Card>
       </div>
+      )}
 
-      {/* Métriques Enrichies - Engagement & Performance */}
+      {/* Métriques Enrichies - Engagement & Performance - Masquer pour contentin */}
+      {!isContentin && (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card className="border-gray-200 bg-gradient-to-br from-white to-blue-50/30 shadow-sm">
           <CardHeader className="pb-3">
@@ -254,8 +313,10 @@ export default async function SuperDashboard() {
           </CardContent>
         </Card>
       </div>
+      )}
 
-      {/* Graphiques de Tendances */}
+      {/* Graphiques de Tendances - Masquer pour contentin */}
+      {!isContentin && (
       <div className="space-y-4">
         <div className="flex items-center justify-between px-1">
           <div>
@@ -265,8 +326,10 @@ export default async function SuperDashboard() {
         </div>
         <TrendChart data={trends30d} title="Évolution du Système" timeRange="30d" />
       </div>
+      )}
 
-      {/* Top Performers */}
+      {/* Top Performers - Masquer pour contentin */}
+      {!isContentin && (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-gray-200 bg-white shadow-sm">
           <CardHeader>
@@ -372,8 +435,10 @@ export default async function SuperDashboard() {
           </CardContent>
         </Card>
       </div>
+      )}
 
-      {/* Organisations Récentes - Style Apple */}
+      {/* Organisations Récentes - Style Apple - Masquer pour contentin */}
+      {!isContentin && (
       <div className="space-y-4">
         <div className="flex items-center justify-between px-1">
           <div>
@@ -449,8 +514,10 @@ export default async function SuperDashboard() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Actualités du Secteur de la Formation - Slider */}
+      {/* Actualités du Secteur de la Formation - Slider - Masquer pour contentin */}
+      {!isContentin && (
       <div className="space-y-4">
         <div className="flex items-center justify-between px-1">
           <div>
@@ -511,6 +578,7 @@ export default async function SuperDashboard() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

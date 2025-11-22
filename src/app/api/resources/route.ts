@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
+import { syncCatalogItem } from "@/lib/utils/sync-catalog-item";
 import { createStripeProduct, updateStripeProduct } from "@/lib/stripe/products";
 
 export async function POST(request: NextRequest) {
@@ -433,6 +434,40 @@ export async function POST(request: NextRequest) {
             // Ne pas bloquer la création de la ressource si Stripe échoue
           }
         }
+
+        // Synchroniser avec catalog_items si Super Admin
+        if (data && data.id) {
+          try {
+            // Vérifier si c'est contentin.cabinet@gmail.com
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("email")
+              .eq("id", user.id)
+              .maybeSingle();
+
+            const isContentin = profile?.email === "contentin.cabinet@gmail.com";
+
+            await syncCatalogItem({
+              supabase,
+              userId: user.id,
+              contentId: data.id,
+              itemType: "ressource",
+              title: title.trim(),
+              description: description?.trim() || null,
+              shortDescription: description ? description.substring(0, 150) : null,
+              price: price || 0,
+              category: category || null,
+              heroImage: null, // Les ressources n'ont pas toujours d'image hero
+              thumbnailUrl: null,
+              targetAudience: isContentin ? "apprenant" : "apprenant", // Toujours "apprenant" pour contentin
+              assignmentType: isContentin ? "no_school" : "no_school", // Toujours "no_school" pour contentin
+              status: published ? "published" : "draft",
+            });
+          } catch (syncError) {
+            console.error("[api/resources] Erreur lors de la synchronisation avec catalog_items:", syncError);
+            // Ne pas bloquer la création si la synchronisation échoue
+          }
+        }
       }
 
       if (error) {
@@ -515,6 +550,40 @@ export async function POST(request: NextRequest) {
         error: "Erreur lors de la publication", 
         details: error.message 
       }, { status: 500 });
+    }
+
+    // Synchroniser avec catalog_items si Super Admin et ressource publiée (ou si contentin, toujours)
+    if (data && data.id && (published || true)) { // Toujours synchroniser pour contentin
+      try {
+        // Vérifier si c'est contentin.cabinet@gmail.com
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        const isContentin = profile?.email === "contentin.cabinet@gmail.com";
+
+        await syncCatalogItem({
+          supabase,
+          userId: user.id,
+          contentId: data.id,
+          itemType: "ressource",
+          title: data.title || "",
+          description: data.description || null,
+          shortDescription: data.description ? data.description.substring(0, 150) : null,
+          price: (data as any).price || 0,
+          category: (data as any).category || null,
+          heroImage: (data as any).hero_image_url || (data as any).cover_url || null,
+          thumbnailUrl: (data as any).thumbnail_url || (data as any).cover_url || null,
+          targetAudience: isContentin ? "apprenant" : "apprenant",
+          assignmentType: isContentin ? "no_school" : "no_school",
+          status: published ? "published" : "draft",
+        });
+      } catch (syncError) {
+        console.error("[api/resources] Erreur lors de la synchronisation avec catalog_items:", syncError);
+        // Ne pas bloquer la mise à jour si la synchronisation échoue
+      }
     }
 
     return NextResponse.json({ 

@@ -113,7 +113,10 @@ export async function POST(request: NextRequest) {
 Génère un ensemble de questions de test basées sur le contenu fourni.
 Les questions doivent être pertinentes, claires et évaluer la compréhension du contenu.
 Génère ${numberOfQuestions} questions de difficulté ${difficulty}.
-Utilise les types de questions suivants : ${questionTypes.join(", ")}.`;
+Utilise les types de questions suivants : ${questionTypes.join(", ")}.
+
+IMPORTANT : Tu dois retourner un OBJET JSON avec une propriété "questions" qui contient un tableau de questions.
+Chaque question doit avoir des données RÉELLES (titre, options, etc.), pas le schéma JSON.`;
 
     const userPrompt = `Génère ${numberOfQuestions} questions d'évaluation basées sur le contenu suivant :
 
@@ -124,7 +127,24 @@ Instructions :
 - Pour les questions à choix multiples (multiple/single), propose 4 options dont une seule correcte
 - Pour les questions texte, assure-toi qu'elles nécessitent une réponse détaillée
 - Adapte la difficulté à : ${difficulty}
-- Les questions doivent être claires et sans ambiguïté`;
+- Les questions doivent être claires et sans ambiguïté
+
+Retourne un objet JSON avec cette structure :
+{
+  "questions": [
+    {
+      "title": "Texte de la question réelle",
+      "type": "multiple",
+      "options": [
+        {"value": "Option 1", "correct": false},
+        {"value": "Option 2", "correct": true},
+        ...
+      ],
+      "score": 1
+    },
+    ...
+  ]
+}`;
 
     const schema = {
       parameters: {
@@ -187,6 +207,8 @@ Instructions :
       resultKeys: result ? Object.keys(result) : [],
       hasQuestions: result?.questions ? true : false,
       questionsCount: result?.questions?.length || 0,
+      resultType: result ? typeof result : null,
+      isArray: Array.isArray(result),
     });
 
     if (!result) {
@@ -197,11 +219,24 @@ Instructions :
       }, { status: 500 });
     }
 
+    // Vérifier si l'IA a retourné le schéma au lieu d'une instance
+    // Le schéma contient "type": "object", "properties", etc.
+    if (result.type === "object" && result.properties && !result.questions) {
+      console.error("[generate-test-from-chapters] L'IA a retourné le schéma au lieu d'une instance:", result);
+      return NextResponse.json({ 
+        error: "Impossible de générer les questions",
+        details: "L'IA a retourné le schéma JSON au lieu de données. Veuillez réessayer."
+      }, { status: 500 });
+    }
+
     // L'IA peut retourner directement un tableau ou un objet avec une propriété questions
     let questionsArray = result.questions || (Array.isArray(result) ? result : null);
 
     if (!questionsArray || !Array.isArray(questionsArray) || questionsArray.length === 0) {
-      console.error("[generate-test-from-chapters] Format de réponse invalide:", result);
+      console.error("[generate-test-from-chapters] Format de réponse invalide:", {
+        result,
+        resultString: JSON.stringify(result).substring(0, 500),
+      });
       return NextResponse.json({ 
         error: "Impossible de générer les questions",
         details: "La réponse de l'IA n'est pas au format attendu. Format reçu: " + JSON.stringify(result).substring(0, 200)

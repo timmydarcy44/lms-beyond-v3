@@ -23,6 +23,7 @@ function CourseValidationContent() {
   useEffect(() => {
     const titleParam = searchParams.get("title");
     const structureParam = searchParams.get("structure");
+    const assignmentTypeParam = searchParams.get("assignment_type");
 
     if (titleParam) {
       setTitle(titleParam);
@@ -152,11 +153,25 @@ function CourseValidationContent() {
     // Hydrater le builder avec cette structure
     hydrate(snapshot);
 
-    // Rediriger vers les métadonnées
+    // Rediriger vers les métadonnées avec la structure validée dans l'URL
     // Vérifier si on vient de /modules ou /formations
     const isFromModules = window.location.pathname.includes("/modules");
     const basePath = isFromModules ? "/super/studio/modules" : "/super/studio/formations";
-    router.push(`${basePath}/new/metadata`);
+    
+    // Passer la structure validée via l'URL pour que la page de métadonnées puisse la charger
+    const params = new URLSearchParams({
+      title: title,
+      method: "validated_prompt",
+      structure: JSON.stringify({ sections: structure }),
+    });
+    
+    // Passer assignment_type si présent dans l'URL
+    const assignmentTypeParam = searchParams.get("assignment_type");
+    if (assignmentTypeParam) {
+      params.append("assignment_type", assignmentTypeParam);
+    }
+    
+    router.push(`${basePath}/new/metadata?${params.toString()}`);
   };
 
   return (
@@ -172,7 +187,12 @@ function CourseValidationContent() {
             </div>
             <Button
               variant="outline"
-              onClick={() => router.back()}
+              onClick={() => {
+                // Rediriger vers les métadonnées au lieu de router.back()
+                const isFromModules = window.location.pathname.includes("/modules");
+                const basePath = isFromModules ? "/super/studio/modules" : "/super/studio/formations";
+                router.push(`${basePath}/new/metadata`);
+              }}
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -349,7 +369,12 @@ function CourseValidationContent() {
       <div className="flex justify-end gap-3 pt-4">
         <Button
           variant="outline"
-          onClick={() => router.back()}
+          onClick={() => {
+            // Rediriger vers les métadonnées au lieu de router.back()
+            const isFromModules = window.location.pathname.includes("/modules");
+            const basePath = isFromModules ? "/super/studio/modules" : "/super/studio/formations";
+            router.push(`${basePath}/new/metadata`);
+          }}
           className="border-gray-300 text-gray-700 hover:bg-gray-50"
         >
           Annuler

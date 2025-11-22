@@ -122,11 +122,51 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
 
       setSlots(slotsData || []);
       setAppointments(
-        (appointmentsData || []).map((apt: any) => ({
-          ...apt,
-          learner_name: apt.learner?.full_name || "Inconnu",
-          learner_email: apt.learner?.email || "",
-        }))
+        (appointmentsData || []).map((apt: any) => {
+          // Si le rendez-vous a un learner_id, utiliser les données du profil
+          if (apt.learner_id && apt.learner) {
+            return {
+              ...apt,
+              learner_name: apt.learner.full_name || "Inconnu",
+              learner_email: apt.learner.email || "",
+            };
+          }
+
+          // Sinon, extraire depuis subject pour les rendez-vous anonymes
+          let learner_name = "Inconnu";
+          if (apt.subject) {
+            // Format: "Prénom Nom - Classe"
+            const subjectMatch = apt.subject.match(/^(.+?)\s+-\s+/);
+            if (subjectMatch) {
+              learner_name = subjectMatch[1].trim();
+            } else {
+              // Si pas de tiret, prendre tout le subject comme nom
+              learner_name = apt.subject.trim() || "Inconnu";
+            }
+          }
+
+          // Extraire l'email depuis notes ou learner_notes
+          let learner_email = "";
+          const notesText = apt.notes || apt.learner_notes || "";
+          const emailMatch = notesText.match(/Email:\s*([^\n\s]+)/i);
+          if (emailMatch) {
+            learner_email = emailMatch[1].trim();
+          } else {
+            // Si pas d'email trouvé, essayer depuis tous les champs
+            const allText = `${apt.subject || ""} ${apt.notes || ""} ${apt.learner_notes || ""}`;
+            const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/;
+            const emailMatch2 = allText.match(emailRegex);
+            if (emailMatch2) {
+              learner_email = emailMatch2[1];
+            }
+          }
+
+          return {
+            ...apt,
+            learner_name,
+            learner_email,
+          };
+        })
       );
     } catch (error) {
       console.error("Error fetching agenda data:", error);

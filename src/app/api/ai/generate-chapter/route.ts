@@ -18,6 +18,11 @@ const normalizeTextValue = (value: unknown): string => {
   }
 
   if (typeof value === "string") {
+    // Si c'est déjà du HTML (contient des balises), le retourner tel quel
+    if (value.includes('<') && value.includes('>')) {
+      return value;
+    }
+    // Sinon, c'est du texte brut, le retourner tel quel aussi
     return value;
   }
 
@@ -57,33 +62,6 @@ const normalizeChapterResult = (raw: any) => {
   const duration =
     typeof raw?.duration === "string" ? raw.duration : String(raw?.duration ?? "");
 
-  const suggestedSubchapters = Array.isArray(raw?.suggestedSubchapters)
-    ? raw.suggestedSubchapters
-        .map((sub: any, index: number) => {
-          const subTitle =
-            typeof sub?.title === "string" && sub.title.trim().length > 0
-              ? sub.title.trim()
-              : `Sous-chapitre ${index + 1}`;
-          const subSummary = normalizeTextValue(sub?.summary);
-          const subDuration =
-            typeof sub?.duration === "string"
-              ? sub.duration
-              : String(sub?.duration ?? "");
-          const subType =
-            typeof sub?.type === "string" && allowedSubchapterTypes.has(sub.type)
-              ? sub.type
-              : "text";
-
-          return {
-            title: subTitle,
-            summary: subSummary,
-            duration: subDuration,
-            type: subType,
-          };
-        })
-        .filter((sub: any) => sub && sub.title)
-    : [];
-
   return {
     title:
       typeof raw?.title === "string" && raw.title.trim().length > 0
@@ -93,7 +71,6 @@ const normalizeChapterResult = (raw: any) => {
     content,
     duration,
     type,
-    suggestedSubchapters,
   };
 };
 
@@ -120,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Construire le prompt
     const fullPrompt = buildChapterGenerationPrompt(prompt, courseContext);
 
-    // Générer le chapitre
+    // Générer le chapitre (sans suggestedSubchapters - on ne veut que le contenu)
     // Note: Le schéma est passé dans le prompt system, la fonction generateJSON utilisera json_object
     const schema = {
       parameters: {
@@ -131,21 +108,8 @@ export async function POST(request: NextRequest) {
           content: { type: "string" },
           duration: { type: "string" },
           type: { type: "string", enum: ["video", "text", "document"] },
-          suggestedSubchapters: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                duration: { type: "string" },
-                type: { type: "string", enum: ["video", "text", "document", "audio"] },
-                summary: { type: "string" },
-              },
-              required: ["title", "duration", "type", "summary"],
-            },
-          },
         },
-        required: ["title", "summary", "content", "duration", "type", "suggestedSubchapters"],
+        required: ["title", "summary", "content", "duration", "type"],
       },
     };
 
@@ -155,7 +119,100 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Erreur lors de la génération" }, { status: 500 });
     }
 
-    const chapter = normalizeChapterResult(result);
+    // Vérifier et corriger le format du contenu si nécessaire
+    let content = result.content;
+    if (typeof content === "string") {
+      // Si le contenu ne contient pas de balises HTML, c'est probablement du texte brut ou du markdown
+      if (!content.includes('<') || !content.includes('>')) {
+        console.warn("[ai] Content is not HTML, converting to HTML format");
+        // Convertir le texte brut/markdown en HTML
+        const lines = content.split('\n');
+        let htmlContent = '';
+        let inList = false;
+        let listType: 'ul' | 'ol' | null = null;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            continue;
+          }
+
+          // Détecter les titres markdown
+          if (line.startsWith('#### ')) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<h4>${line.substring(5)}</h4>\n`;
+          } else if (line.startsWith('### ')) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<h3>${line.substring(4)}</h3>\n`;
+          } else if (line.startsWith('## ')) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<h2>${line.substring(3)}</h2>\n`;
+          } else if (line.startsWith('# ')) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<h2>${line.substring(2)}</h2>\n`;
+          } else if (/^\d+\.\s/.test(line)) {
+            // Liste numérotée
+            if (!inList || listType !== 'ol') {
+              if (inList) {
+                htmlContent += `</${listType}>\n`;
+              }
+              htmlContent += '<ol>\n';
+              inList = true;
+              listType = 'ol';
+            }
+            htmlContent += `<li>${line.replace(/^\d+\.\s/, '')}</li>\n`;
+          } else if (/^[-*+]\s/.test(line)) {
+            // Liste à puces
+            if (!inList || listType !== 'ul') {
+              if (inList) {
+                htmlContent += `</${listType}>\n`;
+              }
+              htmlContent += '<ul>\n';
+              inList = true;
+              listType = 'ul';
+            }
+            htmlContent += `<li>${line.replace(/^[-*+]\s/, '')}</li>\n`;
+          } else {
+            // Paragraphe normal
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<p>${line}</p>\n`;
+          }
+        }
+
+        if (inList) {
+          htmlContent += `</${listType}>\n`;
+        }
+
+        content = htmlContent.trim();
+      }
+    }
+
+    const chapter = normalizeChapterResult({ ...result, content });
 
     return NextResponse.json({ success: true, chapter });
   } catch (error) {

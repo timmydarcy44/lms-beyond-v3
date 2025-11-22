@@ -67,15 +67,27 @@ export default function RessourcesPage() {
 
   const loadResources = async () => {
     try {
-      // Récupérer les items du catalogue pour contentin.cabinet@gmail.com
+      // Récupérer les items du catalogue pour Jessica Contentin
+      // L'API détectera automatiquement le tenant depuis les headers
       const response = await fetch(
-        `/api/catalogue?superAdminEmail=${encodeURIComponent("contentin.cabinet@gmail.com")}`
+        `/api/catalogue?superAdminEmail=${encodeURIComponent("contentin.cabinet@gmail.com")}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
       
       if (response.ok) {
         const data = await response.json();
         setCatalogItems(data.items || []);
         console.log("[RessourcesPage] Items chargés:", data.items?.length || 0);
+        if (data.items && data.items.length > 0) {
+          console.log("[RessourcesPage] Premier item:", {
+            title: data.items[0].title,
+            creator_id: (data.items[0] as any).creator_id,
+          });
+        }
       } else {
         console.error("[RessourcesPage] Erreur lors du chargement des ressources");
       }

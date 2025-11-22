@@ -3,6 +3,7 @@ import { getCatalogItems } from "@/lib/queries/catalogue";
 import { getServerClient } from "@/lib/supabase/server";
 
 const TIM_SUPER_ADMIN_ID = "60c88469-3c53-417f-a81d-565a662ad2f5";
+const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,21 +13,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ items: [] }, { status: 200 });
     }
 
+    // Détecter le tenant depuis les headers (pour app.jessicacontentin.fr)
+    const tenantId = request.headers.get('x-tenant-id');
+    const tenantSuperAdminEmail = request.headers.get('x-super-admin-email');
+    
+    console.log("[api/catalogue] Tenant detection:", {
+      tenantId,
+      tenantSuperAdminEmail,
+    });
+
     // Récupérer le superAdminId depuis les query params pour les pages publiques
     const { searchParams } = new URL(request.url);
     const superAdminId = searchParams.get('superAdminId') || undefined;
     const superAdminEmail = searchParams.get('superAdminEmail') || undefined;
 
-    // Si superAdminEmail est fourni, récupérer l'ID
+    // PRIORITÉ 1: Si on est sur app.jessicacontentin.fr (tenant jessica-contentin-app), 
+    // utiliser l'email du tenant depuis les headers
+    let emailToUse = superAdminEmail || tenantSuperAdminEmail || undefined;
+    
+    // Si superAdminEmail est fourni (via query param ou tenant), récupérer l'ID
     let resolvedSuperAdminId = superAdminId;
-    if (superAdminEmail && !superAdminId) {
+    if (emailToUse && !superAdminId) {
       const { data: superAdminProfile } = await supabase
         .from("profiles")
         .select("id")
-        .eq("email", superAdminEmail)
+        .eq("email", emailToUse)
         .maybeSingle();
       if (superAdminProfile) {
         resolvedSuperAdminId = superAdminProfile.id;
+        console.log("[api/catalogue] Resolved superAdminId from email:", emailToUse, "->", resolvedSuperAdminId);
+      } else {
+        console.warn("[api/catalogue] Could not find profile for email:", emailToUse);
       }
     }
 
@@ -160,10 +177,37 @@ export async function GET(request: NextRequest) {
     
     // IMPORTANT: Si toujours pas de superAdminId et qu'on est sur Beyond No School (catalogue public),
     // forcer l'ID de Tim pour éviter de montrer les formations d'autres super admins
-    if (!finalSuperAdminId && !user) {
+    // MAIS: Ne jamais forcer Tim si on est sur un tenant Jessica Contentin
+    if (!finalSuperAdminId && !user && tenantId !== 'jessica-contentin-app' && tenantId !== 'jessica-contentin') {
       // Catalogue public sans authentification - utiliser Tim par défaut pour Beyond No School
       finalSuperAdminId = TIM_SUPER_ADMIN_ID;
       console.log("[api/catalogue] Public access - forcing Tim as default Super Admin for Beyond No School");
+    }
+    
+    // SÉCURITÉ: Si on est sur app.jessicacontentin.fr mais qu'on n'a pas de superAdminId, 
+    // FORCER l'ID de Jessica Contentin
+    if ((tenantId === 'jessica-contentin-app' || tenantId === 'jessica-contentin') && !finalSuperAdminId) {
+      // Essayer d'abord avec l'email du tenant
+      const emailToResolve = tenantSuperAdminEmail || JESSICA_CONTENTIN_EMAIL;
+      const { data: tenantProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", emailToResolve)
+        .maybeSingle();
+      if (tenantProfile) {
+        finalSuperAdminId = tenantProfile.id;
+        console.log("[api/catalogue] ✅ FORCED superAdminId from tenant Jessica Contentin:", finalSuperAdminId);
+      } else {
+        console.error("[api/catalogue] ❌ Could not resolve Jessica Contentin profile for email:", emailToResolve);
+      }
+    }
+    
+    // SÉCURITÉ FINALE: Si on est sur app.jessicacontentin.fr, on NE DOIT JAMAIS montrer les items de Tim
+    // Si finalSuperAdminId est toujours Tim alors qu'on est sur Jessica Contentin, c'est une erreur
+    if ((tenantId === 'jessica-contentin-app' || tenantId === 'jessica-contentin') && finalSuperAdminId === TIM_SUPER_ADMIN_ID) {
+      console.error("[api/catalogue] ⚠️ SECURITY: Attempted to show Tim's items on Jessica Contentin domain! Blocking.");
+      // Forcer un ID invalide pour retourner un tableau vide plutôt que les items de Tim
+      finalSuperAdminId = "00000000-0000-0000-0000-000000000000";
     }
 
     console.log("[api/catalogue] Final params:", {

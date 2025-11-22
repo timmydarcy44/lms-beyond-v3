@@ -344,9 +344,10 @@ function ModuleAssignmentDialog({
 
           <section className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4">
             <div>
-              <h3 className="text-sm font-semibold">No School</h3>
+              <h3 className="text-sm font-semibold">No School (Catalogue Public)</h3>
               <p className="text-xs text-white/60">
-                Active ce module dans le catalogue No School pour le rendre disponible aux organisations et au B2C.
+                Active ce module dans le catalogue No School. Il sera visible publiquement et disponible pour tous (B2C et organisations). 
+                <strong className="text-white/80"> Distinct de l'assignation à une organisation spécifique ci-dessous.</strong>
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -366,12 +367,13 @@ function ModuleAssignmentDialog({
 
           <section className="space-y-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div>
-                <h3 className="text-sm font-semibold">Organisations</h3>
-                <p className="text-xs text-white/60">
-                  Accorde un accès immédiat à une organisation. L’accès est enregistré comme “Accès manuel”.
-                </p>
-              </div>
+            <div>
+              <h3 className="text-sm font-semibold">Assignation à une Organisation</h3>
+              <p className="text-xs text-white/60">
+                Accorde un accès immédiat à une organisation spécifique. L'accès est enregistré comme "Accès manuel".
+                <strong className="text-white/80"> Cette assignation est indépendante du catalogue No School.</strong>
+              </p>
+            </div>
               <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
                 <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
                   <SelectTrigger className="h-9 w-full border-white/20 bg-white/10 text-left text-sm text-white md:w-56">

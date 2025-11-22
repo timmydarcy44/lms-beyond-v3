@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateJSONWithAnthropic } from "@/lib/ai/anthropic-client";
+import { generateJSON } from "@/lib/ai/openai-client";
 import { getServerClient } from "@/lib/supabase/server";
 
 /**
- * Route pour créer un sous-chapitre avec Anthropic
+ * Route pour créer un sous-chapitre avec OpenAI
  */
 export async function POST(request: NextRequest) {
   try {
@@ -100,20 +100,130 @@ Exemple de structure attendue :
       },
     };
 
-    // Utiliser Anthropic pour la création de sous-chapitres
+    // Utiliser OpenAI pour la création de sous-chapitres
     const systemPrompt = `Tu es un expert en pédagogie. Génère des sous-chapitres de qualité, cohérents avec le chapitre parent.
+CRITIQUE : Le champ "content" DOIT être du HTML valide avec des balises (<h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>). 
+NE PAS utiliser de markdown (pas de ##, -, *, etc.). UNIQUEMENT du HTML brut.
 Schéma JSON attendu : ${JSON.stringify(schema.parameters)}`;
 
-    const result = await generateJSONWithAnthropic(fullPrompt, systemPrompt);
+    const result = await generateJSON(fullPrompt, schema, systemPrompt);
 
     if (!result) {
-      return NextResponse.json({ error: "Erreur lors de la génération" }, { status: 500 });
+      console.error("[ai] generateJSON returned null or undefined");
+      return NextResponse.json({ 
+        error: "Erreur lors de la génération. Vérifiez que OPENAI_API_KEY est configurée et valide." 
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, subchapter: result });
+    // Valider que le résultat contient les champs requis
+    if (!result.title || !result.content || !result.summary || !result.duration || !result.type) {
+      console.error("[ai] Invalid result structure:", result);
+      return NextResponse.json({ 
+        error: "La réponse de l'IA est incomplète. Veuillez réessayer." 
+      }, { status: 500 });
+    }
+
+    // Vérifier et corriger le format du contenu si nécessaire
+    let content = result.content;
+    if (typeof content === "string") {
+      // Si le contenu ne contient pas de balises HTML, c'est probablement du texte brut ou du markdown
+      if (!content.includes('<') || !content.includes('>')) {
+        console.warn("[ai] Content is not HTML, converting markdown/text to HTML format");
+        // Convertir le texte brut/markdown en HTML
+        const lines = content.split('\n');
+        let htmlContent = '';
+        let inList = false;
+        let listType: 'ul' | 'ol' | null = null;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            continue;
+          }
+
+          // Détecter les titres markdown
+          if (line.startsWith('#### ')) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<h4>${line.substring(5)}</h4>\n`;
+          } else if (line.startsWith('### ')) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<h3>${line.substring(4)}</h3>\n`;
+          } else if (line.startsWith('## ')) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<h2>${line.substring(3)}</h2>\n`;
+          } else if (line.startsWith('# ')) {
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<h2>${line.substring(2)}</h2>\n`;
+          } else if (/^\d+\.\s/.test(line)) {
+            // Liste numérotée
+            if (!inList || listType !== 'ol') {
+              if (inList) {
+                htmlContent += `</${listType}>\n`;
+              }
+              htmlContent += '<ol>\n';
+              inList = true;
+              listType = 'ol';
+            }
+            htmlContent += `<li>${line.replace(/^\d+\.\s/, '')}</li>\n`;
+          } else if (/^[-*+]\s/.test(line)) {
+            // Liste à puces
+            if (!inList || listType !== 'ul') {
+              if (inList) {
+                htmlContent += `</${listType}>\n`;
+              }
+              htmlContent += '<ul>\n';
+              inList = true;
+              listType = 'ul';
+            }
+            htmlContent += `<li>${line.replace(/^[-*+]\s/, '')}</li>\n`;
+          } else {
+            // Paragraphe normal
+            if (inList) {
+              htmlContent += `</${listType}>\n`;
+              inList = false;
+              listType = null;
+            }
+            htmlContent += `<p>${line}</p>\n`;
+          }
+        }
+
+        if (inList) {
+          htmlContent += `</${listType}>\n`;
+        }
+
+        content = htmlContent.trim();
+      }
+    }
+
+    return NextResponse.json({ success: true, subchapter: { ...result, content } });
   } catch (error) {
     console.error("[ai] Error in create-subchapter", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue";
+    return NextResponse.json({ 
+      error: errorMessage,
+      details: error instanceof Error ? error.stack : undefined
+    }, { status: 500 });
   }
 }
 

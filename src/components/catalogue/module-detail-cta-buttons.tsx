@@ -44,7 +44,7 @@ export function ModuleDetailCTAButtons({
         }}
       >
         {hasAccess && formationUrl ? (
-          <Link href={formationUrl}>Se former maintenant</Link>
+          <Link href={formationUrl}>Commencer maintenant</Link>
         ) : (
           <Link href={paymentUrl}>Se former maintenant</Link>
         )}

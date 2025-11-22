@@ -14,10 +14,25 @@ export default async function PagesPage() {
   if (!supabase) {
     redirect("/dashboard");
   }
-  const { data: pages, error } = await supabase
+
+  // Récupérer l'utilisateur connecté
+  const { data: { user } } = await supabase.auth.getUser();
+  const isContentin = user?.email === "contentin.cabinet@gmail.com";
+
+  // Filtrer les pages : contentin ne voit que ses pages, les autres voient toutes les pages
+  let query = supabase
     .from("cms_pages")
-    .select("*")
-    .order("updated_at", { ascending: false });
+    .select("*");
+
+  if (isContentin && user?.id) {
+    // Pour contentin, filtrer uniquement ses pages (créées par lui OU slug commence par "jessica-contentin")
+    query = query.or(`created_by.eq.${user.id},slug.ilike.jessica-contentin%`);
+  } else if (!isContentin && user?.id) {
+    // Pour les autres super admins, exclure les pages de jessica-contentin
+    query = query.not("slug", "ilike", "jessica-contentin%");
+  }
+
+  const { data: pages, error } = await query.order("updated_at", { ascending: false });
 
   if (error) {
     console.error("[pages] Error fetching pages:", error);

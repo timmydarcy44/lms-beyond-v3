@@ -34,23 +34,46 @@ export async function getCatalogItems(
   }
 
   // Construire la requête avec filtrage par audience si c'est un apprenant
+  // Pour les Super Admins qui prévisualisent leur catalogue, montrer aussi les items inactifs (brouillons)
   let query = supabase
     .from("catalog_items")
-    .select("*")
-    .eq("is_active", true);
-
+    .select("*");
+  
   // IMPORTANT: Filtrer par creator_id (Super Admin) si spécifié
   // Pour contentin.cabinet@gmail.com, on ne montre que ses items
   if (superAdminId) {
     query = query.eq("creator_id", superAdminId);
     console.log("[catalogue] Filtering by super admin:", superAdminId);
+    
+    // Si c'est un Super Admin qui prévisualise (pas un apprenant), montrer tous les items (actifs et inactifs)
+    // Sinon, pour les apprenants B2C, ne montrer que les actifs
+    if (userRole !== "learner" && !userId) {
+      // Super Admin en mode prévisualisation
+      query = query.or("is_active.eq.true,is_active.eq.false");
+    } else {
+      // Apprenant B2C ou utilisateur normal - seulement les actifs
+      query = query.eq("is_active", true);
+    }
+  } else {
+    // Pas de superAdminId spécifié - seulement les actifs
+    query = query.eq("is_active", true);
   }
 
-  // Si c'est un apprenant, ne montrer que les items pour apprenants ou tous publics
-  if (userRole === "learner") {
+  // IMPORTANT: Pour Beyond No School (catalogue public), toujours filtrer par target_audience = "apprenant"
+  // Même si c'est un super admin qui prévisualise, Beyond No School doit montrer uniquement les formations pour apprenants
+  // Si superAdminId est spécifié ET qu'on est en mode prévisualisation (pas un learner), on peut montrer tous les items
+  const isPreviewMode = superAdminId && userRole !== "learner" && !userId;
+  
+  // Pour Beyond No School, toujours filtrer par target_audience = "apprenant" même en mode prévisualisation
+  // Sauf si c'est explicitement un autre contexte (organisation, etc.)
+  if (userRole === "learner" || !isPreviewMode) {
+    // Pour les apprenants ou le catalogue public Beyond No School, ne montrer que les items pour apprenants
+    query = query.or("target_audience.eq.apprenant,target_audience.eq.all");
+  } else if (isPreviewMode && superAdminId === "60c88469-3c53-417f-a81d-565a662ad2f5") {
+    // Même en mode prévisualisation, pour Tim (Beyond No School), filtrer par apprenant
     query = query.or("target_audience.eq.apprenant,target_audience.eq.all");
   }
-  // Sinon, montrer les items pour pro ou tous publics (formateurs, admins, tuteurs)
+  // Sinon, montrer les items pour pro ou tous publics (formateurs, admins, tuteurs en mode prévisualisation)
   else if (userRole && (userRole === "admin" || userRole === "instructor" || userRole === "tutor")) {
     query = query.or("target_audience.eq.pro,target_audience.eq.all");
   }
@@ -65,7 +88,28 @@ export async function getCatalogItems(
     return [];
   }
 
+  console.log("[catalogue] Query result:", {
+    itemsCount: items?.length || 0,
+    superAdminId,
+    userRole,
+    userId,
+    organizationId,
+    firstItem: items?.[0] ? {
+      id: items[0].id,
+      title: items[0].title,
+      is_active: (items[0] as any).is_active,
+      target_audience: (items[0] as any).target_audience,
+      creator_id: (items[0] as any).creator_id,
+    } : null,
+  });
+
   if (!items || items.length === 0) {
+    console.warn("[catalogue] No items found with filters:", {
+      superAdminId,
+      userRole,
+      userId,
+      organizationId,
+    });
     return [];
   }
 
@@ -114,7 +158,7 @@ export async function getCatalogItems(
         };
       }
 
-      // Pour les modules, récupérer l'image et le prix depuis le course
+      // Pour les modules, récupérer l'image, le prix et le format depuis le course
       if (item.item_type === "module") {
         try {
           const { data: courseData } = await supabase
@@ -122,6 +166,42 @@ export async function getCatalogItems(
             .select("cover_image, builder_snapshot, price")
             .eq("id", item.content_id)
             .single();
+          
+          // Déterminer le format principal du module (text, audio, video)
+          let contentFormat: "text" | "audio" | "video" | null = null;
+          if (courseData?.builder_snapshot) {
+            try {
+              const snapshot = typeof courseData.builder_snapshot === 'string'
+                ? JSON.parse(courseData.builder_snapshot)
+                : courseData.builder_snapshot;
+              
+              // Analyser les chapitres pour déterminer le format principal
+              const sections = snapshot?.sections || [];
+              const chapterTypes: string[] = [];
+              
+              for (const section of sections) {
+                const chapters = section?.chapters || [];
+                for (const chapter of chapters) {
+                  if (chapter?.type) {
+                    chapterTypes.push(chapter.type);
+                  }
+                }
+              }
+              
+              // Déterminer le format principal (priorité: video > audio > text)
+              if (chapterTypes.some(t => t === "video")) {
+                contentFormat = "video";
+              } else if (chapterTypes.some(t => t === "audio")) {
+                contentFormat = "audio";
+              } else if (chapterTypes.some(t => t === "text" || t === "document")) {
+                contentFormat = "text";
+              }
+              
+              (item as any).content_format = contentFormat;
+            } catch (e) {
+              console.error("[catalogue] Error determining content format", item.id, e);
+            }
+          }
           
           // Mettre à jour le prix depuis le course si disponible
           if (courseData?.price !== null && courseData?.price !== undefined) {
@@ -380,7 +460,7 @@ export async function getCatalogItemById(
     .select("*, creator_id")
     .eq("id", catalogItemId)
     .eq("is_active", true)
-    .single();
+    .maybeSingle(); // Utiliser maybeSingle() au lieu de single() pour éviter les erreurs si non trouvé
 
   // Si l'item n'est pas dans catalog_items, essayer de le trouver directement dans les tables
   if (itemError || !item) {

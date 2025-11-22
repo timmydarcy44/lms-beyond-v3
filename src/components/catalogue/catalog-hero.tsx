@@ -25,42 +25,50 @@ type CatalogHeroProps = {
 export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
   const { branding } = useBranding();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const currentItem = items[currentIndex];
   
-  // Couleurs chaudes du branding (marron, beige, doré)
-  const primaryColor = branding?.primary_color || '#8B6F47'; // Marron
-  const accentColor = branding?.accent_color || '#D4AF37'; // Doré
-  const secondaryColor = branding?.secondary_color || '#D4C4A8'; // Beige
+  // Afficher plusieurs items (carrousel) - prendre les 3-5 premiers items avec images
+  const featuredItems = items
+    .filter(item => item.hero_image_url)
+    .slice(0, 5); // Maximum 5 items dans le carrousel
+  
+  const currentItem = featuredItems[currentIndex] || items[0];
+  
+  // Couleurs - Style Netflix (rouge) ou branding personnalisé
+  const isContentin = branding?.background_color === '#F5F0E8' || branding?.background_color === '#F8F9FB';
+  const primaryColor = isContentin ? (branding?.primary_color || '#8B6F47') : '#e50914'; // Rouge Netflix
+  const accentColor = isContentin ? (branding?.accent_color || '#D4AF37') : '#e50914'; // Rouge Netflix
+  const secondaryColor = isContentin ? (branding?.secondary_color || '#D4C4A8') : '#b3b3b3'; // Gris clair
 
   // Auto-rotation des items en vedette
   useEffect(() => {
-    if (items.length <= 1) return;
+    if (featuredItems.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % items.length);
-    }, 8000); // Change toutes les 8 secondes
+      setCurrentIndex((prev) => (prev + 1) % featuredItems.length);
+    }, 6000); // Change toutes les 6 secondes
 
     return () => clearInterval(interval);
-  }, [items.length]);
+  }, [featuredItems.length]);
 
-  if (!currentItem) {
+  // Si pas d'items avec images, ne pas afficher le hero
+  if (!currentItem || featuredItems.length === 0) {
     return null;
   }
 
   const hasHeroImage = !!currentItem.hero_image_url;
 
+  // Les formations ne sont accessibles qu'après paiement d'abonnement
+  // Pas d'accès gratuit, même si is_free est true
   const hasAccess =
     currentItem.access_status === "purchased" ||
-    currentItem.access_status === "manually_granted" ||
-    currentItem.access_status === "free" ||
-    currentItem.is_free;
+    currentItem.access_status === "manually_granted";
 
   // Utiliser le background_color du branding si disponible
   const bgColor = branding?.background_color || '#F5F0E8';
 
   return (
     <div 
-      className="relative h-[70vh] w-full overflow-hidden"
+      className="relative h-[85vh] w-full overflow-hidden -mt-[44px]"
       style={{ backgroundColor: bgColor }}
     >
       {/* Image de fond */}
@@ -155,7 +163,7 @@ export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              Se former maintenant
+              Commencer maintenant
             </Button>
             <Button
               onClick={() => onItemClick(currentItem)}
@@ -182,10 +190,10 @@ export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
         </div>
       </div>
 
-      {/* Indicateurs de pagination */}
-      {items.length > 1 && (
+      {/* Indicateurs de pagination - Style Netflix */}
+      {featuredItems.length > 1 && (
         <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-2">
-          {items.map((_, index) => (
+          {featuredItems.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}

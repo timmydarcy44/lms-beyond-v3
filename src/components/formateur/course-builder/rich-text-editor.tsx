@@ -89,6 +89,22 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
     },
   });
 
+  // Mettre à jour l'éditeur quand le contenu change depuis l'extérieur (ex: génération IA)
+  useEffect(() => {
+    if (!editor) return;
+    
+    const currentContent = editor.getHTML();
+    // Comparer le contenu en normalisant les espaces et en ignorant les différences mineures
+    const normalizeHTML = (html: string) => html.trim().replace(/\s+/g, ' ');
+    const normalizedCurrent = normalizeHTML(currentContent);
+    const normalizedNew = normalizeHTML(content || '');
+    
+    // Ne mettre à jour que si le contenu est vraiment différent
+    if (normalizedCurrent !== normalizedNew) {
+      editor.commands.setContent(content || '', { emitUpdate: false }); // Ne pas déclencher onUpdate
+    }
+  }, [content, editor]);
+
   const addImage = () => {
     if (!editor) return;
     const url = window.prompt("URL de l'image:");

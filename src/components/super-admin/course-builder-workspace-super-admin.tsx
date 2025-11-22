@@ -192,7 +192,7 @@ export function CourseBuilderWorkspaceSuperAdmin({ initialData, previewHref, cou
               disabled={isSaving || isPublishing}
               className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             >
-              <Link href="/super/studio/modules/new">Retour infos</Link>
+              <Link href="/super/studio/modules/new/metadata">Retour infos</Link>
             </Button>
             <Button
               onClick={() => handleSave("draft")}

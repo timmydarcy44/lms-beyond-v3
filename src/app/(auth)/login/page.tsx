@@ -88,52 +88,81 @@ function LoginForm() {
     }
 
     try {
-      console.log("[login] Attempting sign in with Supabase for:", values.email);
-      console.log("[login] Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ Set" : "❌ Missing");
-      console.log("[login] Supabase Anon Key:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? `✅ Set (${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length} chars)` : "❌ Missing");
+      console.log("[login] Attempting sign in via API route for:", values.email);
       
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
+      // Utiliser une route API Next.js pour éviter les problèmes de timeout côté client
+      console.log("[login] Calling /api/auth/signin...");
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+        }),
       });
 
-      console.debug("[login] signIn response:", {
-        hasUser: !!data?.user,
-        hasSession: !!data?.session,
-        authError: authError ? {
-          message: authError.message,
-          status: authError.status,
-          name: authError.name,
-        } : null,
-      });
+      console.log("[login] API response status:", response.status, response.statusText);
+      const result = await response.json();
+      console.log("[login] API response data:", { hasUser: !!result.user, hasSession: !!result.session, error: result.error });
 
-      if (authError) {
-        console.error("[login] Auth error:", authError);
-        setError(authError.message || "Erreur de connexion");
+      if (!response.ok) {
+        console.error("[login] API error:", result.error);
+        setError(result.error || "Erreur de connexion");
         toast.error("Erreur de connexion", {
-          description: authError.message,
+          description: result.error,
         });
         return;
       }
 
-      if (data?.user) {
-        console.log("[login] ✅ Sign in succeeded for:", data.user.email);
+      // Si la connexion réussit via l'API, on doit maintenant créer la session côté client
+      if (result.session && result.user) {
+        console.log("[login] ✅ Sign in successful via API, setting session...");
+        
+        // Créer la session côté client avec Supabase
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: result.session.access_token,
+          refresh_token: result.session.refresh_token,
+        });
+
+        if (sessionError) {
+          console.error("[login] Error setting session:", sessionError);
+          setError("Erreur lors de la création de la session");
+          toast.error("Erreur de connexion", {
+            description: "Impossible de créer la session",
+          });
+          return;
+        }
+
+        console.log("[login] ✅ Sign in succeeded for:", result.user.email);
         toast.success("Connexion réussie !");
         console.log("[login] Sign in succeeded, redirecting to /loading");
         // Rediriger vers la page de chargement qui affichera "Bonjour (prénom)" puis redirigera vers le dashboard
         router.push("/loading");
         router.refresh(); // Forcer le rafraîchissement pour récupérer la session
+        return;
       } else {
         console.warn("[login] ⚠️ Sign in returned no user data");
         setError("Aucune donnée utilisateur reçue");
+        return;
       }
     } catch (err) {
       console.error("[login] Unexpected error during sign in:", err);
       const errorMessage = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
-      setError(errorMessage);
-      toast.error("Erreur de connexion", {
-        description: errorMessage,
-      });
+      
+      // Gérer spécifiquement les erreurs de timeout
+      if (errorMessage.includes("Timeout") || errorMessage.includes("timeout")) {
+        setError("La connexion a pris trop de temps. Vérifiez votre connexion internet.");
+        toast.error("Timeout de connexion", {
+          description: "La connexion à Supabase a pris trop de temps. Vérifiez votre connexion internet ou réessayez.",
+        });
+      } else {
+        setError(errorMessage);
+        toast.error("Erreur de connexion", {
+          description: errorMessage,
+        });
+      }
     }
   };
 

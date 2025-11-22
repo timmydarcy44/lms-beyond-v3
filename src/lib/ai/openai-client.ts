@@ -61,8 +61,45 @@ export async function generateJSON(
     let fullSystemPrompt = systemPrompt || "";
     
     if (schema) {
-      const schemaStr = JSON.stringify(schema.parameters || schema);
-      const schemaInstruction = `Tu dois répondre UNIQUEMENT avec un JSON valide respectant ce schéma : ${schemaStr}. Ne réponds avec AUCUN texte avant ou après le JSON.`;
+      const schemaObj = schema.parameters || schema;
+      
+      // Extraire les propriétés principales du schéma pour créer un exemple concret
+      const properties = schemaObj.properties || {};
+      const requiredFields = schemaObj.required || [];
+      
+      // Construire un exemple concret basé sur le schéma
+      let exampleJson: any = {};
+      for (const [key, value] of Object.entries(properties)) {
+        const prop = value as any;
+        if (prop.type === "array" && prop.items) {
+          exampleJson[key] = [];
+        } else if (prop.type === "object") {
+          exampleJson[key] = {};
+        } else if (prop.type === "string") {
+          exampleJson[key] = `exemple_${key}`;
+        } else if (prop.type === "number") {
+          exampleJson[key] = 0;
+        } else if (prop.type === "boolean") {
+          exampleJson[key] = false;
+        }
+      }
+      
+      const exampleStr = JSON.stringify(exampleJson, null, 2);
+      const schemaStr = JSON.stringify(schemaObj, null, 2);
+      
+      // Instructions très explicites pour éviter que l'IA retourne le schéma
+      const schemaInstruction = `CRITIQUE : Tu dois générer un OBJET JSON avec des DONNÉES RÉELLES qui respectent ce schéma.
+
+Le schéma décrit la STRUCTURE attendue, mais tu dois retourner des DONNÉES, pas la structure.
+
+Structure attendue (schéma) :
+${schemaStr}
+
+Exemple de format de réponse (avec des données réelles) :
+${exampleStr}
+
+⚠️ NE RETOURNE PAS le schéma JSON (avec "type", "properties", etc.).
+⚠️ RETOURNE un objet JSON avec des valeurs réelles qui correspondent à cette structure.`;
       
       if (fullSystemPrompt) {
         fullSystemPrompt = `${fullSystemPrompt}\n\n${schemaInstruction}`;

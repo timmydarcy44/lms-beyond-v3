@@ -329,6 +329,53 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Synchroniser avec catalog_items si Super Admin
+    if (result?.id) {
+      try {
+        // Vérifier si l'utilisateur est un Super Admin
+        const { data: superAdminCheck } = await supabase
+          .from("super_admins")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (superAdminCheck) {
+          // Vérifier si c'est contentin.cabinet@gmail.com
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("email")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const isContentin = profile?.email === "contentin.cabinet@gmail.com";
+
+          // Importer syncCatalogItem
+          const { syncCatalogItem } = await import("@/lib/utils/sync-catalog-item");
+
+          await syncCatalogItem({
+            supabase,
+            userId: user.id,
+            contentId: result.id,
+            itemType: "parcours",
+            title: title.trim(),
+            description: description?.trim() || null,
+            shortDescription: description ? description.substring(0, 150) : null,
+            price: price || 0,
+            category: null, // Les parcours n'ont pas toujours de catégorie
+            heroImage: null,
+            thumbnailUrl: null,
+            targetAudience: isContentin ? "apprenant" : "apprenant", // Toujours "apprenant" pour contentin
+            assignmentType: isContentin ? "no_school" : "no_school", // Toujours "no_school" pour contentin
+            status: status === "published" ? "published" : "draft",
+          });
+        }
+      } catch (syncError) {
+        console.error("[api/paths] Erreur lors de la synchronisation avec catalog_items:", syncError);
+        // Ne pas bloquer la création/mise à jour si la synchronisation échoue
+      }
+    }
+
     return NextResponse.json({ 
       success: true, 
       path: result,

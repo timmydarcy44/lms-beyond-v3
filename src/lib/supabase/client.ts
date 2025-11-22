@@ -23,7 +23,14 @@ export const createSupabaseBrowserClient = (): SupabaseClient | null => {
     console.debug("[supabase-client] AnonKey length:", anonKey.length);
   }
 
-  return createBrowserClient(url, anonKey);
+  // Configuration simplifiée - retirer flowType pkce qui peut causer des problèmes
+  return createBrowserClient(url, anonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
 };
 
 

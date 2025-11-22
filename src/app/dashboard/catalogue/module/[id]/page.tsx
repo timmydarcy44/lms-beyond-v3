@@ -30,24 +30,32 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    notFound();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  // Pour Beyond No School, permettre l'accès même sans authentification (catalogue public)
+  // Mais si authentifié, utiliser les infos de l'utilisateur
+  let organizationId: string | undefined = undefined;
+  
+  if (user && !authError) {
+    // Récupérer le profil pour obtenir l'organisation
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("org_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    organizationId = profile?.org_id || undefined;
   }
-
-  // Récupérer le profil pour obtenir l'organisation
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id")
-    .eq("id", user.id)
-    .single();
-
-  const organizationId = profile?.org_id || undefined;
 
   // Récupérer l'item du catalogue
   const catalogItem = await getCatalogItemById(id, organizationId);
 
   if (!catalogItem || catalogItem.item_type !== "module") {
+    console.error("[catalogue/module] Catalog item not found:", {
+      id,
+      catalogItem: catalogItem ? "found but wrong type" : "not found",
+      itemType: catalogItem?.item_type,
+    });
     notFound();
   }
 
@@ -303,7 +311,7 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
                     backgroundColor: primaryColor,
                   }}
                 >
-                  Se former maintenant
+                  Commencer maintenant
                 </a>
               ) : (
                 <AddToCartButton

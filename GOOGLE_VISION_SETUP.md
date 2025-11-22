@@ -102,3 +102,6 @@ Voir [la page de tarification](https://cloud.google.com/vision/pricing) pour plu
 
 
 
+
+
+

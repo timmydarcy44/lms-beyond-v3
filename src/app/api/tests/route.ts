@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { createStripeProduct, updateStripeProduct } from "@/lib/stripe/products";
 import { calculateTestDuration, formatTestDuration } from "@/lib/utils/test-duration";
+import { syncCatalogItem } from "@/lib/utils/sync-catalog-item";
 
 export async function POST(request: NextRequest) {
   try {
@@ -463,6 +464,40 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Synchroniser avec catalog_items si Super Admin
+      if (test && test.id) {
+        try {
+          // Vérifier si c'est contentin.cabinet@gmail.com
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("email")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const isContentin = profile?.email === "contentin.cabinet@gmail.com";
+
+          await syncCatalogItem({
+            supabase,
+            userId: user.id,
+            contentId: test.id,
+            itemType: "test",
+            title: test.title || "",
+            description: test.description || null,
+            shortDescription: test.description ? test.description.substring(0, 150) : null,
+            price: price || 0,
+            category: category || null,
+            heroImage: (test as any).hero_image_url || (test as any).cover_image || null,
+            thumbnailUrl: (test as any).thumbnail_url || (test as any).cover_image || null,
+            targetAudience: isContentin ? "apprenant" : "apprenant", // Toujours "apprenant" pour contentin
+            assignmentType: isContentin ? "no_school" : "no_school", // Toujours "no_school" pour contentin
+            status: published ? "published" : "draft",
+          });
+        } catch (syncError) {
+          console.error("[api/tests] Erreur lors de la synchronisation avec catalog_items:", syncError);
+          // Ne pas bloquer la création si la synchronisation échoue
+        }
+      }
+
       // Créer automatiquement un produit Stripe si un prix > 0 est défini
       if (test && test.id && price !== undefined && price !== null && price > 0) {
         try {
@@ -538,6 +573,40 @@ export async function POST(request: NextRequest) {
         error: "Erreur lors de la publication", 
         details: error.message 
       }, { status: 500 });
+    }
+
+    // Synchroniser avec catalog_items si Super Admin et test publié (ou si contentin, toujours)
+    if (data && data.id && (status === "published" || true)) { // Toujours synchroniser pour contentin
+      try {
+        // Vérifier si c'est contentin.cabinet@gmail.com
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        const isContentin = profile?.email === "contentin.cabinet@gmail.com";
+
+        await syncCatalogItem({
+          supabase,
+          userId: user.id,
+          contentId: data.id,
+          itemType: "test",
+          title: data.title || "",
+          description: data.description || null,
+          shortDescription: data.description ? data.description.substring(0, 150) : null,
+          price: (data as any).price || 0,
+          category: (data as any).category || null,
+          heroImage: (data as any).hero_image_url || (data as any).cover_image || null,
+          thumbnailUrl: (data as any).thumbnail_url || (data as any).cover_image || null,
+          targetAudience: isContentin ? "apprenant" : "apprenant",
+          assignmentType: isContentin ? "no_school" : "no_school",
+          status: status === "published" ? "published" : "draft",
+        });
+      } catch (syncError) {
+        console.error("[api/tests] Erreur lors de la synchronisation avec catalog_items:", syncError);
+        // Ne pas bloquer la mise à jour si la synchronisation échoue
+      }
     }
 
     return NextResponse.json({ 

@@ -97,6 +97,24 @@ export function SuperAdminSidebarApple({ open: controlledOpen, onToggle }: Super
 
   const isContentin = userEmail === "contentin.cabinet@gmail.com";
 
+  // Filtrer les items de navigation pour contentin.cabinet@gmail.com
+  const filteredNavItems = isContentin
+    ? NAV_ITEMS.filter((item) => {
+        // Masquer "No School", "Voir mon catalogue", "Chiffre d'affaires", "Statistiques", "Gamification"
+        // Masquer aussi "Organisations" et "Utilisateurs" car contentin ne gère que son catalogue
+        const hiddenLabels = [
+          "No School",
+          "Voir mon catalogue",
+          "Chiffre d'affaires",
+          "Statistiques",
+          "Gamification (Demo)",
+          "Organisations",
+          "Utilisateurs",
+        ];
+        return !hiddenLabels.includes(item.label);
+      })
+    : NAV_ITEMS;
+
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const handleToggle = () => {
     if (onToggle) {
@@ -147,7 +165,7 @@ export function SuperAdminSidebarApple({ open: controlledOpen, onToggle }: Super
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const hasChildren = item.children && item.children.length > 0;
           const isExpanded = expandedItems.has(item.label);

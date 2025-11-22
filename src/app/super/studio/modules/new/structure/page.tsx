@@ -10,16 +10,18 @@ export default async function SuperAdminNewModuleStructurePage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
-          Structure & modules
-        </h1>
-        <p className="text-gray-600 text-sm" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
-          Construisez la structure de votre module avec sections, chapitres et sous-chapitres
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#0f0f0f]">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold text-white mb-2" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+            Structure & modules
+          </h1>
+          <p className="text-gray-400 text-sm" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+            Construisez la structure de votre module avec sections, chapitres et sous-chapitres
+          </p>
+        </div>
+        <CourseBuilderWorkspace previewHref="/super/studio/modules/new/preview" />
       </div>
-      <CourseBuilderWorkspace previewHref="/super/studio/modules/new/preview" />
-    </main>
+    </div>
   );
 }

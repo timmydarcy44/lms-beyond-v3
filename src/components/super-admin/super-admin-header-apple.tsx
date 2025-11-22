@@ -30,7 +30,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { AlertsBadge } from "./alerts-badge";
-import { useSupabase } from "@/components/providers/supabase-provider";
 
 type NavItem = {
   label: string;
@@ -96,35 +95,66 @@ export function SuperAdminHeaderApple() {
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const supabase = useSupabase();
 
   useEffect(() => {
     const fetchUserEmail = async () => {
-      if (!supabase) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setUserEmail(user.email);
+      try {
+        const { createSupabaseBrowserClient } = await import("@/lib/supabase/client");
+        const supabase = createSupabaseBrowserClient();
+        if (!supabase) return;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          setUserEmail(user.email);
+        }
+      } catch (error) {
+        console.error("[SuperAdminHeaderApple] Error fetching user email:", error);
       }
     };
     fetchUserEmail();
-  }, [supabase]);
+  }, []);
 
   const isContentin = userEmail === "contentin.cabinet@gmail.com";
 
+  // Filtrer les items de navigation pour contentin.cabinet@gmail.com
+  const filteredNavItems = isContentin
+    ? NAV_ITEMS.filter((item) => {
+        // Masquer "No School", "Premium", "Chiffre d'affaires", "Statistiques"
+        // Masquer aussi "Organisations" et "Utilisateurs" car contentin ne gère que son catalogue
+        // Masquer "IA" car ce n'est pas nécessaire pour contentin
+        const hiddenLabels = [
+          "No School",
+          "Premium",
+          "Chiffre d'affaires",
+          "Statistiques",
+          "Utilisateurs",
+          "IA",
+        ];
+        return !hiddenLabels.includes(item.label);
+      })
+    : NAV_ITEMS;
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-xl">
+    <header className={cn(
+      "sticky top-0 z-50 w-full border-b backdrop-blur-xl",
+      isContentin 
+        ? "border-[#D2B48C]/50 bg-[#F5F5DC]/80" 
+        : "border-gray-200/50 bg-white/80"
+    )}>
       <nav className="mx-auto max-w-[1440px] px-6">
         <div className="flex h-12 items-center justify-between">
           {/* Logo - "Beyond" en petit */}
           <Link href="/super" className="flex items-center">
-            <span className="text-[11px] font-medium tracking-tight text-gray-900" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+            <span className={cn(
+              "text-[11px] font-medium tracking-tight",
+              isContentin ? "text-[#8B4513]" : "text-gray-900"
+            )} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
               Beyond
             </span>
           </Link>
 
           {/* Navigation Items */}
           <div className="flex items-center gap-0">
-            {NAV_ITEMS.map((item) => {
+            {filteredNavItems.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
               const hasChildren = item.children && item.children.length > 0;
               const isHovered = hoveredItem === item.label;
@@ -142,9 +172,13 @@ export function SuperAdminHeaderApple() {
                       href={item.href}
                       className={cn(
                         "relative flex items-center gap-0.5 px-4 py-2 text-[13px] font-normal transition-colors",
-                        isActive || isHovered
-                          ? "text-gray-900"
-                          : "text-gray-700 hover:text-gray-900",
+                        isContentin
+                          ? isActive || isHovered
+                            ? "text-[#D4AF37]"
+                            : "text-[#A0522D] hover:text-[#D4AF37]"
+                          : isActive || isHovered
+                            ? "text-gray-900"
+                            : "text-gray-700 hover:text-gray-900",
                       )}
                       style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
                     >
@@ -155,7 +189,12 @@ export function SuperAdminHeaderApple() {
                     {/* Dropdown Menu - Zone grisée pour les menus normaux */}
                     {isHovered && item.children && item.label !== "Studio" && (
                       <div 
-                        className="absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[200px] rounded-lg border border-gray-200/50 bg-gray-50/95 backdrop-blur-xl shadow-lg py-1.5"
+                        className={cn(
+                          "absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[200px] rounded-lg border backdrop-blur-xl shadow-lg py-1.5",
+                          isContentin
+                            ? "border-[#D2B48C]/50 bg-[#E8E8D3]/95"
+                            : "border-gray-200/50 bg-gray-50/95"
+                        )}
                         style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
                       >
                         {item.children.map((child) => {
@@ -166,9 +205,13 @@ export function SuperAdminHeaderApple() {
                               href={child.href}
                               className={cn(
                                 "block px-3 py-1.5 text-[13px] font-normal transition-colors",
-                                isChildActive
-                                  ? "text-gray-900"
-                                  : "text-gray-700 hover:text-gray-900",
+                                isContentin
+                                  ? isChildActive
+                                    ? "text-[#D4AF37]"
+                                    : "text-[#A0522D] hover:text-[#D4AF37]"
+                                  : isChildActive
+                                    ? "text-gray-900"
+                                    : "text-gray-700 hover:text-gray-900",
                               )}
                               onClick={() => setHoveredItem(null)}
                             >
@@ -262,11 +305,15 @@ export function SuperAdminHeaderApple() {
                     href={item.href}
                     className={cn(
                       "px-4 py-2 flex items-center justify-center transition-colors",
-                      isActive
-                        ? "text-gray-900"
-                        : "text-gray-700 hover:text-gray-900",
+                      isContentin
+                        ? isActive
+                          ? "text-[#D4AF37]"
+                          : "text-[#A0522D] hover:text-[#D4AF37]"
+                        : isActive
+                          ? "text-gray-900"
+                          : "text-gray-700 hover:text-gray-900",
                     )}
-                    title={iconName === "globe" ? "Gestion du site" : "Paramètres"}
+                    title={iconName === "globe" ? (isContentin ? "Gérer mon site jessica-contentin.fr" : "Gestion du site") : "Paramètres"}
                   >
                     <IconComponent className="h-4 w-4" />
                   </Link>
@@ -279,9 +326,13 @@ export function SuperAdminHeaderApple() {
                   href={item.href}
                   className={cn(
                     "px-4 py-2 text-[13px] font-normal transition-colors",
-                    isActive
-                      ? "text-gray-900"
-                      : "text-gray-700 hover:text-gray-900",
+                    isContentin
+                      ? isActive
+                        ? "text-[#D4AF37]"
+                        : "text-[#A0522D] hover:text-[#D4AF37]"
+                      : isActive
+                        ? "text-gray-900"
+                        : "text-gray-700 hover:text-gray-900",
                   )}
                   style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
                 >
@@ -296,8 +347,8 @@ export function SuperAdminHeaderApple() {
                 className={cn(
                   "px-4 py-2 text-[13px] font-normal transition-colors flex items-center gap-1.5",
                   pathname === "/super/agenda" || pathname?.startsWith("/super/agenda/")
-                    ? "text-gray-900"
-                    : "text-gray-700 hover:text-gray-900",
+                    ? "text-[#D4AF37]"
+                    : "text-[#A0522D] hover:text-[#D4AF37]",
                 )}
                 style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
               >
@@ -315,17 +366,32 @@ export function SuperAdminHeaderApple() {
             {/* Icône Messagerie */}
             <Link
               href="/dashboard/communaute"
-              className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
+              className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-full transition-colors",
+                isContentin
+                  ? "hover:bg-[#E8E8D3]"
+                  : "hover:bg-gray-100"
+              )}
               title="Messagerie"
             >
-              <MessageSquare className="h-4 w-4 text-gray-700 hover:text-gray-900" />
+              <MessageSquare className={cn(
+                "h-4 w-4 transition-colors",
+                isContentin
+                  ? "text-[#A0522D] hover:text-[#D4AF37]"
+                  : "text-gray-700 hover:text-gray-900"
+              )} />
             </Link>
             
             {/* Bouton Déconnexion */}
             <form action="/logout" method="POST" className="flex items-center">
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-normal text-gray-700 hover:text-gray-900 transition-colors rounded hover:bg-gray-50"
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-normal transition-colors rounded",
+                  isContentin
+                    ? "text-[#A0522D] hover:text-[#D4AF37] hover:bg-[#E8E8D3]"
+                    : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                )}
                 style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
               >
                 <LogOut className="h-3.5 w-3.5" />

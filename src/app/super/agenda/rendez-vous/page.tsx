@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient } from "@/lib/supabase/server";
 import { AppointmentsGridView } from "@/components/super-admin/agenda/appointments-grid-view";
+import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -34,13 +35,21 @@ export default async function SuperAdminAppointmentsPage() {
     redirect("/super");
   }
 
+  const isContentin = profile?.email === "contentin.cabinet@gmail.com";
+
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+        <h1 className={cn(
+          "text-3xl font-semibold mb-2",
+          isContentin ? "text-[#8B4513]" : "text-gray-900"
+        )} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
           Mes rendez-vous
         </h1>
-        <p className="text-gray-600 text-sm" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+        <p className={cn(
+          "text-sm",
+          isContentin ? "text-[#A0522D]" : "text-gray-600"
+        )} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
           Consultez tous vos rendez-vous avec les apprenants
         </p>
       </div>

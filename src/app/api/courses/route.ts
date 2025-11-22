@@ -278,8 +278,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Synchroniser avec catalog_items si le module est publié et que l'utilisateur est un Super Admin
-    if (status === "published" && result?.id) {
+    // Synchroniser avec catalog_items si l'utilisateur est un Super Admin
+    // Ajouter au catalogue si publié OU si target_audience est "apprenant" (même en brouillon)
+    if (result?.id) {
       try {
         // Vérifier si l'utilisateur est un Super Admin
         const { data: superAdminCheck } = await supabase
@@ -290,58 +291,144 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (superAdminCheck) {
-          // Vérifier si un catalog_item existe déjà pour ce course
-          const { data: existingCatalogItem } = await supabase
-            .from("catalog_items")
-            .select("id")
-            .eq("content_id", result.id)
-            .eq("item_type", "module")
+          // Vérifier si c'est contentin.cabinet@gmail.com
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("email")
+            .eq("id", user.id)
             .maybeSingle();
 
-          const catalogItemData: any = {
-            content_id: result.id,
-            item_type: "module",
-            title: snapshot.general.title,
-            description: snapshot.general.subtitle || null,
-            short_description: snapshot.general.subtitle || null,
-            price: snapshot.general.price || 0,
-            is_free: !snapshot.general.price || snapshot.general.price === 0,
-            category: snapshot.general.category || null,
-            hero_image_url: snapshot.general.heroImage || null,
-            thumbnail_url: snapshot.general.heroImage || null,
-            target_audience: snapshot.general.target_audience || "all",
-            creator_id: user.id,
-            is_active: true,
-            updated_at: new Date().toISOString(),
-          };
+          const isContentin = profile?.email === "contentin.cabinet@gmail.com";
 
-          if (existingCatalogItem) {
-            // Mettre à jour l'item existant
-            const { error: updateError } = await supabase
+          // Pour contentin, forcer assignment_type à "no_school" et target_audience à "apprenant"
+          let assignmentType = snapshot.general.assignment_type || "no_school";
+          let targetAudience = snapshot.general.target_audience || "all";
+
+          if (isContentin) {
+            assignmentType = "no_school";
+            targetAudience = "apprenant";
+            console.log("[api/courses] 🎯 Contentin détecté - Forçage assignment_type=no_school et target_audience=apprenant");
+          } else {
+            // Pour les autres super admins, logique normale
+            targetAudience = assignmentType === "no_school" 
+              ? "apprenant" 
+              : (snapshot.general.target_audience || "all");
+          }
+
+          const assignedOrgId = snapshot.general.assigned_organization_id;
+          
+          // Si No School ou Contentin, toujours ajouter au catalogue et activer
+          // Si Organisation, ajouter au catalogue seulement si publié
+          const shouldAddToCatalog = (assignmentType === "no_school" || isContentin)
+            ? true 
+            : (status === "published" || targetAudience === "apprenant");
+          
+          console.log("[api/courses] Super Admin detected, isContentin:", isContentin, "assignment_type:", assignmentType, "target_audience:", targetAudience, "status:", status, "shouldAddToCatalog:", shouldAddToCatalog);
+
+          if (shouldAddToCatalog) {
+            // Vérifier si un catalog_item existe déjà pour ce course
+            // Note: "module" et "formation" sont la même chose dans la table courses
+            // Filtrer aussi par creator_id pour éviter les doublons
+            const { data: existingCatalogItems } = await supabase
               .from("catalog_items")
-              .update(catalogItemData)
-              .eq("id", existingCatalogItem.id);
+              .select("id")
+              .eq("content_id", result.id)
+              .eq("item_type", "module")
+              .eq("creator_id", user.id) // Filtrer par creator_id pour éviter les doublons
+              .order("created_at", { ascending: false }); // Prendre le plus récent
+            
+            // Prendre le premier (le plus récent) s'il y en a plusieurs
+            const existingCatalogItem = existingCatalogItems && existingCatalogItems.length > 0 
+              ? existingCatalogItems[0] 
+              : null;
+            
+            // Si plusieurs items existent, supprimer les anciens (garder seulement le plus récent)
+            if (existingCatalogItems && existingCatalogItems.length > 1) {
+              const idsToDelete = existingCatalogItems.slice(1).map(item => item.id);
+              await supabase
+                .from("catalog_items")
+                .delete()
+                .in("id", idsToDelete);
+              console.log(`[api/courses] 🗑️ Supprimé ${idsToDelete.length} catalog_item(s) en double pour le module ${result.id}`);
+            }
 
-            if (updateError) {
-              console.error("[api/courses] Erreur lors de la mise à jour du catalog_item:", updateError);
+            const catalogItemData: any = {
+              content_id: result.id,
+              item_type: "module", // "module" = "formation", c'est la même table
+              title: snapshot.general.title,
+              description: snapshot.general.subtitle || null,
+              short_description: snapshot.general.subtitle || null,
+              price: snapshot.general.price || 0,
+              is_free: !snapshot.general.price || snapshot.general.price === 0,
+              category: snapshot.general.category || null,
+              hero_image_url: snapshot.general.heroImage || null,
+              thumbnail_url: snapshot.general.heroImage || null,
+              target_audience: targetAudience,
+              creator_id: user.id,
+              created_by: user.id, // IMPORTANT: Champ requis NOT NULL
+              // Actif si No School (publication automatique) OU si publié OU si contentin
+              is_active: (assignmentType === "no_school" || status === "published" || isContentin),
+              updated_at: new Date().toISOString(),
+            };
+
+            if (existingCatalogItem) {
+              // Mettre à jour l'item existant
+              const { error: updateError } = await supabase
+                .from("catalog_items")
+                .update(catalogItemData)
+                .eq("id", existingCatalogItem.id);
+
+              if (updateError) {
+                console.error("[api/courses] ❌ Erreur lors de la mise à jour du catalog_item:", updateError);
+              } else {
+                console.log("[api/courses] ✅ Catalog item mis à jour:", existingCatalogItem.id, "target_audience:", targetAudience, "is_active:", catalogItemData.is_active);
+              }
             } else {
-              console.log("[api/courses] ✅ Catalog item mis à jour:", existingCatalogItem.id);
+              // Créer un nouvel item
+              const { error: insertError } = await supabase
+                .from("catalog_items")
+                .insert(catalogItemData);
+
+              if (insertError) {
+                console.error("[api/courses] ❌ Erreur lors de la création du catalog_item:", insertError);
+              } else {
+                console.log("[api/courses] ✅ Catalog item créé pour le module:", result.id, "assignment_type:", assignmentType, "target_audience:", targetAudience, "is_active:", catalogItemData.is_active);
+                
+                // Si assigné à une organisation, créer l'accès dans catalog_access
+                if (assignmentType === "organization" && assignedOrgId) {
+                  const { data: insertedCatalogItem } = await supabase
+                    .from("catalog_items")
+                    .select("id")
+                    .eq("content_id", result.id)
+                    .eq("item_type", "module")
+                    .single();
+                  
+                  if (insertedCatalogItem) {
+                    const { error: accessError } = await supabase
+                      .from("catalog_access")
+                      .insert({
+                        catalog_item_id: insertedCatalogItem.id,
+                        organization_id: assignedOrgId,
+                        access_status: "manually_granted",
+                      });
+                    
+                    if (accessError) {
+                      console.error("[api/courses] ❌ Erreur lors de la création de l'accès organisation:", accessError);
+                    } else {
+                      console.log("[api/courses] ✅ Accès organisation créé pour:", assignedOrgId);
+                    }
+                  }
+                }
+              }
             }
           } else {
-            // Créer un nouvel item
-            const { error: insertError } = await supabase
-              .from("catalog_items")
-              .insert(catalogItemData);
-
-            if (insertError) {
-              console.error("[api/courses] Erreur lors de la création du catalog_item:", insertError);
-            } else {
-              console.log("[api/courses] ✅ Catalog item créé pour le module");
-            }
+            console.log("[api/courses] ⏭️ Module non ajouté au catalogue (pas No School et pas publié)");
           }
+        } else {
+          console.log("[api/courses] ⏭️ Utilisateur n'est pas un Super Admin, pas d'ajout au catalogue");
         }
       } catch (catalogError) {
-        console.error("[api/courses] Erreur lors de la synchronisation avec catalog_items:", catalogError);
+        console.error("[api/courses] ❌ Erreur lors de la synchronisation avec catalog_items:", catalogError);
         // Ne pas bloquer la réponse si la synchronisation échoue
       }
     }

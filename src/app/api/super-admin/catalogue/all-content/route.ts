@@ -3,25 +3,39 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  console.log("[api/super-admin/catalogue/all-content] Request received");
+  
   try {
+    console.log("[api/super-admin/catalogue/all-content] Checking super admin access...");
     const hasAccess = await isSuperAdmin();
     if (!hasAccess) {
+      console.log("[api/super-admin/catalogue/all-content] Access denied");
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    console.log("[api/super-admin/catalogue/all-content] Getting Supabase client...");
     const supabase = await getServerClient();
     if (!supabase) {
+      console.log("[api/super-admin/catalogue/all-content] Supabase client unavailable");
       return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
     }
+    
+    console.log("[api/super-admin/catalogue/all-content] Getting user...");
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
+      console.log("[api/super-admin/catalogue/all-content] User not found");
       return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
+    
+    console.log("[api/super-admin/catalogue/all-content] User found:", user.id);
 
     // Récupérer tous les contenus créés par le Super Admin depuis les tables directes
     // TypeScript assertion: supabase est vérifié non-null ci-dessus
     const supabaseClient = supabase!;
+    console.log("[api/super-admin/catalogue/all-content] Fetching content for user:", user.id);
+    
     const [modulesResult, testsResult, resourcesResult, pathsResult] = await Promise.all([
       // Modules (courses)
       supabaseClient
@@ -52,6 +66,51 @@ export async function GET(request: NextRequest) {
         .order("created_at", { ascending: false }),
     ]);
 
+    console.log("[api/super-admin/catalogue/all-content] Results:", {
+      modules: modulesResult.data?.length || 0,
+      tests: testsResult.data?.length || 0,
+      resources: resourcesResult.data?.length || 0,
+      paths: pathsResult.data?.length || 0,
+      moduleTitles: modulesResult.data?.map(m => m.title) || [],
+    });
+    
+    // Vérifier les erreurs
+    if (modulesResult.error) {
+      console.error("[api/super-admin/catalogue/all-content] Error fetching modules:", modulesResult.error);
+    }
+
+    // Récupérer tous les catalog_items en une seule requête pour optimiser
+    const moduleIds = modulesResult.data?.map(m => m.id) || [];
+    const testIds = testsResult.data?.map(t => t.id) || [];
+    const resourceIds = resourcesResult.data?.map(r => r.id) || [];
+    const pathIds = pathsResult.data?.map(p => p.id) || [];
+    
+    const allContentIds = [
+      ...moduleIds,
+      ...testIds,
+      ...resourceIds,
+      ...pathIds,
+    ];
+
+    // Récupérer tous les catalog_items en une seule requête (seulement si on a des IDs)
+    let allCatalogItems = null;
+    if (allContentIds.length > 0) {
+      const { data } = await supabaseClient
+        .from("catalog_items")
+        .select("id, content_id, item_type")
+        .eq("creator_id", user.id)
+        .in("content_id", allContentIds);
+      allCatalogItems = data;
+    }
+
+    // Créer un Map pour accès rapide
+    const catalogItemsMap = new Map<string, string>();
+    if (allCatalogItems) {
+      for (const item of allCatalogItems) {
+        catalogItemsMap.set(`${item.content_id}-${item.item_type}`, item.id);
+      }
+    }
+
     // Transformer les résultats en format uniforme pour le catalogue
     const allItems = [];
 
@@ -61,8 +120,10 @@ export async function GET(request: NextRequest) {
         // Extraire l'image depuis builder_snapshot ou cover_image
         let heroImage = module.cover_image;
         let thumbnail = module.cover_image;
+        let price = 0;
+        let category = null;
         
-        if (!heroImage && module.builder_snapshot) {
+        if (module.builder_snapshot) {
           try {
             const snapshot = typeof module.builder_snapshot === 'string' 
               ? JSON.parse(module.builder_snapshot) 
@@ -72,21 +133,22 @@ export async function GET(request: NextRequest) {
               heroImage = snapshot.general.heroImage;
               thumbnail = snapshot.general.heroImage;
             }
+            if (snapshot?.general?.price) {
+              price = snapshot.general.price;
+            }
+            if (snapshot?.general?.category) {
+              category = snapshot.general.category;
+            }
           } catch (e) {
             console.error("[catalogue/all-content] Error parsing builder_snapshot:", e);
           }
         }
 
-        // Chercher l'item dans catalog_items pour obtenir l'ID du catalogue
-        const { data: catalogItem } = await supabaseClient
-          .from("catalog_items")
-          .select("id")
-          .eq("content_id", module.id)
-          .eq("item_type", "module")
-          .maybeSingle();
+        // Récupérer l'ID du catalogue depuis le Map
+        const catalogItemId = catalogItemsMap.get(`${module.id}-module`);
 
         allItems.push({
-          id: catalogItem?.id || module.id, // Utiliser l'ID du catalogue si disponible
+          id: catalogItemId || module.id, // Utiliser l'ID du catalogue si disponible
           content_id: module.id,
           item_type: "module",
           title: module.title,
@@ -94,9 +156,9 @@ export async function GET(request: NextRequest) {
           short_description: module.description?.substring(0, 150) || null,
           hero_image_url: heroImage,
           thumbnail_url: thumbnail,
-          price: 0,
-          is_free: true,
-          category: null,
+          price: price,
+          is_free: price === 0,
+          category: category,
           duration: null,
           level: null,
           created_at: module.created_at,
@@ -108,16 +170,11 @@ export async function GET(request: NextRequest) {
     // Tests
     if (testsResult.data) {
       for (const test of testsResult.data) {
-        // Chercher l'item dans catalog_items
-        const { data: catalogItem } = await supabase
-          .from("catalog_items")
-          .select("id")
-          .eq("content_id", test.id)
-          .eq("item_type", "test")
-          .maybeSingle();
+        // Récupérer l'ID du catalogue depuis le Map
+        const catalogItemId = catalogItemsMap.get(`${test.id}-test`);
 
         allItems.push({
-          id: catalogItem?.id || test.id,
+          id: catalogItemId || test.id,
           content_id: test.id,
           item_type: "test",
           title: test.title,
@@ -140,13 +197,8 @@ export async function GET(request: NextRequest) {
     // Ressources
     if (resourcesResult.data) {
       for (const resource of resourcesResult.data) {
-        // Chercher l'item dans catalog_items
-        const { data: catalogItem } = await supabase
-          .from("catalog_items")
-          .select("id")
-          .eq("content_id", resource.id)
-          .eq("item_type", "ressource")
-          .maybeSingle();
+        // Récupérer l'ID du catalogue depuis le Map
+        const catalogItemId = catalogItemsMap.get(`${resource.id}-ressource`);
 
         // Priorité pour les images : hero_image_url > thumbnail_url > cover_url > file_url (si image)
         const resourceImage = 
@@ -156,7 +208,7 @@ export async function GET(request: NextRequest) {
           (resource.file_url && resource.file_url.match(/\.(jpg|jpeg|png|webp|gif)(\?|$)/i) ? resource.file_url : null);
 
         allItems.push({
-          id: catalogItem?.id || resource.id,
+          id: catalogItemId || resource.id,
           content_id: resource.id,
           item_type: "ressource",
           title: resource.title,
@@ -180,16 +232,11 @@ export async function GET(request: NextRequest) {
     // Parcours
     if (pathsResult.data) {
       for (const path of pathsResult.data) {
-        // Chercher l'item dans catalog_items
-        const { data: catalogItem } = await supabase
-          .from("catalog_items")
-          .select("id")
-          .eq("content_id", path.id)
-          .eq("item_type", "parcours")
-          .maybeSingle();
+        // Récupérer l'ID du catalogue depuis le Map
+        const catalogItemId = catalogItemsMap.get(`${path.id}-parcours`);
 
         allItems.push({
-          id: catalogItem?.id || path.id,
+          id: catalogItemId || path.id,
           content_id: path.id,
           item_type: "parcours",
           title: path.title,
@@ -216,11 +263,14 @@ export async function GET(request: NextRequest) {
       return dateB - dateA;
     });
 
+    const duration = Date.now() - startTime;
+    console.log("[api/super-admin/catalogue/all-content] Returning", allItems.length, "items in", duration, "ms");
     return NextResponse.json({ items: allItems });
   } catch (error) {
-    console.error("[api/super-admin/catalogue/all-content] Error:", error);
+    const duration = Date.now() - startTime;
+    console.error("[api/super-admin/catalogue/all-content] Error after", duration, "ms:", error);
     return NextResponse.json(
-      { error: "Erreur lors de la récupération des contenus" },
+      { error: "Erreur lors de la récupération des contenus", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

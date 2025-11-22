@@ -13,3 +13,6 @@ CREATE INDEX IF NOT EXISTS idx_catalog_items_target_audience ON catalog_items(ta
 
 
 
+
+
+

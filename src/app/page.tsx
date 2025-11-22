@@ -21,12 +21,19 @@ export default async function Home() {
   if (tenant && !isLocalhost) {
     // Si c'est le tenant jessica-contentin-app (app.jessicacontentin.fr), rediriger vers la page ressources
     if (tenant.id === 'jessica-contentin-app') {
-      redirect('/jessica-contentin/ressources');
+      redirect('/ressources');
     }
     
-    // Si c'est le tenant jessica-contentin, rediriger vers le site vitrine
+    // Si c'est le tenant jessica-contentin, servir directement la page d'accueil
     if (tenant.id === 'jessica-contentin') {
-      redirect('/jessica-contentin');
+      // Importer et servir directement la page Jessica Contentin
+      const { default: JessicaContentinHomePage } = await import('@/app/jessica-contentin/page');
+      const { JessicaContentinLayout } = await import('@/app/jessica-contentin/layout');
+      return (
+        <JessicaContentinLayout>
+          <JessicaContentinHomePage />
+        </JessicaContentinLayout>
+      );
     }
     
     // C'est un tenant en production, afficher la landing page style Netflix

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, FileText, Video, ArrowRight, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 type CatalogItem = {
@@ -30,18 +31,18 @@ export default function RessourcesPage() {
   const sliderRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    // Démarrer l'animation d'entrée après un court délai
+    // Charger les ressources immédiatement
+    loadResources();
+    
+    // Afficher le contenu rapidement (réduire l'animation de bienvenue)
     const timer = setTimeout(() => {
       setShowWelcome(true);
-    }, 100);
+    }, 50);
 
-    // Afficher le contenu après l'animation de bienvenue
+    // Afficher le contenu après une animation très courte
     const contentTimer = setTimeout(() => {
       setShowContent(true);
-    }, 2000);
-
-    // Charger les ressources
-    loadResources();
+    }, 800); // Réduit de 2000ms à 800ms
 
     return () => {
       clearTimeout(timer);
@@ -235,15 +236,24 @@ export default function RessourcesPage() {
                           className="absolute inset-0"
                         >
                           <div className="relative w-full h-full">
-                            <img
-                              src={item.hero_image_url || item.thumbnail_url || ""}
-                              alt={item.title}
-                              className="absolute inset-0 w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1920&q=80";
-                              }}
-                            />
+                            {(item.hero_image_url || item.thumbnail_url) ? (
+                              <Image
+                                src={item.hero_image_url || item.thumbnail_url || ""}
+                                alt={item.title}
+                                fill
+                                priority={index === 0}
+                                quality={85}
+                                className="object-cover"
+                                sizes="100vw"
+                                unoptimized={false}
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1920&q=80";
+                                }}
+                              />
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-br from-[#E6D9C6] to-[#C6A664]" />
+                            )}
                             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                           </div>
@@ -321,10 +331,19 @@ export default function RessourcesPage() {
 
               {/* Sliders par catégorie - Style Netflix */}
               <div className="space-y-8 mt-8 px-6 lg:px-16">
-                {loading ? (
-                  <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C6A664] mb-4"></div>
-                    <p className="text-[#2F2A25]/70">Chargement des ressources...</p>
+                {loading && catalogItems.length === 0 ? (
+                  <div className="space-y-6">
+                    {/* Skeleton loaders */}
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="space-y-4">
+                        <div className="h-8 w-48 bg-[#E6D9C6] rounded animate-pulse" />
+                        <div className="flex gap-4 overflow-hidden">
+                          {[1, 2, 3, 4].map((j) => (
+                            <div key={j} className="flex-shrink-0 w-[280px] md:w-[320px] aspect-video bg-[#E6D9C6] rounded-lg animate-pulse" />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : sortedCategories.length === 0 ? (
                   <div className="text-center py-12">
@@ -389,10 +408,15 @@ export default function RessourcesPage() {
                                 <div className="relative aspect-video rounded-lg overflow-hidden bg-[#E6D9C6] border border-[#E6D9C6] hover:border-[#C6A664] transition-all hover:scale-105 hover:shadow-xl">
                                   {/* Image */}
                                   {item.hero_image_url || item.thumbnail_url ? (
-                                    <img
+                                    <Image
                                       src={item.hero_image_url || item.thumbnail_url || ""}
                                       alt={item.title}
-                                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-110"
+                                      fill
+                                      quality={80}
+                                      className="object-cover transition-transform duration-300 group-hover/item:scale-110"
+                                      sizes="(max-width: 768px) 280px, 320px"
+                                      unoptimized={false}
+                                      loading="lazy"
                                       onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         target.src = "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80";

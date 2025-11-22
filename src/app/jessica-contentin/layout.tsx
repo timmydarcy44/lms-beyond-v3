@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "Psychopédagogue certifiée en neuroéducation. Accompagnement personnalisé pour enfants, adolescents et adultes. Gestion des émotions, confiance en soi, troubles DYS, TDA-H.",
 };
 
-export default function JessicaContentinLayout({
+export function JessicaContentinLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -21,4 +21,6 @@ export default function JessicaContentinLayout({
     </div>
   );
 }
+
+export default JessicaContentinLayout;
 

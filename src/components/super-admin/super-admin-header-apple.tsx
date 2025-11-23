@@ -117,20 +117,24 @@ export function SuperAdminHeaderApple() {
 
   // Filtrer les items de navigation pour contentin.cabinet@gmail.com
   const filteredNavItems = isContentin
-    ? NAV_ITEMS.filter((item) => {
-        // Masquer "No School", "Premium", "Chiffre d'affaires", "Statistiques"
-        // Masquer aussi "Organisations" et "Utilisateurs" car contentin ne gère que son catalogue
-        // Masquer "IA" car ce n'est pas nécessaire pour contentin
-        const hiddenLabels = [
-          "No School",
-          "Premium",
-          "Chiffre d'affaires",
-          "Statistiques",
-          "Utilisateurs",
-          "IA",
-        ];
-        return !hiddenLabels.includes(item.label);
-      })
+    ? [
+        ...NAV_ITEMS.filter((item) => {
+          // Masquer "No School", "Premium", "Chiffre d'affaires", "Statistiques"
+          // Masquer aussi "Organisations" et "Utilisateurs" car contentin ne gère que son catalogue
+          // Masquer "IA" car ce n'est pas nécessaire pour contentin
+          const hiddenLabels = [
+            "No School",
+            "Premium",
+            "Chiffre d'affaires",
+            "Statistiques",
+            "Utilisateurs",
+            "IA",
+          ];
+          return !hiddenLabels.includes(item.label);
+        }),
+        // Ajouter l'onglet Catalogue pour Jessica
+        { label: "Catalogue", href: "/super/catalogue-jessica" },
+      ]
     : NAV_ITEMS;
 
   return (

@@ -8,6 +8,7 @@ import { PillarsSlider } from "@/components/jessica-contentin/pillars-slider";
 import { VideoHero } from "@/components/jessica-contentin/video-hero";
 import { ResourcesSection } from "@/components/jessica-contentin/resources-section";
 import { TrustIndex } from "@/components/jessica-contentin/trust-index";
+import { FeaturesSlider } from "@/components/jessica-contentin/features-slider";
 import { ContactForm } from "@/components/jessica-contentin/contact-form";
 import { motion } from "framer-motion";
 import { env } from "@/lib/env";
@@ -171,6 +172,9 @@ export default function JessicaContentinHomePage() {
           </div>
         </div>
       </motion.section>
+
+      {/* Slider Features style Tony Robbins */}
+      <FeaturesSlider />
 
       {/* Formulaire de contact */}
       <ContactForm />

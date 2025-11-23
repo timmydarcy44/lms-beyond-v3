@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCatalogItemById } from "@/lib/queries/catalogue";
 import { getServerClient } from "@/lib/supabase/server";
 import { CatalogTopNavClient } from "@/components/catalogue/catalog-top-nav-client";
@@ -38,19 +38,19 @@ export default async function TestPaymentPage({ params }: PageProps) {
 
   const organizationId = profile?.org_id || undefined;
 
-  const catalogItem = await getCatalogItemById(id, organizationId);
+  const catalogItem = await getCatalogItemById(id, organizationId, user.id);
 
   if (!catalogItem || catalogItem.item_type !== "test") {
     notFound();
   }
 
-  // Si déjà acheté ou gratuit, rediriger vers le test
-  if (catalogItem.is_free || catalogItem.access_status === "purchased" || catalogItem.access_status === "manually_granted") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Vous avez déjà accès à ce test.</p>
-      </div>
-    );
+  // Vérifier si l'utilisateur est le créateur du contenu
+  const isCreator = (catalogItem as any).creator_id === user.id;
+  
+  // Si déjà acheté, gratuit, ou si c'est le créateur, rediriger vers le test
+  if (isCreator || catalogItem.is_free || catalogItem.access_status === "purchased" || catalogItem.access_status === "manually_granted") {
+    // Rediriger vers la page de détail du test
+    redirect(`/dashboard/catalogue/test/${id}`);
   }
 
   let branding = null;

@@ -99,20 +99,24 @@ export function SuperAdminSidebarApple({ open: controlledOpen, onToggle }: Super
 
   // Filtrer les items de navigation pour contentin.cabinet@gmail.com
   const filteredNavItems = isContentin
-    ? NAV_ITEMS.filter((item) => {
-        // Masquer "No School", "Voir mon catalogue", "Chiffre d'affaires", "Statistiques", "Gamification"
-        // Masquer aussi "Organisations" et "Utilisateurs" car contentin ne gère que son catalogue
-        const hiddenLabels = [
-          "No School",
-          "Voir mon catalogue",
-          "Chiffre d'affaires",
-          "Statistiques",
-          "Gamification (Demo)",
-          "Organisations",
-          "Utilisateurs",
-        ];
-        return !hiddenLabels.includes(item.label);
-      })
+    ? [
+        ...NAV_ITEMS.filter((item) => {
+          // Masquer "No School", "Voir mon catalogue", "Chiffre d'affaires", "Statistiques", "Gamification"
+          // Masquer aussi "Organisations" et "Utilisateurs" car contentin ne gère que son catalogue
+          const hiddenLabels = [
+            "No School",
+            "Voir mon catalogue",
+            "Chiffre d'affaires",
+            "Statistiques",
+            "Gamification (Demo)",
+            "Organisations",
+            "Utilisateurs",
+          ];
+          return !hiddenLabels.includes(item.label);
+        }),
+        // Ajouter l'onglet Catalogue pour Jessica
+        { label: "Catalogue", icon: Store, href: "/super/catalogue-jessica" },
+      ]
     : NAV_ITEMS;
 
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;

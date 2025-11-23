@@ -149,6 +149,37 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
           .eq("user_id", user.id);
       }
 
+      // Si un seul test a été acheté, rediriger directement vers le test
+      if (newOrder && items.length === 1 && items[0].content_type === "test") {
+        const testId = items[0].content_id;
+        
+        // Récupérer le test pour vérifier s'il utilise mental_health_questionnaires
+        const { data: testData } = await supabase
+          .from("tests")
+          .select("id, slug, builder_snapshot")
+          .eq("id", testId)
+          .single();
+
+        if (testData) {
+          const builderSnapshot = testData.builder_snapshot as any;
+          const questionnaireId = builderSnapshot?.questionnaireId;
+
+          if (questionnaireId) {
+            // Rediriger vers la page du questionnaire mental_health
+            redirect(`/dashboard/apprenant/questionnaires/${questionnaireId}`);
+          }
+
+          // Sinon, rediriger vers la page de test classique
+          const testSlug = testData.slug;
+          if (testSlug) {
+            redirect(`/dashboard/tests/${testSlug}`);
+          }
+
+          // Fallback vers l'ID du test
+          redirect(`/dashboard/tests/${testData.id}`);
+        }
+      }
+
       return <CheckoutSuccessClient orderId={newOrder?.id || null} />;
     }
 
@@ -231,6 +262,42 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
         .from("cart_items")
         .delete()
         .eq("user_id", user.id);
+    }
+
+    // Si un seul test a été acheté, rediriger directement vers le test
+    const { data: orderItems } = await supabase
+      .from("order_items")
+      .select("content_id, content_type")
+      .eq("order_id", order.id);
+
+    if (orderItems && orderItems.length === 1 && orderItems[0].content_type === "test") {
+      const testId = orderItems[0].content_id;
+      
+      // Récupérer le test pour vérifier s'il utilise mental_health_questionnaires
+      const { data: testData } = await supabase
+        .from("tests")
+        .select("id, slug, builder_snapshot")
+        .eq("id", testId)
+        .single();
+
+      if (testData) {
+        const builderSnapshot = testData.builder_snapshot as any;
+        const questionnaireId = builderSnapshot?.questionnaireId;
+
+        if (questionnaireId) {
+          // Rediriger vers la page du questionnaire mental_health
+          redirect(`/dashboard/apprenant/questionnaires/${questionnaireId}`);
+        }
+
+        // Sinon, rediriger vers la page de test classique
+        const testSlug = testData.slug;
+        if (testSlug) {
+          redirect(`/dashboard/tests/${testSlug}`);
+        }
+
+        // Fallback vers l'ID du test
+        redirect(`/dashboard/tests/${testData.id}`);
+      }
     }
 
     return <CheckoutSuccessClient orderId={order.id} />;

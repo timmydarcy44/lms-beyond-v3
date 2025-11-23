@@ -57,8 +57,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
+    // Vérifier si l'utilisateur est un super admin
+    const { data: superAdminCheck } = await supabase
+      .from("super_admins")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+    
+    const isSuperAdmin = !!superAdminCheck;
+
     const body = await request.json();
     const { courseId, chapterId, front, back } = body;
+
+    console.log("[api/flashcards] POST request:", JSON.stringify({
+      courseId,
+      chapterId,
+      front: front?.substring(0, 30),
+      back: back?.substring(0, 30),
+      userId: user.id,
+      isSuperAdmin
+    }));
 
     if (!front || !back) {
       return NextResponse.json({ error: "front et back requis" }, { status: 400 });
@@ -66,6 +85,49 @@ export async function POST(request: NextRequest) {
 
     if (!courseId && !chapterId) {
       return NextResponse.json({ error: "courseId ou chapterId requis" }, { status: 400 });
+    }
+
+    // Vérifier que le cours existe et que l'utilisateur est le créateur
+    if (courseId) {
+      const { data: course, error: courseError } = await supabase
+        .from("courses")
+        .select("id, creator_id")
+        .eq("id", courseId)
+        .maybeSingle();
+      
+      if (courseError) {
+        console.error("[api/flashcards] Erreur lors de la vérification du cours:", JSON.stringify(courseError));
+      }
+      
+      if (!course) {
+        console.error("[api/flashcards] Cours introuvable:", courseId);
+        return NextResponse.json({ 
+          error: "Cours introuvable",
+          details: `Le cours avec l'ID ${courseId} n'existe pas`
+        }, { status: 404 });
+      }
+      
+      console.log("[api/flashcards] Vérification du cours:", JSON.stringify({
+        courseId: course.id,
+        creatorId: course.creator_id,
+        userId: user.id,
+        isCreator: course.creator_id === user.id,
+        isSuperAdmin: isSuperAdmin
+      }));
+      
+      // Vérifier que l'utilisateur est le créateur OU un super admin
+      if (course.creator_id !== user.id && !isSuperAdmin) {
+        console.error("[api/flashcards] Utilisateur non autorisé:", JSON.stringify({
+          courseId: course.id,
+          creatorId: course.creator_id,
+          userId: user.id,
+          isSuperAdmin
+        }));
+        return NextResponse.json({ 
+          error: "Non autorisé",
+          details: "Vous n'êtes pas autorisé à créer des flashcards pour ce cours"
+        }, { status: 403 });
+      }
     }
 
     const { data: flashcard, error } = await supabase
@@ -79,17 +141,32 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
+    if (flashcard) {
+      console.log("[api/flashcards] Flashcard created:", JSON.stringify({
+        id: flashcard.id,
+        course_id: flashcard.course_id,
+        chapter_id: flashcard.chapter_id
+      }));
+    }
+
     if (error) {
-      console.error("[api/flashcards] Erreur lors de la création:", {
-        error,
+      console.error("[api/flashcards] Erreur lors de la création:", JSON.stringify({
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        },
         courseId,
         chapterId,
-        front,
-        back,
-      });
+        front: front?.substring(0, 30),
+        back: back?.substring(0, 30),
+      }));
       return NextResponse.json({ 
         error: "Erreur lors de la création",
-        details: error.message || "Impossible de créer la flashcard"
+        details: error.message || "Impossible de créer la flashcard",
+        code: error.code,
+        hint: error.hint
       }, { status: 500 });
     }
 

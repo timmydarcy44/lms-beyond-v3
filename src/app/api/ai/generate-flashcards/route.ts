@@ -164,6 +164,39 @@ Chaque flashcard doit avoir :
           back: flashcard.answer || "",
         }));
 
+        // Vérifier si l'utilisateur est un super admin
+        const { data: superAdminCheck } = await supabase
+          .from("super_admins")
+          .select("id")
+          .eq("user_id", authData.user.id)
+          .eq("is_active", true)
+          .maybeSingle();
+        
+        const isSuperAdmin = !!superAdminCheck;
+
+        // Vérifier que le cours existe et que l'utilisateur est le créateur
+        const { data: course, error: courseError } = await supabase
+          .from("courses")
+          .select("id, creator_id")
+          .eq("id", courseId)
+          .maybeSingle();
+        
+        if (courseError) {
+          console.error("[ai/generate-flashcards] Erreur lors de la vérification du cours:", JSON.stringify(courseError));
+        }
+        
+        if (!course) {
+          console.error("[ai/generate-flashcards] Cours introuvable:", courseId);
+        } else {
+          console.log("[ai/generate-flashcards] Vérification du cours:", JSON.stringify({
+            courseId: course.id,
+            creatorId: course.creator_id,
+            userId: authData.user.id,
+            isCreator: course.creator_id === authData.user.id,
+            isSuperAdmin: isSuperAdmin
+          }));
+        }
+
         // Insérer les flashcards dans la base de données
         const { data: insertedFlashcards, error: insertError } = await supabase
           .from("flashcards")
@@ -171,11 +204,21 @@ Chaque flashcard doit avoir :
           .select();
 
         if (insertError) {
-          console.error("[ai] Error saving flashcards to database:", insertError);
+          console.error("[ai/generate-flashcards] Error saving flashcards to database:", JSON.stringify({
+            error: {
+              code: insertError.code,
+              message: insertError.message,
+              details: insertError.details,
+              hint: insertError.hint,
+            },
+            courseId,
+            actualChapterId,
+            flashcardsCount: flashcardsToInsert.length
+          }));
           // Ne pas échouer complètement si la sauvegarde échoue, on retourne quand même les flashcards générées
         } else {
           savedFlashcards = insertedFlashcards || [];
-          console.log(`[ai] Successfully saved ${savedFlashcards.length} flashcards to database with chapter_id: ${actualChapterId || 'null'}`);
+          console.log(`[ai/generate-flashcards] Successfully saved ${savedFlashcards.length} flashcards to database with chapter_id: ${actualChapterId || 'null'}`);
         }
       } catch (saveError) {
         console.error("[ai] Error saving flashcards:", saveError);

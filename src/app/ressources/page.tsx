@@ -9,14 +9,9 @@ export default async function RessourcesRoute() {
   const hostname = headersList.get('host') || '';
   const isLocalhost = hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1');
 
-  // Si on est sur app.jessicacontentin.fr, servir la page ressources
-  if (tenant?.id === 'jessica-contentin-app' && !isLocalhost) {
+  // Si on est sur jessicacontentin.fr ou app.jessicacontentin.fr, servir la page ressources
+  if ((tenant?.id === 'jessica-contentin' || tenant?.id === 'jessica-contentin-app') && !isLocalhost) {
     return <RessourcesPage />;
-  }
-
-  // Si on est sur jessicacontentin.fr (pas app), rediriger vers app.jessicacontentin.fr
-  if (tenant?.id === 'jessica-contentin' && !isLocalhost) {
-    redirect('https://app.jessicacontentin.fr/ressources');
   }
 
   // Pour le développement local, servir la page

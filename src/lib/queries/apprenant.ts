@@ -815,15 +815,85 @@ export async function getLearnerContentDetail(
       }
 
       // Charger les flashcards du cours depuis la base de données
-      const { data: flashcardsData, error: flashcardsError } = await supabase
+      console.log("[apprenant] Loading flashcards for course:", JSON.stringify({
+        courseId: course.id,
+        courseTitle: course.title
+      }));
+      
+      // Essayer d'abord avec l'ID exact
+      let { data: flashcardsData, error: flashcardsError } = await supabase
         .from("flashcards")
         .select("id, front, back, course_id, chapter_id")
         .eq("course_id", course.id)
         .order("created_at", { ascending: true });
 
-      if (flashcardsError) {
-        console.error("[apprenant] Error loading flashcards:", flashcardsError);
+      // Si aucune flashcard n'est trouvée, vérifier s'il y a des flashcards avec un course_id différent
+      // (peut arriver si le cours a été recréé)
+      if ((!flashcardsData || flashcardsData.length === 0) && course.builder_snapshot) {
+        console.log("[apprenant] No flashcards found with exact course_id, checking all flashcards...");
+        const { data: allFlashcards } = await supabase
+          .from("flashcards")
+          .select("id, front, back, course_id, chapter_id")
+          .limit(100);
+        
+        console.log("[apprenant] All flashcards in DB:", JSON.stringify({
+          total: allFlashcards?.length || 0,
+          sample: allFlashcards?.slice(0, 5).map(f => ({ id: f.id, course_id: f.course_id, chapter_id: f.chapter_id }))
+        }));
       }
+
+      if (flashcardsError) {
+        console.error("[apprenant] Error loading flashcards:", JSON.stringify(flashcardsError));
+      }
+
+      console.log("[apprenant] Flashcards loaded:", JSON.stringify({
+        count: flashcardsData?.length || 0,
+        courseId: course.id,
+        flashcards: flashcardsData?.map(f => ({ id: f.id, course_id: f.course_id, chapter_id: f.chapter_id, front: f.front?.substring(0, 30) }))
+      }));
+      
+      // Si aucune flashcard n'est trouvée, vérifier s'il y en a dans la DB pour ce cours
+      if (!flashcardsData || flashcardsData.length === 0) {
+        const { data: allFlashcards, error: allError } = await supabase
+          .from("flashcards")
+          .select("id, front, back, course_id, chapter_id")
+          .limit(10);
+        
+        console.log("[apprenant] Checking all flashcards in DB (sample):", JSON.stringify({
+          totalSample: allFlashcards?.length || 0,
+          sample: allFlashcards?.map(f => ({ id: f.id, course_id: f.course_id, chapter_id: f.chapter_id }))
+        }));
+      }
+
+      // Construire un mapping des IDs de chapitres depuis le snapshot
+      const chapterIdMap = new Map<string, string>(); // dbId -> localId
+      const localIdMap = new Map<string, string>(); // localId -> dbId
+      
+      if (course.builder_snapshot) {
+        const snapshot = course.builder_snapshot as any;
+        for (const section of snapshot.sections || []) {
+          for (const chapter of section.chapters || []) {
+            if (chapter.dbId && chapter.id) {
+              chapterIdMap.set(chapter.dbId, chapter.id);
+              localIdMap.set(chapter.id, chapter.dbId);
+            }
+            // Vérifier aussi les sous-chapitres
+            if (chapter.subchapters) {
+              for (const subchapter of chapter.subchapters) {
+                if (subchapter.dbId && subchapter.id) {
+                  chapterIdMap.set(subchapter.dbId, subchapter.id);
+                  localIdMap.set(subchapter.id, subchapter.dbId);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      console.log("[apprenant] Chapter ID mapping:", JSON.stringify({
+        chapterIdMap: Array.from(chapterIdMap.entries()),
+        localIdMap: Array.from(localIdMap.entries())
+      }));
 
       // Mapper les flashcards aux lessons appropriées
       if (flashcardsData && flashcardsData.length > 0) {
@@ -836,18 +906,53 @@ export async function getLearnerContentDetail(
 
           // Si la flashcard est associée à un chapitre spécifique
           if (flashcard.chapter_id) {
+            let matched = false;
+            
             // Trouver toutes les lessons qui correspondent à ce chapter_id
             modules.forEach((module) => {
               module.lessons?.forEach((lesson) => {
+                // Vérifier si la leçon correspond directement
                 if (lesson.id === flashcard.chapter_id || lesson.parentChapterId === flashcard.chapter_id) {
                   const lessonWithFlashcards = lesson as LearnerLesson & { flashcards?: LearnerFlashcard[] };
                   if (!lessonWithFlashcards.flashcards) {
                     lessonWithFlashcards.flashcards = [];
                   }
                   lessonWithFlashcards.flashcards.push(learnerFlashcard);
+                  matched = true;
+                  console.log("[apprenant] Flashcard matched directly:", JSON.stringify({
+                    flashcardId: flashcard.id,
+                    chapterId: flashcard.chapter_id,
+                    lessonId: lesson.id
+                  }));
+                } else {
+                  // Vérifier si le chapter_id correspond à un dbId dans le snapshot
+                  // Convertir le dbId en localId
+                  const localId = chapterIdMap.get(flashcard.chapter_id);
+                  if (localId && (lesson.id === localId || lesson.parentChapterId === localId)) {
+                    const lessonWithFlashcards = lesson as LearnerLesson & { flashcards?: LearnerFlashcard[] };
+                    if (!lessonWithFlashcards.flashcards) {
+                      lessonWithFlashcards.flashcards = [];
+                    }
+                    lessonWithFlashcards.flashcards.push(learnerFlashcard);
+                    matched = true;
+                    console.log("[apprenant] Flashcard matched via dbId mapping:", JSON.stringify({
+                      flashcardId: flashcard.id,
+                      chapterId: flashcard.chapter_id,
+                      localId: localId,
+                      lessonId: lesson.id
+                    }));
+                  }
                 }
               });
             });
+            
+            if (!matched) {
+              console.warn("[apprenant] Flashcard not matched to any lesson:", JSON.stringify({
+                flashcardId: flashcard.id,
+                chapterId: flashcard.chapter_id,
+                availableLessonIds: modules.flatMap(m => m.lessons?.map(l => l.id) || [])
+              }));
+            }
           } else {
             // Flashcard associée au cours entier, l'ajouter à toutes les lessons
             modules.forEach((module) => {
@@ -859,9 +964,18 @@ export async function getLearnerContentDetail(
                 lessonWithFlashcards.flashcards.push(learnerFlashcard);
               });
             });
+            console.log("[apprenant] Flashcard added to all lessons (no chapter_id):", JSON.stringify({ flashcardId: flashcard.id }));
           }
         });
       }
+      
+      // Log final pour vérifier
+      const totalFlashcards = modules.reduce((sum, module) => {
+        return sum + (module.lessons?.reduce((lessonSum, lesson) => {
+          return lessonSum + ((lesson as any).flashcards?.length || 0);
+        }, 0) || 0);
+      }, 0);
+      console.log("[apprenant] Total flashcards mapped to lessons:", JSON.stringify({ total: totalFlashcards }));
 
       // Construire la card
       const card: LearnerCard = {

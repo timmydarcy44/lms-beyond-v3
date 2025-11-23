@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { TestEditFormSuperAdmin } from "@/components/super-admin/test-edit-form-super-admin";
-import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { getServiceRoleClientOrFallback, getServerClient } from "@/lib/supabase/server";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -11,10 +11,15 @@ interface TestEditPageProps {
 }
 
 export default async function TestEditPage({ params }: TestEditPageProps) {
-  const hasAccess = await isSuperAdmin();
+  // Vérifier l'authentification
+  const sessionClient = await getServerClient();
+  if (!sessionClient) {
+    redirect("/login");
+  }
 
-  if (!hasAccess) {
-    redirect("/dashboard");
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user?.id) {
+    redirect("/login");
   }
 
   const { id } = await params;
@@ -88,6 +93,14 @@ export default async function TestEditPage({ params }: TestEditPageProps) {
   if (!test) {
     console.error("[super-admin/tests/edit] Test not found for ID:", id);
     redirect("/super/studio/tests");
+  }
+
+  // Vérifier l'accès : super admin OU créateur du contenu
+  const isSuper = await isSuperAdmin();
+  const isCreator = test.creator_id === user.id;
+
+  if (!isSuper && !isCreator) {
+    redirect("/dashboard");
   }
 
   console.log("[super-admin/tests/edit] Test loaded:", {

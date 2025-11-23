@@ -105,8 +105,16 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       // Si les flashcards ont été sauvegardées en DB, les utiliser directement
       if (savedFlashcards.length > 0) {
         console.log("[FlashcardsManager] Flashcards were saved to DB, using saved flashcards:", savedFlashcards.length);
-        // Les flashcards sauvegardées seront chargées depuis la DB dans loadFlashcards
-        // Pas besoin de les stocker localement
+        // Ajouter les flashcards sauvegardées à la liste immédiatement
+        setFlashcards((prev) => {
+          const existingIds = new Set(prev.map((f: any) => f.id));
+          const newFlashcards = savedFlashcards.filter((f: any) => !existingIds.has(f.id));
+          return [...prev, ...newFlashcards];
+        });
+        // Recharger depuis la DB pour s'assurer qu'elles sont à jour
+        setTimeout(() => {
+          loadFlashcards();
+        }, 500);
       } else if (createdFlashcards.length > 0) {
         // Si les flashcards n'ont pas été sauvegardées (pas d'UUID de chapitre), les stocker localement
         const flashcardsWithChapter = createdFlashcards.map((f: any, index: number) => ({
@@ -169,7 +177,7 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       return;
     }
     
-    console.log("[FlashcardsManager] Loading flashcards...", { courseId, chapterId });
+    console.log("[FlashcardsManager] Loading flashcards...", JSON.stringify({ courseId, chapterId }));
     setIsLoading(true);
     try {
       let actualChapterId: string | null = null;
@@ -256,17 +264,19 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       });
       
       // IMPORTANT: Filtrer les flashcards pour ne garder QUE celles du chapitre actuel
+      // Mais aussi inclure celles avec chapter_id: null (pour tout le cours)
       let filteredFlashcards = data.flashcards || [];
       if (actualChapterId) {
-        // Si on a un UUID, filtrer strictement par chapter_id
-        filteredFlashcards = filteredFlashcards.filter((f: any) => f.chapter_id === actualChapterId);
+        // Si on a un UUID, filtrer par chapter_id OU null (pour tout le cours)
+        filteredFlashcards = filteredFlashcards.filter((f: any) => 
+          f.chapter_id === actualChapterId || f.chapter_id === null
+        );
         console.log("[FlashcardsManager] Filtered flashcards for chapter UUID:", actualChapterId, "->", filteredFlashcards.length, "flashcards");
       } else {
-        // Si on n'a pas d'UUID, NE PAS charger les flashcards de la DB avec chapter_id null
-        // Car elles peuvent appartenir à d'autres chapitres non sauvegardés
-        // On utilisera uniquement les flashcards locales pour ce chapitre
-        console.log("[FlashcardsManager] No UUID found, not loading flashcards from DB (will use local flashcards only)");
-        filteredFlashcards = [];
+        // Si on n'a pas d'UUID, charger TOUTES les flashcards du cours (y compris celles avec chapter_id: null)
+        // Elles seront mappées à toutes les leçons côté client
+        console.log("[FlashcardsManager] No UUID found, loading all flashcards for course (including chapter_id: null):", filteredFlashcards.length);
+        // Ne pas filtrer, garder toutes les flashcards du cours
       }
       
       console.log("[FlashcardsManager] Setting flashcards from DB:", filteredFlashcards.length);
@@ -314,6 +324,12 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       return;
     }
 
+    console.log("[FlashcardsManager] Creating flashcard with:", JSON.stringify({
+      courseId,
+      chapterId,
+      courseIdType: typeof courseId
+    }));
+
     setIsSaving(true);
     try {
       // Trouver l'UUID du chapitre si chapterId est un ID local
@@ -343,6 +359,11 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
         }
       }
 
+      console.log("[FlashcardsManager] Sending flashcard creation request:", JSON.stringify({
+        courseId,
+        chapterId: actualChapterId || null,
+      }));
+
       const response = await fetch("/api/flashcards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -366,7 +387,12 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
         } catch {
           errorData = { error: `Erreur HTTP ${response.status}: ${response.statusText}` };
         }
-        throw new Error(errorData.error || errorData.details || "Erreur lors de la création");
+        console.error("[FlashcardsManager] Erreur détaillée de l'API:", JSON.stringify({
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        }));
+        throw new Error(errorData.error || errorData.details || errorData.hint || "Erreur lors de la création");
       }
 
       const data = await response.json();

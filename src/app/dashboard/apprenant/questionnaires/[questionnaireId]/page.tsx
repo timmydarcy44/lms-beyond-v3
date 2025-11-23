@@ -52,6 +52,7 @@ export default async function QuestionnairePlayerPage({
         send_day,
         send_time,
         target_roles,
+        created_by,
         questions:mental_health_questions (
           id,
           question_text,
@@ -89,6 +90,15 @@ export default async function QuestionnairePlayerPage({
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  // Récupérer l'ID de Jessica Contentin pour déterminer si c'est son test
+  const { data: jessicaProfile } = await queryClient
+    .from("profiles")
+    .select("id")
+    .eq("email", "contentin.cabinet@gmail.com")
+    .maybeSingle();
+
+  const isJessicaQuestionnaire = jessicaProfile?.id && questionnaire.created_by === jessicaProfile.id;
+
   return (
     <MentalHealthQuestionnairePlayer
       questionnaire={{
@@ -102,6 +112,7 @@ export default async function QuestionnairePlayerPage({
         questions: sortedQuestions,
       }}
       assessments={assessments ?? []}
+      isJessicaContentin={isJessicaQuestionnaire ?? false}
     />
   );
 }

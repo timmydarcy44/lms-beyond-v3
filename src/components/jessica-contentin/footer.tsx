@@ -44,7 +44,7 @@ export function JessicaContentinFooter() {
             </p>
           </div>
 
-          {/* Quick Links */}
+          {/* Navigation - Pages principales */}
           <div>
             <h4
               className="text-sm font-semibold text-[#2F2A25] mb-4 uppercase tracking-wider"
@@ -52,32 +52,42 @@ export function JessicaContentinFooter() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Navigation
+              Pages
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/a-propos" className="text-sm text-[#2F2A25]/80 hover:text-[#2F2A25]">
-                  A propos
+                <Link href="/" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
+                  Accueil
                 </Link>
               </li>
               <li>
-                <Link href="/consultations" className="text-sm text-[#2F2A25]/80 hover:text-[#2F2A25]">
+                <Link href="/a-propos" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
+                  À propos
+                </Link>
+              </li>
+              <li>
+                <Link href="/consultations" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Consultations
                 </Link>
               </li>
               <li>
-                <Link href="/specialites" className="text-sm text-[#2F2A25]/80 hover:text-[#2F2A25]">
+                <Link href="/specialites" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Spécialités
                 </Link>
               </li>
               <li>
-                <Link href="/orientation" className="text-sm text-[#2F2A25]/80 hover:text-[#2F2A25]">
+                <Link href="/orientation" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Orientation
                 </Link>
               </li>
               <li>
-                <Link href="/ressources" className="text-sm text-[#2F2A25]/80 hover:text-[#2F2A25]">
+                <Link href="/ressources" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Ressources
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
+                  Blog
                 </Link>
               </li>
             </ul>

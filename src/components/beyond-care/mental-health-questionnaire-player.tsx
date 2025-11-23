@@ -48,6 +48,7 @@ type AssessmentSummary = Pick<
 type PlayerProps = {
   questionnaire: QuestionnairePayload;
   assessments: AssessmentSummary[];
+  isJessicaContentin?: boolean;
 };
 
 type Phase = "intro" | "questions" | "result";
@@ -155,15 +156,42 @@ const DIMENSION_MESSAGES: Record<
   },
 };
 
-const brandColor = "#c91459";
-const introHeroImage =
-  "https://images.unsplash.com/photo-1524502397800-09d3eff08e04?auto=format&fit=crop&w=1600&q=80";
-const pdfBrandGradient = {
+// Couleurs Beyond Care (par défaut)
+const beyondCareBrandColor = "#c91459";
+const beyondCarePdfBrandGradient = {
   start: [255, 240, 246],
   end: [255, 255, 255],
 };
 
-export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: PlayerProps) {
+// Couleurs Jessica Contentin
+const jessicaBrandColor = "#8B6F47"; // Marron principal
+const jessicaAccentColor = "#D4AF37"; // Doré
+const jessicaSecondaryColor = "#D4C4A8"; // Beige
+const jessicaBackgroundColor = "#F5F1E8"; // Beige très clair
+const jessicaTextColor = "#5C4A37"; // Marron foncé
+const jessicaPdfBrandGradient = {
+  start: [245, 241, 232], // Beige très clair
+  end: [255, 255, 255], // Blanc
+};
+
+const introHeroImage =
+  "https://images.unsplash.com/photo-1524502397800-09d3eff08e04?auto=format&fit=crop&w=1600&q=80";
+
+export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, isJessicaContentin = false }: PlayerProps) {
+  // Déterminer les couleurs à utiliser
+  const brandColor = isJessicaContentin ? jessicaBrandColor : beyondCareBrandColor;
+  const accentColor = isJessicaContentin ? jessicaAccentColor : beyondCareBrandColor;
+  const secondaryColor = isJessicaContentin ? jessicaSecondaryColor : "#f4c1d2";
+  const backgroundColor = isJessicaContentin ? jessicaBackgroundColor : "#fef5f9";
+  const textColor = isJessicaContentin ? jessicaTextColor : "#5a1d35";
+  const textSecondaryColor = isJessicaContentin ? "#8B7355" : "#7b2a49";
+  const hoverColor = isJessicaContentin ? "#B88A44" : "#b2124f";
+  const pdfBrandGradient = isJessicaContentin ? jessicaPdfBrandGradient : beyondCarePdfBrandGradient;
+  
+  // Fonction utilitaire pour obtenir les styles inline avec les couleurs dynamiques
+  const getColorStyle = (property: string) => ({ [property]: brandColor });
+  const getTextColorStyle = () => ({ color: textColor });
+  const getTextSecondaryColorStyle = () => ({ color: textSecondaryColor });
   const [phase, setPhase] = useState<Phase>("intro");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number | string>>({});
@@ -592,66 +620,110 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         </div>
         <CardHeader className="space-y-3 text-center">
-          <Badge className="mx-auto w-fit rounded-full bg-[#c91459]/10 px-4 py-1 text-xs font-semibold text-[#c91459]">
-            Beyond Care · Préparation
+          <Badge 
+            className="mx-auto w-fit rounded-full px-4 py-1 text-xs font-semibold"
+            style={{ 
+              backgroundColor: `${brandColor}1A`, 
+              color: brandColor 
+            }}
+          >
+            {isJessicaContentin ? "Cabinet Contentin" : "Beyond Care"} · Préparation
           </Badge>
-          <CardTitle className="text-3xl font-semibold tracking-tight text-[#c91459]">
+          <CardTitle 
+            className="text-3xl font-semibold tracking-tight"
+            style={{ color: brandColor }}
+          >
             {questionnaire.title}
           </CardTitle>
           {questionnaire.description ? (
-            <CardDescription className="mx-auto max-w-2xl text-[#7b2a49]">
+            <CardDescription 
+              className="mx-auto max-w-2xl"
+              style={{ color: textSecondaryColor }}
+            >
               {questionnaire.description}
             </CardDescription>
           ) : (
-            <CardDescription className="mx-auto max-w-2xl text-[#7b2a49]">
+            <CardDescription 
+              className="mx-auto max-w-2xl"
+              style={{ color: textSecondaryColor }}
+            >
               Prenez quelques minutes pour répondre aux questions et recevoir un retour personnalisé sur votre fonctionnement naturel.
             </CardDescription>
           )}
         </CardHeader>
-        <CardContent className="space-y-6 text-sm text-[#5a1d35]">
+        <CardContent className="space-y-6 text-sm" style={{ color: textColor }}>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="flex items-center gap-3 rounded-2xl bg-[#fef5f9] p-4">
-              <Clock className="h-5 w-5 text-[#c91459]" />
+            <div 
+              className="flex items-center gap-3 rounded-2xl p-4"
+              style={{ backgroundColor }}
+            >
+              <Clock className="h-5 w-5" style={{ color: brandColor }} />
               <div>
-                <p className="font-semibold text-[#c91459]">Durée</p>
-                <p className="text-xs text-[#7b2a49]">Environ 6 minutes</p>
+                <p className="font-semibold" style={{ color: brandColor }}>Durée</p>
+                <p className="text-xs" style={{ color: textSecondaryColor }}>Environ 6 minutes</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl bg-[#fef5f9] p-4">
-              <BookOpen className="h-5 w-5 text-[#c91459]" />
+            <div 
+              className="flex items-center gap-3 rounded-2xl p-4"
+              style={{ backgroundColor }}
+            >
+              <BookOpen className="h-5 w-5" style={{ color: brandColor }} />
               <div>
-                <p className="font-semibold text-[#c91459]">Format</p>
-                <p className="text-xs text-[#7b2a49]">Échelle de 1 à 5 — soyez spontané·e</p>
+                <p className="font-semibold" style={{ color: brandColor }}>Format</p>
+                <p className="text-xs" style={{ color: textSecondaryColor }}>Échelle de 1 à 5 — soyez spontané·e</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl bg-[#fef5f9] p-4">
-              <Sparkles className="h-5 w-5 text-[#c91459]" />
+            <div 
+              className="flex items-center gap-3 rounded-2xl p-4"
+              style={{ backgroundColor }}
+            >
+              <Sparkles className="h-5 w-5" style={{ color: brandColor }} />
               <div>
-                <p className="font-semibold text-[#c91459]">Résultat</p>
-                <p className="text-xs text-[#7b2a49]">Analyse personnalisée & recommandations</p>
+                <p className="font-semibold" style={{ color: brandColor }}>Résultat</p>
+                <p className="text-xs" style={{ color: textSecondaryColor }}>Analyse personnalisée & recommandations</p>
               </div>
             </div>
           </div>
 
           {history.length > 0 ? (
-            <div className="rounded-3xl border border-[#f6cada] bg-[#fff7fb] p-6 shadow-inner">
-              <h3 className="text-sm font-semibold text-[#c91459]">Vos derniers bilans</h3>
+            <div 
+              className="rounded-3xl border p-6 shadow-inner"
+              style={{ 
+                borderColor: secondaryColor, 
+                backgroundColor: backgroundColor 
+              }}
+            >
+              <h3 className="text-sm font-semibold" style={{ color: brandColor }}>Vos derniers bilans</h3>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 {history.slice(0, 2).map((assessment) => (
                   <div key={assessment.id} className="rounded-2xl bg-white/80 p-4 shadow">
-                    <div className="flex items-center justify-between text-xs text-[#7b2a49]/80">
+                    <div 
+                      className="flex items-center justify-between text-xs"
+                      style={{ color: `${textSecondaryColor}CC` }}
+                    >
                       <span>Analyse</span>
                       <span>{new Date(assessment.created_at).toLocaleDateString("fr-FR")}</span>
                     </div>
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="text-2xl font-semibold text-[#c91459]">
+                      <span 
+                        className="text-2xl font-semibold"
+                        style={{ color: brandColor }}
+                      >
                         {Math.round(assessment.overall_score)}/100
                       </span>
-                      <Button variant="ghost" size="sm" className="text-[#c91459]" onClick={() => setActiveResult(assessment)}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        style={{ color: brandColor }}
+                        onClick={() => setActiveResult(assessment)}
+                      >
                         Voir le détail
                       </Button>
                     </div>
-                    <p className="mt-2 text-xs text-[#7b2a49]">
+                    <p 
+                      className="mt-2 text-xs"
+                      style={{ color: textSecondaryColor }}
+                    >
                       {assessment.analysis_summary ??
                         "Analyse enregistrée — consultez le détail pour découvrir vos axes de progression."}
                     </p>
@@ -660,15 +732,38 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
               </div>
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed border-[#f6cada] bg-[#fff7fb] p-6 text-center">
-              <p className="text-sm text-[#7b2a49]">
-                Vous n’avez pas encore de résultat enregistré. Répondez au questionnaire pour recevoir votre premier bilan Beyond Care.
+            <div 
+              className="rounded-3xl border border-dashed p-6 text-center"
+              style={{ 
+                borderColor: secondaryColor, 
+                backgroundColor: backgroundColor 
+              }}
+            >
+              <p 
+                className="text-sm"
+                style={{ color: textSecondaryColor }}
+              >
+                Vous n'avez pas encore de résultat enregistré. Répondez au questionnaire pour recevoir votre premier bilan {isJessicaContentin ? "Contentin" : "Beyond Care"}.
               </p>
             </div>
           )}
 
           <div className="flex justify-center">
-            <Button className="bg-[#c91459] px-8 text-white shadow-lg hover:bg-[#b2124f]" size="lg" onClick={handleStart}>
+            <Button 
+              className="px-8 text-white shadow-lg" 
+              size="lg" 
+              style={{ 
+                backgroundColor: brandColor,
+                color: "white"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = hoverColor;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = brandColor;
+              }}
+              onClick={handleStart}
+            >
               Commencer le test
             </Button>
           </div>
@@ -690,12 +785,25 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
     return (
       <div className="flex min-h-[75vh] flex-col items-center justify-center">
         <div className="w-full max-w-3xl space-y-6">
-          <div className="flex items-center justify-between text-sm text-[#7b2a49]/70">
+          <div 
+            className="flex items-center justify-between text-sm"
+            style={{ color: `${textSecondaryColor}B3` }}
+          >
             <span>
               Question {currentIndex + 1}/{totalQuestions}
             </span>
-            <div className="h-1.5 w-40 overflow-hidden rounded-full bg-[#fbd8e7]">
-              <div className="h-full rounded-full bg-[#c91459]" style={{ width: `${progress}%`, transition: "width 0.4s ease" }} />
+            <div 
+              className="h-1.5 w-40 overflow-hidden rounded-full"
+              style={{ backgroundColor: secondaryColor }}
+            >
+              <div 
+                className="h-full rounded-full" 
+                style={{ 
+                  width: `${progress}%`, 
+                  transition: "width 0.4s ease",
+                  backgroundColor: brandColor
+                }} 
+              />
             </div>
           </div>
 
@@ -728,7 +836,10 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ duration: 0.45, ease: "easeOut" }}
                 >
-                  <p className="text-2xl font-semibold leading-relaxed text-[#5a1d35]">
+                  <p 
+                    className="text-2xl font-semibold leading-relaxed"
+                    style={{ color: textColor }}
+                  >
                     {currentQuestion.question_text}
                   </p>
                 </motion.div>
@@ -746,13 +857,38 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                         onClick={() => handleSelectAnswer(currentQuestion, value)}
                         className={cn(
                           "group flex w-full max-w-[120px] flex-col items-center gap-2 rounded-2xl border p-4 text-sm transition-all duration-200",
-                          isActive
-                            ? "border-[#c91459] bg-[#fef1f7] text-[#c91459] shadow-[0_12px_28px_rgba(201,20,89,0.18)]"
-                            : "border-[#f4c1d2] bg-white text-[#7b2a49] hover:border-[#c91459]/40 hover:bg-[#fef5f9]",
+                          isActive ? "" : ""
                         )}
+                        style={isActive ? {
+                          borderColor: brandColor,
+                          backgroundColor: backgroundColor,
+                          color: brandColor,
+                          boxShadow: `0 12px 28px ${brandColor}2E`
+                        } : {
+                          borderColor: secondaryColor,
+                          backgroundColor: "white",
+                          color: textSecondaryColor
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.borderColor = `${brandColor}66`;
+                            e.currentTarget.style.backgroundColor = backgroundColor;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.borderColor = secondaryColor;
+                            e.currentTarget.style.backgroundColor = "white";
+                          }
+                        }}
                       >
                         <span className="text-lg font-semibold">{value}</span>
-                        <span className="text-xs text-[#7b2a49]/80">{label ?? " "}</span>
+                        <span 
+                          className="text-xs"
+                          style={{ color: `${textSecondaryColor}CC` }}
+                        >
+                          {label ?? " "}
+                        </span>
                       </button>
                     );
                   })}
@@ -768,12 +904,29 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                         key={option.value}
                         type="button"
                         onClick={() => handleSelectAnswer(currentQuestion, option.value)}
-                        className={cn(
-                          "flex w-full items-center justify-between gap-4 rounded-2xl border p-4 text-left text-sm transition-all duration-200",
-                          isActive
-                            ? "border-[#c91459] bg-[#fef1f7] text-[#c91459] shadow-[0_12px_28px_rgba(201,20,89,0.18)]"
-                            : "border-[#f4c1d2] bg-white text-[#7b2a49] hover:border-[#c91459]/40 hover:bg-[#fef5f9]",
-                        )}
+                        className="flex w-full items-center justify-between gap-4 rounded-2xl border p-4 text-left text-sm transition-all duration-200"
+                        style={isActive ? {
+                          borderColor: brandColor,
+                          backgroundColor: backgroundColor,
+                          color: brandColor,
+                          boxShadow: `0 12px 28px ${brandColor}2E`
+                        } : {
+                          borderColor: secondaryColor,
+                          backgroundColor: "white",
+                          color: textSecondaryColor
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.borderColor = `${brandColor}66`;
+                            e.currentTarget.style.backgroundColor = backgroundColor;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.borderColor = secondaryColor;
+                            e.currentTarget.style.backgroundColor = "white";
+                          }
+                        }}
                       >
                         <span className="font-semibold">{option.label}</span>
                       </button>
@@ -785,7 +938,19 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
               {questionType === "text" ? (
                 <div className="mt-6">
                   <textarea
-                    className="w-full rounded-2xl border border-[#f4c1d2] bg-white/70 p-4 text-sm text-[#5a1d35] focus:border-[#c91459] focus:outline-none focus:ring-2 focus:ring-[#c91459]/40"
+                    className="w-full rounded-2xl border bg-white/70 p-4 text-sm focus:outline-none focus:ring-2"
+                    style={{
+                      borderColor: secondaryColor,
+                      color: textColor
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = brandColor;
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${brandColor}66`;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = secondaryColor;
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
                     rows={4}
                     placeholder="Écris ta réponse en quelques phrases..."
                     value={textValue}
@@ -793,21 +958,48 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                     maxLength={600}
                     disabled={submitting}
                   />
-                  <p className="mt-2 text-xs text-[#7b2a49]/60">{textValue.length}/600 caractères</p>
+                  <p 
+                    className="mt-2 text-xs"
+                    style={{ color: `${textSecondaryColor}99` }}
+                  >
+                    {textValue.length}/600 caractères
+                  </p>
                 </div>
               ) : null}
             </CardContent>
           </Card>
 
           <div className="mt-6 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-between">
-            <Button variant="ghost" className="text-[#c91459] hover:bg-[#fef5f9]" onClick={handlePrev} disabled={submitting}>
+            <Button 
+              variant="ghost" 
+              style={{ 
+                color: brandColor
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = backgroundColor;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              onClick={handlePrev} 
+              disabled={submitting}
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Retour
             </Button>
 
             {currentIndex < totalQuestions - 1 && questionType === "text" ? (
               <Button
-                className="bg-[#c91459] px-6 text-white hover:bg-[#b2124f]"
+                className="px-6 text-white"
+                style={{
+                  backgroundColor: brandColor
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = hoverColor;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = brandColor;
+                }}
                 onClick={handleNext}
                 disabled={!canGoNext || submitting}
               >
@@ -817,7 +1009,16 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
 
             {currentIndex === totalQuestions - 1 && (
               <Button
-                className="bg-[#c91459] px-6 text-white hover:bg-[#b2124f]"
+                className="px-6 text-white"
+                style={{
+                  backgroundColor: brandColor
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = hoverColor;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = brandColor;
+                }}
                 onClick={() => handleSubmit()}
                 disabled={!canGoNext || submitting}
               >
@@ -844,15 +1045,30 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
     const result = activeResult ?? latestHistory;
     if (!result) {
       return (
-        <Card className="border border-dashed border-[#f6cada] bg-white text-center shadow-none">
+        <Card 
+          className="border border-dashed bg-white text-center shadow-none"
+          style={{ borderColor: secondaryColor }}
+        >
           <CardHeader>
-            <CardTitle className="text-[#c91459]">Aucun résultat disponible</CardTitle>
-            <CardDescription className="text-[#7b2a49]">
-              Complétez le questionnaire pour recevoir votre analyse personnalisée Beyond Care.
+            <CardTitle style={{ color: brandColor }}>Aucun résultat disponible</CardTitle>
+            <CardDescription style={{ color: textSecondaryColor }}>
+              Complétez le questionnaire pour recevoir votre analyse personnalisée {isJessicaContentin ? "Contentin" : "Beyond Care"}.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="bg-[#c91459] text-white hover:bg-[#b2124f]" onClick={handleRetry}>
+            <Button 
+              className="text-white"
+              style={{
+                backgroundColor: brandColor
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = hoverColor;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = brandColor;
+              }}
+              onClick={handleRetry}
+            >
               Lancer le questionnaire
             </Button>
           </CardContent>
@@ -888,11 +1104,22 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
       <div className="space-y-8">
         <Card className="border-0 bg-white shadow-[0_30px_70px_rgba(201,20,89,0.2)]">
           <CardHeader className="space-y-2 text-center">
-            <Badge className="mx-auto w-fit rounded-full bg-[#c91459]/10 px-4 py-1 text-xs font-semibold text-[#c91459]">
-              Résultat Beyond Care
+            <Badge 
+              className="mx-auto w-fit rounded-full px-4 py-1 text-xs font-semibold"
+              style={{
+                backgroundColor: `${brandColor}1A`,
+                color: brandColor
+              }}
+            >
+              Résultat {isJessicaContentin ? "Contentin" : "Beyond Care"}
             </Badge>
-            <CardTitle className="text-3xl font-semibold tracking-tight text-[#c91459]">Analyse personnalisée</CardTitle>
-            <CardDescription className="text-[#7b2a49]">
+            <CardTitle 
+              className="text-3xl font-semibold tracking-tight"
+              style={{ color: brandColor }}
+            >
+              Analyse personnalisée
+            </CardTitle>
+            <CardDescription style={{ color: textSecondaryColor }}>
               {result.analysis_summary ??
                 "Vos réponses permettent de cerner vos besoins naturels. Découvrez vos axes d’équilibre ci-dessous."}
             </CardDescription>
@@ -901,11 +1128,24 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
           <CardContent className="space-y-8">
             <div className="flex flex-col items-center gap-4 md:flex-row md:items-end md:justify-between">
               <div className="text-center md:text-left">
-                <p className="text-sm uppercase tracking-[0.4em] text-[#c91459]/60">Score global</p>
+                <p 
+                  className="text-sm uppercase tracking-[0.4em]"
+                  style={{ color: `${brandColor}99` }}
+                >
+                  Score global
+                </p>
                 <div className="mt-2 flex flex-wrap items-end gap-4">
-                  <span className="text-6xl font-bold text-[#c91459]">
+                  <span 
+                    className="text-6xl font-bold"
+                    style={{ color: brandColor }}
+                  >
                     {Math.round(result.overall_score)}
-                    <span className="ml-1 text-2xl text-[#7b2a49]">/100</span>
+                    <span 
+                      className="ml-1 text-2xl"
+                      style={{ color: textSecondaryColor }}
+                    >
+                      /100
+                    </span>
                   </span>
                   <span
                     className={cn(
@@ -928,40 +1168,109 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                           : "vigilance forte"}
                   </span>
                 </div>
-                <p className="mt-3 text-sm text-[#7b2a49]">
-                  <span className="font-semibold text-[#c91459]">Comment lire ce score ?</span>{" "}
-                  <span className="block text-sm text-[#7b2a49]/90">
+                <p 
+                  className="mt-3 text-sm"
+                  style={{ color: textSecondaryColor }}
+                >
+                  <span 
+                    className="font-semibold"
+                    style={{ color: brandColor }}
+                  >
+                    Comment lire ce score ?
+                  </span>{" "}
+                  <span 
+                    className="block text-sm"
+                    style={{ color: `${textSecondaryColor}E6` }}
+                  >
                     80-100 : fonctionnement très aligné • 60-79 : équilibre global, quelques points à surveiller • 40-59 : équilibre fragile, priorité aux axes indiqués • inférieur à 40 : vigilance, un accompagnement est recommandé.
                   </span>
                 </p>
-                <p className="mt-2 text-xs text-[#7b2a49]/80">
+                <p 
+                  className="mt-2 text-xs"
+                  style={{ color: `${textSecondaryColor}CC` }}
+                >
                   Analyse réalisée le {new Date(result.created_at).toLocaleDateString("fr-FR")}
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="ghost" className={cn(isSoftSkills ? "text-white" : "text-[#c91459]")} onClick={handleRetry}>
+                <Button 
+                  variant="ghost" 
+                  style={{ 
+                    color: isSoftSkills ? "white" : brandColor
+                  }}
+                  onClick={handleRetry}
+                >
                   Recommencer
                 </Button>
                 <Button
                   variant="outline"
+                  style={{
+                    borderColor: isSoftSkills ? "white" : brandColor,
+                    color: isSoftSkills ? "white" : brandColor
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isSoftSkills) {
+                      e.currentTarget.style.borderColor = "white";
+                      e.currentTarget.style.color = "black";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isSoftSkills) {
+                      e.currentTarget.style.borderColor = "white";
+                      e.currentTarget.style.color = "white";
+                    }
+                  }}
                   className={cn(
-                    "border-[#c91459] text-[#c91459]",
-                    isSoftSkills && "border-white text-white hover:border-white hover:text-black",
+                    "",
+                    isSoftSkills && "",
                   )}
                   onClick={() => handleDownload(result)}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Exporter
                 </Button>
-                <Button asChild className={cn("bg-[#c91459] text-white hover:bg-[#b2124f]", isSoftSkills && "bg-white text-black")}>
+                <Button 
+                  asChild 
+                  className={cn("text-white", isSoftSkills && "bg-white text-black")}
+                  style={{
+                    backgroundColor: isSoftSkills ? "white" : brandColor,
+                    color: isSoftSkills ? "black" : "white"
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSoftSkills) {
+                      e.currentTarget.style.backgroundColor = hoverColor;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSoftSkills) {
+                      e.currentTarget.style.backgroundColor = brandColor;
+                    }
+                  }}
+                >
                   <Link href="/dashboard/apprenant/beyond-care">Revenir à Beyond Care</Link>
                 </Button>
                 {result.id ? (
                   <Button
                     variant="outline"
+                    style={{
+                      borderColor: isSoftSkills ? "white" : brandColor,
+                      color: isSoftSkills ? "white" : brandColor
+                    }}
+                    onMouseEnter={(e) => {
+                      if (isSoftSkills) {
+                        e.currentTarget.style.borderColor = "white";
+                        e.currentTarget.style.color = "black";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (isSoftSkills) {
+                        e.currentTarget.style.borderColor = "white";
+                        e.currentTarget.style.color = "white";
+                      }
+                    }}
                     className={cn(
-                      "border-[#c91459] text-[#c91459]",
-                      isSoftSkills && "border-white text-white hover:border-white hover:text-black",
+                      "",
+                      isSoftSkills && "",
                     )}
                     onClick={() => {
                       window.location.href = `/dashboard/catalogue/beyond-link?assessment=${result.id}`;
@@ -974,35 +1283,67 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
             </div>
 
             {profileIntroduction ? (
-              <div className="rounded-3xl border border-[#f6cada] bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-[#c91459]/70">
+              <div 
+                className="rounded-3xl border bg-white p-6 shadow-sm"
+                style={{ borderColor: secondaryColor }}
+              >
+                <h3 
+                  className="text-sm font-semibold uppercase tracking-[0.3em]"
+                  style={{ color: `${brandColor}B3` }}
+                >
                   Présentation du profil
                 </h3>
-                <p className="mt-3 text-sm leading-relaxed text-[#5a1d35] whitespace-pre-line">{profileIntroduction}</p>
+                <p 
+                  className="mt-3 text-sm leading-relaxed whitespace-pre-line"
+                  style={{ color: textColor }}
+                >
+                  {profileIntroduction}
+                </p>
               </div>
             ) : null}
 
             {sortedDimensions.length > 0 ? (
-              <div className="rounded-3xl border border-[#f6cada] bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-[#c91459]/70">
+              <div 
+                className="rounded-3xl border bg-white p-6 shadow-sm"
+                style={{ borderColor: secondaryColor }}
+              >
+                <h3 
+                  className="text-sm font-semibold uppercase tracking-[0.3em]"
+                  style={{ color: `${brandColor}B3` }}
+                >
                   Classement décroissant des dimensions
                 </h3>
                 <ol className="mt-4 space-y-4">
                   {sortedDimensions.map(([dimension, score], index) => (
-                    <li key={dimension} className="space-y-2 rounded-2xl bg-[#fef5f9] p-4">
-                      <div className="flex items-center justify-between text-sm font-semibold text-[#5a1d35]">
+                    <li 
+                      key={dimension} 
+                      className="space-y-2 rounded-2xl p-4"
+                      style={{ backgroundColor }}
+                    >
+                      <div 
+                        className="flex items-center justify-between text-sm font-semibold"
+                        style={{ color: textColor }}
+                      >
                         <div className="flex items-center gap-3">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#c91459] shadow-sm">
+                          <span 
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm"
+                            style={{ color: brandColor }}
+                          >
                             {index + 1}
                           </span>
                           <span>{DIMENSION_LABELS[dimension] ?? dimension}</span>
                         </div>
-                        <span className="text-[#c91459]">{Math.round(score)} / 100</span>
+                        <span style={{ color: brandColor }}>{Math.round(score)} / 100</span>
                       </div>
                       <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/80">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#c91459] to-[#f76f9d] transition-all duration-500"
-                          style={{ width: `${Math.max(4, Math.min(100, Math.round(score)))}%` }}
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.max(4, Math.min(100, Math.round(score)))}%`,
+                            background: isJessicaContentin 
+                              ? `linear-gradient(to right, ${brandColor}, ${accentColor})`
+                              : `linear-gradient(to right, ${brandColor}, #f76f9d)`
+                          }}
                         />
                       </div>
                     </li>
@@ -1011,10 +1352,13 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
               </div>
             ) : null}
 
-            <Card className="border border-[#f6cada] bg-white shadow-sm">
+            <Card 
+              className="border bg-white shadow-sm"
+              style={{ borderColor: secondaryColor }}
+            >
               <CardHeader className="text-left">
-                <CardTitle className="text-[#c91459]">Répartition des dimensions</CardTitle>
-                <CardDescription className="text-[#7b2a49]">
+                <CardTitle style={{ color: brandColor }}>Répartition des dimensions</CardTitle>
+                <CardDescription style={{ color: textSecondaryColor }}>
                   Plus la zone colorée est large, plus la dimension est soutenante pour toi.
                 </CardDescription>
               </CardHeader>
@@ -1030,14 +1374,27 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                       cy="50%"
                       outerRadius="70%"
                     >
-                      <PolarGrid stroke="#f6cada" />
-                      <PolarAngleAxis dataKey="dimension" tick={{ fill: "#5a1d35", fontSize: 12 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: "#a84a70", fontSize: 10 }} stroke="#f6cada" />
-                      <Radar dataKey="score" stroke="#c91459" fill="#c91459" fillOpacity={0.32} />
+                      <PolarGrid stroke={secondaryColor} />
+                      <PolarAngleAxis dataKey="dimension" tick={{ fill: textColor, fontSize: 12 }} />
+                      <PolarRadiusAxis 
+                        angle={30} 
+                        domain={[0, 100]} 
+                        tick={{ fill: isJessicaContentin ? textSecondaryColor : "#a84a70", fontSize: 10 }} 
+                        stroke={secondaryColor} 
+                      />
+                      <Radar 
+                        dataKey="score" 
+                        stroke={brandColor} 
+                        fill={brandColor} 
+                        fillOpacity={0.32} 
+                      />
                     </RadarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-[#7b2a49]/60">
+                  <div 
+                    className="flex h-full items-center justify-center text-sm"
+                    style={{ color: `${textSecondaryColor}99` }}
+                  >
                     Pas encore de données suffisantes pour afficher ce radar.
                   </div>
                 )}
@@ -1058,22 +1415,44 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                 return (
                   <div
                     key={dimension}
-                    className="rounded-3xl border border-[#f6cada] bg-[#fef5f9] p-6 shadow-[0_12px_32px_rgba(201,20,89,0.08)]"
+                    className="rounded-3xl border p-6"
+                    style={{
+                      borderColor: secondaryColor,
+                      backgroundColor: backgroundColor,
+                      boxShadow: `0 12px 32px ${brandColor}14`
+                    }}
                   >
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#c91459]/70">
+                      <p 
+                        className="text-sm font-semibold uppercase tracking-[0.25em]"
+                        style={{ color: `${brandColor}B3` }}
+                      >
                         {DIMENSION_LABELS[dimension] ?? dimension}
                       </p>
-                      <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-[#c91459]">
+                      <span 
+                        className="rounded-full bg-white px-3 py-1 text-sm font-semibold"
+                        style={{ color: brandColor }}
+                      >
                         {Math.round(score)}/100
                       </span>
                     </div>
-                    <p className="mt-3 text-sm leading-relaxed text-[#7b2a49]">{message}</p>
+                    <p 
+                      className="mt-3 text-sm leading-relaxed"
+                      style={{ color: textSecondaryColor }}
+                    >
+                      {message}
+                    </p>
                     {recommendations.length > 0 ? (
-                      <ul className="mt-3 space-y-2 text-sm text-[#5a1d35]">
+                      <ul 
+                        className="mt-3 space-y-2 text-sm"
+                        style={{ color: textColor }}
+                      >
                         {recommendations.map((tip, idx) => (
                           <li key={idx} className="flex items-start gap-2">
-                            <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-[#c91459]" />
+                            <span 
+                              className="mt-1 h-2 w-2 flex-shrink-0 rounded-full"
+                              style={{ backgroundColor: brandColor }}
+                            />
                             <span>{tip}</span>
                           </li>
                         ))}
@@ -1087,14 +1466,26 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
             {aiStrengths.length > 0 || aiImprovements.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {aiStrengths.length > 0 ? (
-                  <div className="rounded-3xl border border-[#f6cada] bg-white p-6 shadow-sm">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-[#c91459]/70">
+                  <div 
+                    className="rounded-3xl border bg-white p-6 shadow-sm"
+                    style={{ borderColor: secondaryColor }}
+                  >
+                    <h3 
+                      className="text-sm font-semibold uppercase tracking-[0.3em]"
+                      style={{ color: `${brandColor}B3` }}
+                    >
                       Points forts à consolider
                     </h3>
-                    <ul className="mt-4 space-y-3 text-sm text-[#5a1d35]">
+                    <ul 
+                      className="mt-4 space-y-3 text-sm"
+                      style={{ color: textColor }}
+                    >
                       {aiStrengths.map((item, idx) => (
                         <li key={idx} className="flex items-start gap-3">
-                          <span className="mt-1 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#c91459]" />
+                          <span 
+                            className="mt-1 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                            style={{ backgroundColor: brandColor }}
+                          />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -1103,14 +1494,14 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                 ) : null}
 
                 {aiImprovements.length > 0 ? (
-                  <div className="rounded-3xl border border-[#f6cada] bg-white p-6 shadow-sm">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-[#c91459]/70">
+                  <div className="rounded-3xl border bg-white p-6 shadow-sm">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
                       Axes d’amélioration prioritaires
                     </h3>
-                    <ul className="mt-4 space-y-3 text-sm text-[#5a1d35]">
+                    <ul className="mt-4 space-y-3 text-sm text-text-color">
                       {aiImprovements.map((item, idx) => (
                         <li key={idx} className="flex items-start gap-3">
-                          <span className="mt-1 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#c91459]" />
+                          <span className="mt-1 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-color" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -1121,14 +1512,14 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
             ) : null}
 
             {aiCareerPaths.length > 0 ? (
-              <div className="rounded-3xl border border-[#f6cada] bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-[#c91459]/70">
+              <div className="rounded-3xl border bg-white p-6 shadow-sm">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
                   Métiers ou études alignés avec tes soft skills
                 </h3>
-                <ul className="mt-4 space-y-3 text-sm text-[#5a1d35]">
+                <ul className="mt-4 space-y-3 text-sm text-text-color">
                   {aiCareerPaths.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3">
-                      <span className="mt-1 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#c91459]" />
+                      <span className="mt-1 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-color" />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -1137,14 +1528,14 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
             ) : null}
 
             {aiRecommendations.length > 0 ? (
-              <div className="rounded-3xl border border-[#f6cada] bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-[#c91459]/70">
+              <div className="rounded-3xl border bg-white p-6 shadow-sm">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
                   Recommandations globales
                 </h3>
-                <ul className="mt-4 space-y-3 text-sm text-[#5a1d35]">
+                <ul className="mt-4 space-y-3 text-sm text-text-color">
                   {aiRecommendations.map((rec, index) => (
                     <li key={index} className="flex items-start gap-3">
-                      <span className="mt-1 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#c91459]" />
+                      <span className="mt-1 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-color" />
                       <span>{rec}</span>
                     </li>
                   ))}
@@ -1153,22 +1544,44 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
             ) : null}
 
             {choiceAnswers.length > 0 ? (
-              <div className="rounded-3xl border border-[#f6cada] bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-[#c91459]/70">
+              <div className="rounded-3xl border bg-white p-6 shadow-sm">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
                   Tes préférences déclarées
                 </h3>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   {choiceAnswers.map((answer, idx) => (
-                    <div key={`${answer.dimension}-${idx}`} className="rounded-2xl bg-[#fef5f9] p-4 text-left">
-                      <p className="text-xs uppercase tracking-[0.35em] text-[#c91459]/60">
+                    <div 
+                      key={`${answer.dimension}-${idx}`} 
+                      className="rounded-2xl p-4 text-left"
+                      style={{ backgroundColor }}
+                    >
+                      <p 
+                        className="text-xs uppercase tracking-[0.35em]"
+                        style={{ color: `${brandColor}99` }}
+                      >
                         {DIMENSION_LABELS[answer.dimension] ?? answer.dimension}
                       </p>
                       {answer.question ? (
-                        <p className="mt-2 text-xs font-semibold text-[#7b2a49]/80">{answer.question}</p>
+                        <p 
+                          className="mt-2 text-xs font-semibold"
+                          style={{ color: `${textSecondaryColor}CC` }}
+                        >
+                          {answer.question}
+                        </p>
                       ) : null}
-                      <p className="mt-2 text-sm font-semibold text-[#5a1d35]">{answer.choice}</p>
+                      <p 
+                        className="mt-2 text-sm font-semibold"
+                        style={{ color: textColor }}
+                      >
+                        {answer.choice}
+                      </p>
                       {typeof answer.points === "number" ? (
-                        <p className="text-xs text-[#7b2a49]/70">{answer.points} point(s)</p>
+                        <p 
+                          className="text-xs"
+                          style={{ color: `${textSecondaryColor}B3` }}
+                        >
+                          {answer.points} point(s)
+                        </p>
                       ) : null}
                     </div>
                   ))}
@@ -1177,20 +1590,35 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
             ) : null}
 
             {qualitativeResponses.length > 0 ? (
-              <div className="rounded-3xl border border-[#f6cada] bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-[#c91459]/70">
+              <div className="rounded-3xl border bg-white p-6 shadow-sm">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
                   Ce que tu as exprimé
                 </h3>
                 <div className="mt-4 space-y-4">
                   {qualitativeResponses.map((response, idx) => (
-                    <div key={`${response.dimension}-${idx}`} className="rounded-2xl bg-[#fef1f7] p-4 text-left">
-                      <p className="text-xs uppercase tracking-[0.35em] text-[#c91459]/60">
+                    <div 
+                      key={`${response.dimension}-${idx}`} 
+                      className="rounded-2xl p-4 text-left"
+                      style={{ backgroundColor }}
+                    >
+                      <p 
+                        className="text-xs uppercase tracking-[0.35em]"
+                        style={{ color: `${brandColor}99` }}
+                      >
                         {DIMENSION_LABELS[response.dimension] ?? response.dimension}
                       </p>
                       {response.question ? (
-                        <p className="mt-2 text-xs font-semibold text-[#7b2a49]/80">{response.question}</p>
+                        <p 
+                          className="mt-2 text-xs font-semibold"
+                          style={{ color: `${textSecondaryColor}CC` }}
+                        >
+                          {response.question}
+                        </p>
                       ) : null}
-                      <p className="mt-2 text-sm leading-relaxed text-[#5a1d35] whitespace-pre-line">
+                      <p 
+                        className="mt-2 text-sm leading-relaxed whitespace-pre-line"
+                        style={{ color: textColor }}
+                      >
                         {response.answer}
                       </p>
                     </div>
@@ -1201,16 +1629,21 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
           </CardContent>
         </Card>
 
-        <Card className="border border-[#f6cada] bg-white shadow-sm">
+        <Card className="border bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="text-[#c91459]">Historique des analyses</CardTitle>
-            <CardDescription className="text-[#7b2a49]">
+            <CardTitle className="text-brand-color">Historique des analyses</CardTitle>
+            <CardDescription className="text-text-secondary-color">
               Retrouvez vos passations précédentes et observez l’évolution de vos scores.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {history.length === 0 ? (
-              <p className="text-sm text-[#7b2a49]">Aucun résultat enregistré pour le moment.</p>
+              <p 
+                className="text-sm"
+                style={{ color: textSecondaryColor }}
+              >
+                Aucun résultat enregistré pour le moment.
+              </p>
             ) : (
               <div className="space-y-4">
                 {history.map((assessment) => (
@@ -1219,13 +1652,13 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                     className={cn(
                       "flex flex-col gap-3 rounded-2xl border p-4 transition",
                       assessment.id === result.id
-                        ? "border-[#c91459] bg-[#fef1f7] text-[#c91459]"
-                        : "border-[#f4c1d2] bg-white text-[#7b2a49]",
+                        ? "border-[#c91459] bg-[#fef1f7] text-brand-color"
+                        : "border-[#f4c1d2] bg-white text-text-secondary-color",
                     )}
                   >
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="rounded-full bg-[#c91459]/10 px-3 py-1 text-xs font-semibold text-[#c91459]">
+                        <span className="rounded-full bg-brand-color/10 px-3 py-1 text-xs font-semibold text-brand-color">
                           {new Date(assessment.created_at).toLocaleDateString("fr-FR")}
                         </span>
                         <span className="text-lg font-semibold">
@@ -1235,7 +1668,8 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-[#c91459]"
+                        style={{ color: brandColor }}
+                        className=""
                         onClick={() => {
                           setActiveResult(assessment);
                           setPhase("result");
@@ -1259,7 +1693,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments }: 
   };
 
   const containerClass = cn(
-    "relative min-h-screen bg-gradient-to-b from-[#fef5f9] via-white to-white px-4 pb-16",
+    "relative min-h-screen bg-gradient-to-b via-white to-white px-4 pb-16",
     isSoftSkills && "soft-skills-monochrome",
   );
   const containerStyle = isSoftSkills ? { background: "#050505", color: "#f5f5f5" } : undefined;

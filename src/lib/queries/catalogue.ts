@@ -446,7 +446,8 @@ export async function getCatalogItems(
  */
 export async function getCatalogItemById(
   catalogItemId: string,
-  organizationId?: string
+  organizationId?: string,
+  userId?: string // ID de l'utilisateur pour vérifier si c'est le créateur
 ): Promise<(CatalogItem & { course?: any; test?: any; slug?: string }) | null> {
   const supabase = await getServerClient();
 
@@ -690,6 +691,11 @@ export async function getCatalogItemById(
   // Si gratuit, l'accès est automatique
   if (item.is_free) {
     accessStatus = "free";
+  }
+
+  // Si l'utilisateur est le créateur du contenu, lui donner accès automatiquement
+  if (userId && (item as any).creator_id === userId) {
+    accessStatus = "manually_granted";
   }
 
   return {

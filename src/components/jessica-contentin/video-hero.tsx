@@ -127,8 +127,7 @@ export function VideoHero() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
               onClick={() => {
-                // TODO: Rediriger vers le questionnaire (à implémenter plus tard)
-                console.log("[VideoHero] CTA 'Commencer' cliqué - Redirection vers questionnaire à implémenter");
+                window.location.href = "/quiz";
               }}
             >
               Commencer

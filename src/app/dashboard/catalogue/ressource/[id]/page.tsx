@@ -44,7 +44,7 @@ export default async function CatalogResourceDetailPage({ params }: PageProps) {
   const organizationId = profile?.org_id || undefined;
 
   // Récupérer l'item du catalogue
-  const catalogItem = await getCatalogItemById(id, organizationId);
+  const catalogItem = await getCatalogItemById(id, organizationId, user.id);
 
   if (!catalogItem || catalogItem.item_type !== "ressource") {
     notFound();
@@ -76,8 +76,13 @@ export default async function CatalogResourceDetailPage({ params }: PageProps) {
   // Déterminer l'accroche
   let accroche = catalogItem.short_description || catalogItem.description || resourceData?.description;
 
+  // Vérifier si l'utilisateur est le créateur du contenu
+  const isCreator = (catalogItem as any).creator_id === user.id;
+  
   // Déterminer le statut d'accès
-  const hasAccess = catalogItem.access_status === "purchased" || 
+  // Le créateur a toujours accès, même si le contenu est payant
+  const hasAccess = isCreator ||
+                    catalogItem.access_status === "purchased" || 
                     catalogItem.access_status === "manually_granted" || 
                     catalogItem.access_status === "free" ||
                     catalogItem.is_free;

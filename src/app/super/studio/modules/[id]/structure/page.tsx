@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { getServiceRoleClientOrFallback, getServiceRoleClient } from "@/lib/supabase/server";
+import { getServiceRoleClientOrFallback, getServiceRoleClient, getServerClient } from "@/lib/supabase/server";
 import { getCourseBuilderSnapshot } from "@/lib/queries/formateur";
 import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/course-builder-workspace";
 
@@ -12,10 +12,15 @@ type PageProps = {
 };
 
 export default async function SuperAdminModuleStructurePage({ params }: PageProps) {
-  const hasAccess = await isSuperAdmin();
+  // Vérifier l'authentification
+  const sessionClient = await getServerClient();
+  if (!sessionClient) {
+    redirect("/login");
+  }
 
-  if (!hasAccess) {
-    redirect("/dashboard");
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user?.id) {
+    redirect("/login");
   }
 
   const { id: courseId } = await params;
@@ -94,17 +99,12 @@ export default async function SuperAdminModuleStructurePage({ params }: PageProp
     owner_id: course.owner_id,
   });
 
-  // Vérifier que le module appartient à timdarcypro@gmail.com
-  const { data: creatorProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("email", "timdarcypro@gmail.com")
-    .eq("role", "super_admin")
-    .single();
+  // Vérifier l'accès : super admin OU créateur du contenu
+  const isSuper = await isSuperAdmin();
+  const isCreator = course.creator_id === user.id;
 
-  if (creatorProfile && course.creator_id !== creatorProfile.id) {
-    // Rediriger vers la liste si ce n'est pas le créateur
-    redirect("/super/studio/modules");
+  if (!isSuper && !isCreator) {
+    redirect("/dashboard");
   }
 
   // Récupérer le snapshot du builder

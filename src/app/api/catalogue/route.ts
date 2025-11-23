@@ -220,18 +220,48 @@ export async function GET(request: NextRequest) {
     const items = await getCatalogItems(organizationId, userRole, userId, finalSuperAdminId);
 
     console.log("[api/catalogue] Final superAdminId:", finalSuperAdminId);
-    console.log("[api/catalogue] Items count:", items?.length || 0);
-    if (items && items.length > 0) {
+    console.log("[api/catalogue] Items count before filter:", items?.length || 0);
+    
+    // SÉCURITÉ RENFORCÉE: Si on est sur Jessica Contentin, filtrer strictement par creator_id
+    let filteredItems = items || [];
+    if ((tenantId === 'jessica-contentin-app' || tenantId === 'jessica-contentin') && finalSuperAdminId) {
+      // Récupérer l'ID de Jessica Contentin pour double vérification
+      const { data: jessicaProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", JESSICA_CONTENTIN_EMAIL)
+        .maybeSingle();
+      
+      if (jessicaProfile) {
+        const jessicaId = jessicaProfile.id;
+        // Filtrer les items pour ne garder que ceux créés par Jessica Contentin
+        filteredItems = filteredItems.filter((item: any) => {
+          const itemCreatorId = item.creator_id;
+          const isJessicaItem = itemCreatorId === jessicaId;
+          
+          if (!isJessicaItem) {
+            console.warn(`[api/catalogue] ⚠️ Filtered out item "${item.title}" - creator_id: ${itemCreatorId} (expected: ${jessicaId})`);
+          }
+          
+          return isJessicaItem;
+        });
+        
+        console.log(`[api/catalogue] ✅ Filtered items: ${filteredItems.length} items from Jessica Contentin (removed ${(items?.length || 0) - filteredItems.length} items from other creators)`);
+      }
+    }
+    
+    if (filteredItems && filteredItems.length > 0) {
       console.log("[api/catalogue] First item:", {
-        id: items[0].id,
-        title: items[0].title,
-        category: items[0].category,
-        target_audience: (items[0] as any).target_audience,
-        is_active: (items[0] as any).is_active,
+        id: filteredItems[0].id,
+        title: filteredItems[0].title,
+        category: filteredItems[0].category,
+        creator_id: (filteredItems[0] as any).creator_id,
+        target_audience: (filteredItems[0] as any).target_audience,
+        is_active: (filteredItems[0] as any).is_active,
       });
     }
 
-    return NextResponse.json({ items: items || [] }, { status: 200 });
+    return NextResponse.json({ items: filteredItems }, { status: 200 });
   } catch (error) {
     console.error("[api/catalogue] Error:", error);
     return NextResponse.json(

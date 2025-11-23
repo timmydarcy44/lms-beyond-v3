@@ -7,13 +7,34 @@ import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { env } from "@/lib/env";
+
+// Fonction pour construire l'URL Supabase Storage
+function getSupabaseStorageUrl(bucket: string, path: string): string {
+  const supabaseUrl = 
+    env.supabaseUrl || 
+    (typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) ||
+    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
+  
+  if (!supabaseUrl) {
+    return "";
+  }
+  
+  const encodedBucket = encodeURIComponent(bucket);
+  const pathParts = path.split('/');
+  const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
+  
+  return `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
+}
+
+const BUCKET_NAME = "Jessica CONTENTIN";
 
 const pillars = [
   {
     id: "confiance",
     title: "Confiance en soi",
     description: "Développez votre estime de vous et révélez votre potentiel",
-    image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80",
+    image: getSupabaseStorageUrl(BUCKET_NAME, "Confiance_en_soi.jpg") || "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80",
     href: "/specialites/confiance-en-soi",
   },
   {
@@ -34,7 +55,7 @@ const pillars = [
     id: "neuroeducation",
     title: "Neuroéducation",
     description: "Comprendre le cerveau pour mieux apprendre et enseigner",
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=80",
+    image: getSupabaseStorageUrl(BUCKET_NAME, "Neuroeduction.jpg") || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=80",
     href: "/specialites/neuroeducation",
   },
   {
@@ -48,7 +69,7 @@ const pillars = [
     id: "orientation",
     title: "Orientation scolaire",
     description: "Trouvez votre voie et construisez votre projet professionnel",
-    image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80",
+    image: getSupabaseStorageUrl(BUCKET_NAME, "parcoursup.jpg") || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80",
     href: "/specialites/orientation",
   },
 ];
@@ -199,6 +220,13 @@ export function PillarsSlider() {
                   fill
                   className="object-cover"
                   priority
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    // Fallback vers une image par défaut si l'image Supabase ne charge pas
+                    if (!target.src.includes('unsplash')) {
+                      target.src = "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80";
+                    }
+                  }}
                 />
               </motion.div>
             </AnimatePresence>

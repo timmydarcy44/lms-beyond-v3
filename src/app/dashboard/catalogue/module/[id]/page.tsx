@@ -48,7 +48,7 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
   }
 
   // Récupérer l'item du catalogue
-  const catalogItem = await getCatalogItemById(id, organizationId);
+  const catalogItem = await getCatalogItemById(id, organizationId, user?.id);
 
   if (!catalogItem || catalogItem.item_type !== "module") {
     console.error("[catalogue/module] Catalog item not found:", {
@@ -229,15 +229,36 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
     hasBadge: !!badgeInfo,
   });
 
+  // Vérifier si l'utilisateur est le créateur du contenu
+  const isCreator = user && (catalogItem as any).creator_id === user.id;
+  
   // Déterminer le statut d'accès
-  const hasAccess = catalogItem.access_status === "purchased" || 
+  // Le créateur a toujours accès, même si le contenu est payant
+  const hasAccess = isCreator ||
+                    catalogItem.access_status === "purchased" || 
                     catalogItem.access_status === "manually_granted" || 
                     catalogItem.access_status === "free";
 
   // URL vers la formation (si accès) - utiliser le slug du course ou l'ID
   const courseSlug = catalogItem.course?.slug || catalogItem.course_slug || catalogItem.course?.id;
+  
+  // Vérifier si c'est une formation de Jessica Contentin
+  const isJessicaContentin = (catalogItem as any).creator_id && user;
+  let jessicaProfileId: string | null = null;
+  if (isJessicaContentin && supabase) {
+    const { data: jessicaProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", "contentin.cabinet@gmail.com")
+      .maybeSingle();
+    jessicaProfileId = jessicaProfile?.id || null;
+  }
+  
+  const isJessicaModule = jessicaProfileId && (catalogItem as any).creator_id === jessicaProfileId;
+  
+  // Si c'est un module de Jessica, utiliser la route formations, sinon la route catalogue normale
   const formationUrl = courseSlug 
-    ? `/dashboard/catalogue/formations/${courseSlug}`
+    ? (isJessicaModule ? `/formations/${courseSlug}` : `/dashboard/catalogue/formations/${courseSlug}`)
     : null;
 
   // URL vers la page de paiement Stripe (si pas d'accès)

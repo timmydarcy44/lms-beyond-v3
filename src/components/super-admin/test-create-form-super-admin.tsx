@@ -26,7 +26,7 @@ export function TestCreateFormSuperAdmin() {
   const [duration, setDuration] = useState("");
   const [evaluationType, setEvaluationType] = useState("");
   const [skills, setSkills] = useState("");
-  const [price, setPrice] = useState<string>("0");
+  const [price, setPrice] = useState<string>("15");
   const [category, setCategory] = useState<string>("");
   const [displayFormat, setDisplayFormat] = useState<"ranking" | "radar" | "score" | "detailed">("score");
   const [showAiTools, setShowAiTools] = useState(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -8,7 +8,7 @@ import { ChevronDown, Menu, X, Heart, Brain, Users, BookOpen, Shield, Target, Li
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { env } from "@/lib/env";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Fonction pour construire l'URL Supabase Storage
 function getSupabaseStorageUrl(bucket: string, path: string): string {
@@ -28,6 +28,7 @@ function getSupabaseStorageUrl(bucket: string, path: string): string {
   const pathParts = path.split('/');
   const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
   
+  // Construire l'URL complète avec le chemin Supabase Storage
   const fullUrl = `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
   return fullUrl;
 }
@@ -68,10 +69,36 @@ const specialitesWithIcons = [
 
 export function JessicaContentinHeader() {
   const pathname = usePathname();
-  const isRessourcesPage = pathname === "/ressources" || pathname === "/jessica-contentin/ressources";
+  
+  // Détecter si on est sur une page interne (pas la page d'accueil)
+  // Pages internes : consultations, a-propos, orientation, specialites, ressources
+  // + pages de détail du catalogue (test, ressource, module)
+  // + pages de formations (interface apprenant)
+  const isInternalPage = 
+    pathname === "/consultations" || 
+    pathname === "/a-propos" || 
+    pathname === "/orientation" || 
+    pathname === "/specialites" || 
+    pathname.startsWith("/specialites/") || 
+    pathname === "/ressources" || 
+    pathname === "/blog" ||
+    pathname.startsWith("/blog/") ||
+    pathname.startsWith("/formations/") ||
+    pathname === "/jessica-contentin/ressources" ||
+    pathname === "/jessica-contentin/consultations" ||
+    pathname === "/jessica-contentin/a-propos" ||
+    pathname === "/jessica-contentin/orientation" ||
+    pathname === "/jessica-contentin/specialites" ||
+    pathname.startsWith("/jessica-contentin/specialites/") ||
+    pathname.startsWith("/dashboard/catalogue/test/") ||
+    pathname.startsWith("/dashboard/catalogue/ressource/") ||
+    pathname.startsWith("/dashboard/catalogue/module/");
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isAppDomain, setIsAppDomain] = useState(false);
+  const [ressourcesImageError, setRessourcesImageError] = useState(false);
+  const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     // Détecter si on est sur app.jessicacontentin.fr
@@ -112,7 +139,11 @@ export function JessicaContentinHeader() {
     },
     {
       label: "Ressources",
-      href: isAppDomain ? "/ressources" : "https://app.jessicacontentin.fr/ressources",
+      href: "/ressources",
+    },
+    {
+      label: "Blog",
+      href: "/blog",
     },
   ];
 
@@ -140,8 +171,22 @@ export function JessicaContentinHeader() {
               <div
                 key={item.href}
                 className="relative group"
-                onMouseEnter={() => item.submenu && setActiveDropdown(item.href)}
-                onMouseLeave={() => setActiveDropdown(null)}
+                onMouseEnter={() => {
+                  if (item.submenu) {
+                    // Annuler le timeout de fermeture s'il existe
+                    if (dropdownTimeoutRef.current) {
+                      clearTimeout(dropdownTimeoutRef.current);
+                      dropdownTimeoutRef.current = null;
+                    }
+                    setActiveDropdown(item.href);
+                  }
+                }}
+                onMouseLeave={() => {
+                  // Délai avant de fermer le menu (300ms)
+                  dropdownTimeoutRef.current = setTimeout(() => {
+                    setActiveDropdown(null);
+                  }, 300);
+                }}
               >
                 <Link
                   href={item.href}
@@ -155,32 +200,53 @@ export function JessicaContentinHeader() {
                 </Link>
 
                 {/* Dropdown Menu avec icônes et colonnes */}
-                {item.submenu && activeDropdown === item.href && (
-                  <div className="absolute left-0 top-full mt-2 w-[900px] rounded-xl bg-[#F8F5F0] border border-[#E6D9C6] shadow-lg py-4">
-                    <div className="grid grid-cols-3 gap-4 px-4">
-                      {item.submenu.map((subItem) => {
-                        const Icon = subItem.icon;
-                        return (
-                          <Link
-                            key={subItem.href}
-                            href={subItem.href}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#E6D9C6]/50 transition-colors group"
-                          >
-                            <div className="p-1.5 bg-[#E6D9C6]/30 rounded-lg group-hover:bg-[#C6A664]/20 transition-colors">
-                              <Icon className="h-4 w-4 text-[#C6A664]" />
-                            </div>
-                            <span className="text-sm text-[#2F2A25] font-medium">{subItem.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                <AnimatePresence>
+                  {item.submenu && activeDropdown === item.href && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="absolute left-0 top-full mt-2 w-[900px] rounded-xl bg-[#F8F5F0] border border-[#E6D9C6] shadow-lg py-4 z-50"
+                      onMouseEnter={() => {
+                        // Annuler le timeout de fermeture quand la souris entre dans le menu
+                        if (dropdownTimeoutRef.current) {
+                          clearTimeout(dropdownTimeoutRef.current);
+                          dropdownTimeoutRef.current = null;
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        // Délai avant de fermer le menu (300ms)
+                        dropdownTimeoutRef.current = setTimeout(() => {
+                          setActiveDropdown(null);
+                        }, 300);
+                      }}
+                    >
+                      <div className="grid grid-cols-3 gap-4 px-4">
+                        {item.submenu.map((subItem) => {
+                          const Icon = subItem.icon;
+                          return (
+                            <Link
+                              key={subItem.href}
+                              href={subItem.href}
+                              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#E6D9C6]/50 transition-colors group"
+                            >
+                              <div className="p-1.5 bg-[#E6D9C6]/30 rounded-lg group-hover:bg-[#C6A664]/20 transition-colors">
+                                <Icon className="h-4 w-4 text-[#C6A664]" />
+                              </div>
+                              <span className="text-sm text-[#2F2A25] font-medium">{subItem.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ))}
           </div>
 
-          {/* CTA Button */}
+          {/* CTA Buttons */}
           <div className="hidden lg:flex items-center gap-4">
             <Button
               asChild
@@ -192,6 +258,20 @@ export function JessicaContentinHeader() {
               <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
                 Prendre rendez-vous
               </a>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="bg-transparent hover:bg-[#C6A664]/10 border-2 border-[#8B6F47] text-[#8B6F47] hover:text-[#B88A44] hover:border-[#B88A44] rounded-full px-6"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                borderColor: '#8B6F47',
+                borderWidth: '2px',
+              }}
+            >
+              <Link href="/quiz">
+                Commencer
+              </Link>
             </Button>
           </div>
 
@@ -237,17 +317,33 @@ export function JessicaContentinHeader() {
                   )}
                 </div>
               ))}
-              <Button
-                asChild
-                className="mt-4 bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full"
-                style={{
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                }}
-              >
-                <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                  Prendre rendez-vous
-                </a>
-              </Button>
+              <div className="mt-4 flex flex-col gap-3">
+                <Button
+                  asChild
+                  className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                  }}
+                >
+                  <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                    Prendre rendez-vous
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="bg-transparent hover:bg-[#C6A664]/10 border-2 border-[#8B6F47] text-[#8B6F47] hover:text-[#B88A44] hover:border-[#B88A44] rounded-full"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                    borderColor: '#8B6F47',
+                    borderWidth: '2px',
+                  }}
+                >
+                  <Link href="/quiz">
+                    Commencer
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -255,8 +351,8 @@ export function JessicaContentinHeader() {
       </header>
       </div>
 
-      {/* Hero Section avec image - Masquer sur la page ressources */}
-      {!isRessourcesPage && (
+      {/* Hero Section avec image - Masquer sur les pages internes */}
+      {!isInternalPage && (
       <div className="mx-4 mb-4">
         <section className="relative w-full h-[calc(100vh-4rem)] min-h-[600px] overflow-hidden rounded-2xl shadow-lg">
         <div className="absolute inset-0">
@@ -317,8 +413,8 @@ export function JessicaContentinHeader() {
       </div>
       )}
 
-      {/* Ligne de flottaison avec 3 CTA avec images - Masquer sur la page ressources */}
-      {!isRessourcesPage && (
+      {/* Ligne de flottaison avec 3 CTA avec images - Masquer sur les pages internes */}
+      {!isInternalPage && (
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -418,20 +514,25 @@ export function JessicaContentinHeader() {
               whileHover={{ scale: 1.05, y: -5 }}
             >
               <Link
-                href={isAppDomain ? "/ressources" : "https://app.jessicacontentin.fr/ressources"}
+                href="/ressources"
                 className="group relative overflow-hidden rounded-xl bg-white border border-[#E6D9C6] hover:border-[#C6A664] hover:shadow-lg transition-all block"
               >
               <div className="relative h-48 overflow-hidden">
                 <Image
-                  src={getSupabaseStorageUrl("Jessica CONTENTIN", "cta/ressources.jpg") || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80"}
+                  src={ressourcesImageError 
+                    ? "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80"
+                    : (getSupabaseStorageUrl("Jessica CONTENTIN", "cta/ressources.jpg") || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80")
+                  }
                   alt="Ressources"
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-110"
                   sizes="(max-width: 768px) 100vw, 33vw"
-                  unoptimized={false}
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    console.error("[Header] Erreur lors du chargement de l'image ressources.jpg:", target.src);
+                  unoptimized={true}
+                  onError={() => {
+                    if (!ressourcesImageError) {
+                      console.warn("[Header] Image ressources.jpg non trouvée, utilisation du fallback");
+                      setRessourcesImageError(true);
+                    }
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />

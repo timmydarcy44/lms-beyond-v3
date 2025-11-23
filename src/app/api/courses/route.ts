@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       // Vérifier d'abord que l'utilisateur est propriétaire/créateur
       const { data: existingCourse, error: checkError } = await supabase
         .from("courses")
-        .select("creator_id, owner_id")
+        .select("creator_id, owner_id, id")
         .eq("id", courseId)
         .single();
 
@@ -130,11 +130,13 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      console.log("[api/courses] Mise à jour du course:", {
+      console.log("[api/courses] Mise à jour du course:", JSON.stringify({
         courseId,
+        existingCourseId: existingCourse?.id,
         courseData: Object.keys(courseData),
         title: courseData.title,
-      });
+        status,
+      }));
 
       const { data, error } = await supabase
         .from("courses")

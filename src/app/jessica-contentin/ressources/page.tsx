@@ -28,6 +28,7 @@ export default function RessourcesPage() {
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const sliderRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -80,13 +81,32 @@ export default function RessourcesPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setCatalogItems(data.items || []);
-        console.log("[RessourcesPage] Items chargés:", data.items?.length || 0);
-        if (data.items && data.items.length > 0) {
+        const items = data.items || [];
+        
+        // Vérification supplémentaire côté client : filtrer uniquement les items de Jessica Contentin
+        // Récupérer l'ID de Jessica Contentin pour vérification
+        const jessicaEmail = "contentin.cabinet@gmail.com";
+        const filteredItems = items.filter((item: any) => {
+          // Si l'item a un creator_id, on le garde (l'API devrait déjà avoir filtré)
+          // Sinon, on vérifie via l'email si nécessaire
+          return item.creator_id; // L'API devrait déjà avoir filtré correctement
+        });
+        
+        setCatalogItems(filteredItems);
+        console.log("[RessourcesPage] Items chargés:", filteredItems.length, "sur", items.length, "totaux");
+        
+        if (filteredItems && filteredItems.length > 0) {
           console.log("[RessourcesPage] Premier item:", {
-            title: data.items[0].title,
-            creator_id: (data.items[0] as any).creator_id,
+            title: filteredItems[0].title,
+            creator_id: (filteredItems[0] as any).creator_id,
+            category: filteredItems[0].category,
           });
+          
+          // Vérifier s'il y a des items avec un creator_id différent
+          const uniqueCreatorIds = [...new Set(filteredItems.map((item: any) => item.creator_id))];
+          if (uniqueCreatorIds.length > 1) {
+            console.warn("[RessourcesPage] ⚠️ Multiple creator_ids found:", uniqueCreatorIds);
+          }
         }
       } else {
         console.error("[RessourcesPage] Erreur lors du chargement des ressources");
@@ -100,7 +120,8 @@ export default function RessourcesPage() {
 
   const getItemUrl = (item: CatalogItem) => {
     if (item.item_type === "module") {
-      return `/dashboard/catalogue/module/${item.content_id}`;
+      // Pour les modules de Jessica, utiliser la route formations avec l'interface apprenant
+      return `/formations/${item.content_id}`;
     } else if (item.item_type === "ressource") {
       return `/dashboard/catalogue/ressource/${item.content_id}`;
     } else if (item.item_type === "test") {
@@ -130,6 +151,23 @@ export default function RessourcesPage() {
     ...categoryOrder.filter((cat) => itemsByCategory[cat]?.length > 0),
     ...Object.keys(itemsByCategory).filter((cat) => !categoryOrder.includes(cat) && itemsByCategory[cat]?.length > 0),
   ];
+
+  // Filtrer les catégories affichées si une catégorie est sélectionnée
+  const displayedCategories = selectedCategory 
+    ? sortedCategories.filter(cat => cat === selectedCategory)
+    : sortedCategories;
+
+  // Fonction pour scroller vers une catégorie
+  const scrollToCategory = (category: string) => {
+    setSelectedCategory(category);
+    // Attendre un peu pour que le DOM se mette à jour
+    setTimeout(() => {
+      const element = document.getElementById(`category-${category}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
 
   // Fonction pour scroller horizontalement dans un slider
   const scrollSlider = (category: string, direction: "left" | "right") => {
@@ -232,6 +270,63 @@ export default function RessourcesPage() {
               transition={{ duration: 0.6 }}
               className="pb-20"
             >
+              {/* Section "Vous êtes" avec filtres par catégorie */}
+              <section className="py-8 mx-4 mb-6">
+                <div className="mx-auto max-w-7xl px-6">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-white rounded-2xl shadow-md p-6 border border-[#E6D9C6]"
+                  >
+                    <h2
+                      className="text-xl font-semibold text-[#2F2A25] mb-4"
+                      style={{
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                      }}
+                    >
+                      Comment puis-je vous aider ?
+                    </h2>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => {
+                          setSelectedCategory(null);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className={cn(
+                          "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                          selectedCategory === null
+                            ? "bg-[#C6A664] text-white shadow-md"
+                            : "bg-[#E6D9C6]/50 text-[#2F2A25] hover:bg-[#E6D9C6]"
+                        )}
+                        style={{
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                        }}
+                      >
+                        Tous
+                      </button>
+                      {sortedCategories.map((category) => (
+                        <button
+                          key={category}
+                          onClick={() => scrollToCategory(category)}
+                          className={cn(
+                            "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                            selectedCategory === category
+                              ? "bg-[#C6A664] text-white shadow-md"
+                              : "bg-[#E6D9C6]/50 text-[#2F2A25] hover:bg-[#E6D9C6]"
+                          )}
+                          style={{
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                          }}
+                        >
+                          {category}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </div>
+              </section>
+
               {/* Hero Section avec Slider */}
               {featuredItems.length > 0 && (
                 <section className="relative h-[60vh] min-h-[500px] max-h-[700px] overflow-hidden mx-4 mb-4 rounded-2xl shadow-lg">
@@ -266,21 +361,38 @@ export default function RessourcesPage() {
                             ) : (
                               <div className="absolute inset-0 bg-gradient-to-br from-[#E6D9C6] to-[#C6A664]" />
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/60 to-black/50" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                           </div>
                           
+                          {/* Badge catégorie en haut */}
+                          {item.category && (
+                            <div className="absolute top-6 left-6 z-30">
+                              <motion.span
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="inline-block px-4 py-2 bg-[#C6A664] text-white text-sm font-semibold rounded-full shadow-2xl"
+                                style={{
+                                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                                }}
+                              >
+                                {item.category}
+                              </motion.span>
+                            </div>
+                          )}
+
                           {/* Contenu du hero */}
-                          <div className="relative z-10 h-full flex flex-col justify-end px-6 lg:px-16 pb-12">
-                            <div className="max-w-3xl">
+                          <div className="absolute inset-0 z-20 flex flex-col justify-end px-6 lg:px-16 pb-12">
+                            <div className="max-w-3xl relative">
                               <motion.h1
                                 initial={{ opacity: 0, y: 30 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2 }}
-                                className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 leading-tight"
+                                className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-2xl"
                                 style={{
                                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                                  textShadow: '0 2px 20px rgba(0,0,0,0.5)',
+                                  textShadow: '0 4px 30px rgba(0,0,0,0.8), 0 2px 10px rgba(0,0,0,0.6)',
                                 }}
                               >
                                 {item.title}
@@ -289,10 +401,10 @@ export default function RessourcesPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className="text-lg md:text-xl text-white/90 mb-6 line-clamp-2"
+                                className="text-lg md:text-xl text-white mb-6 line-clamp-2 drop-shadow-lg"
                                 style={{
                                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                                  textShadow: '0 1px 10px rgba(0,0,0,0.3)',
+                                  textShadow: '0 2px 15px rgba(0,0,0,0.7), 0 1px 5px rgba(0,0,0,0.5)',
                                 }}
                               >
                                 {item.short_description || item.description || ""}
@@ -301,17 +413,31 @@ export default function RessourcesPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.4 }}
+                                className="flex flex-wrap gap-4 z-30 relative"
                               >
                                 <Link href={getItemUrl(item)}>
                                   <Button
                                     size="lg"
-                                    className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-8 py-6 text-lg shadow-xl transition-transform hover:scale-105"
+                                    className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-8 py-6 text-lg shadow-2xl transition-transform hover:scale-105"
                                     style={{
                                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                                     }}
                                   >
                                     <Play className="mr-2 h-5 w-5" />
                                     Découvrir
+                                  </Button>
+                                </Link>
+                                <Link href="/quiz">
+                                  <Button
+                                    size="lg"
+                                    variant="outline"
+                                    className="bg-white/20 hover:bg-white/30 backdrop-blur-md border-2 border-white text-white rounded-full px-8 py-6 text-lg shadow-2xl transition-transform hover:scale-105"
+                                    style={{
+                                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                                    }}
+                                  >
+                                    Commencer maintenant
+                                    <ArrowRight className="ml-2 h-5 w-5" />
                                   </Button>
                                 </Link>
                               </motion.div>
@@ -357,7 +483,7 @@ export default function RessourcesPage() {
                       </div>
                     ))}
                   </div>
-                ) : sortedCategories.length === 0 ? (
+                ) : displayedCategories.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-[#2F2A25]/70 mb-4">
                       Aucune ressource disponible pour le moment.
@@ -367,13 +493,14 @@ export default function RessourcesPage() {
                     </p>
                   </div>
                 ) : (
-                  sortedCategories.map((category, categoryIndex) => {
+                  displayedCategories.map((category, categoryIndex) => {
                     const items = itemsByCategory[category];
                     if (!items || items.length === 0) return null;
 
                     return (
                       <motion.div
                         key={category}
+                        id={`category-${category}`}
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: categoryIndex * 0.1 }}
@@ -442,6 +569,13 @@ export default function RessourcesPage() {
                                     </div>
                                   )}
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                                  
+                                  {/* Badge catégorie */}
+                                  {item.category && (
+                                    <div className="absolute top-3 left-3 bg-[#C6A664] text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                      {item.category}
+                                    </div>
+                                  )}
                                   
                                   {/* Badge gratuit */}
                                   {item.is_free && (

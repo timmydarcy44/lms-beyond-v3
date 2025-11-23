@@ -24,7 +24,7 @@ export function ResourceCreateFormSuperAdmin() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<string>(resourceOptions[0].value);
-  const [price, setPrice] = useState<string>("0");
+  const [price, setPrice] = useState<string>("10");
   const [category, setCategory] = useState<string>("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);

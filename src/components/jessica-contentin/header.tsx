@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Menu, X, Heart, Brain, Users, BookOpen, Shield, Target, Lightbulb, Baby, GraduationCap, BookMarked } from "lucide-react";
+import { ChevronDown, Menu, X, Heart, Brain, Users, BookOpen, Shield, Target, Lightbulb, Baby, GraduationCap, BookMarked, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { env } from "@/lib/env";
@@ -250,6 +250,21 @@ export function JessicaContentinHeader() {
           <div className="hidden lg:flex items-center gap-4">
             <Button
               asChild
+              variant="outline"
+              className="bg-transparent hover:bg-[#C6A664]/10 border-2 border-[#8B6F47] text-[#8B6F47] hover:text-[#B88A44] hover:border-[#B88A44] rounded-full px-6"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                borderColor: '#8B6F47',
+                borderWidth: '2px',
+              }}
+            >
+              <Link href="/dashboard/catalogue/account">
+                <User className="mr-2 h-4 w-4" />
+                Mon compte
+              </Link>
+            </Button>
+            <Button
+              asChild
               className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-6"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
@@ -318,6 +333,21 @@ export function JessicaContentinHeader() {
                 </div>
               ))}
               <div className="mt-4 flex flex-col gap-3">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="bg-transparent hover:bg-[#C6A664]/10 border-2 border-[#8B6F47] text-[#8B6F47] hover:text-[#B88A44] hover:border-[#B88A44] rounded-full"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                    borderColor: '#8B6F47',
+                    borderWidth: '2px',
+                  }}
+                >
+                  <Link href="/dashboard/catalogue/account">
+                    <User className="mr-2 h-4 w-4" />
+                    Mon compte
+                  </Link>
+                </Button>
                 <Button
                   asChild
                   className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full"

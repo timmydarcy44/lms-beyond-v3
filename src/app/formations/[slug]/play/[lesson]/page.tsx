@@ -4,6 +4,7 @@ import { JessicaLessonPlayView } from "./jessica-lesson-wrapper";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
 import {
   getLearnerContentDetail,
+  type LearnerFlashcard,
 } from "@/lib/queries/apprenant";
 import { getServerClient } from "@/lib/supabase/server";
 
@@ -71,7 +72,7 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     lessonId: activeLesson.id,
     lessonTitle: activeLesson.title,
     flashcardsCount: flashcards.length,
-    flashcards: flashcards.map(f => ({ id: f.id, front: f.front?.substring(0, 30) }))
+    flashcards: flashcards.map((f: LearnerFlashcard) => ({ id: f.id, front: f.front?.substring(0, 30) }))
   }));
   
   // Utiliser la route formations au lieu de catalog/formations

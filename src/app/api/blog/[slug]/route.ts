@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { getTenantFromHeaders } from "@/lib/tenant/detection-server";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
 export async function GET(
-  request: Request,
-  { params }: { params: { slug: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const supabase = await getServerClient();
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: "Supabase client not available" }, { status: 500 });
     }
 
-    const { slug } = params;
+    const { slug } = await params;
 
     // Récupérer l'ID de Jessica Contentin
     const { data: jessicaProfile, error: profileError } = await supabase

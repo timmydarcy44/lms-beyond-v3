@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { getTenantFromHeaders } from "@/lib/tenant/detection-server";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await getServerClient();
     if (!supabase) {

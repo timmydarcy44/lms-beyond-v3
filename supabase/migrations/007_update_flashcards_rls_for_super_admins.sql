@@ -3,12 +3,19 @@
 -- This migration updates the flashcards_write policy to include super admins
 -- Super admins should have full access to all flashcards
 
--- Drop existing flashcards_write policy if it exists
-DROP POLICY IF EXISTS flashcards_write ON public.flashcards;
-
--- Recreate flashcards_write policy with super admin support
+-- Update flashcards_write policy with super admin support (idempotent)
 DO $$
 BEGIN
+  -- Drop existing policy if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'flashcards'
+      AND policyname = 'flashcards_write'
+  ) THEN
+    DROP POLICY flashcards_write ON public.flashcards;
+  END IF;
+
   -- Check if creator_id exists in courses table
   IF EXISTS (
     SELECT 1 FROM information_schema.columns

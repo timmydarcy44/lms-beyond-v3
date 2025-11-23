@@ -1,6 +1,7 @@
 "use client";
 
-import { notFound, use } from "react";
+import { use } from "react";
+import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, Users, Clock, Target, Heart } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";

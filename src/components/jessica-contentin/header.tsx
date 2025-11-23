@@ -250,21 +250,6 @@ export function JessicaContentinHeader() {
           <div className="hidden lg:flex items-center gap-4">
             <Button
               asChild
-              variant="outline"
-              className="bg-transparent hover:bg-[#C6A664]/10 border-2 border-[#8B6F47] text-[#8B6F47] hover:text-[#B88A44] hover:border-[#B88A44] rounded-full px-6"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                borderColor: '#8B6F47',
-                borderWidth: '2px',
-              }}
-            >
-              <Link href="/dashboard/catalogue/account">
-                <User className="mr-2 h-4 w-4" />
-                Mon compte
-              </Link>
-            </Button>
-            <Button
-              asChild
               className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-6"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
@@ -288,6 +273,17 @@ export function JessicaContentinHeader() {
                 Commencer
               </Link>
             </Button>
+            {/* Mon compte - tout à droite, plus petit, sans bordure */}
+            <Link 
+              href="/dashboard/catalogue/account"
+              className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+              }}
+            >
+              <User className="h-3.5 w-3.5" />
+              Mon compte
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -335,21 +331,6 @@ export function JessicaContentinHeader() {
               <div className="mt-4 flex flex-col gap-3">
                 <Button
                   asChild
-                  variant="outline"
-                  className="bg-transparent hover:bg-[#C6A664]/10 border-2 border-[#8B6F47] text-[#8B6F47] hover:text-[#B88A44] hover:border-[#B88A44] rounded-full"
-                  style={{
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                    borderColor: '#8B6F47',
-                    borderWidth: '2px',
-                  }}
-                >
-                  <Link href="/dashboard/catalogue/account">
-                    <User className="mr-2 h-4 w-4" />
-                    Mon compte
-                  </Link>
-                </Button>
-                <Button
-                  asChild
                   className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
@@ -373,6 +354,18 @@ export function JessicaContentinHeader() {
                     Commencer
                   </Link>
                 </Button>
+                {/* Mon compte - plus petit, sans bordure */}
+                <Link 
+                  href="/dashboard/catalogue/account"
+                  className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                  }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User className="h-3.5 w-3.5" />
+                  Mon compte
+                </Link>
               </div>
             </div>
           </div>

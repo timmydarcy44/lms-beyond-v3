@@ -123,7 +123,8 @@ export default function RessourcesPage() {
       // Pour les modules de Jessica, utiliser la route formations avec l'interface apprenant
       return `/formations/${item.content_id}`;
     } else if (item.item_type === "ressource") {
-      return `/dashboard/catalogue/ressource/${item.content_id}`;
+      // Utiliser la route ressources pour Jessica Contentin
+      return `/ressources/${item.content_id}`;
     } else if (item.item_type === "test") {
       return `/dashboard/catalogue/test/${item.content_id}`;
     }

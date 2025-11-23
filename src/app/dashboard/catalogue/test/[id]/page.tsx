@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getCatalogItemById } from "@/lib/queries/catalogue";
@@ -33,7 +33,7 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    notFound();
+    redirect(`/login?next=${encodeURIComponent(`/dashboard/catalogue/test/${id}`)}`);
   }
 
   // Récupérer le profil pour obtenir l'organisation

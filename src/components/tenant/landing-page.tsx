@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { TenantConfig } from '@/lib/tenant/config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 interface LandingPageProps {
   tenant: TenantConfig;
@@ -86,6 +87,33 @@ export function LandingPage({ tenant, branding }: LandingPageProps) {
           <p className="text-lg mb-12" style={{ color: secondaryTextColor }}>
             Commencez dès aujourd'hui. Sans engagement.
           </p>
+          
+          {/* Bouton Mon compte pour les utilisateurs déjà inscrits */}
+          <div className="mb-8">
+            <Link href="/dashboard/catalogue/account">
+              <Button
+                type="button"
+                variant="outline"
+                className="px-6 py-3 text-base font-medium rounded-full border-2"
+                style={{ 
+                  borderColor: accentColor,
+                  color: accentColor,
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = accentColor;
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = accentColor;
+                }}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Mon compte
+              </Button>
+            </Link>
+          </div>
           
           <form onSubmit={handleSignup} className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
             <Input

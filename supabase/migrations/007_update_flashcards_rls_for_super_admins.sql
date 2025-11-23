@@ -1,108 +1,89 @@
--- 007_update_flashcards_rls_for_super_admins.sql
--- Mise à jour de la politique RLS flashcards_write pour inclure les super admins
--- À exécuter après 003_fix_inconsistencies.sql
+-- Migration 007: Update flashcards RLS policies to allow super admins
+-- ===================================================================
+-- This migration updates the flashcards_write policy to include super admins
+-- Super admins should have full access to all flashcards
 
-BEGIN;
-
--- Supprimer l'ancienne politique si elle existe
+-- Drop existing flashcards_write policy if it exists
 DROP POLICY IF EXISTS flashcards_write ON public.flashcards;
 
--- Recréer la politique avec support des super admins
+-- Recreate flashcards_write policy with super admin support
 DO $$
 BEGIN
-  -- Vérifier si creator_id existe dans courses avant de créer la policy
+  -- Check if creator_id exists in courses table
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'courses' AND column_name = 'creator_id'
+    WHERE table_schema = 'public' 
+      AND table_name = 'courses' 
+      AND column_name = 'creator_id'
   ) THEN
-    -- Vérifier si la table super_admins existe
-    IF EXISTS (
-      SELECT 1 FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = 'super_admins'
-    ) THEN
-      -- Créer la politique avec support des super admins
-      CREATE POLICY flashcards_write ON public.flashcards
-        FOR ALL USING (
-          EXISTS (
-            SELECT 1 FROM public.courses c
-            WHERE c.id = flashcards.course_id
-              AND (
-                c.creator_id = auth.uid()
-                OR public.user_has_role(auth.uid(), array['admin','instructor'])
-                OR EXISTS (
-                  SELECT 1 FROM public.super_admins sa
-                  WHERE sa.user_id = auth.uid() AND sa.is_active = true
-                )
-              )
-          )
-        ) WITH CHECK (
-          EXISTS (
-            SELECT 1 FROM public.courses c
-            WHERE c.id = flashcards.course_id
-              AND (
-                c.creator_id = auth.uid()
-                OR public.user_has_role(auth.uid(), array['admin','instructor'])
-                OR EXISTS (
-                  SELECT 1 FROM public.super_admins sa
-                  WHERE sa.user_id = auth.uid() AND sa.is_active = true
-                )
-              )
-          )
-        );
-    ELSE
-      -- Créer la politique sans support des super admins (fallback)
-      CREATE POLICY flashcards_write ON public.flashcards
-        FOR ALL USING (
-          EXISTS (
-            SELECT 1 FROM public.courses c
-            WHERE c.id = flashcards.course_id
-              AND (
-                c.creator_id = auth.uid()
-                OR public.user_has_role(auth.uid(), array['admin','instructor'])
-              )
-          )
-        ) WITH CHECK (
-          EXISTS (
-            SELECT 1 FROM public.courses c
-            WHERE c.id = flashcards.course_id
-              AND (
-                c.creator_id = auth.uid()
-                OR public.user_has_role(auth.uid(), array['admin','instructor'])
-              )
-          )
-        );
-    END IF;
+    -- Policy with creator_id check + super admin
+    CREATE POLICY flashcards_write ON public.flashcards
+      FOR ALL 
+      USING (
+        -- Super admin check (either via role or super_admins table)
+        public.user_has_role(auth.uid(), array['super_admin'])
+        OR EXISTS (
+          SELECT 1 FROM public.super_admins sa
+          WHERE sa.user_id = auth.uid()
+            AND sa.is_active = TRUE
+        )
+        -- Original conditions: course creator or admin/instructor
+        OR EXISTS (
+          SELECT 1 FROM public.courses c
+          WHERE c.id = flashcards.course_id
+            AND (
+              c.creator_id = auth.uid()
+              OR public.user_has_role(auth.uid(), array['admin','instructor'])
+            )
+        )
+      )
+      WITH CHECK (
+        -- Super admin check (either via role or super_admins table)
+        public.user_has_role(auth.uid(), array['super_admin'])
+        OR EXISTS (
+          SELECT 1 FROM public.super_admins sa
+          WHERE sa.user_id = auth.uid()
+            AND sa.is_active = TRUE
+        )
+        -- Original conditions: course creator or admin/instructor
+        OR EXISTS (
+          SELECT 1 FROM public.courses c
+          WHERE c.id = flashcards.course_id
+            AND (
+              c.creator_id = auth.uid()
+              OR public.user_has_role(auth.uid(), array['admin','instructor'])
+            )
+        )
+      );
   ELSE
-    -- Fallback si creator_id n'existe pas : juste vérifier le rôle et les super admins
-    IF EXISTS (
-      SELECT 1 FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = 'super_admins'
-    ) THEN
-      CREATE POLICY flashcards_write ON public.flashcards
-        FOR ALL USING (
-          public.user_has_role(auth.uid(), array['admin','instructor'])
-          OR EXISTS (
-            SELECT 1 FROM public.super_admins sa
-            WHERE sa.user_id = auth.uid() AND sa.is_active = true
-          )
-        ) WITH CHECK (
-          public.user_has_role(auth.uid(), array['admin','instructor'])
-          OR EXISTS (
-            SELECT 1 FROM public.super_admins sa
-            WHERE sa.user_id = auth.uid() AND sa.is_active = true
-          )
-        );
-    ELSE
-      -- Fallback si super_admins n'existe pas
-      CREATE POLICY flashcards_write ON public.flashcards
-        FOR ALL USING (
-          public.user_has_role(auth.uid(), array['admin','instructor'])
-        ) WITH CHECK (
-          public.user_has_role(auth.uid(), array['admin','instructor'])
-        );
-    END IF;
+    -- Fallback policy if creator_id doesn't exist: role check + super admin
+    CREATE POLICY flashcards_write ON public.flashcards
+      FOR ALL 
+      USING (
+        -- Super admin check (either via role or super_admins table)
+        public.user_has_role(auth.uid(), array['super_admin'])
+        OR EXISTS (
+          SELECT 1 FROM public.super_admins sa
+          WHERE sa.user_id = auth.uid()
+            AND sa.is_active = TRUE
+        )
+        -- Original condition: admin/instructor
+        OR public.user_has_role(auth.uid(), array['admin','instructor'])
+      )
+      WITH CHECK (
+        -- Super admin check (either via role or super_admins table)
+        public.user_has_role(auth.uid(), array['super_admin'])
+        OR EXISTS (
+          SELECT 1 FROM public.super_admins sa
+          WHERE sa.user_id = auth.uid()
+            AND sa.is_active = TRUE
+        )
+        -- Original condition: admin/instructor
+        OR public.user_has_role(auth.uid(), array['admin','instructor'])
+      );
   END IF;
 END $$;
 
-COMMIT;
+-- Note: flashcards_read policy already allows all authenticated users (using true)
+-- so super admins already have read access. No changes needed for read policy.
 

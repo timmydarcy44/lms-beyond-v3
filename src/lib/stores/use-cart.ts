@@ -46,7 +46,7 @@ export const useCart = create<CartStore>()(
 
         // Ajouter au panier local
         const newItems = [...currentItems, item];
-        set({ items: newItems, isOpen: true }); // Ouvrir le drawer automatiquement
+        set({ items: newItems }); // Ne pas ouvrir automatiquement le drawer
 
         // Synchroniser avec le serveur (en arrière-plan, ne pas bloquer)
         fetch("/api/cart/add", {

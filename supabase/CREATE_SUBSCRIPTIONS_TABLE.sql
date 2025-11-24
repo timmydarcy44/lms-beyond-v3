@@ -123,3 +123,4 @@ COMMENT ON COLUMN public.subscriptions.status IS 'Statut de l''abonnement Stripe
 
 
 
+

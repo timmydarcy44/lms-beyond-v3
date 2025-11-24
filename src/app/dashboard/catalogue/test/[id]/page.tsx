@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getCatalogItemById } from "@/lib/queries/catalogue";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { CatalogTopNavClient } from "@/components/catalogue/catalog-top-nav-client";
 import { JessicaContentinHeader } from "@/components/jessica-contentin/header";
 import { HeroImage } from "@/components/catalogue/hero-image";
@@ -25,6 +25,27 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  // Récupérer l'item du catalogue AVANT de vérifier l'utilisateur pour détecter si c'est Jessica
+  // On utilise le service role pour pouvoir lire sans authentification
+  const serviceClient = await getServiceRoleClient();
+  const tempCatalogItem = serviceClient 
+    ? await getCatalogItemById(id, undefined, undefined, serviceClient)
+    : null;
+
+  // Détecter si c'est un test de Jessica Contentin AVANT la redirection
+  let isJessicaContentin = false;
+  let creatorEmail = null;
+  if (tempCatalogItem && (tempCatalogItem as any).creator_id && serviceClient) {
+    const { data: creatorProfile } = await serviceClient
+      .from("profiles")
+      .select("email")
+      .eq("id", (tempCatalogItem as any).creator_id)
+      .maybeSingle();
+    
+    creatorEmail = creatorProfile?.email || null;
+    isJessicaContentin = creatorEmail === "contentin.cabinet@gmail.com";
+  }
+
   // Récupérer l'organisation de l'utilisateur
   const supabase = await getServerClient();
   if (!supabase) {
@@ -33,7 +54,12 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent(`/dashboard/catalogue/test/${id}`)}`);
+    // Rediriger vers la bonne page de login selon le créateur
+    if (isJessicaContentin) {
+      redirect(`/jessica-contentin/login?next=${encodeURIComponent(`/dashboard/catalogue/test/${id}`)}`);
+    } else {
+      redirect(`/login?next=${encodeURIComponent(`/dashboard/catalogue/test/${id}`)}`);
+    }
   }
 
   // Récupérer le profil pour obtenir l'organisation
@@ -60,22 +86,21 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
 
   // Récupérer le branding du Super Admin créateur du test
   let branding = null;
-  let creatorEmail = null;
   if (catalogItem && (catalogItem as any).creator_id) {
     branding = await getSuperAdminBranding((catalogItem as any).creator_id);
     
-    // Récupérer l'email du créateur pour détecter si c'est Jessica
-    const { data: creatorProfile } = await supabase
-      .from("profiles")
-      .select("email")
-      .eq("id", (catalogItem as any).creator_id)
-      .single();
-    
-    creatorEmail = creatorProfile?.email || null;
+    // Récupérer l'email du créateur pour détecter si c'est Jessica (si pas déjà fait)
+    if (!creatorEmail) {
+      const { data: creatorProfile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", (catalogItem as any).creator_id)
+        .maybeSingle();
+      
+      creatorEmail = creatorProfile?.email || null;
+      isJessicaContentin = creatorEmail === "contentin.cabinet@gmail.com";
+    }
   }
-  
-  // Détecter si c'est un test de Jessica Contentin
-  const isJessicaContentin = creatorEmail === "contentin.cabinet@gmail.com";
 
   // Récupérer les détails du test depuis la table tests
   let testData = null;

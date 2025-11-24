@@ -25,3 +25,4 @@ Si l'image ne s'affiche pas, vérifiez :
 - Que l'image est bien dans le dossier `public/`
 - Que le serveur de développement a été redémarré
 
+

@@ -84,3 +84,4 @@ WHERE ci.item_type = 'module'
   AND ci.target_audience = 'apprenant'
 ORDER BY ci.created_at DESC;
 
+

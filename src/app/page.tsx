@@ -14,7 +14,7 @@ export default async function Home() {
   // Ne traiter comme tenant que si ce n'est PAS localhost (pour le développement)
   const headersList = await headers();
   const hostname = headersList.get('host') || '';
-  const isLocalhost = hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1');
+  const isLocalhost = hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1') || hostname.includes('localhost');
   
   console.log('[Home] Hostname:', hostname, 'Tenant:', tenant?.id, 'IsLocalhost:', isLocalhost);
   

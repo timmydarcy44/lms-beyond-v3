@@ -18,6 +18,7 @@ export type CatalogItem = {
   target_audience?: "pro" | "apprenant" | "all";
   access_status?: "pending_payment" | "purchased" | "manually_granted" | "free";
   course_slug?: string | null; // Slug du course associé (pour les modules)
+  stripe_checkout_url?: string | null; // URL Stripe Checkout personnalisée
 };
 
 export async function getCatalogItems(
@@ -64,19 +65,22 @@ export async function getCatalogItems(
   // Si superAdminId est spécifié ET qu'on est en mode prévisualisation (pas un learner), on peut montrer tous les items
   const isPreviewMode = superAdminId && userRole !== "learner" && !userId;
   
-  // Pour Beyond No School, toujours filtrer par target_audience = "apprenant" même en mode prévisualisation
-  // Sauf si c'est explicitement un autre contexte (organisation, etc.)
-  if (userRole === "learner" || !isPreviewMode) {
-    // Pour les apprenants ou le catalogue public Beyond No School, ne montrer que les items pour apprenants
-    query = query.or("target_audience.eq.apprenant,target_audience.eq.all");
-  } else if (isPreviewMode && superAdminId === "60c88469-3c53-417f-a81d-565a662ad2f5") {
-    // Même en mode prévisualisation, pour Tim (Beyond No School), filtrer par apprenant
-    query = query.or("target_audience.eq.apprenant,target_audience.eq.all");
+  // Ne filtrer par target_audience QUE si userRole est spécifié
+  // Si userRole n'est pas spécifié, on affiche tous les items (pour les pages publiques comme Jessica Contentin)
+  if (userRole) {
+    if (userRole === "learner" || !isPreviewMode) {
+      // Pour les apprenants ou le catalogue public Beyond No School, ne montrer que les items pour apprenants
+      query = query.or("target_audience.eq.apprenant,target_audience.eq.all");
+    } else if (isPreviewMode && superAdminId === "60c88469-3c53-417f-a81d-565a662ad2f5") {
+      // Même en mode prévisualisation, pour Tim (Beyond No School), filtrer par apprenant
+      query = query.or("target_audience.eq.apprenant,target_audience.eq.all");
+    }
+    // Sinon, montrer les items pour pro ou tous publics (formateurs, admins, tuteurs en mode prévisualisation)
+    else if (userRole === "admin" || userRole === "instructor" || userRole === "tutor") {
+      query = query.or("target_audience.eq.pro,target_audience.eq.all");
+    }
   }
-  // Sinon, montrer les items pour pro ou tous publics (formateurs, admins, tuteurs en mode prévisualisation)
-  else if (userRole && (userRole === "admin" || userRole === "instructor" || userRole === "tutor")) {
-    query = query.or("target_audience.eq.pro,target_audience.eq.all");
-  }
+  // Si userRole n'est pas spécifié, ne pas filtrer par target_audience (afficher tous les items)
 
   // Récupérer tous les items actifs du catalogue (filtrés selon le rôle)
   const { data: items, error } = await query
@@ -447,9 +451,10 @@ export async function getCatalogItems(
 export async function getCatalogItemById(
   catalogItemId: string,
   organizationId?: string,
-  userId?: string // ID de l'utilisateur pour vérifier si c'est le créateur
+  userId?: string, // ID de l'utilisateur pour vérifier si c'est le créateur
+  supabaseClient?: any // Client Supabase optionnel (pour utiliser service role si nécessaire)
 ): Promise<(CatalogItem & { course?: any; test?: any; slug?: string }) | null> {
-  const supabase = await getServerClient();
+  const supabase = supabaseClient || await getServerClient();
 
   if (!supabase) {
     return null;

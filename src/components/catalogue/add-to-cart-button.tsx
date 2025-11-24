@@ -1,9 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Check } from "lucide-react";
+import { ShoppingBag, Check, ShoppingCart, ArrowRight } from "lucide-react";
 import { useCart } from "@/lib/stores/use-cart";
 import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { CartItem } from "@/lib/stores/use-cart";
 
 type AddToCartButtonProps = {
@@ -28,16 +30,26 @@ export function AddToCartButton({
   className = "",
 }: AddToCartButtonProps) {
   const { items, addItem, openCart } = useCart();
+  const router = useRouter();
+  const pathname = usePathname();
   const [isAdding, setIsAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
 
   const isInCart = items.some(
     (item) => item.content_id === contentId && item.content_type === contentType
   );
 
+  // Déterminer si on est sur le site Jessica Contentin
+  const isJessicaContentin = pathname?.startsWith('/jessica-contentin') || false;
+
   const handleAddToCart = async () => {
     if (isInCart) {
-      openCart();
+      if (isJessicaContentin) {
+        router.push('/jessica-contentin/panier');
+      } else {
+        openCart();
+      }
       return;
     }
 
@@ -56,43 +68,86 @@ export function AddToCartButton({
       await addItem(item);
       setIsAdding(false);
       setJustAdded(true);
-      
-      // Le drawer s'ouvre automatiquement via addItem, donc on n'a pas besoin d'appeler openCart
-      // Mais on peut garder le timeout pour l'état visuel
-      setTimeout(() => {
-        setJustAdded(false);
-      }, 2000);
+      setShowDialog(true);
     } catch (error) {
       console.error("[AddToCartButton] Error adding item:", error);
       setIsAdding(false);
     }
   };
 
+  const handleViewCart = () => {
+    setShowDialog(false);
+    if (isJessicaContentin) {
+      router.push('/jessica-contentin/panier');
+    } else {
+      openCart();
+    }
+  };
+
+  const handleContinueShopping = () => {
+    setShowDialog(false);
+    setJustAdded(false);
+  };
+
   return (
-    <Button
-      onClick={handleAddToCart}
-      disabled={isAdding}
-      variant={isInCart ? "default" : variant}
-      size={size}
-      className={className}
-    >
-      {isAdding ? (
-        <>
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-          Ajout...
-        </>
-      ) : justAdded || isInCart ? (
-        <>
-          <Check className="h-4 w-4 mr-2" />
-          {isInCart ? "Dans le panier" : "Ajouté !"}
-        </>
-      ) : (
-        <>
-          <ShoppingBag className="h-4 w-4 mr-2" />
-          Ajouter à ma liste
-        </>
-      )}
-    </Button>
+    <>
+      <Button
+        onClick={handleAddToCart}
+        disabled={isAdding}
+        variant={isInCart ? "default" : variant}
+        size={size}
+        className={className}
+      >
+        {isAdding ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+            Ajout...
+          </>
+        ) : justAdded || isInCart ? (
+          <>
+            <Check className="h-4 w-4 mr-2" />
+            {isInCart ? "Dans le panier" : "Ajouté !"}
+          </>
+        ) : (
+          <>
+            <ShoppingBag className="h-4 w-4 mr-2" />
+            Ajouter à ma liste
+          </>
+        )}
+      </Button>
+
+      {/* Dialog de confirmation */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-green-600" />
+              Article ajouté au panier
+            </DialogTitle>
+            <DialogDescription>
+              {title} a été ajouté à votre panier avec succès.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={handleContinueShopping}
+              className="w-full sm:w-auto"
+            >
+              Continuer mes achats
+            </Button>
+            <Button
+              onClick={handleViewCart}
+              className="w-full sm:w-auto"
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Voir le panier
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

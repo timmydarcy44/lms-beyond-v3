@@ -191,3 +191,4 @@ WHERE ci.item_type = 'module'
     SELECT 1 FROM courses c WHERE c.id = ci.content_id
   );
 
+

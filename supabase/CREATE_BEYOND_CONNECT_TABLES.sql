@@ -191,3 +191,4 @@ COMMENT ON TABLE public.beyond_connect_certifications IS 'Certifications des uti
 COMMENT ON TABLE public.beyond_connect_projects IS 'Projets et portfolios des utilisateurs pour Beyond Connect';
 COMMENT ON TABLE public.beyond_connect_languages IS 'Langues maîtrisées par les utilisateurs pour Beyond Connect';
 
+

@@ -54,3 +54,4 @@ const BUCKET_NAME = "jessica-contentin"; // Si l'ID est avec tiret
 
 Le nom affiché dans l'interface Supabase ("Jessica CONTENTIN") peut être différent de l'ID utilisé dans les URLs. C'est l'ID qui compte, pas le nom affiché.
 
+

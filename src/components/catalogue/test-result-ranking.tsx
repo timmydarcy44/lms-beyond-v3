@@ -66,7 +66,9 @@ export function TestResultRanking({ categoryResults, colors }: TestResultRanking
                 className="text-lg font-bold"
                 style={{ color: colors.primary }}
               >
-                {result.percentage.toFixed(0)}%
+                {typeof result.percentage === 'number' && !isNaN(result.percentage) 
+                  ? result.percentage.toFixed(0) 
+                  : (result.maxScore > 0 ? ((result.score / result.maxScore) * 100).toFixed(0) : '0')}%
               </p>
               {/* Barre de progression */}
               <div 
@@ -76,7 +78,9 @@ export function TestResultRanking({ categoryResults, colors }: TestResultRanking
                 <div
                   className="h-2 rounded-full transition-all"
                   style={{
-                    width: `${result.percentage}%`,
+                    width: `${typeof result.percentage === 'number' && !isNaN(result.percentage) 
+                      ? result.percentage 
+                      : (result.maxScore > 0 ? (result.score / result.maxScore) * 100 : 0)}%`,
                     backgroundColor: colors.primary,
                   }}
                 />

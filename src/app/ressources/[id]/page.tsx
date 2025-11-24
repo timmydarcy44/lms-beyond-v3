@@ -28,7 +28,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Vérifier l'authentification
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent(`/ressources/${id}`)}`);
+    redirect(`/jessica-contentin/login?next=${encodeURIComponent(`/ressources/${id}`)}`);
   }
 
   // Récupérer l'ID de Jessica Contentin
@@ -59,14 +59,44 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   }
 
   // Vérifier que c'est bien une ressource de Jessica Contentin
-  const isCreator = (catalogItem as any).creator_id === jessicaProfile.id;
-  if (!isCreator) {
+  const isResourceCreator = (catalogItem as any).creator_id === jessicaProfile.id;
+  if (!isResourceCreator) {
     notFound();
   }
 
-  // Récupérer les détails de la ressource depuis la table resources
+  // Vérifier si l'utilisateur a accès AVANT de récupérer les détails sensibles
+  // IMPORTANT : Seul le créateur (Jessica) ou les utilisateurs ayant payé peuvent accéder
+  // Même les ressources gratuites nécessitent un accès explicite dans catalog_item_access
+  const isCreator = user.id === jessicaProfile.id;
+  
+  // Vérifier explicitement dans catalog_item_access si l'utilisateur a un accès
+  // C'est la SEULE source de vérité pour l'accès utilisateur
+  const { data: userAccess } = await supabase
+    .from("catalog_item_access")
+    .select("access_type, access_status")
+    .eq("user_id", user.id)
+    .eq("catalog_item_id", id)
+    .maybeSingle();
+  
+  // L'utilisateur a accès UNIQUEMENT si :
+  // 1. Il est le créateur (Jessica) - TOUJOURS accès
+  // 2. Il a un accès explicite dans catalog_item_access (purchased, free, ou manually_granted)
+  // Le access_status du catalogItem n'est pas suffisant, il faut vérifier catalog_item_access
+  const hasExplicitAccess = userAccess && (
+    userAccess.access_type === "purchased" || 
+    userAccess.access_type === "free" || 
+    userAccess.access_type === "manually_granted" ||
+    userAccess.access_status === "purchased" ||
+    userAccess.access_status === "free" ||
+    userAccess.access_status === "manually_granted"
+  );
+  
+  const hasAccess = isCreator || hasExplicitAccess;
+
+  // Récupérer les détails de la ressource UNIQUEMENT si l'utilisateur a accès
+  // Pour protéger les URLs de fichiers/vidéos/audios
   let resourceData = null;
-  if (catalogItem.content_id) {
+  if (hasAccess && catalogItem.content_id) {
     const { data: resource } = await supabase
       .from("resources")
       .select("id, title, description, kind, file_url, video_url, audio_url")
@@ -76,6 +106,22 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     if (resource) {
       resourceData = resource;
     }
+  } else if (catalogItem.content_id) {
+    // Si pas d'accès, récupérer seulement les métadonnées publiques (pas les URLs)
+    const { data: resource } = await supabase
+      .from("resources")
+      .select("id, title, description, kind")
+      .eq("id", catalogItem.content_id)
+      .single();
+
+    if (resource) {
+      resourceData = {
+        ...resource,
+        file_url: null,
+        video_url: null,
+        audio_url: null,
+      };
+    }
   }
 
   // Déterminer l'image hero
@@ -84,20 +130,17 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Déterminer l'accroche
   let accroche = catalogItem.short_description || catalogItem.description || resourceData?.description;
 
-  // Vérifier si l'utilisateur a accès
-  const hasAccess = catalogItem.access_status === "purchased" || 
-                    catalogItem.access_status === "manually_granted" || 
-                    catalogItem.access_status === "free" ||
-                    catalogItem.is_free ||
-                    user.id === jessicaProfile.id;
-
-  // URL vers la ressource (si accès)
+  // URL vers la ressource (si accès) - PROTÉGÉ : null si pas d'accès
   const resourceUrl = hasAccess && resourceData
     ? (resourceData.file_url || resourceData.video_url || resourceData.audio_url)
     : null;
 
   // URL vers la page de paiement (si pas d'accès)
-  const paymentUrl = `/dashboard/catalogue/ressource/${id}/payment`;
+  // Si la ressource a une URL Stripe Checkout configurée, l'utiliser
+  const stripeCheckoutUrl = (catalogItem as any).stripe_checkout_url;
+  const paymentUrl = stripeCheckoutUrl 
+    ? stripeCheckoutUrl
+    : `/dashboard/catalogue/ressource/${id}/payment`;
 
   // Couleurs de branding Jessica Contentin
   const bgColor = "#FFFFFF"; // Blanc
@@ -119,17 +162,14 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Déterminer le texte du bouton
   const getButtonText = () => {
     if (hasAccess && resourceUrl) {
-      if (resourceData?.kind === "video") {
-        return "Regarder";
-      } else if (resourceData?.kind === "audio") {
-        return "Écouter";
-      }
-      return "Consulter";
+      // Si déjà acheté : "Accéder"
+      return "Accéder";
     }
-    if (catalogItem.is_free) {
-      return "Accéder gratuitement";
+    // Si pas payé : "Acheter"
+    if (catalogItem.price && catalogItem.price > 0) {
+      return `Acheter pour ${catalogItem.price}€`;
     }
-    return `Acheter pour ${catalogItem.price || 0}€`;
+    return "Acheter";
   };
 
   return (
@@ -221,6 +261,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                 </p>
               )}
               <div className="flex flex-wrap items-center gap-3 pt-4">
+                {/* Afficher le bouton d'accès UNIQUEMENT si l'utilisateur a vraiment payé ou a un accès valide */}
                 {hasAccess && resourceUrl ? (
                   <Button 
                     asChild 
@@ -235,18 +276,33 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                     </a>
                   </Button>
                 ) : (
-                  <Button 
-                    asChild 
-                    className="rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl"
-                    style={{
-                      backgroundColor: primaryColor,
-                    }}
-                  >
-                    <Link href={paymentUrl}>
-                      <CreditCard className="h-5 w-5" />
-                      <span className="ml-2">{getButtonText()}</span>
-                    </Link>
-                  </Button>
+                  <>
+                    {/* Toujours afficher le message si pas d'accès */}
+                    <div className="w-full mb-2">
+                      <p className="text-sm font-medium" style={{ color: `${textColor}AA` }}>
+                        🔒 {catalogItem.is_free ? "Accès gratuit requis" : "Vous devez acheter cette ressource pour y accéder"}
+                      </p>
+                    </div>
+                    <Button 
+                      asChild 
+                      className="rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    >
+                      {stripeCheckoutUrl ? (
+                        <a href={paymentUrl} target="_blank" rel="noopener noreferrer">
+                          <CreditCard className="h-5 w-5" />
+                          <span className="ml-2">{getButtonText()}</span>
+                        </a>
+                      ) : (
+                        <Link href={paymentUrl}>
+                          <CreditCard className="h-5 w-5" />
+                          <span className="ml-2">{getButtonText()}</span>
+                        </Link>
+                      )}
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -265,7 +321,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
           </div>
         </section>
 
-        {/* Description détaillée */}
+        {/* Description détaillée - Toujours visible pour donner envie d'acheter */}
         {catalogItem.description && (
           <section 
             className="rounded-3xl border mx-6 mb-8 px-6 py-10 md:px-10"
@@ -283,6 +339,19 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
             >
               {catalogItem.description}
             </p>
+            {!hasAccess && !catalogItem.is_free && (
+              <div className="mt-6 p-4 rounded-lg border" style={{ 
+                borderColor: `${primaryColor}40`,
+                backgroundColor: `${primaryColor}10`,
+              }}>
+                <p className="text-sm font-medium mb-2" style={{ color: textColor }}>
+                  🔒 Contenu protégé
+                </p>
+                <p className="text-sm" style={{ color: `${textColor}AA` }}>
+                  Achetez cette ressource pour accéder au contenu complet.
+                </p>
+              </div>
+            )}
           </section>
         )}
       </div>

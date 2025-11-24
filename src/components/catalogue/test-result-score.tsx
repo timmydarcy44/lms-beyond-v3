@@ -14,6 +14,14 @@ type TestResultScoreProps = {
 };
 
 export function TestResultScore({ score, maxScore, percentage, colors }: TestResultScoreProps) {
+  // Calculer le pourcentage si manquant ou invalide
+  const validPercentage = (percentage != null && !isNaN(percentage) && isFinite(percentage))
+    ? percentage
+    : (maxScore > 0 && score != null && !isNaN(score) ? (score / maxScore) * 100 : 0);
+  
+  const validScore = score != null && !isNaN(score) ? score : 0;
+  const validMaxScore = maxScore != null && !isNaN(maxScore) && maxScore > 0 ? maxScore : 100;
+  
   return (
     <div className="flex items-center justify-center p-8">
       <div className="text-center">
@@ -25,20 +33,20 @@ export function TestResultScore({ score, maxScore, percentage, colors }: TestRes
             className="text-5xl font-bold"
             style={{ color: colors.primary }}
           >
-            {score}
+            {validScore}
           </span>
           <span 
             className="text-2xl ml-2"
             style={{ color: colors.text }}
           >
-            / {maxScore}
+            / {validMaxScore}
           </span>
         </div>
         <div 
           className="text-2xl font-semibold"
           style={{ color: colors.accent }}
         >
-          {percentage.toFixed(1)}%
+          {validPercentage.toFixed(1)}%
         </div>
         
         {/* Barre de progression */}
@@ -49,7 +57,7 @@ export function TestResultScore({ score, maxScore, percentage, colors }: TestRes
           <div
             className="h-3 rounded-full transition-all"
             style={{
-              width: `${percentage}%`,
+              width: `${Math.min(100, Math.max(0, validPercentage))}%`,
               backgroundColor: colors.primary,
             }}
           />
@@ -58,6 +66,7 @@ export function TestResultScore({ score, maxScore, percentage, colors }: TestRes
     </div>
   );
 }
+
 
 
 

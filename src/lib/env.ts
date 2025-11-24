@@ -22,10 +22,13 @@ if (typeof window === 'undefined') {
   }
 }
 
+const brevoApiKey = process.env.BREVO_API_KEY as string | undefined;
+
 export const env = {
   supabaseUrl,
   supabaseAnonKey,
   supabaseServiceKey,
+  brevoApiKey,
 };
 
 

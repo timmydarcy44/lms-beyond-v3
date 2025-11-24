@@ -81,7 +81,7 @@ export function JessicaContentinFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/ressources" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
+                <Link href="/jessica-contentin/ressources" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Ressources
                 </Link>
               </li>

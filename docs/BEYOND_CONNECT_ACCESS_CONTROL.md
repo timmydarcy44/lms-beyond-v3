@@ -145,3 +145,4 @@ Les apprenants BtoC peuvent accéder à Beyond Connect depuis leur dashboard Bey
 - [x] Vitrine publique accessible sans authentification
 - [x] Message d'erreur informatif sur la vitrine
 
+

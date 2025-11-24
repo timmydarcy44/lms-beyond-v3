@@ -161,3 +161,4 @@ WHERE ci.item_type = 'module'
   AND (ci.title ILIKE '%fixer%prix%' OR ci.title ILIKE '%prix%' OR c.title ILIKE '%fixer%prix%' OR c.title ILIKE '%prix%')
 ORDER BY ci.created_at DESC;
 
+

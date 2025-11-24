@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JessicaContentinHeader } from "@/components/jessica-contentin/header";
 import { JessicaContentinFooter } from "@/components/jessica-contentin/footer";
+import { FloatingCartBadge } from "@/components/jessica-contentin/floating-cart-badge";
 
 export const metadata: Metadata = {
   title: "Jessica CONTENTIN - Psychopédagogue certifiée en neuroéducation",
@@ -18,6 +19,7 @@ export function JessicaContentinLayout({
       <JessicaContentinHeader />
       <main className="pt-0">{children}</main>
       <JessicaContentinFooter />
+      <FloatingCartBadge />
     </div>
   );
 }

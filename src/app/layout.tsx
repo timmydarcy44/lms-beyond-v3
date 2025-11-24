@@ -60,7 +60,7 @@ export default function RootLayout({
                   <PomodoroFloatingTimer />
                   <PomodoroCompletionScreen />
                 </PomodoroProvider>
-                <Toaster richColors position="top-right" />
+                <Toaster richColors position="top-center" />
               </ThemeProvider>
             </QueryProvider>
           </SessionProvider>

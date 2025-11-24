@@ -56,26 +56,6 @@ export default async function CatalogResourceDetailPage({ params }: PageProps) {
     branding = await getSuperAdminBranding((catalogItem as any).creator_id);
   }
 
-  // Récupérer les détails de la ressource depuis la table resources
-  let resourceData = null;
-  if (catalogItem.content_id) {
-    const { data: resource } = await supabase
-      .from("resources")
-      .select("id, title, description, kind, file_url, video_url, audio_url")
-      .eq("id", catalogItem.content_id)
-      .single();
-
-    if (resource) {
-      resourceData = resource;
-    }
-  }
-
-  // Déterminer l'image hero
-  let heroImage = catalogItem.hero_image_url || catalogItem.thumbnail_url;
-
-  // Déterminer l'accroche
-  let accroche = catalogItem.short_description || catalogItem.description || resourceData?.description;
-
   // Vérifier si l'utilisateur est le créateur du contenu
   const isCreator = (catalogItem as any).creator_id === user.id;
   
@@ -87,7 +67,44 @@ export default async function CatalogResourceDetailPage({ params }: PageProps) {
                     catalogItem.access_status === "free" ||
                     catalogItem.is_free;
 
-  // URL vers la ressource (si accès)
+  // Récupérer les détails de la ressource UNIQUEMENT si l'utilisateur a accès
+  // Pour protéger les URLs de fichiers/vidéos/audios
+  let resourceData = null;
+  if (hasAccess && catalogItem.content_id) {
+    const { data: resource } = await supabase
+      .from("resources")
+      .select("id, title, description, kind, file_url, video_url, audio_url")
+      .eq("id", catalogItem.content_id)
+      .single();
+
+    if (resource) {
+      resourceData = resource;
+    }
+  } else if (catalogItem.content_id) {
+    // Si pas d'accès, récupérer seulement les métadonnées publiques (pas les URLs)
+    const { data: resource } = await supabase
+      .from("resources")
+      .select("id, title, description, kind")
+      .eq("id", catalogItem.content_id)
+      .single();
+
+    if (resource) {
+      resourceData = {
+        ...resource,
+        file_url: null,
+        video_url: null,
+        audio_url: null,
+      };
+    }
+  }
+
+  // Déterminer l'image hero
+  let heroImage = catalogItem.hero_image_url || catalogItem.thumbnail_url;
+
+  // Déterminer l'accroche
+  let accroche = catalogItem.short_description || catalogItem.description || resourceData?.description;
+
+  // URL vers la ressource (si accès) - PROTÉGÉ : null si pas d'accès
   const resourceUrl = hasAccess && resourceData
     ? (resourceData.file_url || resourceData.video_url || resourceData.audio_url)
     : null;

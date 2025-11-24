@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { env } from "@/lib/env";
 import { motion, AnimatePresence } from "framer-motion";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getUserName } from "@/lib/utils/user-name";
 
 // Fonction pour construire l'URL Supabase Storage
 function getSupabaseStorageUrl(bucket: string, path: string): string {
@@ -74,12 +76,17 @@ export function JessicaContentinHeader() {
   // Pages internes : consultations, a-propos, orientation, specialites, ressources
   // + pages de détail du catalogue (test, ressource, module)
   // + pages de formations (interface apprenant)
+  // + page mon-compte
   const isInternalPage = 
     pathname === "/consultations" || 
     pathname === "/a-propos" || 
     pathname === "/orientation" || 
     pathname === "/specialites" || 
-    pathname.startsWith("/specialites/") || 
+    pathname.startsWith("/specialites/") ||
+    pathname === "/jessica-contentin/mon-compte" || 
+    pathname === "/jessica-contentin/login" ||
+    pathname === "/jessica-contentin/inscription" ||
+    pathname === "/jessica-contentin/panier" ||
     pathname === "/ressources" || 
     pathname === "/blog" ||
     pathname.startsWith("/blog/") ||
@@ -99,12 +106,62 @@ export function JessicaContentinHeader() {
   const [isAppDomain, setIsAppDomain] = useState(false);
   const [ressourcesImageError, setRessourcesImageError] = useState(false);
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [userFirstName, setUserFirstName] = useState<string | null>(null);
   
   useEffect(() => {
     // Détecter si on est sur app.jessicacontentin.fr
     if (typeof window !== 'undefined') {
       setIsAppDomain(window.location.hostname === 'app.jessicacontentin.fr');
     }
+
+    // Vérifier l'authentification et récupérer le prénom
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    // Vérifier l'état initial
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        setIsAuthenticated(true);
+        // Récupérer le profil pour obtenir le prénom
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        const firstName = getUserName(profile?.full_name || profile?.email || user.email || "");
+        setUserFirstName(firstName);
+      } else {
+        setIsAuthenticated(false);
+        setUserFirstName(null);
+      }
+    });
+
+    // Écouter les changements d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setIsAuthenticated(true);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        
+        const firstName = getUserName(profile?.full_name || profile?.email || session.user.email || "");
+        setUserFirstName(firstName);
+      } else {
+        setIsAuthenticated(false);
+        setUserFirstName(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
   
   // Initialiser l'URL de l'image hero
@@ -139,7 +196,7 @@ export function JessicaContentinHeader() {
     },
     {
       label: "Ressources",
-      href: "/ressources",
+      href: "/jessica-contentin/ressources",
     },
     {
       label: "Blog",
@@ -156,7 +213,7 @@ export function JessicaContentinHeader() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span
-              className="text-xl font-semibold text-[#2F2A25]"
+              className="text-xl font-semibold text-[#2F2A25] whitespace-nowrap"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
@@ -191,7 +248,7 @@ export function JessicaContentinHeader() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-1 px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg transition-colors hover:bg-[#E6D9C6]/50",
+                    "flex items-center gap-1 px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg transition-colors hover:bg-[#E6D9C6]/50 whitespace-nowrap",
                     activeDropdown === item.href && "bg-[#E6D9C6]/50"
                   )}
                 >
@@ -274,16 +331,27 @@ export function JessicaContentinHeader() {
               </Link>
             </Button>
             {/* Mon compte - tout à droite, plus petit, sans bordure */}
-            <Link 
-              href="/dashboard/catalogue/account"
-              className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              }}
-            >
-              <User className="h-3.5 w-3.5" />
-              Mon compte
-            </Link>
+            {isAuthenticated && userFirstName ? (
+              <Link 
+                href="/jessica-contentin/mon-compte"
+                className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                }}
+              >
+                Bonjour {userFirstName}
+              </Link>
+            ) : (
+              <Link 
+                href="/jessica-contentin/mon-compte"
+                className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                }}
+              >
+                <User className="h-3.5 w-3.5" />
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -355,17 +423,30 @@ export function JessicaContentinHeader() {
                   </Link>
                 </Button>
                 {/* Mon compte - plus petit, sans bordure */}
-                <Link 
-                  href="/dashboard/catalogue/account"
-                  className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5"
-                  style={{
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                  }}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="h-3.5 w-3.5" />
-                  Mon compte
-                </Link>
+                {isAuthenticated && userFirstName ? (
+                  <Link 
+                    href="/jessica-contentin/mon-compte"
+                    className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
+                    style={{
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                    }}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Bonjour {userFirstName}
+                  </Link>
+                ) : (
+                  <Link 
+                    href="/jessica-contentin/mon-compte"
+                    className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
+                    style={{
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                    }}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    Mon compte
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -537,7 +618,7 @@ export function JessicaContentinHeader() {
               whileHover={{ scale: 1.05, y: -5 }}
             >
               <Link
-                href="/ressources"
+                href="/jessica-contentin/ressources"
                 className="group relative overflow-hidden rounded-xl bg-white border border-[#E6D9C6] hover:border-[#C6A664] hover:shadow-lg transition-all block"
               >
               <div className="relative h-48 overflow-hidden">

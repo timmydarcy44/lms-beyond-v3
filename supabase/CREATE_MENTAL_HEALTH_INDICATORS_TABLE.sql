@@ -142,3 +142,4 @@ COMMENT ON COLUMN public.mental_health_indicators.week_start_date IS 'Date de d√
 
 
 
+

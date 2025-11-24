@@ -218,3 +218,4 @@ La séparation BtoB/BtoC est **stable et complète**. Les utilisateurs BtoB ne p
 
 Les utilisateurs BtoC doivent **explicitement autoriser** leur profil via `is_searchable = true` pour apparaître dans les recherches Beyond Connect.
 
+

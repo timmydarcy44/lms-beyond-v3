@@ -98,3 +98,4 @@ Vous devriez voir toutes les tables listées ci-dessus.
 - Rafraîchissez la page de l'application.
 - Vérifiez que vous avez bien exécuté les deux scripts dans l'ordre.
 
+

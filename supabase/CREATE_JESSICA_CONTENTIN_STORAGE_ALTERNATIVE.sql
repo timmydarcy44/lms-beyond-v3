@@ -55,3 +55,4 @@ WHERE name = 'jessica-contentin';
 -- Si le bucket n'est pas public, vous devez le rendre public via l'interface :
 -- Storage > jessica-contentin > Settings > Toggle "Public bucket" to ON
 
+

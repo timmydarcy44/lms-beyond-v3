@@ -88,3 +88,4 @@ COMMENT ON POLICY "Super admins can upload jessica contentin images" ON storage.
 COMMENT ON POLICY "Super admins can delete jessica contentin images" ON storage.objects IS 
 'Permet aux super admins de supprimer des images du site vitrine';
 
+

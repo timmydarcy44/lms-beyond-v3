@@ -42,14 +42,18 @@ export function TestResultsViewer({
   const accentColor = colors.accent || '#D4AF37';
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function loadTestResults() {
       try {
         const supabase = createSupabaseBrowserClient();
         
         if (!supabase || !userId) {
           console.error("[test-results-viewer] Supabase client or userId not available");
-          setTestResults([]);
-          setLoading(false);
+          if (isMounted) {
+            setTestResults([]);
+            setLoading(false);
+          }
           return;
         }
         
@@ -78,45 +82,188 @@ export function TestResultsViewer({
             )
           `)
           .eq("user_id", userId)
-          .order("completed_at", { ascending: false });
+          .not("completed_at", "is", null)
+          .order("completed_at", { ascending: false })
+          .limit(20);
+
+        // Récupérer aussi les résultats des tests soft skills (mental_health_assessments)
+        const { data: mentalHealthAssessments, error: mentalHealthError } = await supabase
+          .from("mental_health_assessments")
+          .select(`
+            id,
+            questionnaire_id,
+            overall_score,
+            dimension_scores,
+            analysis_summary,
+            analysis_details,
+            metadata,
+            created_at,
+            mental_health_questionnaires (
+              id,
+              title,
+              description
+            )
+          `)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (!isMounted) return;
 
         if (error) {
+          // Logger l'erreur complète pour le débogage
           console.error("[test-results-viewer] Error fetching test results:", error);
-          setTestResults([]);
-          return;
+          console.error("[test-results-viewer] Error details:", {
+            message: error?.message,
+            code: error?.code,
+            details: error?.details,
+            hint: error?.hint,
+            errorString: String(error),
+            errorJSON: JSON.stringify(error, null, 2),
+          });
+          // Ne pas bloquer si c'est juste une erreur de permissions ou de table inexistante
+          if (error?.code !== '42P01' && error?.code !== '42501') {
+            if (isMounted) {
+              setTestResults([]);
+              setLoading(false);
+            }
+            return;
+          }
         }
 
-        // Transformer les données
-        const results: TestWithAttempt[] = (attempts || []).map((attempt: any) => ({
-          id: attempt.tests?.id || attempt.test_id,
-          title: attempt.tests?.title || "Test",
-          description: attempt.tests?.description || null,
-          display_format: (attempt.tests?.display_format || "score") as TestResultDisplayFormat,
-          attempt: {
-            id: attempt.id,
-            test_id: attempt.test_id,
-            user_id: attempt.user_id,
-            completed_at: attempt.completed_at,
-            total_score: attempt.total_score,
-            max_score: attempt.max_score,
-            percentage: attempt.percentage,
-            category_results: attempt.category_results || [],
-            answers: attempt.answers || {},
-            created_at: attempt.created_at,
-            existingAnalysis: attempt.test_result_analyses?.[0]?.analysis || null,
-          },
-        }));
+        if (mentalHealthError) {
+          // Logger l'erreur complète pour le débogage
+          console.error("[test-results-viewer] Error fetching mental health assessments:", mentalHealthError);
+          console.error("[test-results-viewer] Mental health error details:", {
+            message: mentalHealthError?.message,
+            code: mentalHealthError?.code,
+            details: mentalHealthError?.details,
+            hint: mentalHealthError?.hint,
+            errorString: String(mentalHealthError),
+            errorJSON: JSON.stringify(mentalHealthError, null, 2),
+          });
+          // Ne pas bloquer si c'est juste une erreur de permissions ou de table inexistante
+          // On continue avec les résultats de test_attempts seulement
+        }
 
-        setTestResults(results);
+        if (!isMounted) return;
+
+        // Transformer les données des test_attempts
+        const testResults: TestWithAttempt[] = (attempts || []).map((attempt: any) => {
+          // S'assurer que percentage est calculé si manquant
+          let percentage = attempt.percentage;
+          if (percentage == null || isNaN(percentage)) {
+            if (attempt.max_score && attempt.total_score != null) {
+              percentage = (attempt.total_score / attempt.max_score) * 100;
+            } else {
+              percentage = 0;
+            }
+          }
+          
+          // S'assurer que category_results ont bien percentage et maxScore
+          const categoryResults = (attempt.category_results || []).map((cat: any) => {
+            const maxScore = cat.maxScore || 100;
+            const score = cat.score || 0;
+            const catPercentage = cat.percentage != null && !isNaN(cat.percentage) 
+              ? cat.percentage 
+              : (maxScore > 0 ? (score / maxScore) * 100 : 0);
+            
+            return {
+              category: cat.category || '',
+              score: score,
+              maxScore: maxScore,
+              percentage: catPercentage,
+            };
+          });
+          
+          return {
+            id: attempt.tests?.id || attempt.test_id,
+            title: attempt.tests?.title || "Test",
+            description: attempt.tests?.description || null,
+            display_format: (attempt.tests?.display_format || "score") as TestResultDisplayFormat,
+            attempt: {
+              id: attempt.id,
+              test_id: attempt.test_id,
+              user_id: attempt.user_id,
+              completed_at: attempt.completed_at,
+              total_score: attempt.total_score || 0,
+              max_score: attempt.max_score || 100,
+              percentage: percentage,
+              category_results: categoryResults,
+              answers: attempt.answers || {},
+              created_at: attempt.created_at,
+              existingAnalysis: attempt.test_result_analyses?.[0]?.analysis || null,
+            },
+          };
+        });
+
+        // Transformer les données des mental_health_assessments en format compatible
+        const softSkillsResults: TestWithAttempt[] = (mentalHealthAssessments || []).map((assessment: any) => {
+          // Convertir dimension_scores en category_results
+          // Pour les soft skills, les scores sont déjà sur 100, donc maxScore = 100
+          const categoryResults = Object.entries(assessment.dimension_scores || {}).map(([dimension, score]) => {
+            const numericScore = typeof score === 'number' ? score : 0;
+            const maxScore = 100; // Les scores soft skills sont sur 100
+            const percentage = maxScore > 0 ? (numericScore / maxScore) * 100 : 0;
+            
+            return {
+              category: dimension,
+              score: numericScore,
+              maxScore: maxScore,
+              percentage: percentage,
+            };
+          });
+
+          return {
+            id: assessment.mental_health_questionnaires?.id || assessment.questionnaire_id,
+            title: assessment.mental_health_questionnaires?.title || "Soft Skills – Profil 360",
+            description: assessment.mental_health_questionnaires?.description || null,
+            display_format: "ranking" as TestResultDisplayFormat,
+            attempt: {
+              id: assessment.id,
+              test_id: assessment.questionnaire_id,
+              user_id: userId,
+              completed_at: assessment.created_at,
+              total_score: assessment.overall_score || 0,
+              max_score: 100,
+              percentage: assessment.overall_score || 0,
+              category_results: categoryResults,
+              answers: {},
+              created_at: assessment.created_at,
+              existingAnalysis: assessment.analysis_summary || assessment.analysis_details || null,
+            },
+          };
+        });
+
+        // Combiner les résultats
+        const allResults = [...testResults, ...softSkillsResults].sort((a, b) => {
+          const dateA = new Date(a.attempt?.completed_at || a.attempt?.created_at || 0).getTime();
+          const dateB = new Date(b.attempt?.completed_at || b.attempt?.created_at || 0).getTime();
+          return dateB - dateA;
+        });
+
+        if (isMounted) {
+          setTestResults(allResults);
+          setLoading(false);
+        }
       } catch (error) {
-        console.error("[test-results-viewer] Error:", error);
-        setTestResults([]);
-      } finally {
-        setLoading(false);
+        console.error("[test-results-viewer] Error:", error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        } : error);
+        if (isMounted) {
+          setTestResults([]);
+          setLoading(false);
+        }
       }
     }
 
     loadTestResults();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [userId]);
 
   if (loading) {
@@ -220,7 +367,11 @@ export function TestResultsViewer({
                     color: primaryColor,
                   }}
                 >
-                  {test.attempt?.percentage?.toFixed(0)}%
+                  {test.attempt?.percentage != null && !isNaN(test.attempt.percentage) 
+                    ? test.attempt.percentage.toFixed(0) 
+                    : (test.attempt?.max_score && test.attempt?.total_score != null
+                      ? ((test.attempt.total_score / test.attempt.max_score) * 100).toFixed(0)
+                      : '0')}%
                 </div>
               </div>
 
@@ -253,9 +404,9 @@ export function TestResultsViewer({
               
               {test.display_format === "score" && test.attempt && (
                 <TestResultScore 
-                  score={test.attempt.total_score}
-                  maxScore={test.attempt.max_score}
-                  percentage={test.attempt.percentage}
+                  score={test.attempt.total_score ?? 0}
+                  maxScore={test.attempt.max_score ?? 100}
+                  percentage={test.attempt.percentage ?? (test.attempt.max_score && test.attempt.total_score != null ? (test.attempt.total_score / test.attempt.max_score) * 100 : 0)}
                   colors={{ primary: primaryColor, accent: accentColor, text: textColor }}
                 />
               )}
@@ -263,9 +414,9 @@ export function TestResultsViewer({
               {test.display_format === "detailed" && test.attempt && (
                 <div className="space-y-4">
                   <TestResultScore 
-                    score={test.attempt.total_score}
-                    maxScore={test.attempt.max_score}
-                    percentage={test.attempt.percentage}
+                    score={test.attempt.total_score ?? 0}
+                    maxScore={test.attempt.max_score ?? 100}
+                    percentage={test.attempt.percentage ?? (test.attempt.max_score && test.attempt.total_score != null ? (test.attempt.total_score / test.attempt.max_score) * 100 : 0)}
                     colors={{ primary: primaryColor, accent: accentColor, text: textColor }}
                   />
                   {test.attempt.category_results && test.attempt.category_results.length > 0 && (
@@ -284,7 +435,9 @@ export function TestResultsViewer({
                               {cat.category}
                             </span>
                             <span className="text-sm font-semibold" style={{ color: primaryColor }}>
-                              {cat.score}/{cat.maxScore} ({cat.percentage.toFixed(0)}%)
+                              {cat.score}/{cat.maxScore} ({typeof cat.percentage === 'number' && !isNaN(cat.percentage) 
+                                ? cat.percentage.toFixed(0) 
+                                : (cat.maxScore > 0 ? ((cat.score / cat.maxScore) * 100).toFixed(0) : '0')}%)
                             </span>
                           </div>
                         ))}

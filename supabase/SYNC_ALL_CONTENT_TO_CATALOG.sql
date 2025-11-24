@@ -391,3 +391,4 @@ WHERE creator_id = '60c88469-3c53-417f-a81d-565a662ad2f5'
 GROUP BY item_type
 ORDER BY item_type;
 
+

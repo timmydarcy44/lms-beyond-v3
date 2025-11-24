@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, BookOpen, CheckCircle2, Clock, Download, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, Clock, Download, Loader2, Sparkles, ChevronLeft, ChevronRight, Printer, Linkedin } from "lucide-react";
 import { toast } from "sonner";
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
 
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { env } from "@/lib/env";
 import type { MentalAssessment } from "@/types/mental-health-questionnaire";
 
 type LikertScale = {
@@ -177,12 +178,41 @@ const jessicaPdfBrandGradient = {
 const introHeroImage =
   "https://images.unsplash.com/photo-1524502397800-09d3eff08e04?auto=format&fit=crop&w=1600&q=80";
 
+// Fonction pour construire l'URL Supabase Storage
+function getSupabaseStorageUrl(bucket: string, path: string): string {
+  const supabaseUrl = 
+    env.supabaseUrl || 
+    (typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) ||
+    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
+  
+  if (!supabaseUrl) {
+    return "";
+  }
+  
+  const encodedBucket = encodeURIComponent(bucket);
+  const pathParts = path.split('/');
+  const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
+  
+  return `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
+}
+
+const JESSICA_BUCKET_NAME = "Jessica CONTENTIN";
+
 export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, isJessicaContentin = false }: PlayerProps) {
+  // Debug: Log pour vérifier si isJessicaContentin est bien passé
+  console.log("[MentalHealthQuestionnairePlayer] Rendering with:", {
+    questionnaireTitle: questionnaire.title,
+    isJessicaContentin,
+    questionnaireId: questionnaire.id,
+  });
+  
   // Déterminer les couleurs à utiliser
   const brandColor = isJessicaContentin ? jessicaBrandColor : beyondCareBrandColor;
   const accentColor = isJessicaContentin ? jessicaAccentColor : beyondCareBrandColor;
   const secondaryColor = isJessicaContentin ? jessicaSecondaryColor : "#f4c1d2";
   const backgroundColor = isJessicaContentin ? jessicaBackgroundColor : "#fef5f9";
+  const bgColor = isJessicaContentin ? jessicaBackgroundColor : "#fef5f9";
+  const surfaceColor = isJessicaContentin ? "#FFFFFF" : "#FFFFFF";
   const textColor = isJessicaContentin ? jessicaTextColor : "#5a1d35";
   const textSecondaryColor = isJessicaContentin ? "#8B7355" : "#7b2a49";
   const hoverColor = isJessicaContentin ? "#B88A44" : "#b2124f";
@@ -782,6 +812,337 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
     const textValue = typeof currentValue === "string" ? currentValue : "";
     const options = currentQuestion.options ?? [];
 
+    // Layout en 2 colonnes pour Jessica CONTENTIN (comme Quiz)
+    console.log("[renderQuestion] isJessicaContentin:", isJessicaContentin, "currentQuestion:", currentQuestion?.id);
+    if (isJessicaContentin) {
+      console.log("[renderQuestion] ✅ Using 2-column layout for Jessica CONTENTIN");
+      // Construire l'URL de l'image : utiliser media_url de la question ou une image par défaut
+      let imageUrl = mediaUrl;
+      if (mediaUrl && !mediaUrl.startsWith('http')) {
+        // Si c'est un chemin relatif, construire l'URL Supabase
+        imageUrl = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, mediaUrl);
+      }
+      if (!imageUrl) {
+        // Image par défaut depuis le storage de Jessica CONTENTIN
+        // Utiliser "femme soleil.jpg" comme image par défaut (même que la page de login)
+        imageUrl = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "femme soleil.jpg");
+        // Si l'image n'est pas disponible, utiliser une autre image du storage
+        // On peut aussi utiliser "mere enfant.jpg" ou "couche soleil.png"
+      }
+
+      return (
+        <div className="min-h-screen" style={{ backgroundColor: backgroundColor }}>
+          <div className="grid lg:grid-cols-2 min-h-screen">
+            {/* Colonne gauche : Questions */}
+            <div className="bg-white p-8 md:p-12 lg:p-16 flex flex-col">
+              {/* Indicateur de progression */}
+              <div className="mb-8">
+                <div className="flex gap-2 mb-2">
+                  {Array.from({ length: totalQuestions }).map((_, index) => (
+                    <div
+                      key={index}
+                      className={`h-1 flex-1 rounded-full transition-all ${
+                        index <= currentIndex
+                          ? ""
+                          : ""
+                      }`}
+                      style={{
+                        backgroundColor: index <= currentIndex ? brandColor : secondaryColor
+                      }}
+                    />
+                  ))}
+                </div>
+                <p className="text-sm" style={{ color: `${textColor}99` }}>
+                  QUESTION {currentIndex + 1} SUR {totalQuestions}
+                </p>
+              </div>
+
+              {/* Contenu de la question */}
+              <div className="flex-1 flex flex-col">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentQuestion.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex-1"
+                  >
+                    <div className="space-y-8">
+                      <div>
+                        <h2 
+                          className="text-4xl md:text-5xl font-bold mb-4"
+                          style={{ color: textColor }}
+                        >
+                          {currentQuestion.question_text}
+                        </h2>
+                      </div>
+
+                      {questionType === "likert" ? (
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                          {values.map((value) => {
+                            const isActive = currentValue === value;
+                            const label = currentQuestion.likert_scale?.labels?.[String(value)];
+                            return (
+                              <button
+                                key={value}
+                                onClick={() => handleSelectAnswer(currentQuestion, value)}
+                                className={`p-6 rounded-2xl border-2 text-left transition-all ${
+                                  isActive
+                                    ? ""
+                                    : ""
+                                }`}
+                                style={isActive ? {
+                                  borderColor: brandColor,
+                                  backgroundColor: `${brandColor}10`
+                                } : {
+                                  borderColor: secondaryColor,
+                                  backgroundColor: "white"
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isActive) {
+                                    e.currentTarget.style.borderColor = `${brandColor}80`;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isActive) {
+                                    e.currentTarget.style.borderColor = secondaryColor;
+                                  }
+                                }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="text-2xl font-bold block mb-1" style={{ color: textColor }}>
+                                      {value}
+                                    </span>
+                                    {label && (
+                                      <span className="text-sm" style={{ color: `${textColor}80` }}>
+                                        {label}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div
+                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                      isActive ? "" : ""
+                                    }`}
+                                    style={isActive ? {
+                                      borderColor: brandColor,
+                                      backgroundColor: brandColor
+                                    } : {
+                                      borderColor: secondaryColor
+                                    }}
+                                  >
+                                    {isActive && (
+                                      <div className="w-2 h-2 rounded-full bg-white" />
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
+                      {questionType === "single_choice" ? (
+                        <div className="space-y-4">
+                          {options.map((option) => {
+                            const isActive = String(currentValue ?? "") === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                onClick={() => handleSelectAnswer(currentQuestion, option.value)}
+                                className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
+                                  isActive ? "" : ""
+                                }`}
+                                style={isActive ? {
+                                  borderColor: brandColor,
+                                  backgroundColor: `${brandColor}10`
+                                } : {
+                                  borderColor: secondaryColor,
+                                  backgroundColor: "white"
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isActive) {
+                                    e.currentTarget.style.borderColor = `${brandColor}80`;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isActive) {
+                                    e.currentTarget.style.borderColor = secondaryColor;
+                                  }
+                                }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-lg font-medium" style={{ color: textColor }}>
+                                    {option.label}
+                                  </span>
+                                  <div
+                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                      isActive ? "" : ""
+                                    }`}
+                                    style={isActive ? {
+                                      borderColor: brandColor,
+                                      backgroundColor: brandColor
+                                    } : {
+                                      borderColor: secondaryColor
+                                    }}
+                                  >
+                                    {isActive && (
+                                      <div className="w-2 h-2 rounded-full bg-white" />
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
+                      {questionType === "text" ? (
+                        <div className="space-y-4">
+                          <textarea
+                            className="w-full rounded-2xl border-2 p-4 text-sm focus:outline-none"
+                            style={{
+                              borderColor: secondaryColor,
+                              color: textColor
+                            }}
+                            onFocus={(e) => {
+                              e.currentTarget.style.borderColor = brandColor;
+                            }}
+                            onBlur={(e) => {
+                              e.currentTarget.style.borderColor = secondaryColor;
+                            }}
+                            rows={4}
+                            placeholder="Écris ta réponse en quelques phrases..."
+                            value={textValue}
+                            onChange={(event) => handleTextAnswer(currentQuestion, event.target.value)}
+                            maxLength={600}
+                            disabled={submitting}
+                          />
+                          <p className="text-xs" style={{ color: `${textColor}99` }}>
+                            {textValue.length}/600 caractères
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Boutons de navigation */}
+                <div className="flex justify-between mt-12">
+                  {currentIndex > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={handlePrev}
+                      disabled={submitting}
+                      className="rounded-full px-8 py-6 border-2"
+                      style={{
+                        borderColor: secondaryColor,
+                        color: textColor
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = backgroundColor;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
+                    >
+                      <ChevronLeft className="mr-2 h-5 w-5" />
+                      Précédent
+                    </Button>
+                  )}
+                  <div className="flex-1" />
+                  {currentIndex < totalQuestions - 1 && questionType === "text" ? (
+                    <Button
+                      onClick={handleNext}
+                      disabled={!canGoNext || submitting}
+                      className="rounded-full px-8 py-6 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: brandColor
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!e.currentTarget.disabled) {
+                          e.currentTarget.style.backgroundColor = hoverColor;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = brandColor;
+                      }}
+                    >
+                      Continuer
+                      <ChevronRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  ) : null}
+                  {currentIndex === totalQuestions - 1 && (
+                    <Button
+                      onClick={() => handleSubmit()}
+                      disabled={!canGoNext || submitting}
+                      className="rounded-full px-8 py-6 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: brandColor
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!e.currentTarget.disabled) {
+                          e.currentTarget.style.backgroundColor = hoverColor;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = brandColor;
+                      }}
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Analyse en cours
+                        </>
+                      ) : (
+                        <>
+                          Terminer
+                          <CheckCircle2 className="ml-2 h-5 w-5" />
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Colonne droite : Image */}
+            <div className="hidden lg:block relative overflow-hidden">
+              <motion.div
+                key={currentQuestion.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0"
+              >
+                <Image
+                  src={imageUrl}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  priority={currentIndex === 0}
+                  unoptimized={!!imageUrl && imageUrl.includes('supabase')}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    // Si l'image par défaut échoue, essayer une autre image du storage
+                    if (target.src.includes('femme soleil')) {
+                      target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "mere enfant.jpg");
+                    } else if (target.src.includes('mere enfant')) {
+                      target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "couche soleil.png");
+                    } else if (target.src.includes('couche soleil')) {
+                      target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "Couple.png");
+                    }
+                  }}
+                />
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Layout original (centré) pour Beyond
     return (
       <div className="flex min-h-[75vh] flex-col items-center justify-center">
         <div className="w-full max-w-3xl space-y-6">
@@ -1100,9 +1461,28 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
       ? (result.metadata?.ai_career_paths as string[])
       : [];
 
+    // Fonctions pour impression et partage LinkedIn
+    const handlePrint = () => {
+      window.print();
+    };
+
+    const handleShareLinkedIn = () => {
+      const score = Math.round(result.overall_score);
+      const text = `J'ai obtenu un score de ${score}/100 au test Soft Skills – Profil 360 de Jessica Contentin ! Découvrez votre profil de soft skills :`;
+      const url = window.location.href;
+      const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(text)}`;
+      window.open(linkedInUrl, '_blank', 'width=600,height=400');
+    };
+
     return (
-      <div className="space-y-8">
-        <Card className="border-0 bg-white shadow-[0_30px_70px_rgba(201,20,89,0.2)]">
+      <div className="space-y-8" style={{ backgroundColor: isJessicaContentin ? bgColor : undefined }}>
+        <Card 
+          className="border-0 shadow-[0_30px_70px_rgba(201,20,89,0.2)]"
+          style={{ 
+            backgroundColor: isJessicaContentin ? surfaceColor : 'white',
+            boxShadow: isJessicaContentin ? `0_30px_70px_rgba(139,111,71,0.15)` : undefined
+          }}
+        >
           <CardHeader className="space-y-2 text-center">
             <Badge 
               className="mx-auto w-fit rounded-full px-4 py-1 text-xs font-semibold"
@@ -1111,7 +1491,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                 color: brandColor
               }}
             >
-              Résultat {isJessicaContentin ? "Contentin" : "Beyond Care"}
+              Résultat {isJessicaContentin ? "Jessica Contentin" : "Beyond Care"}
             </Badge>
             <CardTitle 
               className="text-3xl font-semibold tracking-tight"
@@ -1192,11 +1572,11 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                   Analyse réalisée le {new Date(result.created_at).toLocaleDateString("fr-FR")}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Button 
                   variant="ghost" 
                   style={{ 
-                    color: isSoftSkills ? "white" : brandColor
+                    color: brandColor
                   }}
                   onClick={handleRetry}
                 >
@@ -1205,87 +1585,121 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                 <Button
                   variant="outline"
                   style={{
-                    borderColor: isSoftSkills ? "white" : brandColor,
-                    color: isSoftSkills ? "white" : brandColor
+                    borderColor: brandColor,
+                    color: brandColor
                   }}
                   onMouseEnter={(e) => {
-                    if (isSoftSkills) {
-                      e.currentTarget.style.borderColor = "white";
-                      e.currentTarget.style.color = "black";
-                    }
+                    e.currentTarget.style.backgroundColor = `${brandColor}10`;
                   }}
                   onMouseLeave={(e) => {
-                    if (isSoftSkills) {
-                      e.currentTarget.style.borderColor = "white";
-                      e.currentTarget.style.color = "white";
-                    }
+                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
-                  className={cn(
-                    "",
-                    isSoftSkills && "",
-                  )}
                   onClick={() => handleDownload(result)}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Exporter
                 </Button>
-                <Button 
-                  asChild 
-                  className={cn("text-white", isSoftSkills && "bg-white text-black")}
+                <Button
+                  variant="outline"
                   style={{
-                    backgroundColor: isSoftSkills ? "white" : brandColor,
-                    color: isSoftSkills ? "black" : "white"
+                    borderColor: brandColor,
+                    color: brandColor
                   }}
                   onMouseEnter={(e) => {
-                    if (!isSoftSkills) {
-                      e.currentTarget.style.backgroundColor = hoverColor;
-                    }
+                    e.currentTarget.style.backgroundColor = `${brandColor}10`;
                   }}
                   onMouseLeave={(e) => {
-                    if (!isSoftSkills) {
-                      e.currentTarget.style.backgroundColor = brandColor;
-                    }
+                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
+                  onClick={handlePrint}
                 >
-                  <Link href="/dashboard/apprenant/beyond-care">Revenir à Beyond Care</Link>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Imprimer
                 </Button>
-                {result.id ? (
-                  <Button
-                    variant="outline"
+                <Button
+                  variant="outline"
+                  style={{
+                    borderColor: brandColor,
+                    color: brandColor
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${brandColor}10`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  onClick={handleShareLinkedIn}
+                >
+                  <Linkedin className="mr-2 h-4 w-4" />
+                  Partager sur LinkedIn
+                </Button>
+                {isJessicaContentin ? (
+                  <Button 
+                    asChild 
+                    className="text-white"
                     style={{
-                      borderColor: isSoftSkills ? "white" : brandColor,
-                      color: isSoftSkills ? "white" : brandColor
+                      backgroundColor: brandColor,
+                      color: 'white'
                     }}
                     onMouseEnter={(e) => {
-                      if (isSoftSkills) {
-                        e.currentTarget.style.borderColor = "white";
-                        e.currentTarget.style.color = "black";
-                      }
+                      e.currentTarget.style.backgroundColor = hoverColor;
                     }}
                     onMouseLeave={(e) => {
-                      if (isSoftSkills) {
-                        e.currentTarget.style.borderColor = "white";
-                        e.currentTarget.style.color = "white";
-                      }
-                    }}
-                    className={cn(
-                      "",
-                      isSoftSkills && "",
-                    )}
-                    onClick={() => {
-                      window.location.href = `/dashboard/catalogue/beyond-link?assessment=${result.id}`;
+                      e.currentTarget.style.backgroundColor = brandColor;
                     }}
                   >
-                    Beyond Link
+                    <Link href="/jessica-contentin/mon-compte">Mon compte</Link>
                   </Button>
-                ) : null}
+                ) : (
+                  <>
+                    <Button 
+                      asChild 
+                      className="text-white"
+                      style={{
+                        backgroundColor: brandColor,
+                        color: 'white'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = hoverColor;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = brandColor;
+                      }}
+                    >
+                      <Link href="/dashboard/apprenant/beyond-care">Revenir à Beyond Care</Link>
+                    </Button>
+                    {result.id ? (
+                      <Button
+                        variant="outline"
+                        style={{
+                          borderColor: brandColor,
+                          color: brandColor
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = `${brandColor}10`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        onClick={() => {
+                          window.location.href = `/dashboard/catalogue/beyond-link?assessment=${result.id}`;
+                        }}
+                      >
+                        Beyond Link
+                      </Button>
+                    ) : null}
+                  </>
+                )}
               </div>
             </div>
 
             {profileIntroduction ? (
               <div 
-                className="rounded-3xl border bg-white p-6 shadow-sm"
-                style={{ borderColor: secondaryColor }}
+                className="rounded-3xl border p-6 shadow-sm"
+                style={{ 
+                  borderColor: secondaryColor,
+                  backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+                }}
               >
                 <h3 
                   className="text-sm font-semibold uppercase tracking-[0.3em]"
@@ -1304,8 +1718,11 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
 
             {sortedDimensions.length > 0 ? (
               <div 
-                className="rounded-3xl border bg-white p-6 shadow-sm"
-                style={{ borderColor: secondaryColor }}
+                className="rounded-3xl border p-6 shadow-sm"
+                style={{ 
+                  borderColor: secondaryColor,
+                  backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+                }}
               >
                 <h3 
                   className="text-sm font-semibold uppercase tracking-[0.3em]"
@@ -1353,8 +1770,11 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
             ) : null}
 
             <Card 
-              className="border bg-white shadow-sm"
-              style={{ borderColor: secondaryColor }}
+              className="border shadow-sm"
+              style={{ 
+                borderColor: secondaryColor,
+                backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+              }}
             >
               <CardHeader className="text-left">
                 <CardTitle style={{ color: brandColor }}>Répartition des dimensions</CardTitle>
@@ -1418,7 +1838,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                     className="rounded-3xl border p-6"
                     style={{
                       borderColor: secondaryColor,
-                      backgroundColor: backgroundColor,
+                      backgroundColor: isJessicaContentin ? surfaceColor : backgroundColor,
                       boxShadow: `0 12px 32px ${brandColor}14`
                     }}
                   >
@@ -1467,8 +1887,11 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
               <div className="grid gap-4 md:grid-cols-2">
                 {aiStrengths.length > 0 ? (
                   <div 
-                    className="rounded-3xl border bg-white p-6 shadow-sm"
-                    style={{ borderColor: secondaryColor }}
+                    className="rounded-3xl border p-6 shadow-sm"
+                    style={{ 
+                      borderColor: secondaryColor,
+                      backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+                    }}
                   >
                     <h3 
                       className="text-sm font-semibold uppercase tracking-[0.3em]"
@@ -1494,9 +1917,18 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                 ) : null}
 
                 {aiImprovements.length > 0 ? (
-                  <div className="rounded-3xl border bg-white p-6 shadow-sm">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
-                      Axes d’amélioration prioritaires
+                  <div 
+                    className="rounded-3xl border p-6 shadow-sm"
+                    style={{ 
+                      borderColor: secondaryColor,
+                      backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+                    }}
+                  >
+                    <h3 
+                      className="text-sm font-semibold uppercase tracking-[0.3em]"
+                      style={{ color: `${brandColor}B3` }}
+                    >
+                      Axes d'amélioration prioritaires
                     </h3>
                     <ul className="mt-4 space-y-3 text-sm text-text-color">
                       {aiImprovements.map((item, idx) => (
@@ -1512,8 +1944,17 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
             ) : null}
 
             {aiCareerPaths.length > 0 ? (
-              <div className="rounded-3xl border bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
+              <div 
+                className="rounded-3xl border p-6 shadow-sm"
+                style={{ 
+                  borderColor: secondaryColor,
+                  backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+                }}
+              >
+                <h3 
+                  className="text-sm font-semibold uppercase tracking-[0.3em]"
+                  style={{ color: `${brandColor}B3` }}
+                >
                   Métiers ou études alignés avec tes soft skills
                 </h3>
                 <ul className="mt-4 space-y-3 text-sm text-text-color">
@@ -1528,8 +1969,17 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
             ) : null}
 
             {aiRecommendations.length > 0 ? (
-              <div className="rounded-3xl border bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
+              <div 
+                className="rounded-3xl border p-6 shadow-sm"
+                style={{ 
+                  borderColor: secondaryColor,
+                  backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+                }}
+              >
+                <h3 
+                  className="text-sm font-semibold uppercase tracking-[0.3em]"
+                  style={{ color: `${brandColor}B3` }}
+                >
                   Recommandations globales
                 </h3>
                 <ul className="mt-4 space-y-3 text-sm text-text-color">
@@ -1544,8 +1994,17 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
             ) : null}
 
             {choiceAnswers.length > 0 ? (
-              <div className="rounded-3xl border bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
+              <div 
+                className="rounded-3xl border p-6 shadow-sm"
+                style={{ 
+                  borderColor: secondaryColor,
+                  backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+                }}
+              >
+                <h3 
+                  className="text-sm font-semibold uppercase tracking-[0.3em]"
+                  style={{ color: `${brandColor}B3` }}
+                >
                   Tes préférences déclarées
                 </h3>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -1590,8 +2049,17 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
             ) : null}
 
             {qualitativeResponses.length > 0 ? (
-              <div className="rounded-3xl border bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-color-70">
+              <div 
+                className="rounded-3xl border p-6 shadow-sm"
+                style={{ 
+                  borderColor: secondaryColor,
+                  backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+                }}
+              >
+                <h3 
+                  className="text-sm font-semibold uppercase tracking-[0.3em]"
+                  style={{ color: `${brandColor}B3` }}
+                >
                   Ce que tu as exprimé
                 </h3>
                 <div className="mt-4 space-y-4">
@@ -1629,11 +2097,17 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
           </CardContent>
         </Card>
 
-        <Card className="border bg-white shadow-sm">
+        <Card 
+          className="border shadow-sm"
+          style={{ 
+            borderColor: secondaryColor,
+            backgroundColor: isJessicaContentin ? surfaceColor : 'white'
+          }}
+        >
           <CardHeader>
-            <CardTitle className="text-brand-color">Historique des analyses</CardTitle>
-            <CardDescription className="text-text-secondary-color">
-              Retrouvez vos passations précédentes et observez l’évolution de vos scores.
+            <CardTitle style={{ color: brandColor }}>Historique des analyses</CardTitle>
+            <CardDescription style={{ color: textSecondaryColor }}>
+              Retrouvez vos passations précédentes et observez l'évolution de vos scores.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1649,16 +2123,24 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                 {history.map((assessment) => (
                   <div
                     key={assessment.id}
-                    className={cn(
-                      "flex flex-col gap-3 rounded-2xl border p-4 transition",
-                      assessment.id === result.id
-                        ? "border-[#c91459] bg-[#fef1f7] text-brand-color"
-                        : "border-[#f4c1d2] bg-white text-text-secondary-color",
-                    )}
+                    className="flex flex-col gap-3 rounded-2xl border p-4 transition"
+                    style={{
+                      borderColor: assessment.id === result.id ? brandColor : secondaryColor,
+                      backgroundColor: assessment.id === result.id 
+                        ? (isJessicaContentin ? `${brandColor}15` : "#fef1f7")
+                        : (isJessicaContentin ? surfaceColor : 'white'),
+                      color: assessment.id === result.id ? brandColor : textSecondaryColor,
+                    }}
                   >
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="rounded-full bg-brand-color/10 px-3 py-1 text-xs font-semibold text-brand-color">
+                        <span 
+                          className="rounded-full px-3 py-1 text-xs font-semibold"
+                          style={{
+                            backgroundColor: `${brandColor}10`,
+                            color: brandColor
+                          }}
+                        >
                           {new Date(assessment.created_at).toLocaleDateString("fr-FR")}
                         </span>
                         <span className="text-lg font-semibold">
@@ -1693,10 +2175,20 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
   };
 
   const containerClass = cn(
-    "relative min-h-screen bg-gradient-to-b via-white to-white px-4 pb-16",
-    isSoftSkills && "soft-skills-monochrome",
+    "relative min-h-screen px-4 pb-16",
+    isSoftSkills && !isJessicaContentin && "soft-skills-monochrome",
   );
-  const containerStyle = isSoftSkills ? { background: "#050505", color: "#f5f5f5" } : undefined;
+  const containerStyle = isSoftSkills && !isJessicaContentin 
+    ? { background: "#050505", color: "#f5f5f5" } 
+    : isJessicaContentin 
+      ? { background: bgColor, color: textColor }
+      : { background: "linear-gradient(to bottom, white, white)" };
+
+  // Pour Jessica CONTENTIN en phase questions, le layout est géré directement dans renderQuestion()
+  // Pour les autres phases (intro, result), on utilise le layout normal
+  if (isJessicaContentin && phase === "questions") {
+    return renderQuestion();
+  }
 
   return (
     <div className={containerClass} style={containerStyle}>

@@ -82,3 +82,4 @@ Après avoir créé les policies :
 
 La **Policy 1 (lecture publique)** est **OBLIGATOIRE** pour que les images soient accessibles sur le site. Sans elle, les images ne se chargeront pas même si le bucket est marqué comme public.
 
+

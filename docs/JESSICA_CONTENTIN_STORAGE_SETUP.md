@@ -70,3 +70,4 @@ Le code utilise actuellement des chemins locaux (`/jessica-contentin-hero.jpg`) 
   - CTA : 800x600px
   - Pillars : 1200x800px
 
+

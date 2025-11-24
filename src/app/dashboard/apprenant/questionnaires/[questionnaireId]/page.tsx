@@ -93,11 +93,58 @@ export default async function QuestionnairePlayerPage({
   // Récupérer l'ID de Jessica Contentin pour déterminer si c'est son test
   const { data: jessicaProfile } = await queryClient
     .from("profiles")
-    .select("id")
+    .select("id, email")
     .eq("email", "contentin.cabinet@gmail.com")
     .maybeSingle();
 
-  const isJessicaQuestionnaire = jessicaProfile?.id && questionnaire.created_by === jessicaProfile.id;
+  // Vérifier si le questionnaire appartient à Jessica (par created_by ou par email du créateur)
+  let isJessicaQuestionnaire = false;
+  console.log("[questionnaire] Checking if questionnaire belongs to Jessica:", {
+    questionnaireId: questionnaire.id,
+    questionnaireTitle: questionnaire.title,
+    createdBy: questionnaire.created_by,
+    jessicaProfileId: jessicaProfile?.id,
+    jessicaEmail: jessicaProfile?.email,
+  });
+  
+  // Vérifier d'abord par created_by
+  if (jessicaProfile?.id && questionnaire.created_by === jessicaProfile.id) {
+    isJessicaQuestionnaire = true;
+    console.log("[questionnaire] ✅ Detected as Jessica's questionnaire by created_by match");
+  } else if (questionnaire.created_by) {
+    // Vérifier aussi par l'email du créateur au cas où
+    const { data: creatorProfile } = await queryClient
+      .from("profiles")
+      .select("email")
+      .eq("id", questionnaire.created_by)
+      .maybeSingle();
+    
+    console.log("[questionnaire] Creator profile:", {
+      creatorId: questionnaire.created_by,
+      creatorEmail: creatorProfile?.email,
+    });
+    
+    isJessicaQuestionnaire = creatorProfile?.email === "contentin.cabinet@gmail.com";
+    if (isJessicaQuestionnaire) {
+      console.log("[questionnaire] ✅ Detected as Jessica's questionnaire by creator email");
+    } else {
+      console.log("[questionnaire] ❌ Not Jessica's questionnaire by creator email");
+    }
+  } else {
+    console.log("[questionnaire] ❌ No created_by field, cannot determine owner");
+  }
+  
+  // Fallback: Si le titre contient "Soft Skills" et qu'on est sur le site de Jessica, considérer comme Jessica
+  // (pour le test Soft Skills qui pourrait être partagé)
+  if (!isJessicaQuestionnaire && questionnaire.title?.toLowerCase().includes("soft skills")) {
+    // Vérifier si l'utilisateur actuel est Jessica ou si on est dans un contexte Jessica
+    if (user?.id === jessicaProfile?.id) {
+      isJessicaQuestionnaire = true;
+      console.log("[questionnaire] ✅ Detected as Jessica's questionnaire by title + user match");
+    }
+  }
+  
+  console.log("[questionnaire] Final isJessicaQuestionnaire:", isJessicaQuestionnaire);
 
   return (
     <MentalHealthQuestionnairePlayer

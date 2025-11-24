@@ -76,33 +76,52 @@ export async function POST(request: NextRequest) {
     // Vérifier si l'accès existe déjà
     const { data: existingAccess } = await supabase
       .from("catalog_access")
-      .select("id")
+      .select("id, access_status")
       .eq("user_id", userId)
       .eq("catalog_item_id", catalogItemId)
       .is("organization_id", null)
       .maybeSingle();
 
-    if (existingAccess) {
-      return NextResponse.json(
-        { error: "L'utilisateur a déjà accès à cette ressource" },
-        { status: 400 }
-      );
-    }
+    let access;
+    let accessError;
 
-    // Créer l'accès (utiliser catalog_access avec user_id pour B2C)
-    const { data: access, error: accessError } = await supabase
-      .from("catalog_access")
-      .insert({
-        user_id: userId,
-        catalog_item_id: catalogItemId,
-        organization_id: null, // B2C, pas d'organisation
-        access_status: "manually_granted",
-        granted_by: jessicaProfile.id,
-        granted_at: new Date().toISOString(),
-        grant_reason: "Accès accordé manuellement par Jessica Contentin",
-      })
-      .select()
-      .single();
+    if (existingAccess) {
+      // Si l'accès existe déjà, le mettre à jour (réassignation)
+      console.log("[admin/assign-resource] Access already exists, updating...");
+      const { data: updatedAccess, error: updateError } = await supabase
+        .from("catalog_access")
+        .update({
+          access_status: "manually_granted",
+          granted_by: jessicaProfile.id,
+          granted_at: new Date().toISOString(),
+          grant_reason: "Accès accordé manuellement par Jessica Contentin",
+        })
+        .eq("id", existingAccess.id)
+        .select()
+        .single();
+      
+      access = updatedAccess;
+      accessError = updateError;
+    } else {
+      // Créer l'accès (utiliser catalog_access avec user_id pour B2C)
+      console.log("[admin/assign-resource] Creating new access...");
+      const { data: newAccess, error: insertError } = await supabase
+        .from("catalog_access")
+        .insert({
+          user_id: userId,
+          catalog_item_id: catalogItemId,
+          organization_id: null, // B2C, pas d'organisation
+          access_status: "manually_granted",
+          granted_by: jessicaProfile.id,
+          granted_at: new Date().toISOString(),
+          grant_reason: "Accès accordé manuellement par Jessica Contentin",
+        })
+        .select()
+        .single();
+      
+      access = newAccess;
+      accessError = insertError;
+    }
 
     if (accessError) {
       console.error("[admin/assign-resource] Error creating access:", JSON.stringify(accessError, null, 2));
@@ -137,12 +156,30 @@ export async function POST(request: NextRequest) {
 
     // Envoyer l'email de notification
     const firstName = userProfile.full_name?.split(" ")[0] || null;
+    const userEmail = userProfile.email;
+    
+    if (!userEmail) {
+      console.error("[admin/assign-resource] User email is missing");
+      return NextResponse.json({
+        success: true,
+        access,
+        emailSent: false,
+        error: "Email utilisateur manquant",
+      });
+    }
+
+    console.log("[admin/assign-resource] Sending email to:", userEmail);
+    console.log("[admin/assign-resource] Resource title:", catalogItem.title);
+    console.log("[admin/assign-resource] Resource URL:", resourceUrl);
+    
     const emailResult = await sendResourceAccessEmail(
-      userProfile.email || "",
+      userEmail,
       firstName,
       catalogItem.title,
       resourceUrl
     );
+
+    console.log("[admin/assign-resource] Email result:", emailResult);
 
     if (!emailResult.success) {
       console.error("[admin/assign-resource] Error sending email:", emailResult.error);
@@ -153,6 +190,7 @@ export async function POST(request: NextRequest) {
       success: true,
       access,
       emailSent: emailResult.success,
+      emailError: emailResult.error,
     });
   } catch (error: any) {
     console.error("[admin/assign-resource] Error:", error);

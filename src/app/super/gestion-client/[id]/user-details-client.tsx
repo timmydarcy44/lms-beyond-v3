@@ -36,22 +36,32 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
   const secondaryColor = "#E6D9C6";
 
   const handleAssignResource = async (catalogItemId: string) => {
-    console.log("[UserDetailsClient] handleAssignResource called", { userId: userDetails.id, catalogItemId });
+    console.log("[UserDetailsClient] ====== handleAssignResource START ======");
+    console.log("[UserDetailsClient] userId:", userDetails.id);
+    console.log("[UserDetailsClient] catalogItemId:", catalogItemId);
+    console.log("[UserDetailsClient] userDetails:", userDetails);
+    
     setIsAssigning(true);
     try {
+      const requestBody = {
+        userId: userDetails.id,
+        catalogItemId,
+      };
+      console.log("[UserDetailsClient] Request body:", requestBody);
       console.log("[UserDetailsClient] Sending request to /api/admin/assign-resource");
+      
       const response = await fetch("/api/admin/assign-resource", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userDetails.id,
-          catalogItemId,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       console.log("[UserDetailsClient] Response status:", response.status);
+      console.log("[UserDetailsClient] Response ok:", response.ok);
+      
       const data = await response.json();
       console.log("[UserDetailsClient] Response data:", data);
+      console.log("[UserDetailsClient] ====== handleAssignResource END ======");
 
       if (!response.ok) {
         throw new Error(data.error || "Erreur lors de l'assignation");
@@ -165,7 +175,11 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                   availableToAssign.map((resource) => (
                     <DropdownMenuItem
                       key={resource.id}
-                      onClick={() => handleAssignResource(resource.id)}
+                      onClick={(e) => {
+                        console.log("[UserDetailsClient] Dropdown item clicked", { resourceId: resource.id, resourceTitle: resource.title });
+                        e.preventDefault();
+                        handleAssignResource(resource.id);
+                      }}
                       className="cursor-pointer"
                       style={{
                         color: textColor,

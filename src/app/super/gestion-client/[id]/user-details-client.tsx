@@ -36,8 +36,10 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
   const secondaryColor = "#E6D9C6";
 
   const handleAssignResource = async (catalogItemId: string) => {
+    console.log("[UserDetailsClient] handleAssignResource called", { userId: userDetails.id, catalogItemId });
     setIsAssigning(true);
     try {
+      console.log("[UserDetailsClient] Sending request to /api/admin/assign-resource");
       const response = await fetch("/api/admin/assign-resource", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,7 +49,9 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
         }),
       });
 
+      console.log("[UserDetailsClient] Response status:", response.status);
       const data = await response.json();
+      console.log("[UserDetailsClient] Response data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Erreur lors de l'assignation");

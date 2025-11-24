@@ -6,13 +6,18 @@ import { sendResourceAccessEmail } from "@/lib/emails/send-resource-access";
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
 export async function POST(request: NextRequest) {
+  console.log("[admin/assign-resource] POST request received");
   try {
+    console.log("[admin/assign-resource] Checking super admin access...");
     const hasAccess = await isSuperAdmin();
     if (!hasAccess) {
+      console.error("[admin/assign-resource] Access denied");
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
+    console.log("[admin/assign-resource] Super admin access granted");
 
     const body = await request.json();
+    console.log("[admin/assign-resource] Request body:", { userId: body.userId, catalogItemId: body.catalogItemId });
     const { userId, catalogItemId } = body;
 
     if (!userId || !catalogItemId) {

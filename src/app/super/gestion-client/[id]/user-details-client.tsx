@@ -181,16 +181,18 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                 ) : (
                   availableToAssign.map((resource) => {
                     console.log("[UserDetailsClient] Rendering dropdown item:", { resourceId: resource.id, resourceTitle: resource.title });
+                    const handleClick = (e: Event) => {
+                      console.log("[UserDetailsClient] Dropdown item clicked - handleClick", { resourceId: resource.id, resourceTitle: resource.title });
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleAssignResource(resource.id);
+                    };
+                    
                     return (
                       <DropdownMenuItem
                         key={resource.id}
                         onSelect={(e) => {
-                          console.log("[UserDetailsClient] Dropdown item onSelect triggered", { resourceId: resource.id, resourceTitle: resource.title, event: e });
-                          e.preventDefault();
-                          handleAssignResource(resource.id);
-                        }}
-                        onClick={(e) => {
-                          console.log("[UserDetailsClient] Dropdown item onClick triggered", { resourceId: resource.id, resourceTitle: resource.title, event: e });
+                          console.log("[UserDetailsClient] Dropdown item onSelect triggered", { resourceId: resource.id, resourceTitle: resource.title });
                           e.preventDefault();
                           handleAssignResource(resource.id);
                         }}
@@ -198,8 +200,22 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                         style={{
                           color: textColor,
                         }}
+                        onPointerDown={(e) => {
+                          console.log("[UserDetailsClient] Dropdown item onPointerDown", { resourceId: resource.id });
+                        }}
+                        onMouseDown={(e) => {
+                          console.log("[UserDetailsClient] Dropdown item onMouseDown", { resourceId: resource.id });
+                        }}
                       >
-                        <div className="flex flex-col">
+                        <div 
+                          className="flex flex-col w-full"
+                          onClick={(e) => {
+                            console.log("[UserDetailsClient] Inner div clicked", { resourceId: resource.id });
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleAssignResource(resource.id);
+                          }}
+                        >
                           <span className="font-medium">{resource.title}</span>
                           <span className="text-xs opacity-70">
                             {resource.item_type === "module" ? "Module" :

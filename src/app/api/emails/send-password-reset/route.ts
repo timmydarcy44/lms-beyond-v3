@@ -13,29 +13,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Récupérer le prénom de l'utilisateur
-    const supabase = await getServerClient();
-    let firstName: string | null = null;
-    
-    if (supabase) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("email", email)
-        .maybeSingle();
-      
-      if (profile?.full_name) {
-        firstName = profile.full_name.split(" ")[0] || null;
-      }
-    }
-
-    // Générer le token de réinitialisation via Supabase Auth
+    // Récupérer le client Supabase
     const supabase = await getServerClient();
     if (!supabase) {
       return NextResponse.json(
         { error: "Service unavailable" },
         { status: 500 }
       );
+    }
+
+    // Récupérer le prénom de l'utilisateur
+    let firstName: string | null = null;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("email", email)
+      .maybeSingle();
+    
+    if (profile?.full_name) {
+      firstName = profile.full_name.split(" ")[0] || null;
     }
 
     // Générer le lien de réinitialisation via Supabase

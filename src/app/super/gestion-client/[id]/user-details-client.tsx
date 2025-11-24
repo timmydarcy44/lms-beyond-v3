@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Euro, ShoppingBag, FileText, Calendar, Mail, Phone, User, Plus, Loader2 } from "lucide-react";
+import { Euro, ShoppingBag, FileText, Calendar, Mail, Phone, User, Plus, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -26,6 +26,7 @@ type UserDetailsClientProps = {
 export function UserDetailsClient({ userDetails, availableResources }: UserDetailsClientProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [isAssigning, setIsAssigning] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   // Couleurs de branding Jessica Contentin
   const bgColor = "#FFFFFF";
@@ -61,6 +62,40 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
       toast.error(error.message || "Erreur lors de l'assignation de la ressource");
     } finally {
       setIsAssigning(false);
+    }
+  };
+
+  const handleRevokeResource = async (catalogItemId: string, purchaseId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir retirer l'accès à cette ressource ?")) {
+      return;
+    }
+
+    setRevokingId(purchaseId);
+    try {
+      const response = await fetch("/api/admin/revoke-resource", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userDetails.id,
+          catalogItemId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors du retrait de l'accès");
+      }
+
+      toast.success("Accès retiré avec succès");
+      
+      // Recharger la page pour mettre à jour les données
+      window.location.reload();
+    } catch (error: any) {
+      console.error("[UserDetailsClient] Error revoking resource:", error);
+      toast.error(error.message || "Erreur lors du retrait de l'accès");
+    } finally {
+      setRevokingId(null);
     }
   };
 
@@ -461,9 +496,22 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                       }}
                     >
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1" style={{ color: textColor }}>
-                          {purchase.title}
-                        </h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-lg" style={{ color: textColor }}>
+                            {purchase.title}
+                          </h3>
+                          {purchase.accessStatus === "manually_granted" && (
+                            <span
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{
+                                backgroundColor: `${primaryColor}20`,
+                                color: primaryColor,
+                              }}
+                            >
+                              Assigné manuellement
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-4 text-sm">
                           <span
                             className="px-3 py-1 rounded-full"
@@ -481,13 +529,40 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                           </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold" style={{ color: primaryColor }}>
-                          {purchase.price.toFixed(2)}€
-                        </p>
-                        <p className="text-xs" style={{ color: textColor, opacity: 0.6 }}>
-                          {purchase.status === "completed" ? "Payé" : purchase.status}
-                        </p>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-2xl font-bold" style={{ color: primaryColor }}>
+                            {purchase.price.toFixed(2)}€
+                          </p>
+                          <p className="text-xs" style={{ color: textColor, opacity: 0.6 }}>
+                            {purchase.status === "completed" ? "Payé" : purchase.status}
+                          </p>
+                        </div>
+                        {purchase.accessStatus === "manually_granted" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRevokeResource(purchase.catalogItemId, purchase.id)}
+                            disabled={revokingId === purchase.id}
+                            className="rounded-full"
+                            style={{
+                              borderColor: "#EF4444",
+                              color: "#EF4444",
+                            }}
+                          >
+                            {revokingId === purchase.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Retrait...
+                              </>
+                            ) : (
+                              <>
+                                <X className="h-4 w-4 mr-2" />
+                                Retirer
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

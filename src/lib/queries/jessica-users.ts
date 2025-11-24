@@ -30,6 +30,7 @@ export type JessicaUserDetails = {
     price: number;
     purchasedAt: string;
     status: string;
+    accessStatus: string; // "purchased" | "manually_granted" | "free"
   }>;
   testResults: Array<{
     id: string;
@@ -225,6 +226,7 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
       price: a.catalog_items?.price || 0,
       purchasedAt: a.granted_at || new Date().toISOString(),
       status: a.access_status === "manually_granted" ? "manually_granted" : "completed",
+      accessStatus: a.access_status || "purchased",
     }));
 
     // Récupérer les résultats de tests

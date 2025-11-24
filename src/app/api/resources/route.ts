@@ -400,9 +400,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Créer automatiquement un produit Stripe si un prix > 0 est défini
+        let stripeProduct: { productId: string; priceId: string; checkoutUrl?: string } | null = null;
         if (data && data.id && price !== undefined && price !== null && price > 0) {
           try {
-            const stripeProduct = await createStripeProduct({
+            stripeProduct = await createStripeProduct({
               title: title.trim(),
               description: description?.trim() || undefined,
               price: parseFloat(String(price)),
@@ -426,9 +427,7 @@ export async function POST(request: NextRequest) {
                 .eq("id", data.id);
 
               console.log("[api/resources] Produit Stripe créé:", stripeProduct);
-              
-              // Stocker l'URL de checkout pour l'utiliser dans syncCatalogItem
-              const stripeCheckoutUrl = stripeProduct.checkoutUrl;
+            }
           } catch (stripeError) {
             console.error("[api/resources] Erreur lors de la création du produit Stripe:", stripeError);
             // Ne pas bloquer la création de la ressource si Stripe échoue

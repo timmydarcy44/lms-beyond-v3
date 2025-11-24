@@ -267,10 +267,8 @@ export async function POST(request: NextRequest) {
         baseData.price = parseFloat(String(price)) || 0;
       }
 
-      // Ajouter category si fourni
-      if (category?.trim()) {
-        baseData.category = category.trim();
-      }
+      // Note: category n'existe pas dans la table resources
+      // Elle sera gérée lors de la synchronisation avec catalog_items
 
       // Essayer différentes combinaisons (ordre optimal)
       // On essaie d'abord les combinaisons les plus probables

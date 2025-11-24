@@ -403,16 +403,47 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                         style={{ backgroundColor: surfaceColor }}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate" style={{ color: textColor }}>
-                            {purchase.title}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate" style={{ color: textColor }}>
+                              {purchase.title}
+                            </p>
+                            {purchase.accessStatus === "manually_granted" && (
+                              <span
+                                className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0"
+                                style={{
+                                  backgroundColor: `${primaryColor}20`,
+                                  color: primaryColor,
+                                }}
+                              >
+                                Assigné
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm" style={{ color: textColor, opacity: 0.7 }}>
                             {format(new Date(purchase.purchasedAt), "dd MMM yyyy", { locale: fr })}
                           </p>
                         </div>
-                        <p className="font-bold ml-4" style={{ color: primaryColor }}>
-                          {purchase.price.toFixed(2)}€
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold" style={{ color: primaryColor }}>
+                            {purchase.price.toFixed(2)}€
+                          </p>
+                          {purchase.accessStatus === "manually_granted" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRevokeResource(purchase.catalogItemId, purchase.id)}
+                              disabled={revokingId === purchase.id}
+                              className="h-8 w-8 p-0"
+                              style={{ color: "#EF4444" }}
+                            >
+                              {revokingId === purchase.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -27,6 +27,7 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
   const [activeTab, setActiveTab] = useState("overview");
   const [isAssigning, setIsAssigning] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Couleurs de branding Jessica Contentin
   const bgColor = "#FFFFFF";
@@ -144,7 +145,7 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                 Ouvrir l'accès à une ressource pour ce client
               </p>
             </div>
-            <DropdownMenu>
+            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   disabled={isAssigning || availableToAssign.length === 0}
@@ -181,41 +182,27 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                 ) : (
                   availableToAssign.map((resource) => {
                     console.log("[UserDetailsClient] Rendering dropdown item:", { resourceId: resource.id, resourceTitle: resource.title });
-                    const handleClick = (e: Event) => {
-                      console.log("[UserDetailsClient] Dropdown item clicked - handleClick", { resourceId: resource.id, resourceTitle: resource.title });
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleAssignResource(resource.id);
+                    
+                    const handleItemClick = async () => {
+                      console.log("[UserDetailsClient] handleItemClick called", { resourceId: resource.id, resourceTitle: resource.title });
+                      setDropdownOpen(false); // Fermer le dropdown manuellement
+                      await handleAssignResource(resource.id);
                     };
                     
                     return (
                       <DropdownMenuItem
                         key={resource.id}
                         onSelect={(e) => {
-                          console.log("[UserDetailsClient] Dropdown item onSelect triggered", { resourceId: resource.id, resourceTitle: resource.title });
+                          console.log("[UserDetailsClient] Dropdown item onSelect triggered", { resourceId: resource.id, resourceTitle: resource.title, event: e });
                           e.preventDefault();
-                          handleAssignResource(resource.id);
+                          handleItemClick();
                         }}
                         className="cursor-pointer"
                         style={{
                           color: textColor,
                         }}
-                        onPointerDown={(e) => {
-                          console.log("[UserDetailsClient] Dropdown item onPointerDown", { resourceId: resource.id });
-                        }}
-                        onMouseDown={(e) => {
-                          console.log("[UserDetailsClient] Dropdown item onMouseDown", { resourceId: resource.id });
-                        }}
                       >
-                        <div 
-                          className="flex flex-col w-full"
-                          onClick={(e) => {
-                            console.log("[UserDetailsClient] Inner div clicked", { resourceId: resource.id });
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleAssignResource(resource.id);
-                          }}
-                        >
+                        <div className="flex flex-col w-full">
                           <span className="font-medium">{resource.title}</span>
                           <span className="text-xs opacity-70">
                             {resource.item_type === "module" ? "Module" :

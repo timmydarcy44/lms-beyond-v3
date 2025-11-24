@@ -542,12 +542,42 @@ export async function getCatalogItemById(
           target_audience: "all",
         } as any;
       } else {
-        console.error("[catalogue] Error fetching catalog item from catalog_items:", itemError?.message || itemError);
-        console.error("[catalogue] Lookup by content_id error:", byContentError?.message || byContentError);
-        console.error("[catalogue] Test lookup error:", testError?.message || testError);
-        console.error("[catalogue] Course lookup error:", courseError?.message || courseError);
-        console.error("[catalogue] Item ID searched:", catalogItemId);
-        return null;
+        // Essayer de trouver dans resources
+        const { data: resourceData, error: resourceError } = await supabase
+          .from("resources")
+          .select("id, title, description, price, kind, created_by, owner_id, created_at, updated_at")
+          .eq("id", catalogItemId)
+          .maybeSingle();
+        
+        if (!resourceError && resourceData) {
+          console.log("[catalogue] Found resource directly in resources table:", resourceData.id);
+          // Créer un item de catalogue virtuel depuis la ressource
+          item = {
+            id: resourceData.id,
+            content_id: resourceData.id,
+            item_type: "ressource" as const,
+            title: resourceData.title,
+            description: resourceData.description || "",
+            short_description: resourceData.description || "",
+            price: (resourceData as any).price || 0,
+            is_free: !(resourceData as any).price || (resourceData as any).price === 0,
+            thumbnail_url: null,
+            hero_image_url: null,
+            creator_id: resourceData.created_by || resourceData.owner_id,
+            created_at: resourceData.created_at,
+            updated_at: resourceData.updated_at,
+            is_active: true,
+            target_audience: "all",
+          } as any;
+        } else {
+          console.error("[catalogue] Error fetching catalog item from catalog_items:", itemError?.message || itemError);
+          console.error("[catalogue] Lookup by content_id error:", byContentError?.message || byContentError);
+          console.error("[catalogue] Test lookup error:", testError?.message || testError);
+          console.error("[catalogue] Course lookup error:", courseError?.message || courseError);
+          console.error("[catalogue] Resource lookup error:", resourceError?.message || resourceError);
+          console.error("[catalogue] Item ID searched:", catalogItemId);
+          return null;
+        }
       }
       }
     }

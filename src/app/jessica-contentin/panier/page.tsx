@@ -50,7 +50,13 @@ export default function JessicaContentinCartPage({
       // Rediriger vers Stripe Checkout
       if (data.sessionId && typeof window !== "undefined") {
         const { loadStripe } = await import("@stripe/stripe-js");
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
+        const { env } = await import("@/lib/env");
+        
+        if (!env.stripePublishableKey) {
+          throw new Error("Clé publique Stripe non configurée");
+        }
+        
+        const stripe = await loadStripe(env.stripePublishableKey);
         
         if (stripe) {
           await stripe.redirectToCheckout({ sessionId: data.sessionId });

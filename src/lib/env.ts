@@ -23,12 +23,14 @@ if (typeof window === 'undefined') {
 }
 
 const brevoApiKey = process.env.BREVO_API_KEY as string | undefined;
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string | undefined;
 
 export const env = {
   supabaseUrl,
   supabaseAnonKey,
   supabaseServiceKey,
   brevoApiKey,
+  stripePublishableKey,
 };
 
 

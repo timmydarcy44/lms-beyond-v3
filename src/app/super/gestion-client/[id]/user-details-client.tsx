@@ -183,26 +183,43 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                   availableToAssign.map((resource) => {
                     console.log("[UserDetailsClient] Rendering dropdown item:", { resourceId: resource.id, resourceTitle: resource.title });
                     
-                    const handleItemClick = async () => {
-                      console.log("[UserDetailsClient] handleItemClick called", { resourceId: resource.id, resourceTitle: resource.title });
-                      setDropdownOpen(false); // Fermer le dropdown manuellement
-                      await handleAssignResource(resource.id);
-                    };
-                    
                     return (
                       <DropdownMenuItem
                         key={resource.id}
                         onSelect={(e) => {
-                          console.log("[UserDetailsClient] Dropdown item onSelect triggered", { resourceId: resource.id, resourceTitle: resource.title, event: e });
+                          console.log("[UserDetailsClient] Dropdown item onSelect triggered", { resourceId: resource.id, resourceTitle: resource.title });
                           e.preventDefault();
-                          handleItemClick();
+                          // Utiliser setTimeout pour s'assurer que le handler s'exécute
+                          setTimeout(() => {
+                            console.log("[UserDetailsClient] setTimeout callback executing", { resourceId: resource.id });
+                            setDropdownOpen(false);
+                            handleAssignResource(resource.id);
+                          }, 0);
+                        }}
+                        onPointerDown={(e) => {
+                          console.log("[UserDetailsClient] Dropdown item onPointerDown", { resourceId: resource.id });
+                          // Empêcher la fermeture automatique
+                          e.preventDefault();
                         }}
                         className="cursor-pointer"
                         style={{
                           color: textColor,
                         }}
                       >
-                        <div className="flex flex-col w-full">
+                        <div 
+                          className="flex flex-col w-full"
+                          onPointerDown={(e) => {
+                            console.log("[UserDetailsClient] Inner div onPointerDown", { resourceId: resource.id });
+                            e.stopPropagation();
+                          }}
+                          onClick={(e) => {
+                            console.log("[UserDetailsClient] Inner div onClick", { resourceId: resource.id });
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDropdownOpen(false);
+                            handleAssignResource(resource.id);
+                          }}
+                        >
                           <span className="font-medium">{resource.title}</span>
                           <span className="text-xs opacity-70">
                             {resource.item_type === "module" ? "Module" :

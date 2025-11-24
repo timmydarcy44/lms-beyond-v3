@@ -426,7 +426,9 @@ export async function POST(request: NextRequest) {
                 .eq("id", data.id);
 
               console.log("[api/resources] Produit Stripe créé:", stripeProduct);
-            }
+              
+              // Stocker l'URL de checkout pour l'utiliser dans syncCatalogItem
+              const stripeCheckoutUrl = stripeProduct.checkoutUrl;
           } catch (stripeError) {
             console.error("[api/resources] Erreur lors de la création du produit Stripe:", stripeError);
             // Ne pas bloquer la création de la ressource si Stripe échoue
@@ -460,6 +462,7 @@ export async function POST(request: NextRequest) {
               targetAudience: isContentin ? "apprenant" : "apprenant", // Toujours "apprenant" pour contentin
               assignmentType: isContentin ? "no_school" : "no_school", // Toujours "no_school" pour contentin
               status: published ? "published" : "draft",
+              stripeCheckoutUrl: stripeProduct?.checkoutUrl || null, // Passer l'URL de checkout Stripe
             });
           } catch (syncError) {
             console.error("[api/resources] Erreur lors de la synchronisation avec catalog_items:", syncError);

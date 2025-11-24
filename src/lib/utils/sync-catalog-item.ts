@@ -21,6 +21,7 @@ export interface SyncCatalogItemParams {
   isActive?: boolean;
   assignmentType?: "no_school" | "organization";
   status?: "draft" | "published";
+  stripeCheckoutUrl?: string | null; // URL Stripe Checkout pour le paiement
 }
 
 /**
@@ -152,6 +153,11 @@ export async function syncCatalogItem(params: SyncCatalogItemParams): Promise<{
       is_active: finalIsActive, // Toujours true pour contentin
       updated_at: new Date().toISOString(),
     };
+
+    // Ajouter stripe_checkout_url si fourni
+    if (params.stripeCheckoutUrl) {
+      catalogItemData.stripe_checkout_url = params.stripeCheckoutUrl;
+    }
 
     if (existingCatalogItem) {
       // Mettre à jour l'item existant

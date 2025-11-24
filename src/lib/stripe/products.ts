@@ -37,8 +37,8 @@ type CreateStripeProductParams = {
 };
 
 /**
- * Crée un produit Stripe avec un prix associé
- * Retourne l'ID du produit Stripe et l'ID du prix Stripe
+ * Crée un produit Stripe avec un prix associé et une URL de checkout
+ * Retourne l'ID du produit Stripe, l'ID du prix Stripe et l'URL de checkout
  */
 export async function createStripeProduct({
   title,
@@ -51,6 +51,7 @@ export async function createStripeProduct({
 }: CreateStripeProductParams): Promise<{
   productId: string;
   priceId: string;
+  checkoutUrl?: string;
 } | null> {
   try {
     const stripeClient = await getStripeClient();
@@ -89,9 +90,40 @@ export async function createStripeProduct({
       connectedAccountId ? { stripeAccount: connectedAccountId } : undefined
     );
 
+    // Créer une URL de checkout Stripe pour ce produit
+    let checkoutUrl: string | undefined;
+    try {
+      const checkoutSession = await stripeClient.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: priceObj.id,
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr"}/jessica-contentin/ressources?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr"}/ressources/${contentId}`,
+        metadata: {
+          content_type: contentType,
+          content_id: contentId,
+          ...metadata,
+        },
+      }, connectedAccountId ? { stripeAccount: connectedAccountId } : undefined);
+
+      // Utiliser l'URL de la session de checkout
+      checkoutUrl = checkoutSession.url || undefined;
+      
+      console.log("[stripe/products] URL de checkout créée:", checkoutUrl);
+    } catch (checkoutError) {
+      console.error("[stripe/products] Erreur lors de la création de l'URL de checkout:", checkoutError);
+      // Ne pas bloquer la création du produit si l'URL de checkout échoue
+    }
+
     console.log("[stripe/products] Produit créé:", {
       productId: product.id,
       priceId: priceObj.id,
+      checkoutUrl,
       contentType,
       contentId,
     });
@@ -99,6 +131,7 @@ export async function createStripeProduct({
     return {
       productId: product.id,
       priceId: priceObj.id,
+      checkoutUrl,
     };
   } catch (error) {
     console.error("[stripe/products] Erreur lors de la création du produit Stripe:", error);

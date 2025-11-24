@@ -92,7 +92,8 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
     } else if (item.item_type === "ressource") {
       // TOUJOURS afficher la page de la ressource, le paiement se fait sur la page de détail
       // Utiliser la route ressources pour Jessica Contentin
-      return `/ressources/${item.content_id || item.id}`;
+      // Utiliser item.id (catalog_item_id) en priorité, car getCatalogItemById cherche d'abord par id
+      return `/ressources/${item.id || item.content_id}`;
     } else if (item.item_type === "test") {
       return `/dashboard/catalogue/test/${item.content_id}`;
     }

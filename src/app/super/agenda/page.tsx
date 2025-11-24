@@ -35,37 +35,53 @@ export default async function SuperAdminAgendaPage() {
     redirect("/super");
   }
 
+  // Couleurs de branding Jessica Contentin
+  const bgColor = "#F8F5F0";
+  const textColor = "#2F2A25";
+  const primaryColor = "#C6A664";
+  const secondaryColor = "#E6D9C6";
+
   return (
-    <main className="mx-auto max-w-7xl px-6 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
-            Agenda
-          </h1>
-          <p className="text-gray-600 text-sm" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
-            Gérez vos plages horaires et rendez-vous
-          </p>
+    <main className="min-h-screen" style={{ backgroundColor: bgColor }}>
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 
+              className="text-4xl font-bold mb-2"
+              style={{ color: textColor }}
+            >
+              Agenda
+            </h1>
+            <p 
+              className="text-lg"
+              style={{ color: textColor, opacity: 0.7 }}
+            >
+              Gérez vos plages horaires et rendez-vous
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <a
+              href="/super/agenda/rendez-vous"
+              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-xl"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <Calendar className="h-4 w-4" />
+              Mes rendez-vous
+            </a>
+            <a
+              href="/reservation"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-xl"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <Calendar className="h-4 w-4" />
+              Voir la page de réservation
+            </a>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <a
-            href="/super/agenda/rendez-vous"
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
-          >
-            <Calendar className="h-4 w-4" />
-            Mes rendez-vous
-          </a>
-          <a
-            href="/reservation"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            <Calendar className="h-4 w-4" />
-            Voir la page de réservation
-          </a>
-        </div>
+        <AgendaView superAdminId={user.id} />
       </div>
-      <AgendaView superAdminId={user.id} />
     </main>
   );
 }

@@ -88,10 +88,12 @@ export function JessicaContentinHeader() {
     pathname === "/jessica-contentin/inscription" ||
     pathname === "/jessica-contentin/panier" ||
     pathname === "/ressources" || 
+    pathname.startsWith("/ressources/") ||
     pathname === "/blog" ||
     pathname.startsWith("/blog/") ||
     pathname.startsWith("/formations/") ||
     pathname === "/jessica-contentin/ressources" ||
+    pathname.startsWith("/jessica-contentin/ressources/") ||
     pathname === "/jessica-contentin/consultations" ||
     pathname === "/jessica-contentin/a-propos" ||
     pathname === "/jessica-contentin/orientation" ||

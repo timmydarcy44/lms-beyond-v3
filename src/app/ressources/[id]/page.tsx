@@ -3,9 +3,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCatalogItemById } from "@/lib/queries/catalogue";
 import { Button } from "@/components/ui/button";
-import { JessicaContentinLayout } from "@/app/jessica-contentin/layout";
 import { getServerClient } from "@/lib/supabase/server";
 import { Play, FileText, Video, Headphones, CreditCard } from "lucide-react";
+import { BuyButton } from "@/components/jessica-contentin/buy-button";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
@@ -55,12 +55,20 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   const catalogItem = await getCatalogItemById(id, organizationId, user.id);
 
   if (!catalogItem || catalogItem.item_type !== "ressource") {
+    console.error("[ressources/[id]] Catalog item not found:", { id, catalogItem });
     notFound();
   }
+
+  // Utiliser le catalog_item_id réel (peut être différent de l'id passé en paramètre)
+  const catalogItemId = catalogItem.id;
 
   // Vérifier que c'est bien une ressource de Jessica Contentin
   const isResourceCreator = (catalogItem as any).creator_id === jessicaProfile.id;
   if (!isResourceCreator) {
+    console.error("[ressources/[id]] Resource creator mismatch:", { 
+      catalogItemCreatorId: (catalogItem as any).creator_id, 
+      jessicaProfileId: jessicaProfile.id 
+    });
     notFound();
   }
 
@@ -71,11 +79,12 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   
   // Vérifier explicitement dans catalog_item_access si l'utilisateur a un accès
   // C'est la SEULE source de vérité pour l'accès utilisateur
+  // Utiliser le catalog_item_id réel, pas l'id passé en paramètre
   const { data: userAccess } = await supabase
     .from("catalog_item_access")
     .select("access_type, access_status")
     .eq("user_id", user.id)
-    .eq("catalog_item_id", id)
+    .eq("catalog_item_id", catalogItemId)
     .maybeSingle();
   
   // L'utilisateur a accès UNIQUEMENT si :
@@ -137,10 +146,11 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
 
   // URL vers la page de paiement (si pas d'accès)
   // Si la ressource a une URL Stripe Checkout configurée, l'utiliser
+  // Sinon, créer une session de paiement à la demande via l'API
   const stripeCheckoutUrl = (catalogItem as any).stripe_checkout_url;
   const paymentUrl = stripeCheckoutUrl 
     ? stripeCheckoutUrl
-    : `/dashboard/catalogue/ressource/${id}/payment`;
+    : `/api/stripe/create-checkout-session-jessica`; // API route qui créera la session à la demande
 
   // Couleurs de branding Jessica Contentin
   const bgColor = "#FFFFFF"; // Blanc
@@ -173,99 +183,156 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   };
 
   return (
-    <JessicaContentinLayout>
-      <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
-        {/* Hero Section */}
-        <section 
-          className="relative overflow-hidden rounded-3xl border mx-6 mt-6 mb-8 shadow-lg"
-          style={{ 
-            borderColor: `${primaryColor}30`,
-            backgroundColor: surfaceColor,
-          }}
-        >
-          <div className="absolute inset-0">
-            {heroImage ? (
-              <Image
-                src={heroImage}
-                alt={catalogItem.title}
-                fill
-                priority
-                className="object-cover opacity-20"
-              />
-            ) : null}
-            <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/90 to-white/95" />
-          </div>
+    <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
+      {/* Contenu principal */}
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        {/* Breadcrumb */}
+        <div className="mb-8">
+          <Link 
+            href="/jessica-contentin/ressources"
+            className="inline-flex items-center gap-2 text-sm mb-6 hover:underline transition-colors"
+            style={{ color: primaryColor }}
+          >
+            ← Retour aux ressources
+          </Link>
+        </div>
 
-          <div className="relative z-10 flex flex-col gap-10 px-6 py-12 md:px-12 md:py-16 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl space-y-6" style={{ color: textColor }}>
-              <span 
-                className="inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em]"
+        {/* En-tête */}
+        <div className="mb-12">
+          {catalogItem.category && (
+            <span 
+              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] mb-4"
+              style={{ 
+                backgroundColor: `${primaryColor}20`,
+                color: primaryColor,
+              }}
+            >
+              {catalogItem.category}
+            </span>
+          )}
+          <h1 
+            className="text-4xl md:text-5xl font-bold leading-tight mb-6"
+            style={{ color: textColor }}
+          >
+            {catalogItem.title}
+          </h1>
+          {accroche && (
+            <p 
+              className="text-xl text-[#2F2A25]/80 mb-6"
+              style={{ color: `${textColor}CC` }}
+            >
+              {accroche}
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Colonne principale - Description et contenu */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Métadonnées */}
+            <div className="flex flex-wrap items-center gap-3">
+              {catalogItem.is_free && (
+                <span 
+                  className="rounded-full border-2 px-4 py-2 font-semibold"
+                  style={{ 
+                    borderColor: primaryColor,
+                    backgroundColor: `${primaryColor}10`,
+                    color: primaryColor,
+                  }}
+                >
+                  Gratuit
+                </span>
+              )}
+              {!catalogItem.is_free && catalogItem.price && (
+                <span 
+                  className="rounded-full border-2 px-4 py-2 font-bold text-lg"
+                  style={{ 
+                    borderColor: primaryColor,
+                    backgroundColor: `${primaryColor}10`,
+                    color: primaryColor,
+                  }}
+                >
+                  {catalogItem.price}€
+                </span>
+              )}
+              {resourceData?.kind && (
+                <span 
+                  className="rounded-full border-2 px-4 py-2 font-medium"
+                  style={{ 
+                    borderColor: `${primaryColor}60`,
+                    backgroundColor: `${primaryColor}05`,
+                    color: textColor,
+                  }}
+                >
+                  {resourceData.kind === "video" ? "📹 Vidéo" : resourceData.kind === "audio" ? "🎧 Audio" : "📄 Document"}
+                </span>
+              )}
+            </div>
+
+            {/* Description détaillée */}
+            {catalogItem.description && (
+              <section 
+                className="rounded-3xl border-2 p-8 md:p-10"
                 style={{ 
-                  backgroundColor: `${primaryColor}20`,
-                  color: primaryColor,
+                  borderColor: `${primaryColor}30`,
+                  backgroundColor: surfaceColor,
                 }}
               >
-                {catalogItem.category || "Ressource"}
-              </span>
-              <div className="space-y-3">
-                <h1 
-                  className="text-3xl font-semibold leading-tight md:text-5xl"
+                <h2 
+                  className="text-2xl md:text-3xl font-bold mb-6"
                   style={{ color: textColor }}
                 >
-                  {catalogItem.title}
-                </h1>
-                {accroche && (
-                  <p className="text-sm md:text-base" style={{ color: `${textColor}CC` }}>
-                    {accroche}
+                  À propos de cette ressource
+                </h2>
+                <div 
+                  className="prose prose-lg max-w-none"
+                  style={{ color: `${textColor}CC` }}
+                >
+                  <p 
+                    className="text-base md:text-lg leading-relaxed whitespace-pre-wrap"
+                    style={{ color: `${textColor}CC` }}
+                  >
+                    {catalogItem.description}
                   </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm" style={{ color: `${textColor}AA` }}>
-                {catalogItem.is_free && (
-                  <span 
-                    className="rounded-full border px-3 py-1"
-                    style={{ 
-                      borderColor: `${primaryColor}40`,
-                      backgroundColor: `${primaryColor}10`,
-                    }}
-                  >
-                    Gratuit
-                  </span>
-                )}
-                {!catalogItem.is_free && catalogItem.price && (
-                  <span 
-                    className="rounded-full border px-3 py-1"
-                    style={{ 
-                      borderColor: `${primaryColor}40`,
-                      backgroundColor: `${primaryColor}10`,
-                    }}
-                  >
-                    {catalogItem.price}€
-                  </span>
-                )}
-                {resourceData?.kind && (
-                  <span 
-                    className="rounded-full border px-3 py-1"
-                    style={{ 
-                      borderColor: `${primaryColor}40`,
-                      backgroundColor: `${primaryColor}10`,
-                    }}
-                  >
-                    {resourceData.kind === "video" ? "Vidéo" : resourceData.kind === "audio" ? "Audio" : "Document"}
-                  </span>
-                )}
-              </div>
-              {catalogItem.description && (
-                <p className="max-w-2xl text-sm md:text-base" style={{ color: `${textColor}CC` }}>
-                  {catalogItem.description}
-                </p>
-              )}
-              <div className="flex flex-wrap items-center gap-3 pt-4">
-                {/* Afficher le bouton d'accès UNIQUEMENT si l'utilisateur a vraiment payé ou a un accès valide */}
-                {hasAccess && resourceUrl ? (
+                </div>
+              </section>
+            )}
+          </div>
+
+          {/* Colonne latérale - CTA et informations */}
+          <div className="lg:col-span-1">
+            <div 
+              className="sticky top-8 rounded-3xl border-2 p-8 shadow-xl"
+              style={{ 
+                borderColor: `${primaryColor}40`,
+                backgroundColor: surfaceColor,
+              }}
+            >
+              {hasAccess && resourceUrl ? (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <div 
+                      className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
+                      style={{ backgroundColor: `${primaryColor}20` }}
+                    >
+                      <div className="text-2xl">✅</div>
+                    </div>
+                    <h3 
+                      className="text-xl font-bold mb-2"
+                      style={{ color: textColor }}
+                    >
+                      Accès activé
+                    </h3>
+                    <p 
+                      className="text-sm"
+                      style={{ color: `${textColor}AA` }}
+                    >
+                      Vous avez accès à cette ressource
+                    </p>
+                  </div>
                   <Button 
                     asChild 
-                    className="rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl"
+                    className="w-full rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
                     style={{
                       backgroundColor: primaryColor,
                     }}
@@ -275,87 +342,97 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                       <span className="ml-2">{getButtonText()}</span>
                     </a>
                   </Button>
-                ) : (
-                  <>
-                    {/* Toujours afficher le message si pas d'accès */}
-                    <div className="w-full mb-2">
-                      <p className="text-sm font-medium" style={{ color: `${textColor}AA` }}>
-                        🔒 {catalogItem.is_free ? "Accès gratuit requis" : "Vous devez acheter cette ressource pour y accéder"}
-                      </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <div 
+                      className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
+                      style={{ backgroundColor: `${primaryColor}20` }}
+                    >
+                      <div className="text-2xl">🔒</div>
                     </div>
+                    <h3 
+                      className="text-xl font-bold mb-2"
+                      style={{ color: textColor }}
+                    >
+                      {catalogItem.is_free ? "Accès gratuit" : "Accès payant"}
+                    </h3>
+                    <p 
+                      className="text-sm mb-4"
+                      style={{ color: `${textColor}AA` }}
+                    >
+                      {catalogItem.is_free 
+                        ? "Connectez-vous pour accéder gratuitement à cette ressource"
+                        : "Achetez cette ressource pour y accéder immédiatement"}
+                    </p>
+                    {!catalogItem.is_free && catalogItem.price && (
+                      <div className="mb-4">
+                        <div 
+                          className="text-4xl font-bold"
+                          style={{ color: primaryColor }}
+                        >
+                          {catalogItem.price}€
+                        </div>
+                        <p 
+                          className="text-xs mt-1"
+                          style={{ color: `${textColor}80` }}
+                        >
+                          Paiement unique
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {stripeCheckoutUrl ? (
                     <Button 
                       asChild 
-                      className="rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl"
+                      className="w-full rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
                       style={{
                         backgroundColor: primaryColor,
                       }}
                     >
-                      {stripeCheckoutUrl ? (
-                        <a href={paymentUrl} target="_blank" rel="noopener noreferrer">
-                          <CreditCard className="h-5 w-5" />
-                          <span className="ml-2">{getButtonText()}</span>
-                        </a>
-                      ) : (
-                        <Link href={paymentUrl}>
-                          <CreditCard className="h-5 w-5" />
-                          <span className="ml-2">{getButtonText()}</span>
-                        </Link>
-                      )}
+                      <a href={stripeCheckoutUrl} target="_blank" rel="noopener noreferrer">
+                        <CreditCard className="h-5 w-5" />
+                        <span className="ml-2">{getButtonText()}</span>
+                      </a>
                     </Button>
-                  </>
-                )}
-              </div>
-            </div>
-            {heroImage && (
-              <div className="w-full max-w-sm lg:max-w-xs">
-                <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl">
-                  <Image
-                    src={heroImage}
-                    alt={catalogItem.title}
-                    fill
-                    className="object-cover"
-                  />
+                  ) : (
+                    <BuyButton
+                      catalogItemId={catalogItemId}
+                      contentId={catalogItem.content_id}
+                      price={catalogItem.price || 0}
+                      title={catalogItem.title}
+                      className="w-full rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    />
+                  )}
+                  {!catalogItem.is_free && (
+                    <div className="pt-4 border-t" style={{ borderColor: `${primaryColor}30` }}>
+                      <ul className="space-y-2 text-sm" style={{ color: `${textColor}AA` }}>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1">✓</span>
+                          <span>Accès immédiat après paiement</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1">✓</span>
+                          <span>Accès à vie</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1">✓</span>
+                          <span>Support inclus</span>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </section>
-
-        {/* Description détaillée - Toujours visible pour donner envie d'acheter */}
-        {catalogItem.description && (
-          <section 
-            className="rounded-3xl border mx-6 mb-8 px-6 py-10 md:px-10"
-            style={{ 
-              borderColor: `${primaryColor}30`,
-              backgroundColor: surfaceColor,
-            }}
-          >
-            <h2 className="text-2xl font-semibold mb-6" style={{ color: textColor }}>
-              Description
-            </h2>
-            <p 
-              className="text-base md:text-lg max-w-none leading-relaxed whitespace-pre-wrap"
-              style={{ color: `${textColor}CC` }}
-            >
-              {catalogItem.description}
-            </p>
-            {!hasAccess && !catalogItem.is_free && (
-              <div className="mt-6 p-4 rounded-lg border" style={{ 
-                borderColor: `${primaryColor}40`,
-                backgroundColor: `${primaryColor}10`,
-              }}>
-                <p className="text-sm font-medium mb-2" style={{ color: textColor }}>
-                  🔒 Contenu protégé
-                </p>
-                <p className="text-sm" style={{ color: `${textColor}AA` }}>
-                  Achetez cette ressource pour accéder au contenu complet.
-                </p>
-              </div>
-            )}
-          </section>
-        )}
+        </div>
       </div>
-    </JessicaContentinLayout>
+    </div>
   );
 }
 

@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { SuperAdminHeaderApple } from "@/components/super-admin/super-admin-header-apple";
+import { JessicaHeader } from "@/components/jessica-contentin/jessica-header";
 import { BrandingProvider } from "@/components/super-admin/branding-provider";
 import { getSuperAdminBranding } from "@/lib/queries/super-admin-branding";
 import { getServerClient } from "@/lib/supabase/server";
+import { FloatingCreateButton } from "@/components/jessica-contentin/floating-create-button";
 
 export default async function SuperLayout({
   children,
@@ -33,8 +35,9 @@ export default async function SuperLayout({
   return (
     <BrandingProvider initialBranding={branding}>
       <div className={`min-h-screen ${isContentin ? "bg-[#F5F5DC]" : "bg-white"}`}>
-        <SuperAdminHeaderApple />
+        {isContentin ? <JessicaHeader /> : <SuperAdminHeaderApple />}
         {children}
+        {isContentin && <FloatingCreateButton />}
       </div>
     </BrandingProvider>
   );

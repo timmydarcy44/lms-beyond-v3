@@ -1,0 +1,143 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerClient } from "@/lib/supabase/server";
+import { getCatalogItemById } from "@/lib/queries/catalogue";
+import Stripe from "stripe";
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { catalogItemId, contentId } = body;
+
+    if (!catalogItemId && !contentId) {
+      return NextResponse.json(
+        { error: "catalogItemId ou contentId requis" },
+        { status: 400 }
+      );
+    }
+
+    // Récupérer l'utilisateur
+    const supabase = await getServerClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Non authentifié" },
+        { status: 401 }
+      );
+    }
+
+    // Récupérer l'item du catalogue
+    const itemId = catalogItemId || contentId;
+    const catalogItem = await getCatalogItemById(itemId, undefined, user.id);
+
+    if (!catalogItem) {
+      return NextResponse.json(
+        { error: "Item non trouvé" },
+        { status: 404 }
+      );
+    }
+
+    if (catalogItem.item_type !== "ressource") {
+      return NextResponse.json(
+        { error: "Type d'item non supporté" },
+        { status: 400 }
+      );
+    }
+
+    // Vérifier que Stripe est configuré
+    // Essayer plusieurs noms de variables possibles
+    // Note: rk_live_ est une clé restreinte, sk_live_ est la clé secrète standard
+    const stripeSecretKey = 
+      process.env.STRIPE_SECRET_KEY || 
+      process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY ||
+      process.env.STRIPE_SECRET;
+    
+    // Log pour debug (sans exposer la clé complète)
+    if (stripeSecretKey) {
+      console.log("[stripe/create-checkout-session-jessica] Clé Stripe trouvée:", {
+        prefix: stripeSecretKey.substring(0, 7),
+        length: stripeSecretKey.length,
+        type: stripeSecretKey.startsWith('sk_') ? 'Secret key' : 
+              stripeSecretKey.startsWith('rk_') ? 'Restricted key' : 'Unknown'
+      });
+    }
+    
+    if (!stripeSecretKey) {
+      console.error("[stripe/create-checkout-session-jessica] STRIPE_SECRET_KEY non configuré");
+      console.error("[stripe/create-checkout-session-jessica] Variables disponibles:", {
+        STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
+        NEXT_PUBLIC_STRIPE_SECRET_KEY: !!process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY,
+        STRIPE_SECRET: !!process.env.STRIPE_SECRET,
+        allEnvKeys: Object.keys(process.env).filter(key => key.includes('STRIPE')),
+      });
+      return NextResponse.json(
+        { 
+          error: "Stripe n'est pas configuré",
+          details: "La variable d'environnement STRIPE_SECRET_KEY n'est pas définie. Vérifiez votre configuration."
+        },
+        { status: 503 }
+      );
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey, {
+        apiVersion: "2025-10-29.clover",
+      });
+
+      // Créer la session de paiement Stripe
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "eur",
+              product_data: {
+                name: catalogItem.title,
+                description: catalogItem.description || undefined,
+              },
+              unit_amount: Math.round((catalogItem.price || 0) * 100), // Stripe utilise les centimes
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${baseUrl}/jessica-contentin/ressources?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/ressources/${catalogItem.content_id || catalogItem.id}`,
+        metadata: {
+          catalog_item_id: catalogItem.id,
+          content_id: catalogItem.content_id,
+          item_type: catalogItem.item_type,
+          user_id: user.id,
+        },
+      });
+
+      return NextResponse.json({ 
+        sessionId: session.id,
+        url: session.url,
+      });
+    } catch (stripeError: any) {
+      console.error("[stripe/create-checkout-session-jessica] Stripe error:", stripeError);
+      return NextResponse.json(
+        { 
+          error: "Erreur lors de la création de la session de paiement",
+          details: stripeError.message || "Erreur inconnue"
+        },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
+    console.error("[stripe/create-checkout-session-jessica] Error:", error);
+    return NextResponse.json(
+      { 
+        error: "Erreur lors de la création de la session de paiement",
+        details: error.message || "Erreur inconnue"
+      },
+      { status: 500 }
+    );
+  }
+}
+

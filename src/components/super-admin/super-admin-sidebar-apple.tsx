@@ -100,22 +100,30 @@ export function SuperAdminSidebarApple({ open: controlledOpen, onToggle }: Super
   // Filtrer les items de navigation pour contentin.cabinet@gmail.com
   const filteredNavItems = isContentin
     ? [
+        // Dashboard spécifique pour Jessica
+        { label: "Dashboard", icon: LayoutDashboard, href: "/super/jessica-dashboard" },
         ...NAV_ITEMS.filter((item) => {
-          // Masquer "No School", "Voir mon catalogue", "Chiffre d'affaires", "Statistiques", "Gamification"
-          // Masquer aussi "Organisations" et "Utilisateurs" car contentin ne gère que son catalogue
+          // Masquer uniquement les items spécifiques à Beyond
           const hiddenLabels = [
+            "Dashboard", // Remplacé par le dashboard Jessica
             "No School",
             "Voir mon catalogue",
-            "Chiffre d'affaires",
-            "Statistiques",
-            "Gamification (Demo)",
             "Organisations",
-            "Utilisateurs",
+            "Utilisateurs", // Utilisateurs généraux (remplacé par Gestion client)
           ];
           return !hiddenLabels.includes(item.label);
         }),
-        // Ajouter l'onglet Catalogue pour Jessica
+        // Ajouter les onglets spécifiques pour Jessica
         { label: "Catalogue", icon: Store, href: "/super/catalogue-jessica" },
+        {
+          label: "Gestion client",
+          icon: Users,
+          href: "/super/gestion-client",
+          children: [
+            { label: "Liste des clients", icon: Users, href: "/super/gestion-client" },
+            { label: "Créer un compte", icon: UserPlus, href: "/super/gestion-client/new" },
+          ],
+        },
       ]
     : NAV_ITEMS;
 

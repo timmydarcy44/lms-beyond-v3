@@ -118,22 +118,31 @@ export function SuperAdminHeaderApple() {
   // Filtrer les items de navigation pour contentin.cabinet@gmail.com
   const filteredNavItems = isContentin
     ? [
+        // Dashboard spécifique pour Jessica
+        { label: "Dashboard", href: "/super/jessica-dashboard" },
         ...NAV_ITEMS.filter((item) => {
-          // Masquer "No School", "Premium", "Chiffre d'affaires", "Statistiques"
-          // Masquer aussi "Organisations" et "Utilisateurs" car contentin ne gère que son catalogue
-          // Masquer "IA" car ce n'est pas nécessaire pour contentin
+          // Masquer uniquement les items spécifiques à Beyond
           const hiddenLabels = [
+            "Dashboard", // Remplacé par le dashboard Jessica
             "No School",
             "Premium",
             "Chiffre d'affaires",
             "Statistiques",
-            "Utilisateurs",
+            "Utilisateurs", // Utilisateurs généraux (remplacé par Gestion client)
             "IA",
           ];
           return !hiddenLabels.includes(item.label);
         }),
-        // Ajouter l'onglet Catalogue pour Jessica
+        // Ajouter les onglets spécifiques pour Jessica
         { label: "Catalogue", href: "/super/catalogue-jessica" },
+        {
+          label: "Gestion client",
+          href: "/super/gestion-client",
+          children: [
+            { label: "Liste des clients", href: "/super/gestion-client" },
+            { label: "Créer un compte", href: "/super/gestion-client/new" },
+          ],
+        },
       ]
     : NAV_ITEMS;
 
@@ -156,8 +165,8 @@ export function SuperAdminHeaderApple() {
             </span>
           </Link>
 
-          {/* Navigation Items */}
-          <div className="flex items-center gap-0">
+          {/* Navigation Items - Centré */}
+          <div className="flex items-center gap-0 flex-1 justify-center">
             {filteredNavItems.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
               const hasChildren = item.children && item.children.length > 0;
@@ -362,8 +371,26 @@ export function SuperAdminHeaderApple() {
             )}
           </div>
 
-          {/* Right side - Alertes, Messagerie et Déconnexion */}
+          {/* Right side - Gestion client (pour Jessica) et autres */}
           <div className="flex items-center gap-3">
+            {/* CTA Gestion client - uniquement pour Jessica */}
+            {isContentin && (
+              <Link
+                href="/super/gestion-client"
+                className={cn(
+                  "px-4 py-2 text-[13px] font-medium transition-colors rounded-lg",
+                  pathname === "/super/gestion-client" || pathname?.startsWith("/super/gestion-client/")
+                    ? "text-white"
+                    : "text-[#A0522D] hover:text-white",
+                  pathname === "/super/gestion-client" || pathname?.startsWith("/super/gestion-client/")
+                    ? "bg-[#C6A664]"
+                    : "bg-[#E6D9C6] hover:bg-[#C6A664]",
+                )}
+                style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
+              >
+                Gestion client
+              </Link>
+            )}
             {/* Badge Alertes */}
             <AlertsBadge />
             

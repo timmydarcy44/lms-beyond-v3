@@ -18,6 +18,11 @@ export default async function SuperDashboard() {
   const { data: { user } } = await supabase.auth.getUser();
   const isContentin = user?.email === "contentin.cabinet@gmail.com";
 
+  // Rediriger Jessica vers son dashboard spécifique
+  if (isContentin) {
+    redirect("/super/jessica-dashboard");
+  }
+
   const [stats, news, trends30d, topPerformers] = await Promise.all([
     getSuperAdminStats(),
     getTrainingSectorNews(),

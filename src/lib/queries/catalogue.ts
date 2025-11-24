@@ -551,6 +551,22 @@ export async function getCatalogItemById(
         
         if (!resourceError && resourceData) {
           console.log("[catalogue] Found resource directly in resources table:", resourceData.id);
+          
+          // Récupérer le creator_id depuis le profil si possible
+          let creatorId = resourceData.created_by || resourceData.owner_id;
+          if (creatorId) {
+            // Vérifier si c'est un Super Admin (Jessica Contentin)
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("id, email")
+              .eq("id", creatorId)
+              .maybeSingle();
+            
+            if (profile?.email === "contentin.cabinet@gmail.com") {
+              creatorId = profile.id;
+            }
+          }
+          
           // Créer un item de catalogue virtuel depuis la ressource
           item = {
             id: resourceData.id,
@@ -563,7 +579,7 @@ export async function getCatalogItemById(
             is_free: !(resourceData as any).price || (resourceData as any).price === 0,
             thumbnail_url: null,
             hero_image_url: null,
-            creator_id: resourceData.created_by || resourceData.owner_id,
+            creator_id: creatorId,
             created_at: resourceData.created_at,
             updated_at: resourceData.updated_at,
             is_active: true,

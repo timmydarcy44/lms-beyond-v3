@@ -27,11 +27,20 @@ export function FloatingCartBadge() {
   }
 
   const handleClick = () => {
-    if (isJessicaContentin) {
+    // Détecter si on est sur le domaine de Jessica Contentin
+    const isJessicaDomain = 
+      typeof window !== 'undefined' && 
+      (window.location.hostname === 'jessicacontentin.fr' || 
+       window.location.hostname === 'www.jessicacontentin.fr' ||
+       window.location.hostname === 'localhost' ||
+       window.location.hostname === '127.0.0.1' ||
+       pathname?.startsWith('/jessica-contentin') ||
+       pathname?.startsWith('/ressources'));
+    
+    if (isJessicaDomain) {
       router.push('/jessica-contentin/panier');
     } else {
       // Pour les autres sites, ouvrir le drawer
-      // (on pourrait aussi créer une page panier pour eux)
       router.push('/dashboard/catalogue/checkout');
     }
   };

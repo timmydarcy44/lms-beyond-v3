@@ -156,7 +156,7 @@ export function CatalogueJessicaClient({ items, jessicaProfileId }: CatalogueJes
     setShowDeleteDialog(true);
   };
 
-  const getItemUrl = (item: CatalogItem) => {
+  const getItemUrl = (item: CatalogItem): string | undefined => {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
     if (item.item_type === "ressource") {
       return `${baseUrl}/ressources/${item.content_id || item.id}`;
@@ -165,7 +165,7 @@ export function CatalogueJessicaClient({ items, jessicaProfileId }: CatalogueJes
     } else if (item.item_type === "test") {
       return `${baseUrl}/dashboard/catalogue/test/${item.content_id || item.id}`;
     }
-    return null;
+    return undefined;
   };
 
   return (

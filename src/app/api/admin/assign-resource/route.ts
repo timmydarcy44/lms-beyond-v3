@@ -105,9 +105,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (accessError) {
-      console.error("[admin/assign-resource] Error creating access:", accessError);
+      console.error("[admin/assign-resource] Error creating access:", JSON.stringify(accessError, null, 2));
+      console.error("[admin/assign-resource] Error code:", accessError.code);
+      console.error("[admin/assign-resource] Error message:", accessError.message);
+      console.error("[admin/assign-resource] Error details:", accessError.details);
+      console.error("[admin/assign-resource] Error hint:", accessError.hint);
       return NextResponse.json(
-        { error: "Erreur lors de l'assignation de la ressource" },
+        { 
+          error: "Erreur lors de l'assignation de la ressource",
+          details: accessError.message,
+          code: accessError.code,
+          hint: accessError.hint
+        },
         { status: 500 }
       );
     }

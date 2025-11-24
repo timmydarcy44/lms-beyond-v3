@@ -117,6 +117,13 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
   const assignedResourceIds = new Set(userDetails.purchases.map(p => p.catalogItemId));
   const availableToAssign = availableResources.filter(r => !assignedResourceIds.has(r.id));
 
+  console.log("[UserDetailsClient] Component render:", {
+    availableResourcesCount: availableResources.length,
+    assignedResourceIds: Array.from(assignedResourceIds),
+    availableToAssignCount: availableToAssign.length,
+    availableToAssign: availableToAssign.map(r => ({ id: r.id, title: r.title })),
+  });
+
   return (
     <div className="space-y-6">
       {/* Bouton Assigner une ressource */}
@@ -172,30 +179,38 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                     Toutes les ressources sont déjà assignées
                   </div>
                 ) : (
-                  availableToAssign.map((resource) => (
-                    <DropdownMenuItem
-                      key={resource.id}
-                      onClick={(e) => {
-                        console.log("[UserDetailsClient] Dropdown item clicked", { resourceId: resource.id, resourceTitle: resource.title });
-                        e.preventDefault();
-                        handleAssignResource(resource.id);
-                      }}
-                      className="cursor-pointer"
-                      style={{
-                        color: textColor,
-                      }}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium">{resource.title}</span>
-                        <span className="text-xs opacity-70">
-                          {resource.item_type === "module" ? "Module" :
-                           resource.item_type === "ressource" ? "Ressource" :
-                           resource.item_type === "test" ? "Test" :
-                           resource.item_type === "parcours" ? "Parcours" : resource.item_type}
-                        </span>
-                      </div>
-                    </DropdownMenuItem>
-                  ))
+                  availableToAssign.map((resource) => {
+                    console.log("[UserDetailsClient] Rendering dropdown item:", { resourceId: resource.id, resourceTitle: resource.title });
+                    return (
+                      <DropdownMenuItem
+                        key={resource.id}
+                        onSelect={(e) => {
+                          console.log("[UserDetailsClient] Dropdown item onSelect triggered", { resourceId: resource.id, resourceTitle: resource.title, event: e });
+                          e.preventDefault();
+                          handleAssignResource(resource.id);
+                        }}
+                        onClick={(e) => {
+                          console.log("[UserDetailsClient] Dropdown item onClick triggered", { resourceId: resource.id, resourceTitle: resource.title, event: e });
+                          e.preventDefault();
+                          handleAssignResource(resource.id);
+                        }}
+                        className="cursor-pointer"
+                        style={{
+                          color: textColor,
+                        }}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{resource.title}</span>
+                          <span className="text-xs opacity-70">
+                            {resource.item_type === "module" ? "Module" :
+                             resource.item_type === "ressource" ? "Ressource" :
+                             resource.item_type === "test" ? "Test" :
+                             resource.item_type === "parcours" ? "Parcours" : resource.item_type}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

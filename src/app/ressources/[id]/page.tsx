@@ -74,27 +74,25 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
 
   // Vérifier si l'utilisateur a accès AVANT de récupérer les détails sensibles
   // IMPORTANT : Seul le créateur (Jessica) ou les utilisateurs ayant payé peuvent accéder
-  // Même les ressources gratuites nécessitent un accès explicite dans catalog_item_access
+  // Même les ressources gratuites nécessitent un accès explicite dans catalog_access
   const isCreator = user.id === jessicaProfile.id;
   
-  // Vérifier explicitement dans catalog_item_access si l'utilisateur a un accès
+  // Vérifier explicitement dans catalog_access si l'utilisateur a un accès
   // C'est la SEULE source de vérité pour l'accès utilisateur
   // Utiliser le catalog_item_id réel, pas l'id passé en paramètre
+  // Vérifier soit par user_id (B2C) soit par organization_id (B2B)
   const { data: userAccess } = await supabase
-    .from("catalog_item_access")
-    .select("access_type, access_status")
-    .eq("user_id", user.id)
+    .from("catalog_access")
+    .select("access_status")
     .eq("catalog_item_id", catalogItemId)
+    .or(`user_id.eq.${user.id},organization_id.eq.${organizationId || 'null'}`)
     .maybeSingle();
   
   // L'utilisateur a accès UNIQUEMENT si :
   // 1. Il est le créateur (Jessica) - TOUJOURS accès
-  // 2. Il a un accès explicite dans catalog_item_access (purchased, free, ou manually_granted)
-  // Le access_status du catalogItem n'est pas suffisant, il faut vérifier catalog_item_access
+  // 2. Il a un accès explicite dans catalog_access (purchased, free, ou manually_granted)
+  // Le access_status du catalogItem n'est pas suffisant, il faut vérifier catalog_access
   const hasExplicitAccess = userAccess && (
-    userAccess.access_type === "purchased" || 
-    userAccess.access_type === "free" || 
-    userAccess.access_type === "manually_granted" ||
     userAccess.access_status === "purchased" ||
     userAccess.access_status === "free" ||
     userAccess.access_status === "manually_granted"

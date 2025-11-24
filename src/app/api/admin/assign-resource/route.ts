@@ -75,10 +75,11 @@ export async function POST(request: NextRequest) {
 
     // Vérifier si l'accès existe déjà
     const { data: existingAccess } = await supabase
-      .from("catalog_item_access")
+      .from("catalog_access")
       .select("id")
       .eq("user_id", userId)
       .eq("catalog_item_id", catalogItemId)
+      .is("organization_id", null)
       .maybeSingle();
 
     if (existingAccess) {
@@ -88,20 +89,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Créer l'accès (utiliser upsert pour éviter les doublons)
+    // Créer l'accès (utiliser catalog_access avec user_id pour B2C)
     const { data: access, error: accessError } = await supabase
-      .from("catalog_item_access")
-      .upsert({
+      .from("catalog_access")
+      .insert({
         user_id: userId,
         catalog_item_id: catalogItemId,
-        access_type: "manually_granted",
+        organization_id: null, // B2C, pas d'organisation
+        access_status: "manually_granted",
+        granted_by: jessicaProfile.id,
         granted_at: new Date().toISOString(),
-        metadata: {
-          granted_by: jessicaProfile.id,
-          grant_reason: "Accès accordé manuellement par Jessica Contentin",
-        },
-      }, {
-        onConflict: "user_id,catalog_item_id",
+        grant_reason: "Accès accordé manuellement par Jessica Contentin",
       })
       .select()
       .single();

@@ -88,16 +88,18 @@ export async function POST(request: NextRequest) {
       // Si on a un itemId dans les métadonnées, accorder l'accès directement
       if (metadata?.itemId && metadata?.itemType) {
         const { error: accessError } = await supabase
-          .from("catalog_item_access")
+          .from("catalog_access")
           .upsert({
             user_id: profile.id,
             catalog_item_id: metadata.itemId,
-            access_type: "purchased",
+            organization_id: null, // B2C, pas d'organisation
+            access_status: "purchased",
             granted_at: new Date().toISOString(),
-            metadata: {
-              stripe_session_id: session.id,
-              stripe_payment_intent: session.payment_intent,
-            },
+            transaction_id: session.payment_intent,
+            purchase_amount: (session.amount_total || 0) / 100, // Convertir de centimes en euros
+            purchase_date: new Date().toISOString(),
+          }, {
+            onConflict: "user_id,catalog_item_id",
           });
 
         if (accessError) {
@@ -174,17 +176,18 @@ export async function POST(request: NextRequest) {
           const catalogItem = catalogItems[0];
           
           const { error: accessError } = await supabase
-            .from("catalog_item_access")
+            .from("catalog_access")
             .upsert({
               user_id: profile.id,
               catalog_item_id: catalogItem.id,
-              access_type: "purchased",
+              organization_id: null, // B2C, pas d'organisation
+              access_status: "purchased",
               granted_at: new Date().toISOString(),
-              metadata: {
-                stripe_session_id: session.id,
-                stripe_payment_intent: session.payment_intent,
-                stripe_checkout_url: catalogItem.stripe_checkout_url,
-              },
+              transaction_id: session.payment_intent,
+              purchase_amount: (session.amount_total || 0) / 100, // Convertir de centimes en euros
+              purchase_date: new Date().toISOString(),
+            }, {
+              onConflict: "user_id,catalog_item_id",
             });
 
           if (accessError) {

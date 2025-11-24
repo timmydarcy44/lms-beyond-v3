@@ -56,12 +56,14 @@ export async function POST(request: NextRequest) {
 
     // Accorder l'accès au contenu
     const { error: accessError } = await supabase
-      .from("catalog_item_access")
+      .from("catalog_access")
       .upsert({
         user_id: user_id,
         catalog_item_id: catalog_item_id,
-        access_type: "purchased",
+        organization_id: null, // B2C, pas d'organisation
+        access_status: "purchased",
         granted_at: new Date().toISOString(),
+        purchase_date: new Date().toISOString(),
         metadata: {
           stripe_session_id: session_id,
           stripe_payment_intent: session.payment_intent,

@@ -87,11 +87,11 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
 
     // Récupérer les achats liés aux contenus de Jessica (inclure purchased et manually_granted)
     const { data: accessData } = await supabase
-      .from("catalog_item_access")
+      .from("catalog_access")
       .select(`
         user_id,
         granted_at,
-        access_type,
+        access_status,
         catalog_items!inner (
           id,
           creator_id,
@@ -99,14 +99,15 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
         )
       `)
       .eq("catalog_items.creator_id", jessicaProfile.id)
-      .in("access_type", ["purchased", "manually_granted"])
-      .in("user_id", userIds);
+      .in("access_status", ["purchased", "manually_granted"])
+      .in("user_id", userIds)
+      .not("user_id", "is", null); // Seulement les accès B2C (avec user_id)
 
     // Calculer les statistiques pour chaque utilisateur
     const usersWithStats = (profiles || []).map((profile) => {
       const userAccess = (accessData || []).filter((a: any) => a.user_id === profile.id);
       // Calculer le CA uniquement pour les achats (pas les assignations manuelles)
-      const purchasedAccess = userAccess.filter((a: any) => a.access_type === "purchased");
+      const purchasedAccess = userAccess.filter((a: any) => a.access_status === "purchased");
       const totalRevenue = purchasedAccess.reduce((sum: number, a: any) => {
         return sum + (a.catalog_items?.price || 0);
       }, 0);
@@ -196,12 +197,12 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
 
     // Récupérer les achats (inclure purchased et manually_granted)
     const { data: accessData } = await supabase
-      .from("catalog_item_access")
+      .from("catalog_access")
       .select(`
         id,
         catalog_item_id,
         granted_at,
-        access_type,
+        access_status,
         catalog_items!inner (
           id,
           title,
@@ -212,7 +213,8 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
       `)
       .eq("user_id", userId)
       .eq("catalog_items.creator_id", jessicaProfile.id)
-      .in("access_type", ["purchased", "manually_granted"])
+      .in("access_status", ["purchased", "manually_granted"])
+      .is("organization_id", null) // Seulement les accès B2C
       .order("granted_at", { ascending: false });
 
     const purchases = (accessData || []).map((a: any) => ({
@@ -222,7 +224,7 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
       itemType: a.catalog_items?.item_type || "unknown",
       price: a.catalog_items?.price || 0,
       purchasedAt: a.granted_at || new Date().toISOString(),
-      status: a.access_type === "manually_granted" ? "manually_granted" : "completed",
+      status: a.access_status === "manually_granted" ? "manually_granted" : "completed",
     }));
 
     // Récupérer les résultats de tests

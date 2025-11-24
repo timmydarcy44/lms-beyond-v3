@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Users, FileText } from "lucide-react";
+import { Calendar, Users, FileText, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function JessicaHeader() {
@@ -49,6 +49,24 @@ export function JessicaHeader() {
             >
               <Calendar className="h-4 w-4" />
               <span>Agenda</span>
+            </Link>
+
+            {/* Catalogue */}
+            <Link
+              href="/super/catalogue-jessica"
+              className={cn(
+                "px-4 py-2 text-sm font-medium transition-colors rounded-lg flex items-center gap-2",
+                pathname === "/super/catalogue-jessica" || pathname?.startsWith("/super/catalogue-jessica/")
+                  ? "text-white"
+                  : "text-[#A0522D] hover:text-white",
+                pathname === "/super/catalogue-jessica" || pathname?.startsWith("/super/catalogue-jessica/")
+                  ? "bg-[#C6A664]"
+                  : "bg-[#E6D9C6] hover:bg-[#C6A664]",
+              )}
+              style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
+            >
+              <Package className="h-4 w-4" />
+              <span>Catalogue</span>
             </Link>
 
             {/* Gestion client */}

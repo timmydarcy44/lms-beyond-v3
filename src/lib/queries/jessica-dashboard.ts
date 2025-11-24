@@ -94,23 +94,24 @@ export async function getJessicaDashboardStats(): Promise<JessicaDashboardStats>
       return new Date(lastUpdate) >= last24h;
     }).length;
 
-    // CA et Commandes - Utiliser catalog_item_access pour les achats
+    // CA et Commandes - Utiliser catalog_access pour les achats
     // Inclure à la fois "purchased" (achats en ligne) et "manually_granted" (assignations manuelles)
     const { data: purchases } = await supabase
-      .from("catalog_item_access")
+      .from("catalog_access")
       .select(`
         granted_at,
-        access_type,
+        access_status,
         catalog_items!inner (
           price,
           creator_id
         )
       `)
       .eq("catalog_items.creator_id", jessicaProfile.id)
-      .in("access_type", ["purchased", "manually_granted"]);
+      .in("access_status", ["purchased", "manually_granted"])
+      .not("user_id", "is", null); // Seulement les accès B2C (avec user_id)
 
     // Calculer le CA uniquement pour les achats (pas les assignations manuelles)
-    const purchasedItems = (purchases || []).filter((p: any) => p.access_type === "purchased");
+    const purchasedItems = (purchases || []).filter((p: any) => p.access_status === "purchased");
     
     const totalRevenue = purchasedItems.reduce((sum: number, p: any) => {
       return sum + (p.catalog_items?.price || 0);

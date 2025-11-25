@@ -55,18 +55,25 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY ||
       process.env.STRIPE_SECRET;
     
+    console.log("[stripe/create-checkout-session-jessica] Checking Stripe configuration...");
+    console.log("[stripe/create-checkout-session-jessica] STRIPE_SECRET_KEY exists:", !!process.env.STRIPE_SECRET_KEY);
+    console.log("[stripe/create-checkout-session-jessica] NEXT_PUBLIC_STRIPE_SECRET_KEY exists:", !!process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY);
+    console.log("[stripe/create-checkout-session-jessica] STRIPE_SECRET exists:", !!process.env.STRIPE_SECRET);
+    
     // Log pour debug (sans exposer la clé complète)
     if (stripeSecretKey) {
-      console.log("[stripe/create-checkout-session-jessica] Clé Stripe trouvée:", {
+      console.log("[stripe/create-checkout-session-jessica] ✅ Clé Stripe trouvée:", {
         prefix: stripeSecretKey.substring(0, 7),
         length: stripeSecretKey.length,
-        type: stripeSecretKey.startsWith('sk_') ? 'Secret key' : 
-              stripeSecretKey.startsWith('rk_') ? 'Restricted key' : 'Unknown'
+        type: stripeSecretKey.startsWith('sk_live_') ? 'Live Secret Key' :
+              stripeSecretKey.startsWith('sk_test_') ? 'Test Secret Key' :
+              stripeSecretKey.startsWith('rk_live_') ? 'Live Restricted Key' :
+              stripeSecretKey.startsWith('rk_test_') ? 'Test Restricted Key' : 'Unknown'
       });
     }
     
     if (!stripeSecretKey) {
-      console.error("[stripe/create-checkout-session-jessica] STRIPE_SECRET_KEY non configuré");
+      console.error("[stripe/create-checkout-session-jessica] ❌ STRIPE_SECRET_KEY non configuré");
       console.error("[stripe/create-checkout-session-jessica] Variables disponibles:", {
         STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
         NEXT_PUBLIC_STRIPE_SECRET_KEY: !!process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY,

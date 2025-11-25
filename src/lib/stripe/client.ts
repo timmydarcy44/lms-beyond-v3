@@ -15,8 +15,30 @@ export async function getStripeClient() {
     return null;
   }
 
-  if (!process.env.STRIPE_SECRET_KEY) {
-    console.warn("[stripe/client] STRIPE_SECRET_KEY non configuré");
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  
+  // Log de configuration (côté serveur uniquement)
+  if (typeof window === 'undefined') {
+    console.log("[stripe/client] Module loaded - STRIPE_SECRET_KEY exists:", !!stripeSecretKey);
+    if (stripeSecretKey) {
+      console.log("[stripe/client] Module loaded - STRIPE_SECRET_KEY length:", stripeSecretKey.length);
+      console.log("[stripe/client] Module loaded - STRIPE_SECRET_KEY starts with:", stripeSecretKey.substring(0, 7));
+      console.log("[stripe/client] Module loaded - STRIPE_SECRET_KEY type:", 
+        stripeSecretKey.startsWith('sk_live_') ? 'Live Secret Key' :
+        stripeSecretKey.startsWith('sk_test_') ? 'Test Secret Key' :
+        stripeSecretKey.startsWith('rk_live_') ? 'Live Restricted Key' :
+        stripeSecretKey.startsWith('rk_test_') ? 'Test Restricted Key' : 'Unknown'
+      );
+    } else {
+      console.warn("[stripe/client] STRIPE_SECRET_KEY non configuré");
+      console.warn("[stripe/client] Variables disponibles:", {
+        STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
+        allStripeKeys: Object.keys(process.env).filter(key => key.includes('STRIPE')),
+      });
+    }
+  }
+  
+  if (!stripeSecretKey) {
     return null;
   }
 
@@ -32,7 +54,7 @@ export async function getStripeClient() {
 
   // Créer l'instance Stripe si elle n'existe pas
   if (!stripeInstance) {
-    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    stripeInstance = new Stripe(stripeSecretKey, {
       apiVersion: "2024-11-20.acacia",
     });
   }

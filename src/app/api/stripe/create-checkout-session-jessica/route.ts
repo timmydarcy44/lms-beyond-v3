@@ -89,6 +89,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Vérifier que ce n'est pas une clé restreinte (rk_live_)
+    if (stripeSecretKey.startsWith('rk_')) {
+      console.error("[stripe/create-checkout-session-jessica] ❌ Clé RESTREINTE détectée (rk_live_)");
+      console.error("[stripe/create-checkout-session-jessica] Les clés restreintes (rk_live_) ne fonctionnent pas pour les paiements standards.");
+      console.error("[stripe/create-checkout-session-jessica] Utilisez une clé SECRÈTE standard (sk_live_) à la place.");
+      return NextResponse.json(
+        { 
+          error: "Clé Stripe invalide",
+          details: "Vous utilisez une clé RESTREINTE (rk_live_). Utilisez une clé SECRÈTE standard (sk_live_) dans STRIPE_SECRET_KEY. Consultez https://dashboard.stripe.com/apikeys pour obtenir la bonne clé."
+        },
+        { status: 503 }
+      );
+    }
+
     try {
       const stripe = new Stripe(stripeSecretKey, {
         apiVersion: "2025-10-29.clover",

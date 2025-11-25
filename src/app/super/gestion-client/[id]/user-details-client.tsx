@@ -145,7 +145,8 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                 Ouvrir l'accès à une ressource pour ce client
               </p>
             </div>
-            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            {availableToAssign.length > 0 ? (
+              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   disabled={isAssigning || availableToAssign.length === 0}

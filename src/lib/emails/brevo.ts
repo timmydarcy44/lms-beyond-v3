@@ -8,6 +8,17 @@ import { env } from "@/lib/env";
 const BREVO_API_KEY = process.env.BREVO_API_KEY || env.brevoApiKey;
 const BREVO_API_URL = "https://api.brevo.com/v3";
 
+// Log de configuration au chargement du module (côté serveur uniquement)
+if (typeof window === 'undefined') {
+  console.log("[BREVO] Module loaded - BREVO_API_KEY exists:", !!BREVO_API_KEY);
+  console.log("[BREVO] Module loaded - BREVO_API_KEY from process.env:", !!process.env.BREVO_API_KEY);
+  console.log("[BREVO] Module loaded - BREVO_API_KEY from env:", !!env.brevoApiKey);
+  if (BREVO_API_KEY) {
+    console.log("[BREVO] Module loaded - BREVO_API_KEY length:", BREVO_API_KEY.length);
+    console.log("[BREVO] Module loaded - BREVO_API_KEY starts with:", BREVO_API_KEY.substring(0, 10));
+  }
+}
+
 export interface EmailOptions {
   to: string | string[];
   subject: string;

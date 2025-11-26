@@ -51,9 +51,18 @@ export default function JessicaContentinCartPage({
       if (data.sessionId && typeof window !== "undefined") {
         const { loadStripe } = await import("@stripe/stripe-js");
         
+        // Les variables NEXT_PUBLIC_* sont accessibles directement dans le code client
         const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+        
+        console.log("[CartPage] Stripe publishable key check:", {
+          exists: !!stripePublishableKey,
+          length: stripePublishableKey?.length || 0,
+          startsWith: stripePublishableKey?.substring(0, 10) || "N/A"
+        });
+        
         if (!stripePublishableKey) {
-          throw new Error("Clé publique Stripe non configurée");
+          console.error("[CartPage] NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not available");
+          throw new Error("Clé publique Stripe non configurée. Veuillez redémarrer le serveur de développement.");
         }
         
         const stripe = await loadStripe(stripePublishableKey);

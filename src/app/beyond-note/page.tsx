@@ -1,19 +1,11 @@
 import { Metadata } from "next";
-import { BeyondNotePageContent } from "@/components/beyond-note/beyond-note-page";
+import { BeyondNotePage } from "@/components/beyond-note/beyond-note-page";
 
 export const metadata: Metadata = {
-  title: "Beyond Note - Scanner et transformer vos documents",
-  description: "Scannez vos documents et transformez-les avec l'IA : fiches de révision, reformulation, traduction, schémas, audio et plus encore.",
+  title: "Beyond Note - Prise de notes intelligente | Beyond",
+  description: "Organisez et structurez vos notes efficacement avec Beyond Note, une solution intelligente pour capturer, synthétiser et retrouver vos informations.",
 };
 
-export default function BeyondNotePage() {
-  return <BeyondNotePageContent />;
+export default function NotePage() {
+  return <BeyondNotePage />;
 }
-
-
-
-
-
-
-
-

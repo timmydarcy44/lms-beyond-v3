@@ -188,39 +188,27 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                       <DropdownMenuItem
                         key={resource.id}
                         onSelect={(e) => {
-                          console.log("[UserDetailsClient] Dropdown item onSelect triggered", { resourceId: resource.id, resourceTitle: resource.title });
+                          console.log("[UserDetailsClient] ====== onSelect TRIGGERED ======");
+                          console.log("[UserDetailsClient] Resource ID:", resource.id);
+                          console.log("[UserDetailsClient] Resource Title:", resource.title);
+                          console.log("[UserDetailsClient] Event:", e);
+                          
+                          // Empêcher la fermeture automatique du dropdown
                           e.preventDefault();
-                          // Utiliser setTimeout pour s'assurer que le handler s'exécute
-                          setTimeout(() => {
-                            console.log("[UserDetailsClient] setTimeout callback executing", { resourceId: resource.id });
-                            setDropdownOpen(false);
-                            handleAssignResource(resource.id);
-                          }, 0);
-                        }}
-                        onPointerDown={(e) => {
-                          console.log("[UserDetailsClient] Dropdown item onPointerDown", { resourceId: resource.id });
-                          // Empêcher la fermeture automatique
-                          e.preventDefault();
+                          
+                          // Fermer manuellement le dropdown
+                          setDropdownOpen(false);
+                          
+                          // Appeler directement la fonction d'assignation
+                          console.log("[UserDetailsClient] Calling handleAssignResource...");
+                          handleAssignResource(resource.id);
                         }}
                         className="cursor-pointer"
                         style={{
                           color: textColor,
                         }}
                       >
-                        <div 
-                          className="flex flex-col w-full"
-                          onPointerDown={(e) => {
-                            console.log("[UserDetailsClient] Inner div onPointerDown", { resourceId: resource.id });
-                            e.stopPropagation();
-                          }}
-                          onClick={(e) => {
-                            console.log("[UserDetailsClient] Inner div onClick", { resourceId: resource.id });
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setDropdownOpen(false);
-                            handleAssignResource(resource.id);
-                          }}
-                        >
+                        <div className="flex flex-col w-full">
                           <span className="font-medium">{resource.title}</span>
                           <span className="text-xs opacity-70">
                             {resource.item_type === "module" ? "Module" :
@@ -235,6 +223,11 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+            ) : (
+              <div className="px-4 py-2 text-sm" style={{ color: textColor, opacity: 0.7 }}>
+                Toutes les ressources sont déjà assignées
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

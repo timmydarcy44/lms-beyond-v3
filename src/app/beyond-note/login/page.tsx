@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, Mail, Lock, AlertCircle, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, Lock, AlertCircle, ArrowLeft, Music } from "lucide-react";
 import { toast } from "sonner";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { motion } from "framer-motion";
@@ -115,62 +115,10 @@ function LoginForm() {
           return;
         }
 
-        // Vérifier le rôle et l'organisation pour rediriger correctement
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("id, role")
-          .eq("id", result.user.id)
-          .single();
-
-        if (profileError || !profile) {
-          console.error("[beyond-connect/login] Profile error:", profileError);
-          setError("Profil utilisateur introuvable");
-          toast.error("Erreur", {
-            description: "Impossible de récupérer votre profil",
-          });
-          return;
-        }
-
-        console.log("[beyond-connect/login] User profile:", profile);
-
-        // Vérifier si l'utilisateur a une organisation (entreprise)
-        const { data: membership, error: membershipError } = await supabase
-          .from("org_memberships")
-          .select("id, role")
-          .eq("user_id", result.user.id)
-          .in("role", ["admin", "instructor"])
-          .maybeSingle();
-
-        console.log("[beyond-connect/login] Membership:", membership);
-
-        let redirectPath = searchParams.get("next");
-        
-        if (!redirectPath) {
-          // Redirection automatique selon le rôle
-          // Si l'utilisateur a une organisation et est admin/instructor → espace entreprise
-          if (membership && (profile.role === "admin" || profile.role === "instructor")) {
-            redirectPath = "/beyond-connect-app/companies";
-            console.log("[beyond-connect/login] Redirecting to companies:", redirectPath);
-          } 
-          // Si l'utilisateur est learner/student (avec ou sans organisation) → espace candidat
-          else if (profile.role === "learner" || profile.role === "student") {
-            redirectPath = "/beyond-connect-app";
-            console.log("[beyond-connect/login] Redirecting to app:", redirectPath);
-          } 
-          // Si l'utilisateur est admin/instructor mais sans organisation → espace candidat aussi
-          else if (profile.role === "admin" || profile.role === "instructor") {
-            redirectPath = "/beyond-connect-app";
-            console.log("[beyond-connect/login] Admin/instructor without org, redirecting to app:", redirectPath);
-          }
-          // Sinon, on essaie quand même de rediriger vers l'app
-          else {
-            console.warn("[beyond-connect/login] Unknown role, redirecting to app anyway:", profile.role);
-            redirectPath = "/beyond-connect-app";
-          }
-        }
-
         toast.success("Connexion réussie !");
-        router.push(redirectPath);
+        
+        const next = searchParams.get("next") || "/beyond-note-app";
+        router.push(next);
         router.refresh();
         return;
       } else {
@@ -178,7 +126,7 @@ function LoginForm() {
         return;
       }
     } catch (err) {
-      console.error("[beyond-connect/login] Error:", err);
+      console.error("[beyond-note/login] Error:", err);
       const errorMessage = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
       setError(errorMessage);
       toast.error("Erreur de connexion", {
@@ -188,30 +136,29 @@ function LoginForm() {
   };
 
   const isLoading = form.formState.isSubmitting;
+  const noteColor = "#A8E6CF";
 
   return (
     <div className="flex min-h-screen bg-white">
       {/* Partie gauche - Image */}
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center bg-gradient-to-br from-[#003087] via-[#003087] to-[#002a7a] p-12">
+      <div className="hidden lg:flex lg:w-1/2 items-center justify-center bg-gradient-to-br from-[#A8E6CF]/10 via-white to-white p-12">
         <div className="relative w-full h-full max-w-2xl">
-          {/* Image placeholder - Vous pouvez remplacer par une vraie image */}
           <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-blue-800/20" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#A8E6CF]/20 to-[#A8E6CF]/10" />
             <Image
-              src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80"
-              alt="Homme et femme travaillant ensemble"
+              src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop"
+              alt="Beyond Note"
               fill
               className="object-cover"
               priority
             />
-            {/* Overlay avec texte */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#003087]/90 via-[#003087]/50 to-transparent flex items-end p-12">
-              <div className="text-white">
-                <h2 className="text-3xl font-bold mb-4">
-                  Bienvenue sur Beyond Connect
+            <div className="absolute inset-0 bg-gradient-to-t from-[#A8E6CF]/90 via-[#A8E6CF]/50 to-transparent flex items-end p-12">
+              <div className="text-black">
+                <h2 className="text-3xl font-light mb-4">
+                  Bienvenue sur Beyond Note
                 </h2>
-                <p className="text-lg text-blue-100">
-                  Gérez votre CV numérique et trouvez les meilleures opportunités professionnelles.
+                <p className="text-lg text-black/80">
+                  Organisez et structurez vos notes efficacement.
                 </p>
               </div>
             </div>
@@ -222,27 +169,25 @@ function LoginForm() {
       {/* Partie droite - Formulaire */}
       <div className="flex w-full lg:w-1/2 items-center justify-center p-6 lg:p-12 bg-white">
         <div className="w-full max-w-md">
-          {/* Logo et retour */}
           <div className="mb-8">
-            <Link href="/beyond-connect" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#003087] mb-6">
+            <Link href="/beyond-note" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#A8E6CF] mb-6">
               <ArrowLeft className="h-4 w-4" />
               <span className="text-sm">Retour à la vitrine</span>
             </Link>
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#003087] text-white font-bold text-xl">
-                BC
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg text-black" style={{ backgroundColor: noteColor }}>
+                <Music className="h-6 w-6" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">Beyond Connect</span>
+              <span className="text-2xl font-light text-gray-900">Beyond Note</span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-light text-gray-900 mb-2">
               Connexion
             </h1>
             <p className="text-gray-600">
-              Accédez à votre espace Beyond Connect
+              Accédez à votre espace Beyond Note
             </p>
           </div>
 
-          {/* Message d'erreur */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -254,7 +199,6 @@ function LoginForm() {
             </motion.div>
           )}
 
-          {/* Formulaire */}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -272,7 +216,8 @@ function LoginForm() {
                           type="email"
                           placeholder="vous@example.com"
                           autoComplete="email"
-                          className="h-12 rounded-lg border-gray-300 bg-white pl-12 text-gray-900 placeholder:text-gray-400 focus:border-[#003087] focus:ring-2 focus:ring-[#003087]/20"
+                          className="h-12 rounded-lg border-gray-300 bg-white pl-12 text-black placeholder:text-gray-400 focus:border-[#A8E6CF] focus:ring-2 focus:ring-[#A8E6CF]/20"
+                          style={{ color: '#000000' }}
                           {...field}
                         />
                       </div>
@@ -296,7 +241,8 @@ function LoginForm() {
                           type="password"
                           placeholder="••••••••"
                           autoComplete="current-password"
-                          className="h-12 rounded-lg border-gray-300 bg-white pl-12 text-gray-900 placeholder:text-gray-400 focus:border-[#003087] focus:ring-2 focus:ring-[#003087]/20"
+                          className="h-12 rounded-lg border-gray-300 bg-white pl-12 text-black placeholder:text-gray-400 focus:border-[#A8E6CF] focus:ring-2 focus:ring-[#A8E6CF]/20"
+                          style={{ color: '#000000' }}
                           {...field}
                         />
                       </div>
@@ -307,7 +253,8 @@ function LoginForm() {
               />
               <Button
                 type="submit"
-                className="h-12 w-full rounded-lg bg-[#003087] text-sm font-semibold text-white shadow-lg shadow-[#003087]/25 transition-all hover:bg-[#002a7a] hover:shadow-xl hover:shadow-[#003087]/40 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
+                className="h-12 w-full rounded-lg text-sm font-light text-black shadow-lg transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
+                style={{ backgroundColor: noteColor }}
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -322,11 +269,10 @@ function LoginForm() {
             </form>
           </Form>
 
-          {/* Liens supplémentaires */}
           <div className="mt-8 space-y-4 border-t border-gray-200 pt-6">
             <Link
               href="/forgot-password"
-              className="block text-center text-sm text-gray-600 transition-colors hover:text-[#003087]"
+              className="block text-center text-sm text-gray-600 transition-colors hover:text-[#A8E6CF]"
             >
               Mot de passe oublié ?
             </Link>
@@ -334,13 +280,11 @@ function LoginForm() {
               Pas encore de compte ?{" "}
               <Link
                 href="/signup"
-                className="font-medium text-[#003087] transition-colors hover:text-[#002a7a]"
+                className="font-medium transition-colors hover:opacity-80"
+                style={{ color: noteColor }}
               >
                 Créer un compte
               </Link>
-            </p>
-            <p className="text-center text-xs text-gray-500 mt-4">
-              Beyond Connect est réservé aux apprenants de Beyond No School.
             </p>
           </div>
         </div>
@@ -349,7 +293,7 @@ function LoginForm() {
   );
 }
 
-export default function BeyondConnectLoginPage() {
+export default function BeyondNoteLoginPage() {
   return (
     <>
       <Suspense fallback={null}>

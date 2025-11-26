@@ -313,6 +313,13 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                     </div>
                   );
                 })}
+                {/* Beyond Care et Beyond Note pour les apprenants (même si No School n'est pas affiché) */}
+                {!isTutorArea && !isInstructor && !isAdminRole && (
+                  <>
+                    <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
+                    <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
+                  </>
+                )}
               </nav>
             </div>
           </motion.aside>
@@ -464,6 +471,13 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
               </div>
             );
           })}
+          {/* Beyond Care et Beyond Note pour les apprenants (même si No School n'est pas affiché) */}
+          {!isTutorArea && !isInstructor && !isAdminRole && (
+            <>
+              <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
+              <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
+            </>
+          )}
         </nav>
 
         {isOpen ? (

@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { BeyondNotePageContent } from "@/components/beyond-note/beyond-note-page";
+import { BeyondNotePage } from "@/components/beyond-note/beyond-note-page";
 
 export const metadata: Metadata = {
   title: "Beyond Note - Scanner et transformer vos documents",
@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 export default function BeyondNoteAppPage() {
-  return <BeyondNotePageContent />;
+  return <BeyondNotePage />;
 }
 
 

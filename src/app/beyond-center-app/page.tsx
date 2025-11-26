@@ -10,6 +10,11 @@ export const metadata: Metadata = {
 
 export default async function BeyondCenterAppPage() {
   const supabase = await getServerClient();
+  
+  if (!supabase) {
+    redirect("/beyond-center/login?next=/beyond-center-app");
+  }
+  
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

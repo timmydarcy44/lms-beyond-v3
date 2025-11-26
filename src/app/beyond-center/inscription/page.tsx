@@ -40,6 +40,10 @@ export default function BeyondCenterSignupPage() {
 
     try {
       const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        toast.error("Erreur de connexion");
+        return;
+      }
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

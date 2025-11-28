@@ -128,7 +128,7 @@ export default function SpecialitesPage() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <Link href={`/specialites/${specialite.id}`}>
+                  <Link href={`/jessica-contentin/specialites/${specialite.id}`}>
                     <Card className="border-[#E6D9C6] bg-white hover:shadow-xl transition-all hover:border-[#C6A664] cursor-pointer h-full group">
                       <CardHeader className="pb-4">
                         <div className="flex items-start gap-4 mb-4">

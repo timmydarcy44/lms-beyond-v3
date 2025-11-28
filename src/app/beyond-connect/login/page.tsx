@@ -59,6 +59,7 @@ function LoginForm() {
   const supabase = useSupabase();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -68,7 +69,23 @@ function LoginForm() {
   });
 
   const onSubmit = async (values: LoginFormValues) => {
+    if (isSubmitting) {
+      console.log("[beyond-connect/login] ⚠️ Already submitting, ignoring");
+      return;
+    }
+
+    console.log("[beyond-connect/login] 🚀 Form submitted with email:", values.email);
+    console.log("[beyond-connect/login] Form values:", values);
     setError(null);
+    setIsSubmitting(true);
+    
+    // Vérifier que le formulaire est valide
+    if (!values.email || !values.password) {
+      console.error("[beyond-connect/login] ❌ Missing email or password");
+      setError("Email et mot de passe requis");
+      setIsSubmitting(false);
+      return;
+    }
     
     if (!supabase) {
       const errorMsg = "Supabase n'est pas configuré. Vérifiez les variables d'environnement.";
@@ -76,10 +93,12 @@ function LoginForm() {
       toast.error("Erreur de configuration", {
         description: "Les variables d'environnement Supabase ne sont pas configurées.",
       });
+      setIsSubmitting(false);
       return;
     }
 
     try {
+      console.log("[beyond-connect/login] 📡 Calling /api/auth/signin...");
       const response = await fetch("/api/auth/signin", {
         method: "POST",
         headers: {
@@ -91,103 +110,173 @@ function LoginForm() {
         }),
       });
 
+      console.log("[beyond-connect/login] 📥 Response status:", response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("[beyond-connect/login] ❌ API error:", errorData);
+        setError(errorData.error || "Erreur de connexion");
+        toast.error("Erreur de connexion", {
+          description: errorData.error,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
       const result = await response.json();
+      console.log("[beyond-connect/login] 📥 Response data:", { hasSession: !!result.session, hasUser: !!result.user, error: result.error });
 
       if (!response.ok) {
         setError(result.error || "Erreur de connexion");
         toast.error("Erreur de connexion", {
           description: result.error,
         });
+        setIsSubmitting(false);
         return;
       }
 
       if (result.session && result.user) {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: result.session.access_token,
-          refresh_token: result.session.refresh_token,
-        });
+        console.log("[beyond-connect/login] ✅ Session received, setting session...");
+        
+        try {
+          console.log("[beyond-connect/login] 🔐 Setting session with tokens...");
+          console.log("[beyond-connect/login] Token lengths:", {
+            access_token: result.session.access_token?.length || 0,
+            refresh_token: result.session.refresh_token?.length || 0
+          });
+          
+          // Ajouter un timeout pour éviter que ça reste bloqué
+          const setSessionPromise = supabase.auth.setSession({
+            access_token: result.session.access_token,
+            refresh_token: result.session.refresh_token,
+          });
 
-        if (sessionError) {
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("setSession timeout after 5s")), 5000)
+          );
+
+          const sessionResult = await Promise.race([setSessionPromise, timeoutPromise]) as any;
+
+          console.log("[beyond-connect/login] setSession result:", {
+            hasData: !!sessionResult?.data,
+            hasError: !!sessionResult?.error,
+            errorMessage: sessionResult?.error?.message
+          });
+
+          if (sessionResult?.error) {
+            console.error("[beyond-connect/login] ❌ Session error:", sessionResult.error);
+            setError("Erreur lors de la création de la session");
+            toast.error("Erreur de connexion", {
+              description: sessionResult.error.message || "Impossible de créer la session",
+            });
+            setIsSubmitting(false);
+            return;
+          }
+
+          console.log("[beyond-connect/login] ✅ Session set successfully:", { 
+            hasSession: !!sessionResult?.data?.session, 
+            hasUser: !!sessionResult?.data?.user 
+          });
+        } catch (sessionErr) {
+          console.error("[beyond-connect/login] ❌ Exception setting session:", sessionErr);
           setError("Erreur lors de la création de la session");
           toast.error("Erreur de connexion", {
-            description: "Impossible de créer la session",
+            description: sessionErr instanceof Error ? sessionErr.message : "Impossible de créer la session",
           });
+          setIsSubmitting(false);
           return;
         }
 
-        // Vérifier le rôle et l'organisation pour rediriger correctement
+        // Attendre un peu pour que la session soit bien propagée
+        console.log("[beyond-connect/login] ⏳ Waiting 500ms for session propagation...");
+        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log("[beyond-connect/login] ✅ Wait complete");
+
+        // Récupérer le profil pour déterminer le rôle
+        console.log("[beyond-connect/login] 📋 Fetching profile for user:", result.user.id);
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("id, role")
           .eq("id", result.user.id)
           .single();
 
-        if (profileError || !profile) {
-          console.error("[beyond-connect/login] Profile error:", profileError);
+        if (profileError) {
+          console.error("[beyond-connect/login] ❌ Profile error:", profileError);
+          setError("Profil utilisateur introuvable");
+          toast.error("Erreur", {
+            description: profileError.message || "Impossible de récupérer votre profil",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!profile) {
+          console.error("[beyond-connect/login] ❌ No profile found for user:", result.user.id);
           setError("Profil utilisateur introuvable");
           toast.error("Erreur", {
             description: "Impossible de récupérer votre profil",
           });
+          setIsSubmitting(false);
           return;
         }
 
-        console.log("[beyond-connect/login] User profile:", profile);
+        console.log("[beyond-connect/login] ✅ Profile fetched:", { id: profile.id, role: profile.role });
 
-        // Vérifier si l'utilisateur a une organisation (entreprise)
-        const { data: membership, error: membershipError } = await supabase
-          .from("org_memberships")
-          .select("id, role")
-          .eq("user_id", result.user.id)
-          .in("role", ["admin", "instructor"])
-          .maybeSingle();
-
-        console.log("[beyond-connect/login] Membership:", membership);
-
+        // Déterminer le chemin de redirection selon le rôle
         let redirectPath = searchParams.get("next");
         
         if (!redirectPath) {
-          // Redirection automatique selon le rôle
-          // Si l'utilisateur a une organisation et est admin/instructor → espace entreprise
-          if (membership && (profile.role === "admin" || profile.role === "instructor")) {
+          // Redirection simple selon le rôle
+          if (profile.role === "admin" || profile.role === "instructor") {
             redirectPath = "/beyond-connect-app/companies";
-            console.log("[beyond-connect/login] Redirecting to companies:", redirectPath);
+            console.log("[beyond-connect/login] → Admin/instructor, redirecting to companies:", redirectPath);
           } 
-          // Si l'utilisateur est learner/student (avec ou sans organisation) → espace candidat
           else if (profile.role === "learner" || profile.role === "student") {
             redirectPath = "/beyond-connect-app";
-            console.log("[beyond-connect/login] Redirecting to app:", redirectPath);
-          } 
-          // Si l'utilisateur est admin/instructor mais sans organisation → espace candidat aussi
-          else if (profile.role === "admin" || profile.role === "instructor") {
-            redirectPath = "/beyond-connect-app";
-            console.log("[beyond-connect/login] Admin/instructor without org, redirecting to app:", redirectPath);
+            console.log("[beyond-connect/login] → Learner/student, redirecting to app:", redirectPath);
           }
-          // Sinon, on essaie quand même de rediriger vers l'app
           else {
-            console.warn("[beyond-connect/login] Unknown role, redirecting to app anyway:", profile.role);
-            redirectPath = "/beyond-connect-app";
+            // Par défaut, rediriger vers le dashboard principal
+            redirectPath = "/dashboard";
+            console.log("[beyond-connect/login] → Unknown role, redirecting to dashboard:", redirectPath);
           }
         }
 
+        console.log("[beyond-connect/login] 🚀 Final redirect path:", redirectPath);
+        
+        // Réinitialiser l'état avant la redirection
+        setIsSubmitting(false);
+        
+        // Afficher le toast
         toast.success("Connexion réussie !");
-        router.push(redirectPath);
-        router.refresh();
+        
+        // Utiliser window.location pour forcer une navigation complète
+        // Petit délai pour laisser le toast s'afficher
+        setTimeout(() => {
+          window.location.href = redirectPath;
+        }, 300);
         return;
       } else {
+        console.error("[beyond-connect/login] ❌ No session or user data received");
         setError("Aucune donnée utilisateur reçue");
+        setIsSubmitting(false);
         return;
       }
     } catch (err) {
-      console.error("[beyond-connect/login] Error:", err);
+      console.error("[beyond-connect/login] ❌ Error:", err);
       const errorMessage = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
       setError(errorMessage);
       toast.error("Erreur de connexion", {
         description: errorMessage,
       });
+    } finally {
+      // S'assurer que le formulaire se réinitialise
+      setIsSubmitting(false);
+      console.log("[beyond-connect/login] ✅ Form submission completed");
     }
   };
 
-  const isLoading = form.formState.isSubmitting;
+  const isLoading = isSubmitting || form.formState.isSubmitting;
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -256,7 +345,18 @@ function LoginForm() {
 
           {/* Formulaire */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form 
+              onSubmit={form.handleSubmit(
+                (data) => {
+                  console.log("[beyond-connect/login] ✅ Form is valid, submitting:", data);
+                  onSubmit(data);
+                },
+                (errors) => {
+                  console.error("[beyond-connect/login] ❌ Form validation errors:", errors);
+                }
+              )} 
+              className="space-y-6"
+            >
               <FormField
                 control={form.control}
                 name="email"
@@ -306,19 +406,26 @@ function LoginForm() {
                 )}
               />
               <Button
-                type="submit"
-                className="h-12 w-full rounded-lg bg-[#003087] text-sm font-semibold text-white shadow-lg shadow-[#003087]/25 transition-all hover:bg-[#002a7a] hover:shadow-xl hover:shadow-[#003087]/40 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connexion en cours...
-                  </>
-                ) : (
-                  "Se connecter"
-                )}
-              </Button>
+                    type="submit"
+                    className="h-12 w-full rounded-lg bg-[#003087] text-sm font-semibold text-white shadow-lg shadow-[#003087]/25 transition-all hover:bg-[#002a7a] hover:shadow-xl hover:shadow-[#003087]/40 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
+                    disabled={isLoading}
+                    onClick={(e) => {
+                      console.log("[beyond-connect/login] 🔘 Button clicked, isLoading:", isLoading);
+                      console.log("[beyond-connect/login] Form state:", form.formState);
+                      console.log("[beyond-connect/login] Form values:", form.getValues());
+                      console.log("[beyond-connect/login] Form errors:", form.formState.errors);
+                      // Ne pas empêcher la soumission, laisser le formulaire gérer
+                    }}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Connexion en cours...
+                      </>
+                    ) : (
+                      "Se connecter"
+                    )}
+                  </Button>
             </form>
           </Form>
 

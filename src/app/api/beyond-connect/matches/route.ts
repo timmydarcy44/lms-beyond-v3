@@ -90,29 +90,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ matches: [] });
     }
 
-    // Filtrer pour ne garder que les utilisateurs BtoC (sans organisation)
-    // Beyond Connect ne doit afficher que les clients BtoC (Beyond No School)
-    const userIds = matches.map((m: any) => m.profiles?.id).filter(Boolean);
-    
-    if (userIds.length === 0) {
-      return NextResponse.json({ matches: [] });
-    }
-
-    // Vérifier que tous les utilisateurs sont BtoC
-    const { data: orgMemberships } = await supabase
-      .from("org_memberships")
-      .select("user_id")
-      .in("user_id", userIds);
-
-    const usersWithOrg = new Set(orgMemberships?.map(m => m.user_id) || []);
-    
-    // Filtrer les matchings pour ne garder que ceux avec des utilisateurs BtoC
-    const b2cMatches = matches.filter((m: any) => {
-      const userId = m.profiles?.id;
-      return userId && !usersWithOrg.has(userId);
-    });
-
-    return NextResponse.json({ matches: b2cMatches });
+    // Pour les matchings, on affiche tous les candidats qui matchent
+    // (pas de filtre BtoC/BtoB pour les matchings)
+    return NextResponse.json({ matches });
   } catch (error) {
     console.error("[beyond-connect/matches] Error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Edit, Eye, FileText, MapPin, Euro, Clock, Briefcase } from "lucide-react";
+import { ArrowLeft, Edit, Eye, FileText, MapPin, Euro, Clock, Briefcase, User, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,25 @@ type JobOffer = {
   created_at: string;
 };
 
+type Application = {
+  id: string;
+  job_offer_id: string;
+  user_id: string;
+  cover_letter?: string;
+  status: string;
+  match_score?: number;
+  created_at: string;
+  updated_at: string;
+  profiles?: {
+    id: string;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
+};
+
 const SOFT_SKILLS_LABELS: Record<string, string> = {
   gestion_emotions_stress: "Gestion des émotions & du stress",
   communication_influence: "Communication & influence",
@@ -56,14 +75,15 @@ const SOFT_SKILLS_LABELS: Record<string, string> = {
 export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPageProps) {
   const router = useRouter();
   const [jobOffer, setJobOffer] = useState<JobOffer | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadJobOffer();
+    loadApplications();
   }, [jobOfferId]);
 
   const loadJobOffer = async () => {
-    setLoading(true);
     try {
       const response = await fetch(`/api/beyond-connect/job-offers/${jobOfferId}`);
       if (response.ok) {
@@ -72,6 +92,19 @@ export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPagePro
       }
     } catch (error) {
       console.error("[job-offer-detail] Error loading job offer:", error);
+    }
+  };
+
+  const loadApplications = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/beyond-connect/job-offers/${jobOfferId}/applications`);
+      if (response.ok) {
+        const data = await response.json();
+        setApplications(data.applications || []);
+      }
+    } catch (error) {
+      console.error("[job-offer-detail] Error loading applications:", error);
     } finally {
       setLoading(false);
     }
@@ -285,7 +318,7 @@ export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPagePro
 
         {/* Date limite */}
         {jobOffer.application_deadline && (
-          <Card className="border-gray-200 bg-white">
+          <Card className="border-gray-200 bg-white mb-6">
             <CardContent className="p-6">
               <div className="flex items-center gap-2 text-gray-700">
                 <Clock className="h-5 w-5 text-[#003087]" />
@@ -295,6 +328,79 @@ export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPagePro
             </CardContent>
           </Card>
         )}
+
+        {/* Candidatures */}
+        <Card className="border-gray-200 bg-white">
+          <CardHeader>
+            <CardTitle className="text-lg text-gray-900">
+              Candidatures ({applications.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8 text-gray-600">Chargement des candidatures...</div>
+            ) : applications.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>Aucune candidature pour le moment</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {applications.map((application) => {
+                  const profile = application.profiles;
+                  const initials = profile?.first_name?.charAt(0) || profile?.email?.charAt(0).toUpperCase() || "?";
+                  const fullName = profile?.full_name || `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim() || profile?.email || "Candidat";
+                  const matchScore = application.match_score || 0;
+                  
+                  return (
+                    <div
+                      key={application.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4 flex-1">
+                          <div className="h-12 w-12 rounded-full bg-[#003087] flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                            {initials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-1">
+                              <h3 className="font-semibold text-gray-900">{fullName}</h3>
+                              {matchScore > 0 && (
+                                <Badge className={`${
+                                  matchScore >= 80 ? "bg-green-100 text-green-800 border-green-200" :
+                                  matchScore >= 60 ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
+                                  "bg-gray-100 text-gray-800 border-gray-200"
+                                }`}>
+                                  {matchScore.toFixed(0)}% match
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="capitalize">
+                                {application.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">{profile?.email}</p>
+                            {application.cover_letter && (
+                              <p className="text-sm text-gray-700 line-clamp-2">{application.cover_letter}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                              Candidature du {new Date(application.created_at).toLocaleDateString("fr-FR")}
+                            </p>
+                          </div>
+                        </div>
+                        <Link href={`/beyond-connect-app/companies/candidates/${application.user_id}?job_offer_id=${jobOfferId}`}>
+                          <Button variant="outline" className="border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white">
+                            <Eye className="mr-2 h-4 w-4" />
+                            Voir le profil
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

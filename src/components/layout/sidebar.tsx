@@ -33,6 +33,7 @@ import { BeyondLogo } from "@/components/ui/beyond-logo";
 import Image from "next/image";
 import { BeyondCareSidebarWrapper } from "@/components/beyond-care/beyond-care-sidebar-wrapper";
 import { BeyondNoteSidebarWrapper } from "@/components/beyond-note/beyond-note-sidebar-wrapper";
+import { BeyondConnectSidebarWrapper } from "@/components/beyond-connect/beyond-connect-sidebar-wrapper";
 import { useCommunityConversations } from "@/hooks/use-community-conversations";
 import { useUserRole } from "@/hooks/use-user-role";
 import { databaseToFrontendRole, type DatabaseRole } from "@/lib/utils/role-mapping";
@@ -329,7 +330,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
       <aside
         className={cn(
           "hidden md:flex md:flex-col md:gap-6 md:transition-all md:duration-300 md:ease-in-out",
-          "md:h-full md:text-white",
+          "md:h-screen md:text-white md:fixed md:top-0 md:left-0 md:z-30",
           isOpen ? "md:w-72" : "md:w-20",
           isBeyondCareArea
             ? "bg-[#c91459] text-white shadow-[0_30px_60px_rgba(201,20,89,0.25)] rounded-e-[2.5rem]"
@@ -337,7 +338,11 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
         )}
         style={
           isBeyondCareArea
-            ? undefined
+            ? {
+                backgroundColor: '#c91459',
+                background: '#c91459',
+                zIndex: 30,
+              }
             : {
                 backgroundColor: 'transparent',
                 background: 'none',
@@ -461,21 +466,23 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                     ) : null}
                   </div>
                 </Link>
-                {/* Beyond Care et Beyond Note - conditionnels, juste après No School */}
+                {/* Beyond Care, Beyond Note et Beyond Connect - conditionnels, juste après No School */}
                 {isCatalogue && !isTutorArea && (
                   <>
                     <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
                     <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
+                    <BeyondConnectSidebarWrapper isOpen={isOpen} role={roleForNav === "tuteur" ? "formateur" : roleForNav} />
                   </>
                 )}
               </div>
             );
           })}
-          {/* Beyond Care et Beyond Note pour les apprenants (même si No School n'est pas affiché) */}
+          {/* Beyond Care, Beyond Note et Beyond Connect pour les apprenants (même si No School n'est pas affiché) */}
           {!isTutorArea && !isInstructor && !isAdminRole && (
             <>
               <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
               <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
+              <BeyondConnectSidebarWrapper isOpen={isOpen} role={roleForNav === "tuteur" ? "formateur" : roleForNav} />
             </>
           )}
         </nav>

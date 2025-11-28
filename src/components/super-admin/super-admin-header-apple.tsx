@@ -83,6 +83,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "Analyse avancée", href: "/super/premium/analyse-avancee" },
       { label: "Beyond Care", href: "/super/premium/beyond-care" },
+      { label: "Beyond Connect", href: "/super/premium/beyond-connect" },
       { label: "Beyond Play", href: "/super/premium/beyond-play" },
       { label: "Beyond Note", href: "/super/premium/beyond-note" },
     ],

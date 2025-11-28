@@ -203,7 +203,183 @@ const specialitesContent: Record<string, {
       "Professionnels en reconversion ou en recherche d'évolution",
     ],
   },
-  // ... autres spécialités restent inchangées pour l'instant
+  // Contenu par défaut pour les autres spécialités
+  "gestion-stress": {
+    title: "Gestion du stress",
+    subtitle: "Techniques et stratégies pour mieux gérer le stress au quotidien",
+    description: "Apprenez à identifier les sources de votre stress et développez des outils concrets pour y faire face.",
+    whatIs: {
+      title: "Qu'est-ce que l'accompagnement en gestion du stress ?",
+      description: "Un accompagnement personnalisé pour vous aider à mieux comprendre et gérer votre stress au quotidien.",
+      details: [
+        "Techniques de relaxation et de respiration",
+        "Stratégies d'adaptation et de gestion du temps",
+        "Accompagnement personnalisé adapté à vos besoins",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
+  "tnd": {
+    title: "Accompagnement TND",
+    subtitle: "Accompagnement spécialisé pour les troubles du neurodéveloppement",
+    description: "Un accompagnement adapté aux besoins spécifiques des enfants et adolescents présentant des troubles DYS ou TDA-H.",
+    whatIs: {
+      title: "Qu'est-ce que l'accompagnement TND ?",
+      description: "Un accompagnement spécialisé pour les troubles du neurodéveloppement (DYS, TDA-H).",
+      details: [
+        "Stratégies d'apprentissage personnalisées",
+        "Soutien à l'inclusion scolaire",
+        "Collaboration avec les équipes éducatives",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
+  "guidance-parentale": {
+    title: "Guidance parentale",
+    subtitle: "Soutien et conseils pour les parents dans leur rôle éducatif",
+    description: "Un espace d'écoute et de conseils pour vous accompagner dans votre rôle de parent.",
+    whatIs: {
+      title: "Qu'est-ce que la guidance parentale ?",
+      description: "Un accompagnement pour vous aider dans votre rôle de parent.",
+      details: [
+        "Stratégies éducatives adaptées",
+        "Gestion des conflits familiaux",
+        "Renforcement du lien parent-enfant",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
+  "tests": {
+    title: "Tests de connaissance de soi",
+    subtitle: "Évaluations et bilans pour mieux se connaître",
+    description: "Des bilans psychopédagogiques approfondis pour mieux comprendre vos compétences.",
+    whatIs: {
+      title: "Qu'est-ce que les tests de connaissance de soi ?",
+      description: "Des évaluations pour mieux vous connaître et identifier vos forces.",
+      details: [
+        "Bilans psychopédagogiques approfondis",
+        "Identification de vos compétences",
+        "Recommandations personnalisées",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
+  "harcelement": {
+    title: "Harcèlement Scolaire",
+    subtitle: "Accompagnement et soutien face au harcèlement scolaire",
+    description: "Un accompagnement bienveillant et sécurisant pour les enfants et adolescents confrontés au harcèlement.",
+    whatIs: {
+      title: "Qu'est-ce que l'accompagnement face au harcèlement scolaire ?",
+      description: "Un accompagnement pour aider les enfants et adolescents confrontés au harcèlement.",
+      details: [
+        "Écoute et soutien psychologique",
+        "Stratégies de protection",
+        "Collaboration avec l'école et la famille",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
+  "orientation-professionnelle": {
+    title: "Orientation professionnelle",
+    subtitle: "Accompagnement personnalisé pour révéler votre potentiel et faire les bons choix",
+    description: "Un accompagnement complet pour vous aider à identifier vos aspirations, vos compétences et à construire un projet d'orientation professionnelle épanouissant. Mon expertise en tant que professeure certifiée et ma connaissance approfondie du système éducatif français me permettent de vous guider dans cette étape cruciale de votre parcours.",
+    whatIs: {
+      title: "Qu'est-ce que l'orientation professionnelle ?",
+      description: "L'orientation professionnelle est un accompagnement personnalisé qui vous aide à faire les bons choix pour votre avenir. En tant que professeure certifiée, j'ai développé une solide expérience dans l'accompagnement des jeunes dans le choix de leur orientation, notamment pour l'orientation post-bac et la plateforme Parcoursup. Mon approche combine une écoute attentive, une analyse approfondie de votre profil et une méthodologie structurée pour vous guider vers des choix éclairés et épanouissants.",
+      details: [
+        "Premier rendez-vous pour comprendre vos questionnements et vos aspirations",
+        "Test des soft skills pour identifier vos forces et vos talents naturels",
+        "Travail sur les perspectives métiers en lien avec votre profil",
+        "Rédaction d'un projet d'orientation structuré et personnalisé",
+        "Mise en place de Parcoursup avec stratégie d'inscription optimisée",
+        "Travail sur la lettre de motivation et le CV pour valoriser vos compétences",
+        "Exploration des métiers et formations",
+        "Aide à la décision",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
+  "therapie": {
+    title: "Thérapie psycho-émotionnelle",
+    subtitle: "Accompagnement thérapeutique pour la gestion des émotions",
+    description: "Un accompagnement thérapeutique pour mieux comprendre et gérer vos émotions.",
+    whatIs: {
+      title: "Qu'est-ce que la thérapie psycho-émotionnelle ?",
+      description: "Un accompagnement pour la gestion des émotions.",
+      details: [
+        "Techniques de régulation émotionnelle",
+        "Gestion de l'anxiété",
+        "Travail sur les traumatismes",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
+  "neuroeducation": {
+    title: "Neuroéducation",
+    subtitle: "Approche basée sur les neurosciences pour optimiser les apprentissages",
+    description: "Une approche innovante qui s'appuie sur les dernières découvertes en neurosciences.",
+    whatIs: {
+      title: "Qu'est-ce que la neuroéducation ?",
+      description: "Une approche basée sur les neurosciences pour optimiser les apprentissages.",
+      details: [
+        "Compréhension du fonctionnement du cerveau",
+        "Stratégies d'apprentissage efficaces",
+        "Approche adaptée à chacun",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
+  "strategie-apprentissage": {
+    title: "Stratégie d'apprentissage",
+    subtitle: "Développement de méthodes et techniques d'apprentissage personnalisées",
+    description: "Des méthodes et techniques d'apprentissage adaptées à votre profil et à vos besoins.",
+    whatIs: {
+      title: "Qu'est-ce que la stratégie d'apprentissage ?",
+      description: "Des méthodes pour développer votre autonomie et améliorer vos performances.",
+      details: [
+        "Organisation du travail",
+        "Mémorisation et concentration",
+        "Gestion du temps",
+      ],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
 };
 
 // Composant FAQ avec accordéon
@@ -564,11 +740,134 @@ export default function SpecialiteDetailPage({
     );
   }
 
-  // Pour les autres spécialités, garder l'ancien design
+  // Pour les autres spécialités, afficher un design simplifié
   return (
-    <div className="min-h-screen bg-[#F8F5F0]">
-      {/* Ancien design pour les autres spécialités */}
-      <p>Page en cours de développement</p>
+    <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
+      {/* Hero Section */}
+      <section className="relative py-20 px-4 md:px-8">
+        <div className="max-w-6xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <h1
+              className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6"
+              style={{ color: textColor }}
+            >
+              {content.title}
+            </h1>
+            <p
+              className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto"
+              style={{ color: `${textColor}80` }}
+            >
+              {content.subtitle}
+            </p>
+            <p
+              className="text-lg mb-8 max-w-2xl mx-auto leading-relaxed"
+              style={{ color: `${textColor}80` }}
+            >
+              {content.description}
+            </p>
+            <Button
+              size="lg"
+              className="rounded-full px-8 py-6 text-lg font-semibold shadow-xl"
+              style={{
+                backgroundColor: primaryColor,
+                color: '#FFFFFF',
+              }}
+              asChild
+            >
+              <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                Prendre rendez-vous
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </a>
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* What is Section */}
+      {content.whatIs && (
+        <section className="py-20 px-4 md:px-8">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2
+                className="text-4xl md:text-5xl font-bold mb-6 text-center"
+                style={{ color: textColor }}
+              >
+                {content.whatIs.title}
+              </h2>
+              <p
+                className="text-lg md:text-xl mb-8 text-center max-w-4xl mx-auto leading-relaxed"
+                style={{ color: `${textColor}80` }}
+              >
+                {content.whatIs.description}
+              </p>
+              {content.whatIs.details.length > 0 && (
+                <div className="grid md:grid-cols-3 gap-6 mt-12">
+                  {content.whatIs.details.map((detail, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      className="bg-white rounded-2xl p-6 shadow-lg border border-[#E6D9C6]"
+                    >
+                      <p style={{ color: textColor }}>{detail}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Final CTA */}
+      <section className="py-20 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2
+              className="text-4xl md:text-5xl font-bold mb-6"
+              style={{ color: textColor }}
+            >
+              Prêt à commencer votre accompagnement ?
+            </h2>
+            <p
+              className="text-lg md:text-xl mb-8 max-w-2xl mx-auto"
+              style={{ color: `${textColor}80` }}
+            >
+              Contactez-moi pour discuter de vos besoins et trouver ensemble la meilleure approche pour vous accompagner.
+            </p>
+            <Button
+              size="lg"
+              className="rounded-full px-8 py-6 text-lg font-semibold shadow-xl"
+              style={{
+                backgroundColor: primaryColor,
+                color: '#FFFFFF',
+              }}
+              asChild
+            >
+              <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                Planifier mon appel
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </a>
+            </Button>
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 }

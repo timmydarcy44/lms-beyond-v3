@@ -164,22 +164,8 @@ export const DashboardShell = ({
           />
         </>
       )}
-      {/* Sidebar intégrée - transparente pour laisser voir le fond global */}
-      <div 
-        className={cn(
-          "fixed top-0 left-0 z-30 h-screen transition-all duration-300",
-          isBeyondCareArea
-            ? "bg-[#c91459] text-white shadow-[8px_0_30px_rgba(201,20,89,0.25)] rounded-tr-[3.5rem] rounded-br-[3.5rem] overflow-hidden"
-            : isLight 
-              ? "bg-slate-50" 
-              : "bg-transparent",
-        )}
-        style={{
-          width: sidebarWidth,
-        }}
-      >
-        <Sidebar isOpen={isOpen} onToggle={() => setIsOpen((prev) => !prev)} organizationLogo={organizationLogo} />
-      </div>
+      {/* Sidebar intégrée */}
+      <Sidebar isOpen={isOpen} onToggle={() => setIsOpen((prev) => !prev)} organizationLogo={organizationLogo} />
 
       {!isDesktop && isOpen ? (
         <button

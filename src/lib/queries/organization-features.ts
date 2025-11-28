@@ -1,4 +1,5 @@
 import { getServerClient } from "@/lib/supabase/server";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 
 /**
@@ -79,13 +80,26 @@ export async function hasUserFeature(featureKey: string): Promise<boolean> {
 export async function isUserAdminWithFeature(featureKey: string): Promise<boolean> {
   const session = await getSession();
   if (!session?.id) {
+    console.log("[organization-features] ❌ No session");
     return false;
   }
 
-  const supabase = await getServerClient();
+  console.log("[organization-features] 🔍 Checking feature", featureKey, "for user", session.id);
+
+  // Utiliser le service role client pour contourner RLS (vérification d'autorisation)
+  const supabase = getServiceRoleClient();
   if (!supabase) {
-    return false;
+    console.warn("[organization-features] ⚠️ No service role client available, using normal client");
+    // Fallback sur le client normal
+    const normalClient = await getServerClient();
+    if (!normalClient) {
+      console.error("[organization-features] ❌ No normal client available either");
+      return false;
+    }
+    return await checkWithNormalClient(normalClient, session.id, featureKey);
   }
+  
+  console.log("[organization-features] ✅ Using service role client");
 
   try {
     // Récupérer toutes les organisations de l'utilisateur avec leur rôle
@@ -94,19 +108,36 @@ export async function isUserAdminWithFeature(featureKey: string): Promise<boolea
       .select("org_id, role")
       .eq("user_id", session.id);
 
-    if (membershipError || !memberships || memberships.length === 0) {
+    if (membershipError) {
+      console.error("[organization-features] Error fetching memberships:", membershipError);
+      return false;
+    }
+
+    if (!memberships || memberships.length === 0) {
       console.log("[organization-features] User not part of an organization");
       return false;
     }
 
+    console.log("[organization-features] User memberships:", memberships.map(m => ({ org_id: m.org_id, role: m.role })));
+
     // Récupérer les organisations avec la fonctionnalité activée
     const orgIds = memberships.map(m => m.org_id);
-    const { data: features } = await supabase
+    
+    console.log("[organization-features] Checking feature", featureKey, "for orgs:", orgIds);
+    
+    const { data: features, error: featuresError } = await supabase
       .from("organization_features")
-      .select("org_id")
+      .select("org_id, is_enabled, feature_key")
       .in("org_id", orgIds)
       .eq("feature_key", featureKey)
       .eq("is_enabled", true);
+
+    if (featuresError) {
+      console.error("[organization-features] Error fetching features:", featuresError);
+      return false;
+    }
+
+    console.log("[organization-features] Features found:", features?.length || 0, features);
 
     const orgsWithFeature = features?.map(f => f.org_id) || [];
 
@@ -115,9 +146,38 @@ export async function isUserAdminWithFeature(featureKey: string): Promise<boolea
       m => m.role === "admin" && orgsWithFeature.includes(m.org_id)
     );
 
+    console.log("[organization-features] ✅ isAdmin result:", isAdmin, "for feature", featureKey);
+
     return isAdmin;
   } catch (error) {
     console.error("[organization-features] Unexpected error:", error);
+    return false;
+  }
+}
+
+async function checkWithNormalClient(supabase: any, userId: string, featureKey: string): Promise<boolean> {
+  try {
+    const { data: memberships, error: membershipError } = await supabase
+      .from("org_memberships")
+      .select("org_id, role")
+      .eq("user_id", userId);
+
+    if (membershipError || !memberships || memberships.length === 0) {
+      return false;
+    }
+
+    const orgIds = memberships.map((m: { org_id: string }) => m.org_id);
+    const { data: features } = await supabase
+      .from("organization_features")
+      .select("org_id")
+      .in("org_id", orgIds)
+      .eq("feature_key", featureKey)
+      .eq("is_enabled", true);
+
+    const orgsWithFeature = features?.map((f: { org_id: string }) => f.org_id) || [];
+    return memberships.some((m: { role: string; org_id: string }) => m.role === "admin" && orgsWithFeature.includes(m.org_id));
+  } catch (error) {
+    console.error("[organization-features] Error in checkWithNormalClient:", error);
     return false;
   }
 }

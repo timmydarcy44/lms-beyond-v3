@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { isUserAdminWithFeature } from "@/lib/queries/organization-features";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { AdminBeyondCareDashboard } from "@/components/beyond-care/admin-beyond-care-dashboard";
 
-export default async function AdminBeyondCarePage() {
+export default async function BeyondCareLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await getSession();
   
   if (!session?.id) {
@@ -18,16 +20,7 @@ export default async function AdminBeyondCarePage() {
     redirect("/admin");
   }
 
-  return (
-    <DashboardShell
-      title="Beyond Care"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/admin" },
-        { label: "Beyond Care" },
-      ]}
-    >
-      <AdminBeyondCareDashboard />
-    </DashboardShell>
-  );
+  // Retourner les enfants sans wrapper pour éviter le layout admin
+  return <>{children}</>;
 }
 

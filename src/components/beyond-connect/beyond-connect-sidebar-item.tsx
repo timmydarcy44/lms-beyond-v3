@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -8,13 +8,13 @@ import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, type MouseEvent } from "react";
 
-type BeyondCareSidebarItemProps = {
+type BeyondConnectSidebarItemProps = {
   href: string;
   isOpen: boolean;
   role: "admin" | "formateur" | "apprenant";
 };
 
-export function BeyondCareSidebarItem({ href, isOpen, role }: BeyondCareSidebarItemProps) {
+export function BeyondConnectSidebarItem({ href, isOpen, role }: BeyondConnectSidebarItemProps) {
   const pathname = usePathname();
   const isActive = pathname?.startsWith(href);
   const { resolvedTheme } = useTheme();
@@ -41,11 +41,11 @@ export function BeyondCareSidebarItem({ href, isOpen, role }: BeyondCareSidebarI
   };
 
   const brand = {
-    base: "#c91459", // Rouge Beyond Care
-    lightBgFrom: "#fde4ef",
-    lightBgTo: "#fcd3e4",
-    lightText: "#9f0f4a",
-    darkGlow: "rgba(201,20,89,0.35)",
+    base: "#003087", // Bleu PSG Beyond Connect
+    lightBgFrom: "#e6edf7",
+    lightBgTo: "#d4e1f0",
+    lightText: "#002a6b",
+    darkGlow: "rgba(0,48,135,0.35)",
   };
 
   return (
@@ -65,7 +65,7 @@ export function BeyondCareSidebarItem({ href, isOpen, role }: BeyondCareSidebarI
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.45, ease: "easeOut" }}
               style={{
-                background: "radial-gradient(circle at top, rgba(201,20,89,0.92), rgba(17,24,39,0.92))",
+                background: "radial-gradient(circle at top, rgba(0,48,135,0.92), rgba(17,24,39,0.92))",
               }}
             />
             <motion.div
@@ -94,7 +94,7 @@ export function BeyondCareSidebarItem({ href, isOpen, role }: BeyondCareSidebarI
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.28, delay: 0.1 }}
                 >
-                  beyond care
+                  beyond connect
                 </motion.span>
                 <motion.h3
                   className="text-3xl font-semibold"
@@ -102,7 +102,7 @@ export function BeyondCareSidebarItem({ href, isOpen, role }: BeyondCareSidebarI
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: 0.16 }}
                 >
-                  Bienvenue sur Beyond Care
+                  Bienvenue sur Beyond Connect
                 </motion.h3>
                 <motion.p
                   className="text-sm text-white/70"
@@ -118,43 +118,43 @@ export function BeyondCareSidebarItem({ href, isOpen, role }: BeyondCareSidebarI
         )}
       </AnimatePresence>
 
-      <Link href={href} title="Beyond Care" className="relative" onClick={handleClick}>
+      <Link href={href} title="Beyond Connect" className="relative" onClick={handleClick}>
         <div
           className={cn(
             "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-            // Style premium avec bordure et couleur orange/verte
+            // Style premium avec bordure et couleur bleue
             "border-2",
             isLight
               ? isActive
-                ? "bg-gradient-to-r from-[#fde4ef] to-[#fcd3e4] text-[#9f0f4a] border-[#c91459] shadow-sm"
-                : "border-[#c9145955] text-slate-600 hover:bg-[#fde4ef]/60 hover:text-[#b1104a] hover:border-[#c91459]"
+                ? "bg-gradient-to-r from-[#e6edf7] to-[#d4e1f0] text-[#002a6b] border-[#003087] shadow-sm"
+                : "border-[#00308755] text-slate-600 hover:bg-[#e6edf7]/60 hover:text-[#002a6b] hover:border-[#003087]"
               : isActive
-                ? "bg-gradient-to-r from-[#c91459]/25 to-[#c91459]/10 text-[#ff6fa6] border-[#c91459]/70 backdrop-blur-sm shadow-lg shadow-[#c91459]/30"
-                : "border-[#c91459]/35 text-white/70 hover:bg-[#c91459]/10 hover:text-[#ff6fa6] hover:border-[#c91459]/60",
+                ? "bg-gradient-to-r from-[#003087]/25 to-[#003087]/10 text-[#4a7bc8] border-[#003087]/70 backdrop-blur-sm shadow-lg shadow-[#003087]/30"
+                : "border-[#003087]/35 text-white/70 hover:bg-[#003087]/10 hover:text-[#4a7bc8] hover:border-[#003087]/60",
             isOpen ? "gap-3" : "gap-0 justify-center px-2",
-            isAnimating && "ring-2 ring-[#c91459]/50",
+            isAnimating && "ring-2 ring-[#003087]/50",
           )}
         >
-          <Heart
+          <Briefcase
             className={cn(
               "h-5 w-5 shrink-0 transition-colors",
               isLight
                 ? isActive
-                  ? "text-[#c91459]"
-                  : "text-[#c91459] group-hover:text-[#b1104a]"
+                  ? "text-[#003087]"
+                  : "text-[#003087] group-hover:text-[#002a6b]"
                 : isActive
-                  ? "text-[#ff77b0]"
-                  : "text-[#ff9cc7]/80 group-hover:text-[#ff77b0]",
+                  ? "text-[#4a7bc8]"
+                  : "text-[#6b8fd4]/80 group-hover:text-[#4a7bc8]",
             )}
           />
           {isOpen && (
             <span className="transition-opacity duration-300">
-              Beyond Care
+              Beyond Connect
             </span>
           )}
           {/* Badge premium */}
           {isOpen && (
-            <span className="ml-auto rounded bg-[#c91459]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#c91459]/80">
+            <span className="ml-auto rounded bg-[#003087]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#003087]/80">
               PREMIUM
             </span>
           )}

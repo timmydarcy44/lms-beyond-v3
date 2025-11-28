@@ -12,6 +12,7 @@ import {
   UserCircle2,
   MessageCircle,
   Settings,
+  Menu,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -162,6 +163,26 @@ export const DashboardHeader = ({
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Bouton burger mobile - toujours visible sur mobile */}
+        {onToggleSidebar ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className={cn(
+              "md:hidden",
+              isBeyondCareArea
+                ? "text-[#c91459] hover:bg-[#f9d7e5]"
+                : isLight
+                  ? "text-slate-600 hover:bg-slate-100"
+                  : "text-white hover:bg-white/10",
+            )}
+            onClick={onToggleSidebar}
+            aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          >
+            {isSidebarOpen ? <PanelLeftClose className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+        ) : null}
         <div
           className={cn(
             "hidden items-center gap-2 rounded-full border px-3 py-1.5 text-sm md:flex backdrop-blur-sm",
@@ -198,6 +219,7 @@ export const DashboardHeader = ({
           variant="ghost"
           size="icon"
           className={cn(
+            "hidden md:flex",
             isBeyondCareArea
               ? "text-[#c91459] hover:bg-[#f9d7e5]"
               : isLight
@@ -213,6 +235,7 @@ export const DashboardHeader = ({
           variant="ghost"
           size="icon"
           className={cn(
+            "hidden md:flex",
             isBeyondCareArea
               ? "text-[#c91459] hover:bg-[#f9d7e5]"
               : isLight
@@ -242,25 +265,6 @@ export const DashboardHeader = ({
             <UserCircle2 className="h-6 w-6" />
           </Link>
         </Button>
-        {onToggleSidebar ? (
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className={cn(
-              "md:hidden",
-              isBeyondCareArea
-                ? "text-[#c91459] hover:bg-[#f9d7e5]"
-                : isLight
-                  ? "text-slate-600 hover:bg-slate-100"
-                  : "text-white hover:bg-white/10",
-            )}
-            onClick={onToggleSidebar}
-            aria-label={isSidebarOpen ? "Réduire la navigation" : "Déployer la navigation"}
-          >
-            {isSidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
-          </Button>
-        ) : null}
       </div>
     </header>
     <Link

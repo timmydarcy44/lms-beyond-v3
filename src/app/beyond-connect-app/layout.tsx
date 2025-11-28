@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { BeyondConnectHeader } from "@/components/beyond-connect/beyond-connect-header";
 import { getServerClient } from "@/lib/supabase/server";
+import { BeyondConnectAppLayoutWrapper } from "./layout-wrapper";
 
 export default async function BeyondConnectAppLayout({
   children,
@@ -14,41 +15,26 @@ export default async function BeyondConnectAppLayout({
     redirect("/beyond-connect/login?next=/beyond-connect-app");
   }
 
-  // Vérifier que l'utilisateur est un apprenant BtoC (sans organisation)
-  // Beyond Connect est uniquement accessible aux clients BtoC de Beyond No School
   const supabase = await getServerClient();
   if (!supabase) {
     redirect("/beyond-connect/login?next=/beyond-connect-app");
   }
 
-  // Vérifier le rôle
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, role")
-    .eq("id", session.id)
-    .single();
+  // Ne pas vérifier le rôle ici pour éviter les boucles de redirection
+  // Le layout /companies gérera l'accès pour les admins/instructors
+  // La page /beyond-connect-app/page.tsx gérera la redirection pour les admins vers /companies
+  // Ce layout ne fait que vérifier la session et fournir le header
 
-  if (!profile || (profile.role !== "learner" && profile.role !== "student")) {
-    redirect("/beyond-connect?error=access_denied");
-  }
-
-  // Vérifier qu'il n'a pas d'organisation (BtoC uniquement)
-  const { data: membership } = await supabase
-    .from("org_memberships")
-    .select("id")
-    .eq("user_id", session.id)
-    .maybeSingle();
-
-  if (membership) {
-    // L'utilisateur appartient à une organisation (BtoB) - accès refusé
-    redirect("/beyond-connect?error=access_denied");
-  }
-
+  // Vérifier si on est sur une route /companies pour ne pas afficher le header en double
+  // Le layout /companies a son propre header
+  // Le wrapper client détecte si on est sur /companies pour conditionner l'affichage
   return (
-    <div className="min-h-screen bg-white">
-      <BeyondConnectHeader user={session} />
-      <main>{children}</main>
-    </div>
+    <BeyondConnectAppLayoutWrapper>
+      <div className="min-h-screen bg-white">
+        <BeyondConnectHeader user={session} />
+        <main>{children}</main>
+      </div>
+    </BeyondConnectAppLayoutWrapper>
   );
 }
 

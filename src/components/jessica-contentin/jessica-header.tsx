@@ -21,7 +21,7 @@ export function JessicaHeader() {
           {/* Logo Jessica Contentin */}
           <Link href="/super/jessica-dashboard" className="flex items-center">
             <span 
-              className="text-lg font-semibold tracking-tight"
+              className="text-lg font-normal tracking-tight"
               style={{ 
                 color: "#8B4513",
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif'

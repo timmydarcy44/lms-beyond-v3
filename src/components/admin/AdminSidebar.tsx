@@ -6,6 +6,7 @@ import { useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 import { BeyondCareSidebarWrapper } from "@/components/beyond-care/beyond-care-sidebar-wrapper";
+import { BeyondConnectSidebarWrapper } from "@/components/beyond-connect/beyond-connect-sidebar-wrapper";
 
 import {
   GraduationCap,
@@ -132,6 +133,8 @@ export const AdminSidebar = ({ open, onToggle, organizationLogo }: AdminSidebarP
         })}
         {/* Beyond Care - conditionnel */}
         <BeyondCareSidebarWrapper isOpen={open} role="admin" />
+        {/* Beyond Connect - conditionnel */}
+        <BeyondConnectSidebarWrapper isOpen={open} role="admin" />
       </nav>
       
       {/* Bouton de déconnexion en bas */}

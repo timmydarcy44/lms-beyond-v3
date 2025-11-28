@@ -57,16 +57,16 @@ const HERO_IMAGE_FALLBACK = "https://images.unsplash.com/photo-1519389950473-47b
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
 const specialitesWithIcons = [
-  { label: "Gestion de la confiance en soi", href: "/specialites/confiance-en-soi", icon: Heart },
-  { label: "Gestion du stress", href: "/specialites/gestion-stress", icon: Brain },
-  { label: "Accompagnement TND", href: "/specialites/tnd", icon: Users },
-  { label: "Guidance parentale", href: "/specialites/guidance-parentale", icon: Baby },
-  { label: "Tests de connaissance de soi", href: "/specialites/tests", icon: BookOpen },
-  { label: "Harcèlement Scolaire", href: "/specialites/harcelement", icon: Shield },
-  { label: "Orientation scolaire", href: "/specialites/orientation", icon: Target },
-  { label: "Thérapie psycho-émotionnelle", href: "/specialites/therapie", icon: Lightbulb },
-  { label: "Neuroéducation", href: "/specialites/neuroeducation", icon: GraduationCap },
-  { label: "Stratégie d'apprentissage", href: "/specialites/strategie-apprentissage", icon: BookMarked },
+  { label: "Gestion de la confiance en soi", href: "/jessica-contentin/specialites/confiance-en-soi", icon: Heart },
+  { label: "Gestion du stress", href: "/jessica-contentin/specialites/gestion-stress", icon: Brain },
+  { label: "Accompagnement TND", href: "/jessica-contentin/specialites/tnd", icon: Users },
+  { label: "Guidance parentale", href: "/jessica-contentin/specialites/guidance-parentale", icon: Baby },
+  { label: "Tests de connaissance de soi", href: "/jessica-contentin/specialites/tests", icon: BookOpen },
+  { label: "Harcèlement Scolaire", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
+  { label: "Orientation professionnelle", href: "/jessica-contentin/specialites/orientation-professionnelle", icon: Target },
+  { label: "Thérapie psycho-émotionnelle", href: "/jessica-contentin/specialites/therapie", icon: Lightbulb },
+  { label: "Neuroéducation", href: "/jessica-contentin/specialites/neuroeducation", icon: GraduationCap },
+  { label: "Stratégie d'apprentissage", href: "/jessica-contentin/specialites/strategie-apprentissage", icon: BookMarked },
 ];
 
 export function JessicaContentinHeader() {
@@ -80,9 +80,8 @@ export function JessicaContentinHeader() {
   const isInternalPage = 
     pathname === "/consultations" || 
     pathname === "/a-propos" || 
-    pathname === "/orientation" || 
     pathname === "/specialites" || 
-    pathname.startsWith("/specialites/") ||
+    pathname.startsWith("/specialites/") || 
     pathname === "/jessica-contentin/mon-compte" || 
     pathname === "/jessica-contentin/login" ||
     pathname === "/jessica-contentin/inscription" ||
@@ -96,7 +95,6 @@ export function JessicaContentinHeader() {
     pathname.startsWith("/jessica-contentin/ressources/") ||
     pathname === "/jessica-contentin/consultations" ||
     pathname === "/jessica-contentin/a-propos" ||
-    pathname === "/jessica-contentin/orientation" ||
     pathname === "/jessica-contentin/specialites" ||
     pathname.startsWith("/jessica-contentin/specialites/") ||
     pathname.startsWith("/dashboard/catalogue/test/") ||
@@ -189,12 +187,8 @@ export function JessicaContentinHeader() {
     },
     {
       label: "Spécialités",
-      href: "/specialites",
+      href: "/jessica-contentin/specialites",
       submenu: specialitesWithIcons,
-    },
-    {
-      label: "Orientation",
-      href: "/orientation",
     },
     {
       label: "Ressources",
@@ -215,7 +209,7 @@ export function JessicaContentinHeader() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span
-              className="text-xl font-semibold text-[#2F2A25] whitespace-nowrap"
+              className="text-xl font-normal text-[#2F2A25] whitespace-nowrap"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
@@ -579,7 +573,7 @@ export function JessicaContentinHeader() {
               whileHover={{ scale: 1.05, y: -5 }}
             >
               <Link
-                href="/specialites"
+                href="/jessica-contentin/specialites"
                 className="group relative overflow-hidden rounded-xl bg-white border border-[#E6D9C6] hover:border-[#C6A664] hover:shadow-lg transition-all block"
               >
               <div className="relative h-48 overflow-hidden">

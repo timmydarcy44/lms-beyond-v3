@@ -41,7 +41,7 @@ export function LearnerBeyondCareDashboard() {
   const [data, setData] = useState<LearnerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const brandColor = "#c91459";
+  const brandColor = "#c91459"; // Rouge Beyond Care
 
   const quickMenuItems = [
     { label: "Mon profil", icon: User },
@@ -206,7 +206,7 @@ export function LearnerBeyondCareDashboard() {
         <Card className="border border-[#f6cada] bg-white shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium" style={{ color: brandColor }}>Stress</CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold text-[#c91459]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold" style={{ color: brandColor }}>
               S
             </div>
           </CardHeader>
@@ -229,7 +229,7 @@ export function LearnerBeyondCareDashboard() {
         <Card className="border border-[#f6cada] bg-white shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium" style={{ color: brandColor }}>Bien-être</CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold text-[#c91459]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold" style={{ color: brandColor }}>
               B
             </div>
           </CardHeader>
@@ -252,7 +252,7 @@ export function LearnerBeyondCareDashboard() {
         <Card className="border border-[#f6cada] bg-white shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium" style={{ color: brandColor }}>Motivation</CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold text-[#c91459]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold" style={{ color: brandColor }}>
               M
             </div>
           </CardHeader>
@@ -327,7 +327,10 @@ export function LearnerBeyondCareDashboard() {
                 variant="outline"
                 size="sm"
                 asChild
-                className="border-[#f1c5d9] text-[#c91459] hover:bg-[#fef0f6]"
+                className="border-[#f1c5d9]"
+                style={{ color: brandColor }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#fef0f6"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
               >
                 <Link href="/dashboard/apprenant/questionnaires">
                   Voir l'historique

@@ -193,6 +193,130 @@ export async function GET() {
       .in("user_id", learnerIds)
       .is("completed_at", null);
 
+    // ============================================
+    // CALCUL DES MOYENNES HEBDOMADAIRES ET MENSUELLES
+    // ============================================
+    
+    // Récupérer les indicateurs de la semaine en cours et des 4 dernières semaines
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay()); // Début de la semaine (dimanche)
+    currentWeekStart.setHours(0, 0, 0, 0);
+    
+    const lastWeekStart = new Date(currentWeekStart);
+    lastWeekStart.setDate(currentWeekStart.getDate() - 7);
+    
+    const lastMonthStart = new Date(now);
+    lastMonthStart.setMonth(now.getMonth() - 1);
+    lastMonthStart.setDate(1);
+    lastMonthStart.setHours(0, 0, 0, 0);
+
+    // Récupérer les indicateurs de cette semaine
+    const { data: currentWeekIndicators } = await dataClient
+      .from("mental_health_indicators")
+      .select("indicator_type, indicator_value, user_id")
+      .in("user_id", learnerIds)
+      .gte("week_start_date", currentWeekStart.toISOString().split('T')[0])
+      .lte("week_start_date", now.toISOString().split('T')[0]);
+
+    // Récupérer les indicateurs de la semaine dernière
+    const { data: lastWeekIndicators } = await dataClient
+      .from("mental_health_indicators")
+      .select("indicator_type, indicator_value, user_id")
+      .in("user_id", learnerIds)
+      .gte("week_start_date", lastWeekStart.toISOString().split('T')[0])
+      .lt("week_start_date", currentWeekStart.toISOString().split('T')[0]);
+
+    // Récupérer les indicateurs du mois dernier
+    const { data: lastMonthIndicators } = await dataClient
+      .from("mental_health_indicators")
+      .select("indicator_type, indicator_value, user_id")
+      .in("user_id", learnerIds)
+      .gte("week_start_date", lastMonthStart.toISOString().split('T')[0])
+      .lt("week_start_date", currentWeekStart.toISOString().split('T')[0]);
+
+    // Calculer les moyennes pour cette semaine
+    const currentWeekAverages = {
+      stress: 0,
+      wellbeing: 0,
+      motivation: 0,
+    };
+    const currentWeekCounts = { stress: 0, wellbeing: 0, motivation: 0 };
+    
+    (currentWeekIndicators ?? []).forEach((indicator) => {
+      const type = indicator.indicator_type as 'stress' | 'wellbeing' | 'motivation';
+      if (type === 'stress' || type === 'wellbeing' || type === 'motivation') {
+        currentWeekAverages[type] += Number(indicator.indicator_value) || 0;
+        currentWeekCounts[type] += 1;
+      }
+    });
+
+    Object.keys(currentWeekAverages).forEach((key) => {
+      if (currentWeekCounts[key as keyof typeof currentWeekCounts] > 0) {
+        currentWeekAverages[key as keyof typeof currentWeekAverages] /= currentWeekCounts[key as keyof typeof currentWeekCounts];
+      }
+    });
+
+    // Calculer les moyennes pour la semaine dernière
+    const lastWeekAverages = {
+      stress: 0,
+      wellbeing: 0,
+      motivation: 0,
+    };
+    const lastWeekCounts = { stress: 0, wellbeing: 0, motivation: 0 };
+    
+    (lastWeekIndicators ?? []).forEach((indicator) => {
+      const type = indicator.indicator_type as 'stress' | 'wellbeing' | 'motivation';
+      if (type === 'stress' || type === 'wellbeing' || type === 'motivation') {
+        lastWeekAverages[type] += Number(indicator.indicator_value) || 0;
+        lastWeekCounts[type] += 1;
+      }
+    });
+
+    Object.keys(lastWeekAverages).forEach((key) => {
+      if (lastWeekCounts[key as keyof typeof lastWeekCounts] > 0) {
+        lastWeekAverages[key as keyof typeof lastWeekAverages] /= lastWeekCounts[key as keyof typeof lastWeekCounts];
+      }
+    });
+
+    // Calculer les moyennes pour le mois dernier
+    const lastMonthAverages = {
+      stress: 0,
+      wellbeing: 0,
+      motivation: 0,
+    };
+    const lastMonthCounts = { stress: 0, wellbeing: 0, motivation: 0 };
+    
+    (lastMonthIndicators ?? []).forEach((indicator) => {
+      const type = indicator.indicator_type as 'stress' | 'wellbeing' | 'motivation';
+      if (type === 'stress' || type === 'wellbeing' || type === 'motivation') {
+        lastMonthAverages[type] += Number(indicator.indicator_value) || 0;
+        lastMonthCounts[type] += 1;
+      }
+    });
+
+    Object.keys(lastMonthAverages).forEach((key) => {
+      if (lastMonthCounts[key as keyof typeof lastMonthCounts] > 0) {
+        lastMonthAverages[key as keyof typeof lastMonthAverages] /= lastMonthCounts[key as keyof typeof lastMonthCounts];
+      }
+    });
+
+    // Calculer les tendances (comparaison semaine actuelle vs semaine dernière)
+    const weeklyTrends = {
+      stress: currentWeekCounts.stress > 0 && lastWeekCounts.stress > 0
+        ? (currentWeekAverages.stress > lastWeekAverages.stress + 2 ? "up" : 
+           currentWeekAverages.stress < lastWeekAverages.stress - 2 ? "down" : "stable")
+        : "stable" as "up" | "down" | "stable",
+      wellbeing: currentWeekCounts.wellbeing > 0 && lastWeekCounts.wellbeing > 0
+        ? (currentWeekAverages.wellbeing > lastWeekAverages.wellbeing + 2 ? "up" : 
+           currentWeekAverages.wellbeing < lastWeekAverages.wellbeing - 2 ? "down" : "stable")
+        : "stable" as "up" | "down" | "stable",
+      motivation: currentWeekCounts.motivation > 0 && lastWeekCounts.motivation > 0
+        ? (currentWeekAverages.motivation > lastWeekAverages.motivation + 2 ? "up" : 
+           currentWeekAverages.motivation < lastWeekAverages.motivation - 2 ? "down" : "stable")
+        : "stable" as "up" | "down" | "stable",
+    };
+
     return NextResponse.json({
       totalLearners,
       atRiskLearners,
@@ -202,6 +326,15 @@ export async function GET() {
       pendingQuestionnaires: pendingCount || 0,
       dimensionAverages,
       alerts,
+      // Nouvelles statistiques hebdomadaires et mensuelles
+      weeklyAverages: {
+        current: currentWeekAverages,
+        last: lastWeekAverages,
+        trends: weeklyTrends,
+      },
+      monthlyAverages: {
+        last: lastMonthAverages,
+      },
     });
   } catch (error) {
     console.error("[beyond-care/admin/stats] Error:", error);

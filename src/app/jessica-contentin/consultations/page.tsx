@@ -110,7 +110,7 @@ export default function ConsultationsPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Consultations psychopédagogiques personnalisées à <strong>Fleury-sur-Orne (Caen)</strong>. Tarifs : première consultation <strong>90€</strong>, suivi <strong>70€</strong>. Pour enfants, adolescents, adultes et parents. Cabinet chaleureux avec coin enfant. <Link href="https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin" className="text-[#C6A664] hover:underline font-semibold">Prenez rendez-vous en ligne</Link>.
+              Consultations psychopédagogiques personnalisées à <strong>Fleury-sur-Orne (Caen)</strong>. Tarifs : première consultation <strong>90€</strong>, suivi <strong>70€</strong>. Pour enfants, adolescents, adultes et parents. Cabinet chaleureux avec coin enfant. <a href="https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin" target="_blank" rel="noopener noreferrer" className="text-[#C6A664] hover:underline font-semibold">Prenez rendez-vous en ligne</a>.
             </motion.p>
           </div>
         </div>

@@ -2,11 +2,23 @@ import type { Metadata } from "next";
 import { JessicaContentinHeader } from "@/components/jessica-contentin/header";
 import { JessicaContentinFooter } from "@/components/jessica-contentin/footer";
 import { FloatingCartBadge } from "@/components/jessica-contentin/floating-cart-badge";
+import { generateSEOMetadata, STRUCTURED_DATA } from "@/lib/seo/jessica-contentin-seo";
 
+// Métadonnées par défaut (seront surchargées par chaque page)
 export const metadata: Metadata = {
-  title: "Jessica CONTENTIN - Psychopédagogue certifiée en neuroéducation",
-  description:
-    "Psychopédagogue certifiée en neuroéducation. Accompagnement personnalisé pour enfants, adolescents et adultes. Gestion des émotions, confiance en soi, troubles DYS, TDA-H.",
+  ...generateSEOMetadata("home"),
+  metadataBase: new URL("https://jessicacontentin.fr"),
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export function JessicaContentinLayout({

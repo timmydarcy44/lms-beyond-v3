@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Edit, Trash2, Filter, Share2 } from "lucide-react";
+import { Loader2, Edit, Trash2, Filter, Share2, ExternalLink, Brain } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -133,6 +134,29 @@ export function CatalogViewSuperAdmin() {
         <h1 className="text-3xl font-semibold text-gray-900 mb-4" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
           No School
         </h1>
+        
+        {/* Section Test Soft Skills */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Brain className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Test Soft Skills – Profil 360</h3>
+                <p className="text-sm text-gray-600">Questionnaire d'évaluation des compétences comportementales</p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/apprenant/questionnaires/4f1d7284-8684-4696-8d0e-59fd57160f86"
+              target="_blank"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <span>Accéder au test</span>
+              <ExternalLink className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
         
         {/* Filtres par catégorie */}
         <div className="flex items-center gap-3 flex-wrap">

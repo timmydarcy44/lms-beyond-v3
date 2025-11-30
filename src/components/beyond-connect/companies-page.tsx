@@ -263,77 +263,79 @@ export function BeyondConnectCompaniesPageContent({ userId }: BeyondConnectCompa
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-12">
         {/* Header déjà géré par le layout parent */}
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="mb-4 text-4xl font-bold text-gray-900">Espace Entreprises</h1>
-          <p className="text-lg text-gray-600">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="mb-2 sm:mb-4 text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Espace Entreprises</h1>
+          <p className="text-sm sm:text-base md:text-lg text-gray-600">
             Gérez vos offres d'emploi, votre CVthèque et découvrez des profils correspondants
           </p>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-[#003087] data-[state=active]:text-white">
-              Vue d'ensemble
-            </TabsTrigger>
-            <TabsTrigger value="jobs" className="data-[state=active]:bg-[#003087] data-[state=active]:text-white">
-              Offres d'emploi
-            </TabsTrigger>
-            <TabsTrigger value="cv-library" className="data-[state=active]:bg-[#003087] data-[state=active]:text-white">
-              CVthèque
-            </TabsTrigger>
-            <TabsTrigger value="matches" className="data-[state=active]:bg-[#003087] data-[state=active]:text-white">
-              Matchings
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <TabsList className="inline-flex w-full min-w-max sm:grid sm:grid-cols-4 bg-gray-100">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-[#003087] data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+                Vue d'ensemble
+              </TabsTrigger>
+              <TabsTrigger value="jobs" className="data-[state=active]:bg-[#003087] data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+                Offres d'emploi
+              </TabsTrigger>
+              <TabsTrigger value="cv-library" className="data-[state=active]:bg-[#003087] data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+                CVthèque
+              </TabsTrigger>
+              <TabsTrigger value="matches" className="data-[state=active]:bg-[#003087] data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+                Matchings
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="overview" className="mt-6">
-            <div className="grid gap-6 md:grid-cols-3">
+          <TabsContent value="overview" className="mt-4 sm:mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <Card className="border-gray-200 bg-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                    <Briefcase className="h-4 w-4 text-[#003087]" />
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-600">
+                    <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 text-[#003087]" />
                     Offres actives
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                     {jobOffers.filter(j => j.is_active).length}
                   </div>
-                  <Link href="/beyond-connect-app/companies?tab=jobs" className="text-sm text-[#003087] hover:underline">
+                  <Link href="/beyond-connect-app/companies?tab=jobs" className="text-xs sm:text-sm text-[#003087] hover:underline">
                     Voir toutes →
                   </Link>
                 </CardContent>
               </Card>
 
               <Card className="border-gray-200 bg-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                    <Users className="h-4 w-4 text-[#003087]" />
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-600">
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 text-[#003087]" />
                     Candidatures
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                     {jobOffers.reduce((sum, j) => sum + j.applications_count, 0)}
                   </div>
-                  <p className="text-sm text-gray-600">Total des candidatures</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Total des candidatures</p>
                 </CardContent>
               </Card>
 
-              <Card className="border-gray-200 bg-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                    <TrendingUp className="h-4 w-4 text-[#003087]" />
+              <Card className="border-gray-200 bg-white sm:col-span-2 lg:col-span-1">
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-600">
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-[#003087]" />
                     Profils en CVthèque
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">0</div>
-                  <Link href="/beyond-connect-app/companies?tab=cv-library" className="text-sm text-[#003087] hover:underline">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-900">0</div>
+                  <Link href="/beyond-connect-app/companies?tab=cv-library" className="text-xs sm:text-sm text-[#003087] hover:underline">
                     Gérer →
                   </Link>
                 </CardContent>
@@ -341,62 +343,62 @@ export function BeyondConnectCompaniesPageContent({ userId }: BeyondConnectCompa
             </div>
 
             {/* Quick Actions */}
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link 
                 href="/beyond-connect-app/companies/jobs/new"
                 className="block"
               >
                 <Card className="cursor-pointer border-2 border-[#003087] bg-white transition-all hover:shadow-lg">
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#003087] text-white">
-                      <Plus className="h-6 w-6" />
+                  <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-[#003087] text-white flex-shrink-0">
+                      <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Créer une offre d'emploi</h3>
-                      <p className="text-sm text-gray-600">Publiez une nouvelle offre (stage, alternance, CDI, CDD)</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm sm:text-base text-gray-900">Créer une offre d'emploi</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">Publiez une nouvelle offre (stage, alternance, CDI, CDD)</p>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-[#003087]" />
+                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-[#003087] flex-shrink-0" />
                   </CardContent>
                 </Card>
               </Link>
 
               <Link href="/beyond-connect-app/companies/candidates">
                 <Card className="cursor-pointer border-2 border-[#003087] bg-white transition-all hover:shadow-lg">
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#003087] text-white">
-                      <Search className="h-6 w-6" />
+                  <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-[#003087] text-white flex-shrink-0">
+                      <Search className="h-5 w-5 sm:h-6 sm:w-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Rechercher un candidat</h3>
-                      <p className="text-sm text-gray-600">Trouvez les profils qui correspondent à vos critères</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm sm:text-base text-gray-900">Rechercher un candidat</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">Trouvez les profils qui correspondent à vos critères</p>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-[#003087]" />
+                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-[#003087] flex-shrink-0" />
                   </CardContent>
                 </Card>
               </Link>
 
-              <Link href="/beyond-connect-app/companies/cv-library">
+              <Link href="/beyond-connect-app/companies/cv-library" className="sm:col-span-2">
                 <Card className="cursor-pointer border-2 border-gray-200 bg-white transition-all hover:border-[#003087] hover:shadow-lg">
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-[#003087]">
-                      <Users className="h-6 w-6" />
+                  <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-gray-100 text-[#003087] flex-shrink-0">
+                      <Users className="h-5 w-5 sm:h-6 sm:w-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Gérer la CVthèque</h3>
-                      <p className="text-sm text-gray-600">Suivez les profils de jeunes talents</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm sm:text-base text-gray-900">Gérer la CVthèque</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">Suivez les profils de jeunes talents</p>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-gray-400" />
+                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
                   </CardContent>
                 </Card>
               </Link>
             </div>
           </TabsContent>
 
-          <TabsContent value="jobs" className="mt-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Offres d'emploi</h2>
-              <Link href="/beyond-connect-app/companies/jobs/new">
-                <Button className="bg-[#003087] hover:bg-[#002a6b] text-white">
+          <TabsContent value="jobs" className="mt-4 sm:mt-6">
+            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Offres d'emploi</h2>
+              <Link href="/beyond-connect-app/companies/jobs/new" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto bg-[#003087] hover:bg-[#002a6b] text-white text-sm sm:text-base">
                   <Plus className="mr-2 h-4 w-4" />
                   Nouvelle offre
                 </Button>
@@ -416,35 +418,35 @@ export function BeyondConnectCompaniesPageContent({ userId }: BeyondConnectCompa
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {jobOffers.map((job) => (
                   <Card key={job.id} className="border-gray-200 bg-white">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
-                            <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                            <Badge variant={job.is_active ? "default" : "secondary"} className={job.is_active ? "bg-green-600" : ""}>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">{job.title}</h3>
+                            <Badge variant={job.is_active ? "default" : "secondary"} className={`${job.is_active ? "bg-green-600" : ""} text-xs sm:text-sm`}>
                               {job.is_active ? "Active" : "Inactive"}
                             </Badge>
                           </div>
-                          <div className="mb-2 flex items-center gap-4 text-sm text-gray-600">
+                          <div className="mb-2 flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                             <span className="capitalize">{job.contract_type}</span>
-                            {job.location && <span>{job.location}</span>}
+                            {job.location && <span className="truncate">{job.location}</span>}
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
                             <span className="flex items-center gap-1">
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                               {job.views_count} vues
                             </span>
                             <span className="flex items-center gap-1">
-                              <FileText className="h-4 w-4" />
+                              <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
                               {job.applications_count} candidatures
                             </span>
                           </div>
                         </div>
-                        <Link href={`/beyond-connect-app/companies/jobs/${job.id}`}>
-                          <Button variant="outline" className="border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white">
+                        <Link href={`/beyond-connect-app/companies/jobs/${job.id}`} className="w-full sm:w-auto">
+                          <Button variant="outline" className="w-full sm:w-auto border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white text-sm sm:text-base">
                             Voir
                           </Button>
                         </Link>
@@ -456,10 +458,10 @@ export function BeyondConnectCompaniesPageContent({ userId }: BeyondConnectCompa
             )}
           </TabsContent>
 
-          <TabsContent value="cv-library" className="mt-6">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">CVthèque</h2>
-              <p className="mt-2 text-gray-600">Profils de jeunes talents que vous suivez</p>
+          <TabsContent value="cv-library" className="mt-4 sm:mt-6">
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">CVthèque</h2>
+              <p className="mt-2 text-sm sm:text-base text-gray-600">Profils de jeunes talents que vous suivez</p>
             </div>
 
             <Card className="border-gray-200 bg-white">
@@ -471,17 +473,17 @@ export function BeyondConnectCompaniesPageContent({ userId }: BeyondConnectCompa
             </Card>
           </TabsContent>
 
-          <TabsContent value="matches" className="mt-6">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Matchings Premium</h2>
-              <p className="mt-2 text-gray-600">
+          <TabsContent value="matches" className="mt-4 sm:mt-6">
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Matchings Premium</h2>
+              <p className="mt-2 text-sm sm:text-base text-gray-600">
                 Découvrez les profils qui correspondent à vos offres d'emploi
               </p>
             </div>
 
             {companies.some(c => c.is_premium) ? (
               matches.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {matches.map((match) => {
                     const profile = match.profiles;
                     const jobOffer = match.beyond_connect_job_offers;
@@ -490,36 +492,36 @@ export function BeyondConnectCompaniesPageContent({ userId }: BeyondConnectCompa
                     
                     return (
                       <Card key={match.id} className="border-gray-200 bg-white hover:shadow-lg transition-shadow cursor-pointer">
-                        <CardContent className="p-6">
-                          <div className="flex items-start gap-4 mb-4">
-                            <div className="h-12 w-12 rounded-full bg-[#003087] flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-[#003087] flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0">
                               {initials}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 truncate">{fullName}</h3>
-                              <p className="text-sm text-gray-500 truncate">{profile?.email}</p>
+                              <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">{fullName}</h3>
+                              <p className="text-xs sm:text-sm text-gray-500 truncate">{profile?.email}</p>
                             </div>
-                            <Badge className="bg-green-100 text-green-800 border-green-200">
+                            <Badge className="bg-green-100 text-green-800 border-green-200 text-xs sm:text-sm flex-shrink-0">
                               {match.match_score}%
                             </Badge>
                           </div>
                           
                           {jobOffer && (
-                            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-gray-50 rounded-lg">
                               <p className="text-xs text-gray-500 mb-1">Offre correspondante</p>
-                              <p className="font-medium text-sm text-gray-900">{jobOffer.title}</p>
+                              <p className="font-medium text-xs sm:text-sm text-gray-900 break-words">{jobOffer.title}</p>
                               <p className="text-xs text-gray-600 capitalize">{jobOffer.contract_type}</p>
                             </div>
                           )}
                           
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                             <Link 
                               href={`/beyond-connect-app/companies/candidates/${match.user_id}${jobOffer ? `?job_offer_id=${jobOffer.id}` : ""}`}
-                              className="text-sm text-[#003087] hover:underline font-medium"
+                              className="text-xs sm:text-sm text-[#003087] hover:underline font-medium text-center sm:text-left"
                             >
                               Voir le profil
                             </Link>
-                            <Button size="sm" variant="outline" className="border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white">
+                            <Button size="sm" variant="outline" className="w-full sm:w-auto border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white text-xs sm:text-sm">
                               Contacter
                             </Button>
                           </div>
@@ -541,16 +543,16 @@ export function BeyondConnectCompaniesPageContent({ userId }: BeyondConnectCompa
               )
             ) : (
               <Card className="border-2 border-[#003087] bg-blue-50">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <Building2 className="h-8 w-8 text-[#003087]" />
-                    <div className="flex-1">
-                      <h3 className="mb-2 text-lg font-semibold text-gray-900">Passez en Premium</h3>
-                      <p className="mb-4 text-gray-700">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-[#003087] flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="mb-2 text-base sm:text-lg font-semibold text-gray-900">Passez en Premium</h3>
+                      <p className="mb-4 text-sm sm:text-base text-gray-700">
                         Accédez au système de matching intelligent qui vous permet de découvrir automatiquement
                         les profils correspondant à vos offres d'emploi.
                       </p>
-                      <Button className="bg-[#003087] hover:bg-[#002a6b] text-white">
+                      <Button className="w-full sm:w-auto bg-[#003087] hover:bg-[#002a6b] text-white text-sm sm:text-base">
                         En savoir plus
                       </Button>
                     </div>

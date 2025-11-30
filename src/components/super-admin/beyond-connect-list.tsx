@@ -87,6 +87,12 @@ export function BeyondConnectList() {
             Gérez l'accès à Beyond Connect pour les organisations
           </p>
         </div>
+        <Link href="/super/premium/beyond-connect/candidates">
+          <Button className="bg-[#003087] hover:bg-[#002a6b] text-white">
+            <Users className="mr-2 h-4 w-4" />
+            Gérer les candidats
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

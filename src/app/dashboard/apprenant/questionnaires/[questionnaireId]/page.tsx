@@ -25,21 +25,29 @@ export default async function QuestionnairePlayerPage({
 }) {
   const { questionnaireId } = await params;
 
+  const isSuper = await isSuperAdmin();
   const sessionClient = await getServerClient();
-  if (!sessionClient) {
+  
+  // Pour les super admins, permettre l'accès même sans session client
+  if (!sessionClient && !isSuper) {
     redirect("/dashboard");
   }
 
   const {
     data: { user },
-  } = await sessionClient.auth.getUser();
+  } = sessionClient ? await sessionClient.auth.getUser() : { data: { user: null } };
 
-  if (!user?.id) {
+  // Pour les super admins, permettre l'accès même sans user
+  if (!user?.id && !isSuper) {
     redirect("/dashboard");
   }
 
-  const isSuper = await isSuperAdmin();
-  const queryClient = isSuper ? getServiceRoleClient() ?? sessionClient : sessionClient;
+  // Utiliser le service role client pour les super admins, sinon le session client
+  const queryClient = isSuper ? (getServiceRoleClient() ?? sessionClient) : (sessionClient!);
+
+  if (!queryClient) {
+    redirect("/dashboard");
+  }
 
   const { data: questionnaire } = await queryClient
     .from("mental_health_questionnaires")
@@ -83,34 +91,46 @@ export default async function QuestionnairePlayerPage({
       order_index: question.order_index ?? 0,
     }));
 
-  const { data: assessments } = await queryClient
+  const { data: assessments } = user?.id ? await queryClient
     .from("mental_health_assessments")
     .select("id, questionnaire_id, overall_score, dimension_scores, analysis_summary, analysis_details, metadata, created_at")
     .eq("questionnaire_id", questionnaireId)
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }) : { data: [] };
 
-  // Récupérer l'ID de Jessica Contentin pour déterminer si c'est son test
+  // Récupérer l'ID de Jessica Contentin et Tim Darcy pour déterminer si c'est leur test
   const { data: jessicaProfile } = await queryClient
     .from("profiles")
     .select("id, email")
     .eq("email", "contentin.cabinet@gmail.com")
     .maybeSingle();
 
-  // Vérifier si le questionnaire appartient à Jessica (par created_by ou par email du créateur)
+  const { data: timDarcyProfile } = await queryClient
+    .from("profiles")
+    .select("id, email")
+    .eq("email", "timdarcypro@gmail.com")
+    .maybeSingle();
+
+  // Vérifier si le questionnaire appartient à Jessica ou Tim Darcy (par created_by ou par email du créateur)
   let isJessicaQuestionnaire = false;
-  console.log("[questionnaire] Checking if questionnaire belongs to Jessica:", {
+  let isTimDarcyQuestionnaire = false;
+  console.log("[questionnaire] Checking if questionnaire belongs to Jessica or Tim Darcy:", {
     questionnaireId: questionnaire.id,
     questionnaireTitle: questionnaire.title,
     createdBy: questionnaire.created_by,
     jessicaProfileId: jessicaProfile?.id,
     jessicaEmail: jessicaProfile?.email,
+    timDarcyProfileId: timDarcyProfile?.id,
+    timDarcyEmail: timDarcyProfile?.email,
   });
   
   // Vérifier d'abord par created_by
   if (jessicaProfile?.id && questionnaire.created_by === jessicaProfile.id) {
     isJessicaQuestionnaire = true;
     console.log("[questionnaire] ✅ Detected as Jessica's questionnaire by created_by match");
+  } else if (timDarcyProfile?.id && questionnaire.created_by === timDarcyProfile.id) {
+    isTimDarcyQuestionnaire = true;
+    console.log("[questionnaire] ✅ Detected as Tim Darcy's questionnaire by created_by match");
   } else if (questionnaire.created_by) {
     // Vérifier aussi par l'email du créateur au cas où
     const { data: creatorProfile } = await queryClient
@@ -125,10 +145,14 @@ export default async function QuestionnairePlayerPage({
     });
     
     isJessicaQuestionnaire = creatorProfile?.email === "contentin.cabinet@gmail.com";
+    isTimDarcyQuestionnaire = creatorProfile?.email === "timdarcypro@gmail.com";
+    
     if (isJessicaQuestionnaire) {
       console.log("[questionnaire] ✅ Detected as Jessica's questionnaire by creator email");
+    } else if (isTimDarcyQuestionnaire) {
+      console.log("[questionnaire] ✅ Detected as Tim Darcy's questionnaire by creator email");
     } else {
-      console.log("[questionnaire] ❌ Not Jessica's questionnaire by creator email");
+      console.log("[questionnaire] ❌ Not Jessica's or Tim Darcy's questionnaire by creator email");
     }
   } else {
     console.log("[questionnaire] ❌ No created_by field, cannot determine owner");
@@ -145,6 +169,14 @@ export default async function QuestionnairePlayerPage({
   }
   
   console.log("[questionnaire] Final isJessicaQuestionnaire:", isJessicaQuestionnaire);
+  console.log("[questionnaire] Final isTimDarcyQuestionnaire:", isTimDarcyQuestionnaire);
+  console.log("[questionnaire] Questionnaire details:", {
+    id: questionnaire.id,
+    title: questionnaire.title,
+    created_by: questionnaire.created_by,
+    timDarcyProfileId: timDarcyProfile?.id,
+    jessicaProfileId: jessicaProfile?.id,
+  });
 
   return (
     <MentalHealthQuestionnairePlayer
@@ -160,6 +192,7 @@ export default async function QuestionnairePlayerPage({
       }}
       assessments={assessments ?? []}
       isJessicaContentin={isJessicaQuestionnaire ?? false}
+      isTimDarcy={isTimDarcyQuestionnaire ?? false}
     />
   );
 }

@@ -9,6 +9,10 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
 import { env } from "@/lib/env";
+import { StrategicInternalLinks } from "@/components/jessica-contentin/strategic-internal-links";
+import { SPECIALITY_SEO_CONFIG } from "@/lib/seo/link-juice-strategy";
+import Link from "next/link";
+import Script from "next/script";
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
 // Fonction pour construire l'URL Supabase Storage
@@ -458,7 +462,7 @@ export default function SpecialiteDetailPage({
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                     }}
                   >
-                    {content.title}
+                    {SPECIALITY_SEO_CONFIG[slug]?.h1 || content.title}
                   </h1>
                   <p
                     className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto"
@@ -755,7 +759,7 @@ export default function SpecialiteDetailPage({
               className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6"
               style={{ color: textColor }}
             >
-              {content.title}
+              {SPECIALITY_SEO_CONFIG[slug]?.h1 || content.title}
             </h1>
             <p
               className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto"
@@ -830,6 +834,47 @@ export default function SpecialiteDetailPage({
         </section>
       )}
 
+      {/* Contenu SEO enrichi pour les spécialités principales */}
+      {SPECIALITY_SEO_CONFIG[slug] && (
+        <section className="py-16 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
+          <div className="max-w-6xl mx-auto">
+            {SPECIALITY_SEO_CONFIG[slug].contentSections.map((section, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+                className="mb-12"
+              >
+                <Card className="border-[#E6D9C6] bg-white shadow-lg">
+                  <CardContent className="p-8">
+                    <h2
+                      className="text-3xl font-bold text-[#2F2A25] mb-6"
+                      style={{
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                      }}
+                    >
+                      {section.title}
+                    </h2>
+                    <div
+                      className="prose prose-lg max-w-none text-[#2F2A25] leading-relaxed"
+                      style={{
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                      }}
+                      dangerouslySetInnerHTML={{ __html: section.content.replace(/\n/g, '<br />') }}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Liens internes stratégiques - Link Juice */}
+      <StrategicInternalLinks currentPage={`specialites/${slug}`} title="Découvrez aussi" />
+
       {/* Final CTA */}
       <section className="py-20 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
         <div className="max-w-4xl mx-auto text-center">
@@ -868,6 +913,33 @@ export default function SpecialiteDetailPage({
           </motion.div>
         </div>
       </section>
+
+      {/* Structured Data pour les spécialités */}
+      <Script
+        id={`structured-data-speciality-${slug}`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "serviceType": content.title,
+            "provider": {
+              "@type": "Person",
+              "name": "Jessica CONTENTIN",
+              "jobTitle": "Psychopédagogue certifiée en neuroéducation",
+            },
+            "description": content.description,
+            "areaServed": {
+              "@type": "City",
+              "name": "Caen",
+            },
+            "availableChannel": {
+              "@type": "ServiceChannel",
+              "serviceUrl": `https://jessicacontentin.fr/specialites/${slug}`,
+            },
+          }),
+        }}
+      />
     </div>
   );
 }

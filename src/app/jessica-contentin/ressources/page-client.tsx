@@ -240,6 +240,34 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
               transition={{ duration: 0.6 }}
               className="pb-20"
             >
+              {/* H1 SEO principal - Rayonnement national */}
+              <section className="py-12 mx-4 mb-6">
+                <div className="mx-auto max-w-7xl px-6">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-4xl md:text-5xl font-bold text-[#2F2A25] mb-4 text-center"
+                    style={{
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                    }}
+                  >
+                    Ressources Psychopédagogiques - Contenus et Outils pour Toute la France
+                  </motion.h1>
+                  <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    className="text-lg md:text-xl text-[#2F2A25]/80 text-center max-w-3xl mx-auto"
+                    style={{
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                    }}
+                  >
+                    Découvrez nos ressources et outils psychopédagogiques accessibles partout en France : troubles DYS, TDA-H, gestion des émotions, confiance en soi, orientation scolaire, neuroéducation.
+                  </motion.p>
+                </div>
+              </section>
+
               {/* Section "Vous êtes" avec filtres par catégorie */}
               <section className="py-8 mx-4 mb-6">
                 <div className="mx-auto max-w-7xl px-6">

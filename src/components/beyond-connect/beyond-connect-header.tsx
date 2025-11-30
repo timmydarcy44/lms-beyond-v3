@@ -22,10 +22,17 @@ export function BeyondConnectHeader({ user }: BeyondConnectHeaderProps) {
   // Vérifier si on est dans la section entreprises (pas clients)
   const isCompaniesSection = pathname?.startsWith("/beyond-connect-app/companies");
 
-  const navItems = [
-    { label: "Rechercher un candidat", href: "/beyond-connect-app/companies/candidates", icon: Search },
-    { label: "Offres d'emploi", href: "/beyond-connect-app/jobs", icon: Briefcase },
-  ];
+  // Navigation différente selon si on est dans la section entreprises ou candidat
+  const navItems = isCompaniesSection
+    ? [
+        { label: "Rechercher un candidat", href: "/beyond-connect-app/companies/candidates", icon: Search },
+        { label: "Offres d'emploi", href: "/beyond-connect-app/jobs", icon: Briefcase },
+      ]
+    : [
+        { label: "Mon CV", href: "/beyond-connect-app", icon: User },
+        { label: "Offres d'emploi", href: "/beyond-connect-app/jobs", icon: Briefcase },
+        { label: "Mes candidatures", href: "/beyond-connect-app/applications", icon: Briefcase },
+      ];
 
   // Afficher "Entreprises" seulement si l'utilisateur est membre d'une organisation
   // TODO: Vérifier si l'utilisateur a des organisations

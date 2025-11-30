@@ -1,126 +1,151 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef } from "react";
+
+/**
+ * CONFIGURATION GOOGLE BUSINESS IFRAME
+ * 
+ * Pour afficher les avis Google via iframe :
+ * 1. Allez sur votre profil Google Business
+ * 2. Cliquez sur "Partager" ou "Partager l'entreprise"
+ * 3. Sélectionnez "Intégrer une carte"
+ * 4. Copiez l'URL de l'iframe (elle commence par https://www.google.com/maps/embed?pb=...)
+ * 5. Collez-la ci-dessous dans GOOGLE_BUSINESS_IFRAME_URL
+ * 
+ * Exemple d'URL : "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d..."
+ */
+const GOOGLE_BUSINESS_IFRAME_URL = ""; // ⬅️ COLLEZ VOTRE URL GOOGLE BUSINESS IFRAME ICI
 
 export function TrustIndex() {
-  const widgetRef = useRef<HTMLDivElement>(null);
-  const scriptLoadedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const scriptLoadedRef = useRef(false);
+
+  // Trust Index Widget ID
+  const TRUST_INDEX_WIDGET_ID = "b77eee0587d8867421367bea9ed";
+  
+  // Utiliser l'iframe si l'URL est configurée, sinon utiliser le script Trust Index
+  const useIframe = !!GOOGLE_BUSINESS_IFRAME_URL;
 
   useEffect(() => {
-    // Fonction pour charger et initialiser Trust Index
-    const loadTrustIndex = () => {
-      console.log("[TrustIndex] Début du chargement...");
-      
-      // Vérifier si le script est déjà chargé
-      const existingScript = document.querySelector('script[src*="trustindex.io"]');
-      
-      if (existingScript && scriptLoadedRef.current) {
-        console.log("[TrustIndex] Script déjà chargé, réinitialisation...");
-        // Si déjà chargé, réinitialiser le widget
-        if ((window as any).TrustindexLoader) {
-          (window as any).TrustindexLoader.load();
-          setLoading(false);
-        }
-        return;
-      }
-
-      // Charger le script Trustindex avec l'identifiant spécifique
-      const script = document.createElement("script");
-      script.src = "https://cdn.trustindex.io/loader.js?c04957f3726379396096fb45252";
-      script.async = true;
-      script.defer = true;
-      script.id = "trustindex-loader-script";
-      
-      script.onload = () => {
-        console.log("[TrustIndex] Script chargé avec succès");
-        scriptLoadedRef.current = true;
+    if (useIframe) {
+      // Si on utilise l'iframe, juste attendre le chargement
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else {
+      // Charger le script Trust Index
+      const loadTrustIndex = () => {
+        console.log("[TrustIndex] Début du chargement du script Trust Index...");
         
-        // Attendre que le DOM soit prêt et que TrustindexLoader soit disponible
-        const checkAndLoad = () => {
-          if ((window as any).TrustindexLoader) {
-            console.log("[TrustIndex] TrustindexLoader trouvé, chargement du widget...");
-            try {
-              (window as any).TrustindexLoader.load();
-              setLoading(false);
-              console.log("[TrustIndex] Widget chargé");
-            } catch (err) {
-              console.error("[TrustIndex] Erreur lors du chargement du widget:", err);
-              setError(true);
+        // Vérifier si le script est déjà chargé
+        const existingScript = document.querySelector(`script[src*="trustindex.io"][src*="${TRUST_INDEX_WIDGET_ID}"]`);
+        
+        if (existingScript) {
+          console.log("[TrustIndex] Script déjà présent dans le DOM");
+          // Attendre un peu et vérifier si TrustindexLoader est disponible
+          setTimeout(() => {
+            if ((window as any).TrustindexLoader) {
+              console.log("[TrustIndex] TrustindexLoader disponible, chargement du widget...");
+              try {
+                (window as any).TrustindexLoader.load();
+                setLoading(false);
+                setError(false);
+              } catch (err) {
+                console.error("[TrustIndex] Erreur lors du chargement du widget:", err);
+                setError(true);
+                setLoading(false);
+              }
+            } else {
+              console.log("[TrustIndex] TrustindexLoader pas encore disponible, attente...");
               setLoading(false);
             }
-          } else {
-            console.log("[TrustIndex] TrustindexLoader pas encore disponible, nouvelle tentative...");
-            setTimeout(checkAndLoad, 200);
-          }
+          }, 1000);
+          return;
+        }
+
+        // Créer et charger le script
+        const script = document.createElement("script");
+        script.src = `https://cdn.trustindex.io/loader.js?${TRUST_INDEX_WIDGET_ID}`;
+        script.async = true;
+        script.defer = true;
+        script.id = "trustindex-loader-script";
+        
+        script.onload = () => {
+          console.log("[TrustIndex] ✅ Script chargé avec succès");
+          scriptLoadedRef.current = true;
+          
+          // Attendre que TrustindexLoader soit disponible
+          const checkAndLoad = () => {
+            if ((window as any).TrustindexLoader) {
+              console.log("[TrustIndex] ✅ TrustindexLoader trouvé, chargement du widget...");
+              try {
+                (window as any).TrustindexLoader.load();
+                // Attendre un peu pour que le widget se rende
+                setTimeout(() => {
+                  setLoading(false);
+                  setError(false);
+                  console.log("[TrustIndex] ✅ Widget chargé et affiché");
+                }, 1000);
+              } catch (err) {
+                console.error("[TrustIndex] ❌ Erreur lors du chargement du widget:", err);
+                setError(true);
+                setLoading(false);
+              }
+            } else {
+              console.log("[TrustIndex] ⏳ TrustindexLoader pas encore disponible, nouvelle tentative...");
+              setTimeout(checkAndLoad, 300);
+            }
+          };
+          
+          // Première tentative après 500ms
+          setTimeout(checkAndLoad, 500);
+          
+          // Timeout de sécurité après 10 secondes
+          setTimeout(() => {
+            if (loading) {
+              console.warn("[TrustIndex] ⚠️ Timeout - Le widget n'a pas pu se charger dans les temps");
+              // Essayer l'iframe de fallback
+              const iframeFallback = document.getElementById('trustindex-iframe-fallback') as HTMLIFrameElement;
+              if (iframeFallback) {
+                console.log("[TrustIndex] Tentative avec l'iframe de fallback...");
+                iframeFallback.style.display = "block";
+                if (widgetRef.current) {
+                  widgetRef.current.style.display = "none";
+                }
+                setLoading(false);
+                setError(false);
+              } else {
+                setError(true);
+                setLoading(false);
+              }
+            }
+          }, 10000);
         };
         
-        // Première tentative après 500ms
-        setTimeout(checkAndLoad, 500);
+        script.onerror = () => {
+          console.error("[TrustIndex] ❌ Erreur lors du chargement du script");
+          setError(true);
+          setLoading(false);
+        };
         
-        // Timeout de sécurité après 5 secondes
-        setTimeout(() => {
-          if (loading) {
-            console.warn("[TrustIndex] Timeout - Le widget n'a pas pu se charger");
-            setError(true);
-            setLoading(false);
-          }
-        }, 5000);
+        // Ajouter le script au head
+        document.head.appendChild(script);
+        console.log("[TrustIndex] Script ajouté au DOM");
       };
-      
-      script.onerror = () => {
-        console.error("[TrustIndex] Erreur lors du chargement du script Trust Index");
-        setError(true);
-        setLoading(false);
+
+      // Charger le script après un court délai
+      const timer = setTimeout(() => {
+        loadTrustIndex();
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
       };
-      
-      document.head.appendChild(script);
-      console.log("[TrustIndex] Script ajouté au DOM");
-    };
-
-    // Charger Trust Index après un court délai pour s'assurer que le DOM est prêt
-    const timer = setTimeout(() => {
-      loadTrustIndex();
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [loading]);
-
-  // Script inline pour forcer le chargement après le rendu (uniquement côté client)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const initTrustIndex = () => {
-      if (typeof (window as any).TrustindexLoader !== 'undefined') {
-        console.log('[TrustIndex] TrustindexLoader trouvé dans script inline');
-        try {
-          (window as any).TrustindexLoader.load();
-        } catch (e) {
-          console.error('[TrustIndex] Erreur dans script inline:', e);
-        }
-      } else {
-        console.log('[TrustIndex] TrustindexLoader pas encore disponible dans script inline');
-      }
-    };
-
-    // Exécuter le script inline après un délai
-    const scriptTimer = setTimeout(() => {
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTrustIndex);
-      } else {
-        initTrustIndex();
-      }
-
-      window.addEventListener('load', initTrustIndex);
-    }, 500);
-
-    return () => {
-      clearTimeout(scriptTimer);
-    };
-  }, []);
+    }
+  }, [useIframe]);
 
   return (
     <section className="py-12 bg-[#F8F5F0] mx-4 mb-4 rounded-2xl">
@@ -134,22 +159,77 @@ export function TrustIndex() {
           Avis Google
         </h2>
         
-        {/* Widget Trust Index - Format pour no-registration=google */}
-        <div
-          ref={widgetRef}
-          className="trustindex-widget"
-          data-no-registration="google"
-          style={{ 
-            minHeight: "300px",
-            width: "100%",
-            display: "block"
-          }}
-        >
-          {loading && !error && (
-            <div className="text-center text-gray-500 py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C6A664] mb-4"></div>
-              <p>Chargement des avis Google...</p>
+        <div className="relative w-full" style={{ minHeight: "400px" }}>
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-500 z-10">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C6A664] mb-4"></div>
+                <p>Chargement des avis Google...</p>
+              </div>
             </div>
+          )}
+          
+          {useIframe ? (
+            <iframe
+              src={GOOGLE_BUSINESS_IFRAME_URL}
+              className="w-full rounded-xl border-0"
+              style={{
+                minHeight: "400px",
+                height: "600px",
+                display: loading ? "none" : "block",
+              }}
+              title="Avis Google - Jessica CONTENTIN"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              onLoad={() => {
+                setLoading(false);
+                setError(false);
+              }}
+              onError={() => {
+                setLoading(false);
+                setError(true);
+              }}
+            />
+          ) : (
+            <>
+              {/* 
+                Conteneur Trust Index - Équivalent HTML du shortcode [trustindex data-widget-id=b77eee0587d8867421367bea9ed]
+                Le shortcode WordPress [trustindex data-widget-id=b77eee0587d8867421367bea9ed] se traduit par :
+                - class="trustindex-widget"
+                - data-widget-id="b77eee0587d8867421367bea9ed"
+                Le script Trust Index chargera automatiquement les avis dans ce conteneur
+              */}
+              <div
+                ref={widgetRef}
+                className="trustindex-widget"
+                data-widget-id={TRUST_INDEX_WIDGET_ID}
+                style={{ 
+                  minHeight: "400px",
+                  width: "100%",
+                  display: "block"
+                }}
+              >
+                {/* Le widget Trust Index sera injecté ici par le script loader.js */}
+              </div>
+              
+              {/* 
+                Iframe de fallback Trust Index (si le script ne fonctionne pas)
+                URL format: https://www.trustindex.io/reviews/{WIDGET_ID}?no-registration=google
+              */}
+              <iframe
+                src={`https://www.trustindex.io/reviews/${TRUST_INDEX_WIDGET_ID}?no-registration=google`}
+                className="w-full rounded-xl border-0"
+                style={{
+                  minHeight: "400px",
+                  height: "600px",
+                  display: "none" // Caché par défaut, activé automatiquement si le script échoue
+                }}
+                title="Avis Google - Jessica CONTENTIN"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                id="trustindex-iframe-fallback"
+              />
+            </>
           )}
           
           {error && (
@@ -157,11 +237,17 @@ export function TrustIndex() {
               <p className="text-gray-600 mb-4">
                 Les avis Google ne peuvent pas être affichés pour le moment.
               </p>
-              <p className="text-sm text-gray-500">
-                Pour afficher les avis, vous devez configurer Trust Index avec votre profil Google Business.
-                <br />
-                Contactez le support Trust Index pour obtenir votre <code className="bg-gray-100 px-2 py-1 rounded">location-id</code> ou <code className="bg-gray-100 px-2 py-1 rounded">widget-id</code>.
-              </p>
+              {useIframe ? (
+                <p className="text-sm text-gray-500">
+                  L'iframe Google Business n'a pas pu se charger. Vérifiez que l'URL dans <code className="bg-gray-100 px-2 py-1 rounded">GOOGLE_BUSINESS_IFRAME_URL</code> est correcte.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Pour afficher les avis via iframe, configurez <code className="bg-gray-100 px-2 py-1 rounded">GOOGLE_BUSINESS_IFRAME_URL</code> en haut du fichier <code className="bg-gray-100 px-2 py-1 rounded">trust-index.tsx</code>.
+                  <br />
+                  <strong>Instructions :</strong> Google Business &gt; Partager &gt; Intégrer une carte &gt; Copier l'URL de l'iframe
+                </p>
+              )}
             </div>
           )}
         </div>

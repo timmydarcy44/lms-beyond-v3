@@ -128,11 +128,11 @@ export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPagePro
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-4xl px-6 py-8">
+      <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-8">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Link href="/beyond-connect-app/companies">
-            <Button variant="ghost" className="text-[#003087] hover:bg-gray-100">
+            <Button variant="ghost" className="text-[#003087] hover:bg-gray-100 text-sm sm:text-base">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Retour
             </Button>
@@ -140,67 +140,69 @@ export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPagePro
         </div>
 
         {/* En-tête de l'offre */}
-        <Card className="border-gray-200 bg-white mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold text-gray-900">{jobOffer.title}</h1>
-                  <Badge variant={jobOffer.is_active ? "default" : "secondary"} className={jobOffer.is_active ? "bg-green-600" : ""}>
+        <Card className="border-gray-200 bg-white mb-4 sm:mb-6">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 break-words">{jobOffer.title}</h1>
+                  <Badge variant={jobOffer.is_active ? "default" : "secondary"} className={`${jobOffer.is_active ? "bg-green-600" : ""} w-fit`}>
                     {jobOffer.is_active ? "Publiée" : "Brouillon"}
                   </Badge>
                 </div>
-                <p className="text-lg text-gray-700 mb-4">{jobOffer.company.name}</p>
+                <p className="text-base sm:text-lg text-gray-700 mb-4">{jobOffer.company.name}</p>
               </div>
-              <Link href={`/beyond-connect-app/companies/jobs/${jobOfferId}/edit`}>
-                <Button variant="outline" className="border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white">
+              <Link href={`/beyond-connect-app/companies/jobs/${jobOfferId}/edit`} className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white text-sm sm:text-base">
                   <Edit className="mr-2 h-4 w-4" />
                   Modifier
                 </Button>
               </Link>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Briefcase className="h-5 w-5 text-[#003087]" />
-                <span className="capitalize">{jobOffer.contract_type}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
+                <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-[#003087] flex-shrink-0" />
+                <span className="capitalize truncate">{jobOffer.contract_type}</span>
               </div>
               {jobOffer.location && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <MapPin className="h-5 w-5 text-[#003087]" />
-                  {jobOffer.location}
+                <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-[#003087] flex-shrink-0" />
+                  <span className="truncate">{jobOffer.location}</span>
                 </div>
               )}
               {jobOffer.remote_allowed && (
-                <Badge variant="outline" className="border-green-600 text-green-600 w-fit">
+                <Badge variant="outline" className="border-green-600 text-green-600 w-fit text-xs sm:text-sm">
                   Télétravail possible
                 </Badge>
               )}
               {jobOffer.hours_per_week && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Clock className="h-5 w-5 text-[#003087]" />
-                  {jobOffer.hours_per_week}h/semaine
+                <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-[#003087] flex-shrink-0" />
+                  <span>{jobOffer.hours_per_week}h/semaine</span>
                 </div>
               )}
               {(jobOffer.salary_min || jobOffer.salary_max) && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Euro className="h-5 w-5 text-[#003087]" />
-                  {jobOffer.salary_min && jobOffer.salary_max
-                    ? `${jobOffer.salary_min} - ${jobOffer.salary_max} €`
-                    : jobOffer.salary_min
-                    ? `À partir de ${jobOffer.salary_min} €`
-                    : `Jusqu'à ${jobOffer.salary_max} €`}
+                <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
+                  <Euro className="h-4 w-4 sm:h-5 sm:w-5 text-[#003087] flex-shrink-0" />
+                  <span className="truncate">
+                    {jobOffer.salary_min && jobOffer.salary_max
+                      ? `${jobOffer.salary_min} - ${jobOffer.salary_max} €`
+                      : jobOffer.salary_min
+                      ? `À partir de ${jobOffer.salary_min} €`
+                      : `Jusqu'à ${jobOffer.salary_max} €`}
+                  </span>
                 </div>
               )}
             </div>
 
-            <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+            <div className="mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
               <span className="flex items-center gap-1">
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                 {jobOffer.views_count} vues
               </span>
               <span className="flex items-center gap-1">
-                <FileText className="h-4 w-4" />
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
                 {jobOffer.applications_count} candidatures
               </span>
             </div>
@@ -208,12 +210,12 @@ export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPagePro
         </Card>
 
         {/* Description de l'annonce */}
-        <Card className="border-gray-200 bg-white mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg text-gray-900">Description de l'annonce</CardTitle>
+        <Card className="border-gray-200 bg-white mb-4 sm:mb-6">
+          <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg text-gray-900">Description de l'annonce</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 whitespace-pre-wrap">{jobOffer.description || "Aucune description"}</p>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words">{jobOffer.description || "Aucune description"}</p>
           </CardContent>
         </Card>
 
@@ -355,18 +357,18 @@ export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPagePro
                   return (
                     <div
                       key={application.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4 flex-1">
-                          <div className="h-12 w-12 rounded-full bg-[#003087] flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                        <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-[#003087] flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0">
                             {initials}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-1">
-                              <h3 className="font-semibold text-gray-900">{fullName}</h3>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+                              <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">{fullName}</h3>
                               {matchScore > 0 && (
-                                <Badge className={`${
+                                <Badge className={`text-xs sm:text-sm ${
                                   matchScore >= 80 ? "bg-green-100 text-green-800 border-green-200" :
                                   matchScore >= 60 ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
                                   "bg-gray-100 text-gray-800 border-gray-200"
@@ -374,22 +376,22 @@ export function JobOfferDetailPage({ jobOfferId, userId }: JobOfferDetailPagePro
                                   {matchScore.toFixed(0)}% match
                                 </Badge>
                               )}
-                              <Badge variant="outline" className="capitalize">
+                              <Badge variant="outline" className="capitalize text-xs sm:text-sm">
                                 {application.status}
                               </Badge>
                             </div>
-                            <p className="text-sm text-gray-600 mb-2">{profile?.email}</p>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2 truncate">{profile?.email}</p>
                             {application.cover_letter && (
-                              <p className="text-sm text-gray-700 line-clamp-2">{application.cover_letter}</p>
+                              <p className="text-xs sm:text-sm text-gray-700 line-clamp-2 break-words">{application.cover_letter}</p>
                             )}
                             <p className="text-xs text-gray-500 mt-2">
                               Candidature du {new Date(application.created_at).toLocaleDateString("fr-FR")}
                             </p>
                           </div>
                         </div>
-                        <Link href={`/beyond-connect-app/companies/candidates/${application.user_id}?job_offer_id=${jobOfferId}`}>
-                          <Button variant="outline" className="border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white">
-                            <Eye className="mr-2 h-4 w-4" />
+                        <Link href={`/beyond-connect-app/companies/candidates/${application.user_id}?job_offer_id=${jobOfferId}`} className="w-full sm:w-auto">
+                          <Button variant="outline" className="w-full sm:w-auto border-[#003087] text-[#003087] hover:bg-[#003087] hover:text-white text-sm sm:text-base">
+                            <Eye className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                             Voir le profil
                           </Button>
                         </Link>

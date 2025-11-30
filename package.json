@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "db:apply:mental-health": "supabase db push --file supabase/CREATE_MENTAL_HEALTH_SCHEMA.sql",
-    "check:db": "node scripts/check-db-setup.js"
+    "check:db": "node scripts/check-db-setup.js",
+    "analyze:competitors": "node scripts/run-competitor-analysis.js",
+    "analyze:competitors:manual": "node scripts/competitor-analyzer-manual.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

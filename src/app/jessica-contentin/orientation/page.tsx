@@ -5,6 +5,9 @@ import { ArrowRight, Target, GraduationCap, FileText, Briefcase, CheckCircle2, U
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { InternalLinks } from "@/components/jessica-contentin/internal-links";
+import Script from "next/script";
+import Link from "next/link";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
@@ -76,7 +79,7 @@ export default function OrientationPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Accompagnement à l'orientation
+              Orientation Scolaire et Professionnelle - Accompagnement Parcoursup | Psychopédagogue Caen
             </h1>
             <p
               className="text-xl md:text-2xl text-[#2F2A25]/80 max-w-3xl mx-auto leading-relaxed"
@@ -84,7 +87,7 @@ export default function OrientationPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Un accompagnement personnalisé pour vous aider à faire les bons choix et à révéler votre potentiel
+              Accompagnement personnalisé à l'<strong>orientation scolaire et professionnelle</strong> à Caen. <strong>Test soft skills</strong>, travail sur perspectives métiers, rédaction projet orientation, aide <strong>Parcoursup</strong>, CV et lettre de motivation. Cabinet Jessica CONTENTIN, Fleury-sur-Orne.
             </p>
           </motion.div>
           </div>
@@ -357,6 +360,33 @@ export default function OrientationPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Maillage interne SEO */}
+      <InternalLinks currentPage="orientation" />
+
+      {/* Structured Data */}
+      <Script
+        id="structured-data-educational-service"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "EducationalOccupationalProgram",
+            "name": "Accompagnement à l'orientation scolaire et professionnelle",
+            "description": "Accompagnement personnalisé pour l'orientation scolaire et professionnelle avec test soft skills, aide Parcoursup, rédaction CV et lettre de motivation.",
+            "provider": {
+              "@type": "Person",
+              "name": "Jessica CONTENTIN",
+            },
+            "programType": "EducationalOccupationalProgram",
+            "occupationalCategory": "Orientation scolaire",
+            "areaServed": {
+              "@type": "City",
+              "name": "Caen",
+            },
+          }),
+        }}
+      />
     </div>
   );
 }

@@ -14,10 +14,23 @@ const buildClient = async (url: string, anonKey: string) => {
         return cookieStore.get(name)?.value;
       },
       set(name, value, options) {
-        cookieStore.set({ name, value, ...options });
+        try {
+          // Dans Next.js 15, les cookies ne peuvent être modifiés que dans
+          // des Server Actions ou Route Handlers. Dans les Server Components,
+          // on ne peut que les lire, donc on ignore silencieusement les tentatives
+          // de modification (par exemple lors du rafraîchissement automatique de token).
+          cookieStore.set({ name, value, ...options });
+        } catch (error) {
+          // Ignorer l'erreur - les cookies ne peuvent pas être modifiés dans ce contexte
+          // Les modifications de cookies doivent être faites dans des Server Actions ou Route Handlers
+        }
       },
       remove(name, options) {
-        cookieStore.delete({ name, ...options });
+        try {
+          cookieStore.delete({ name, ...options });
+        } catch (error) {
+          // Ignorer l'erreur - les cookies ne peuvent pas être modifiés dans ce contexte
+        }
       },
     },
   });

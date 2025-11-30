@@ -50,6 +50,7 @@ type PlayerProps = {
   questionnaire: QuestionnairePayload;
   assessments: AssessmentSummary[];
   isJessicaContentin?: boolean;
+  isTimDarcy?: boolean;
 };
 
 type Phase = "intro" | "questions" | "result";
@@ -198,25 +199,31 @@ function getSupabaseStorageUrl(bucket: string, path: string): string {
 
 const JESSICA_BUCKET_NAME = "Jessica CONTENTIN";
 
-export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, isJessicaContentin = false }: PlayerProps) {
+export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, isJessicaContentin = false, isTimDarcy = false }: PlayerProps) {
   // Debug: Log pour vérifier si isJessicaContentin est bien passé
   console.log("[MentalHealthQuestionnairePlayer] Rendering with:", {
     questionnaireTitle: questionnaire.title,
     isJessicaContentin,
+    isTimDarcy,
     questionnaireId: questionnaire.id,
   });
   
+  if (isTimDarcy) {
+    console.log("[MentalHealthQuestionnairePlayer] ✅ Tim Darcy detected - will use black & white layout");
+  }
+  
   // Déterminer les couleurs à utiliser
-  const brandColor = isJessicaContentin ? jessicaBrandColor : beyondCareBrandColor;
-  const accentColor = isJessicaContentin ? jessicaAccentColor : beyondCareBrandColor;
-  const secondaryColor = isJessicaContentin ? jessicaSecondaryColor : "#f4c1d2";
-  const backgroundColor = isJessicaContentin ? jessicaBackgroundColor : "#fef5f9";
-  const bgColor = isJessicaContentin ? jessicaBackgroundColor : "#fef5f9";
-  const surfaceColor = isJessicaContentin ? "#FFFFFF" : "#FFFFFF";
-  const textColor = isJessicaContentin ? jessicaTextColor : "#5a1d35";
-  const textSecondaryColor = isJessicaContentin ? "#8B7355" : "#7b2a49";
-  const hoverColor = isJessicaContentin ? "#B88A44" : "#b2124f";
-  const pdfBrandGradient = isJessicaContentin ? jessicaPdfBrandGradient : beyondCarePdfBrandGradient;
+  // Pour Tim Darcy : noir et blanc
+  const brandColor = isTimDarcy ? "#000000" : (isJessicaContentin ? jessicaBrandColor : beyondCareBrandColor);
+  const accentColor = isTimDarcy ? "#000000" : (isJessicaContentin ? jessicaAccentColor : beyondCareBrandColor);
+  const secondaryColor = isTimDarcy ? "#666666" : (isJessicaContentin ? jessicaSecondaryColor : "#f4c1d2");
+  const backgroundColor = isTimDarcy ? "#FFFFFF" : (isJessicaContentin ? jessicaBackgroundColor : "#fef5f9");
+  const bgColor = isTimDarcy ? "#FFFFFF" : (isJessicaContentin ? jessicaBackgroundColor : "#fef5f9");
+  const surfaceColor = isTimDarcy ? "#FFFFFF" : (isJessicaContentin ? "#FFFFFF" : "#FFFFFF");
+  const textColor = isTimDarcy ? "#000000" : (isJessicaContentin ? jessicaTextColor : "#5a1d35");
+  const textSecondaryColor = isTimDarcy ? "#666666" : (isJessicaContentin ? "#8B7355" : "#7b2a49");
+  const hoverColor = isTimDarcy ? "#333333" : (isJessicaContentin ? "#B88A44" : "#b2124f");
+  const pdfBrandGradient = isTimDarcy ? "linear-gradient(135deg, #000000 0%, #333333 100%)" : (isJessicaContentin ? jessicaPdfBrandGradient : beyondCarePdfBrandGradient);
   
   // Fonction utilitaire pour obtenir les styles inline avec les couleurs dynamiques
   const getColorStyle = (property: string) => ({ [property]: brandColor });
@@ -812,32 +819,89 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
     const textValue = typeof currentValue === "string" ? currentValue : "";
     const options = currentQuestion.options ?? [];
 
-    // Layout en 2 colonnes pour Jessica CONTENTIN (comme Quiz)
-    console.log("[renderQuestion] isJessicaContentin:", isJessicaContentin, "currentQuestion:", currentQuestion?.id);
-    if (isJessicaContentin) {
-      console.log("[renderQuestion] ✅ Using 2-column layout for Jessica CONTENTIN");
+    // Layout en 2 colonnes pour Jessica CONTENTIN (questions à gauche, image à droite)
+    // Layout en 2 colonnes pour Tim Darcy (image à gauche, questions à droite) - noir et blanc
+    console.log("[renderQuestion] isJessicaContentin:", isJessicaContentin, "isTimDarcy:", isTimDarcy, "currentQuestion:", currentQuestion?.id);
+    if (isTimDarcy) {
+      console.log("[renderQuestion] ✅ Tim Darcy detected - using black & white layout with image on left, questions on right");
+    } else if (isJessicaContentin) {
+      console.log("[renderQuestion] ✅ Jessica CONTENTIN detected - using 2-column layout with questions on left, image on right");
+    }
+    if (isJessicaContentin || isTimDarcy) {
+      console.log(`[renderQuestion] ✅ Using 2-column layout for ${isTimDarcy ? 'Tim Darcy' : 'Jessica CONTENTIN'}`);
       // Construire l'URL de l'image : utiliser media_url de la question ou une image par défaut
+      // Le media_url crée un lien direct entre la question et l'image
       let imageUrl = mediaUrl;
       if (mediaUrl && !mediaUrl.startsWith('http')) {
         // Si c'est un chemin relatif, construire l'URL Supabase
-        imageUrl = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, mediaUrl);
+        if (isJessicaContentin) {
+          imageUrl = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, mediaUrl);
+        } else if (isTimDarcy) {
+          // Pour Tim Darcy, on pourrait utiliser un bucket spécifique si nécessaire
+          // Pour l'instant, on utilisera les images par défaut qui changent selon la question
+          imageUrl = undefined;
+        } else {
+          imageUrl = undefined;
+        }
       }
       if (!imageUrl) {
-        // Image par défaut depuis le storage de Jessica CONTENTIN
-        // Utiliser "femme soleil.jpg" comme image par défaut (même que la page de login)
-        imageUrl = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "femme soleil.jpg");
-        // Si l'image n'est pas disponible, utiliser une autre image du storage
-        // On peut aussi utiliser "mere enfant.jpg" ou "couche soleil.png"
+        if (isJessicaContentin) {
+          // Image par défaut depuis le storage de Jessica CONTENTIN
+          imageUrl = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "femme soleil.jpg");
+        } else if (isTimDarcy) {
+          // Pour Tim Darcy : images en couleur qui changent selon la question pour créer un lien visuel
+          // Utiliser l'ID de la question ou l'index pour déterminer quelle image afficher
+          // Cela crée un lien visuel entre chaque question et son image
+          const questionHash = currentQuestion.id ? 
+            currentQuestion.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 
+            currentIndex;
+          const imageIndex = questionHash % 5; // Cycle entre 5 images différentes
+          const defaultImages = [
+            "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop", // Collaboration
+            "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop", // Leadership
+            "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1932&auto=format&fit=crop", // Communication
+            "https://images.unsplash.com/photo-1556761175-4b46a572b786?q=80&w=1974&auto=format&fit=crop", // Créativité
+            "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2084&auto=format&fit=crop" // Organisation
+          ];
+          imageUrl = defaultImages[imageIndex];
+        } else {
+          imageUrl = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop";
+        }
       }
 
+      // Pour Tim Darcy : image à gauche, questions à droite (inverse de Jessica)
+      const isTimDarcyLayout = isTimDarcy;
+      
       return (
         <div className="min-h-screen" style={{ backgroundColor: backgroundColor }}>
-          <div className="grid lg:grid-cols-2 min-h-screen">
-            {/* Colonne gauche : Questions */}
-            <div className="bg-white p-8 md:p-12 lg:p-16 flex flex-col">
+          <div className={`grid lg:grid-cols-2 min-h-screen ${isTimDarcyLayout ? '' : ''}`}>
+            {/* Colonne gauche : Questions pour Jessica, Image pour Tim Darcy */}
+            {isTimDarcyLayout ? (
+              /* Image à gauche pour Tim Darcy - cachée sur mobile */
+              <div className="hidden lg:block relative overflow-hidden bg-black">
+                <motion.div
+                  key={currentQuestion.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0"
+                >
+                  <Image
+                    src={imageUrl || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop"}
+                    alt={`Illustration pour la question ${currentIndex + 1}: ${currentQuestion.question_text?.substring(0, 100) || "Question Soft Skills"}`}
+                    fill
+                    className="object-cover transition-opacity duration-300"
+                    priority={currentIndex === 0}
+                    unoptimized={!!imageUrl && imageUrl.includes('supabase')}
+                  />
+                </motion.div>
+              </div>
+            ) : (
+              /* Questions à gauche pour Jessica */
+              <div className="bg-white p-4 sm:p-6 md:p-8 lg:p-12 xl:p-16 flex flex-col min-h-screen lg:min-h-0 overflow-y-auto">
               {/* Indicateur de progression */}
-              <div className="mb-8">
-                <div className="flex gap-2 mb-2">
+              <div className="mb-4 sm:mb-6 md:mb-8">
+                <div className="flex gap-1 sm:gap-2 mb-2">
                   {Array.from({ length: totalQuestions }).map((_, index) => (
                     <div
                       key={index}
@@ -852,13 +916,13 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                     />
                   ))}
                 </div>
-                <p className="text-sm" style={{ color: `${textColor}99` }}>
+                <p className="text-xs sm:text-sm" style={{ color: `${textColor}99` }}>
                   QUESTION {currentIndex + 1} SUR {totalQuestions}
                 </p>
               </div>
 
               {/* Contenu de la question */}
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col overflow-y-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentQuestion.id}
@@ -868,10 +932,10 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                     transition={{ duration: 0.3 }}
                     className="flex-1"
                   >
-                    <div className="space-y-8">
+                    <div className="space-y-4 sm:space-y-6 md:space-y-8">
                       <div>
                         <h2 
-                          className="text-4xl md:text-5xl font-bold mb-4"
+                          className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 leading-tight"
                           style={{ color: textColor }}
                         >
                           {currentQuestion.question_text}
@@ -879,7 +943,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                       </div>
 
                       {questionType === "likert" ? (
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                           {values.map((value) => {
                             const isActive = currentValue === value;
                             const label = currentQuestion.likert_scale?.labels?.[String(value)];
@@ -887,7 +951,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                               <button
                                 key={value}
                                 onClick={() => handleSelectAnswer(currentQuestion, value)}
-                                className={`p-6 rounded-2xl border-2 text-left transition-all ${
+                                className={`p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl sm:rounded-2xl border-2 text-left transition-all ${
                                   isActive
                                     ? ""
                                     : ""
@@ -910,19 +974,19 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                                   }
                                 }}
                               >
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <span className="text-2xl font-bold block mb-1" style={{ color: textColor }}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-lg sm:text-xl md:text-2xl font-bold block mb-0.5 sm:mb-1" style={{ color: textColor }}>
                                       {value}
                                     </span>
                                     {label && (
-                                      <span className="text-sm" style={{ color: `${textColor}80` }}>
+                                      <span className="text-xs sm:text-sm block leading-tight" style={{ color: `${textColor}80` }}>
                                         {label}
                                       </span>
                                     )}
                                   </div>
                                   <div
-                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                                       isActive ? "" : ""
                                     }`}
                                     style={isActive ? {
@@ -933,7 +997,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                                     }}
                                   >
                                     {isActive && (
-                                      <div className="w-2 h-2 rounded-full bg-white" />
+                                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white" />
                                     )}
                                   </div>
                                 </div>
@@ -944,14 +1008,14 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                       ) : null}
 
                       {questionType === "single_choice" ? (
-                        <div className="space-y-4">
+                        <div className="space-y-2 sm:space-y-3 md:space-y-4">
                           {options.map((option) => {
                             const isActive = String(currentValue ?? "") === option.value;
                             return (
                               <button
                                 key={option.value}
                                 onClick={() => handleSelectAnswer(currentQuestion, option.value)}
-                                className={`w-full p-6 rounded-2xl border-2 text-left transition-all ${
+                                className={`w-full p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl sm:rounded-2xl border-2 text-left transition-all ${
                                   isActive ? "" : ""
                                 }`}
                                 style={isActive ? {
@@ -972,12 +1036,12 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                                   }
                                 }}
                               >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-lg font-medium" style={{ color: textColor }}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm sm:text-base md:text-lg font-medium flex-1" style={{ color: textColor }}>
                                     {option.label}
                                   </span>
                                   <div
-                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                                       isActive ? "" : ""
                                     }`}
                                     style={isActive ? {
@@ -988,7 +1052,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                                     }}
                                   >
                                     {isActive && (
-                                      <div className="w-2 h-2 rounded-full bg-white" />
+                                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white" />
                                     )}
                                   </div>
                                 </div>
@@ -998,44 +1062,44 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                         </div>
                       ) : null}
 
-                      {questionType === "text" ? (
-                        <div className="space-y-4">
-                          <textarea
-                            className="w-full rounded-2xl border-2 p-4 text-sm focus:outline-none"
-                            style={{
-                              borderColor: secondaryColor,
-                              color: textColor
-                            }}
-                            onFocus={(e) => {
-                              e.currentTarget.style.borderColor = brandColor;
-                            }}
-                            onBlur={(e) => {
-                              e.currentTarget.style.borderColor = secondaryColor;
-                            }}
-                            rows={4}
-                            placeholder="Écris ta réponse en quelques phrases..."
-                            value={textValue}
-                            onChange={(event) => handleTextAnswer(currentQuestion, event.target.value)}
-                            maxLength={600}
-                            disabled={submitting}
-                          />
-                          <p className="text-xs" style={{ color: `${textColor}99` }}>
-                            {textValue.length}/600 caractères
-                          </p>
-                        </div>
-                      ) : null}
+                        {questionType === "text" ? (
+                          <div className="space-y-2 sm:space-y-3 md:space-y-4">
+                            <textarea
+                              className="w-full rounded-xl sm:rounded-2xl border-2 p-3 sm:p-4 text-sm sm:text-base focus:outline-none resize-none"
+                              style={{
+                                borderColor: secondaryColor,
+                                color: textColor
+                              }}
+                              onFocus={(e) => {
+                                e.currentTarget.style.borderColor = brandColor;
+                              }}
+                              onBlur={(e) => {
+                                e.currentTarget.style.borderColor = secondaryColor;
+                              }}
+                              rows={4}
+                              placeholder="Écris ta réponse en quelques phrases..."
+                              value={textValue}
+                              onChange={(event) => handleTextAnswer(currentQuestion, event.target.value)}
+                              maxLength={600}
+                              disabled={submitting}
+                            />
+                            <p className="text-xs sm:text-sm" style={{ color: `${textColor}99` }}>
+                              {textValue.length}/600 caractères
+                            </p>
+                          </div>
+                        ) : null}
                     </div>
                   </motion.div>
                 </AnimatePresence>
 
                 {/* Boutons de navigation */}
-                <div className="flex justify-between mt-12">
+                <div className="flex justify-between gap-2 sm:gap-4 mt-6 sm:mt-8 md:mt-12 pt-4 sm:pt-6 border-t border-gray-100">
                   {currentIndex > 0 && (
                     <Button
                       variant="outline"
                       onClick={handlePrev}
                       disabled={submitting}
-                      className="rounded-full px-8 py-6 border-2"
+                      className="rounded-full px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 border-2 text-sm sm:text-base"
                       style={{
                         borderColor: secondaryColor,
                         color: textColor
@@ -1047,16 +1111,17 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                         e.currentTarget.style.backgroundColor = "transparent";
                       }}
                     >
-                      <ChevronLeft className="mr-2 h-5 w-5" />
-                      Précédent
+                      <ChevronLeft className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">Précédent</span>
+                      <span className="sm:hidden">Préc.</span>
                     </Button>
                   )}
                   <div className="flex-1" />
-                  {currentIndex < totalQuestions - 1 && questionType === "text" ? (
+                  {currentIndex < totalQuestions - 1 && (questionType === "text" || canGoNext) ? (
                     <Button
                       onClick={handleNext}
                       disabled={!canGoNext || submitting}
-                      className="rounded-full px-8 py-6 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-full px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                       style={{
                         backgroundColor: brandColor
                       }}
@@ -1070,14 +1135,14 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                       }}
                     >
                       Continuer
-                      <ChevronRight className="ml-2 h-5 w-5" />
+                      <ChevronRight className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
                   ) : null}
                   {currentIndex === totalQuestions - 1 && (
                     <Button
                       onClick={() => handleSubmit()}
                       disabled={!canGoNext || submitting}
-                      className="rounded-full px-8 py-6 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-full px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                       style={{
                         backgroundColor: brandColor
                       }}
@@ -1092,51 +1157,332 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                     >
                       {submitting ? (
                         <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Analyse en cours
+                          <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                          <span className="hidden sm:inline">Analyse en cours</span>
+                          <span className="sm:hidden">Analyse...</span>
                         </>
                       ) : (
                         <>
                           Terminer
-                          <CheckCircle2 className="ml-2 h-5 w-5" />
+                          <CheckCircle2 className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                         </>
                       )}
                     </Button>
                   )}
                 </div>
               </div>
-            </div>
+              </div>
+            )}
 
-            {/* Colonne droite : Image */}
-            <div className="hidden lg:block relative overflow-hidden">
-              <motion.div
-                key={currentQuestion.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0"
-              >
-                <Image
-                  src={imageUrl}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  priority={currentIndex === 0}
-                  unoptimized={!!imageUrl && imageUrl.includes('supabase')}
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    // Si l'image par défaut échoue, essayer une autre image du storage
-                    if (target.src.includes('femme soleil')) {
-                      target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "mere enfant.jpg");
-                    } else if (target.src.includes('mere enfant')) {
-                      target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "couche soleil.png");
-                    } else if (target.src.includes('couche soleil')) {
-                      target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "Couple.png");
-                    }
-                  }}
-                />
-              </motion.div>
-            </div>
+            {/* Colonne droite : Image pour Jessica, Questions pour Tim Darcy */}
+            {isTimDarcyLayout ? (
+              /* Questions à droite pour Tim Darcy - pleine largeur sur mobile */
+              <div className="bg-white p-4 sm:p-6 md:p-8 lg:p-12 xl:p-16 flex flex-col min-h-screen lg:min-h-0 lg:col-span-1">
+                {/* Indicateur de progression */}
+                <div className="mb-4 sm:mb-6 md:mb-8">
+                  <div className="flex gap-1 sm:gap-2 mb-2">
+                    {Array.from({ length: totalQuestions }).map((_, index) => (
+                      <div
+                        key={index}
+                        className={`h-1 flex-1 rounded-full transition-all ${
+                          index <= currentIndex
+                            ? ""
+                            : ""
+                        }`}
+                        style={{
+                          backgroundColor: index <= currentIndex ? "#000000" : "#E5E5E5"
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs sm:text-sm" style={{ color: "#666666" }}>
+                    QUESTION {currentIndex + 1} SUR {totalQuestions}
+                  </p>
+                </div>
+
+                {/* Contenu de la question */}
+                <div className="flex-1 flex flex-col overflow-y-auto">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentQuestion.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex-1"
+                    >
+                      <div className="space-y-4 sm:space-y-6 md:space-y-8">
+                        <div>
+                          <h2 
+                            className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 leading-tight"
+                            style={{ color: "#000000" }}
+                          >
+                            {currentQuestion.question_text}
+                          </h2>
+                        </div>
+
+                        {questionType === "likert" ? (
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+                            {values.map((value) => {
+                              const isActive = currentValue === value;
+                              const label = currentQuestion.likert_scale?.labels?.[String(value)];
+                              return (
+                                <button
+                                  key={value}
+                                  onClick={() => handleSelectAnswer(currentQuestion, value)}
+                                  className={`p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl sm:rounded-2xl border-2 text-left transition-all ${
+                                    isActive
+                                      ? ""
+                                      : ""
+                                  }`}
+                                  style={isActive ? {
+                                    borderColor: "#000000",
+                                    backgroundColor: "#F5F5F5"
+                                  } : {
+                                    borderColor: "#E5E5E5",
+                                    backgroundColor: "white"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isActive) {
+                                      e.currentTarget.style.borderColor = "#666666";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isActive) {
+                                      e.currentTarget.style.borderColor = "#E5E5E5";
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-lg sm:text-xl md:text-2xl font-bold block mb-0.5 sm:mb-1" style={{ color: "#000000" }}>
+                                        {value}
+                                      </span>
+                                      {label && (
+                                        <span className="text-xs sm:text-sm block leading-tight" style={{ color: "#666666" }}>
+                                          {label}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div
+                                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                        isActive ? "" : ""
+                                      }`}
+                                      style={isActive ? {
+                                        borderColor: "#000000",
+                                        backgroundColor: "#000000"
+                                      } : {
+                                        borderColor: "#E5E5E5"
+                                      }}
+                                    >
+                                      {isActive && (
+                                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        {questionType === "single_choice" ? (
+                          <div className="space-y-2 sm:space-y-3 md:space-y-4">
+                            {options.map((option) => {
+                              const isActive = String(currentValue ?? "") === option.value;
+                              return (
+                                <button
+                                  key={option.value}
+                                  onClick={() => handleSelectAnswer(currentQuestion, option.value)}
+                                  className={`w-full p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl sm:rounded-2xl border-2 text-left transition-all ${
+                                    isActive ? "" : ""
+                                  }`}
+                                  style={isActive ? {
+                                    borderColor: "#000000",
+                                    backgroundColor: "#F5F5F5"
+                                  } : {
+                                    borderColor: "#E5E5E5",
+                                    backgroundColor: "white"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isActive) {
+                                      e.currentTarget.style.borderColor = "#666666";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isActive) {
+                                      e.currentTarget.style.borderColor = "#E5E5E5";
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-sm sm:text-base md:text-lg font-medium flex-1" style={{ color: "#000000" }}>
+                                      {option.label}
+                                    </span>
+                                    <div
+                                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                        isActive ? "" : ""
+                                      }`}
+                                      style={isActive ? {
+                                        borderColor: "#000000",
+                                        backgroundColor: "#000000"
+                                      } : {
+                                        borderColor: "#E5E5E5"
+                                      }}
+                                    >
+                                      {isActive && (
+                                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        {questionType === "text" ? (
+                          <div className="space-y-2 sm:space-y-3 md:space-y-4">
+                            <textarea
+                              className="w-full rounded-xl sm:rounded-2xl border-2 p-3 sm:p-4 text-sm sm:text-base focus:outline-none resize-none"
+                              style={{
+                                borderColor: "#E5E5E5",
+                                color: "#000000"
+                              }}
+                              onFocus={(e) => {
+                                e.currentTarget.style.borderColor = "#000000";
+                              }}
+                              onBlur={(e) => {
+                                e.currentTarget.style.borderColor = "#E5E5E5";
+                              }}
+                              rows={4}
+                              placeholder="Écris ta réponse en quelques phrases..."
+                              value={textValue}
+                              onChange={(event) => handleTextAnswer(currentQuestion, event.target.value)}
+                              maxLength={600}
+                              disabled={submitting}
+                            />
+                            <p className="text-xs sm:text-sm" style={{ color: "#666666" }}>
+                              {textValue.length}/600 caractères
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Boutons de navigation */}
+                  <div className="flex justify-between gap-2 sm:gap-4 mt-6 sm:mt-8 md:mt-12 pt-4 sm:pt-6 border-t border-gray-100">
+                    {currentIndex > 0 && (
+                      <Button
+                        variant="outline"
+                        onClick={handlePrev}
+                        disabled={submitting}
+                        className="rounded-full px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 border-2 text-sm sm:text-base"
+                        style={{
+                          borderColor: "#E5E5E5",
+                          color: "#000000"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#F5F5F5";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        }}
+                      >
+                        <ChevronLeft className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">Précédent</span>
+                        <span className="sm:hidden">Préc.</span>
+                      </Button>
+                    )}
+                    <div className="flex-1" />
+                    {currentIndex < totalQuestions - 1 && (questionType === "text" || canGoNext) ? (
+                      <Button
+                        onClick={handleNext}
+                        disabled={!canGoNext || submitting}
+                        className="rounded-full px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                        style={{
+                          backgroundColor: "#000000"
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = "#333333";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "#000000";
+                        }}
+                      >
+                        Continuer
+                        <ChevronRight className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      </Button>
+                    ) : null}
+                    {currentIndex === totalQuestions - 1 && (
+                      <Button
+                        onClick={() => handleSubmit()}
+                        disabled={!canGoNext || submitting}
+                        className="rounded-full px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                        style={{
+                          backgroundColor: "#000000"
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = "#333333";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "#000000";
+                        }}
+                      >
+                        {submitting ? (
+                          <>
+                            <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                            <span className="hidden sm:inline">Analyse en cours</span>
+                            <span className="sm:hidden">Analyse...</span>
+                          </>
+                        ) : (
+                          <>
+                            Terminer
+                            <CheckCircle2 className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Image à droite pour Jessica */
+              <div className="hidden lg:block relative overflow-hidden">
+                <motion.div
+                  key={currentQuestion.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0"
+                >
+                  <Image
+                    src={imageUrl}
+                    alt={`Illustration pour la question ${currentIndex + 1}: ${currentQuestion.question_text?.substring(0, 100) || "Question"}`}
+                    fill
+                    className="object-cover transition-opacity duration-300"
+                    priority={currentIndex === 0}
+                    unoptimized={!!imageUrl && imageUrl.includes('supabase')}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      // Si l'image par défaut échoue, essayer une autre image du storage
+                      if (target.src.includes('femme soleil')) {
+                        target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "mere enfant.jpg");
+                      } else if (target.src.includes('mere enfant')) {
+                        target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "couche soleil.png");
+                      } else if (target.src.includes('couche soleil')) {
+                        target.src = getSupabaseStorageUrl(JESSICA_BUCKET_NAME, "Couple.png");
+                      }
+                    }}
+                  />
+                </motion.div>
+              </div>
+            )}
           </div>
         </div>
       );
@@ -1634,17 +1980,17 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                   Partager sur LinkedIn
                 </Button>
                 {isJessicaContentin ? (
-                  <Button 
-                    asChild 
+                <Button 
+                  asChild 
                     className="text-white"
-                    style={{
+                  style={{
                       backgroundColor: brandColor,
                       color: 'white'
-                    }}
-                    onMouseEnter={(e) => {
+                  }}
+                  onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = hoverColor;
-                    }}
-                    onMouseLeave={(e) => {
+                  }}
+                  onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = brandColor;
                     }}
                   >
@@ -1664,30 +2010,30 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = brandColor;
-                      }}
-                    >
-                      <Link href="/dashboard/apprenant/beyond-care">Revenir à Beyond Care</Link>
-                    </Button>
-                    {result.id ? (
-                      <Button
-                        variant="outline"
-                        style={{
+                  }}
+                >
+                  <Link href="/dashboard/apprenant/beyond-care">Revenir à Beyond Care</Link>
+                </Button>
+                {result.id ? (
+                  <Button
+                    variant="outline"
+                    style={{
                           borderColor: brandColor,
                           color: brandColor
-                        }}
-                        onMouseEnter={(e) => {
+                    }}
+                    onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = `${brandColor}10`;
-                        }}
-                        onMouseLeave={(e) => {
+                    }}
+                    onMouseLeave={(e) => {
                           e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                        onClick={() => {
-                          window.location.href = `/dashboard/catalogue/beyond-link?assessment=${result.id}`;
-                        }}
-                      >
-                        Beyond Link
-                      </Button>
-                    ) : null}
+                    }}
+                    onClick={() => {
+                      window.location.href = `/dashboard/catalogue/beyond-link?assessment=${result.id}`;
+                    }}
+                  >
+                    Beyond Link
+                  </Button>
+                ) : null}
                   </>
                 )}
               </div>
@@ -2176,17 +2522,19 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
 
   const containerClass = cn(
     "relative min-h-screen px-4 pb-16",
-    isSoftSkills && !isJessicaContentin && "soft-skills-monochrome",
+    isSoftSkills && !isJessicaContentin && !isTimDarcy && "soft-skills-monochrome",
   );
-  const containerStyle = isSoftSkills && !isJessicaContentin 
-    ? { background: "#050505", color: "#f5f5f5" } 
-    : isJessicaContentin 
-      ? { background: bgColor, color: textColor }
-      : { background: "linear-gradient(to bottom, white, white)" };
+  const containerStyle = isTimDarcy
+    ? { background: "#FFFFFF", color: "#000000" }
+    : isSoftSkills && !isJessicaContentin 
+      ? { background: "#050505", color: "#f5f5f5" } 
+      : isJessicaContentin 
+        ? { background: bgColor, color: textColor }
+        : { background: "linear-gradient(to bottom, white, white)" };
 
-  // Pour Jessica CONTENTIN en phase questions, le layout est géré directement dans renderQuestion()
+  // Pour Jessica CONTENTIN et Tim Darcy en phase questions, le layout est géré directement dans renderQuestion()
   // Pour les autres phases (intro, result), on utilise le layout normal
-  if (isJessicaContentin && phase === "questions") {
+  if ((isJessicaContentin || isTimDarcy) && phase === "questions") {
     return renderQuestion();
   }
 
@@ -2201,6 +2549,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
   );
 }
 
+// Fonction utilitaire pour convertir un score en message
 function scoreToMessage(dimension: string, score: number) {
   let thresholds = DIMENSION_MESSAGES[dimension as keyof typeof DIMENSION_MESSAGES];
   if (!thresholds) {

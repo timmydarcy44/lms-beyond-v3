@@ -21,7 +21,7 @@ export default async function BeyondConnectAppPage() {
   if (supabase) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, role")
+      .select("id, role, first_name, last_name")
       .eq("id", session.id)
       .single();
 
@@ -51,6 +51,14 @@ export default async function BeyondConnectAppPage() {
             redirect("/beyond-connect-app/companies");
           }
         }
+      }
+    }
+
+    // Pour les candidats (learner/student), vérifier si le profil est complet
+    // Si first_name ou last_name manquent, rediriger vers l'onboarding
+    if (profile && (profile.role === "learner" || profile.role === "student")) {
+      if (!profile.first_name || !profile.last_name) {
+        redirect("/beyond-connect-app/onboarding");
       }
     }
   }

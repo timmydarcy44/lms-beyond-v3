@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { env } from "@/lib/env";
+import { InternalLinks } from "@/components/jessica-contentin/internal-links";
+import Script from "next/script";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
@@ -97,7 +99,7 @@ export default function ConsultationsPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Consultations
+              Consultations Psychopédagogiques - Tarifs et Modalités | Cabinet Fleury-sur-Orne, Caen
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -108,7 +110,7 @@ export default function ConsultationsPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Des consultations personnalisées adaptées à chaque profil et à chaque besoin, dans un cadre chaleureux et bienveillant.
+              Consultations psychopédagogiques personnalisées à <strong>Fleury-sur-Orne (Caen)</strong>. Tarifs : première consultation <strong>90€</strong>, suivi <strong>70€</strong>. Pour enfants, adolescents, adultes et parents. Cabinet chaleureux avec coin enfant. <Link href="https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin" className="text-[#C6A664] hover:underline font-semibold">Prenez rendez-vous en ligne</Link>.
             </motion.p>
           </div>
         </div>
@@ -515,6 +517,47 @@ export default function ConsultationsPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Maillage interne SEO */}
+      <InternalLinks currentPage="consultations" />
+
+      {/* Structured Data */}
+      <Script
+        id="structured-data-local-business"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            "name": "Cabinet de Psychopédagogie Jessica CONTENTIN",
+            "description": "Cabinet de psychopédagogie spécialisé dans l'accompagnement des troubles du neurodéveloppement, harcèlement scolaire et phobie scolaire.",
+            "url": "https://jessicacontentin.fr",
+            "telephone": "+33683477174",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "41 C",
+              "addressLocality": "Fleury-sur-Orne",
+              "postalCode": "14123",
+              "addressRegion": "Normandie",
+              "addressCountry": "FR",
+            },
+            "geo": {
+              "@type": "GeoCoordinates",
+              "latitude": "49.1478",
+              "longitude": "-0.3756",
+            },
+            "priceRange": "€€",
+            "openingHoursSpecification": [
+              {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                "opens": "09:30",
+                "closes": "18:00",
+              },
+            ],
+          }),
+        }}
+      />
     </div>
   );
 }

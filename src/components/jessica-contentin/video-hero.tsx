@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Video } from "lucide-react";
 import { env } from "@/lib/env";
 
 // Fonction pour construire l'URL Supabase Storage
@@ -30,9 +30,14 @@ const VIDEO_PATH = "Design sans titre (2).mp4";
 export function VideoHero() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [useIframe, setUseIframe] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const videoUrl = getSupabaseStorageUrl(BUCKET_NAME, VIDEO_PATH);
+  
+  // URL de l'iframe pour la lecture (à configurer selon vos besoins)
+  // Exemple : YouTube, Vimeo, ou un lecteur personnalisé
+  const iframeUrl = videoUrl || ""; // Utilisez l'URL de votre lecteur iframe
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -60,25 +65,45 @@ export function VideoHero() {
       transition={{ duration: 0.6 }}
       className="relative w-full h-[400px] md:h-[450px] lg:h-[500px] mx-4 mb-4 rounded-2xl overflow-hidden shadow-2xl"
     >
-      {/* Vidéo en arrière-plan */}
+      {/* Vidéo en arrière-plan - Iframe ou Video */}
       <div className="absolute inset-0">
-        <video
-          ref={videoRef}
-          src={videoUrl}
-          autoPlay
-          loop
-          muted={isMuted}
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          onError={(e) => {
-            console.error("[VideoHero] Erreur lors du chargement de la vidéo:", e);
-          }}
-          onLoadedData={() => {
-            console.log("[VideoHero] ✅ Vidéo chargée avec succès");
-          }}
-        />
-        {/* Overlay sombre pour améliorer la lisibilité */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+        {useIframe && iframeUrl ? (
+          <iframe
+            src={iframeUrl}
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{ border: "none" }}
+            onError={() => {
+              console.error("[VideoHero] Erreur lors du chargement de l'iframe");
+              setUseIframe(false);
+            }}
+          />
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              autoPlay
+              loop
+              muted={isMuted}
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={(e) => {
+                console.error("[VideoHero] Erreur lors du chargement de la vidéo:", e);
+                // Si la vidéo échoue, essayer l'iframe si disponible
+                if (iframeUrl) {
+                  setUseIframe(true);
+                }
+              }}
+              onLoadedData={() => {
+                console.log("[VideoHero] ✅ Vidéo chargée avec succès");
+              }}
+            />
+            {/* Overlay sombre pour améliorer la lisibilité */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+          </>
+        )}
       </div>
 
       {/* Contenu centré sur la vidéo */}
@@ -137,35 +162,47 @@ export function VideoHero() {
       </div>
 
       {/* Contrôles vidéo (optionnels, en bas à droite) */}
-      <div className="absolute bottom-4 right-4 z-20 flex gap-2">
-        <button
-          onClick={togglePlay}
-          className="p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur-sm"
-          aria-label={isPlaying ? "Pause" : "Play"}
-        >
-          {isPlaying ? (
-            <Pause className="h-5 w-5" />
-          ) : (
-            <Play className="h-5 w-5" />
+      {!useIframe && (
+        <div className="absolute bottom-4 right-4 z-20 flex gap-2">
+          <button
+            onClick={togglePlay}
+            className="p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur-sm"
+            aria-label={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5" />
+            )}
+          </button>
+          <button
+            onClick={toggleMute}
+            className="p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur-sm"
+            aria-label={isMuted ? "Activer le son" : "Désactiver le son"}
+          >
+            {isMuted ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+            )}
+          </button>
+          {iframeUrl && (
+            <button
+              onClick={() => setUseIframe(!useIframe)}
+              className="p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur-sm"
+              aria-label="Basculer vers le lecteur iframe"
+              title="Utiliser le lecteur iframe"
+            >
+              <Video className="h-5 w-5" />
+            </button>
           )}
-        </button>
-        <button
-          onClick={toggleMute}
-          className="p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur-sm"
-          aria-label={isMuted ? "Activer le son" : "Désactiver le son"}
-        >
-          {isMuted ? (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-            </svg>
-          ) : (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            </svg>
-          )}
-        </button>
-      </div>
+        </div>
+      )}
     </motion.section>
   );
 }

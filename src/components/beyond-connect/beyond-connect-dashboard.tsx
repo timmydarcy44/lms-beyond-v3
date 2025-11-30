@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { toast } from "sonner";
+import { RecommendedFormationsSection } from "./recommended-formations-section";
 
 type BeyondConnectDashboardProps = {
   userId: string;
@@ -209,6 +210,11 @@ export function BeyondConnectDashboard({ userId }: BeyondConnectDashboardProps) 
               <p className="text-sm text-gray-600">Les entreprises premium peuvent vous contacter directement</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Recommended Formations */}
+        <div className="mt-8">
+          <RecommendedFormationsSection userId={userId} limit={3} />
         </div>
       </div>
     </div>

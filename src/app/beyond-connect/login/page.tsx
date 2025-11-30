@@ -440,7 +440,7 @@ function LoginForm() {
             <p className="text-center text-sm text-gray-600">
               Pas encore de compte ?{" "}
               <Link
-                href="/signup"
+                href="/beyond-connect/inscription"
                 className="font-medium text-[#003087] transition-colors hover:text-[#002a7a]"
               >
                 Créer un compte

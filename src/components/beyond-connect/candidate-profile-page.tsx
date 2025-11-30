@@ -145,11 +145,11 @@ export function CandidateProfilePage({ candidateUserId, jobOfferId, viewerUserId
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-8">
         {/* Header avec bouton retour */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Link href="/beyond-connect-app/companies/candidates">
-            <Button variant="ghost" className="text-[#003087] hover:bg-gray-100">
+            <Button variant="ghost" className="text-[#003087] hover:bg-gray-100 text-sm sm:text-base">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Retour à la recherche
             </Button>
@@ -157,25 +157,27 @@ export function CandidateProfilePage({ candidateUserId, jobOfferId, viewerUserId
         </div>
 
         {/* En-tête du profil */}
-        <Card className="border-gray-200 bg-white mb-6">
-          <CardContent className="p-8">
-            <div className="flex items-start gap-6">
-              <div className="h-32 w-32 rounded-full bg-[#003087] flex items-center justify-center text-white text-4xl font-semibold">
-                {profile.avatar_url ? (
+        <Card className="border-gray-200 bg-white mb-4 sm:mb-6">
+          <CardContent className="p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+              {profile.avatar_url ? (
+                <div className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-full overflow-hidden flex-shrink-0 border-4 border-[#003087]">
                   <img
                     src={profile.avatar_url}
                     alt={profile.full_name || profile.email}
-                    className="h-32 w-32 rounded-full object-cover"
+                    className="h-full w-full object-cover"
                   />
-                ) : (
-                  (profile.first_name?.charAt(0) || profile.email.charAt(0).toUpperCase())
-                )}
-              </div>
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                </div>
+              ) : (
+                <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-[#003087] flex items-center justify-center text-white text-2xl sm:text-4xl font-semibold flex-shrink-0">
+                  {profile.first_name?.charAt(0) || profile.email.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2 break-words">
                   {profile.full_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || profile.email}
                 </h1>
-                <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm sm:text-base text-gray-600 mb-4">
                   {profile.email && (
                     <span className="flex items-center gap-1">
                       <Mail className="h-4 w-4" />
@@ -242,7 +244,7 @@ export function CandidateProfilePage({ candidateUserId, jobOfferId, viewerUserId
         </Card>
 
         {/* Grille de contenu */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           {/* Expériences */}
           <Card className="border-gray-200 bg-white">
             <CardHeader>

@@ -5,6 +5,8 @@ import { ArrowRight, Brain, Heart, Users, BookOpen, Shield, Target, Lightbulb, B
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { InternalLinks } from "@/components/jessica-contentin/internal-links";
+import Script from "next/script";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
@@ -99,7 +101,7 @@ export default function SpecialitesPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Mes Spécialités
+              Mes Spécialités en Psychopédagogie - Troubles DYS, TDA-H, Harcèlement scolaire | Caen
             </h1>
             <p
               className="text-xl text-[#2F2A25]/80 max-w-3xl mx-auto"
@@ -107,8 +109,7 @@ export default function SpecialitesPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Un accompagnement personnalisé adapté à chaque besoin spécifique. 
-              Découvrez les domaines dans lesquels je peux vous accompagner.
+              Un accompagnement personnalisé adapté à chaque besoin spécifique. Découvrez mes spécialités : <strong>accompagnement TND (troubles DYS, TDA-H)</strong>, <strong>harcèlement scolaire</strong>, <strong>phobie scolaire</strong>, <strong>gestion des émotions</strong>, <strong>confiance en soi</strong>, <strong>orientation scolaire</strong> et <strong>neuroéducation</strong>. Cabinet à Fleury-sur-Orne, près de Caen.
             </p>
           </motion.div>
         </div>
@@ -226,6 +227,68 @@ export default function SpecialitesPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Maillage interne SEO */}
+      <InternalLinks currentPage="specialites" />
+
+      {/* Structured Data */}
+      <Script
+        id="structured-data-services"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "serviceType": "Psychopédagogie",
+            "provider": {
+              "@type": "Person",
+              "name": "Jessica CONTENTIN",
+            },
+            "areaServed": {
+              "@type": "City",
+              "name": "Caen",
+            },
+            "hasOfferCatalog": {
+              "@type": "OfferCatalog",
+              "name": "Services de psychopédagogie",
+              "itemListElement": [
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Accompagnement TND",
+                    "description": "Accompagnement spécialisé pour troubles du neurodéveloppement (DYS, TDA-H)",
+                  },
+                },
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Harcèlement scolaire",
+                    "description": "Accompagnement et soutien face au harcèlement scolaire",
+                  },
+                },
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Gestion des émotions",
+                    "description": "Accompagnement pour la gestion des émotions",
+                  },
+                },
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Orientation scolaire",
+                    "description": "Accompagnement à l'orientation scolaire et professionnelle",
+                  },
+                },
+              ],
+            },
+          }),
+        }}
+      />
     </div>
   );
 }

@@ -397,5 +397,180 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
       },
     ],
   },
+  "gestion-stress": {
+    title: "Gestion du Stress | Techniques de Relaxation | Psychopédagogue Caen | Jessica CONTENTIN",
+    description: "Accompagnement pour mieux gérer le stress au quotidien à Caen. Techniques de relaxation, gestion du temps, stratégies d'adaptation. Pour enfants, adolescents et adultes. Cabinet Fleury-sur-Orne.",
+    h1: "Gestion du Stress - Techniques et Stratégies d'Adaptation",
+    keywords: [
+      "gestion stress Caen",
+      "techniques relaxation Caen",
+      "stress enfant Caen",
+      "anxiété scolaire",
+      "gestion temps",
+      "psychopédagogue stress",
+    ],
+    contentSections: [
+      {
+        title: "Comprendre le stress",
+        content: "Le stress est une réaction naturelle de l'organisme face à une situation perçue comme menaçante. Il peut être bénéfique à court terme (motivation, performance) mais devient problématique lorsqu'il est chronique. Chez les enfants et adolescents, le stress peut se manifester par des difficultés de concentration, des troubles du sommeil, de l'irritabilité ou des somatisations.",
+        keywords: ["stress", "anxiété", "troubles"],
+      },
+      {
+        title: "Techniques de gestion du stress",
+        content: "Mon accompagnement pour la gestion du stress inclut l'apprentissage de techniques de relaxation (respiration, méditation, visualisation), la gestion du temps et de l'organisation, le développement de stratégies d'adaptation et la compréhension des mécanismes du stress. L'objectif est de retrouver sérénité et équilibre dans la vie quotidienne.",
+        keywords: ["relaxation", "techniques", "équilibre"],
+      },
+    ],
+  },
+  "guidance-parentale": {
+    title: "Guidance Parentale | Accompagnement Parents | Psychopédagogue Caen | Jessica CONTENTIN",
+    description: "Soutien et conseils pour les parents dans leur rôle éducatif à Caen. Stratégies éducatives adaptées, gestion conflits familiaux, renforcement lien parent-enfant. Cabinet Fleury-sur-Orne.",
+    h1: "Guidance Parentale - Accompagnement et Soutien pour les Parents",
+    keywords: [
+      "guidance parentale Caen",
+      "accompagnement parents Caen",
+      "conseils éducatifs",
+      "gestion conflits familiaux",
+      "relation parent-enfant",
+      "psychopédagogue parents",
+    ],
+    contentSections: [
+      {
+        title: "Pourquoi la guidance parentale ?",
+        content: "Être parent est un rôle complexe qui peut être source de questionnements, de doutes et de difficultés. Chaque enfant est unique et nécessite une approche adaptée. La guidance parentale offre un espace d'écoute et de conseils pour accompagner les parents dans leur rôle éducatif, les aider à comprendre les besoins de leur enfant et à développer des stratégies éducatives adaptées.",
+        keywords: ["guidance parentale", "parents", "éducation"],
+      },
+      {
+        title: "Mon approche de la guidance parentale",
+        content: "Mon accompagnement en guidance parentale s'articule autour de plusieurs axes : l'écoute et la compréhension des difficultés rencontrées, le développement de stratégies éducatives adaptées, la gestion des conflits familiaux, le renforcement du lien parent-enfant et la valorisation des compétences parentales. L'objectif est de créer un environnement familial épanouissant pour tous.",
+        keywords: ["stratégies", "conflits", "lien parent-enfant"],
+      },
+    ],
+  },
+  "tests": {
+    title: "Tests de Connaissance de Soi | Bilans Psychopédagogiques | Psychopédagogue Caen | Jessica CONTENTIN",
+    description: "Bilans psychopédagogiques approfondis à Caen pour mieux se connaître et identifier ses forces. Évaluations, recommandations personnalisées. Cabinet Fleury-sur-Orne.",
+    h1: "Tests de Connaissance de Soi - Bilans Psychopédagogiques",
+    keywords: [
+      "tests connaissance de soi Caen",
+      "bilans psychopédagogiques Caen",
+      "évaluations psychopédagogie",
+      "tests soft skills",
+      "bilan orientation",
+      "psychopédagogue tests",
+    ],
+    contentSections: [
+      {
+        title: "Pourquoi faire un bilan psychopédagogique ?",
+        content: "Un bilan psychopédagogique permet de mieux comprendre ses compétences, ses forces, ses axes d'amélioration et ses besoins spécifiques. Il peut être utile pour l'orientation scolaire et professionnelle, la compréhension des difficultés d'apprentissage, le développement personnel ou la préparation à des choix importants. Les résultats permettent d'orienter le parcours et de développer son potentiel.",
+        keywords: ["bilan", "évaluation", "compétences"],
+      },
+      {
+        title: "Types de bilans proposés",
+        content: "Je propose différents types de bilans selon les besoins : bilans de connaissance de soi, tests de soft skills, bilans d'orientation, évaluations des compétences d'apprentissage. Chaque bilan est personnalisé et adapté à la situation. Les résultats sont présentés de manière claire et constructive, avec des recommandations personnalisées pour orienter le parcours.",
+        keywords: ["soft skills", "orientation", "compétences"],
+      },
+    ],
+  },
+  "therapie": {
+    title: "Thérapie Psycho-émotionnelle | Gestion des Émotions | Psychopédagogue Caen | Jessica CONTENTIN",
+    description: "Accompagnement thérapeutique pour la gestion des émotions à Caen. Techniques de régulation émotionnelle, gestion anxiété, travail sur traumatismes. Cabinet Fleury-sur-Orne.",
+    h1: "Thérapie Psycho-émotionnelle - Gestion des Émotions et Résilience",
+    keywords: [
+      "thérapie psycho-émotionnelle Caen",
+      "gestion émotions Caen",
+      "régulation émotionnelle",
+      "gestion anxiété",
+      "traumatismes",
+      "psychopédagogue thérapie",
+    ],
+    contentSections: [
+      {
+        title: "Comprendre la thérapie psycho-émotionnelle",
+        content: "La thérapie psycho-émotionnelle vise à mieux comprendre et gérer ses émotions pour développer sa résilience et retrouver un équilibre émotionnel. Elle peut être utile pour gérer l'anxiété, le stress, les traumatismes, les difficultés relationnelles ou les troubles de l'humeur. L'approche intègre les dimensions cognitive, émotionnelle et comportementale.",
+        keywords: ["thérapie", "émotions", "résilience"],
+      },
+      {
+        title: "Mon approche thérapeutique",
+        content: "Mon accompagnement en thérapie psycho-émotionnelle inclut l'apprentissage de techniques de régulation émotionnelle, la gestion de l'anxiété, le travail sur les traumatismes, le développement de la résilience et l'amélioration de la compréhension de soi. Chaque parcours est personnalisé selon les besoins et les objectifs de la personne, dans un cadre bienveillant et sécurisant.",
+        keywords: ["régulation", "anxiété", "traumatismes"],
+      },
+    ],
+  },
+  "neuroeducation": {
+    title: "Neuroéducation | Neurosciences et Apprentissage | Psychopédagogue Caen | Jessica CONTENTIN",
+    description: "Approche basée sur les neurosciences pour optimiser les apprentissages à Caen. Comprendre le fonctionnement du cerveau, stratégies d'apprentissage efficaces. Cabinet Fleury-sur-Orne.",
+    h1: "Neuroéducation - Optimiser les Apprentissages grâce aux Neurosciences",
+    keywords: [
+      "neuroéducation Caen",
+      "neurosciences apprentissage",
+      "fonctionnement cerveau",
+      "stratégies apprentissage",
+      "psychopédagogue neuroéducation",
+      "sciences cognitives",
+    ],
+    contentSections: [
+      {
+        title: "Qu'est-ce que la neuroéducation ?",
+        content: "La neuroéducation est une approche qui s'appuie sur les dernières découvertes en neurosciences pour comprendre comment fonctionne le cerveau et optimiser les processus d'apprentissage. Elle permet de développer des stratégies d'apprentissage efficaces et adaptées à chacun, en tenant compte des mécanismes cérébraux impliqués dans l'apprentissage, la mémorisation et la compréhension.",
+        keywords: ["neuroéducation", "neurosciences", "apprentissage"],
+      },
+      {
+        title: "Applications de la neuroéducation",
+        content: "La neuroéducation permet de mieux comprendre les difficultés d'apprentissage, de développer des méthodes d'apprentissage adaptées, d'optimiser la mémorisation et la compréhension, et de favoriser la réussite scolaire. Mon accompagnement intègre ces connaissances pour proposer des stratégies d'apprentissage personnalisées et efficaces.",
+        keywords: ["méthodes", "mémorisation", "réussite"],
+      },
+    ],
+  },
+  "strategie-apprentissage": {
+    title: "Stratégies d'Apprentissage | Méthodes Personnalisées | Psychopédagogue Caen | Jessica CONTENTIN",
+    description: "Développement de méthodes et techniques d'apprentissage personnalisées à Caen. Organisation du travail, mémorisation, concentration, gestion du temps. Cabinet Fleury-sur-Orne.",
+    h1: "Stratégies d'Apprentissage - Méthodes Personnalisées pour la Réussite",
+    keywords: [
+      "stratégies apprentissage Caen",
+      "méthodes apprentissage",
+      "organisation travail",
+      "mémorisation",
+      "concentration",
+      "psychopédagogue méthodes",
+    ],
+    contentSections: [
+      {
+        title: "Pourquoi développer des stratégies d'apprentissage ?",
+        content: "Chaque personne apprend différemment. Développer des stratégies d'apprentissage adaptées à son profil permet d'améliorer ses performances, de gagner en autonomie et de retrouver confiance en ses capacités. Les stratégies d'apprentissage incluent l'organisation du travail, les techniques de mémorisation, la gestion de la concentration, la planification et la gestion du temps.",
+        keywords: ["stratégies", "apprentissage", "autonomie"],
+      },
+      {
+        title: "Mon accompagnement en stratégies d'apprentissage",
+        content: "Mon accompagnement pour développer des stratégies d'apprentissage personnalisées inclut l'identification du profil d'apprentissage, l'apprentissage de techniques de mémorisation, le développement de l'organisation et de la planification, l'amélioration de la concentration et la gestion du temps. L'objectif est de développer l'autonomie et d'améliorer les performances scolaires ou professionnelles.",
+        keywords: ["profil", "mémorisation", "organisation"],
+      },
+    ],
+  },
+  "orientation": {
+    title: "Orientation Scolaire et Professionnelle | Parcoursup | Psychopédagogue Caen | Jessica CONTENTIN",
+    description: "Accompagnement à l'orientation scolaire et professionnelle à Caen. Test soft skills, exploration métiers, aide Parcoursup, CV et lettre de motivation. Cabinet Fleury-sur-Orne.",
+    h1: "Orientation Scolaire et Professionnelle - Accompagnement Complet",
+    keywords: [
+      "orientation scolaire Caen",
+      "orientation professionnelle Caen",
+      "accompagnement Parcoursup",
+      "bilan orientation",
+      "test soft skills",
+      "psychopédagogue orientation",
+    ],
+    contentSections: [
+      {
+        title: "Pourquoi un accompagnement à l'orientation ?",
+        content: "L'orientation scolaire et professionnelle est un moment clé qui peut être source de stress et de questionnements. Un accompagnement personnalisé permet d'identifier ses intérêts, ses compétences et ses aspirations, d'explorer les métiers et les formations, et de faire des choix éclairés. L'objectif est de construire un projet d'avenir qui correspond à la personne.",
+        keywords: ["orientation", "choix", "projet"],
+      },
+      {
+        title: "Mon processus d'accompagnement orientation",
+        content: "Mon accompagnement à l'orientation s'articule en plusieurs étapes : bilan d'orientation avec test de soft skills, exploration des métiers et des formations, travail sur les perspectives métiers, rédaction du projet d'orientation, aide à la rédaction du CV et de la lettre de motivation, et accompagnement dans les démarches (Parcoursup, candidatures, etc.).",
+        keywords: ["bilan", "soft skills", "Parcoursup"],
+      },
+    ],
+  },
 };
 

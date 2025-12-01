@@ -265,22 +265,13 @@ export function BeyondCarePage() {
               >
                 <div className="relative w-[280px] h-[560px] rounded-[3rem] overflow-hidden shadow-2xl bg-black p-2">
                   <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-white">
-                    {/* Status Bar */}
-                    <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 pt-3 z-20 bg-white">
-                      <span className="text-black text-xs font-medium">9:41</span>
-                      <div className="flex items-center gap-1">
-                        <div className="w-4 h-2 border border-black rounded-sm" />
-                        <div className="w-1 h-1 bg-black rounded-full" />
-                      </div>
-                    </div>
-
-                    {/* Screen Content */}
-                    <div className="relative w-full h-full pt-12">
+                    {/* Screen Content - L'image contient déjà sa propre barre de statut */}
+                    <div className="relative w-full h-full">
                       <Image
                         src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4958.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
-                        alt="Beyond Care - Écran 1"
+                        alt="Beyond Care - Dashboard avec métriques (Total collaborateurs, Score moyen, Questionnaires)"
                         fill
-                        className="object-cover"
+                        className="object-contain"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           if (!target.src.includes('unsplash')) {
@@ -304,22 +295,13 @@ export function BeyondCarePage() {
               >
                 <div className="relative w-[280px] h-[560px] rounded-[3rem] overflow-hidden shadow-2xl bg-black p-2">
                   <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-white">
-                    {/* Status Bar */}
-                    <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 pt-3 z-20 bg-white">
-                      <span className="text-black text-xs font-medium">9:41</span>
-                      <div className="flex items-center gap-1">
-                        <div className="w-4 h-2 border border-black rounded-sm" />
-                        <div className="w-1 h-1 bg-black rounded-full" />
-                      </div>
-                    </div>
-
-                    {/* Screen Content */}
-                    <div className="relative w-full h-full pt-12">
+                    {/* Screen Content - L'image contient déjà sa propre barre de statut */}
+                    <div className="relative w-full h-full">
                       <Image
                         src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4959.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
-                        alt="Beyond Care - Écran 2"
+                        alt="Beyond Care - Graphique d'évolution des indicateurs (Bien-être, Motivation, Stress)"
                         fill
-                        className="object-cover"
+                        className="object-contain"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           if (!target.src.includes('unsplash')) {

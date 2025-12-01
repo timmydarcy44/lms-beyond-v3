@@ -26,7 +26,7 @@ function getSupabaseStorageUrl(bucket: string, path: string): string {
   return `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
 }
 
-const BUCKET_NAME = "Beyond Center";
+const BUCKET_NAME = "center";
 
 export function BeyondCarePage() {
   const blue = "#006CFF";
@@ -255,7 +255,7 @@ export function BeyondCarePage() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="flex flex-wrap justify-center gap-8 items-center"
             >
-              {/* iPhone 1 - Questionnaire Screen */}
+              {/* iPhone 1 - IMG_4958.png */}
               <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -264,9 +264,9 @@ export function BeyondCarePage() {
                 className="relative"
               >
                 <div className="relative w-[280px] h-[560px] rounded-[3rem] overflow-hidden shadow-2xl bg-black p-2">
-                  <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-[#FF6B6B]/10 via-white to-white">
+                  <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-white">
                     {/* Status Bar */}
-                    <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 pt-3 z-20 bg-white/80 backdrop-blur-sm">
+                    <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 pt-3 z-20 bg-white">
                       <span className="text-black text-xs font-medium">9:41</span>
                       <div className="flex items-center gap-1">
                         <div className="w-4 h-2 border border-black rounded-sm" />
@@ -274,45 +274,27 @@ export function BeyondCarePage() {
                       </div>
                     </div>
 
-                    {/* Screen Content - Questionnaire UI */}
-                    <div className="relative w-full h-full pt-12 bg-gradient-to-br from-[#FF6B6B]/5 to-white">
-                      <div className="px-6 pt-8 pb-6">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${blue}20` }}>
-                            <Heart className="w-6 h-6" style={{ color: blue }} />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-black">Questionnaire</h3>
-                            <p className="text-xs text-gray-500">État mental</p>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-4 mb-6">
-                          <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-[#FF6B6B] to-[#FF8E8E] rounded-full" style={{ width: '60%' }} />
-                          </div>
-                          <p className="text-sm text-gray-600">Question 6 sur 10</p>
-                        </div>
-
-                        <div className="bg-white rounded-2xl p-6 shadow-lg mb-4">
-                          <p className="text-base font-medium text-black mb-4">
-                            Comment vous sentez-vous aujourd'hui ?
-                          </p>
-                          <div className="space-y-3">
-                            {['Très bien', 'Bien', 'Moyen', 'Pas bien'].map((option, i) => (
-                              <div key={i} className="p-3 rounded-xl border border-gray-200 hover:border-[#FF6B6B] transition-colors cursor-pointer">
-                                <p className="text-sm text-gray-700">{option}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                    {/* Screen Content */}
+                    <div className="relative w-full h-full pt-12">
+                      <Image
+                        src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4958.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
+                        alt="Beyond Care - Écran 1"
+                        fill
+                        className="object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          if (!target.src.includes('unsplash')) {
+                            target.src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop";
+                          }
+                        }}
+                        unoptimized
+                      />
                     </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* iPhone 2 - Analytics Screen */}
+              {/* iPhone 2 - IMG_4959.png */}
               <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -321,9 +303,9 @@ export function BeyondCarePage() {
                 className="relative"
               >
                 <div className="relative w-[280px] h-[560px] rounded-[3rem] overflow-hidden shadow-2xl bg-black p-2">
-                  <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-white via-white to-[#FF6B6B]/5">
+                  <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-white">
                     {/* Status Bar */}
-                    <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 pt-3 z-20 bg-white/80 backdrop-blur-sm">
+                    <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 pt-3 z-20 bg-white">
                       <span className="text-black text-xs font-medium">9:41</span>
                       <div className="flex items-center gap-1">
                         <div className="w-4 h-2 border border-black rounded-sm" />
@@ -331,65 +313,21 @@ export function BeyondCarePage() {
                       </div>
                     </div>
 
-                    {/* Screen Content - Analytics UI */}
-                    <div className="relative w-full h-full pt-12 bg-white">
-                      <div className="px-6 pt-8 pb-6">
-                        <div className="flex items-center justify-between mb-6">
-                          <div>
-                            <h3 className="text-lg font-semibold text-black">Mes Analyses</h3>
-                            <p className="text-xs text-gray-500">Évolution sur 30 jours</p>
-                          </div>
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${blue}20` }}>
-                            <BarChart3 className="w-5 h-5" style={{ color: blue }} />
-                          </div>
-                        </div>
-
-                        {/* Chart Area */}
-                        <div className="bg-gradient-to-br from-[#FF6B6B]/10 to-white rounded-2xl p-6 mb-4">
-                          <div className="h-32 flex items-end justify-between gap-2 mb-4">
-                            {[40, 55, 45, 60, 50, 65, 70].map((height, i) => (
-                              <div key={i} className="flex-1 flex flex-col items-center">
-                                <div 
-                                  className="w-full rounded-t-lg mb-2"
-                                  style={{ 
-                                    height: `${height}%`,
-                                    background: `linear-gradient(to top, ${blue}, ${blue}80)`
-                                  }}
-                                />
-                                <div className="w-1 h-1 bg-gray-300 rounded-full" />
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>Lun</span>
-                            <span>Mer</span>
-                            <span>Ven</span>
-                            <span>Dim</span>
-                          </div>
-                        </div>
-
-                        {/* Stats Cards */}
-                        <div className="space-y-3">
-                          <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs text-gray-500 mb-1">Bien-être moyen</p>
-                                <p className="text-2xl font-semibold text-black">72%</p>
-                              </div>
-                              <TrendingUp className="w-5 h-5 text-green-500" />
-                            </div>
-                          </div>
-                          <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs text-gray-500 mb-1">Progression</p>
-                                <p className="text-2xl font-semibold text-black">+12%</p>
-                              </div>
-                              <Heart className="w-5 h-5" style={{ color: '#FF6B6B' }} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    {/* Screen Content */}
+                    <div className="relative w-full h-full pt-12">
+                      <Image
+                        src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4959.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
+                        alt="Beyond Care - Écran 2"
+                        fill
+                        className="object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          if (!target.src.includes('unsplash')) {
+                            target.src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop";
+                          }
+                        }}
+                        unoptimized
+                      />
                     </div>
                   </div>
                 </div>

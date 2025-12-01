@@ -6,6 +6,27 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Heart, Brain, BarChart3, Calendar, Users, Shield, TrendingUp } from "lucide-react";
 import Image from "next/image";
 import { EcosystemHeader } from "@/components/beyond-center/ecosystem-header";
+import { env } from "@/lib/env";
+
+// Fonction pour construire l'URL Supabase Storage
+function getSupabaseStorageUrl(bucket: string, path: string): string {
+  const supabaseUrl = 
+    env.supabaseUrl || 
+    (typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) ||
+    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
+  
+  if (!supabaseUrl) {
+    return "";
+  }
+  
+  const encodedBucket = encodeURIComponent(bucket);
+  const pathParts = path.split('/');
+  const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
+  
+  return `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
+}
+
+const BUCKET_NAME = "Beyond Center";
 
 export function BeyondCarePage() {
   const blue = "#006CFF";
@@ -88,6 +109,120 @@ export function BeyondCarePage() {
                 fill
                 className="object-cover"
               />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* iPhone Screens Section */}
+      <section className="py-32 bg-gradient-to-b from-white to-gray-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-20"
+          >
+            <h2 
+              className="text-4xl md:text-5xl font-light mb-6 text-black"
+              style={{ 
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                letterSpacing: '-0.02em',
+                fontWeight: 300
+              }}
+            >
+              Découvrez Beyond Care
+            </h2>
+            <p 
+              className="text-lg font-light text-gray-600 max-w-2xl mx-auto"
+              style={{ 
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif'
+              }}
+            >
+              Une expérience intuitive et personnalisée pour votre bien-être mental
+            </p>
+          </motion.div>
+
+          <div className="flex flex-wrap justify-center gap-12 items-center">
+            {/* iPhone 1 */}
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="relative"
+            >
+              <div className="relative w-[280px] h-[560px] rounded-[3rem] overflow-hidden shadow-2xl bg-black p-2">
+                {/* Phone Frame */}
+                <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-white">
+                  {/* Status Bar */}
+                  <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 pt-3 z-20 bg-white">
+                    <span className="text-black text-xs font-medium">9:41</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-2 border border-black rounded-sm" />
+                      <div className="w-1 h-1 bg-black rounded-full" />
+                    </div>
+                  </div>
+
+                  {/* Screen Content */}
+                  <div className="relative w-full h-full pt-12">
+                    <Image
+                      src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4958.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
+                      alt="Beyond Care - Écran 1"
+                      fill
+                      className="object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target.src.includes('unsplash')) {
+                          target.src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop";
+                        }
+                      }}
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* iPhone 2 */}
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="relative"
+            >
+              <div className="relative w-[280px] h-[560px] rounded-[3rem] overflow-hidden shadow-2xl bg-black p-2">
+                {/* Phone Frame */}
+                <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-white">
+                  {/* Status Bar */}
+                  <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 pt-3 z-20 bg-white">
+                    <span className="text-black text-xs font-medium">9:41</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-2 border border-black rounded-sm" />
+                      <div className="w-1 h-1 bg-black rounded-full" />
+                    </div>
+                  </div>
+
+                  {/* Screen Content */}
+                  <div className="relative w-full h-full pt-12">
+                    <Image
+                      src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4959.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
+                      alt="Beyond Care - Écran 2"
+                      fill
+                      className="object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target.src.includes('unsplash')) {
+                          target.src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop";
+                        }
+                      }}
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>

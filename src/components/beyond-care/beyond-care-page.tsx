@@ -247,7 +247,7 @@ export function BeyondCarePage() {
               </div>
             </motion.div>
 
-            {/* Right Side - iPhone Screens */}
+            {/* Right Side - Images */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -255,7 +255,7 @@ export function BeyondCarePage() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="flex flex-wrap justify-center gap-8 items-center"
             >
-              {/* iPhone 1 - IMG_4958.png */}
+              {/* Image 1 - IMG_4958.png */}
               <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -263,29 +263,25 @@ export function BeyondCarePage() {
                 transition={{ duration: 0.8, delay: 0.3 }}
                 className="relative"
               >
-                <div className="relative w-[280px] h-[560px] rounded-[3rem] overflow-hidden shadow-2xl bg-black p-2">
-                  <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-white">
-                    {/* Screen Content - L'image contient déjà sa propre barre de statut */}
-                    <div className="relative w-full h-full">
-                      <Image
-                        src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4958.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
-                        alt="Beyond Care - Dashboard avec métriques (Total collaborateurs, Score moyen, Questionnaires)"
-                        fill
-                        className="object-contain"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          if (!target.src.includes('unsplash')) {
-                            target.src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop";
-                          }
-                        }}
-                        unoptimized
-                      />
-                    </div>
-                  </div>
+                <div className="relative w-full max-w-[400px] rounded-2xl overflow-hidden shadow-xl">
+                  <Image
+                    src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4958.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
+                    alt="Beyond Care - Dashboard avec métriques (Total collaborateurs, Score moyen, Questionnaires)"
+                    width={400}
+                    height={800}
+                    className="w-full h-auto object-contain rounded-2xl"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (!target.src.includes('unsplash')) {
+                        target.src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop";
+                      }
+                    }}
+                    unoptimized
+                  />
                 </div>
               </motion.div>
 
-              {/* iPhone 2 - IMG_4959.png */}
+              {/* Image 2 - IMG_4959.png */}
               <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -293,25 +289,21 @@ export function BeyondCarePage() {
                 transition={{ duration: 0.8, delay: 0.5 }}
                 className="relative"
               >
-                <div className="relative w-[280px] h-[560px] rounded-[3rem] overflow-hidden shadow-2xl bg-black p-2">
-                  <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-white">
-                    {/* Screen Content - L'image contient déjà sa propre barre de statut */}
-                    <div className="relative w-full h-full">
-                      <Image
-                        src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4959.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
-                        alt="Beyond Care - Graphique d'évolution des indicateurs (Bien-être, Motivation, Stress)"
-                        fill
-                        className="object-contain"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          if (!target.src.includes('unsplash')) {
-                            target.src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop";
-                          }
-                        }}
-                        unoptimized
-                      />
-                    </div>
-                  </div>
+                <div className="relative w-full max-w-[400px] rounded-2xl overflow-hidden shadow-xl">
+                  <Image
+                    src={getSupabaseStorageUrl(BUCKET_NAME, "IMG_4959.png") || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop"}
+                    alt="Beyond Care - Graphique d'évolution des indicateurs (Bien-être, Motivation, Stress)"
+                    width={400}
+                    height={800}
+                    className="w-full h-auto object-contain rounded-2xl"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (!target.src.includes('unsplash')) {
+                        target.src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop";
+                      }
+                    }}
+                    unoptimized
+                  />
                 </div>
               </motion.div>
             </motion.div>

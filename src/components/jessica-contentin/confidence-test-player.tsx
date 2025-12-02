@@ -291,9 +291,17 @@ type AnalysisResult = {
 
 type ConfidenceTestPlayerProps = {
   initialFirstName?: string;
+  catalogItemId?: string;
+  isFree?: boolean;
+  hasAccess?: boolean;
 };
 
-export function ConfidenceTestPlayer({ initialFirstName }: ConfidenceTestPlayerProps = {}) {
+export function ConfidenceTestPlayer({ 
+  initialFirstName,
+  catalogItemId,
+  isFree = false,
+  hasAccess = false,
+}: ConfidenceTestPlayerProps = {}) {
   const [phase, setPhase] = useState<"intro" | "questions" | "results">("intro");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
@@ -301,6 +309,7 @@ export function ConfidenceTestPlayer({ initialFirstName }: ConfidenceTestPlayerP
   const [firstName] = useState<string>(initialFirstName || "");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(false);
 
   const currentQuestion = TEST_QUESTIONS[currentIndex];
   const totalQuestions = TEST_QUESTIONS.length;
@@ -421,16 +430,44 @@ export function ConfidenceTestPlayer({ initialFirstName }: ConfidenceTestPlayerP
               {/* CTA au-dessus de la ligne de flottaison */}
               <div className="pt-6">
                 <Button
-                  onClick={() => setPhase("questions")}
+                  onClick={async () => {
+                    // Si l'item n'est pas gratuit, vérifier l'accès avant de commencer
+                    if (!isFree && !hasAccess) {
+                      setCheckingAccess(true);
+                      try {
+                        const response = await fetch("/api/jessica-contentin/check-test-access");
+                        const data = await response.json();
+                        if (data.hasAccess) {
+                          setPhase("questions");
+                        } else {
+                          // Afficher un message pour payer ou demander l'accès
+                          alert("Vous n'avez pas encore accès à ce test. Veuillez contacter Jessica Contentin pour obtenir l'accès ou procéder au paiement.");
+                        }
+                      } catch (error) {
+                        console.error("Error checking access:", error);
+                        alert("Une erreur s'est produite lors de la vérification de l'accès. Veuillez réessayer.");
+                      } finally {
+                        setCheckingAccess(false);
+                      }
+                    } else {
+                      setPhase("questions");
+                    }
+                  }}
+                  disabled={checkingAccess}
                   size="lg"
-                  className="bg-[#C6A664] hover:bg-[#B89654] text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                  className="bg-[#C6A664] hover:bg-[#B89654] text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Commencer le test
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  {checkingAccess ? "Vérification de l'accès..." : "Commencer le test"}
+                  {!checkingAccess && <ArrowRight className="ml-2 h-5 w-5" />}
                 </Button>
                 <p className="text-sm text-[#2F2A25]/60 mt-3">
                   ⏱️ Environ 10 minutes • 📊 Résultats immédiats
                 </p>
+                {!isFree && !hasAccess && (
+                  <p className="text-sm text-amber-600 mt-2">
+                    ⚠️ Accès payant requis. Contactez Jessica Contentin pour obtenir l'accès.
+                  </p>
+                )}
               </div>
             </motion.div>
 
@@ -611,16 +648,44 @@ export function ConfidenceTestPlayer({ initialFirstName }: ConfidenceTestPlayerP
                 Prêt à découvrir votre profil de confiance en soi ?
               </p>
               <Button
-                onClick={() => setPhase("questions")}
+                onClick={async () => {
+                  // Si l'item n'est pas gratuit, vérifier l'accès avant de commencer
+                  if (!isFree && !hasAccess) {
+                    setCheckingAccess(true);
+                    try {
+                      const response = await fetch("/api/jessica-contentin/check-test-access");
+                      const data = await response.json();
+                      if (data.hasAccess) {
+                        setPhase("questions");
+                      } else {
+                        // Afficher un message pour payer ou demander l'accès
+                        alert("Vous n'avez pas encore accès à ce test. Veuillez contacter Jessica Contentin pour obtenir l'accès ou procéder au paiement.");
+                      }
+                    } catch (error) {
+                      console.error("Error checking access:", error);
+                      alert("Une erreur s'est produite lors de la vérification de l'accès. Veuillez réessayer.");
+                    } finally {
+                      setCheckingAccess(false);
+                    }
+                  } else {
+                    setPhase("questions");
+                  }
+                }}
+                disabled={checkingAccess}
                 size="lg"
-                className="bg-[#C6A664] hover:bg-[#B89654] text-white px-12 py-8 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+                className="bg-[#C6A664] hover:bg-[#B89654] text-white px-12 py-8 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Commencer le test maintenant
-                <ArrowRight className="ml-3 h-6 w-6" />
+                {checkingAccess ? "Vérification de l'accès..." : "Commencer le test maintenant"}
+                {!checkingAccess && <ArrowRight className="ml-3 h-6 w-6" />}
               </Button>
               <p className="text-sm text-[#2F2A25]/60 mt-4">
                 ⏱️ Environ 10 minutes • 📊 Résultats immédiats • 🤖 Analyse IA
               </p>
+              {!isFree && !hasAccess && (
+                <p className="text-sm text-amber-600 mt-2">
+                  ⚠️ Accès payant requis. Contactez Jessica Contentin pour obtenir l'accès.
+                </p>
+              )}
             </motion.div>
           </div>
         </div>

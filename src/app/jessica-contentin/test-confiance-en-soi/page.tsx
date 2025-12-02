@@ -90,9 +90,11 @@ export default async function ConfidenceTestPage() {
       redirect("/jessica-contentin/ressources?error=catalog_item_not_found");
     }
 
-    // Si l'item est gratuit, l'accès est automatique
-    if (!catalogItem.is_free) {
-      // Vérifier l'accès de l'utilisateur
+    // Vérifier l'accès de l'utilisateur (mais ne pas bloquer l'accès à l'intro)
+    let hasAccess = false;
+    if (catalogItem.is_free) {
+      hasAccess = true;
+    } else {
       const { data: access, error: accessError } = await clientToUse
         .from("catalog_item_access")
         .select("access_status, access_type")
@@ -105,15 +107,18 @@ export default async function ConfidenceTestPage() {
         console.error("[ConfidenceTestPage] Error checking access:", accessError);
       }
 
-      // Si l'utilisateur n'a pas d'accès, rediriger avec un message
-      if (!access) {
-        console.log("[ConfidenceTestPage] User", session.id, "does not have access to test", catalogItem.id);
-        redirect("/jessica-contentin/ressources?error=no_access&test=confiance-en-soi");
-      }
+      hasAccess = !!access;
     }
 
     const firstName = getUserName(session.fullName || session.email || null);
-    return <ConfidenceTestPlayer initialFirstName={firstName || undefined} />;
+    return (
+      <ConfidenceTestPlayer 
+        initialFirstName={firstName || undefined}
+        catalogItemId={catalogItem.id}
+        isFree={catalogItem.is_free}
+        hasAccess={hasAccess}
+      />
+    );
   } catch (error) {
     console.error("[ConfidenceTestPage] Error checking access:", error);
     // Log plus détaillé pour déboguer

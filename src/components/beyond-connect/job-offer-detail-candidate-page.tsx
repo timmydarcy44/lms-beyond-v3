@@ -73,12 +73,13 @@ export function JobOfferDetailCandidatePage({
 
   const loadJobOffer = async () => {
     try {
-      const response = await fetch(`/api/beyond-connect/job-offers/${jobOfferId}`);
+      const response = await fetch(`/api/beyond-connect/job-offers/public/${jobOfferId}`);
       if (response.ok) {
         const data = await response.json();
         setJobOffer(data.jobOffer);
       } else {
-        toast.error("Erreur lors du chargement de l'offre");
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.error || "Erreur lors du chargement de l'offre");
       }
     } catch (error) {
       console.error("[job-offer-detail] Error:", error);

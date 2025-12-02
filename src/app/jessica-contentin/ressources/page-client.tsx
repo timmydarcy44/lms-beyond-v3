@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, FileText, Video, ArrowRight, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { BookOpen, FileText, Video, ArrowRight, ChevronLeft, ChevronRight, Play, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { CatalogItem as CatalogItemType } from "@/lib/queries/catalogue";
 
@@ -20,6 +21,7 @@ type RessourcesPageClientProps = {
 };
 
 export default function RessourcesPageClient({ initialItems, userFirstName: initialUserFirstName }: RessourcesPageClientProps) {
+  const router = useRouter();
   const [showWelcome, setShowWelcome] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>(initialItems);
@@ -322,6 +324,56 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
                       ))}
                     </div>
                   </motion.div>
+                </div>
+              </section>
+
+              {/* Section Test de Confiance en soi */}
+              <section className="py-8 mx-4 mb-6">
+                <div className="mx-auto max-w-7xl px-6">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gradient-to-r from-[#C6A664] to-[#B89654] rounded-2xl shadow-lg p-8 cursor-pointer group"
+                    onClick={() => router.push('/test-confiance-en-soi')}
+                  >
+                      <div className="grid md:grid-cols-2 gap-8 items-center">
+                        <div>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
+                              <Heart className="h-8 w-8 text-white" />
+                            </div>
+                            <h2
+                              className="text-2xl md:text-3xl font-semibold text-white"
+                              style={{
+                                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                              }}
+                            >
+                              Test de Confiance en soi
+                            </h2>
+                          </div>
+                          <p className="text-white/90 text-lg mb-4 leading-relaxed">
+                            Évaluez votre estime de soi, votre auto-efficacité, votre assertivité et vos compétences sociales grâce à un test professionnel et bienveillant.
+                          </p>
+                          <p className="text-white/80 text-sm mb-6">
+                            24 questions • 4 dimensions • Analyse personnalisée
+                          </p>
+                          <div className="flex items-center text-white font-medium text-lg">
+                            Passer le test
+                            <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </div>
+                        <div className="hidden md:block relative h-64 rounded-xl overflow-hidden">
+                          <Image
+                            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2070&auto=format&fit=crop"
+                            alt="Test de confiance en soi"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
                 </div>
               </section>
 

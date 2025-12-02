@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/emails/brevo";
+import {
+  getApplicationConfirmationEmail,
+  getNewApplicationNotificationEmail,
+} from "@/lib/emails/templates/beyond-connect-application";
 
 /**
  * Récupère les candidatures pour une offre d'emploi (entreprises) ou vérifie si le candidat a postulé
@@ -193,6 +198,104 @@ export async function POST(
         .from("beyond_connect_job_offers")
         .update({ applications_count: (currentOffer.applications_count || 0) + 1 })
         .eq("id", jobOfferId);
+    }
+
+    // Récupérer les informations nécessaires pour les emails
+    const { data: jobOfferDetails } = await supabase
+      .from("beyond_connect_job_offers")
+      .select("title, company_id")
+      .eq("id", jobOfferId)
+      .single();
+
+    const { data: company } = jobOfferDetails?.company_id
+      ? await supabase
+          .from("beyond_connect_companies")
+          .select("id, name, organization_id")
+          .eq("id", jobOfferDetails.company_id)
+          .single()
+      : { data: null };
+
+    const { data: candidateProfile } = await supabase
+      .from("profiles")
+      .select("email, first_name, last_name, full_name")
+      .eq("id", user.id)
+      .single();
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const applicationLink = `${baseUrl}/beyond-connect-app/applications`;
+    const candidateProfileLink = `${baseUrl}/beyond-connect-app/profile`;
+
+    // Envoyer l'email de confirmation au candidat
+    if (candidateProfile && jobOfferDetails && company) {
+      const candidateName = candidateProfile.first_name || candidateProfile.full_name?.split(" ")[0] || "Cher/Chère candidat(e)";
+
+      try {
+        const { html, text } = getApplicationConfirmationEmail({
+          candidateName,
+          jobTitle: jobOfferDetails.title,
+          companyName: company.name,
+          applicationLink,
+        });
+
+        await sendEmail({
+          to: candidateProfile.email,
+          subject: `Candidature envoyée - ${jobOfferDetails.title}`,
+          htmlContent: html,
+          textContent: text,
+          tags: ["beyond-connect", "application", "candidate"],
+        });
+      } catch (emailError) {
+        console.error("[beyond-connect/applications] Error sending confirmation email to candidate:", emailError);
+      }
+
+      // Envoyer l'email de notification aux recruteurs de l'entreprise
+      if (company.organization_id) {
+        const supabaseService = getServiceRoleClient();
+        if (supabaseService) {
+          const { data: memberships } = await supabaseService
+            .from("org_memberships")
+            .select(`
+              user_id,
+              profiles!inner(
+                email,
+                first_name,
+                last_name,
+                full_name
+              )
+            `)
+            .eq("org_id", company.organization_id)
+            .in("role", ["admin", "instructor"]);
+
+          if (memberships && Array.isArray(memberships)) {
+            for (const membership of memberships) {
+              const recruiterProfile = (membership as any).profiles;
+              if (recruiterProfile && recruiterProfile.email) {
+                try {
+                  const recruiterName = recruiterProfile.first_name || recruiterProfile.full_name?.split(" ")[0] || "Cher/Chère recruteur(se)";
+                  const { html, text } = getNewApplicationNotificationEmail({
+                    recruiterName,
+                    candidateName: candidateProfile.full_name || candidateName,
+                    jobTitle: jobOfferDetails.title,
+                    companyName: company.name,
+                    applicationLink: `${baseUrl}/beyond-connect/jobs/${jobOfferId}`,
+                    candidateProfileLink,
+                  });
+
+                  await sendEmail({
+                    to: recruiterProfile.email,
+                    subject: `Nouvelle candidature - ${jobOfferDetails.title}`,
+                    htmlContent: html,
+                    textContent: text,
+                    tags: ["beyond-connect", "application", "recruiter"],
+                  });
+                } catch (emailError) {
+                  console.error("[beyond-connect/applications] Error sending notification email to recruiter:", emailError);
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     return NextResponse.json({ application }, { status: 201 });

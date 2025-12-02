@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BookOpen, FileText, Video, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ArrowRight, BookOpen, FileText, Video, ChevronLeft, ChevronRight, Play, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -183,6 +183,40 @@ export function ResourcesSection() {
                   </p>
                 </div>
               </div>
+
+              {/* Test de confiance en soi - Carte spéciale */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                whileHover={{ scale: 1.02 }}
+                className="mt-6 p-6 bg-gradient-to-r from-[#C6A664] to-[#B89654] rounded-2xl shadow-lg cursor-pointer group"
+                onClick={() => router.push('/test-confiance-en-soi')}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
+                    <Heart className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3
+                      className="text-lg font-semibold text-white mb-1"
+                      style={{
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                      }}
+                    >
+                      Test de Confiance en soi
+                    </h3>
+                    <p className="text-white/90 text-sm mb-3">
+                      Évaluez votre estime de soi, auto-efficacité, assertivité et compétences sociales
+                    </p>
+                    <div className="flex items-center text-white text-sm font-medium">
+                      Passer le test
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
 
             <motion.div

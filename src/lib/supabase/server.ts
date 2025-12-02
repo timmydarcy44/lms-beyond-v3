@@ -80,7 +80,6 @@ export const getServiceRoleClient = () => {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
-      storage: undefined, // Pas de stockage pour le service role
     },
     db: {
       schema: 'public',

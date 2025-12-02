@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/emails/brevo";
 import { getSignupConfirmationEmail } from "@/lib/emails/templates/signup-confirmation";
+import { getBeyondConnectBaseUrl } from "@/lib/beyond-connect/utils";
 
 /**
  * Inscription d'un candidat avec juste l'email
@@ -94,8 +95,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Générer le lien de confirmation
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    // Générer le lien de confirmation avec l'URL correcte de Beyond Connect
+    const baseUrl = getBeyondConnectBaseUrl();
     const confirmationLink = `${baseUrl}/beyond-connect/confirmer?token=${confirmationToken}&email=${encodeURIComponent(email)}`;
 
     // Envoyer l'email de confirmation
@@ -113,6 +114,7 @@ export async function POST(request: NextRequest) {
         subject: "Confirmez votre inscription sur Beyond Connect",
         htmlContent: html,
         textContent: text,
+        tags: ["beyond-connect", "signup", "confirmation"],
       });
 
       if (emailResult.success) {

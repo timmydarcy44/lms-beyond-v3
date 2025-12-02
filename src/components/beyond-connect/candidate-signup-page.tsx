@@ -152,8 +152,10 @@ export function CandidateSignupPage() {
             src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2084&auto=format&fit=crop"
             alt="Professionnels en réunion"
             fill
+            sizes="100vw"
             className="object-cover"
             priority
+            loading="eager"
           />
           {/* Overlay avec gradient - bleu foncé avec touche de rouge */}
           <div className="absolute inset-0 bg-gradient-to-br from-[#003e71]/95 via-[#003087]/90 to-[#002a6b]/95" style={{ background: 'linear-gradient(to bottom right, rgba(0, 62, 113, 0.95), rgba(0, 48, 135, 0.90), rgba(0, 42, 107, 0.95)), radial-gradient(circle at 30% 20%, rgba(220, 38, 38, 0.08), transparent)' }} />
@@ -269,6 +271,7 @@ export function CandidateSignupPage() {
                 src="https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop"
                 alt="Succès professionnel"
                 fill
+                sizes="(max-width: 1024px) 0vw, 50vw"
                 className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#003e71]/50 to-transparent" style={{ background: 'linear-gradient(to top, rgba(0, 62, 113, 0.5), transparent), radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.05), transparent)' }} />
@@ -365,6 +368,7 @@ export function CandidateSignupPage() {
                       src={benefit.screenshot || benefit.image}
                       alt={benefit.title}
                       fill
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                       className="object-cover"
                     />
                     <div className={`absolute inset-0 bg-gradient-to-br ${benefit.color} opacity-15`} />

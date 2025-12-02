@@ -51,18 +51,25 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { first_name, last_name, phone, birth_date, bio, passions, current_studies, education_level } = body;
+    const { first_name, last_name, phone, birth_date, bio, passions, current_studies, education_level, city, cv_url, cv_file_name, employment_type } = body;
 
     // Mettre à jour le profil
     const updateData: any = {};
     if (first_name !== undefined) updateData.first_name = first_name;
     if (last_name !== undefined) updateData.last_name = last_name;
     if (phone !== undefined) updateData.phone = phone;
-    if (birth_date !== undefined) updateData.birth_date = birth_date;
+    // Ne pas envoyer birth_date si c'est une chaîne vide
+    if (birth_date !== undefined && birth_date !== null && birth_date !== "") {
+      updateData.birth_date = birth_date;
+    }
     if (bio !== undefined) updateData.bio = bio;
     if (passions !== undefined) updateData.passions = passions;
     if (current_studies !== undefined) updateData.current_studies = current_studies;
     if (education_level !== undefined) updateData.education_level = education_level;
+    if (city !== undefined) updateData.city = city;
+    if (cv_url !== undefined) updateData.cv_url = cv_url;
+    if (cv_file_name !== undefined) updateData.cv_file_name = cv_file_name;
+    if (employment_type !== undefined) updateData.employment_type = employment_type;
 
     // Mettre à jour full_name si first_name ou last_name changent
     if (first_name || last_name) {

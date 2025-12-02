@@ -60,9 +60,15 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   try {
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
     
-    const payload = {
+    // Déterminer le nom de l'expéditeur selon les tags (Beyond Connect vs Jessica Contentin)
+    const isBeyondConnect = options.tags?.some(tag => tag.includes("beyond-connect"));
+    const defaultSenderName = isBeyondConnect ? "Beyond Connect" : "Jessica CONTENTIN";
+    
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    
+    const payload: any = {
       sender: options.from || {
-        name: "Jessica CONTENTIN",
+        name: defaultSenderName,
         email: "contentin.cabinet@gmail.com", // Email vérifié du compte BREVO
       },
       to: recipients.map(email => ({ email })),
@@ -70,11 +76,21 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       htmlContent: options.htmlContent,
       textContent: options.textContent || stripHtml(options.htmlContent),
       replyTo: options.replyTo || {
-        name: "Jessica CONTENTIN",
+        name: defaultSenderName,
         email: "contentin.cabinet@gmail.com",
       },
-      tags: options.tags || [],
+      // Headers pour améliorer la délivrabilité
+      headers: {
+        "X-Mailer": "Beyond Connect Platform",
+        "List-Unsubscribe": `<${baseUrl}/unsubscribe>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
     };
+    
+    // Ne pas inclure tags s'il est vide (Brevo exige qu'il soit non vide s'il est présent)
+    if (options.tags && options.tags.length > 0) {
+      payload.tags = options.tags;
+    }
     
     console.log("[BREVO] Sending email to BREVO API:", {
       url: `${BREVO_API_URL}/smtp/email`,
@@ -128,14 +144,18 @@ export async function sendTransactionalEmail(
   try {
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
     
+    // Déterminer le nom de l'expéditeur selon les tags (Beyond Connect vs Jessica Contentin)
+    const isBeyondConnect = options.tags?.some(tag => tag.includes("beyond-connect"));
+    const defaultSenderName = isBeyondConnect ? "Beyond Connect" : "Jessica CONTENTIN";
+    
     const payload: any = {
       to: recipients.map(email => ({ email })),
       sender: options.from || {
-        name: "Jessica CONTENTIN",
+        name: defaultSenderName,
         email: "contentin.cabinet@gmail.com", // Email vérifié du compte BREVO
       },
       replyTo: options.replyTo || {
-        name: "Jessica CONTENTIN",
+        name: defaultSenderName,
         email: "contentin.cabinet@gmail.com",
       },
       tags: options.tags || [],

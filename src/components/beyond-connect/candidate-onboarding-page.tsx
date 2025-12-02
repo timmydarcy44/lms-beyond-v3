@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { User, GraduationCap, Heart, Briefcase, ArrowRight, Check, Camera, Plus, X } from "lucide-react";
+import { User, GraduationCap, Heart, Briefcase, ArrowRight, Check, Camera, Plus, X, FileText, MapPin, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { ExperienceForm } from "./experience-form";
 import { EducationForm } from "./education-form";
+import { calculateProfileScore, ProfileScoreData } from "@/lib/beyond-connect/profile-score";
+import { Progress } from "@/components/ui/progress";
+import { env } from "@/lib/env";
+
+// Fonction pour construire l'URL Supabase Storage
+function getSupabaseStorageUrl(bucket: string, path: string): string {
+  const supabaseUrl = 
+    env.supabaseUrl || 
+    (typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) ||
+    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
+  
+  if (!supabaseUrl) {
+    return "";
+  }
+  
+  const encodedBucket = encodeURIComponent(bucket);
+  const pathParts = path.split('/');
+  const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
+  
+  return `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
+}
+
+const BUCKET_NAME = "Public";
+
+// Images pour la colonne de droite - une image par étape
+const ONBOARDING_IMAGES_BY_STEP: Record<number, { path: string; alt: string }> = {
+  1: { path: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80", alt: "Personnes collaborant" },
+  2: { path: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1200&q=80", alt: "Étudiant en cours" },
+  3: { path: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80", alt: "Professionnel au travail" },
+  4: { path: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80", alt: "Formation et développement" },
+  5: { path: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80", alt: "Équipe professionnelle" },
+  6: { path: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&q=80", alt: "Succès professionnel" },
+};
 
 type CandidateOnboardingPageProps = {
   userId: string;
@@ -28,6 +62,10 @@ type ProfileData = {
   passions?: string;
   current_studies?: string;
   education_level?: string;
+  city?: string;
+  cv_url?: string;
+  cv_file_name?: string;
+  employment_type?: string; // CDD, CDI, Freelance, Alternance, Stage, etc.
 };
 
 type Experience = {
@@ -58,6 +96,8 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingCV, setUploadingCV] = useState(false);
+  const [profileScore, setProfileScore] = useState<{ score: number; maxScore: number; details: any[] } | null>(null);
   const [profileData, setProfileData] = useState<ProfileData>({
     first_name: "",
     last_name: "",
@@ -69,6 +109,10 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
     passions: "",
     current_studies: "",
     education_level: "",
+    city: "",
+    cv_url: "",
+    cv_file_name: "",
+    employment_type: "",
   });
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [education, setEducation] = useState<Education[]>([]);
@@ -92,7 +136,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
       if (profileRes.ok) {
         const data = await profileRes.json();
         if (data.profile) {
-          setProfileData({
+          const newProfileData = {
             first_name: data.profile.first_name || "",
             last_name: data.profile.last_name || "",
             email: data.profile.email || "",
@@ -103,7 +147,12 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
             passions: data.profile.passions || "",
             current_studies: data.profile.current_studies || "",
             education_level: data.profile.education_level || "",
-          });
+            city: data.profile.city || "",
+            cv_url: data.profile.cv_url || "",
+            cv_file_name: data.profile.cv_file_name || "",
+            employment_type: data.profile.employment_type || "",
+          };
+          setProfileData(newProfileData);
         }
       }
 
@@ -120,6 +169,29 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
       console.error("[onboarding] Error loading profile:", error);
     }
   };
+
+  const updateProfileScore = useCallback(() => {
+    const scoreData: ProfileScoreData = {
+      hasPhoto: !!profileData.avatar_url,
+      hasFirstName: !!profileData.first_name,
+      hasLastName: !!profileData.last_name,
+      hasEmail: !!profileData.email,
+      hasPhone: !!profileData.phone,
+      hasCity: !!profileData.city,
+      hasBio: !!profileData.bio && profileData.bio.length > 0,
+      hasCV: !!profileData.cv_url,
+      experiencesCount: experiences.length,
+      educationCount: education.length,
+      hasEmploymentType: !!profileData.employment_type,
+    };
+    const score = calculateProfileScore(scoreData);
+    setProfileScore(score);
+  }, [profileData, experiences, education]);
+
+  // Calculer le score après le chargement des données
+  useEffect(() => {
+    updateProfileScore();
+  }, [updateProfileScore]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -155,6 +227,40 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
     }
   };
 
+  const handleCVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Le CV doit faire moins de 10 Mo");
+      return;
+    }
+
+    setUploadingCV(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/beyond-connect/upload-cv", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erreur lors de l'upload");
+      }
+
+      const data = await response.json();
+      setProfileData({ ...profileData, cv_url: data.url, cv_file_name: data.fileName });
+      toast.success("CV uploadé avec succès");
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de l'upload du CV");
+    } finally {
+      setUploadingCV(false);
+    }
+  };
+
   const handleNext = () => {
     if (step === 1) {
       if (!profileData.first_name || !profileData.last_name) {
@@ -170,6 +276,15 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
     }
     if (step === 4) {
       // Pas de validation obligatoire pour les diplômes
+    }
+    if (step === 5) {
+      if (!profileData.employment_type) {
+        toast.error("Veuillez sélectionner un type d'emploi recherché");
+        return;
+      }
+    }
+    if (step === 6) {
+      // Dernière étape, pas de validation supplémentaire
     }
     setStep(step + 1);
   };
@@ -237,18 +352,37 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
   const handleSave = async () => {
     setLoading(true);
     try {
+      // Nettoyer les données : ne pas envoyer les champs vides
+      const cleanedData = { ...profileData };
+      if (!cleanedData.birth_date || cleanedData.birth_date === "") {
+        delete cleanedData.birth_date;
+      }
+      if (!cleanedData.bio || cleanedData.bio.trim() === "") {
+        delete cleanedData.bio;
+      }
+      if (!cleanedData.passions || cleanedData.passions.trim() === "") {
+        delete cleanedData.passions;
+      }
+      if (!cleanedData.current_studies || cleanedData.current_studies.trim() === "") {
+        delete cleanedData.current_studies;
+      }
+      if (!cleanedData.education_level || cleanedData.education_level.trim() === "") {
+        delete cleanedData.education_level;
+      }
+
       const response = await fetch(`/api/beyond-connect/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profileData),
+        body: JSON.stringify(cleanedData),
       });
 
       if (!response.ok) {
-        throw new Error("Erreur lors de la sauvegarde");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erreur lors de la sauvegarde");
       }
 
       toast.success("Profil créé avec succès !");
-      router.push("/beyond-connect-app/profile");
+      router.push("/beyond-connect-app/welcome");
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de la sauvegarde");
     } finally {
@@ -256,17 +390,22 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
     }
   };
 
+  const currentImage = ONBOARDING_IMAGES_BY_STEP[step] || ONBOARDING_IMAGES_BY_STEP[1];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
-      <div className="mx-auto max-w-3xl px-6 py-12">
+      <div className="grid lg:grid-cols-2 min-h-screen">
+        {/* Colonne gauche : Formulaire */}
+        <div className="flex flex-col overflow-y-auto">
+          <div className="mx-auto w-full max-w-3xl px-6 py-12">
         {/* Progress */}
         <div className="mb-8">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-3xl font-bold text-gray-900">Créer mon profil</h1>
-            <span className="text-sm text-gray-600">Étape {step} sur 5</span>
+            <span className="text-sm text-gray-600">Étape {step} sur 6</span>
           </div>
           <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((s) => (
+            {[1, 2, 3, 4, 5, 6].map((s) => (
               <div
                 key={s}
                 className={`h-2 flex-1 rounded-full ${
@@ -294,7 +433,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
             <CardContent className="space-y-6">
               {/* Photo */}
               <div className="flex flex-col items-center">
-                <Label className="mb-2">Photo de profil</Label>
+                <Label className="mb-2 text-base font-semibold text-gray-900">Photo de profil</Label>
                 <div className="relative">
                   {profileData.avatar_url ? (
                     <div className="relative h-32 w-32 overflow-hidden rounded-full border-4 border-[#003087]">
@@ -331,7 +470,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label htmlFor="first_name">Prénom *</Label>
+                  <Label htmlFor="first_name" className="text-base font-semibold text-gray-900 mb-2 block">Prénom *</Label>
                   <Input
                     id="first_name"
                     value={profileData.first_name}
@@ -341,7 +480,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
                   />
                 </div>
                 <div>
-                  <Label htmlFor="last_name">Nom *</Label>
+                  <Label htmlFor="last_name" className="text-base font-semibold text-gray-900 mb-2 block">Nom *</Label>
                   <Input
                     id="last_name"
                     value={profileData.last_name}
@@ -353,7 +492,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
               </div>
 
               <div>
-                <Label htmlFor="email">Adresse email</Label>
+                <Label htmlFor="email" className="text-base font-semibold text-gray-900 mb-2 block">Adresse email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -365,7 +504,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
               </div>
 
               <div>
-                <Label htmlFor="phone">Téléphone</Label>
+                <Label htmlFor="phone" className="text-base font-semibold text-gray-900 mb-2 block">Numéro de téléphone</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -377,7 +516,19 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
               </div>
 
               <div>
-                <Label htmlFor="birth_date">Date de naissance</Label>
+                <Label htmlFor="city" className="text-base font-semibold text-gray-900 mb-2 block">Ville de résidence</Label>
+                <Input
+                  id="city"
+                  type="text"
+                  value={profileData.city}
+                  onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
+                  placeholder="Ex: Paris, Lyon, Marseille..."
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="birth_date" className="text-base font-semibold text-gray-900 mb-2 block">Date de naissance</Label>
                 <Input
                   id="birth_date"
                   type="date"
@@ -387,8 +538,57 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
                 />
               </div>
 
+              {/* Upload CV */}
+              <div className="col-span-2">
+                <Label htmlFor="cv" className="text-base font-semibold text-gray-900 mb-2 block">CV (optionnel)</Label>
+                {profileData.cv_url ? (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-[#003087]" />
+                      <div>
+                        <p className="font-medium text-gray-900">{profileData.cv_file_name || "CV uploadé"}</p>
+                        <a
+                          href={profileData.cv_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-[#003087] hover:underline"
+                        >
+                          Voir le CV
+                        </a>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setProfileData({ ...profileData, cv_url: "", cv_file_name: "" })}
+                      className="text-red-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="mt-2 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 hover:border-[#003087]">
+                    <div className="text-center">
+                      <FileText className="mx-auto h-8 w-8 text-gray-400" />
+                      <p className="mt-2 text-sm text-gray-600">
+                        {uploadingCV ? "Upload en cours..." : "Cliquez pour uploader votre CV"}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">PDF, DOC, DOCX (max 10 Mo)</p>
+                      <input
+                        id="cv"
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleCVUpload}
+                        className="hidden"
+                        disabled={uploadingCV}
+                      />
+                    </div>
+                  </label>
+                )}
+              </div>
+
               <div>
-                <Label htmlFor="bio">Présentation</Label>
+                <Label htmlFor="bio" className="text-base font-semibold text-gray-900 mb-2 block">Présentation</Label>
                 <Textarea
                   id="bio"
                   value={profileData.bio}
@@ -425,7 +625,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <Label htmlFor="current_studies">Études actuelles *</Label>
+                <Label htmlFor="current_studies" className="text-base font-semibold text-gray-900 mb-2 block">Études actuelles *</Label>
                 <Input
                   id="current_studies"
                   value={profileData.current_studies}
@@ -436,7 +636,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
               </div>
 
               <div>
-                <Label htmlFor="education_level">Niveau d'études</Label>
+                <Label htmlFor="education_level" className="text-base font-semibold text-gray-900 mb-2 block">Niveau d'études</Label>
                 <select
                   id="education_level"
                   value={profileData.education_level}
@@ -652,8 +852,56 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
           </Card>
         )}
 
-        {/* Step 5: Passions et centres d'intérêt */}
+        {/* Step 5: Style d'emploi */}
         {step === 5 && (
+          <Card className="border-gray-200 bg-white shadow-lg">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#003087] text-white">
+                  <Briefcase className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl text-gray-900">Type d'emploi recherché</CardTitle>
+                  <p className="text-sm text-gray-600">Quel type de contrat vous intéresse ?</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <Label htmlFor="employment_type" className="text-base font-semibold text-gray-900 mb-2 block">Style d'emploi *</Label>
+                <select
+                  id="employment_type"
+                  value={profileData.employment_type}
+                  onChange={(e) => setProfileData({ ...profileData, employment_type: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2"
+                >
+                  <option value="">Sélectionnez un type d'emploi</option>
+                  <option value="CDI">CDI (Contrat à Durée Indéterminée)</option>
+                  <option value="CDD">CDD (Contrat à Durée Déterminée)</option>
+                  <option value="Freelance">Freelance / Indépendant</option>
+                  <option value="Alternance">Alternance</option>
+                  <option value="Stage">Stage</option>
+                  <option value="Interim">Intérim</option>
+                  <option value="Temps_partiel">Temps partiel</option>
+                  <option value="Temps_plein">Temps plein</option>
+                </select>
+              </div>
+
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(step - 1)}>
+                  Précédent
+                </Button>
+                <Button onClick={handleNext} className="bg-[#003087] hover:bg-[#002a6b] text-white">
+                  Suivant
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 6: Passions et centres d'intérêt + Jauge de qualification */}
+        {step === 6 && (
           <Card className="border-gray-200 bg-white shadow-lg">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -668,7 +916,7 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <Label htmlFor="passions">Vos passions</Label>
+                <Label htmlFor="passions" className="text-base font-semibold text-gray-900 mb-2 block">Vos passions</Label>
                 <Textarea
                   id="passions"
                   value={profileData.passions}
@@ -681,6 +929,44 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
                   Décrivez ce qui vous passionne, vos hobbies, vos centres d'intérêt...
                 </p>
               </div>
+
+              {/* Jauge de qualification */}
+              {profileScore && (
+                <div className="rounded-lg border-2 border-[#003087] bg-blue-50 p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-[#003087]" />
+                      <h3 className="text-lg font-semibold text-gray-900">Niveau de qualification de votre profil</h3>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-[#003087]">{profileScore.score}%</p>
+                      <p className="text-xs text-gray-600">sur {profileScore.maxScore} points</p>
+                    </div>
+                  </div>
+                  <Progress 
+                    value={profileScore.score} 
+                    className="mb-4 h-3 bg-gray-200" 
+                    indicatorClassName="bg-[#003087]"
+                  />
+                  <div className="space-y-2">
+                    {profileScore.details.map((detail, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm">
+                        <span className={detail.missing ? "text-gray-500" : "text-gray-900"}>
+                          {detail.missing ? "❌" : "✅"} {detail.label}
+                        </span>
+                        <span className={detail.missing ? "text-gray-500" : "text-[#003087] font-medium"}>
+                          {detail.points}/{detail.maxPoints} pts
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {profileScore.score < 50 && (
+                    <p className="mt-4 text-sm text-amber-600">
+                      💡 Complétez votre profil pour améliorer votre visibilité auprès des recruteurs !
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="rounded-lg bg-blue-50 p-4">
                 <div className="flex items-start gap-3">
@@ -710,6 +996,36 @@ export function CandidateOnboardingPage({ userId }: CandidateOnboardingPageProps
             </CardContent>
           </Card>
         )}
+          </div>
+        </div>
+
+        {/* Colonne droite : Image correspondant à l'étape */}
+        <div className="hidden lg:block relative overflow-hidden bg-gradient-to-br from-[#003087] to-[#002a6b]">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0"
+          >
+            <Image
+              src={currentImage.path}
+              alt={currentImage.alt}
+              fill
+              className="object-cover"
+              priority={step === 1}
+              sizes="50vw"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (!target.src.includes('unsplash.com')) {
+                  target.src = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80";
+                }
+              }}
+            />
+            {/* Overlay avec gradient pour améliorer la lisibilité */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          </motion.div>
+        </div>
       </div>
     </div>
   );

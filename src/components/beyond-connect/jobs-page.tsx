@@ -25,13 +25,16 @@ type JobOffer = {
   };
   created_at: string;
   application_deadline?: string;
+  match_score?: number;
 };
 
 export function BeyondConnectJobsPageContent() {
   const [jobOffers, setJobOffers] = useState<JobOffer[]>([]);
+  const [matchedJobOffers, setMatchedJobOffers] = useState<JobOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterContract, setFilterContract] = useState<string>("all");
+  const [showMatchedOnly, setShowMatchedOnly] = useState(false);
 
   useEffect(() => {
     loadJobOffers();
@@ -40,10 +43,18 @@ export function BeyondConnectJobsPageContent() {
   const loadJobOffers = async () => {
     setLoading(true);
     try {
+      // Charger toutes les offres
       const response = await fetch("/api/beyond-connect/job-offers/public");
       if (response.ok) {
         const data = await response.json();
         setJobOffers(data.jobOffers || []);
+      }
+
+      // Charger les offres correspondantes
+      const matchedResponse = await fetch("/api/beyond-connect/job-offers/matched");
+      if (matchedResponse.ok) {
+        const matchedData = await matchedResponse.json();
+        setMatchedJobOffers(matchedData.jobOffers || []);
       }
     } catch (error) {
       console.error("[beyond-connect/jobs] Error loading job offers:", error);
@@ -52,7 +63,10 @@ export function BeyondConnectJobsPageContent() {
     }
   };
 
-  const filteredOffers = jobOffers.filter(offer => {
+  // Utiliser les offres correspondantes si le filtre est activé, sinon toutes les offres
+  const offersToFilter = showMatchedOnly ? matchedJobOffers : jobOffers;
+
+  const filteredOffers = offersToFilter.filter(offer => {
     const matchesSearch = !searchTerm || 
       offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       offer.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -116,6 +130,17 @@ export function BeyondConnectJobsPageContent() {
               </select>
             </div>
           </div>
+          {matchedJobOffers.length > 0 && (
+            <div className="flex items-center gap-4">
+              <Button
+                variant={showMatchedOnly ? "default" : "outline"}
+                onClick={() => setShowMatchedOnly(!showMatchedOnly)}
+                className={showMatchedOnly ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+              >
+                {showMatchedOnly ? "✓ " : ""}Afficher uniquement les offres qui me correspondent ({matchedJobOffers.length})
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Job Offers List */}
@@ -138,6 +163,11 @@ export function BeyondConnectJobsPageContent() {
                         <Badge className="bg-[#003087] text-white capitalize">
                           {offer.contract_type}
                         </Badge>
+                        {offer.match_score && (
+                          <Badge className="bg-green-600 text-white">
+                            {offer.match_score}% match
+                          </Badge>
+                        )}
                       </div>
                       <p className="mb-4 text-gray-700">{offer.company.name}</p>
                       <p className="mb-4 line-clamp-2 text-gray-600">{offer.description}</p>

@@ -1,13 +1,15 @@
 /**
- * Template email de confirmation d'inscription Beyond Connect
+ * Template email de réinitialisation de mot de passe Beyond Connect
  */
 
-export function getSignupConfirmationEmail({
+export function getBeyondConnectPasswordResetEmail({
   email,
-  confirmationLink,
+  resetLink,
+  expiresIn = 60,
 }: {
   email: string;
-  confirmationLink: string;
+  resetLink: string;
+  expiresIn?: number; // en minutes
 }) {
   const html = `
 <!DOCTYPE html>
@@ -15,7 +17,7 @@ export function getSignupConfirmationEmail({
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmez votre inscription</title>
+  <title>Réinitialisation de mot de passe - Beyond Connect</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -35,7 +37,7 @@ export function getSignupConfirmationEmail({
           <tr>
             <td style="padding: 40px;">
               <h2 style="margin: 0 0 20px; color: #1a1a1a; font-size: 24px; font-weight: 600;">
-                Confirmez votre inscription
+                Réinitialisation de mot de passe
               </h2>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
@@ -43,14 +45,18 @@ export function getSignupConfirmationEmail({
               </p>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Merci de vous être inscrit(e) sur Beyond Connect ! Pour finaliser votre inscription et accéder à votre espace, veuillez cliquer sur le bouton ci-dessous :
+                Vous avez demandé à réinitialiser votre mot de passe pour le compte associé à l'adresse email <strong>${email}</strong>.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :
               </p>
               
               <table role="presentation" style="width: 100%; margin: 30px 0;">
                 <tr>
                   <td style="text-align: center;">
-                    <a href="${confirmationLink}" style="display: inline-block; padding: 14px 32px; background-color: #003087; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Confirmer mon inscription
+                    <a href="${resetLink}" style="display: inline-block; padding: 14px 32px; background-color: #003087; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                      Réinitialiser mon mot de passe
                     </a>
                   </td>
                 </tr>
@@ -60,11 +66,17 @@ export function getSignupConfirmationEmail({
                 Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :
               </p>
               <p style="margin: 10px 0 0; color: #003087; font-size: 14px; word-break: break-all;">
-                ${confirmationLink}
+                ${resetLink}
               </p>
               
-              <p style="margin: 30px 0 0; color: #8a8a8a; font-size: 12px; line-height: 1.6;">
-                Ce lien est valide pendant 24 heures. Si vous n'avez pas demandé cette inscription, vous pouvez ignorer cet email.
+              <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 30px 0; border-radius: 4px;">
+                <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.6;">
+                  <strong>⚠️ Important :</strong> Ce lien est valide pendant ${expiresIn} minutes. Si vous n'avez pas demandé cette réinitialisation, ignorez cet email et votre mot de passe restera inchangé.
+                </p>
+              </div>
+              
+              <p style="margin: 30px 0 0; color: #8a8a8a; font-size: 14px; line-height: 1.6;">
+                Pour des raisons de sécurité, ne partagez jamais ce lien avec quelqu'un d'autre.
               </p>
             </td>
           </tr>
@@ -86,18 +98,22 @@ export function getSignupConfirmationEmail({
   `;
 
   const text = `
-Beyond Connect - Confirmez votre inscription
+Beyond Connect - Réinitialisation de mot de passe
 
 Bonjour,
 
-Merci de vous être inscrit(e) sur Beyond Connect ! Pour finaliser votre inscription et créer votre profil, veuillez cliquer sur le lien ci-dessous :
+Vous avez demandé à réinitialiser votre mot de passe pour le compte associé à l'adresse email ${email}.
 
-${confirmationLink}
+Cliquez sur le lien ci-dessous pour créer un nouveau mot de passe :
 
-Ce lien est valide pendant 24 heures. Si vous n'avez pas demandé cette inscription, vous pouvez ignorer cet email.
+${resetLink}
+
+⚠️ Important : Ce lien est valide pendant ${expiresIn} minutes. Si vous n'avez pas demandé cette réinitialisation, ignorez cet email et votre mot de passe restera inchangé.
+
+Pour des raisons de sécurité, ne partagez jamais ce lien avec quelqu'un d'autre.
 
 © ${new Date().getFullYear()} Beyond Connect. Tous droits réservés.
-  `;
+  `.trim();
 
   return { html, text };
 }

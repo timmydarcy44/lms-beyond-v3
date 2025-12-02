@@ -12,10 +12,11 @@ export const metadata: Metadata = {
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; force?: string }>;
 }) {
   const session = await getSession();
   const params = await searchParams;
+  const forceAccess = params.force === "true";
 
   // Si un token est fourni (depuis l'email de confirmation), on peut essayer de connecter l'utilisateur
   // Sinon, vérifier la session normale
@@ -29,7 +30,8 @@ export default async function OnboardingPage({
   }
 
   // Si l'utilisateur a déjà complété son profil (first_name et last_name), rediriger vers le profil
-  if (session) {
+  // SAUF si force=true est passé en paramètre (pour permettre l'accès direct)
+  if (session && !forceAccess) {
     const supabase = await getServerClient();
     if (supabase) {
       const { data: profile } = await supabase

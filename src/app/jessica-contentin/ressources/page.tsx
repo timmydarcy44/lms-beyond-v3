@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import RessourcesPageClient from "./page-client";
 
@@ -221,10 +222,16 @@ export default async function RessourcesPage() {
   console.log("[RessourcesPage] Serialized items count:", serializedItems.length);
 
   return (
-    <RessourcesPageClient 
-      initialItems={serializedItems as any} 
-      userFirstName={userFirstName}
-    />
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C6A664]"></div>
+      </div>
+    }>
+      <RessourcesPageClient 
+        initialItems={serializedItems as any} 
+        userFirstName={userFirstName}
+      />
+    </Suspense>
   );
 }
 

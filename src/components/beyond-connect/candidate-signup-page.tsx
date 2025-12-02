@@ -94,7 +94,13 @@ export function CandidateSignupPage() {
       }
 
       setSuccess(true);
-      toast.success("Email de confirmation envoyé !");
+      
+      // Afficher un message différent si l'email n'a pas pu être envoyé
+      if (data.warning) {
+        toast.warning(data.message || "Compte créé mais email non envoyé. Contactez le support.");
+      } else {
+        toast.success("Email de confirmation envoyé !");
+      }
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de l'inscription");
     } finally {

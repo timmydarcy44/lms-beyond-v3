@@ -57,14 +57,24 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       console.error("[beyond-connect/signup] Auth error:", authError);
-      return NextResponse.json({ error: "Erreur lors de la création du compte" }, { status: 500 });
+      
+      // Gérer le cas où l'email existe déjà
+      if (authError.message?.includes("already been registered") || authError.message?.includes("email_exists") || (authError as any).code === "email_exists") {
+        return NextResponse.json({ 
+          error: "Cet email est déjà utilisé. Utilisez la fonction 'Mot de passe oublié' si vous avez déjà un compte." 
+        }, { status: 400 });
+      }
+      
+      return NextResponse.json({ 
+        error: authError.message || "Erreur lors de la création du compte" 
+      }, { status: 500 });
     }
 
     if (!authData.user) {
       return NextResponse.json({ error: "Erreur lors de la création du compte" }, { status: 500 });
     }
 
-    // Créer le profil avec le rôle learner
+    // Créer le profil avec le rôle learner (seulement si le profil n'existe pas déjà)
     const { error: profileError } = await supabaseService
       .from("profiles")
       .insert({
@@ -72,11 +82,16 @@ export async function POST(request: NextRequest) {
         email: email,
         role: "learner",
         full_name: "",
-      });
+      })
+      .select()
+      .maybeSingle();
 
     if (profileError) {
-      console.error("[beyond-connect/signup] Profile error:", profileError);
-      // On continue quand même, le profil peut être créé plus tard
+      // Si le profil existe déjà (erreur de clé unique), ce n'est pas grave
+      if (profileError.code !== "23505") {
+        console.error("[beyond-connect/signup] Profile error:", profileError);
+        // On continue quand même, le profil peut être créé plus tard
+      }
     }
 
     // Générer le lien de confirmation
@@ -84,26 +99,44 @@ export async function POST(request: NextRequest) {
     const confirmationLink = `${baseUrl}/beyond-connect/confirmer?token=${confirmationToken}&email=${encodeURIComponent(email)}`;
 
     // Envoyer l'email de confirmation
+    let emailSent = false;
+    let emailError = null;
+    
     try {
       const { html, text } = getSignupConfirmationEmail({
         email,
         confirmationLink,
       });
 
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: email,
         subject: "Confirmez votre inscription sur Beyond Connect",
         htmlContent: html,
         textContent: text,
       });
-    } catch (emailError) {
-      console.error("[beyond-connect/signup] Email error:", emailError);
-      // On continue quand même, l'utilisateur peut demander un nouveau lien
+
+      if (emailResult.success) {
+        emailSent = true;
+      } else {
+        emailError = emailResult.error;
+        console.error("[beyond-connect/signup] Email error:", emailResult.error);
+      }
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : "Erreur inconnue";
+      console.error("[beyond-connect/signup] Email exception:", err);
     }
 
-    // Stocker le token dans une table temporaire pour vérification
-    // Pour l'instant, on utilise le user_metadata de Supabase
-    // On pourrait aussi créer une table `signup_tokens` si nécessaire
+    // Si l'email n'a pas pu être envoyé, on retourne quand même un succès
+    // mais avec un avertissement (l'utilisateur peut demander un nouveau lien)
+    if (!emailSent) {
+      console.warn("[beyond-connect/signup] Email not sent, but account created. User can request new link.");
+      return NextResponse.json({ 
+        success: true,
+        message: "Compte créé avec succès, mais l'email de confirmation n'a pas pu être envoyé. Veuillez contacter le support ou réessayer plus tard.",
+        warning: true,
+        emailError: emailError,
+      });
+    }
 
     return NextResponse.json({ 
       success: true,

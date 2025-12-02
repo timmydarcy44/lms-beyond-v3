@@ -37,29 +37,39 @@ export default async function ConfidenceTestPage() {
     const serviceClient = getServiceRoleClient();
     const clientToUse = serviceClient || supabase;
     
-    const { data: jessicaProfile } = await clientToUse
+    const { data: jessicaProfile, error: jessicaError } = await clientToUse
       .from("profiles")
       .select("id")
       .eq("email", JESSICA_CONTENTIN_EMAIL)
       .maybeSingle();
 
+    if (jessicaError) {
+      console.error("[ConfidenceTestPage] Error fetching Jessica profile:", jessicaError);
+    }
+
     if (!jessicaProfile) {
-      redirect("/jessica-contentin/ressources");
+      console.error("[ConfidenceTestPage] Jessica profile not found");
+      redirect("/jessica-contentin/ressources?error=profile_not_found");
     }
 
     // Chercher le test dans la table tests par slug
-    const { data: test } = await clientToUse
+    const { data: test, error: testError } = await clientToUse
       .from("tests")
       .select("id")
       .eq("slug", TEST_CONTENT_ID)
       .maybeSingle();
 
+    if (testError) {
+      console.error("[ConfidenceTestPage] Error fetching test:", testError);
+    }
+
     if (!test) {
-      redirect("/jessica-contentin/ressources?test=confiance-en-soi");
+      console.error("[ConfidenceTestPage] Test not found with slug:", TEST_CONTENT_ID);
+      redirect("/jessica-contentin/ressources?error=test_not_found");
     }
 
     // Chercher l'item de catalogue pour le test
-    const { data: catalogItem } = await clientToUse
+    const { data: catalogItem, error: catalogError } = await clientToUse
       .from("catalog_items")
       .select("id, content_id, creator_id, is_free")
       .eq("content_id", test.id) // Utiliser l'UUID du test
@@ -67,15 +77,19 @@ export default async function ConfidenceTestPage() {
       .eq("item_type", "test")
       .maybeSingle();
 
+    if (catalogError) {
+      console.error("[ConfidenceTestPage] Error fetching catalog item:", catalogError);
+    }
+
     if (!catalogItem) {
-      // Si l'item n'existe pas, rediriger vers les ressources
-      redirect("/jessica-contentin/ressources?test=confiance-en-soi");
+      console.error("[ConfidenceTestPage] Catalog item not found for test:", test.id);
+      redirect("/jessica-contentin/ressources?error=catalog_item_not_found");
     }
 
     // Si l'item est gratuit, l'accès est automatique
     if (!catalogItem.is_free) {
       // Vérifier l'accès de l'utilisateur
-      const { data: access } = await clientToUse
+      const { data: access, error: accessError } = await clientToUse
         .from("catalog_item_access")
         .select("access_status, access_type")
         .eq("user_id", session.id)
@@ -83,9 +97,14 @@ export default async function ConfidenceTestPage() {
         .in("access_status", ["purchased", "manually_granted", "free"])
         .maybeSingle();
 
-      // Si l'utilisateur n'a pas d'accès, rediriger
+      if (accessError) {
+        console.error("[ConfidenceTestPage] Error checking access:", accessError);
+      }
+
+      // Si l'utilisateur n'a pas d'accès, rediriger avec un message
       if (!access) {
-        redirect("/jessica-contentin/ressources?test=confiance-en-soi");
+        console.log("[ConfidenceTestPage] User", session.id, "does not have access to test", catalogItem.id);
+        redirect("/jessica-contentin/ressources?error=no_access&test=confiance-en-soi");
       }
     }
 
@@ -93,7 +112,7 @@ export default async function ConfidenceTestPage() {
     return <ConfidenceTestPlayer initialFirstName={firstName || undefined} />;
   } catch (error) {
     console.error("[ConfidenceTestPage] Error checking access:", error);
-    redirect("/jessica-contentin/ressources");
+    redirect("/jessica-contentin/ressources?error=server_error");
   }
 }
 

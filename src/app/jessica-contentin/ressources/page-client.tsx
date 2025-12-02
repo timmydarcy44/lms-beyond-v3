@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, FileText, Video, ArrowRight, ChevronLeft, ChevronRight, Play, Heart } from "lucide-react";
+import { BookOpen, FileText, Video, ArrowRight, ChevronLeft, ChevronRight, Play, Heart, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { CatalogItem as CatalogItemType } from "@/lib/queries/catalogue";
 
@@ -22,6 +22,7 @@ type RessourcesPageClientProps = {
 
 export default function RessourcesPageClient({ initialItems, userFirstName: initialUserFirstName }: RessourcesPageClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showWelcome, setShowWelcome] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>(initialItems);
@@ -30,6 +31,25 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const sliderRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [userFirstName] = useState<string | null>(initialUserFirstName);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Vérifier les paramètres d'erreur dans l'URL
+  useEffect(() => {
+    const error = searchParams.get("error");
+    const test = searchParams.get("test");
+    
+    if (error === "no_access" && test === "confiance-en-soi") {
+      setErrorMessage("Vous n'avez pas encore accès au Test de Confiance en soi. Veuillez contacter Jessica Contentin pour obtenir l'accès.");
+    } else if (error === "test_not_found") {
+      setErrorMessage("Le test demandé n'a pas été trouvé. Veuillez réessayer plus tard.");
+    } else if (error === "catalog_item_not_found") {
+      setErrorMessage("L'élément de catalogue n'a pas été trouvé. Veuillez réessayer plus tard.");
+    } else if (error === "profile_not_found") {
+      setErrorMessage("Une erreur s'est produite lors de la vérification de votre accès. Veuillez réessayer.");
+    } else if (error === "server_error") {
+      setErrorMessage("Une erreur serveur s'est produite. Veuillez réessayer plus tard.");
+    }
+  }, [searchParams]);
 
   // Mettre à jour les items si initialItems change (pour le SSR/hydration)
   useEffect(() => {
@@ -154,6 +174,34 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+        {/* Message d'erreur si présent */}
+        <AnimatePresence>
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-2xl w-full mx-4"
+            >
+              <div className="bg-amber-50 border border-amber-200 rounded-lg shadow-lg p-4 flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-amber-800">{errorMessage}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setErrorMessage(null);
+                    router.replace("/jessica-contentin/ressources");
+                  }}
+                  className="text-amber-600 hover:text-amber-800 flex-shrink-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Animation effet sable */}
         <AnimatePresence>
           {showWelcome && !showContent && (

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Heart, Target, MessageSquare, Users, Calendar } from "lucide-react";
+import { ArrowRight, CheckCircle2, Heart, Target, MessageSquare, Users, Calendar, Clock } from "lucide-react";
 
 // Configuration du test
 const TEST_QUESTIONS = [
@@ -385,69 +385,234 @@ export function ConfidenceTestPlayer({ initialFirstName }: ConfidenceTestPlayerP
     return images[question.imageIndex % images.length];
   };
 
-  const renderIntro = () => (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8F5F0] to-white py-12 px-4">
-      <div className="mx-auto max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl md:text-5xl font-semibold text-[#2F2A25] mb-6">
-            Test de Confiance en soi
-          </h1>
-          <p className="text-xl text-[#2F2A25]/80 max-w-2xl mx-auto leading-relaxed">
-            Un outil d'auto-évaluation bienveillant pour mieux comprendre votre fonctionnement
-          </p>
-        </motion.div>
+  const renderIntro = () => {
+    // Image de présentation du test
+    const introImageUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2070&auto=format&fit=crop";
 
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="p-8 md:p-12">
-            <div className="space-y-6 text-[#2F2A25]">
-              <div>
-                <h2 className="text-2xl font-semibold mb-4">À propos de ce test</h2>
-                <p className="leading-relaxed">
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8F5F0] to-white">
+        <div className="mx-auto max-w-7xl px-4 py-12 md:py-20">
+          {/* Hero Section avec image */}
+          <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
+            {/* Colonne gauche : Texte */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              className="space-y-6"
+            >
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-[#2F2A25] leading-tight">
+                Test de Confiance en soi
+              </h1>
+              <p className="text-xl md:text-2xl text-[#2F2A25]/80 leading-relaxed">
+                Un outil d'auto-évaluation bienveillant pour mieux comprendre votre fonctionnement et développer votre potentiel
+              </p>
+              <div className="flex flex-wrap gap-3 pt-4">
+                <span className="px-4 py-2 bg-[#C6A664]/10 text-[#C6A664] rounded-full text-sm font-medium">
+                  ✓ Analyse personnalisée
+                </span>
+                <span className="px-4 py-2 bg-[#C6A664]/10 text-[#C6A664] rounded-full text-sm font-medium">
+                  ✓ Résultats immédiats
+                </span>
+                <span className="px-4 py-2 bg-[#C6A664]/10 text-[#C6A664] rounded-full text-sm font-medium">
+                  ✓ Recommandations IA
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Colonne droite : Image */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden shadow-2xl"
+            >
+              <Image
+                src={introImageUrl}
+                alt="Personne confiante et épanouie"
+                fill
+                className="object-cover"
+                priority
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+            </motion.div>
+          </div>
+
+          {/* Section Présentation */}
+          <div className="grid md:grid-cols-2 gap-8 mb-16">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+              <CardContent className="p-8">
+                <h2 className="text-2xl font-semibold text-[#2F2A25] mb-4 flex items-center gap-3">
+                  <Heart className="h-6 w-6 text-[#C6A664]" />
+                  À propos de ce test
+                </h2>
+                <p className="text-[#2F2A25]/80 leading-relaxed mb-4">
                   Ce test mesure quatre dimensions essentielles de la confiance en soi : <strong>l'estime de soi</strong>, 
-                  <strong> l'auto-efficacité</strong>, <strong>l'assertivité</strong> et <strong>les compétences sociales</strong>. 
+                  <strong> l'auto-efficacité</strong>, <strong>l'assertivité</strong> et <strong>les compétences sociales & adaptabilité</strong>.
+                </p>
+                <p className="text-[#2F2A25]/80 leading-relaxed">
                   Il repose sur des modèles validés scientifiquement (Rosenberg, GSES) et vous permet une auto-évaluation 
-                  claire et en douceur.
+                  claire, bienveillante et en douceur.
                 </p>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div>
-                <h3 className="text-xl font-semibold mb-3">Pour qui ?</h3>
-                <p className="leading-relaxed">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+              <CardContent className="p-8">
+                <h2 className="text-2xl font-semibold text-[#2F2A25] mb-4 flex items-center gap-3">
+                  <Users className="h-6 w-6 text-[#C6A664]" />
+                  Pour qui ?
+                </h2>
+                <p className="text-[#2F2A25]/80 leading-relaxed">
                   Ce test s'adresse aux adultes, adolescents, étudiants ou parents accompagnés qui souhaitent mieux 
-                  comprendre leur fonctionnement, identifier leurs forces et leurs axes de progression.
+                  comprendre leur fonctionnement, identifier leurs forces et leurs axes de progression dans un cadre 
+                  bienveillant et professionnel.
                 </p>
-              </div>
+              </CardContent>
+            </Card>
+          </div>
 
-              <div>
-                <h3 className="text-xl font-semibold mb-3">Comment ça fonctionne ?</h3>
-                <ul className="space-y-2 list-disc list-inside leading-relaxed">
-                  <li>24 questions réparties en 4 dimensions</li>
-                  <li>Répondez selon votre ressenti actuel</li>
-                  <li>Obtenez une analyse personnalisée par dimension</li>
-                  <li>Découvrez votre profil global synthétique</li>
-                </ul>
+          {/* Section Bénéfices */}
+          <Card className="bg-gradient-to-r from-[#C6A664] to-[#B89654] border-0 shadow-xl mb-16">
+            <CardContent className="p-8 md:p-12 text-white">
+              <h2 className="text-3xl md:text-4xl font-semibold mb-8 text-center">
+                Les bénéfices de faire ce test
+              </h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold">Compréhension de soi</h3>
+                  <p className="text-white/90 leading-relaxed">
+                    Découvrez vos forces et vos zones de développement dans un cadre bienveillant et professionnel.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Target className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold">Analyse approfondie par IA</h3>
+                  <p className="text-white/90 leading-relaxed">
+                    Bénéficiez d'une analyse personnalisée et détaillée générée par intelligence artificielle, 
+                    adaptée à votre profil unique.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <MessageSquare className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold">Recommandations concrètes</h3>
+                  <p className="text-white/90 leading-relaxed">
+                    Recevez des recommandations prioritaires et complémentaires pour développer votre confiance en soi.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold">Résultats immédiats</h3>
+                  <p className="text-white/90 leading-relaxed">
+                    Obtenez vos résultats et votre analyse complète directement à la fin du test, sans attente.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Heart className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold">Approche bienveillante</h3>
+                  <p className="text-white/90 leading-relaxed">
+                    Un test conçu avec bienveillance, sans jugement, pour vous accompagner dans votre développement personnel.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold">Profil global synthétique</h3>
+                  <p className="text-white/90 leading-relaxed">
+                    Visualisez votre profil global avec une synthèse claire de vos quatre dimensions de confiance en soi.
+                  </p>
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="pt-6 border-t border-[#E6D9C6]">
-                <Button
-                  onClick={() => setPhase("questions")}
-                  className="w-full md:w-auto bg-[#C6A664] hover:bg-[#B89654] text-white px-8 py-6 text-lg rounded-full"
-                >
-                  Commencer le test
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+          {/* Section Comment ça fonctionne */}
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg mb-12">
+            <CardContent className="p-8 md:p-12">
+              <h2 className="text-3xl font-semibold text-[#2F2A25] mb-8 text-center">
+                Comment ça fonctionne ?
+              </h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-[#C6A664]/10 rounded-full flex items-center justify-center mx-auto">
+                    <span className="text-2xl font-bold text-[#C6A664]">1</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#2F2A25]">24 questions</h3>
+                  <p className="text-[#2F2A25]/80 text-sm">
+                    Réparties en 4 dimensions essentielles de la confiance en soi
+                  </p>
+                </div>
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-[#C6A664]/10 rounded-full flex items-center justify-center mx-auto">
+                    <span className="text-2xl font-bold text-[#C6A664]">2</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#2F2A25]">Répondez</h3>
+                  <p className="text-[#2F2A25]/80 text-sm">
+                    Selon votre ressenti actuel, en toute sincérité et bienveillance
+                  </p>
+                </div>
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-[#C6A664]/10 rounded-full flex items-center justify-center mx-auto">
+                    <span className="text-2xl font-bold text-[#C6A664]">3</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#2F2A25]">Analyse IA</h3>
+                  <p className="text-[#2F2A25]/80 text-sm">
+                    Analyse approfondie par intelligence artificielle de vos résultats
+                  </p>
+                </div>
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-[#C6A664]/10 rounded-full flex items-center justify-center mx-auto">
+                    <span className="text-2xl font-bold text-[#C6A664]">4</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#2F2A25]">Résultats</h3>
+                  <p className="text-[#2F2A25]/80 text-sm">
+                    Profil global, analyse par dimension et recommandations personnalisées
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* CTA Final */}
+          <div className="text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <p className="text-lg text-[#2F2A25]/80 mb-6">
+                Prêt à découvrir votre profil de confiance en soi ?
+              </p>
+              <Button
+                onClick={() => setPhase("questions")}
+                size="lg"
+                className="bg-[#C6A664] hover:bg-[#B89654] text-white px-12 py-8 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+              >
+                Commencer le test maintenant
+                <ArrowRight className="ml-3 h-6 w-6" />
+              </Button>
+              <p className="text-sm text-[#2F2A25]/60 mt-4">
+                ⏱️ Environ 10 minutes • 📊 Résultats immédiats • 🤖 Analyse IA
+              </p>
+            </motion.div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderQuestion = () => {
     const currentAnswer = answers[currentQuestion.id];

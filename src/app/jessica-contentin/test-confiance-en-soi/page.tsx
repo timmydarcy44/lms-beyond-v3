@@ -61,6 +61,8 @@ export default async function ConfidenceTestPage() {
 
     if (testError) {
       console.error("[ConfidenceTestPage] Error fetching test:", testError);
+      // Si c'est une erreur de requête, rediriger avec un message d'erreur
+      redirect("/jessica-contentin/ressources?error=test_not_found");
     }
 
     if (!test) {
@@ -79,6 +81,8 @@ export default async function ConfidenceTestPage() {
 
     if (catalogError) {
       console.error("[ConfidenceTestPage] Error fetching catalog item:", catalogError);
+      // Si c'est une erreur de requête, rediriger avec un message d'erreur
+      redirect("/jessica-contentin/ressources?error=catalog_item_not_found");
     }
 
     if (!catalogItem) {
@@ -112,6 +116,12 @@ export default async function ConfidenceTestPage() {
     return <ConfidenceTestPlayer initialFirstName={firstName || undefined} />;
   } catch (error) {
     console.error("[ConfidenceTestPage] Error checking access:", error);
+    // Log plus détaillé pour déboguer
+    if (error instanceof Error) {
+      console.error("[ConfidenceTestPage] Error message:", error.message);
+      console.error("[ConfidenceTestPage] Error stack:", error.stack);
+    }
+    // Rediriger avec un message d'erreur plus spécifique si possible
     redirect("/jessica-contentin/ressources?error=server_error");
   }
 }

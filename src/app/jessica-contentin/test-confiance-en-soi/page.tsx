@@ -73,7 +73,7 @@ export default async function ConfidenceTestPage() {
     // Chercher l'item de catalogue pour le test
     const { data: catalogItem, error: catalogError } = await clientToUse
       .from("catalog_items")
-      .select("id, content_id, creator_id, is_free")
+      .select("id, content_id, creator_id, is_free, price")
       .eq("content_id", test.id) // Utiliser l'UUID du test
       .eq("creator_id", jessicaProfile.id)
       .eq("item_type", "test")
@@ -115,6 +115,8 @@ export default async function ConfidenceTestPage() {
       <ConfidenceTestPlayer 
         initialFirstName={firstName || undefined}
         catalogItemId={catalogItem.id}
+        contentId={test.id}
+        price={catalogItem.price || 19.99}
         isFree={catalogItem.is_free}
         hasAccess={hasAccess}
       />

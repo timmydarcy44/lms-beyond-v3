@@ -292,6 +292,8 @@ type AnalysisResult = {
 type ConfidenceTestPlayerProps = {
   initialFirstName?: string;
   catalogItemId?: string;
+  contentId?: string;
+  price?: number;
   isFree?: boolean;
   hasAccess?: boolean;
 };
@@ -299,6 +301,8 @@ type ConfidenceTestPlayerProps = {
 export function ConfidenceTestPlayer({ 
   initialFirstName,
   catalogItemId,
+  contentId,
+  price = 19.99,
   isFree = false,
   hasAccess = false,
 }: ConfidenceTestPlayerProps = {}) {
@@ -431,22 +435,44 @@ export function ConfidenceTestPlayer({
               <div className="pt-6">
                 <Button
                   onClick={async () => {
-                    // Si l'item n'est pas gratuit, vérifier l'accès avant de commencer
+                    // Si l'item n'est pas gratuit et pas d'accès, rediriger vers Stripe checkout
                     if (!isFree && !hasAccess) {
                       setCheckingAccess(true);
                       try {
-                        const response = await fetch("/api/jessica-contentin/check-test-access");
+                        const response = await fetch("/api/stripe/create-checkout-session-jessica", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            catalogItemId,
+                            contentId,
+                          }),
+                        });
+
                         const data = await response.json();
-                        if (data.hasAccess) {
-                          setPhase("questions");
-                        } else {
-                          // Afficher un message pour payer ou demander l'accès
-                          alert("Vous n'avez pas encore accès à ce test. Veuillez contacter Jessica Contentin pour obtenir l'accès ou procéder au paiement.");
+
+                        if (!response.ok) {
+                          throw new Error(data.error || "Erreur lors de la création de la session de paiement");
+                        }
+
+                        // Rediriger vers Stripe Checkout
+                        if (data.url) {
+                          window.location.href = data.url;
+                        } else if (data.sessionId) {
+                          const { loadStripe } = await import("@stripe/stripe-js");
+                          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+                          if (!stripePublishableKey) {
+                            throw new Error("Clé publique Stripe non configurée");
+                          }
+                          const stripe = await loadStripe(stripePublishableKey);
+                          if (stripe) {
+                            await stripe.redirectToCheckout({ sessionId: data.sessionId });
+                          } else {
+                            throw new Error("Stripe n'est pas disponible");
+                          }
                         }
                       } catch (error) {
-                        console.error("Error checking access:", error);
-                        alert("Une erreur s'est produite lors de la vérification de l'accès. Veuillez réessayer.");
-                      } finally {
+                        console.error("Error creating checkout session:", error);
+                        alert("Une erreur s'est produite lors de la création de la session de paiement. Veuillez réessayer.");
                         setCheckingAccess(false);
                       }
                     } else {
@@ -457,17 +483,12 @@ export function ConfidenceTestPlayer({
                   size="lg"
                   className="bg-[#C6A664] hover:bg-[#B89654] text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {checkingAccess ? "Vérification de l'accès..." : "Commencer le test"}
+                  {checkingAccess ? "Redirection vers le paiement..." : (!isFree && !hasAccess ? `Acheter pour ${price}€` : "Commencer le test")}
                   {!checkingAccess && <ArrowRight className="ml-2 h-5 w-5" />}
                 </Button>
                 <p className="text-sm text-[#2F2A25]/60 mt-3">
                   ⏱️ Environ 10 minutes • 📊 Résultats immédiats
                 </p>
-                {!isFree && !hasAccess && (
-                  <p className="text-sm text-amber-600 mt-2">
-                    ⚠️ Accès payant requis. Contactez Jessica Contentin pour obtenir l'accès.
-                  </p>
-                )}
               </div>
             </motion.div>
 
@@ -649,22 +670,44 @@ export function ConfidenceTestPlayer({
               </p>
               <Button
                 onClick={async () => {
-                  // Si l'item n'est pas gratuit, vérifier l'accès avant de commencer
+                  // Si l'item n'est pas gratuit et pas d'accès, rediriger vers Stripe checkout
                   if (!isFree && !hasAccess) {
                     setCheckingAccess(true);
                     try {
-                      const response = await fetch("/api/jessica-contentin/check-test-access");
+                      const response = await fetch("/api/stripe/create-checkout-session-jessica", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          catalogItemId,
+                          contentId,
+                        }),
+                      });
+
                       const data = await response.json();
-                      if (data.hasAccess) {
-                        setPhase("questions");
-                      } else {
-                        // Afficher un message pour payer ou demander l'accès
-                        alert("Vous n'avez pas encore accès à ce test. Veuillez contacter Jessica Contentin pour obtenir l'accès ou procéder au paiement.");
+
+                      if (!response.ok) {
+                        throw new Error(data.error || "Erreur lors de la création de la session de paiement");
+                      }
+
+                      // Rediriger vers Stripe Checkout
+                      if (data.url) {
+                        window.location.href = data.url;
+                      } else if (data.sessionId) {
+                        const { loadStripe } = await import("@stripe/stripe-js");
+                        const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+                        if (!stripePublishableKey) {
+                          throw new Error("Clé publique Stripe non configurée");
+                        }
+                        const stripe = await loadStripe(stripePublishableKey);
+                        if (stripe) {
+                          await stripe.redirectToCheckout({ sessionId: data.sessionId });
+                        } else {
+                          throw new Error("Stripe n'est pas disponible");
+                        }
                       }
                     } catch (error) {
-                      console.error("Error checking access:", error);
-                      alert("Une erreur s'est produite lors de la vérification de l'accès. Veuillez réessayer.");
-                    } finally {
+                      console.error("Error creating checkout session:", error);
+                      alert("Une erreur s'est produite lors de la création de la session de paiement. Veuillez réessayer.");
                       setCheckingAccess(false);
                     }
                   } else {
@@ -675,17 +718,12 @@ export function ConfidenceTestPlayer({
                 size="lg"
                 className="bg-[#C6A664] hover:bg-[#B89654] text-white px-12 py-8 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {checkingAccess ? "Vérification de l'accès..." : "Commencer le test maintenant"}
+                {checkingAccess ? "Redirection vers le paiement..." : (!isFree && !hasAccess ? `Acheter pour ${price}€` : "Commencer le test maintenant")}
                 {!checkingAccess && <ArrowRight className="ml-3 h-6 w-6" />}
               </Button>
               <p className="text-sm text-[#2F2A25]/60 mt-4">
                 ⏱️ Environ 10 minutes • 📊 Résultats immédiats • 🤖 Analyse IA
               </p>
-              {!isFree && !hasAccess && (
-                <p className="text-sm text-amber-600 mt-2">
-                  ⚠️ Accès payant requis. Contactez Jessica Contentin pour obtenir l'accès.
-                </p>
-              )}
             </motion.div>
           </div>
         </div>

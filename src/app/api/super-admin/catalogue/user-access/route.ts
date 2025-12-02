@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
-import { getSession } from "@/lib/auth/session";
+import { isSuperAdmin } from "@/lib/auth/super-admin";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 const TEST_CONTENT_ID = "test-confiance-en-soi";
@@ -8,8 +8,8 @@ const TEST_CONTENT_ID = "test-confiance-en-soi";
 export async function GET(request: NextRequest) {
   try {
     // Vérifier que l'utilisateur est super admin
-    const session = await getSession();
-    if (!session || session.role !== "super_admin") {
+    const hasAccess = await isSuperAdmin();
+    if (!hasAccess) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
     }
 

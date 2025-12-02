@@ -418,6 +418,20 @@ export function ConfidenceTestPlayer({ initialFirstName }: ConfidenceTestPlayerP
                   ✓ Recommandations IA
                 </span>
               </div>
+              {/* CTA au-dessus de la ligne de flottaison */}
+              <div className="pt-6">
+                <Button
+                  onClick={() => setPhase("questions")}
+                  size="lg"
+                  className="bg-[#C6A664] hover:bg-[#B89654] text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                >
+                  Commencer le test
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <p className="text-sm text-[#2F2A25]/60 mt-3">
+                  ⏱️ Environ 10 minutes • 📊 Résultats immédiats
+                </p>
+              </div>
             </motion.div>
 
             {/* Colonne droite : Image */}

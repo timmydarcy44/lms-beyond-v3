@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CatalogItemsList } from "./catalog-items-list";
 import { CatalogAccessManager } from "./catalog-access-manager";
+import { UserTestAccessManager } from "./user-test-access-manager";
 import { AddCatalogItemModal } from "./add-catalog-item-modal";
 
 export function CatalogManagementView() {
@@ -117,7 +118,10 @@ export function CatalogManagementView() {
             Items du catalogue
           </TabsTrigger>
           <TabsTrigger value="access" className="data-[state=active]:bg-gray-900 data-[state=active]:text-white">
-            Gestion des accès
+            Accès organisations
+          </TabsTrigger>
+          <TabsTrigger value="user-access" className="data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+            Accès utilisateurs (Test Confiance)
           </TabsTrigger>
         </TabsList>
 
@@ -127,6 +131,10 @@ export function CatalogManagementView() {
 
         <TabsContent value="access" className="space-y-4">
           <CatalogAccessManager />
+        </TabsContent>
+
+        <TabsContent value="user-access" className="space-y-4">
+          <UserTestAccessManager />
         </TabsContent>
       </Tabs>
 

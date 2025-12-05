@@ -267,10 +267,130 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
     hasAccess,
   });
 
-  // URL vers la page de test (si accès)
+  // URL vers la page de test
+  // IMPORTANT: Chercher le questionnaire même si pas d'accès, pour afficher le bon bouton
   // Vérifier si le test utilise un questionnaire mental_health
   let testUrl = null;
-  if (hasAccess) {
+  
+  // D'abord, vérifier si c'est le test Soft Skills et chercher le questionnaire
+  const isSoftSkillsTest = catalogItem.title === "Soft Skills – Profil 360" || catalogItem.title?.toLowerCase().includes("soft skills");
+  
+  if (isSoftSkillsTest) {
+    console.log("[catalogue/test] Detected Soft Skills test, searching for questionnaire...");
+    
+    // Utiliser le service role client pour contourner RLS et trouver le questionnaire
+    const serviceClient = getServiceRoleClient();
+    const clientToUse = serviceClient || supabase;
+    
+    // D'abord, vérifier si le content_id est directement un ID de questionnaire mental_health
+    if (catalogItem.content_id) {
+      console.log("[catalogue/test] Checking if content_id is a questionnaire ID:", catalogItem.content_id);
+      const { data: directQuestionnaire } = await clientToUse
+        .from("mental_health_questionnaires")
+        .select("id, title")
+        .eq("id", catalogItem.content_id)
+        .maybeSingle();
+      
+      if (directQuestionnaire) {
+        testUrl = `/dashboard/apprenant/questionnaires/${directQuestionnaire.id}`;
+        console.log("[catalogue/test] content_id is a questionnaire ID, testUrl:", testUrl);
+      }
+    }
+    
+    // Si pas trouvé, chercher par titre
+    if (!testUrl) {
+      console.log("[catalogue/test] Starting comprehensive questionnaire search...");
+      
+      // 1. Chercher par titre exact avec is_active
+      let { data: questionnaire, error: questionnaireError } = await clientToUse
+        .from("mental_health_questionnaires")
+        .select("id, title, created_by, org_id, is_active")
+        .eq("title", "Soft Skills – Profil 360")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (questionnaireError) {
+        console.error("[catalogue/test] Error searching questionnaire (exact + is_active):", questionnaireError);
+      }
+      
+      console.log("[catalogue/test] Search result (exact + is_active):", {
+        found: !!questionnaire,
+        id: questionnaire?.id,
+        title: questionnaire?.title,
+      });
+      
+      // 2. Si pas trouvé, chercher sans le filtre is_active
+      if (!questionnaire) {
+        console.log("[catalogue/test] Trying without is_active filter...");
+        const { data: questionnaires, error: questionnairesError } = await clientToUse
+          .from("mental_health_questionnaires")
+          .select("id, title, created_by, org_id, is_active")
+          .eq("title", "Soft Skills – Profil 360")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        
+        if (questionnairesError) {
+          console.error("[catalogue/test] Error searching questionnaires (exact, no filter):", questionnairesError);
+        }
+        
+        console.log("[catalogue/test] Search result (exact, no filter):", {
+          count: questionnaires?.length || 0,
+          questionnaires: questionnaires?.map(q => ({ id: q.id, title: q.title, is_active: q.is_active })) || [],
+        });
+        
+        if (questionnaires && questionnaires.length > 0) {
+          // Prendre le premier actif, sinon le premier
+          questionnaire = questionnaires.find(q => q.is_active) || questionnaires[0];
+          console.log("[catalogue/test] Found questionnaire without is_active filter:", questionnaire.id);
+        }
+      }
+      
+      // 3. Si toujours pas trouvé, chercher avec ILIKE (insensible à la casse)
+      if (!questionnaire) {
+        console.log("[catalogue/test] Trying with ILIKE search...");
+        const { data: ilikeResults, error: ilikeError } = await clientToUse
+          .from("mental_health_questionnaires")
+          .select("id, title, created_by, org_id, is_active")
+          .ilike("title", "%Soft Skills%")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        
+        if (ilikeError) {
+          console.error("[catalogue/test] Error searching with ILIKE:", ilikeError);
+        }
+        
+        console.log("[catalogue/test] Search result (ILIKE):", {
+          count: ilikeResults?.length || 0,
+          questionnaires: ilikeResults?.map(q => ({ id: q.id, title: q.title, is_active: q.is_active })) || [],
+        });
+        
+        if (ilikeResults && ilikeResults.length > 0) {
+          // Chercher celui qui correspond le mieux
+          questionnaire = ilikeResults.find(q => 
+            q.title.toLowerCase().includes("profil 360") || 
+            q.title.toLowerCase().includes("soft skills")
+          ) || ilikeResults[0];
+          console.log("[catalogue/test] Found questionnaire with ILIKE:", questionnaire.id);
+        }
+      }
+      
+      // 4. Si trouvé, créer l'URL
+      if (questionnaire) {
+        testUrl = `/dashboard/apprenant/questionnaires/${questionnaire.id}`;
+        console.log("[catalogue/test] ✅ Found questionnaire, testUrl:", testUrl);
+      } else {
+        // 5. Fallback final : utiliser le content_id comme questionnaire ID directement
+        if (catalogItem.content_id) {
+          console.log("[catalogue/test] ⚠️ No questionnaire found via search, assuming content_id is questionnaire ID:", catalogItem.content_id);
+          testUrl = `/dashboard/apprenant/questionnaires/${catalogItem.content_id}`;
+          console.log("[catalogue/test] Using content_id as questionnaire ID, testUrl:", testUrl);
+        }
+      }
+    }
+  } else if (hasAccess) {
+    // Pour les autres tests, chercher l'URL seulement si l'utilisateur a accès
     if (testData) {
       const builderSnapshot = (testData as any)?.builder_snapshot as any;
       const questionnaireId = builderSnapshot?.questionnaireId;
@@ -290,135 +410,22 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
         console.log("[catalogue/test] Using test slug/content_id:", testUrl);
       }
     } else {
-      // Si testData n'est pas trouvé, chercher directement le questionnaire mental_health
-      // pour le test "Soft Skills – Profil 360"
-      if (catalogItem.title === "Soft Skills – Profil 360" || catalogItem.title?.includes("Soft Skills")) {
-        console.log("[catalogue/test] Searching for mental_health questionnaire as fallback");
-        
-        // Utiliser le service role client pour contourner RLS
-        const serviceClient = getServiceRoleClient();
-        const clientToUse = serviceClient || supabase;
-        
-        // D'abord, vérifier si le content_id est directement un ID de questionnaire mental_health
-        if (catalogItem.content_id) {
-          console.log("[catalogue/test] Checking if content_id is a questionnaire ID:", catalogItem.content_id);
-          const { data: directQuestionnaire } = await clientToUse
-            .from("mental_health_questionnaires")
-            .select("id, title")
-            .eq("id", catalogItem.content_id)
-            .maybeSingle();
-          
-          if (directQuestionnaire) {
-            testUrl = `/dashboard/apprenant/questionnaires/${directQuestionnaire.id}`;
-            console.log("[catalogue/test] content_id is a questionnaire ID, testUrl:", testUrl);
-          }
-        }
-        
-        // Si pas trouvé, chercher par titre
-        if (!testUrl) {
-          console.log("[catalogue/test] Starting comprehensive questionnaire search...");
-          
-          // 1. Chercher par titre exact avec is_active
-          let { data: questionnaire, error: questionnaireError } = await clientToUse
-            .from("mental_health_questionnaires")
-            .select("id, title, created_by, org_id, is_active")
-            .eq("title", "Soft Skills – Profil 360")
-            .eq("is_active", true)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          if (questionnaireError) {
-            console.error("[catalogue/test] Error searching questionnaire (exact + is_active):", questionnaireError);
-          }
-          
-          console.log("[catalogue/test] Search result (exact + is_active):", {
-            found: !!questionnaire,
-            id: questionnaire?.id,
-            title: questionnaire?.title,
-          });
-          
-          // 2. Si pas trouvé, chercher sans le filtre is_active
-          if (!questionnaire) {
-            console.log("[catalogue/test] Trying without is_active filter...");
-            const { data: questionnaires, error: questionnairesError } = await clientToUse
-              .from("mental_health_questionnaires")
-              .select("id, title, created_by, org_id, is_active")
-              .eq("title", "Soft Skills – Profil 360")
-              .order("created_at", { ascending: false })
-              .limit(10);
-            
-            if (questionnairesError) {
-              console.error("[catalogue/test] Error searching questionnaires (exact, no filter):", questionnairesError);
-            }
-            
-            console.log("[catalogue/test] Search result (exact, no filter):", {
-              count: questionnaires?.length || 0,
-              questionnaires: questionnaires?.map(q => ({ id: q.id, title: q.title, is_active: q.is_active })) || [],
-            });
-            
-            if (questionnaires && questionnaires.length > 0) {
-              // Prendre le premier actif, sinon le premier
-              questionnaire = questionnaires.find(q => q.is_active) || questionnaires[0];
-              console.log("[catalogue/test] Found questionnaire without is_active filter:", questionnaire.id);
-            }
-          }
-          
-          // 3. Si toujours pas trouvé, chercher avec ILIKE (insensible à la casse)
-          if (!questionnaire) {
-            console.log("[catalogue/test] Trying with ILIKE search...");
-            const { data: ilikeResults, error: ilikeError } = await clientToUse
-              .from("mental_health_questionnaires")
-              .select("id, title, created_by, org_id, is_active")
-              .ilike("title", "%Soft Skills%")
-              .order("created_at", { ascending: false })
-              .limit(10);
-            
-            if (ilikeError) {
-              console.error("[catalogue/test] Error searching with ILIKE:", ilikeError);
-            }
-            
-            console.log("[catalogue/test] Search result (ILIKE):", {
-              count: ilikeResults?.length || 0,
-              questionnaires: ilikeResults?.map(q => ({ id: q.id, title: q.title, is_active: q.is_active })) || [],
-            });
-            
-            if (ilikeResults && ilikeResults.length > 0) {
-              // Chercher celui qui correspond le mieux
-              questionnaire = ilikeResults.find(q => 
-                q.title.toLowerCase().includes("profil 360") || 
-                q.title.toLowerCase().includes("soft skills")
-              ) || ilikeResults[0];
-              console.log("[catalogue/test] Found questionnaire with ILIKE:", questionnaire.id);
-            }
-          }
-          
-          // 4. Si trouvé, créer l'URL
-          if (questionnaire) {
-            testUrl = `/dashboard/apprenant/questionnaires/${questionnaire.id}`;
-            console.log("[catalogue/test] ✅ Found questionnaire, testUrl:", testUrl);
-          } else {
-            // 5. Fallback final : utiliser le content_id comme questionnaire ID directement
-            // Le content_id pourrait être directement un questionnaire ID même si la recherche ne le trouve pas
-            // (problème de RLS ou le questionnaire existe mais n'est pas accessible)
-            if (catalogItem.content_id) {
-              console.log("[catalogue/test] ⚠️ No questionnaire found via search, assuming content_id is questionnaire ID:", catalogItem.content_id);
-              testUrl = `/dashboard/apprenant/questionnaires/${catalogItem.content_id}`;
-              console.log("[catalogue/test] Using content_id as questionnaire ID, testUrl:", testUrl);
-            } else {
-              testUrl = `/dashboard/catalogue/test/${id}`;
-              console.log("[catalogue/test] ❌ No questionnaire found and no content_id, using catalog page as fallback:", testUrl);
-            }
-          }
-        }
-      } else {
-        // Pour les autres tests, utiliser l'ID du test comme URL
-        testUrl = catalogItem.content_id 
-          ? `/dashboard/tests/${catalogItem.content_id}`
-          : `/dashboard/catalogue/test/${id}`;
-        console.log("[catalogue/test] Using content_id as testUrl:", testUrl);
-      }
+      // Pour les autres tests sans testData, utiliser l'ID du test comme URL
+      testUrl = catalogItem.content_id 
+        ? `/dashboard/tests/${catalogItem.content_id}`
+        : `/dashboard/catalogue/test/${id}`;
+      console.log("[catalogue/test] Using content_id as testUrl:", testUrl);
     }
+  }
+  
+  // Si c'est le test Soft Skills et qu'on n'a toujours pas trouvé de testUrl, utiliser le fallback
+  if (isSoftSkillsTest && !testUrl) {
+    if (catalogItem.content_id) {
+      testUrl = `/dashboard/apprenant/questionnaires/${catalogItem.content_id}`;
+    } else {
+      testUrl = `/dashboard/catalogue/test/${id}`;
+    }
+    console.log("[catalogue/test] Soft Skills fallback testUrl:", testUrl);
   }
   
   console.log("[catalogue/test] Test URL determination:", {
@@ -443,9 +450,7 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
   const primaryColor = branding?.primary_color || '#8B6F47';
   const accentColor = branding?.accent_color || '#D4AF37';
 
-  // Vérifier si c'est le test des soft skills
-  const isSoftSkillsTest = catalogItem.title?.toLowerCase().includes("soft skills") || 
-                           catalogItem.title === "Soft Skills – Profil 360";
+  // isSoftSkillsTest est déjà défini plus haut
 
   return (
     <BrandingProvider initialBranding={branding}>

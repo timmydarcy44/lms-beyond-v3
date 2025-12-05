@@ -62,7 +62,7 @@ export function TestResultsViewer({
         const controller = new AbortController();
         timeoutId = setTimeout(() => {
           controller.abort();
-        }, 8000); // 8 secondes de timeout
+        }, 15000); // 15 secondes de timeout (augmenté)
         
         // Récupérer les tests passés par l'utilisateur avec les analyses existantes
         // Limiter les champs pour améliorer les performances
@@ -111,24 +111,28 @@ export function TestResultsViewer({
           .order("created_at", { ascending: false })
           .limit(10); // Réduire à 10 pour améliorer les performances
 
-        // Exécuter les deux requêtes en parallèle avec timeout
+        // Exécuter les deux requêtes en parallèle avec timeout plus long
+        // Utiliser un timeout de 15 secondes pour les requêtes lourdes
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => {
             reject(new Error("Timeout: La requête a pris trop de temps"));
-          }, 8000);
+          }, 15000); // Augmenté à 15 secondes
         });
 
         let attemptsResult: any;
         let mentalHealthResult: any;
         
         try {
-          [attemptsResult, mentalHealthResult] = await Promise.race([
+          const results = await Promise.race([
             Promise.all([attemptsPromise, mentalHealthPromise]),
             timeoutPromise,
           ]) as any;
+          
+          [attemptsResult, mentalHealthResult] = results;
         } catch (raceError: any) {
           if (timeoutId) clearTimeout(timeoutId);
           console.error("[test-results-viewer] Promise race error:", raceError);
+          // Ne pas bloquer l'interface, continuer avec des données vides
           if (isMounted) {
             setTestResults([]);
             setLoading(false);
@@ -138,8 +142,11 @@ export function TestResultsViewer({
 
         if (timeoutId) clearTimeout(timeoutId);
 
-        const { data: attempts, error } = attemptsResult || { data: null, error: null };
-        const { data: mentalHealthAssessments, error: mentalHealthError } = mentalHealthResult || { data: null, error: null };
+        // Vérifier que les résultats sont bien des objets avec data et error
+        const attempts = attemptsResult?.data || null;
+        const error = attemptsResult?.error || null;
+        const mentalHealthAssessments = mentalHealthResult?.data || null;
+        const mentalHealthError = mentalHealthResult?.error || null;
 
         if (!isMounted) {
           if (timeoutId) clearTimeout(timeoutId);

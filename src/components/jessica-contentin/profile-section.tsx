@@ -368,7 +368,7 @@ export function ProfileSection({ userId }: { userId: string }) {
 
       {/* Bouton Déconnexion */}
       <div 
-        className="p-6 rounded-xl"
+        className="p-6 rounded-xl relative z-10"
         style={{ 
           backgroundColor: surfaceColor,
           border: `1px solid ${primaryColor}30`,
@@ -377,11 +377,13 @@ export function ProfileSection({ userId }: { userId: string }) {
         <Button
           onClick={handleLogout}
           variant="outline"
-          className="rounded-full px-6 border-2"
+          className="rounded-full px-6 border-2 cursor-pointer relative z-10"
           style={{
             borderColor: "#DC2626",
             color: "#DC2626",
+            pointerEvents: "auto",
           }}
+          type="button"
         >
           <LogOut className="h-4 w-4 mr-2" />
           Me déconnecter

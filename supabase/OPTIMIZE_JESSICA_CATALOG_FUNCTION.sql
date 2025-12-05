@@ -6,7 +6,11 @@
 -- par une seule requête avec jointures
 -- =====================================================
 
-CREATE OR REPLACE FUNCTION get_jessica_catalog_items(user_id_param UUID DEFAULT NULL)
+-- Supprimer la fonction existante si elle existe (nécessaire si on change le type de retour)
+DROP FUNCTION IF EXISTS get_jessica_catalog_items(UUID);
+
+-- Créer la fonction avec le nouveau type de retour (incluant slug)
+CREATE FUNCTION get_jessica_catalog_items(user_id_param UUID DEFAULT NULL)
 RETURNS TABLE (
   id UUID,
   item_type TEXT,

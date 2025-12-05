@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCatalogItemById } from "@/lib/queries/catalogue";
 import { Button } from "@/components/ui/button";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { Play, FileText, Video, Headphones, CreditCard } from "lucide-react";
 import { BuyButton } from "@/components/jessica-contentin/buy-button";
 
@@ -64,9 +64,13 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
 
   console.log("[ressources/[id]] Starting search for resource:", { id, isIdUUID, jessicaProfileId: jessicaProfile.id });
 
+  // Utiliser le service role client pour contourner RLS lors de la recherche initiale
+  const serviceClient = getServiceRoleClient();
+  const searchClient = serviceClient || supabase;
+
   if (isIdUUID) {
     // C'est un UUID, chercher directement par ID dans catalog_items (sans filtre créateur d'abord)
-    const { data: catalogItemDirect } = await supabase
+    const { data: catalogItemDirect } = await searchClient
       .from("catalog_items")
       .select("*")
       .eq("id", id)
@@ -76,53 +80,59 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     console.log("[ressources/[id]] Direct catalog_items lookup:", { found: !!catalogItemDirect, created_by: catalogItemDirect?.created_by, creator_id: catalogItemDirect?.creator_id });
     
     if (catalogItemDirect) {
-      catalogItem = await getCatalogItemById(id, organizationId, user?.id);
+      catalogItem = await getCatalogItemById(id, organizationId, user?.id, serviceClient);
     }
     
     // Si pas trouvé, essayer de chercher par content_id dans catalog_items
     if (!catalogItem) {
-      const { data: catalogItemByContentId } = await supabase
+      const { data: catalogItemByContentId } = await searchClient
         .from("catalog_items")
         .select("id, content_id, item_type, created_by, creator_id")
         .eq("content_id", id)
         .eq("item_type", "ressource")
-        .maybeSingle(); // Retirer le filtre created_by pour voir tous les résultats
+        .maybeSingle();
       
       console.log("[ressources/[id]] Search by content_id:", { found: !!catalogItemByContentId, id: catalogItemByContentId?.id, created_by: catalogItemByContentId?.created_by });
       
       if (catalogItemByContentId) {
-        catalogItem = await getCatalogItemById(catalogItemByContentId.id, organizationId, user?.id);
+        catalogItem = await getCatalogItemById(catalogItemByContentId.id, organizationId, user?.id, serviceClient);
       }
     }
   } else {
       // C'est un slug, chercher d'abord dans catalog_items par slug ou titre
-      const { data: catalogItemBySlug } = await supabase
+      const { data: catalogItemBySlug } = await searchClient
         .from("catalog_items")
-        .select("id, content_id, item_type")
-        .or(`slug.eq.${id},title.ilike.%${id}%`)
-        .eq("created_by", jessicaProfile.id)
+        .select("id, content_id, item_type, created_by, creator_id")
+        .or(`slug.eq.${id},title.ilike.%${id.replace(/-/g, " ")}%`)
+        .eq("is_active", true)
         .maybeSingle();
 
+      console.log("[ressources/[id]] Search by slug/title:", { found: !!catalogItemBySlug, id: catalogItemBySlug?.id, created_by: catalogItemBySlug?.created_by });
+
     if (catalogItemBySlug) {
-      catalogItem = await getCatalogItemById(catalogItemBySlug.id, organizationId, user?.id);
+      catalogItem = await getCatalogItemById(catalogItemBySlug.id, organizationId, user?.id, serviceClient);
     } else {
       // Si pas trouvé dans catalog_items, chercher dans resources par slug ou titre
-      const { data: resource } = await supabase
+      const { data: resource } = await searchClient
         .from("resources")
-        .select("id")
-        .or(`slug.eq.${id},title.ilike.%${id}%`)
+        .select("id, created_by, owner_id")
+        .or(`slug.eq.${id},title.ilike.%${id.replace(/-/g, " ")}%`)
         .maybeSingle();
+
+      console.log("[ressources/[id]] Search in resources table:", { found: !!resource, id: resource?.id });
 
       if (resource) {
         resourceId = resource.id;
-        catalogItem = await getCatalogItemById(resourceId, organizationId, user?.id);
+        catalogItem = await getCatalogItemById(resourceId, organizationId, user?.id, serviceClient);
       } else {
         // Si pas trouvé dans resources, chercher dans tests
-        const { data: test } = await supabase
+        const { data: test } = await searchClient
           .from("tests")
-          .select("id, title")
-          .or(`slug.eq.${id},title.ilike.%${id}%`)
+          .select("id, title, created_by")
+          .or(`slug.eq.${id},title.ilike.%${id.replace(/-/g, " ")}%`)
           .maybeSingle();
+
+        console.log("[ressources/[id]] Search in tests table:", { found: !!test, id: test?.id, title: test?.title });
 
         if (test) {
           // Si c'est le test de confiance en soi, rediriger vers la page dédiée
@@ -131,19 +141,22 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
             redirect("/test-confiance-en-soi");
           }
           resourceId = test.id;
-          catalogItem = await getCatalogItemById(resourceId, organizationId, user?.id);
+          catalogItem = await getCatalogItemById(resourceId, organizationId, user?.id, serviceClient);
         } else {
           // Dernière tentative : chercher dans catalog_items par titre partiel
-          const { data: catalogItemByTitle } = await supabase
+          const { data: catalogItemByTitle } = await searchClient
             .from("catalog_items")
-            .select("id, content_id, item_type")
+            .select("id, content_id, item_type, created_by, creator_id")
             .ilike("title", `%${id.replace(/-/g, " ")}%`)
-            .eq("created_by", jessicaProfile.id)
+            .eq("is_active", true)
             .maybeSingle();
 
+          console.log("[ressources/[id]] Final search by partial title:", { found: !!catalogItemByTitle, id: catalogItemByTitle?.id, created_by: catalogItemByTitle?.created_by });
+
           if (catalogItemByTitle) {
-            catalogItem = await getCatalogItemById(catalogItemByTitle.id, organizationId, user?.id);
+            catalogItem = await getCatalogItemById(catalogItemByTitle.id, organizationId, user?.id, serviceClient);
           } else {
+            console.error("[ressources/[id]] ❌ Resource not found after all attempts for ID:", id);
             notFound();
           }
         }

@@ -214,7 +214,8 @@ export default async function RessourcesPage() {
     target_audience: item.target_audience || null,
     access_status: item.access_status || "pending_payment",
     stripe_checkout_url: item.stripe_checkout_url || null,
-    creator_id: null, // Pas nécessaire dans la réponse
+    slug: item.slug || null, // Ajouter le slug pour les recherches
+    created_by: item.created_by || null, // Ajouter created_by pour les vérifications
   }));
 
   return (

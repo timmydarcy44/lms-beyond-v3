@@ -29,11 +29,36 @@ export default async function ResourceEditPage({ params }: ResourceEditPageProps
   if (!supabase) {
     redirect("/dashboard");
   }
-  const { data: resource, error } = await supabase
+
+  // Essayer d'abord de trouver la ressource directement par ID
+  let { data: resource, error } = await supabase
     .from("resources")
     .select("*")
     .eq("id", id)
     .single();
+
+  // Si pas trouvé, essayer de trouver via catalog_items (l'ID pourrait être celui du catalog_item)
+  if (error || !resource) {
+    const { data: catalogItem } = await supabase
+      .from("catalog_items")
+      .select("content_id")
+      .eq("id", id)
+      .eq("item_type", "ressource")
+      .maybeSingle();
+
+    if (catalogItem?.content_id) {
+      const { data: resourceFromCatalog, error: resourceError } = await supabase
+        .from("resources")
+        .select("*")
+        .eq("id", catalogItem.content_id)
+        .single();
+
+      if (!resourceError && resourceFromCatalog) {
+        resource = resourceFromCatalog;
+        error = null;
+      }
+    }
+  }
 
   if (error || !resource) {
     redirect("/super/studio/ressources");

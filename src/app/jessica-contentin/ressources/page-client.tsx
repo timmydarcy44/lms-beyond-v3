@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, FileText, Video, ArrowRight, ChevronLeft, ChevronRight, Play, Heart, AlertCircle, X } from "lucide-react";
+import { BookOpen, FileText, Video, ArrowRight, ChevronLeft, ChevronRight, Play, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
@@ -226,9 +226,41 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
   };
 
   // Ressources mises en avant pour le hero (2-3 premières avec images)
+  // Exclure le test de confiance en soi car il est déjà dans sa catégorie
   const featuredItems = catalogItems
-    .filter((item) => item.hero_image_url || item.thumbnail_url)
+    .filter((item) => {
+      // Vérifier si c'est le test de confiance en soi
+      const titleLower = (item.title || "").toLowerCase();
+      const slug = (item as any).slug || "";
+      const slugLower = slug.toLowerCase();
+      
+      const isConfidenceTest = 
+        titleLower.includes("confiance") || 
+        titleLower.includes("confiance en soi") ||
+        slugLower.includes("confiance") ||
+        slugLower === "test-confiance-en-soi" ||
+        item.id === "c2ac900f-7adc-4d32-b1b3-516a4dfd9fcf" || // ID du catalog_item du test (corrigé)
+        item.content_id === "bc07c56a-8d9a-415a-adf3-20ff420af4d3" || // ID du test lui-même
+        (item.item_type === "test" && (titleLower.includes("confiance") || slugLower.includes("confiance")));
+      
+      // Exclure le test de confiance et ne garder que les items avec images
+      if (isConfidenceTest) {
+        console.log("[RessourcesPageClient] Excluding confidence test from featured:", {
+          title: item.title,
+          id: item.id,
+          content_id: item.content_id,
+          item_type: item.item_type,
+          slug: slug
+        });
+        return false;
+      }
+      
+      return !!(item.hero_image_url || item.thumbnail_url);
+    })
     .slice(0, 3);
+  
+  // Log pour debug
+  console.log("[RessourcesPageClient] Featured items count:", featuredItems.length, "out of", catalogItems.length);
 
   // Grouper les ressources par catégorie
   const itemsByCategory = catalogItems.reduce((acc, item) => {
@@ -393,33 +425,132 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
               transition={{ duration: 0.6 }}
               className="pb-20"
             >
-              {/* H1 SEO principal - Rayonnement national */}
-              <section className="py-12 mx-4 mb-6">
-                <div className="mx-auto max-w-7xl px-6">
-                  <motion.h1
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="text-2xl md:text-3xl font-semibold text-[#2F2A25] mb-4 text-center"
-                    style={{
-                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                    }}
-                  >
-                    Ressources psychopédagogiques - Contenus et outils
-                  </motion.h1>
-                  <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    className="text-lg md:text-xl text-[#2F2A25]/80 text-center max-w-3xl mx-auto"
-                    style={{
-                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                    }}
-                  >
-                    Découvrez nos ressources et outils psychopédagogiques accessibles partout en France : troubles DYS, TDA-H, gestion des émotions, confiance en soi, orientation scolaire, neuroéducation.
-                  </motion.p>
-                </div>
-              </section>
+              {/* Hero Section avec Slider - Au-dessus de la ligne de flottaison */}
+              {featuredItems.length > 0 && (
+                <section className="relative h-[60vh] min-h-[500px] max-h-[700px] overflow-hidden mx-4 mb-6 rounded-2xl shadow-lg">
+                  <AnimatePresence mode="wait">
+                    {featuredItems.map((item, index) => {
+                      if (index !== heroIndex) return null;
+                      return (
+                        <motion.div
+                          key={item.id}
+                          initial={{ opacity: 0, x: 100 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -100 }}
+                          transition={{ duration: 0.5 }}
+                          className="absolute inset-0"
+                        >
+                          <div className="relative w-full h-full">
+                            {(item.hero_image_url || item.thumbnail_url) ? (
+                              <Image
+                                src={item.hero_image_url || item.thumbnail_url || ""}
+                                alt={item.title}
+                                fill
+                                priority={index === 0}
+                                quality={85}
+                                className="object-cover"
+                                sizes="100vw"
+                                unoptimized={false}
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1920&q=80";
+                                }}
+                              />
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-br from-[#E6D9C6] to-[#C6A664]" />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/60 to-black/50" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                          </div>
+                          
+                          {/* Badge catégorie en haut */}
+                          {item.category && (
+                            <div className="absolute top-6 left-6 z-30">
+                              <motion.span
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="inline-block px-4 py-2 bg-[#C6A664] text-white text-sm font-semibold rounded-full shadow-2xl"
+                                style={{
+                                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                                }}
+                              >
+                                {item.category}
+                              </motion.span>
+                            </div>
+                          )}
+                          
+                          {/* Contenu au centre */}
+                          <div className="absolute inset-0 z-20 flex items-center justify-start px-8 md:px-16">
+                            <div className="max-w-2xl">
+                              <motion.h2
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight"
+                                style={{
+                                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                                  textShadow: '0 2px 10px rgba(0,0,0,0.5)',
+                                }}
+                              >
+                                {item.title}
+                              </motion.h2>
+                              {item.short_description && (
+                                <motion.p
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.3 }}
+                                  className="text-lg md:text-xl text-white/90 mb-6 line-clamp-2"
+                                  style={{
+                                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                                    textShadow: '0 1px 5px rgba(0,0,0,0.5)',
+                                  }}
+                                >
+                                  {item.short_description}
+                                </motion.p>
+                              )}
+                              <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 }}
+                              >
+                                <Link href={getItemUrl(item)}>
+                                  <Button
+                                    size="lg"
+                                    className="bg-[#C6A664] hover:bg-[#B89654] text-white px-8 py-6 text-lg font-semibold rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+                                  >
+                                    Découvrir
+                                    <ArrowRight className="ml-2 h-5 w-5" />
+                                  </Button>
+                                </Link>
+                              </motion.div>
+                            </div>
+                          </div>
+                          
+                          {/* Indicateurs de pagination en bas */}
+                          {featuredItems.length > 1 && (
+                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+                              {featuredItems.map((_, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => setHeroIndex(idx)}
+                                  className={cn(
+                                    "h-2 rounded-full transition-all",
+                                    idx === heroIndex
+                                      ? "w-8 bg-[#C6A664]"
+                                      : "w-2 bg-white/50 hover:bg-white/70"
+                                  )}
+                                  aria-label={`Aller à la slide ${idx + 1}`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </section>
+              )}
 
               {/* Section "Vous êtes" avec filtres par catégorie */}
               <section className="py-8 mx-4 mb-6">
@@ -477,196 +608,6 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                   </motion.div>
                 </div>
               </section>
-
-              {/* Section Test de Confiance en soi */}
-              <section className="py-8 mx-4 mb-6">
-                <div className="mx-auto max-w-7xl px-6">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-gradient-to-r from-[#C6A664] to-[#B89654] rounded-2xl shadow-lg p-8 cursor-pointer group"
-                    onClick={() => router.push('/test-confiance-en-soi')}
-                  >
-                      <div className="grid md:grid-cols-2 gap-8 items-center">
-                        <div>
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
-                              <Heart className="h-8 w-8 text-white" />
-                            </div>
-                            <h2
-                              className="text-2xl md:text-3xl font-semibold text-white"
-                              style={{
-                                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                              }}
-                            >
-                              Test de Confiance en soi
-                            </h2>
-                          </div>
-                          <p className="text-white/90 text-lg mb-4 leading-relaxed">
-                            Évaluez votre estime de soi, votre auto-efficacité, votre assertivité et vos compétences sociales grâce à un test professionnel et bienveillant.
-                          </p>
-                          <p className="text-white/80 text-sm mb-6">
-                            24 questions • 4 dimensions • Analyse personnalisée
-                          </p>
-                          <div className="flex items-center text-white font-medium text-lg">
-                            Passer le test
-                            <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                          </div>
-                        </div>
-                        <div className="hidden md:block relative h-64 rounded-xl overflow-hidden">
-                          <Image
-                            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2070&auto=format&fit=crop"
-                            alt="Test de confiance en soi"
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                </div>
-              </section>
-
-              {/* Hero Section avec Slider */}
-              {featuredItems.length > 0 && (
-                <section className="relative h-[60vh] min-h-[500px] max-h-[700px] overflow-hidden mx-4 mb-4 rounded-2xl shadow-lg">
-                  <AnimatePresence mode="wait">
-                    {featuredItems.map((item, index) => {
-                      if (index !== heroIndex) return null;
-                      return (
-                        <motion.div
-                          key={item.id}
-                          initial={{ opacity: 0, x: 100 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -100 }}
-                          transition={{ duration: 0.5 }}
-                          className="absolute inset-0"
-                        >
-                          <div className="relative w-full h-full">
-                            {(item.hero_image_url || item.thumbnail_url) ? (
-                              <Image
-                                src={item.hero_image_url || item.thumbnail_url || ""}
-                                alt={item.title}
-                                fill
-                                priority={index === 0}
-                                quality={85}
-                                className="object-cover"
-                                sizes="100vw"
-                                unoptimized={false}
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1920&q=80";
-                                }}
-                              />
-                            ) : (
-                              <div className="absolute inset-0 bg-gradient-to-br from-[#E6D9C6] to-[#C6A664]" />
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/60 to-black/50" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                          </div>
-                          
-                          {/* Badge catégorie en haut */}
-                          {item.category && (
-                            <div className="absolute top-6 left-6 z-30">
-                              <motion.span
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
-                                className="inline-block px-4 py-2 bg-[#C6A664] text-white text-sm font-semibold rounded-full shadow-2xl"
-                                style={{
-                                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                                }}
-                              >
-                                {item.category}
-                              </motion.span>
-                            </div>
-                          )}
-
-                          {/* Contenu du hero */}
-                          <div className="absolute inset-0 z-20 flex flex-col justify-end px-6 lg:px-16 pb-12">
-                            <div className="max-w-3xl relative">
-                              <motion.h1
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
-                                className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-2xl"
-                                style={{
-                                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                                  textShadow: '0 4px 30px rgba(0,0,0,0.8), 0 2px 10px rgba(0,0,0,0.6)',
-                                }}
-                              >
-                                {item.title}
-                              </motion.h1>
-                              <motion.p
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
-                                className="text-lg md:text-xl text-white mb-6 line-clamp-2 drop-shadow-lg"
-                                style={{
-                                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                                  textShadow: '0 2px 15px rgba(0,0,0,0.7), 0 1px 5px rgba(0,0,0,0.5)',
-                                }}
-                              >
-                                {item.short_description || item.description || ""}
-                              </motion.p>
-                              <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.4 }}
-                                className="flex flex-wrap gap-4 z-30 relative"
-                              >
-                                <Link href={getItemUrl(item)}>
-                                  <Button
-                                    size="lg"
-                                    className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-8 py-6 text-lg shadow-2xl transition-transform hover:scale-105"
-                                    style={{
-                                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                                    }}
-                                  >
-                                    <Play className="mr-2 h-5 w-5" />
-                                    Découvrir
-                                  </Button>
-                                </Link>
-                                <Link href="/quiz">
-                                  <Button
-                                    size="lg"
-                                    variant="outline"
-                                    className="bg-white/20 hover:bg-white/30 backdrop-blur-md border-2 border-white text-white rounded-full px-8 py-6 text-lg shadow-2xl transition-transform hover:scale-105"
-                                    style={{
-                                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                                    }}
-                                  >
-                                    Commencer maintenant
-                                    <ArrowRight className="ml-2 h-5 w-5" />
-                                  </Button>
-                                </Link>
-                              </motion.div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
-
-                  {/* Indicateurs du slider */}
-                  {featuredItems.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                      {featuredItems.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setHeroIndex(index)}
-                          className={cn(
-                            "h-2 rounded-full transition-all duration-300",
-                            index === heroIndex ? "w-8 bg-[#C6A664]" : "w-2 bg-white/50 hover:bg-white/70"
-                          )}
-                          aria-label={`Aller à la ressource ${index + 1}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )}
 
               {/* Sliders par catégorie - Style Netflix */}
               <div className="space-y-8 mt-8 px-6 lg:px-16">
@@ -748,7 +689,10 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                                 </div>
                                 <div className="absolute top-2 right-2">
                                   <span className="px-2 py-1 text-xs font-semibold rounded-full bg-[#C6A664] text-white">
-                                    {item.item_type === "module" ? "Formation" : item.item_type === "ressource" ? "Ressource" : "Test"}
+                                    {item.item_type === "module" ? "📚 Micro formation" :
+                                     item.item_type === "test" ? "🧪 Test" :
+                                     item.item_type === "ressource" ? "📄 Ressource" :
+                                     "📦 Contenu"}
                                   </span>
                                 </div>
                               </div>
@@ -836,12 +780,13 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                                   )}
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                                   
-                                  {/* Badge catégorie */}
-                                  {item.category && (
-                                    <div className="absolute top-3 left-3 bg-[#C6A664] text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                      {item.category}
-                                    </div>
-                                  )}
+                                  {/* Badge type de contenu */}
+                                  <div className="absolute top-3 left-3 bg-[#C6A664] text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                    {item.item_type === "module" ? "📚 Micro formation" :
+                                     item.item_type === "test" ? "🧪 Test" :
+                                     item.item_type === "ressource" ? "📄 Ressource" :
+                                     "📦 Contenu"}
+                                  </div>
                                   
                                   {/* Badge gratuit */}
                                   {item.is_free && (
@@ -889,6 +834,35 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Section titre en bas avant le footer */}
+        <section className="py-12 mx-4 mb-8">
+          <div className="mx-auto max-w-7xl px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center"
+            >
+              <h2
+                className="text-2xl md:text-3xl font-semibold text-[#2F2A25] mb-4"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                }}
+              >
+                Ressources psychopédagogiques - Contenus et outils
+              </h2>
+              <p
+                className="text-lg md:text-xl text-[#2F2A25]/80 max-w-3xl mx-auto"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                }}
+              >
+                Découvrez nos ressources et outils psychopédagogiques accessibles partout en France : troubles DYS, TDA-H, gestion des émotions, confiance en soi, orientation scolaire, neuroéducation.
+              </p>
+            </motion.div>
+          </div>
+        </section>
     </div>
   );
 }

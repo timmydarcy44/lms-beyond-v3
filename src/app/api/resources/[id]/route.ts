@@ -54,9 +54,8 @@ export async function PATCH(
     if (title !== undefined) updateData.title = title.trim();
     if (description !== undefined) updateData.description = description?.trim() || null;
     if (type !== undefined) {
-      // Essayer kind d'abord, puis type
+      // La table resources utilise 'kind', pas 'type'
       updateData.kind = type;
-      updateData.type = type;
     }
     if (price !== undefined) updateData.price = parseFloat(String(price)) || 0;
     if (published !== undefined) {

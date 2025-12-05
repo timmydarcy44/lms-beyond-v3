@@ -141,9 +141,9 @@ export function CatalogueJessicaClient({ items, jessicaProfileId }: CatalogueJes
   const handleEdit = (item: CatalogItem) => {
     // Rediriger vers la page d'édition appropriée selon le type
     if (item.item_type === "module") {
-      router.push(`/dashboard/courses/${item.content_id}/edit`);
+      router.push(`/super/studio/modules/${item.content_id}/structure`);
     } else if (item.item_type === "ressource") {
-      router.push(`/super/studio/ressources/${item.content_id}`);
+      router.push(`/super/studio/ressources/${item.content_id}/edit`);
     } else if (item.item_type === "test") {
       router.push(`/super/studio/tests/${item.content_id || item.id}/edit`);
     } else if (item.item_type === "parcours") {

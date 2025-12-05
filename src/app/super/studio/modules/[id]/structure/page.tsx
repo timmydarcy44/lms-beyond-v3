@@ -54,6 +54,34 @@ export default async function SuperAdminModuleStructurePage({ params }: PageProp
     .eq("id", courseId)
     .maybeSingle();
 
+  // Si pas trouvé, essayer de trouver via catalog_items (l'ID pourrait être celui du catalog_item)
+  if (courseError || !course) {
+    console.log("[super-admin/modules/structure] Course not found directly, trying via catalog_items");
+    const { data: catalogItem } = await supabase
+      .from("catalog_items")
+      .select("content_id")
+      .eq("id", courseId)
+      .eq("item_type", "module")
+      .maybeSingle();
+
+    if (catalogItem?.content_id) {
+      console.log("[super-admin/modules/structure] Found catalog_item, fetching course with content_id:", catalogItem.content_id);
+      const { data: courseFromCatalog, error: courseFromCatalogError } = await supabase
+        .from("courses")
+        .select("id, title, creator_id, owner_id, status, builder_snapshot")
+        .eq("id", catalogItem.content_id)
+        .maybeSingle();
+
+      if (!courseFromCatalogError && courseFromCatalog) {
+        course = courseFromCatalog;
+        courseError = null;
+        console.log("[super-admin/modules/structure] ✅ Course found via catalog_item");
+      } else {
+        courseError = courseFromCatalogError;
+      }
+    }
+  }
+
   // Si erreur, essayer avec service role client si disponible
   if (courseError) {
     console.warn("[super-admin/modules/structure] First attempt failed, trying with service role client");

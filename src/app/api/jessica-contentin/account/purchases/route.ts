@@ -25,11 +25,14 @@ export async function GET(request: NextRequest) {
 
     // Récupérer les achats depuis catalog_access (table correcte pour les accès B2C)
     // Utiliser une requête optimisée avec limite
+    // IMPORTANT: Vérifier que user_id n'est pas NULL (accès B2C uniquement)
     let query = supabase
       .from("catalog_access")
       .select(`
         id,
         catalog_item_id,
+        user_id,
+        organization_id,
         granted_at,
         access_status,
         purchase_amount,
@@ -47,27 +50,63 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq("user_id", userId)
+      .is("organization_id", null) // S'assurer que c'est un accès B2C (pas B2B)
       .in("access_status", ["purchased", "manually_granted", "free"])
       .order("granted_at", { ascending: false })
       .limit(50); // Limiter à 50 résultats
 
     const { data: access, error } = await query;
 
+    // Log de diagnostic détaillé
+    console.log("[api/jessica-contentin/account/purchases] Query details:", {
+      userId,
+      queryParams: {
+        user_id: userId,
+        organization_id: "IS NULL",
+        access_status: ["purchased", "manually_granted", "free"],
+      },
+    });
+
     console.log("[api/jessica-contentin/account/purchases] Raw access data:", {
       userId,
       jessicaProfileId,
       accessCount: access?.length || 0,
+      error: error ? {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      } : null,
       access: access?.map((a: any) => ({
         id: a.id,
         catalog_item_id: a.catalog_item_id,
+        user_id: a.user_id,
+        organization_id: a.organization_id,
         access_status: a.access_status,
+        granted_at: a.granted_at,
         catalog_item: a.catalog_items ? {
           id: a.catalog_items.id,
           title: a.catalog_items.title,
           creator_id: a.catalog_items.creator_id,
+          created_by: a.catalog_items.created_by,
         } : null,
       })) || [],
     });
+
+    // Vérifier s'il y a des accès avec organization_id au lieu de user_id (erreur de configuration)
+    if (access && access.length === 0) {
+      const { data: accessWithOrg } = await supabase
+        .from("catalog_access")
+        .select("id, user_id, organization_id, catalog_item_id, access_status")
+        .or(`user_id.eq.${userId},organization_id.is.not.null`)
+        .in("access_status", ["purchased", "manually_granted", "free"])
+        .limit(5);
+      
+      console.log("[api/jessica-contentin/account/purchases] ⚠️ No access found with user_id, checking for organization_id access:", {
+        found: accessWithOrg?.length || 0,
+        samples: accessWithOrg?.slice(0, 3) || [],
+      });
+    }
 
     // Filtrer uniquement les contenus de Jessica Contentin côté serveur si on a son ID
     // (Le filtre dans la requête Supabase ne fonctionne pas toujours correctement avec les joins)

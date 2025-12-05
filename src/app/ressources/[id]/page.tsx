@@ -66,13 +66,13 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     // C'est un UUID, chercher directement par ID
     catalogItem = await getCatalogItemById(id, organizationId, user?.id);
   } else {
-    // C'est un slug, chercher d'abord dans catalog_items par slug ou titre
-    const { data: catalogItemBySlug } = await supabase
-      .from("catalog_items")
-      .select("id, content_id, item_type")
-      .or(`slug.eq.${id},title.ilike.%${id}%`)
-      .eq("creator_id", jessicaProfile.id)
-      .maybeSingle();
+      // C'est un slug, chercher d'abord dans catalog_items par slug ou titre
+      const { data: catalogItemBySlug } = await supabase
+        .from("catalog_items")
+        .select("id, content_id, item_type")
+        .or(`slug.eq.${id},title.ilike.%${id}%`)
+        .eq("created_by", jessicaProfile.id)
+        .maybeSingle();
 
     if (catalogItemBySlug) {
       catalogItem = await getCatalogItemById(catalogItemBySlug.id, organizationId, user?.id);
@@ -109,7 +109,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
             .from("catalog_items")
             .select("id, content_id, item_type")
             .ilike("title", `%${id.replace(/-/g, " ")}%`)
-            .eq("creator_id", jessicaProfile.id)
+            .eq("created_by", jessicaProfile.id)
             .maybeSingle();
 
           if (catalogItemByTitle) {
@@ -147,10 +147,14 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   const catalogItemId = catalogItem.id;
 
   // Vérifier que c'est bien une ressource de Jessica Contentin
-  const isResourceCreator = (catalogItem as any).creator_id === jessicaProfile.id;
+  // Vérifier created_by (colonne principale) ou creator_id (si existe)
+  const catalogItemCreatorId = (catalogItem as any).created_by || (catalogItem as any).creator_id;
+  const isResourceCreator = catalogItemCreatorId === jessicaProfile.id;
   if (!isResourceCreator) {
     console.error("[ressources/[id]] Resource creator mismatch:", { 
-      catalogItemCreatorId: (catalogItem as any).creator_id, 
+      catalogItemCreatorId: catalogItemCreatorId,
+      created_by: (catalogItem as any).created_by,
+      creator_id: (catalogItem as any).creator_id,
       jessicaProfileId: jessicaProfile.id 
     });
     notFound();

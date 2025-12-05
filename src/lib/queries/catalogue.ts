@@ -460,10 +460,10 @@ export async function getCatalogItemById(
     return null;
   }
 
-  // Récupérer l'item du catalogue avec creator_id
+  // Récupérer l'item du catalogue avec created_by et creator_id
   let { data: item, error: itemError } = await supabase
     .from("catalog_items")
-    .select("*, creator_id")
+    .select("*") // Sélectionner toutes les colonnes (inclut created_by et creator_id si elles existent)
     .eq("id", catalogItemId)
     .eq("is_active", true)
     .maybeSingle(); // Utiliser maybeSingle() au lieu de single() pour éviter les erreurs si non trouvé
@@ -474,7 +474,7 @@ export async function getCatalogItemById(
 
     const { data: byContent, error: byContentError } = await supabase
       .from("catalog_items")
-      .select("*, creator_id")
+      .select("*") // Sélectionner toutes les colonnes
       .eq("content_id", catalogItemId)
       .eq("is_active", true)
       .maybeSingle();

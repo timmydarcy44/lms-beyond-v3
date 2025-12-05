@@ -49,11 +49,11 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Récupérer le profil pour obtenir l'organisation (si l'utilisateur est connecté)
   let organizationId: string | undefined = undefined;
   if (user?.id) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("org_id")
-      .eq("id", user.id)
-      .maybeSingle();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("org_id")
+    .eq("id", user.id)
+    .maybeSingle();
     organizationId = profile?.org_id || undefined;
   }
 
@@ -62,19 +62,33 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   let resourceId = id;
   let catalogItem = null;
 
+  console.log("[ressources/[id]] Starting search for resource:", { id, isIdUUID, jessicaProfileId: jessicaProfile.id });
+
   if (isIdUUID) {
-    // C'est un UUID, chercher directement par ID dans catalog_items
-    catalogItem = await getCatalogItemById(id, organizationId, user?.id);
+    // C'est un UUID, chercher directement par ID dans catalog_items (sans filtre créateur d'abord)
+    const { data: catalogItemDirect } = await supabase
+      .from("catalog_items")
+      .select("*")
+      .eq("id", id)
+      .eq("is_active", true)
+      .maybeSingle();
+    
+    console.log("[ressources/[id]] Direct catalog_items lookup:", { found: !!catalogItemDirect, created_by: catalogItemDirect?.created_by, creator_id: catalogItemDirect?.creator_id });
+    
+    if (catalogItemDirect) {
+      catalogItem = await getCatalogItemById(id, organizationId, user?.id);
+    }
     
     // Si pas trouvé, essayer de chercher par content_id dans catalog_items
     if (!catalogItem) {
       const { data: catalogItemByContentId } = await supabase
         .from("catalog_items")
-        .select("id, content_id, item_type")
+        .select("id, content_id, item_type, created_by, creator_id")
         .eq("content_id", id)
         .eq("item_type", "ressource")
-        .eq("created_by", jessicaProfile.id)
-        .maybeSingle();
+        .maybeSingle(); // Retirer le filtre created_by pour voir tous les résultats
+      
+      console.log("[ressources/[id]] Search by content_id:", { found: !!catalogItemByContentId, id: catalogItemByContentId?.id, created_by: catalogItemByContentId?.created_by });
       
       if (catalogItemByContentId) {
         catalogItem = await getCatalogItemById(catalogItemByContentId.id, organizationId, user?.id);
@@ -137,15 +151,57 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     }
   }
 
-  // Si toujours pas trouvé, essayer avec l'ID original
+  // Si toujours pas trouvé, essayer avec l'ID original via getCatalogItemById
   if (!catalogItem) {
+    console.log("[ressources/[id]] Trying getCatalogItemById with original id:", id);
     catalogItem = await getCatalogItemById(id, organizationId, user?.id);
   }
 
+  // Si toujours pas trouvé, essayer une recherche directe dans catalog_items sans filtre créateur
+  if (!catalogItem && isIdUUID) {
+    console.log("[ressources/[id]] Trying direct catalog_items lookup without creator filter:", id);
+    const { data: directItem } = await supabase
+      .from("catalog_items")
+      .select("*")
+      .or(`id.eq.${id},content_id.eq.${id}`)
+      .eq("item_type", "ressource")
+      .eq("is_active", true)
+      .maybeSingle();
+    
+    if (directItem) {
+      console.log("[ressources/[id]] Found direct item:", { id: directItem.id, created_by: directItem.created_by });
+      // Créer un objet catalogItem minimal depuis directItem
+      catalogItem = {
+        id: directItem.id,
+        content_id: directItem.content_id,
+        item_type: directItem.item_type,
+        title: directItem.title,
+        description: directItem.description,
+        short_description: directItem.short_description,
+        price: directItem.price || 0,
+        is_free: directItem.is_free || false,
+        thumbnail_url: directItem.thumbnail_url,
+        hero_image_url: directItem.hero_image_url,
+        category: directItem.category,
+        created_by: directItem.created_by,
+        creator_id: directItem.creator_id,
+        access_status: "pending_payment" as const,
+      } as any;
+    }
+  }
+
   if (!catalogItem) {
-    console.error("[ressources/[id]] Catalog item not found:", { id });
+    console.error("[ressources/[id]] Catalog item not found after all attempts:", { id, isIdUUID });
     notFound();
   }
+  
+  console.log("[ressources/[id]] Catalog item found:", { 
+    id: catalogItem.id, 
+    item_type: catalogItem.item_type,
+    title: catalogItem.title,
+    created_by: (catalogItem as any).created_by,
+    creator_id: (catalogItem as any).creator_id
+  });
 
   // Si c'est un test de confiance en soi, rediriger vers la page dédiée
   if (catalogItem.item_type === "test" && catalogItem.slug === "test-confiance-en-soi") {
@@ -166,25 +222,29 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   const catalogItemCreatorId = (catalogItem as any).created_by || (catalogItem as any).creator_id;
   const isResourceCreator = catalogItemCreatorId === jessicaProfile.id;
   
+  console.log("[ressources/[id]] Creator check:", { 
+    catalogItemCreatorId,
+    created_by: (catalogItem as any).created_by,
+    creator_id: (catalogItem as any).creator_id,
+    jessicaProfileId: jessicaProfile.id,
+    isResourceCreator,
+    catalogItemId: catalogItem.id
+  });
+  
   // Si pas de créateur défini, permettre quand même l'accès (pour compatibilité)
-  // mais logger un avertissement
-  if (!catalogItemCreatorId) {
-    console.warn("[ressources/[id]] No creator_id or created_by found for catalog item:", { 
-      catalogItemId: catalogItem.id,
-      itemType: catalogItem.item_type
-    });
-  } else if (!isResourceCreator) {
-    console.error("[ressources/[id]] Resource creator mismatch:", { 
+  // Si créateur défini mais différent, bloquer uniquement si c'est une ressource (pas un test)
+  if (catalogItemCreatorId && !isResourceCreator && catalogItem.item_type === "ressource") {
+    console.error("[ressources/[id]] Resource creator mismatch - blocking access:", { 
       catalogItemCreatorId: catalogItemCreatorId,
-      created_by: (catalogItem as any).created_by,
-      creator_id: (catalogItem as any).creator_id,
       jessicaProfileId: jessicaProfile.id,
       catalogItemId: catalogItem.id
     });
-    // Ne pas bloquer si pas de créateur défini, mais bloquer si créateur différent
-    if (catalogItemCreatorId) {
-      notFound();
-    }
+    notFound();
+  } else if (!catalogItemCreatorId) {
+    console.warn("[ressources/[id]] No creator_id or created_by found for catalog item - allowing access:", { 
+      catalogItemId: catalogItem.id,
+      itemType: catalogItem.item_type
+    });
   }
 
   // Vérifier si l'utilisateur a accès AVANT de récupérer les détails sensibles
@@ -199,11 +259,11 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   let userAccess = null;
   if (user?.id || organizationId) {
     const { data: access } = await supabase
-      .from("catalog_access")
-      .select("access_status")
-      .eq("catalog_item_id", catalogItemId)
+    .from("catalog_access")
+    .select("access_status")
+    .eq("catalog_item_id", catalogItemId)
       .or(`user_id.eq.${user?.id || 'null'},organization_id.eq.${organizationId || 'null'}`)
-      .maybeSingle();
+    .maybeSingle();
     userAccess = access;
   }
   
@@ -227,31 +287,31 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   
   if (catalogItem.item_type === "ressource" && catalogItem.content_id) {
     if (hasAccess) {
-      const { data: resource } = await supabase
-        .from("resources")
+    const { data: resource } = await supabase
+      .from("resources")
         .select("id, title, description, kind, file_url, video_url, audio_url, slug")
-        .eq("id", catalogItem.content_id)
+      .eq("id", catalogItem.content_id)
         .maybeSingle();
 
-      if (resource) {
-        resourceData = resource;
+    if (resource) {
+      resourceData = resource;
         contentSlug = resource.slug || null;
-      }
+    }
     } else {
-      // Si pas d'accès, récupérer seulement les métadonnées publiques (pas les URLs)
-      const { data: resource } = await supabase
-        .from("resources")
+    // Si pas d'accès, récupérer seulement les métadonnées publiques (pas les URLs)
+    const { data: resource } = await supabase
+      .from("resources")
         .select("id, title, description, kind, slug")
-        .eq("id", catalogItem.content_id)
+      .eq("id", catalogItem.content_id)
         .maybeSingle();
 
-      if (resource) {
-        resourceData = {
-          ...resource,
-          file_url: null,
-          video_url: null,
-          audio_url: null,
-        };
+    if (resource) {
+      resourceData = {
+        ...resource,
+        file_url: null,
+        video_url: null,
+        audio_url: null,
+      };
         contentSlug = resource.slug || null;
       }
     }
@@ -384,17 +444,17 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
           {/* Contenu principal à droite */}
           <div className={heroImage ? "lg:col-span-3 space-y-6" : "lg:col-span-5 space-y-6"}>
             <div className="flex flex-wrap items-center gap-3">
-              {catalogItem.category && (
-                <span 
+          {catalogItem.category && (
+            <span 
                   className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em]"
-                  style={{ 
-                    backgroundColor: `${primaryColor}20`,
-                    color: primaryColor,
-                  }}
-                >
-                  {catalogItem.category}
-                </span>
-              )}
+              style={{ 
+                backgroundColor: `${primaryColor}20`,
+                color: primaryColor,
+              }}
+            >
+              {catalogItem.category}
+            </span>
+          )}
               {/* Étiquette type de ressource (si pas d'image) */}
               {!heroImage && (
                 <span 
@@ -413,18 +473,18 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
             </div>
             <h1 
               className="text-3xl md:text-4xl font-bold leading-tight"
-              style={{ color: textColor }}
-            >
-              {catalogItem.title}
-            </h1>
-            {accroche && (
-              <p 
+            style={{ color: textColor }}
+          >
+            {catalogItem.title}
+          </h1>
+          {accroche && (
+            <p 
                 className="text-lg text-[#2F2A25]/80"
-                style={{ color: `${textColor}CC` }}
-              >
-                {accroche}
-              </p>
-            )}
+              style={{ color: `${textColor}CC` }}
+            >
+              {accroche}
+            </p>
+          )}
 
             {/* CTA et prix - Au-dessus de la ligne de flottaison */}
             <div 
@@ -611,8 +671,8 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
             >
               <h2 
                 className="text-2xl md:text-3xl font-bold mb-6"
-                style={{ color: textColor }}
-              >
+                      style={{ color: textColor }}
+                    >
                 Ce que vous allez découvrir
               </h2>
               <div className="space-y-4">
@@ -649,12 +709,12 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div 
+                    <div 
                     className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
                     style={{ backgroundColor: primaryColor }}
-                  >
+                    >
                     3
-                  </div>
+                    </div>
                   <div>
                     <h3 className="font-semibold text-lg mb-2" style={{ color: textColor }}>
                       Mettre en place des routines efficaces
@@ -673,7 +733,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
             {!catalogItem.is_free && !canAccess && (
               <div 
                 className="sticky top-8 rounded-2xl border-2 p-6 shadow-lg"
-                style={{ 
+                      style={{
                   borderColor: `${primaryColor}30`,
                   backgroundColor: surfaceColor,
                 }}
@@ -685,21 +745,21 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                   Avantages
                 </h3>
                 <ul className="space-y-3 text-sm" style={{ color: `${textColor}AA` }}>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-600 mt-1">✓</span>
-                    <span>Accès immédiat après paiement</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-600 mt-1">✓</span>
-                    <span>Accès à vie</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-600 mt-1">✓</span>
-                    <span>Support inclus</span>
-                  </li>
-                </ul>
-              </div>
-            )}
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1">✓</span>
+                          <span>Accès immédiat après paiement</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1">✓</span>
+                          <span>Accès à vie</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1">✓</span>
+                          <span>Support inclus</span>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
           </div>
         </div>
       </div>

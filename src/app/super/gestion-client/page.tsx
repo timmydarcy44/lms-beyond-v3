@@ -36,18 +36,32 @@ export default async function JessicaUsersPage() {
               Liste de tous les utilisateurs ayant créé un compte
             </p>
           </div>
-          <Link href="/super/gestion-client/new">
-            <Button
-              className="rounded-full px-6 py-3 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
-              style={{
-                backgroundColor: "#C6A664",
-                color: "white",
-              }}
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Créer un compte
-            </Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/super/gestion-client/fix-purchases">
+              <Button
+                variant="outline"
+                className="rounded-full px-6 py-3 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+                style={{
+                  borderColor: "#C6A664",
+                  color: "#C6A664",
+                }}
+              >
+                Corriger les achats passés
+              </Button>
+            </Link>
+            <Link href="/super/gestion-client/new">
+              <Button
+                className="rounded-full px-6 py-3 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+                style={{
+                  backgroundColor: "#C6A664",
+                  color: "white",
+                }}
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Créer un compte
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}

@@ -88,15 +88,77 @@ export async function POST(request: NextRequest) {
     for (const session of userSessions) {
       try {
         const metadata = session.metadata;
-        const catalogItemId = metadata?.catalog_item_id || metadata?.itemId;
+        let catalogItemId = metadata?.catalog_item_id || metadata?.itemId;
 
+        // Si pas de catalog_item_id dans les métadonnées, chercher par URL de checkout
         if (!catalogItemId) {
-          console.warn(`[admin/fix-past-purchases] No catalog_item_id in session ${session.id}`);
-          errors.push({
-            session_id: session.id,
-            error: "No catalog_item_id in metadata",
-          });
-          continue;
+          console.log(`[admin/fix-past-purchases] No catalog_item_id in metadata for session ${session.id}, trying to find via checkout URL...`);
+          
+          let catalogItems: any[] = [];
+          
+          // Essayer de trouver par l'URL complète dans success_url ou cancel_url
+          const checkoutUrl = session.success_url || session.cancel_url || "";
+          if (checkoutUrl) {
+            // Chercher par URL complète
+            const { data: itemsByUrl } = await supabase
+              .from("catalog_items")
+              .select("id, title, stripe_checkout_url")
+              .eq("stripe_checkout_url", checkoutUrl)
+              .limit(1);
+            
+            if (itemsByUrl && itemsByUrl.length > 0) {
+              catalogItems = itemsByUrl;
+            }
+            
+            // Si pas trouvé, essayer de trouver par l'ID de checkout dans l'URL (ex: buy.stripe.com/XXXXX)
+            if (catalogItems.length === 0) {
+              const checkoutIdMatch = checkoutUrl.match(/buy\.stripe\.com\/([a-zA-Z0-9]+)/);
+              if (checkoutIdMatch) {
+                const checkoutId = checkoutIdMatch[1];
+                const { data: itemsByPattern } = await supabase
+                  .from("catalog_items")
+                  .select("id, title, stripe_checkout_url")
+                  .like("stripe_checkout_url", `%${checkoutId}%`)
+                  .limit(1);
+                
+                if (itemsByPattern && itemsByPattern.length > 0) {
+                  catalogItems = itemsByPattern;
+                }
+              }
+            }
+            
+            // Si toujours pas trouvé, essayer de trouver par l'ID de session dans l'URL
+            if (catalogItems.length === 0) {
+              const sessionIdMatch = checkoutUrl.match(/session_id=([a-zA-Z0-9_]+)/);
+              if (sessionIdMatch) {
+                const sessionIdInUrl = sessionIdMatch[1];
+                // Chercher dans les catalog_items qui pourraient avoir cette session_id dans leur URL
+                const { data: itemsBySessionId } = await supabase
+                  .from("catalog_items")
+                  .select("id, title, stripe_checkout_url")
+                  .like("stripe_checkout_url", `%${sessionIdInUrl}%`)
+                  .limit(1);
+                
+                if (itemsBySessionId && itemsBySessionId.length > 0) {
+                  catalogItems = itemsBySessionId;
+                }
+              }
+            }
+          }
+
+          if (catalogItems && catalogItems.length > 0) {
+            catalogItemId = catalogItems[0].id;
+            console.log(`[admin/fix-past-purchases] ✅ Found catalog_item_id via checkout URL: ${catalogItemId} for session ${session.id}`);
+          } else {
+            console.warn(`[admin/fix-past-purchases] ❌ Could not find catalog_item_id for session ${session.id} (no metadata, no matching checkout URL)`);
+            errors.push({
+              session_id: session.id,
+              error: "No catalog_item_id in metadata and could not find via checkout URL. Please grant access manually.",
+              checkout_url: checkoutUrl,
+              amount: (session.amount_total || 0) / 100,
+            });
+            continue;
+          }
         }
 
         // Vérifier si l'accès existe déjà

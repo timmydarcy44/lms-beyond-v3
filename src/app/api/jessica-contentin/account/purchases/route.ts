@@ -123,7 +123,17 @@ export async function GET(request: NextRequest) {
     // Filtrer uniquement les contenus de Jessica Contentin côté serveur si on a son ID
     // (Le filtre dans la requête Supabase ne fonctionne pas toujours correctement avec les joins)
     let filteredAccess = access || [];
-    if (jessicaProfileId && filteredAccess.length > 0) {
+    
+    // Si l'utilisateur est Jessica Contentin elle-même, elle a accès à tous ses contenus
+    // même sans entrée dans catalog_access (car elle est le créateur)
+    const isJessicaHerself = jessicaProfileId && String(userId) === String(jessicaProfileId);
+    
+    if (isJessicaHerself) {
+      console.log("[api/jessica-contentin/account/purchases] User is Jessica Contentin herself, she has access to all her content");
+      // Pour Jessica, on peut retourner un tableau vide car elle a accès à tout
+      // ou on peut récupérer tous ses catalog_items directement
+      // Pour l'instant, on retourne les accès existants (qui peuvent être vides)
+    } else if (jessicaProfileId && filteredAccess.length > 0) {
       const beforeCount = filteredAccess.length;
       filteredAccess = filteredAccess.filter((item: any) => {
         const hasCatalogItem = !!item.catalog_items;

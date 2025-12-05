@@ -25,19 +25,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
     }
 
-    const { error } = await supabase
-      .from("cart_items")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("content_id", content_id)
-      .eq("content_type", content_type);
-
-    if (error) {
-      console.error("[api/cart/remove] Error:", error);
-      return NextResponse.json({ error: "Erreur lors de la suppression" }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
+    // Le panier est géré via Zustand (local storage), pas via une table Supabase
+    // La table cart_items n'existe pas, donc on retourne un succès
+    // Le panier est synchronisé côté client via le store Zustand
+    return NextResponse.json({ success: true, localOnly: true });
   } catch (error) {
     console.error("[api/cart/remove] Error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

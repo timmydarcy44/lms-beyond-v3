@@ -22,7 +22,8 @@ RETURNS TABLE (
   access_status TEXT,
   stripe_checkout_url TEXT,
   target_audience TEXT,
-  created_at TIMESTAMPTZ
+  created_at TIMESTAMPTZ,
+  slug TEXT
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -74,7 +75,7 @@ BEGIN
       ci.is_free, 
       (COALESCE(ci.price, r.price, c.price, t.price, 0) = 0)
     ) as is_free,
-    COALESCE(ci.category, c.category, t.category) as category,
+    COALESCE(ci.category, c.category, t.category) as category, -- Note: resources n'a pas de colonne category
     CASE 
       -- Vérifier l'accès utilisateur
       WHEN user_id_param IS NOT NULL AND EXISTS (
@@ -98,7 +99,8 @@ BEGIN
     END as access_status,
     ci.stripe_checkout_url,
     ci.target_audience,
-    ci.created_at
+    ci.created_at,
+    COALESCE(ci.slug, r.slug, c.slug, t.slug) as slug
   FROM catalog_items ci
   -- Jointures LEFT pour récupérer les données selon le type
   LEFT JOIN resources r ON ci.item_type = 'ressource' AND ci.content_id = r.id

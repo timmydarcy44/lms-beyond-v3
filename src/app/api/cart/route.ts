@@ -18,19 +18,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ items: [] });
     }
 
-    const { data: cartItems, error } = await supabase
-      .from("cart_items")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("added_at", { ascending: false });
-
-    if (error) {
-      console.error("[api/cart] Error fetching cart:", error);
-      return NextResponse.json({ items: [] });
-    }
-
+    // Le panier est géré via Zustand (local storage), pas via une table Supabase
+    // La table cart_items n'existe pas, donc on retourne un tableau vide
+    // Le panier est synchronisé côté client via le store Zustand
     return NextResponse.json({
-      items: cartItems || [],
+      items: [],
     });
   } catch (error) {
     console.error("[api/cart] Error:", error);

@@ -42,7 +42,7 @@ async function getCatalogItemsFallback(supabase: any, userId: string | null) {
       if (item.item_type === "ressource" && item.content_id) {
         const { data: resource } = await supabase
           .from("resources")
-          .select("id, title, description, price, category, thumbnail_url, cover_url")
+          .select("id, title, description, price, thumbnail_url, cover_url, slug")
           .eq("id", item.content_id)
           .maybeSingle();
         
@@ -50,9 +50,10 @@ async function getCatalogItemsFallback(supabase: any, userId: string | null) {
           enrichedItem.description = enrichedItem.description || resource.description;
           enrichedItem.price = enrichedItem.price || resource.price || 0;
           enrichedItem.is_free = !enrichedItem.price || enrichedItem.price === 0;
-          enrichedItem.category = enrichedItem.category || resource.category;
+          // Note: resources n'a pas de colonne category, on garde celle de catalog_items
           enrichedItem.hero_image_url = enrichedItem.hero_image_url || resource.cover_url || resource.thumbnail_url;
           enrichedItem.thumbnail_url = enrichedItem.thumbnail_url || resource.thumbnail_url || resource.cover_url;
+          enrichedItem.slug = enrichedItem.slug || resource.slug;
         }
       } else if (item.item_type === "module" && item.content_id) {
         const { data: course } = await supabase

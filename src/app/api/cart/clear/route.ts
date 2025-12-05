@@ -18,17 +18,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const { error } = await supabase
-      .from("cart_items")
-      .delete()
-      .eq("user_id", user.id);
-
-    if (error) {
-      console.error("[api/cart/clear] Error:", error);
-      return NextResponse.json({ error: "Erreur lors du vidage du panier" }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
+    // Le panier est géré via Zustand (local storage), pas via une table Supabase
+    // La table cart_items n'existe pas, donc on retourne un succès
+    // Le panier est synchronisé côté client via le store Zustand
+    return NextResponse.json({ success: true, localOnly: true });
   } catch (error) {
     console.error("[api/cart/clear] Error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

@@ -228,18 +228,20 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     creator_id: (catalogItem as any).creator_id,
     jessicaProfileId: jessicaProfile.id,
     isResourceCreator,
-    catalogItemId: catalogItem.id
+    catalogItemId: catalogItem.id,
+    itemType: catalogItem.item_type
   });
   
-  // Si pas de créateur défini, permettre quand même l'accès (pour compatibilité)
-  // Si créateur défini mais différent, bloquer uniquement si c'est une ressource (pas un test)
-  if (catalogItemCreatorId && !isResourceCreator && catalogItem.item_type === "ressource") {
-    console.error("[ressources/[id]] Resource creator mismatch - blocking access:", { 
+  // NE PAS BLOQUER même si le créateur est différent - permettre l'accès à la page
+  // La vérification du créateur est informative seulement
+  // Si le créateur est différent, on log un avertissement mais on continue
+  if (catalogItemCreatorId && !isResourceCreator) {
+    console.warn("[ressources/[id]] Resource creator mismatch - allowing access anyway:", { 
       catalogItemCreatorId: catalogItemCreatorId,
       jessicaProfileId: jessicaProfile.id,
-      catalogItemId: catalogItem.id
+      catalogItemId: catalogItem.id,
+      itemType: catalogItem.item_type
     });
-    notFound();
   } else if (!catalogItemCreatorId) {
     console.warn("[ressources/[id]] No creator_id or created_by found for catalog item - allowing access:", { 
       catalogItemId: catalogItem.id,
@@ -381,13 +383,27 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Vérifier si c'est un test et déterminer l'URL
   const isTest = catalogItem.item_type === "test";
   let testPageUrl: string | null = null;
-  if (isTest && testData) {
+  if (isTest) {
     // Pour le test de confiance en soi, utiliser l'URL spéciale
-    if (contentSlug === "test-confiance-en-soi") {
+    if (contentSlug === "test-confiance-en-soi" || catalogItem.title?.toLowerCase().includes("confiance en soi")) {
       testPageUrl = `/test-confiance-en-soi`;
+    } else if (catalogItem.title?.toLowerCase().includes("soft skills") || catalogItem.title === "Soft Skills – Profil 360") {
+      // Pour le test Soft Skills, chercher le questionnaire mental_health
+      const { data: questionnaire } = await supabase
+        .from("mental_health_questionnaires")
+        .select("id")
+        .eq("title", "Soft Skills – Profil 360")
+        .maybeSingle();
+      
+      if (questionnaire) {
+        testPageUrl = `/dashboard/apprenant/questionnaires/${questionnaire.id}`;
+      } else {
+        // Fallback : utiliser la route catalogue test qui gère la redirection
+        testPageUrl = `/dashboard/catalogue/test/${catalogItem.id || catalogItem.content_id}`;
+      }
     } else {
       // Pour les autres tests, utiliser la route dashboard
-      testPageUrl = `/dashboard/catalogue/test/${catalogItem.content_id}`;
+      testPageUrl = `/dashboard/catalogue/test/${catalogItem.id || catalogItem.content_id}`;
     }
   }
   

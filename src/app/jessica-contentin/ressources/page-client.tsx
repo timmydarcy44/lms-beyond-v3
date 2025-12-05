@@ -219,8 +219,12 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
       if (item.title?.toLowerCase().includes("confiance en soi") || item.title === "Test de Confiance en soi") {
         return `/test-confiance-en-soi`;
       }
+      // Pour le test Soft Skills, utiliser la route catalogue test (qui gère la redirection vers le questionnaire)
+      if (item.title?.toLowerCase().includes("soft skills") || item.title === "Soft Skills – Profil 360") {
+        return `/dashboard/catalogue/test/${item.id || item.content_id}`;
+      }
       // Pour les autres tests, utiliser la route dashboard
-      return `/dashboard/catalogue/test/${item.content_id}`;
+      return `/dashboard/catalogue/test/${item.content_id || item.id}`;
     }
     return "#";
   };
@@ -781,12 +785,12 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                                   
                                   {/* Badge type de contenu */}
-                                  <div className="absolute top-3 left-3 bg-[#C6A664] text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                    <div className="absolute top-3 left-3 bg-[#C6A664] text-white px-3 py-1 rounded-full text-xs font-semibold">
                                     {item.item_type === "module" ? "📚 Micro formation" :
                                      item.item_type === "test" ? "🧪 Test" :
                                      item.item_type === "ressource" ? "📄 Ressource" :
                                      "📦 Contenu"}
-                                  </div>
+                                    </div>
                                   
                                   {/* Badge gratuit */}
                                   {item.is_free && (

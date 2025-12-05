@@ -508,6 +508,7 @@ export async function getCatalogItemById(
           hero_image_url: testData.hero_image_url || testData.cover_image || testData.thumbnail_url,
           category: testData.category,
           creator_id: testData.creator_id,
+          created_by: testData.creator_id, // IMPORTANT: Définir created_by aussi
           created_at: testData.created_at,
           updated_at: testData.updated_at,
           is_active: true,
@@ -536,6 +537,7 @@ export async function getCatalogItemById(
           thumbnail_url: courseData.thumbnail_url || courseData.cover_image || courseData.hero_image_url,
           hero_image_url: courseData.hero_image_url || courseData.cover_image || courseData.thumbnail_url,
           creator_id: courseData.creator_id,
+          created_by: courseData.creator_id, // IMPORTANT: Définir created_by aussi
           created_at: courseData.created_at,
           updated_at: courseData.updated_at,
           is_active: true,
@@ -580,6 +582,7 @@ export async function getCatalogItemById(
             thumbnail_url: null,
             hero_image_url: null,
             creator_id: creatorId,
+            created_by: creatorId, // IMPORTANT: Définir created_by aussi
             created_at: resourceData.created_at,
             updated_at: resourceData.updated_at,
             is_active: true,

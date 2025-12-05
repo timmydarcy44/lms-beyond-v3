@@ -63,8 +63,23 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   let catalogItem = null;
 
   if (isIdUUID) {
-    // C'est un UUID, chercher directement par ID
+    // C'est un UUID, chercher directement par ID dans catalog_items
     catalogItem = await getCatalogItemById(id, organizationId, user?.id);
+    
+    // Si pas trouvé, essayer de chercher par content_id dans catalog_items
+    if (!catalogItem) {
+      const { data: catalogItemByContentId } = await supabase
+        .from("catalog_items")
+        .select("id, content_id, item_type")
+        .eq("content_id", id)
+        .eq("item_type", "ressource")
+        .eq("created_by", jessicaProfile.id)
+        .maybeSingle();
+      
+      if (catalogItemByContentId) {
+        catalogItem = await getCatalogItemById(catalogItemByContentId.id, organizationId, user?.id);
+      }
+    }
   } else {
       // C'est un slug, chercher d'abord dans catalog_items par slug ou titre
       const { data: catalogItemBySlug } = await supabase
@@ -150,14 +165,26 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Vérifier created_by (colonne principale) ou creator_id (si existe)
   const catalogItemCreatorId = (catalogItem as any).created_by || (catalogItem as any).creator_id;
   const isResourceCreator = catalogItemCreatorId === jessicaProfile.id;
-  if (!isResourceCreator) {
+  
+  // Si pas de créateur défini, permettre quand même l'accès (pour compatibilité)
+  // mais logger un avertissement
+  if (!catalogItemCreatorId) {
+    console.warn("[ressources/[id]] No creator_id or created_by found for catalog item:", { 
+      catalogItemId: catalogItem.id,
+      itemType: catalogItem.item_type
+    });
+  } else if (!isResourceCreator) {
     console.error("[ressources/[id]] Resource creator mismatch:", { 
       catalogItemCreatorId: catalogItemCreatorId,
       created_by: (catalogItem as any).created_by,
       creator_id: (catalogItem as any).creator_id,
-      jessicaProfileId: jessicaProfile.id 
+      jessicaProfileId: jessicaProfile.id,
+      catalogItemId: catalogItem.id
     });
-    notFound();
+    // Ne pas bloquer si pas de créateur défini, mais bloquer si créateur différent
+    if (catalogItemCreatorId) {
+      notFound();
+    }
   }
 
   // Vérifier si l'utilisateur a accès AVANT de récupérer les détails sensibles

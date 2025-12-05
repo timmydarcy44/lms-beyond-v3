@@ -208,25 +208,6 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Vérifier si l'accès existe déjà (vérification séparée pour éviter les doublons)
-        const { data: existingAccessCheck } = await supabase
-          .from("catalog_access")
-          .select("id")
-          .eq("user_id", profile.id)
-          .eq("catalog_item_id", catalogItemId)
-          .is("organization_id", null)
-          .maybeSingle();
-
-        if (existingAccessCheck) {
-          console.log(`[admin/fix-past-purchases] Access already exists for session ${session.id}`);
-          results.push({
-            session_id: session.id,
-            catalog_item_id: catalogItemId,
-            status: "already_exists",
-          });
-          continue;
-        }
-
         // Vérifier si l'accès existe déjà (pour éviter les doublons)
         const { data: existingAccess } = await supabase
           .from("catalog_access")

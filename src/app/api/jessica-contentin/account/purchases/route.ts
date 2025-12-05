@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     // Récupérer les achats depuis catalog_access (table correcte pour les accès B2C)
     // Utiliser une requête optimisée avec limite
     // IMPORTANT: Vérifier que user_id n'est pas NULL (accès B2C uniquement)
+    // Utiliser LEFT JOIN au lieu de INNER JOIN pour voir tous les accès même si catalog_item n'existe pas
     let query = supabase
       .from("catalog_access")
       .select(`
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
         access_status,
         purchase_amount,
         purchase_date,
-        catalog_items!inner (
+        catalog_items (
           id,
           title,
           item_type,
@@ -56,6 +57,17 @@ export async function GET(request: NextRequest) {
       .limit(50); // Limiter à 50 résultats
 
     const { data: access, error } = await query;
+
+    // Vérifier si des accès existent sans catalog_item (problème de jointure)
+    if (access && access.length > 0) {
+      const accessWithoutCatalogItem = access.filter((a: any) => !a.catalog_items);
+      if (accessWithoutCatalogItem.length > 0) {
+        console.warn("[api/jessica-contentin/account/purchases] ⚠️ Found access without catalog_item:", {
+          count: accessWithoutCatalogItem.length,
+          catalog_item_ids: accessWithoutCatalogItem.map((a: any) => a.catalog_item_id),
+        });
+      }
+    }
 
     // Log de diagnostic détaillé
     console.log("[api/jessica-contentin/account/purchases] Query details:", {

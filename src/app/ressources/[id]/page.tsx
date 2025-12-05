@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { Play, FileText, Video, Headphones, CreditCard } from "lucide-react";
 import { BuyButton } from "@/components/jessica-contentin/buy-button";
+import { headers } from "next/headers";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
@@ -19,7 +20,16 @@ function isUUID(str: string): boolean {
   return uuidRegex.test(str);
 }
 
+// Forcer la revalidation à chaque requête pour éviter les problèmes de cache (notamment sur Edge)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function RessourceDetailPage({ params }: RessourceDetailPageProps) {
+  // Définir des headers pour éviter le cache (notamment sur Edge)
+  const headersList = await headers();
+  headersList.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  headersList.set('Pragma', 'no-cache');
+  headersList.set('Expires', '0');
   const { id } = await params;
 
   if (!id) {

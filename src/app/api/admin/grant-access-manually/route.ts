@@ -151,19 +151,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Accorder l'accès
-    const { error: accessError, data: accessData } = await supabase
+    // Vérifier si l'accès existe déjà
+    const { data: existingAccess } = await supabase
       .from("catalog_access")
-      .upsert({
-        user_id: userId,
-        catalog_item_id: catalogItemId,
-        organization_id: null,
-        access_status: "purchased",
-        granted_at: new Date().toISOString(),
-        purchase_date: new Date().toISOString(),
-      }, {
-        onConflict: "user_id,catalog_item_id",
-      });
+      .select("id")
+      .eq("user_id", userId)
+      .eq("catalog_item_id", catalogItemId)
+      .is("organization_id", null)
+      .maybeSingle();
+
+    let accessError = null;
+    let accessData = null;
+
+    if (existingAccess) {
+      // Mettre à jour l'accès existant
+      const { error: updateError, data: updateData } = await supabase
+        .from("catalog_access")
+        .update({
+          access_status: "purchased",
+          granted_at: new Date().toISOString(),
+          purchase_date: new Date().toISOString(),
+        })
+        .eq("id", existingAccess.id)
+        .select()
+        .single();
+      
+      accessError = updateError;
+      accessData = updateData;
+    } else {
+      // Créer un nouvel accès
+      const { error: insertError, data: insertData } = await supabase
+        .from("catalog_access")
+        .insert({
+          user_id: userId,
+          catalog_item_id: catalogItemId,
+          organization_id: null,
+          access_status: "purchased",
+          granted_at: new Date().toISOString(),
+          purchase_date: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      
+      accessError = insertError;
+      accessData = insertData;
+    }
 
     if (accessError) {
       console.error("[admin/grant-access-manually] Error granting access:", accessError);

@@ -42,15 +42,28 @@ export async function GET(request: NextRequest) {
     const createdAfter = now - (days * 24 * 60 * 60); // X days ago in seconds
 
     // Récupérer les sessions Stripe
+    // Note: customer_email n'est pas un paramètre valide pour list(), on doit filtrer après
     const sessions = await stripe.checkout.sessions.list({
-      customer_email: email || undefined,
       created: { gte: createdAfter },
-      limit: limit,
+      limit: 100, // Récupérer plus de sessions pour filtrer par email
       expand: ["data.payment_intent"],
     });
 
+    // Filtrer par email si fourni
+    let filteredSessions = sessions.data;
+    if (email) {
+      filteredSessions = sessions.data.filter(
+        (session) =>
+          session.customer_email === email ||
+          session.customer_details?.email === email
+      );
+    }
+
+    // Limiter au nombre demandé
+    filteredSessions = filteredSessions.slice(0, limit);
+
     // Formater les résultats
-    const formattedSessions = sessions.data.map((session) => ({
+    const formattedSessions = filteredSessions.map((session) => ({
       id: session.id,
       customer_email: session.customer_email || session.customer_details?.email,
       payment_status: session.payment_status,
@@ -69,7 +82,7 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({
-      total: sessions.data.length,
+      total: filteredSessions.length,
       sessions: formattedSessions,
     });
   } catch (error) {

@@ -208,15 +208,16 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Vérifier si l'accès existe déjà
-        const { data: existingAccess } = await supabase
+        // Vérifier si l'accès existe déjà (vérification séparée pour éviter les doublons)
+        const { data: existingAccessCheck } = await supabase
           .from("catalog_access")
           .select("id")
           .eq("user_id", profile.id)
           .eq("catalog_item_id", catalogItemId)
+          .is("organization_id", null)
           .maybeSingle();
 
-        if (existingAccess) {
+        if (existingAccessCheck) {
           console.log(`[admin/fix-past-purchases] Access already exists for session ${session.id}`);
           results.push({
             session_id: session.id,
@@ -226,21 +227,55 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Accorder l'accès
-        const { error: accessError, data: accessData } = await supabase
+        // Vérifier si l'accès existe déjà (pour éviter les doublons)
+        const { data: existingAccess } = await supabase
           .from("catalog_access")
-          .upsert({
-            user_id: profile.id,
-            catalog_item_id: catalogItemId,
-            organization_id: null,
-            access_status: "purchased",
-            granted_at: new Date(session.created * 1000).toISOString(),
-            transaction_id: session.payment_intent,
-            purchase_amount: (session.amount_total || 0) / 100,
-            purchase_date: new Date(session.created * 1000).toISOString(),
-          }, {
-            onConflict: "user_id,catalog_item_id",
-          });
+          .select("id")
+          .eq("user_id", profile.id)
+          .eq("catalog_item_id", catalogItemId)
+          .is("organization_id", null)
+          .maybeSingle();
+
+        let accessError = null;
+        let accessData = null;
+
+        if (existingAccess) {
+          // Mettre à jour l'accès existant
+          const { error: updateError, data: updateData } = await supabase
+            .from("catalog_access")
+            .update({
+              access_status: "purchased",
+              granted_at: new Date(session.created * 1000).toISOString(),
+              transaction_id: session.payment_intent,
+              purchase_amount: (session.amount_total || 0) / 100,
+              purchase_date: new Date(session.created * 1000).toISOString(),
+            })
+            .eq("id", existingAccess.id)
+            .select()
+            .single();
+          
+          accessError = updateError;
+          accessData = updateData;
+        } else {
+          // Créer un nouvel accès
+          const { error: insertError, data: insertData } = await supabase
+            .from("catalog_access")
+            .insert({
+              user_id: profile.id,
+              catalog_item_id: catalogItemId,
+              organization_id: null,
+              access_status: "purchased",
+              granted_at: new Date(session.created * 1000).toISOString(),
+              transaction_id: session.payment_intent,
+              purchase_amount: (session.amount_total || 0) / 100,
+              purchase_date: new Date(session.created * 1000).toISOString(),
+            })
+            .select()
+            .single();
+          
+          accessError = insertError;
+          accessData = insertData;
+        }
 
         if (accessError) {
           console.error(`[admin/fix-past-purchases] Error granting access for session ${session.id}:`, accessError);

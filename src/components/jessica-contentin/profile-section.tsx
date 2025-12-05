@@ -31,6 +31,7 @@ export function ProfileSection({ userId }: { userId: string }) {
     newPassword: "",
     confirmPassword: "",
   });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -176,20 +177,33 @@ export function ProfileSection({ userId }: { userId: string }) {
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) return; // Éviter les doubles clics
+    
     try {
+      setIsLoggingOut(true);
       const supabase = createSupabaseBrowserClient();
-      if (!supabase) return;
+      if (!supabase) {
+        setIsLoggingOut(false);
+        return;
+      }
 
+      console.log("[profile-section] Starting logout...");
       const { error } = await supabase.auth.signOut();
       if (error) {
+        console.error("[profile-section] SignOut error:", error);
         throw error;
       }
 
-      router.push("/jessica-contentin");
-      router.refresh();
+      console.log("[profile-section] SignOut successful, redirecting...");
+      // Attendre un peu pour que la déconnexion soit complète
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Rediriger vers la page d'accueil
+      window.location.href = "/jessica-contentin";
     } catch (error: any) {
       console.error("[profile-section] Error logging out:", error);
       toast.error("Erreur lors de la déconnexion");
+      setIsLoggingOut(false);
     }
   };
 
@@ -368,7 +382,7 @@ export function ProfileSection({ userId }: { userId: string }) {
 
       {/* Bouton Déconnexion */}
       <div 
-        className="p-6 rounded-xl relative z-10"
+        className="p-6 rounded-xl relative z-[100]"
         style={{ 
           backgroundColor: surfaceColor,
           border: `1px solid ${primaryColor}30`,
@@ -376,17 +390,20 @@ export function ProfileSection({ userId }: { userId: string }) {
       >
         <Button
           onClick={handleLogout}
+          disabled={isLoggingOut}
           variant="outline"
-          className="rounded-full px-6 border-2 cursor-pointer relative z-10"
+          className="rounded-full px-6 border-2 cursor-pointer relative z-[100] hover:bg-red-50 transition-colors"
           style={{
             borderColor: "#DC2626",
             color: "#DC2626",
             pointerEvents: "auto",
+            position: "relative",
+            zIndex: 100,
           }}
           type="button"
         >
           <LogOut className="h-4 w-4 mr-2" />
-          Me déconnecter
+          {isLoggingOut ? "Déconnexion..." : "Me déconnecter"}
         </Button>
       </div>
     </div>

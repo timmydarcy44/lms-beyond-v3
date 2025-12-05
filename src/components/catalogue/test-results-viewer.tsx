@@ -58,14 +58,30 @@ export function TestResultsViewer({
           return;
         }
         
-        // Utiliser AbortController pour gérer le timeout
-        const controller = new AbortController();
-        timeoutId = setTimeout(() => {
-          controller.abort();
-        }, 15000); // 15 secondes de timeout (augmenté)
+        // Utiliser un timeout plus court pour chaque requête individuellement
+        // et les exécuter séquentiellement pour éviter les problèmes de performance
+        const timeoutMs = 10000; // 10 secondes par requête
         
-        // Récupérer les tests passés par l'utilisateur avec les analyses existantes
-        // Limiter les champs pour améliorer les performances
+        // Fonction helper pour exécuter une requête avec timeout
+        const executeWithTimeout = async <T,>(
+          promise: Promise<T>,
+          timeoutMs: number,
+          errorMessage: string
+        ): Promise<T | null> => {
+          try {
+            const timeoutPromise = new Promise<never>((_, reject) => {
+              setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+            });
+            
+            const result = await Promise.race([promise, timeoutPromise]);
+            return result;
+          } catch (error: any) {
+            console.warn(`[test-results-viewer] ${errorMessage}:`, error.message);
+            return null;
+          }
+        };
+        
+        // Récupérer les tests passés par l'utilisateur (sans jointure pour améliorer les performances)
         const attemptsPromise = supabase
           .from("test_attempts")
           .select(`
@@ -78,21 +94,51 @@ export function TestResultsViewer({
             percentage,
             category_results,
             answers,
-            created_at,
-            tests (
-              id,
-              title,
-              description,
-              display_format
-            )
+            created_at
           `)
           .eq("user_id", userId)
           .not("completed_at", "is", null)
           .order("completed_at", { ascending: false })
-          .limit(10); // Réduire à 10 pour améliorer les performances
-          // Note: Supabase ne supporte pas directement AbortController, mais on peut utiliser Promise.race
+          .limit(10);
 
-        // Récupérer aussi les résultats des tests soft skills (mental_health_assessments)
+        // Exécuter la première requête avec timeout
+        const attemptsResult = await executeWithTimeout(
+          attemptsPromise,
+          timeoutMs,
+          "Timeout lors de la récupération des test_attempts"
+        );
+
+        // Récupérer les détails des tests séparément si on a des résultats
+        let attempts = attemptsResult?.data || [];
+        let error = attemptsResult?.error || null;
+        
+        // Si on a des attempts, récupérer les détails des tests
+        if (attempts && attempts.length > 0 && !error) {
+          const testIds = [...new Set(attempts.map((a: any) => a.test_id))];
+          
+          const testsPromise = supabase
+            .from("tests")
+            .select("id, title, description, display_format")
+            .in("id", testIds);
+          
+          const testsResult = await executeWithTimeout(
+            testsPromise,
+            timeoutMs,
+            "Timeout lors de la récupération des détails des tests"
+          );
+          
+          // Mapper les tests aux attempts
+          const testsMap = new Map(
+            (testsResult?.data || []).map((t: any) => [t.id, t])
+          );
+          
+          attempts = attempts.map((attempt: any) => ({
+            ...attempt,
+            tests: testsMap.get(attempt.test_id) || null,
+          }));
+        }
+
+        // Récupérer aussi les résultats des tests soft skills (sans jointure)
         const mentalHealthPromise = supabase
           .from("mental_health_assessments")
           .select(`
@@ -101,99 +147,68 @@ export function TestResultsViewer({
             overall_score,
             dimension_scores,
             analysis_summary,
-            created_at,
-            mental_health_questionnaires (
-              id,
-              title
-            )
+            created_at
           `)
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
-          .limit(10); // Réduire à 10 pour améliorer les performances
+          .limit(10);
 
-        // Exécuter les deux requêtes en parallèle avec timeout plus long
-        // Utiliser un timeout de 15 secondes pour les requêtes lourdes
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => {
-            reject(new Error("Timeout: La requête a pris trop de temps"));
-          }, 15000); // Augmenté à 15 secondes
-        });
+        // Exécuter la deuxième requête avec timeout
+        const mentalHealthResult = await executeWithTimeout(
+          mentalHealthPromise,
+          timeoutMs,
+          "Timeout lors de la récupération des mental_health_assessments"
+        );
 
-        let attemptsResult: any;
-        let mentalHealthResult: any;
+        let mentalHealthAssessments = mentalHealthResult?.data || [];
+        let mentalHealthError = mentalHealthResult?.error || null;
         
-        try {
-          const results = await Promise.race([
-            Promise.all([attemptsPromise, mentalHealthPromise]),
-            timeoutPromise,
-          ]) as any;
+        // Si on a des assessments, récupérer les détails des questionnaires
+        if (mentalHealthAssessments && mentalHealthAssessments.length > 0 && !mentalHealthError) {
+          const questionnaireIds = [...new Set(mentalHealthAssessments.map((a: any) => a.questionnaire_id))];
           
-          [attemptsResult, mentalHealthResult] = results;
-        } catch (raceError: any) {
-          if (timeoutId) clearTimeout(timeoutId);
-          console.error("[test-results-viewer] Promise race error:", raceError);
-          // Ne pas bloquer l'interface, continuer avec des données vides
-          if (isMounted) {
-            setTestResults([]);
-            setLoading(false);
-          }
-          return;
+          const questionnairesPromise = supabase
+            .from("mental_health_questionnaires")
+            .select("id, title")
+            .in("id", questionnaireIds);
+          
+          const questionnairesResult = await executeWithTimeout(
+            questionnairesPromise,
+            timeoutMs,
+            "Timeout lors de la récupération des détails des questionnaires"
+          );
+          
+          // Mapper les questionnaires aux assessments
+          const questionnairesMap = new Map(
+            (questionnairesResult?.data || []).map((q: any) => [q.id, q])
+          );
+          
+          mentalHealthAssessments = mentalHealthAssessments.map((assessment: any) => ({
+            ...assessment,
+            mental_health_questionnaires: questionnairesMap.get(assessment.questionnaire_id) || null,
+          }));
         }
 
-        if (timeoutId) clearTimeout(timeoutId);
+        if (!isMounted) return;
 
-        // Vérifier que les résultats sont bien des objets avec data et error
-        const attempts = attemptsResult?.data || null;
-        const error = attemptsResult?.error || null;
-        const mentalHealthAssessments = mentalHealthResult?.data || null;
-        const mentalHealthError = mentalHealthResult?.error || null;
-
-        if (!isMounted) {
-          if (timeoutId) clearTimeout(timeoutId);
-          return;
-        }
-
-        if (timeoutId) clearTimeout(timeoutId);
-
+        // Gérer les erreurs sans bloquer l'interface
         if (error) {
-          console.error("[test-results-viewer] Error fetching test results:", error);
-          console.error("[test-results-viewer] Error details:", {
-            message: error?.message,
-            code: error?.code,
-            details: error?.details,
-            hint: error?.hint,
-          });
+          console.warn("[test-results-viewer] Error fetching test results:", error);
           // Ne pas bloquer si c'est juste une erreur de permissions, de table inexistante, ou de colonne inexistante
           // Codes d'erreur PostgreSQL:
           // 42P01 = table inexistante
           // 42501 = permission refusée
-          // 42703 = colonne inexistante (comme test_result_analyses)
+          // 42703 = colonne inexistante
           if (error?.code !== '42P01' && error?.code !== '42501' && error?.code !== '42703') {
-            if (isMounted) {
-              setTestResults([]);
-              setLoading(false);
-            }
-            return;
-          }
-          // Si c'est une erreur de colonne inexistante, on continue avec des données vides
-          if (error?.code === '42703') {
-            console.warn("[test-results-viewer] Column does not exist, continuing with empty data");
+            // Pour les autres erreurs, continuer avec des données vides
+            attempts = [];
           }
         }
 
         if (mentalHealthError) {
-          // Logger l'erreur complète pour le débogage
-          console.error("[test-results-viewer] Error fetching mental health assessments:", mentalHealthError);
-          console.error("[test-results-viewer] Mental health error details:", {
-            message: mentalHealthError?.message,
-            code: mentalHealthError?.code,
-            details: mentalHealthError?.details,
-            hint: mentalHealthError?.hint,
-            errorString: String(mentalHealthError),
-            errorJSON: JSON.stringify(mentalHealthError, null, 2),
-          });
-          // Ne pas bloquer si c'est juste une erreur de permissions ou de table inexistante
-          // On continue avec les résultats de test_attempts seulement
+          console.warn("[test-results-viewer] Error fetching mental health assessments:", mentalHealthError);
+          // Continuer avec des données vides pour les assessments
+          mentalHealthAssessments = [];
         }
 
         if (!isMounted) return;

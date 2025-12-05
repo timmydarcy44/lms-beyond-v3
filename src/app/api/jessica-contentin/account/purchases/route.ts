@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
         catalog_item_id,
         granted_at,
         access_status,
+        purchase_amount,
+        purchase_date,
         catalog_items!inner (
           id,
           title,
@@ -40,7 +42,8 @@ export async function GET(request: NextRequest) {
           hero_image_url,
           content_id,
           price,
-          creator_id
+          creator_id,
+          created_by
         )
       `)
       .eq("user_id", userId)
@@ -74,7 +77,9 @@ export async function GET(request: NextRequest) {
       filteredAccess = filteredAccess.filter((item: any) => {
         const hasCatalogItem = !!item.catalog_items;
         // Comparer les IDs en string pour éviter les problèmes de type
-        const creatorMatches = String(item.catalog_items?.creator_id) === String(jessicaProfileId);
+        // Vérifier à la fois creator_id et created_by
+        const creatorId = item.catalog_items?.creator_id || item.catalog_items?.created_by;
+        const creatorMatches = String(creatorId) === String(jessicaProfileId);
         
         if (!hasCatalogItem) {
           console.warn("[api/jessica-contentin/account/purchases] Item without catalog_items:", item);
@@ -82,11 +87,12 @@ export async function GET(request: NextRequest) {
           console.log("[api/jessica-contentin/account/purchases] Item filtered out (wrong creator):", {
             catalog_item_id: item.catalog_item_id,
             item_creator_id: item.catalog_items.creator_id,
+            item_created_by: item.catalog_items.created_by,
             item_creator_id_type: typeof item.catalog_items.creator_id,
             jessicaProfileId,
             jessicaProfileId_type: typeof jessicaProfileId,
             title: item.catalog_items.title,
-            match: String(item.catalog_items.creator_id) === String(jessicaProfileId),
+            match: String(creatorId) === String(jessicaProfileId),
           });
         }
         

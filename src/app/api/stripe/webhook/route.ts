@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { sendPurchaseConfirmationEmail } from "@/lib/emails/send";
 import Stripe from "stripe";
 
@@ -67,18 +67,26 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
-      const supabase = await getServerClient();
+      // Utiliser le service role client pour contourner RLS dans le webhook
+      const supabase = getServiceRoleClient();
       if (!supabase) {
         console.error("[stripe/webhook] Supabase not configured");
         return NextResponse.json({ received: true });
       }
 
+      console.log("[stripe/webhook] Processing payment for email:", customerEmail);
+
       // Trouver l'utilisateur par email
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, email")
         .eq("email", customerEmail)
         .maybeSingle();
+      
+      if (profileError) {
+        console.error("[stripe/webhook] Error finding user:", profileError);
+        return NextResponse.json({ received: true });
+      }
 
       if (!profile) {
         console.error("[stripe/webhook] User not found for email:", customerEmail);
@@ -90,8 +98,21 @@ export async function POST(request: NextRequest) {
       const catalogItemId = metadata?.catalog_item_id || metadata?.itemId;
       const itemType = metadata?.item_type || metadata?.itemType;
       
+      console.log("[stripe/webhook] Metadata extracted:", {
+        catalog_item_id: metadata?.catalog_item_id,
+        itemId: metadata?.itemId,
+        item_type: metadata?.item_type,
+        itemType: metadata?.itemType,
+        catalogItemId,
+        itemType,
+        user_id: metadata?.user_id,
+        profile_id: profile.id,
+      });
+      
       if (catalogItemId && itemType) {
-        const { error: accessError } = await supabase
+        console.log("[stripe/webhook] Granting access for catalog_item_id:", catalogItemId, "to user:", profile.id);
+        
+        const { error: accessError, data: accessData } = await supabase
           .from("catalog_access")
           .upsert({
             user_id: profile.id,
@@ -107,9 +128,16 @@ export async function POST(request: NextRequest) {
           });
 
         if (accessError) {
-          console.error("[stripe/webhook] Error granting access:", accessError);
+          console.error("[stripe/webhook] ❌ Error granting access:", accessError);
+          console.error("[stripe/webhook] Error details:", {
+            code: accessError.code,
+            message: accessError.message,
+            details: accessError.details,
+            hint: accessError.hint,
+          });
         } else {
-          console.log("[stripe/webhook] Access granted for item:", catalogItemId);
+          console.log("[stripe/webhook] ✅ Access granted successfully for item:", catalogItemId, "to user:", profile.id);
+          console.log("[stripe/webhook] Access data:", accessData);
           
           // Envoyer l'email de confirmation d'achat
           try {

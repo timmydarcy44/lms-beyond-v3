@@ -257,8 +257,16 @@ export async function POST(request: NextRequest) {
             }
           }
         } else {
-          console.warn("[stripe/webhook] No catalog item found for checkout URL:", checkoutUrl);
+          console.warn("[stripe/webhook] ⚠️ No catalog item found for checkout URL:", checkoutUrl);
+          console.warn("[stripe/webhook] Session metadata:", metadata);
+          console.warn("[stripe/webhook] Session success_url:", session.success_url);
+          console.warn("[stripe/webhook] Session cancel_url:", session.cancel_url);
         }
+      } else {
+        console.warn("[stripe/webhook] ⚠️ No catalog_item_id or itemId in metadata");
+        console.warn("[stripe/webhook] Available metadata:", metadata);
+        console.warn("[stripe/webhook] Session ID:", session.id);
+        console.warn("[stripe/webhook] Customer email:", customerEmail);
       }
     }
 

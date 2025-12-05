@@ -105,15 +105,53 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
   // Récupérer les détails du test depuis la table tests
   let testData = null;
   if (catalogItem.content_id) {
-    const { data: test } = await supabase
+    const { data: test, error: testError } = await supabase
       .from("tests")
       .select("id, title, description, duration, evaluation_type, skills, display_format, questions, slug, builder_snapshot")
       .eq("id", catalogItem.content_id)
-      .single();
+      .maybeSingle();
+
+    if (testError) {
+      console.error("[catalogue/test] Error fetching test data:", testError);
+    }
 
     if (test) {
       testData = test;
+      console.log("[catalogue/test] Test data retrieved:", {
+        id: test.id,
+        title: test.title,
+        hasSlug: !!test.slug,
+        slug: test.slug,
+        hasBuilderSnapshot: !!(test as any).builder_snapshot,
+        questionnaireId: (test as any).builder_snapshot?.questionnaireId || null,
+      });
+    } else {
+      console.warn("[catalogue/test] Test data not found for content_id:", catalogItem.content_id);
+      
+      // Si le test n'est pas dans la table tests, chercher le questionnaire mental_health
+      // Le test "Soft Skills – Profil 360" utilise un questionnaire mental_health
+      if (catalogItem.title === "Soft Skills – Profil 360" || catalogItem.title?.includes("Soft Skills")) {
+        console.log("[catalogue/test] Searching for mental_health questionnaire for Soft Skills test");
+        const { data: questionnaire } = await supabase
+          .from("mental_health_questionnaires")
+          .select("id, title")
+          .eq("title", "Soft Skills – Profil 360")
+          .maybeSingle();
+        
+        if (questionnaire) {
+          console.log("[catalogue/test] Found mental_health questionnaire:", questionnaire.id);
+          // Créer un objet testData factice avec le questionnaireId
+          testData = {
+            id: catalogItem.content_id,
+            builder_snapshot: {
+              questionnaireId: questionnaire.id,
+            },
+          } as any;
+        }
+      }
     }
+  } else {
+    console.warn("[catalogue/test] No content_id in catalogItem");
   }
 
   // Déterminer l'image hero
@@ -131,34 +169,269 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
   // Vérifier si l'utilisateur est le créateur du contenu
   const isCreator = (catalogItem as any).creator_id === user.id;
   
-  // Déterminer le statut d'accès
-  // Le créateur a toujours accès, même si le contenu est payant
-  const hasAccess = isCreator ||
-                    catalogItem.access_status === "purchased" || 
-                    catalogItem.access_status === "manually_granted" || 
-                    catalogItem.access_status === "free" ||
-                    catalogItem.is_free;
+  // Déterminer le vrai catalog_item_id
+  // Si catalogItem.id correspond à un content_id (test trouvé directement), 
+  // il faut trouver le catalog_item_id correspondant dans catalog_items
+  let catalogItemId = catalogItem.id;
+  
+  // Vérifier si catalogItem.id est un content_id (test trouvé directement)
+  // Si oui, chercher le catalog_item_id correspondant
+  if (catalogItem.content_id && catalogItem.id === catalogItem.content_id) {
+    // L'ID passé est un content_id, chercher le catalog_item_id
+    const { data: catalogItemFromDb } = await supabase
+      .from("catalog_items")
+      .select("id")
+      .eq("content_id", catalogItem.content_id)
+      .eq("item_type", "test")
+      .maybeSingle();
+    
+    if (catalogItemFromDb) {
+      catalogItemId = catalogItemFromDb.id;
+      console.log("[catalogue/test] Found catalog_item_id:", catalogItemId, "for content_id:", catalogItem.content_id);
+    } else {
+      console.warn("[catalogue/test] No catalog_item found for content_id:", catalogItem.content_id);
+    }
+  }
+  
+  // Vérifier explicitement dans catalog_access si l'utilisateur a un accès
+  // C'est la SEULE source de vérité pour l'accès utilisateur
+  // Essayer d'abord avec le catalog_item_id
+  let query = supabase
+    .from("catalog_access")
+    .select("access_status")
+    .eq("catalog_item_id", catalogItemId);
+  
+  // Construire la condition OR correctement
+  if (organizationId) {
+    query = query.or(`user_id.eq.${user.id},organization_id.eq.${organizationId}`);
+  } else {
+    query = query.eq("user_id", user.id);
+  }
+  
+  let { data: userAccess, error: accessError } = await query.maybeSingle();
+  
+  // Si pas trouvé et qu'on a un content_id, essayer aussi avec le content_id
+  // (au cas où l'accès aurait été créé avec le content_id au lieu du catalog_item_id)
+  if (!userAccess && !accessError && catalogItem.content_id && catalogItem.content_id !== catalogItemId) {
+    console.log("[catalogue/test] Access not found with catalog_item_id, trying with content_id:", catalogItem.content_id);
+    let queryByContentId = supabase
+      .from("catalog_access")
+      .select("access_status, catalog_item_id")
+      .eq("catalog_item_id", catalogItem.content_id);
+    
+    if (organizationId) {
+      queryByContentId = queryByContentId.or(`user_id.eq.${user.id},organization_id.eq.${organizationId}`);
+    } else {
+      queryByContentId = queryByContentId.eq("user_id", user.id);
+    }
+    
+    const { data: accessByContentId } = await queryByContentId.maybeSingle();
+    
+    if (accessByContentId) {
+      userAccess = accessByContentId;
+      console.log("[catalogue/test] Found access with content_id:", accessByContentId);
+    }
+  }
+  
+  if (accessError) {
+    console.error("[catalogue/test] Error checking access:", accessError);
+  }
+  
+  console.log("[catalogue/test] Access check:", {
+    userId: user.id,
+    userEmail: user.email,
+    organizationId,
+    catalogItemId,
+    contentId: catalogItem.content_id,
+    userAccess,
+    hasAccess: !!userAccess,
+    accessStatus: userAccess?.access_status,
+  });
+  
+  // L'utilisateur a accès UNIQUEMENT si :
+  // 1. Il est le créateur (Jessica) - TOUJOURS accès
+  // 2. Il a un accès explicite dans catalog_access (purchased, free, ou manually_granted)
+  // 3. L'item est gratuit (is_free = true)
+  const hasExplicitAccess = userAccess && (
+    userAccess.access_status === "purchased" ||
+    userAccess.access_status === "free" ||
+    userAccess.access_status === "manually_granted"
+  );
+  
+  const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
+  
+  console.log("[catalogue/test] Final access decision:", {
+    isCreator,
+    hasExplicitAccess,
+    isFree: catalogItem.is_free,
+    hasAccess,
+  });
 
   // URL vers la page de test (si accès)
   // Vérifier si le test utilise un questionnaire mental_health
   let testUrl = null;
-  if (hasAccess && testData) {
-    const builderSnapshot = (testData as any)?.builder_snapshot as any;
-    const questionnaireId = builderSnapshot?.questionnaireId;
+  if (hasAccess) {
+    if (testData) {
+      const builderSnapshot = (testData as any)?.builder_snapshot as any;
+      const questionnaireId = builderSnapshot?.questionnaireId;
 
-    if (questionnaireId) {
-      // Rediriger vers la page du questionnaire mental_health
-      testUrl = `/dashboard/apprenant/questionnaires/${questionnaireId}`;
+      if (questionnaireId) {
+        // Rediriger vers la page du questionnaire mental_health
+        testUrl = `/dashboard/apprenant/questionnaires/${questionnaireId}`;
+        console.log("[catalogue/test] Using questionnaireId from builder_snapshot:", testUrl);
+      } else {
+        // Sinon, utiliser la page de test classique
+        const testSlug = (testData as any)?.slug || null;
+        testUrl = testSlug
+          ? `/dashboard/tests/${testSlug}`
+          : catalogItem.content_id
+            ? `/dashboard/tests/${catalogItem.content_id}`
+            : null;
+        console.log("[catalogue/test] Using test slug/content_id:", testUrl);
+      }
     } else {
-      // Sinon, utiliser la page de test classique
-      const testSlug = (testData as any)?.slug || null;
-      testUrl = testSlug
-        ? `/dashboard/tests/${testSlug}`
-        : catalogItem.content_id
+      // Si testData n'est pas trouvé, chercher directement le questionnaire mental_health
+      // pour le test "Soft Skills – Profil 360"
+      if (catalogItem.title === "Soft Skills – Profil 360" || catalogItem.title?.includes("Soft Skills")) {
+        console.log("[catalogue/test] Searching for mental_health questionnaire as fallback");
+        
+        // Utiliser le service role client pour contourner RLS
+        const serviceClient = getServiceRoleClient();
+        const clientToUse = serviceClient || supabase;
+        
+        // D'abord, vérifier si le content_id est directement un ID de questionnaire mental_health
+        if (catalogItem.content_id) {
+          console.log("[catalogue/test] Checking if content_id is a questionnaire ID:", catalogItem.content_id);
+          const { data: directQuestionnaire } = await clientToUse
+            .from("mental_health_questionnaires")
+            .select("id, title")
+            .eq("id", catalogItem.content_id)
+            .maybeSingle();
+          
+          if (directQuestionnaire) {
+            testUrl = `/dashboard/apprenant/questionnaires/${directQuestionnaire.id}`;
+            console.log("[catalogue/test] content_id is a questionnaire ID, testUrl:", testUrl);
+          }
+        }
+        
+        // Si pas trouvé, chercher par titre
+        if (!testUrl) {
+          console.log("[catalogue/test] Starting comprehensive questionnaire search...");
+          
+          // 1. Chercher par titre exact avec is_active
+          let { data: questionnaire, error: questionnaireError } = await clientToUse
+            .from("mental_health_questionnaires")
+            .select("id, title, created_by, org_id, is_active")
+            .eq("title", "Soft Skills – Profil 360")
+            .eq("is_active", true)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (questionnaireError) {
+            console.error("[catalogue/test] Error searching questionnaire (exact + is_active):", questionnaireError);
+          }
+          
+          console.log("[catalogue/test] Search result (exact + is_active):", {
+            found: !!questionnaire,
+            id: questionnaire?.id,
+            title: questionnaire?.title,
+          });
+          
+          // 2. Si pas trouvé, chercher sans le filtre is_active
+          if (!questionnaire) {
+            console.log("[catalogue/test] Trying without is_active filter...");
+            const { data: questionnaires, error: questionnairesError } = await clientToUse
+              .from("mental_health_questionnaires")
+              .select("id, title, created_by, org_id, is_active")
+              .eq("title", "Soft Skills – Profil 360")
+              .order("created_at", { ascending: false })
+              .limit(10);
+            
+            if (questionnairesError) {
+              console.error("[catalogue/test] Error searching questionnaires (exact, no filter):", questionnairesError);
+            }
+            
+            console.log("[catalogue/test] Search result (exact, no filter):", {
+              count: questionnaires?.length || 0,
+              questionnaires: questionnaires?.map(q => ({ id: q.id, title: q.title, is_active: q.is_active })) || [],
+            });
+            
+            if (questionnaires && questionnaires.length > 0) {
+              // Prendre le premier actif, sinon le premier
+              questionnaire = questionnaires.find(q => q.is_active) || questionnaires[0];
+              console.log("[catalogue/test] Found questionnaire without is_active filter:", questionnaire.id);
+            }
+          }
+          
+          // 3. Si toujours pas trouvé, chercher avec ILIKE (insensible à la casse)
+          if (!questionnaire) {
+            console.log("[catalogue/test] Trying with ILIKE search...");
+            const { data: ilikeResults, error: ilikeError } = await clientToUse
+              .from("mental_health_questionnaires")
+              .select("id, title, created_by, org_id, is_active")
+              .ilike("title", "%Soft Skills%")
+              .order("created_at", { ascending: false })
+              .limit(10);
+            
+            if (ilikeError) {
+              console.error("[catalogue/test] Error searching with ILIKE:", ilikeError);
+            }
+            
+            console.log("[catalogue/test] Search result (ILIKE):", {
+              count: ilikeResults?.length || 0,
+              questionnaires: ilikeResults?.map(q => ({ id: q.id, title: q.title, is_active: q.is_active })) || [],
+            });
+            
+            if (ilikeResults && ilikeResults.length > 0) {
+              // Chercher celui qui correspond le mieux
+              questionnaire = ilikeResults.find(q => 
+                q.title.toLowerCase().includes("profil 360") || 
+                q.title.toLowerCase().includes("soft skills")
+              ) || ilikeResults[0];
+              console.log("[catalogue/test] Found questionnaire with ILIKE:", questionnaire.id);
+            }
+          }
+          
+          // 4. Si trouvé, créer l'URL
+          if (questionnaire) {
+            testUrl = `/dashboard/apprenant/questionnaires/${questionnaire.id}`;
+            console.log("[catalogue/test] ✅ Found questionnaire, testUrl:", testUrl);
+          } else {
+            // 5. Fallback final : utiliser le content_id comme questionnaire ID directement
+            // Le content_id pourrait être directement un questionnaire ID même si la recherche ne le trouve pas
+            // (problème de RLS ou le questionnaire existe mais n'est pas accessible)
+            if (catalogItem.content_id) {
+              console.log("[catalogue/test] ⚠️ No questionnaire found via search, assuming content_id is questionnaire ID:", catalogItem.content_id);
+              testUrl = `/dashboard/apprenant/questionnaires/${catalogItem.content_id}`;
+              console.log("[catalogue/test] Using content_id as questionnaire ID, testUrl:", testUrl);
+            } else {
+              testUrl = `/dashboard/catalogue/test/${id}`;
+              console.log("[catalogue/test] ❌ No questionnaire found and no content_id, using catalog page as fallback:", testUrl);
+            }
+          }
+        }
+      } else {
+        // Pour les autres tests, utiliser l'ID du test comme URL
+        testUrl = catalogItem.content_id 
           ? `/dashboard/tests/${catalogItem.content_id}`
-          : null;
+          : `/dashboard/catalogue/test/${id}`;
+        console.log("[catalogue/test] Using content_id as testUrl:", testUrl);
+      }
     }
   }
+  
+  console.log("[catalogue/test] Test URL determination:", {
+    hasAccess,
+    hasTestData: !!testData,
+    testUrl,
+    testDataId: testData?.id,
+    builderSnapshot: (testData as any)?.builder_snapshot ? "exists" : "null",
+    questionnaireId: (testData as any)?.builder_snapshot?.questionnaireId || null,
+    testSlug: (testData as any)?.slug || null,
+    contentId: catalogItem.content_id,
+    catalogItemTitle: catalogItem.title,
+  });
 
   // URL vers la page de paiement (si pas d'accès)
   const paymentUrl = `/dashboard/catalogue/test/${id}/payment`;
@@ -221,16 +494,29 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
               
               {/* CTA "Ajouter à ma liste" ou "Démarrer le test" */}
               <div className="flex justify-center mt-12">
-                {hasAccess && testUrl ? (
-                  <a
-                    href={testUrl}
-                    className="px-8 py-6 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all text-white"
-                    style={{
-                      backgroundColor: primaryColor,
-                    }}
-                  >
-                    Démarrer le test
-                  </a>
+                {hasAccess ? (
+                  testUrl ? (
+                    <a
+                      href={testUrl}
+                      className="px-8 py-6 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all text-white cursor-pointer"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    >
+                      Démarrer le test
+                    </a>
+                  ) : (
+                    // Si pas de testUrl mais accès, créer une URL de fallback
+                    <a
+                      href={catalogItem.content_id ? `/dashboard/tests/${catalogItem.content_id}` : `/dashboard/catalogue/test/${id}`}
+                      className="px-8 py-6 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all text-white cursor-pointer"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    >
+                      ✓ Accéder au test
+                    </a>
+                  )
                 ) : (
                   <AddToCartButton
                     contentId={catalogItem.content_id || catalogItem.id}

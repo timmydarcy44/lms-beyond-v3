@@ -111,15 +111,39 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
     console.log("[BREVO] Response status:", response.status);
     console.log("[BREVO] Response ok:", response.ok);
 
+    // Lire le body une seule fois
+    const responseText = await response.text();
+    console.log("[BREVO] Response text:", responseText);
+
+    // Brevo retourne 201 (Created) pour un succès, pas 200
+    // response.ok est true pour 200-299, donc 201 est considéré comme ok
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch {
+        errorData = { message: responseText || "Unknown error" };
+      }
       console.error("[BREVO] Error sending email:", JSON.stringify(errorData, null, 2));
       return { success: false, error: errorData.message || `HTTP ${response.status}` };
     }
 
-    const data = await response.json();
+    // Pour les réponses 201 (succès), Brevo peut retourner un body vide ou un messageId
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        // Si ce n'est pas du JSON, c'est probablement un messageId
+        data = { messageId: responseText.trim() };
+      }
+    } else {
+      // Pas de body, générer un messageId factice
+      data = { messageId: `brevo-${Date.now()}` };
+    }
+    
     console.log("[BREVO] Email sent successfully:", data);
-    return { success: true, messageId: data.messageId };
+    return { success: true, messageId: data.messageId || `brevo-${Date.now()}` };
   } catch (error) {
     console.error("[BREVO] Exception sending email:", error);
     if (error instanceof Error) {

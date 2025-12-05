@@ -122,19 +122,26 @@ export const useCart = create<CartStore>()(
         try {
           const response = await fetch("/api/cart");
           if (!response.ok) {
-            // Si l'API échoue, garder les items locaux
+            // Si l'API échoue (utilisateur non connecté), vider le panier local
+            if (response.status === 401 || response.status === 403) {
+              set({ items: [] });
+            }
             return;
           }
           const data = await response.json();
           
-          // Ne synchroniser que si on a des items côté serveur ET que le panier local est vide
-          // Sinon, on garde les items locaux pour éviter de perdre les ajouts récents
-          if (data.items && data.items.length > 0 && get().items.length === 0) {
+          // Toujours synchroniser avec le serveur pour éviter les incohérences
+          // Le serveur est la source de vérité
+          if (data.items) {
             set({ items: data.items });
+          } else {
+            // Si pas d'items côté serveur, vider le panier local
+            set({ items: [] });
           }
         } catch (error) {
-          // En cas d'erreur, garder les items locaux
+          // En cas d'erreur, vider le panier local pour éviter les incohérences
           console.error("[cart] Error syncing with server:", error);
+          set({ items: [] });
         }
       },
     }),

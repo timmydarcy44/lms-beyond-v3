@@ -55,17 +55,16 @@ export async function GET(request: NextRequest) {
 
     // Récupérer tous les accès utilisateurs pour ce test
     const { data: accesses, error } = await serviceClient
-      .from("catalog_item_access")
+      .from("catalog_access")
       .select(`
         id,
         user_id,
         catalog_item_id,
         access_status,
-        access_type,
         granted_by,
         granted_at,
         grant_reason,
-        profiles!catalog_item_access_user_id_fkey (
+        profiles (
           email,
           full_name
         )

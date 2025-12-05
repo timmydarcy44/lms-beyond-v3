@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
+import { Loader2, Mail, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Chrome } from "lucide-react";
 import { toast } from "sonner";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -77,6 +77,32 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Vérifier les paramètres d'URL pour les messages
+  useEffect(() => {
+    const confirmed = searchParams.get("confirmed");
+    const errorParam = searchParams.get("error");
+    
+    if (confirmed === "true") {
+      setSuccessMessage("Votre email a été confirmé avec succès ! Vous pouvez maintenant vous connecter.");
+      toast.success("Email confirmé avec succès !");
+    } else if (errorParam) {
+      switch (errorParam) {
+        case "confirmation_failed":
+          setError("La confirmation de votre email a échoué. Veuillez réessayer ou contacter le support.");
+          break;
+        case "service_unavailable":
+          setError("Service temporairement indisponible. Veuillez réessayer plus tard.");
+          break;
+        case "invalid_token":
+          setError("Le lien de confirmation est invalide ou a expiré. Veuillez demander un nouveau lien.");
+          break;
+        default:
+          setError("Une erreur est survenue. Veuillez réessayer.");
+      }
+    }
+  }, [searchParams]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -251,6 +277,23 @@ function LoginForm() {
                       borderColor: `${primaryColor}30`,
                     }}
                   >
+                    {/* Message de succès */}
+                    {successMessage && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 flex items-center gap-3 rounded-xl border p-4 text-sm"
+                        style={{
+                          borderColor: "#10B981",
+                          backgroundColor: "#D1FAE5",
+                          color: "#065F46",
+                        }}
+                      >
+                        <CheckCircle2 className="h-5 w-5 shrink-0" />
+                        <span>{successMessage}</span>
+                      </motion.div>
+                    )}
+
                     {/* Message d'erreur */}
                     {error && (
                       <motion.div

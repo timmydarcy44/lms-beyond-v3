@@ -13,6 +13,12 @@ interface RessourceDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
+// Fonction pour détecter si c'est un UUID
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 export default async function RessourceDetailPage({ params }: RessourceDetailPageProps) {
   const { id } = await params;
 
@@ -25,11 +31,9 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     notFound();
   }
 
-  // Vérifier l'authentification
+  // Vérifier l'authentification (optionnel pour voir la page, mais requis pour accéder au contenu)
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect(`/jessica-contentin/login?next=${encodeURIComponent(`/ressources/${id}`)}`);
-  }
+  // Ne pas rediriger si l'utilisateur n'est pas connecté - permettre la visualisation de la page
 
   // Récupérer l'ID de Jessica Contentin
   const { data: jessicaProfile } = await supabase
@@ -42,20 +46,100 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     notFound();
   }
 
-  // Récupérer le profil pour obtenir l'organisation
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id")
-    .eq("id", user.id)
-    .maybeSingle();
+  // Récupérer le profil pour obtenir l'organisation (si l'utilisateur est connecté)
+  let organizationId: string | undefined = undefined;
+  if (user?.id) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("org_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    organizationId = profile?.org_id || undefined;
+  }
 
-  const organizationId = profile?.org_id || undefined;
+  // Détecter si c'est un UUID ou un slug
+  const isIdUUID = isUUID(id);
+  let resourceId = id;
+  let catalogItem = null;
 
-  // Récupérer l'item du catalogue
-  const catalogItem = await getCatalogItemById(id, organizationId, user.id);
+  if (isIdUUID) {
+    // C'est un UUID, chercher directement par ID
+    catalogItem = await getCatalogItemById(id, organizationId, user?.id);
+  } else {
+    // C'est un slug, chercher d'abord dans catalog_items par slug ou titre
+    const { data: catalogItemBySlug } = await supabase
+      .from("catalog_items")
+      .select("id, content_id, item_type")
+      .or(`slug.eq.${id},title.ilike.%${id}%`)
+      .eq("creator_id", jessicaProfile.id)
+      .maybeSingle();
 
-  if (!catalogItem || catalogItem.item_type !== "ressource") {
-    console.error("[ressources/[id]] Catalog item not found:", { id, catalogItem });
+    if (catalogItemBySlug) {
+      catalogItem = await getCatalogItemById(catalogItemBySlug.id, organizationId, user?.id);
+    } else {
+      // Si pas trouvé dans catalog_items, chercher dans resources par slug ou titre
+      const { data: resource } = await supabase
+        .from("resources")
+        .select("id")
+        .or(`slug.eq.${id},title.ilike.%${id}%`)
+        .maybeSingle();
+
+      if (resource) {
+        resourceId = resource.id;
+        catalogItem = await getCatalogItemById(resourceId, organizationId, user?.id);
+      } else {
+        // Si pas trouvé dans resources, chercher dans tests
+        const { data: test } = await supabase
+          .from("tests")
+          .select("id, title")
+          .or(`slug.eq.${id},title.ilike.%${id}%`)
+          .maybeSingle();
+
+        if (test) {
+          // Si c'est le test de confiance en soi, rediriger vers la page dédiée
+          const testTitle = (test as any).title;
+          if (id === "test-confiance-en-soi" || (testTitle && testTitle.toLowerCase().includes("confiance en soi"))) {
+            redirect("/test-confiance-en-soi");
+          }
+          resourceId = test.id;
+          catalogItem = await getCatalogItemById(resourceId, organizationId, user?.id);
+        } else {
+          // Dernière tentative : chercher dans catalog_items par titre partiel
+          const { data: catalogItemByTitle } = await supabase
+            .from("catalog_items")
+            .select("id, content_id, item_type")
+            .ilike("title", `%${id.replace(/-/g, " ")}%`)
+            .eq("creator_id", jessicaProfile.id)
+            .maybeSingle();
+
+          if (catalogItemByTitle) {
+            catalogItem = await getCatalogItemById(catalogItemByTitle.id, organizationId, user?.id);
+          } else {
+            notFound();
+          }
+        }
+      }
+    }
+  }
+
+  // Si toujours pas trouvé, essayer avec l'ID original
+  if (!catalogItem) {
+    catalogItem = await getCatalogItemById(id, organizationId, user?.id);
+  }
+
+  if (!catalogItem) {
+    console.error("[ressources/[id]] Catalog item not found:", { id });
+    notFound();
+  }
+
+  // Si c'est un test de confiance en soi, rediriger vers la page dédiée
+  if (catalogItem.item_type === "test" && catalogItem.slug === "test-confiance-en-soi") {
+    redirect("/test-confiance-en-soi");
+  }
+
+  // Accepter les ressources et les tests
+  if (catalogItem.item_type !== "ressource" && catalogItem.item_type !== "test") {
+    console.error("[ressources/[id]] Unsupported item type:", { id, item_type: catalogItem.item_type });
     notFound();
   }
 
@@ -75,18 +159,22 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Vérifier si l'utilisateur a accès AVANT de récupérer les détails sensibles
   // IMPORTANT : Seul le créateur (Jessica) ou les utilisateurs ayant payé peuvent accéder
   // Même les ressources gratuites nécessitent un accès explicite dans catalog_access
-  const isCreator = user.id === jessicaProfile.id;
+  const isCreator = user?.id === jessicaProfile.id;
   
   // Vérifier explicitement dans catalog_access si l'utilisateur a un accès
   // C'est la SEULE source de vérité pour l'accès utilisateur
   // Utiliser le catalog_item_id réel, pas l'id passé en paramètre
   // Vérifier soit par user_id (B2C) soit par organization_id (B2B)
-  const { data: userAccess } = await supabase
-    .from("catalog_access")
-    .select("access_status")
-    .eq("catalog_item_id", catalogItemId)
-    .or(`user_id.eq.${user.id},organization_id.eq.${organizationId || 'null'}`)
-    .maybeSingle();
+  let userAccess = null;
+  if (user?.id || organizationId) {
+    const { data: access } = await supabase
+      .from("catalog_access")
+      .select("access_status")
+      .eq("catalog_item_id", catalogItemId)
+      .or(`user_id.eq.${user?.id || 'null'},organization_id.eq.${organizationId || 'null'}`)
+      .maybeSingle();
+    userAccess = access;
+  }
   
   // L'utilisateur a accès UNIQUEMENT si :
   // 1. Il est le créateur (Jessica) - TOUJOURS accès
@@ -100,34 +188,53 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   
   const hasAccess = isCreator || hasExplicitAccess;
 
-  // Récupérer les détails de la ressource UNIQUEMENT si l'utilisateur a accès
+  // Récupérer les détails de la ressource ou du test UNIQUEMENT si l'utilisateur a accès
   // Pour protéger les URLs de fichiers/vidéos/audios
   let resourceData = null;
-  if (hasAccess && catalogItem.content_id) {
-    const { data: resource } = await supabase
-      .from("resources")
-      .select("id, title, description, kind, file_url, video_url, audio_url")
-      .eq("id", catalogItem.content_id)
-      .single();
+  let testData = null;
+  let contentSlug: string | null = null;
+  
+  if (catalogItem.item_type === "ressource" && catalogItem.content_id) {
+    if (hasAccess) {
+      const { data: resource } = await supabase
+        .from("resources")
+        .select("id, title, description, kind, file_url, video_url, audio_url, slug")
+        .eq("id", catalogItem.content_id)
+        .maybeSingle();
 
-    if (resource) {
-      resourceData = resource;
+      if (resource) {
+        resourceData = resource;
+        contentSlug = resource.slug || null;
+      }
+    } else {
+      // Si pas d'accès, récupérer seulement les métadonnées publiques (pas les URLs)
+      const { data: resource } = await supabase
+        .from("resources")
+        .select("id, title, description, kind, slug")
+        .eq("id", catalogItem.content_id)
+        .maybeSingle();
+
+      if (resource) {
+        resourceData = {
+          ...resource,
+          file_url: null,
+          video_url: null,
+          audio_url: null,
+        };
+        contentSlug = resource.slug || null;
+      }
     }
-  } else if (catalogItem.content_id) {
-    // Si pas d'accès, récupérer seulement les métadonnées publiques (pas les URLs)
-    const { data: resource } = await supabase
-      .from("resources")
-      .select("id, title, description, kind")
+  } else if (catalogItem.item_type === "test" && catalogItem.content_id) {
+    // Pour les tests, récupérer les données du test
+    const { data: test } = await supabase
+      .from("tests")
+      .select("id, title, description, slug")
       .eq("id", catalogItem.content_id)
-      .single();
-
-    if (resource) {
-      resourceData = {
-        ...resource,
-        file_url: null,
-        video_url: null,
-        audio_url: null,
-      };
+      .maybeSingle();
+    
+    if (test) {
+      testData = test;
+      contentSlug = test.slug || null;
     }
   }
 
@@ -135,7 +242,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   let heroImage = catalogItem.hero_image_url || catalogItem.thumbnail_url;
 
   // Déterminer l'accroche
-  let accroche = catalogItem.short_description || catalogItem.description || resourceData?.description;
+  let accroche = catalogItem.short_description || catalogItem.description || resourceData?.description || testData?.description;
 
   // URL vers la ressource (si accès) - PROTÉGÉ : null si pas d'accès
   const resourceUrl = hasAccess && resourceData
@@ -180,6 +287,22 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     return "Acheter";
   };
 
+  // Vérifier si c'est un test et déterminer l'URL
+  const isTest = catalogItem.item_type === "test";
+  let testPageUrl: string | null = null;
+  if (isTest && testData) {
+    // Pour le test de confiance en soi, utiliser l'URL spéciale
+    if (contentSlug === "test-confiance-en-soi") {
+      testPageUrl = `/test-confiance-en-soi`;
+    } else {
+      // Pour les autres tests, utiliser la route dashboard
+      testPageUrl = `/dashboard/catalogue/test/${catalogItem.content_id}`;
+    }
+  }
+  
+  // Pour les tests, si l'utilisateur a accès, on peut afficher le bouton "Accéder" même sans resourceUrl
+  const canAccess = hasAccess && (resourceUrl || testPageUrl);
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
       {/* Contenu principal */}
@@ -194,6 +317,20 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
             ← Retour aux ressources
           </Link>
         </div>
+
+        {/* Hero Section avec image */}
+        {heroImage && (
+          <div className="relative w-full h-64 md:h-96 rounded-3xl overflow-hidden mb-12 shadow-xl">
+            <Image
+              src={heroImage}
+              alt={catalogItem.title}
+              fill
+              className="object-cover"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          </div>
+        )}
 
         {/* En-tête */}
         <div className="mb-12">
@@ -270,7 +407,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
             {/* Description détaillée */}
             {catalogItem.description && (
               <section 
-                className="rounded-3xl border-2 p-8 md:p-10"
+                className="rounded-3xl border-2 p-8 md:p-10 mb-8"
                 style={{ 
                   borderColor: `${primaryColor}30`,
                   backgroundColor: surfaceColor,
@@ -295,6 +432,72 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                 </div>
               </section>
             )}
+
+            {/* Section "Ce que vous allez découvrir" - Exemple de contenu */}
+            <section 
+              className="rounded-3xl border-2 p-8 md:p-10 mb-8"
+              style={{ 
+                borderColor: `${primaryColor}30`,
+                backgroundColor: surfaceColor,
+              }}
+            >
+              <h2 
+                className="text-2xl md:text-3xl font-bold mb-6"
+                style={{ color: textColor }}
+              >
+                Ce que vous allez découvrir
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div 
+                    className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    1
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2" style={{ color: textColor }}>
+                      Comprendre les mécanismes du sommeil
+                    </h3>
+                    <p className="text-base" style={{ color: `${textColor}CC` }}>
+                      Découvrez les cycles de sommeil et leur importance pour le développement de l'enfant.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div 
+                    className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    2
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2" style={{ color: textColor }}>
+                      Identifier les troubles du sommeil
+                    </h3>
+                    <p className="text-base" style={{ color: `${textColor}CC` }}>
+                      Apprenez à reconnaître les signes de troubles du sommeil et comment y remédier.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div 
+                    className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    3
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2" style={{ color: textColor }}>
+                      Mettre en place des routines efficaces
+                    </h3>
+                    <p className="text-base" style={{ color: `${textColor}CC` }}>
+                      Des stratégies pratiques et des outils concrets pour améliorer le sommeil de votre enfant.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
 
           {/* Colonne latérale - CTA et informations */}
@@ -306,7 +509,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                 backgroundColor: surfaceColor,
               }}
             >
-              {hasAccess && resourceUrl ? (
+              {canAccess ? (
                 <div className="space-y-6">
                   <div className="text-center">
                     <div 
@@ -325,21 +528,36 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                       className="text-sm"
                       style={{ color: `${textColor}AA` }}
                     >
-                      Vous avez accès à cette ressource
+                      Vous avez accès à cette {isTest ? "test" : "ressource"}
                     </p>
                   </div>
-                  <Button 
-                    asChild 
-                    className="w-full rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                    style={{
-                      backgroundColor: primaryColor,
-                    }}
-                  >
-                    <a href={resourceUrl} target="_blank" rel="noopener noreferrer">
-                      {getResourceIcon()}
-                      <span className="ml-2">{getButtonText()}</span>
-                    </a>
-                  </Button>
+                  {testPageUrl ? (
+                    <Button 
+                      asChild 
+                      className="w-full rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    >
+                      <Link href={testPageUrl}>
+                        <Play className="h-5 w-5 mr-2" />
+                        <span className="ml-2">Accéder au test</span>
+                      </Link>
+                    </Button>
+                  ) : resourceUrl ? (
+                    <Button 
+                      asChild 
+                      className="w-full rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    >
+                      <a href={resourceUrl} target="_blank" rel="noopener noreferrer">
+                        {getResourceIcon()}
+                        <span className="ml-2">{getButtonText()}</span>
+                      </a>
+                    </Button>
+                  ) : null}
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -397,9 +615,11 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                   ) : (
                     <BuyButton
                       catalogItemId={catalogItemId}
-                      contentId={catalogItem.content_id}
+                      contentId={catalogItem.content_id || catalogItemId}
                       price={catalogItem.price || 0}
                       title={catalogItem.title}
+                      contentType={catalogItem.item_type as "module" | "test" | "ressource" | "parcours" || "ressource"}
+                      thumbnailUrl={catalogItem.thumbnail_url}
                       className="w-full rounded-full px-8 py-6 text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
                       style={{
                         backgroundColor: primaryColor,

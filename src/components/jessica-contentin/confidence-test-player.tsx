@@ -8,6 +8,21 @@ import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Heart, Target, MessageSquare, Users, Calendar, Clock } from "lucide-react";
+import { useCart } from "@/lib/stores/use-cart";
+import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ShoppingCart, Check } from "lucide-react";
+
+// Hook pour s'assurer que le composant est monté côté client
+function useIsMounted() {
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  return isMounted;
+}
 
 // Configuration du test
 const TEST_QUESTIONS = [
@@ -306,6 +321,9 @@ export function ConfidenceTestPlayer({
   isFree = false,
   hasAccess = false,
 }: ConfidenceTestPlayerProps = {}) {
+  const isMounted = useIsMounted();
+  const { addItem } = useCart();
+  const router = useRouter();
   const [phase, setPhase] = useState<"intro" | "questions" | "results">("intro");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
@@ -314,10 +332,13 @@ export function ConfidenceTestPlayer({
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  // Utiliser directement TEST_QUESTIONS (hardcodé)
+  const [questions] = useState<typeof TEST_QUESTIONS>(TEST_QUESTIONS);
 
-  const currentQuestion = TEST_QUESTIONS[currentIndex];
-  const totalQuestions = TEST_QUESTIONS.length;
-  const progress = ((currentIndex + 1) / totalQuestions) * 100;
+  const currentQuestion = questions[currentIndex];
+  const totalQuestions = questions.length;
+  const progress = totalQuestions > 0 ? ((currentIndex + 1) / totalQuestions) * 100 : 0;
 
   const handleAnswer = (value: number) => {
     const newAnswers = {
@@ -340,7 +361,7 @@ export function ConfidenceTestPlayer({
           competences_sociales: 0,
         };
 
-        TEST_QUESTIONS.forEach((question) => {
+        questions.forEach((question) => {
           const answer = newAnswers[question.id] || 0;
           let score = answer;
 
@@ -349,21 +370,30 @@ export function ConfidenceTestPlayer({
             score = 5 - answer; // 1→4, 2→3, 3→2, 4→1
           }
 
-          dimensionScores[question.dimension] += score;
+          // Normaliser les noms de dimensions
+          const dimension = question.dimension === "efficacite" ? "auto_efficacite" : 
+                           question.dimension === "sociales" ? "competences_sociales" : 
+                           question.dimension;
+          
+          if (dimensionScores.hasOwnProperty(dimension)) {
+            dimensionScores[dimension as keyof typeof dimensionScores] += score;
+          }
         });
 
         setScores(dimensionScores);
         setPhase("results");
         setLoadingAnalysis(true);
 
-        // Appeler l'API d'analyse IA
+        // Appeler l'API d'analyse IA et sauvegarder les résultats
         fetch("/api/jessica-contentin/analyze-confidence-test", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            testId: contentId,
             scores: dimensionScores,
+            answers: newAnswers,
             firstName: firstName || undefined,
           }),
         })
@@ -393,8 +423,12 @@ export function ConfidenceTestPlayer({
   };
 
 
-  const getImageUrl = (question: typeof TEST_QUESTIONS[0]) => {
-    const images = DIMENSION_IMAGES[question.dimension] || DIMENSION_IMAGES.estime;
+  const getImageUrl = (question: { dimension: string; imageIndex: number }) => {
+    // Normaliser le nom de dimension pour la recherche dans DIMENSION_IMAGES
+    const normalizedDimension = question.dimension === "efficacite" ? "auto_efficacite" : 
+                                question.dimension === "sociales" ? "competences_sociales" : 
+                                question.dimension;
+    const images = DIMENSION_IMAGES[normalizedDimension as keyof typeof DIMENSION_IMAGES] || DIMENSION_IMAGES.estime;
     return images[question.imageIndex % images.length];
   };
 
@@ -443,8 +477,8 @@ export function ConfidenceTestPlayer({
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
-                            catalogItemId,
-                            contentId,
+                            catalogItemId: catalogItemId || contentId,
+                            contentId: contentId, // Garder pour compatibilité
                           }),
                         });
 
@@ -670,44 +704,28 @@ export function ConfidenceTestPlayer({
               </p>
               <Button
                 onClick={async () => {
-                  // Si l'item n'est pas gratuit et pas d'accès, rediriger vers Stripe checkout
+                  // Si l'item n'est pas gratuit et pas d'accès, ajouter au panier
                   if (!isFree && !hasAccess) {
                     setCheckingAccess(true);
                     try {
-                      const response = await fetch("/api/stripe/create-checkout-session-jessica", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          catalogItemId,
-                          contentId,
-                        }),
+                      const itemId = catalogItemId || contentId;
+                      if (!itemId) {
+                        throw new Error("ID du test manquant");
+                      }
+                      await addItem({
+                        id: `${itemId}-test`,
+                        content_id: itemId,
+                        content_type: "test",
+                        title: "Test de Confiance en soi",
+                        price: price,
+                        thumbnail_url: null,
                       });
-
-                      const data = await response.json();
-
-                      if (!response.ok) {
-                        throw new Error(data.error || "Erreur lors de la création de la session de paiement");
-                      }
-
-                      // Rediriger vers Stripe Checkout
-                      if (data.url) {
-                        window.location.href = data.url;
-                      } else if (data.sessionId) {
-                        const { loadStripe } = await import("@stripe/stripe-js");
-                        const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-                        if (!stripePublishableKey) {
-                          throw new Error("Clé publique Stripe non configurée");
-                        }
-                        const stripe = await loadStripe(stripePublishableKey);
-                        if (stripe) {
-                          await stripe.redirectToCheckout({ sessionId: data.sessionId });
-                        } else {
-                          throw new Error("Stripe n'est pas disponible");
-                        }
-                      }
+                      
+                      setCheckingAccess(false);
+                      setShowDialog(true);
                     } catch (error) {
-                      console.error("Error creating checkout session:", error);
-                      alert("Une erreur s'est produite lors de la création de la session de paiement. Veuillez réessayer.");
+                      console.error("Error adding to cart:", error);
+                      alert("Une erreur s'est produite lors de l'ajout au panier. Veuillez réessayer.");
                       setCheckingAccess(false);
                     }
                   } else {
@@ -718,7 +736,7 @@ export function ConfidenceTestPlayer({
                 size="lg"
                 className="bg-[#C6A664] hover:bg-[#B89654] text-white px-12 py-8 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {checkingAccess ? "Redirection vers le paiement..." : (!isFree && !hasAccess ? `Acheter pour ${price}€` : "Commencer le test maintenant")}
+                {checkingAccess ? "Ajout au panier..." : (!isFree && !hasAccess ? `Acheter pour ${price}€` : "Commencer le test maintenant")}
                 {!checkingAccess && <ArrowRight className="ml-3 h-6 w-6" />}
               </Button>
               <p className="text-sm text-[#2F2A25]/60 mt-4">
@@ -901,10 +919,11 @@ export function ConfidenceTestPlayer({
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg mb-8">
             <CardContent className="p-6 md:p-8">
               <h2 className="text-2xl font-semibold text-[#2F2A25] mb-4">Votre profil global</h2>
-              <div 
-                className="text-[#2F2A25]/80 leading-relaxed prose prose-lg max-w-none"
-                dangerouslySetInnerHTML={{ __html: analysis.global.replace(/\n/g, '<br />') }}
-              />
+              <div className="text-[#2F2A25]/80 leading-relaxed prose prose-lg max-w-none">
+                {analysis.global.split('\n').map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
@@ -1036,10 +1055,51 @@ export function ConfidenceTestPlayer({
     );
   };
 
-  if (phase === "intro") return renderIntro();
-  if (phase === "questions") return renderQuestion();
-  if (phase === "results") return renderResults();
+  return (
+    <>
+      {phase === "intro" && renderIntro()}
+      {phase === "questions" && renderQuestion()}
+      {phase === "results" && renderResults()}
 
-  return null;
+      {/* Dialog de confirmation */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-green-600" />
+              Test ajouté au panier
+            </DialogTitle>
+            <DialogDescription>
+              Le test de confiance en soi a été ajouté à votre panier avec succès.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Continuer mes achats
+            </Button>
+            <Button
+              onClick={() => {
+                setShowDialog(false);
+                router.push('/jessica-contentin/panier');
+              }}
+              className="w-full sm:w-auto"
+              style={{
+                backgroundColor: "#C6A664",
+                color: '#FFFFFF',
+              }}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Passer au paiement
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 

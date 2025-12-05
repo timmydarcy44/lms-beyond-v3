@@ -145,16 +145,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Construire l'URL de la ressource
+    // Construire l'URL de la ressource avec slug si disponible
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
     let resourceUrl = "";
     
     if (catalogItem.item_type === "ressource") {
-      resourceUrl = `${baseUrl}/ressources/${catalogItem.content_id || catalogItemId}`;
+      // Récupérer le slug de la ressource
+      const { data: resource } = await supabase
+        .from("resources")
+        .select("slug")
+        .eq("id", catalogItem.content_id)
+        .maybeSingle();
+      
+      if (resource?.slug) {
+        resourceUrl = `${baseUrl}/ressources/${resource.slug}`;
+      } else {
+        // Fallback sur l'ID si pas de slug
+        resourceUrl = `${baseUrl}/ressources/${catalogItem.content_id || catalogItemId}`;
+      }
+    } else if (catalogItem.item_type === "test") {
+      // Récupérer le slug du test
+      const { data: test } = await supabase
+        .from("tests")
+        .select("slug")
+        .eq("id", catalogItem.content_id)
+        .maybeSingle();
+      
+      if (test?.slug) {
+        // Pour le test de confiance en soi, utiliser l'URL spéciale
+        if (test.slug === "test-confiance-en-soi") {
+          resourceUrl = `${baseUrl}/test-confiance-en-soi`;
+        } else {
+          resourceUrl = `${baseUrl}/ressources/${test.slug}`;
+        }
+      } else {
+        // Fallback sur l'ID si pas de slug
+        resourceUrl = `${baseUrl}/test-confiance-en-soi`;
+      }
     } else if (catalogItem.item_type === "module") {
       resourceUrl = `${baseUrl}/formations/${catalogItem.content_id || catalogItemId}`;
-    } else if (catalogItem.item_type === "test") {
-      resourceUrl = `${baseUrl}/dashboard/catalogue/test/${catalogItem.content_id || catalogItemId}`;
     } else {
       resourceUrl = `${baseUrl}/jessica-contentin/ressources`;
     }
@@ -173,7 +202,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    console.log("[admin/assign-resource] ====== EMAIL SENDING START ======");
     console.log("[admin/assign-resource] Sending email to:", userEmail);
+    console.log("[admin/assign-resource] First name:", firstName);
     console.log("[admin/assign-resource] Resource title:", catalogItem.title);
     console.log("[admin/assign-resource] Resource URL:", resourceUrl);
     
@@ -184,11 +215,18 @@ export async function POST(request: NextRequest) {
       resourceUrl
     );
 
-    console.log("[admin/assign-resource] Email result:", emailResult);
+    console.log("[admin/assign-resource] ====== EMAIL SENDING RESULT ======");
+    console.log("[admin/assign-resource] Email success:", emailResult.success);
+    console.log("[admin/assign-resource] Email messageId:", emailResult.messageId);
+    console.log("[admin/assign-resource] Email error:", emailResult.error);
+    console.log("[admin/assign-resource] Full email result:", JSON.stringify(emailResult, null, 2));
 
     if (!emailResult.success) {
-      console.error("[admin/assign-resource] Error sending email:", emailResult.error);
+      console.error("[admin/assign-resource] ❌ ERROR: Email not sent!");
+      console.error("[admin/assign-resource] Error details:", emailResult.error);
       // Ne pas échouer la requête si l'email échoue, l'accès a été créé
+    } else {
+      console.log("[admin/assign-resource] ✅ SUCCESS: Email sent successfully!");
     }
 
     return NextResponse.json({
@@ -196,6 +234,7 @@ export async function POST(request: NextRequest) {
       access,
       emailSent: emailResult.success,
       emailError: emailResult.error,
+      emailMessageId: emailResult.messageId,
     });
   } catch (error: any) {
     console.error("[admin/assign-resource] Error:", error);

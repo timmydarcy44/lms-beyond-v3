@@ -19,6 +19,7 @@ const GOOGLE_BUSINESS_IFRAME_URL = ""; // ⬅️ COLLEZ VOTRE URL GOOGLE BUSINES
 export function TrustIndex() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const widgetRef = useRef<HTMLDivElement>(null);
   const scriptLoadedRef = useRef(false);
 
@@ -28,7 +29,17 @@ export function TrustIndex() {
   // Utiliser l'iframe si l'URL est configurée, sinon utiliser le script Trust Index
   const useIframe = !!GOOGLE_BUSINESS_IFRAME_URL;
 
+  // S'assurer que le composant est monté côté client avant de manipuler le DOM
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Ne rien faire si le composant n'est pas encore monté
+    if (!isMounted) return;
+    
+    // Vérifier que document est disponible (côté client uniquement)
+    if (typeof document === 'undefined') return;
     if (useIframe) {
       // Si on utilise l'iframe, juste attendre le chargement
       const timer = setTimeout(() => {
@@ -145,7 +156,33 @@ export function TrustIndex() {
         clearTimeout(timer);
       };
     }
-  }, [useIframe]);
+  }, [useIframe, isMounted]);
+
+  // Ne rien afficher pendant l'hydratation
+  if (!isMounted) {
+    return (
+      <section className="py-12 bg-[#F8F5F0] mx-4 mb-4 rounded-2xl">
+        <div className="mx-auto max-w-7xl px-6">
+          <h2
+            className="text-3xl font-bold text-[#2F2A25] mb-8 text-center"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+            }}
+          >
+            Avis Google
+          </h2>
+          <div className="relative w-full" style={{ minHeight: "400px" }}>
+            <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C6A664] mb-4"></div>
+                <p>Chargement...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 bg-[#F8F5F0] mx-4 mb-4 rounded-2xl">

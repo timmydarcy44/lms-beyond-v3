@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Check, ShoppingCart, ArrowRight } from "lucide-react";
 import { useCart } from "@/lib/stores/use-cart";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { CartItem } from "@/lib/stores/use-cart";
@@ -25,18 +25,26 @@ export function AddToCartButton({
   title,
   price,
   thumbnailUrl,
-  variant = "outline",
+  variant = "default",
   size = "default",
   className = "",
 }: AddToCartButtonProps) {
-  const { items, addItem, openCart } = useCart();
+  const { items, addItem, openCart, syncWithServer } = useCart();
   const router = useRouter();
   const pathname = usePathname();
   const [isAdding, setIsAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  const isInCart = items.some(
+  // S'assurer que le composant est monté avant de vérifier le panier
+  useEffect(() => {
+    setIsMounted(true);
+    // Synchroniser avec le serveur au montage pour avoir les bonnes données
+    syncWithServer();
+  }, [syncWithServer]);
+
+  const isInCart = isMounted && items.some(
     (item) => item.content_id === contentId && item.content_type === contentType
   );
 
@@ -89,14 +97,26 @@ export function AddToCartButton({
     setJustAdded(false);
   };
 
+  // Déterminer le style du bouton selon le contexte
+  // Pour "Ajouter à ma liste", utiliser un style plus visible avec fond coloré
+  const buttonVariant = isInCart ? "default" : variant;
+  const buttonStyle = isInCart ? {} : {
+    backgroundColor: isJessicaContentin ? "#C6A664" : "#8B6F47",
+    color: "#FFFFFF",
+    borderColor: isJessicaContentin ? "#C6A664" : "#8B6F47",
+    fontWeight: "600",
+    boxShadow: "0 4px 14px 0 rgba(139, 111, 71, 0.3)",
+  };
+
   return (
     <>
       <Button
         onClick={handleAddToCart}
         disabled={isAdding}
-        variant={isInCart ? "default" : variant}
+        variant={buttonVariant}
         size={size}
-        className={className}
+        className={`${className} ${!isInCart && !justAdded ? 'hover:opacity-90 hover:scale-105 transition-all' : ''}`}
+        style={buttonStyle}
       >
         {isAdding ? (
           <>

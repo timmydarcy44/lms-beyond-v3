@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Headphones, Video, FileText } from "lucide-react";
 import { CategorySelectField } from "./category-select-field";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 const resourceOptions = [
   { value: "pdf", label: "Document PDF", icon: FileText },
@@ -27,6 +28,7 @@ export function ResourceCreateFormSuperAdmin() {
   const [price, setPrice] = useState<string>("10");
   const [category, setCategory] = useState<string>("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   
@@ -61,6 +63,7 @@ export function ResourceCreateFormSuperAdmin() {
           type,
           price: parseFloat(price) || 0,
           category: category.trim() || null,
+          cover_image_url: coverImageUrl || null,
           published,
         }),
       });
@@ -243,6 +246,14 @@ export function ResourceCreateFormSuperAdmin() {
               value={category}
               onChange={setCategory}
               label="Catégorie"
+            />
+
+            <ImageUpload
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+              label="Image de couverture"
+              bucket="Public"
+              folder="covers"
             />
 
             <label className="space-y-2 text-sm text-gray-700">

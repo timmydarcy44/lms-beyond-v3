@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { getLearnerContentDetail } from "@/lib/queries/apprenant";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { Button } from "@/components/ui/button";
-import { JessicaContentinLayout } from "@/app/jessica-contentin/layout";
 import { getServerClient } from "@/lib/supabase/server";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
@@ -63,13 +62,12 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   const accentColor = "#D4AF37"; // Doré accent
 
   return (
-    <JessicaContentinLayout>
-      <LearningSessionTracker
-        contentType="course"
-        contentId={card.id}
-        showIndicator={false}
-      >
-        <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
+    <LearningSessionTracker
+      contentType="course"
+      contentId={card.id}
+      showIndicator={false}
+    >
+      <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
           {/* Hero Section */}
           <section 
             className="relative overflow-hidden rounded-3xl border mx-6 mt-6 mb-8 shadow-lg"
@@ -419,7 +417,6 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
           </section>
         </div>
       </LearningSessionTracker>
-    </JessicaContentinLayout>
   );
 }
 

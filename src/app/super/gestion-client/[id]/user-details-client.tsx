@@ -62,13 +62,23 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
       
       const data = await response.json();
       console.log("[UserDetailsClient] Response data:", data);
+      console.log("[UserDetailsClient] Email sent:", data.emailSent);
+      console.log("[UserDetailsClient] Email error:", data.emailError);
       console.log("[UserDetailsClient] ====== handleAssignResource END ======");
 
       if (!response.ok) {
         throw new Error(data.error || "Erreur lors de l'assignation");
       }
 
-      toast.success("Ressource assignée avec succès ! Un email a été envoyé au client.");
+      // Afficher un message différent selon si l'email a été envoyé ou non
+      if (data.emailSent) {
+        toast.success("Ressource assignée avec succès ! Un email a été envoyé au client.");
+      } else {
+        toast.success("Ressource assignée avec succès, mais l'email n'a pas pu être envoyé.", {
+          description: data.emailError || "Veuillez contacter le support.",
+        });
+        console.error("[UserDetailsClient] Email not sent:", data.emailError);
+      }
       
       // Recharger la page pour mettre à jour les données
       window.location.reload();

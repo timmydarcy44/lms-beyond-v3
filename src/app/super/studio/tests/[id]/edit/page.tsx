@@ -132,6 +132,8 @@ export default async function TestEditPage({ params }: TestEditPageProps) {
     cover_image: coverImage,
     // S'assurer que questions est un tableau ou null
     questions: test.questions || null,
+    // Inclure builder_snapshot si présent
+    builder_snapshot: test.builder_snapshot || null,
   };
 
   return (

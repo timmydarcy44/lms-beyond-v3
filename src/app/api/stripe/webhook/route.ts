@@ -85,13 +85,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
-      // Si on a un itemId dans les métadonnées, accorder l'accès directement
-      if (metadata?.itemId && metadata?.itemType) {
+      // Si on a un catalog_item_id dans les métadonnées, accorder l'accès directement
+      // Support à la fois itemId (ancien format) et catalog_item_id (nouveau format)
+      const catalogItemId = metadata?.catalog_item_id || metadata?.itemId;
+      const itemType = metadata?.item_type || metadata?.itemType;
+      
+      if (catalogItemId && itemType) {
         const { error: accessError } = await supabase
           .from("catalog_access")
           .upsert({
             user_id: profile.id,
-            catalog_item_id: metadata.itemId,
+            catalog_item_id: catalogItemId,
             organization_id: null, // B2C, pas d'organisation
             access_status: "purchased",
             granted_at: new Date().toISOString(),
@@ -105,14 +109,14 @@ export async function POST(request: NextRequest) {
         if (accessError) {
           console.error("[stripe/webhook] Error granting access:", accessError);
         } else {
-          console.log("[stripe/webhook] Access granted for item:", metadata.itemId);
+          console.log("[stripe/webhook] Access granted for item:", catalogItemId);
           
           // Envoyer l'email de confirmation d'achat
           try {
             const { data: catalogItem } = await supabase
               .from("catalog_items")
-              .select("id, title, price")
-              .eq("id", metadata.itemId)
+              .select("id, title, price, item_type, content_id")
+              .eq("id", catalogItemId)
               .maybeSingle();
             
             if (catalogItem) {

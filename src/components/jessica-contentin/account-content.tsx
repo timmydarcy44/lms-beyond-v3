@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale/fr";
 import { Check, Clock, Package, Play, FileText, Video, Headphones } from "lucide-react";
@@ -43,95 +42,91 @@ export function JessicaContentinAccountContent({
 }) {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // S'assurer que le composant est monté avant de faire des requêtes (évite les problèmes d'hydratation)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    // Ne pas faire de requête si le composant n'est pas monté
+    if (!isMounted) return;
+
+    let isMountedRef = true;
+    let timeoutId: NodeJS.Timeout | null = null;
     
     async function loadPurchases() {
       try {
-        const supabase = createSupabaseBrowserClient();
+        // Utiliser AbortController pour gérer le timeout
+        const controller = new AbortController();
+        timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 10000); // 10 secondes de timeout
         
-        if (!supabase) {
-          console.error("[jessica-contentin/account] Supabase client not available");
-          if (isMounted) {
+        // Utiliser une API route pour les requêtes lourdes (plus rapide et plus fiable)
+        const apiUrl = `/api/jessica-contentin/account/purchases?userId=${userId}${jessicaProfileId ? `&jessicaProfileId=${jessicaProfileId}` : ''}`;
+        console.log("[jessica-contentin/account] Fetching purchases from:", apiUrl);
+        console.log("[jessica-contentin/account] Parameters:", { userId, jessicaProfileId });
+        
+        const response = await fetch(apiUrl, { signal: controller.signal });
+
+        console.log("[jessica-contentin/account] Response status:", response.status, response.ok);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("[jessica-contentin/account] API error response:", errorText);
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log("[jessica-contentin/account] API result:", result);
+        
+        const { data: access, error } = result;
+
+        console.log("[jessica-contentin/account] API response:", {
+          userId,
+          jessicaProfileId,
+          accessCount: access?.length || 0,
+          access: access?.map((a: any) => ({
+            id: a.id,
+            catalog_item_id: a.catalog_item_id,
+            access_status: a.access_status,
+            catalog_item: a.catalog_items ? {
+              id: a.catalog_items.id,
+              title: a.catalog_items.title,
+              creator_id: a.catalog_items.creator_id,
+            } : null,
+          })) || [],
+          error,
+        });
+
+        if (!isMountedRef) {
+          if (timeoutId) clearTimeout(timeoutId);
+          return;
+        }
+
+        if (timeoutId) clearTimeout(timeoutId);
+
+        if (error) {
+          console.error("[jessica-contentin/account] Error fetching purchases:", error);
+          if (isMountedRef) {
             setPurchases([]);
             setLoading(false);
           }
           return;
         }
-        
-        // Récupérer les achats depuis catalog_item_access (table correcte pour les accès B2C)
-        let query = supabase
-          .from("catalog_item_access")
-          .select(`
-            id,
-            catalog_item_id,
-            granted_at,
-            access_status,
-            access_type,
-            catalog_items!inner (
-              id,
-              title,
-              item_type,
-              thumbnail_url,
-              hero_image_url,
-              content_id,
-              price,
-              creator_id
-            )
-          `)
-          .eq("user_id", userId)
-          .order("granted_at", { ascending: false });
-
-        // Filtrer uniquement les contenus de Jessica Contentin si on a son ID
-        if (jessicaProfileId) {
-          query = query.eq("catalog_items.creator_id", jessicaProfileId);
-        }
-
-        const { data: access, error } = await query;
-
-        if (!isMounted) return;
-
-        if (error) {
-          console.error("[jessica-contentin/account] Error fetching purchases:", {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            error: error,
-            fullError: JSON.stringify(error, null, 2),
-          });
-          // Ne pas bloquer si c'est juste une erreur de permissions ou de table inexistante
-          if (error.code !== '42P01' && error.code !== '42501') {
-            if (isMounted) {
-              setPurchases([]);
-              setLoading(false);
-            }
-            return;
-          }
-          // Si c'est une erreur de permissions, continuer avec un tableau vide
-          if (isMounted) {
-            setPurchases([]);
-          }
-        }
 
         // Transformer les données en format Purchase
-        // Filtrer par access_status ou access_type (les deux peuvent exister)
+        // Le filtre access_status est déjà fait dans la requête, donc on peut simplifier
         const purchasesData: Purchase[] = (access || [])
           .filter((item: any) => {
             // Filtrer les items valides
-            if (!item.catalog_items) return false;
-            
-            // Vérifier l'accès : purchased, manually_granted, ou free
-            const hasAccess = 
-              item.access_status === "purchased" || 
-              item.access_status === "manually_granted" || 
-              item.access_status === "free" ||
-              item.access_type === "purchased" ||
-              item.access_type === "manually_granted" ||
-              item.access_type === "free";
-            
-            return hasAccess;
+            const isValid = !!item.catalog_items;
+            if (!isValid) {
+              console.warn("[jessica-contentin/account] Item without catalog_items:", item);
+            }
+            return isValid;
           })
           .map((item: any) => ({
             id: item.id,
@@ -149,7 +144,16 @@ export function JessicaContentinAccountContent({
             },
           }));
 
-        if (isMounted) {
+        console.log("[jessica-contentin/account] Transformed purchases:", {
+          count: purchasesData.length,
+          purchases: purchasesData.map(p => ({
+            id: p.id,
+            title: p.catalog_item.title,
+            item_type: p.catalog_item.item_type,
+          })),
+        });
+
+        if (isMountedRef) {
           setPurchases(purchasesData);
           setLoading(false);
         }
@@ -159,26 +163,36 @@ export function JessicaContentinAccountContent({
           stack: error.stack,
           name: error.name
         } : error);
-        if (isMounted) {
+        if (isMountedRef) {
           setPurchases([]);
           setLoading(false);
         }
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
       }
     }
 
     loadPurchases();
     
     return () => {
-      isMounted = false;
+      isMountedRef = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [userId, jessicaProfileId]);
+  }, [userId, jessicaProfileId, isMounted]);
 
   const getItemUrl = (item: Purchase["catalog_item"]) => {
     if (item.item_type === "module") {
       return `/formations/${item.content_id}`;
     } else if (item.item_type === "ressource") {
+      // Utiliser le slug si disponible, sinon l'ID
       return `/ressources/${item.content_id}`;
     } else if (item.item_type === "test") {
+      // Pour le test de confiance en soi, utiliser l'URL spéciale
+      // Vérifier si c'est le test de confiance en soi par le titre ou le content_id
+      if (item.title?.toLowerCase().includes("confiance en soi") || item.title === "Test de Confiance en soi") {
+        return `/test-confiance-en-soi`;
+      }
+      // Pour les autres tests, utiliser la route dashboard
       return `/dashboard/catalogue/test/${item.content_id}`;
     }
     return "#";
@@ -193,14 +207,51 @@ export function JessicaContentinAccountContent({
     return <FileText className="h-4 w-4" />;
   };
 
+  // Ne rien afficher tant que le composant n'est pas monté (évite les problèmes d'hydratation)
+  if (!isMounted) {
+    return null; // Retourner null pendant l'hydratation
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div 
-          className="text-lg"
-          style={{ color: `${textColor}80` }}
-        >
-          Chargement...
+      <div className="min-h-screen bg-[#F8F5F0]">
+        {/* Hero Section Skeleton */}
+        <section className="py-20 mx-4 mb-8">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="text-center mb-12">
+              <div className="h-12 bg-gray-200 rounded-lg w-64 mx-auto mb-4 animate-pulse" />
+              <div className="h-6 bg-gray-200 rounded-lg w-96 mx-auto animate-pulse" />
+            </div>
+          </div>
+        </section>
+
+        {/* Contenu principal Skeleton */}
+        <div className="max-w-7xl mx-auto px-6 pb-12">
+          {/* Statistiques Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-6 rounded-xl bg-gray-100 animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-32 mb-4" />
+                <div className="h-8 bg-gray-200 rounded w-16" />
+              </div>
+            ))}
+          </div>
+
+          {/* Liste Skeleton */}
+          <div className="mb-12">
+            <div className="h-8 bg-gray-200 rounded w-48 mb-6 animate-pulse" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl bg-gray-100 animate-pulse">
+                  <div className="aspect-video bg-gray-200" />
+                  <div className="p-4">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

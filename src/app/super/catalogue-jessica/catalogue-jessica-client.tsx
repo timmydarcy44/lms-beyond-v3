@@ -145,7 +145,7 @@ export function CatalogueJessicaClient({ items, jessicaProfileId }: CatalogueJes
     } else if (item.item_type === "ressource") {
       router.push(`/super/studio/ressources/${item.content_id}`);
     } else if (item.item_type === "test") {
-      router.push(`/super/studio/tests/${item.content_id}`);
+      router.push(`/super/studio/tests/${item.content_id || item.id}/edit`);
     } else if (item.item_type === "parcours") {
       router.push(`/dashboard/paths/${item.content_id}/edit`);
     }

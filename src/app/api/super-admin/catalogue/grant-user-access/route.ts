@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { sendResourceAccessEmail } from "@/lib/emails/send-resource-access";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Chercher l'item de catalogue
     const { data: catalogItem } = await serviceClient
       .from("catalog_items")
-      .select("id")
+      .select("id, title")
       .eq("content_id", test.id) // Utiliser l'UUID du test
       .eq("creator_id", jessicaProfile.id)
       .eq("item_type", "test")
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     // Vérifier si l'accès existe déjà
     const { data: existingAccess } = await serviceClient
-      .from("catalog_item_access")
+      .from("catalog_access")
       .select("id, access_status")
       .eq("user_id", userProfile.id)
       .eq("catalog_item_id", catalogItem.id)
@@ -87,10 +88,9 @@ export async function POST(request: NextRequest) {
     if (existingAccess) {
       // Mettre à jour l'accès existant
       const { error: updateError } = await serviceClient
-        .from("catalog_item_access")
+        .from("catalog_access")
         .update({
           access_status: "manually_granted",
-          access_type: "manually_granted",
           granted_by: session.id,
           granted_at: new Date().toISOString(),
           grant_reason: reason || null,
@@ -102,17 +102,41 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
       }
 
+      // Envoyer l'email de notification
+      try {
+        const { data: userProfileForEmail } = await serviceClient
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", userProfile.id)
+          .maybeSingle();
+
+        if (userProfileForEmail?.email) {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+          const resourceUrl = `${baseUrl}/test-confiance-en-soi`;
+          const firstName = userProfileForEmail.full_name?.split(" ")[0] || null;
+
+          await sendResourceAccessEmail(
+            userProfileForEmail.email,
+            firstName,
+            catalogItem.title || "Test de Confiance en soi",
+            resourceUrl
+          );
+        }
+      } catch (emailError) {
+        console.error("[grant-user-access] Error sending email:", emailError);
+        // Ne pas échouer la requête si l'email échoue
+      }
+
       return NextResponse.json({ success: true, message: "Accès mis à jour" }, { status: 200 });
     }
 
     // Créer un nouvel accès
     const { error: insertError } = await serviceClient
-      .from("catalog_item_access")
+      .from("catalog_access")
       .insert({
         user_id: userProfile.id,
         catalog_item_id: catalogItem.id,
         access_status: "manually_granted",
-        access_type: "manually_granted",
         granted_by: session.id,
         granted_at: new Date().toISOString(),
         grant_reason: reason || null,
@@ -121,6 +145,31 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       console.error("[grant-user-access] Insert error:", insertError);
       return NextResponse.json({ error: "Erreur lors de la création de l'accès" }, { status: 500 });
+    }
+
+    // Envoyer l'email de notification
+    try {
+      const { data: userProfileForEmail } = await serviceClient
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", userProfile.id)
+        .maybeSingle();
+
+      if (userProfileForEmail?.email) {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+        const resourceUrl = `${baseUrl}/test-confiance-en-soi`;
+        const firstName = userProfileForEmail.full_name?.split(" ")[0] || null;
+
+        await sendResourceAccessEmail(
+          userProfileForEmail.email,
+          firstName,
+          catalogItem.title || "Test de Confiance en soi",
+          resourceUrl
+        );
+      }
+    } catch (emailError) {
+      console.error("[grant-user-access] Error sending email:", emailError);
+      // Ne pas échouer la requête si l'email échoue
     }
 
     return NextResponse.json({ success: true, message: "Accès accordé avec succès" }, { status: 200 });

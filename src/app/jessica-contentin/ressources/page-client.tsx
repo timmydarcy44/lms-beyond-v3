@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, FileText, Video, ArrowRight, ChevronLeft, ChevronRight, Play, Heart, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,8 @@ type RessourcesPageClientProps = {
   userFirstName: string | null;
 };
 
-export default function RessourcesPageClient({ initialItems, userFirstName: initialUserFirstName }: RessourcesPageClientProps) {
+// Composant interne qui utilise useSearchParams (doit être enveloppé dans Suspense)
+function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstName }: RessourcesPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcome, setShowWelcome] = useState(false);
@@ -50,6 +51,103 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
       setErrorMessage("Une erreur serveur s'est produite. Veuillez réessayer plus tard.");
     }
   }, [searchParams]);
+
+  // Gérer la redirection après paiement Stripe avec polling pour vérifier l'accès
+  useEffect(() => {
+    const paymentSuccess = searchParams.get("payment");
+    const sessionId = searchParams.get("session_id");
+    
+    if (paymentSuccess === "success" && sessionId) {
+      let pollCount = 0;
+      const maxPolls = 20; // 20 tentatives = 10 secondes max
+      let catalogItemId: string | null = null;
+      let itemUrl: string | null = null;
+      
+      // Récupérer le produit acheté depuis la session Stripe
+      fetch(`/api/stripe/get-session-item?session_id=${sessionId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.catalogItemId) {
+            catalogItemId = data.catalogItemId;
+            
+            // Trouver l'item dans la liste
+            const purchasedItem = catalogItems.find(item => item.id === data.catalogItemId);
+            
+            // Construire l'URL selon le type d'item
+            if (purchasedItem) {
+              if (purchasedItem.item_type === "test") {
+                if (purchasedItem.title?.toLowerCase().includes("confiance en soi") || purchasedItem.title === "Test de Confiance en soi") {
+                  itemUrl = `/test-confiance-en-soi`;
+                } else {
+                  itemUrl = `/dashboard/catalogue/test/${purchasedItem.content_id || purchasedItem.id}`;
+                }
+              } else if (purchasedItem.item_type === "ressource") {
+                itemUrl = `/ressources/${purchasedItem.id || purchasedItem.content_id}`;
+              } else if (purchasedItem.item_type === "module") {
+                itemUrl = `/formations/${purchasedItem.content_id}`;
+              }
+            } else {
+              // Si l'item n'est pas dans la liste, utiliser les données de l'API
+              if (data.itemType === "test") {
+                if (data.title?.toLowerCase().includes("confiance en soi")) {
+                  itemUrl = `/test-confiance-en-soi`;
+                } else {
+                  itemUrl = `/dashboard/catalogue/test/${data.contentId || data.catalogItemId}`;
+                }
+              } else if (data.itemType === "ressource") {
+                itemUrl = `/ressources/${data.catalogItemId}`;
+              } else if (data.itemType === "module") {
+                itemUrl = `/formations/${data.contentId}`;
+              }
+            }
+            
+            // Polling pour vérifier que l'accès est accordé
+            const checkAccess = async () => {
+              if (!catalogItemId) return;
+              
+              try {
+                const response = await fetch(`/api/jessica-contentin/check-access?catalogItemId=${catalogItemId}`);
+                const accessData = await response.json();
+                
+                if (accessData.hasAccess && itemUrl) {
+                  // Accès accordé, rediriger
+                  console.log("[RessourcesPageClient] ✅ Access granted, redirecting to:", itemUrl);
+                  router.push(itemUrl);
+                } else if (pollCount < maxPolls) {
+                  // Pas encore d'accès, réessayer dans 500ms
+                  pollCount++;
+                  setTimeout(checkAccess, 500);
+                } else {
+                  // Timeout après 10 secondes
+                  console.warn("[RessourcesPageClient] ⚠️ Timeout waiting for access, redirecting anyway");
+                  if (itemUrl) {
+                    router.push(itemUrl);
+                  } else {
+                    // Rediriger vers la page ressources avec un message
+                    router.push("/jessica-contentin/ressources?payment=processing");
+                  }
+                }
+              } catch (error) {
+                console.error("[RessourcesPageClient] Error checking access:", error);
+                // En cas d'erreur, rediriger quand même après un délai
+                if (pollCount < maxPolls) {
+                  pollCount++;
+                  setTimeout(checkAccess, 500);
+                } else if (itemUrl) {
+                  router.push(itemUrl);
+                }
+              }
+            };
+            
+            // Commencer le polling après un court délai initial (500ms)
+            setTimeout(checkAccess, 500);
+          }
+        })
+        .catch(error => {
+          console.error("[RessourcesPageClient] Error fetching session item:", error);
+        });
+    }
+  }, [searchParams, catalogItems, router]);
 
   // Mettre à jour les items si initialItems change (pour le SSR/hydration)
   useEffect(() => {
@@ -117,6 +215,11 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
       // Utiliser item.id (catalog_item_id) en priorité, car getCatalogItemById cherche d'abord par id
       return `/ressources/${item.id || item.content_id}`;
     } else if (item.item_type === "test") {
+      // Pour le test de confiance en soi, utiliser l'URL spéciale
+      if (item.title?.toLowerCase().includes("confiance en soi") || item.title === "Test de Confiance en soi") {
+        return `/test-confiance-en-soi`;
+      }
+      // Pour les autres tests, utiliser la route dashboard
       return `/dashboard/catalogue/test/${item.content_id}`;
     }
     return "#";
@@ -297,12 +400,12 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="text-4xl md:text-5xl font-bold text-[#2F2A25] mb-4 text-center"
+                    className="text-2xl md:text-3xl font-semibold text-[#2F2A25] mb-4 text-center"
                     style={{
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                     }}
                   >
-                    Ressources Psychopédagogiques - Contenus et Outils pour Toute la France
+                    Ressources psychopédagogiques - Contenus et outils
                   </motion.h1>
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
@@ -787,5 +890,18 @@ export default function RessourcesPageClient({ initialItems, userFirstName: init
           )}
         </AnimatePresence>
     </div>
+  );
+}
+
+// Composant principal qui enveloppe le contenu dans Suspense
+export default function RessourcesPageClient(props: RessourcesPageClientProps) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C6A664]"></div>
+      </div>
+    }>
+      <RessourcesPageContent {...props} />
+    </Suspense>
   );
 }

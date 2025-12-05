@@ -43,6 +43,7 @@ export function TestResultsViewer({
 
   useEffect(() => {
     let isMounted = true;
+    let timeoutId: NodeJS.Timeout | null = null;
     
     async function loadTestResults() {
       try {
@@ -57,8 +58,15 @@ export function TestResultsViewer({
           return;
         }
         
+        // Utiliser AbortController pour gérer le timeout
+        const controller = new AbortController();
+        timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 8000); // 8 secondes de timeout
+        
         // Récupérer les tests passés par l'utilisateur avec les analyses existantes
-        const { data: attempts, error } = await supabase
+        // Limiter les champs pour améliorer les performances
+        const attemptsPromise = supabase
           .from("test_attempts")
           .select(`
             id,
@@ -76,18 +84,16 @@ export function TestResultsViewer({
               title,
               description,
               display_format
-            ),
-            test_result_analyses (
-              analysis
             )
           `)
           .eq("user_id", userId)
           .not("completed_at", "is", null)
           .order("completed_at", { ascending: false })
-          .limit(20);
+          .limit(10); // Réduire à 10 pour améliorer les performances
+          // Note: Supabase ne supporte pas directement AbortController, mais on peut utiliser Promise.race
 
         // Récupérer aussi les résultats des tests soft skills (mental_health_assessments)
-        const { data: mentalHealthAssessments, error: mentalHealthError } = await supabase
+        const mentalHealthPromise = supabase
           .from("mental_health_assessments")
           .select(`
             id,
@@ -95,39 +101,76 @@ export function TestResultsViewer({
             overall_score,
             dimension_scores,
             analysis_summary,
-            analysis_details,
-            metadata,
             created_at,
             mental_health_questionnaires (
               id,
-              title,
-              description
+              title
             )
           `)
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(10); // Réduire à 10 pour améliorer les performances
 
-        if (!isMounted) return;
+        // Exécuter les deux requêtes en parallèle avec timeout
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error("Timeout: La requête a pris trop de temps"));
+          }, 8000);
+        });
+
+        let attemptsResult: any;
+        let mentalHealthResult: any;
+        
+        try {
+          [attemptsResult, mentalHealthResult] = await Promise.race([
+            Promise.all([attemptsPromise, mentalHealthPromise]),
+            timeoutPromise,
+          ]) as any;
+        } catch (raceError: any) {
+          if (timeoutId) clearTimeout(timeoutId);
+          console.error("[test-results-viewer] Promise race error:", raceError);
+          if (isMounted) {
+            setTestResults([]);
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (timeoutId) clearTimeout(timeoutId);
+
+        const { data: attempts, error } = attemptsResult || { data: null, error: null };
+        const { data: mentalHealthAssessments, error: mentalHealthError } = mentalHealthResult || { data: null, error: null };
+
+        if (!isMounted) {
+          if (timeoutId) clearTimeout(timeoutId);
+          return;
+        }
+
+        if (timeoutId) clearTimeout(timeoutId);
 
         if (error) {
-          // Logger l'erreur complète pour le débogage
           console.error("[test-results-viewer] Error fetching test results:", error);
           console.error("[test-results-viewer] Error details:", {
             message: error?.message,
             code: error?.code,
             details: error?.details,
             hint: error?.hint,
-            errorString: String(error),
-            errorJSON: JSON.stringify(error, null, 2),
           });
-          // Ne pas bloquer si c'est juste une erreur de permissions ou de table inexistante
-          if (error?.code !== '42P01' && error?.code !== '42501') {
+          // Ne pas bloquer si c'est juste une erreur de permissions, de table inexistante, ou de colonne inexistante
+          // Codes d'erreur PostgreSQL:
+          // 42P01 = table inexistante
+          // 42501 = permission refusée
+          // 42703 = colonne inexistante (comme test_result_analyses)
+          if (error?.code !== '42P01' && error?.code !== '42501' && error?.code !== '42703') {
             if (isMounted) {
               setTestResults([]);
               setLoading(false);
             }
             return;
+          }
+          // Si c'est une erreur de colonne inexistante, on continue avec des données vides
+          if (error?.code === '42703') {
+            console.warn("[test-results-viewer] Column does not exist, continuing with empty data");
           }
         }
 
@@ -192,7 +235,7 @@ export function TestResultsViewer({
               category_results: categoryResults,
               answers: attempt.answers || {},
               created_at: attempt.created_at,
-              existingAnalysis: attempt.test_result_analyses?.[0]?.analysis || null,
+              existingAnalysis: null, // Les analyses sont générées à la demande via l'API
             },
           };
         });
@@ -256,6 +299,8 @@ export function TestResultsViewer({
           setTestResults([]);
           setLoading(false);
         }
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
       }
     }
 
@@ -263,6 +308,7 @@ export function TestResultsViewer({
     
     return () => {
       isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [userId]);
 

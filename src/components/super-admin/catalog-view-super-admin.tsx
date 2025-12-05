@@ -87,7 +87,8 @@ export function CatalogViewSuperAdmin() {
       case "ressource":
         return `/super/studio/ressources/${item.content_id}/edit`;
       case "test":
-        return `/super/studio/tests/${item.content_id}/edit`;
+        // Pour le test de confiance en soi, utiliser l'ID du catalog_item pour trouver le content_id
+        return `/super/studio/tests/${item.content_id || item.id}/edit`;
       default:
         return "/super/catalogue";
     }

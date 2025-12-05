@@ -616,12 +616,24 @@ export async function getCatalogItemById(
   } else if (item.item_type === "test") {
     const { data: testData, error: testError } = await supabase
       .from("tests")
-      .select("id, title, description, duration, evaluation_type, skills, display_format, questions")
+      .select("id, title, description, duration, evaluation_type, skills, display_format, questions, slug")
       .eq("id", item.content_id)
       .single();
 
     if (!testError && testData) {
       test = testData;
+    }
+  } else if (item.item_type === "ressource") {
+    // Récupérer le slug de la ressource
+    const { data: resourceData, error: resourceError } = await supabase
+      .from("resources")
+      .select("id, slug")
+      .eq("id", item.content_id)
+      .maybeSingle();
+
+    if (!resourceError && resourceData) {
+      // Stocker le slug dans test pour réutilisation (pas idéal mais fonctionnel)
+      test = { slug: resourceData.slug } as any;
     }
   }
   
@@ -749,12 +761,23 @@ export async function getCatalogItemById(
     accessStatus = "manually_granted";
   }
 
+  // Déterminer le slug selon le type d'item
+  let slug: string | null = null;
+  if (item.item_type === "module" && course?.slug) {
+    slug = course.slug;
+  } else if (item.item_type === "test" && test?.slug) {
+    slug = test.slug;
+  } else if (item.item_type === "ressource" && test?.slug) {
+    // Le slug de la ressource est stocké dans test (voir ci-dessus)
+    slug = test.slug;
+  }
+
   return {
     ...item,
     access_status: accessStatus || "pending_payment",
     course,
     test,
-    slug: course?.slug || null,
+    slug,
   };
 }
 

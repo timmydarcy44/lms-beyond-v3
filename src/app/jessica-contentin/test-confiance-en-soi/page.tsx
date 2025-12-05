@@ -94,10 +94,12 @@ export default async function ConfidenceTestPage() {
     let hasAccess = false;
     if (catalogItem.is_free) {
       hasAccess = true;
+      console.log("[ConfidenceTestPage] Test is free, access granted");
     } else {
+      console.log("[ConfidenceTestPage] Checking access for user:", session.id, "catalog_item_id:", catalogItem.id);
       const { data: access, error: accessError } = await clientToUse
-        .from("catalog_item_access")
-        .select("access_status, access_type")
+        .from("catalog_access")
+        .select("access_status, user_id, catalog_item_id")
         .eq("user_id", session.id)
         .eq("catalog_item_id", catalogItem.id)
         .in("access_status", ["purchased", "manually_granted", "free"])
@@ -106,6 +108,13 @@ export default async function ConfidenceTestPage() {
       if (accessError) {
         console.error("[ConfidenceTestPage] Error checking access:", accessError);
       }
+
+      console.log("[ConfidenceTestPage] Access check result:", {
+        hasAccess: !!access,
+        access: access,
+        userId: session.id,
+        catalogItemId: catalogItem.id,
+      });
 
       hasAccess = !!access;
     }

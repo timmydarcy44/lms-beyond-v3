@@ -30,19 +30,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer l'item du catalogue
+    // Prioriser catalogItemId, sinon utiliser contentId pour chercher par content_id
     const itemId = catalogItemId || contentId;
+    if (!itemId) {
+      return NextResponse.json(
+        { error: "catalogItemId ou contentId requis" },
+        { status: 400 }
+      );
+    }
+    
     const catalogItem = await getCatalogItemById(itemId, undefined, user.id);
 
+    console.log("[stripe/create-checkout-session-jessica] Catalog item retrieved:", {
+      id: catalogItem?.id,
+      item_type: catalogItem?.item_type,
+      title: catalogItem?.title,
+      itemId,
+    });
+
     if (!catalogItem) {
+      console.error("[stripe/create-checkout-session-jessica] Catalog item not found for itemId:", itemId);
       return NextResponse.json(
         { error: "Item non trouvé" },
         { status: 404 }
       );
     }
 
-    if (catalogItem.item_type !== "ressource") {
+    // Accepter les ressources et les tests
+    console.log("[stripe/create-checkout-session-jessica] Checking item_type:", catalogItem.item_type);
+    if (catalogItem.item_type !== "ressource" && catalogItem.item_type !== "test") {
+      console.error("[stripe/create-checkout-session-jessica] Unsupported item_type:", catalogItem.item_type);
       return NextResponse.json(
-        { error: "Type d'item non supporté" },
+        { error: `Type d'item non supporté: ${catalogItem.item_type}. Types supportés: ressource, test` },
         { status: 400 }
       );
     }
@@ -126,8 +145,12 @@ export async function POST(request: NextRequest) {
           },
         ],
         mode: "payment",
-        success_url: `${baseUrl}/jessica-contentin/ressources?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/ressources/${catalogItem.content_id || catalogItem.id}`,
+        success_url: catalogItem.item_type === "test" 
+          ? `${baseUrl}/test-confiance-en-soi?payment=success&session_id={CHECKOUT_SESSION_ID}`
+          : `${baseUrl}/jessica-contentin/ressources?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: catalogItem.item_type === "test"
+          ? `${baseUrl}/test-confiance-en-soi`
+          : `${baseUrl}/ressources/${catalogItem.content_id || catalogItem.id}`,
         metadata: {
           catalog_item_id: catalogItem.id,
           content_id: catalogItem.content_id,

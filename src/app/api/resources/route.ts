@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       slug,
       price,
       category,
+      cover_image_url,
     } = body as {
       resourceId?: string;
       published?: boolean;
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest) {
       slug?: string;
       price?: number;
       category?: string;
+      cover_image_url?: string | null;
     };
 
     // Si pas de resourceId, c'est une création
@@ -267,6 +269,15 @@ export async function POST(request: NextRequest) {
         baseData.price = parseFloat(String(price)) || 0;
       }
 
+      // Ajouter l'image de couverture si fournie
+      if (cover_image_url) {
+        // Essayer différentes colonnes possibles pour l'image
+        baseData.cover_image_url = cover_image_url;
+        baseData.hero_image_url = cover_image_url;
+        baseData.cover_url = cover_image_url;
+        baseData.thumbnail_url = cover_image_url;
+      }
+
       // Note: category n'existe pas dans la table resources
       // Elle sera gérée lors de la synchronisation avec catalog_items
 
@@ -456,8 +467,8 @@ export async function POST(request: NextRequest) {
               shortDescription: description ? description.substring(0, 150) : null,
               price: price || 0,
               category: category || null,
-              heroImage: null, // Les ressources n'ont pas toujours d'image hero
-              thumbnailUrl: null,
+              heroImage: cover_image_url || null,
+              thumbnailUrl: cover_image_url || null,
               targetAudience: isContentin ? "apprenant" : "apprenant", // Toujours "apprenant" pour contentin
               assignmentType: isContentin ? "no_school" : "no_school", // Toujours "no_school" pour contentin
               status: published ? "published" : "draft",
@@ -574,8 +585,8 @@ export async function POST(request: NextRequest) {
           shortDescription: data.description ? data.description.substring(0, 150) : null,
           price: (data as any).price || 0,
           category: (data as any).category || null,
-          heroImage: (data as any).hero_image_url || (data as any).cover_url || null,
-          thumbnailUrl: (data as any).thumbnail_url || (data as any).cover_url || null,
+              heroImage: cover_image_url || (data as any).hero_image_url || (data as any).cover_image_url || (data as any).cover_url || null,
+              thumbnailUrl: cover_image_url || (data as any).thumbnail_url || (data as any).cover_image_url || (data as any).cover_url || null,
           targetAudience: isContentin ? "apprenant" : "apprenant",
           assignmentType: isContentin ? "no_school" : "no_school",
           status: published ? "published" : "draft",

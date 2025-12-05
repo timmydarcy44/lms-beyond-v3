@@ -18,6 +18,7 @@ import { QuestionFlowBuilder } from "@/components/formateur/tests/question-flow-
 import { TestQuestionBuilder } from "@/components/formateur/tests/test-question-builder";
 import { CategorySelectField } from "./category-select-field";
 import { Upload, X } from "lucide-react";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 import type { TestBuilderQuestion } from "@/types/test-builder";
 
@@ -47,6 +48,7 @@ export function TestEditFormSuperAdmin({ initialData }: TestEditFormSuperAdminPr
   // Charger les questions existantes depuis le test
   const [questions, setQuestions] = useState<TestBuilderQuestion[]>(() => {
     console.log('[test-edit] Initial data questions:', initialData.questions);
+    console.log('[test-edit] Initial data builder_snapshot:', initialData.builder_snapshot);
     
     // Vérifier si questions existe dans initialData
     if (initialData.questions) {
@@ -63,7 +65,7 @@ export function TestEditFormSuperAdmin({ initialData }: TestEditFormSuperAdminPr
           // S'assurer que chaque question a un id et des options
           const formattedQuestions = parsedQuestions.map((q: any) => ({
             id: q.id || nanoid(),
-            title: q.title || "Nouvelle question",
+            title: q.title || q.text || "Nouvelle question",
             type: q.type || "multiple",
             context: q.context || "",
             options: q.options || [],
@@ -71,7 +73,7 @@ export function TestEditFormSuperAdmin({ initialData }: TestEditFormSuperAdminPr
             feedback: q.feedback || "",
             status: q.status || "draft",
             aiGenerated: q.aiGenerated || false,
-            category: q.category || null,
+            category: q.category || q.dimension || null,
             weight: q.weight || null,
             likert: q.likert || null,
           }));
@@ -84,42 +86,46 @@ export function TestEditFormSuperAdmin({ initialData }: TestEditFormSuperAdminPr
       }
     }
     
+    // Vérifier aussi dans builder_snapshot si présent
+    if (initialData.builder_snapshot) {
+      try {
+        let snapshot = initialData.builder_snapshot;
+        if (typeof snapshot === 'string') {
+          snapshot = JSON.parse(snapshot);
+        }
+        
+        // Chercher les questions dans le snapshot
+        if (snapshot.questions && Array.isArray(snapshot.questions) && snapshot.questions.length > 0) {
+          const formattedQuestions = snapshot.questions.map((q: any) => ({
+            id: q.id || nanoid(),
+            title: q.title || q.text || "Nouvelle question",
+            type: q.type || "multiple",
+            context: q.context || "",
+            options: q.options || [],
+            score: q.score || 1,
+            feedback: q.feedback || "",
+            status: q.status || "draft",
+            aiGenerated: q.aiGenerated || false,
+            category: q.category || q.dimension || null,
+            weight: q.weight || null,
+            likert: q.likert || null,
+          }));
+          
+          console.log('[test-edit] Loaded questions from builder_snapshot:', formattedQuestions.length);
+          return formattedQuestions;
+        }
+      } catch (error) {
+        console.error('[test-edit] Error parsing builder_snapshot:', error);
+      }
+    }
+    
     // Si pas de questions, retourner un tableau vide (pas de question par défaut)
     console.log('[test-edit] No questions found, starting with empty array');
     return [];
   });
 
-  // Cover image
+  // Cover image - utiliser ImageUpload component
   const [coverImage, setCoverImage] = useState<string | null>(initialData.cover_image || initialData.hero_image_url || null);
-  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
-  const [uploadingCover, setUploadingCover] = useState(false);
-
-  const handleCoverUpload = async (file: File): Promise<string | null> => {
-    setUploadingCover(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'test-covers');
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'upload');
-      }
-
-      const data = await response.json();
-      return data.url;
-    } catch (error) {
-      console.error('[test-edit] Erreur upload cover:', error);
-      toast.error('Erreur lors de l\'upload de l\'image');
-      return null;
-    } finally {
-      setUploadingCover(false);
-    }
-  };
 
   const handleAddBlankQuestion = () => {
     setQuestions((prev) => [
@@ -158,14 +164,8 @@ export function TestEditFormSuperAdmin({ initialData }: TestEditFormSuperAdminPr
     }
 
     try {
-      // Upload cover si un fichier a été sélectionné
+      // Utiliser l'image de couverture actuelle
       let coverImageUrl = coverImage;
-      if (coverImageFile) {
-        const uploadedUrl = await handleCoverUpload(coverImageFile);
-        if (uploadedUrl) {
-          coverImageUrl = uploadedUrl;
-        }
-      }
 
       // Préparer le body, en excluant category si vide (pour éviter les erreurs si la colonne n'existe pas)
       const body: any = {
@@ -376,59 +376,13 @@ export function TestEditFormSuperAdmin({ initialData }: TestEditFormSuperAdminPr
                 onChange={setCategory}
                 label="Catégorie"
               />
-              <div className="space-y-1">
-                <label className="text-xs uppercase tracking-wider text-gray-500" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
-                  Image de couverture (cover)
-                </label>
-                <div className="space-y-2">
-                  {coverImage && (
-                    <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-gray-200">
-                      <Image
-                        src={coverImage}
-                        alt="Cover"
-                        fill
-                        className="object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCoverImage(null);
-                          setCoverImageFile(null);
-                        }}
-                        className="absolute top-2 right-2 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <label className="flex-1 cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setCoverImageFile(file);
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setCoverImage(reader.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="hidden"
-                      />
-                      <div className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors">
-                        <Upload className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm text-gray-700">
-                          {coverImage ? "Changer l'image" : "Ajouter une image de couverture"}
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              </div>
+              <ImageUpload
+                value={coverImage}
+                onChange={setCoverImage}
+                label="Image de couverture"
+                bucket="Public"
+                folder="test-covers"
+              />
               <div className="space-y-1">
                 <label className="text-xs uppercase tracking-wider text-gray-500" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
                   Format d'affichage des résultats

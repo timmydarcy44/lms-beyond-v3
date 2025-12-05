@@ -18,10 +18,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Loader2, Mail, Lock, User, AlertCircle, CheckCircle2, Chrome } from "lucide-react";
 import { toast } from "sonner";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { env } from "@/lib/env";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 // Fonction pour construire l'URL Supabase Storage
 function getSupabaseStorageUrl(bucket: string, path: string): string {
@@ -79,117 +79,45 @@ export default function JessicaContentinSignupPage() {
     setError(null);
     setSuccess(false);
 
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
-      setError("Service indisponible");
-      return;
-    }
-
-    const fullName = `${values.firstName} ${values.lastName}`.trim();
-
-    // Désactiver l'envoi d'email automatique de Supabase pour utiliser BREVO
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        data: {
-          full_name: fullName,
-          role: "learner",
+    try {
+      // Utiliser la route API qui utilise le service role client
+      // Cela évite les problèmes de rate limit de Supabase
+      const response = await fetch("/api/jessica-contentin/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        emailRedirectTo: `${window.location.origin}/jessica-contentin/ressources`,
-      },
-    });
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+          firstName: values.firstName,
+          lastName: values.lastName,
+        }),
+      });
 
-    // Ignorer les erreurs liées à l'envoi d'email de Supabase
-    // car on utilisera BREVO pour envoyer l'email
-    if (signUpError) {
-      // Si l'erreur est liée à l'envoi d'email, on continue quand même
-      if (signUpError.message?.toLowerCase().includes("email") || 
-          signUpError.message?.toLowerCase().includes("confirmation") ||
-          signUpError.message?.toLowerCase().includes("sending")) {
-        console.warn("[signup] Supabase email error (will use BREVO):", signUpError.message);
-        // On continue quand même si on a un user
-        if (!data?.user) {
-          setError("Une erreur est survenue lors de la création du compte");
-          return;
-        }
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Erreur de l'API
+        setError(data.error || "Une erreur est survenue lors de la création du compte. Veuillez réessayer.");
+        return;
+      }
+
+      // Succès
+      if (data.warning) {
+        // Compte créé mais email non envoyé
+        toast.warning(data.message || "Compte créé, mais l'email de confirmation n'a pas pu être envoyé. Veuillez contacter le support.");
       } else {
-        setError(signUpError.message || "Une erreur est survenue lors de la création du compte");
-        return;
+        // Compte créé et email envoyé
+        toast.success(`${values.firstName}, je viens de vous envoyer un mail pour valider votre inscription`);
       }
-    }
 
-    if (!data?.user) {
-      setError("Une erreur est survenue lors de la création du compte");
-      return;
-    }
-
-    // Créer le profil
-    const { error: profileError } = await supabase.from("profiles").upsert({
-      id: data.user.id,
-      email: values.email,
-      full_name: fullName,
-      role: "learner",
-      org_id: null, // B2C
-    });
-
-    if (profileError) {
-      console.error("[signup] Profile error:", profileError);
-      // Ne pas échouer si le profil existe déjà
-      if (profileError.code !== "23505") {
-        setError("Erreur lors de la création du profil");
-        return;
-      }
-    }
-
-    // Envoyer l'email de confirmation via BREVO
-    if (data.user && !data.session) {
-      try {
-        // Générer le lien de confirmation
-        // Pour l'instant, on utilise un lien simple qui redirigera vers la page ressources
-        // En production, vous devrez générer un vrai token de confirmation
-        const baseUrl = window.location.origin;
-        const confirmationLink = `${baseUrl}/jessica-contentin/ressources?confirmed=true`;
-        
-        // Envoyer l'email via BREVO
-        const emailResponse = await fetch("/api/emails/send-signup-confirmation", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: values.email,
-            firstName: values.firstName,
-            confirmationLink: confirmationLink,
-          }),
-        });
-
-        if (!emailResponse.ok) {
-          const errorData = await emailResponse.json().catch(() => ({}));
-          console.error("[signup] Error sending confirmation email via BREVO:", errorData);
-          // Ne pas bloquer l'inscription si l'email échoue, mais afficher un avertissement
-          toast.warning("Compte créé, mais l'email de confirmation n'a pas pu être envoyé. Veuillez contacter le support.");
-        }
-      } catch (emailError) {
-        console.error("[signup] Exception sending confirmation email:", emailError);
-        // Ne pas bloquer l'inscription si l'email échoue
-        toast.warning("Compte créé, mais l'email de confirmation n'a pas pu être envoyé. Veuillez contacter le support.");
-      }
-    }
-
-    // Si l'email n'a pas besoin de confirmation, rediriger directement
-    if (data.session) {
-      toast.success("Compte créé avec succès !");
-      // Réinitialiser le formulaire
-      form.reset();
-      router.push("/jessica-contentin/ressources");
-      router.refresh();
-    } else {
       setSuccess(true);
-      // Afficher le message personnalisé avec le prénom
-      toast.success(`${values.firstName}, je viens de vous envoyer un mail pour valider votre inscription`);
       // Réinitialiser le formulaire
       form.reset();
+    } catch (error) {
+      console.error("[signup] Exception:", error);
+      setError("Une erreur est survenue lors de la création du compte. Veuillez réessayer.");
     }
   };
 

@@ -1,0 +1,127 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+    const jessicaProfileId = searchParams.get("jessicaProfileId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "userId requis" },
+        { status: 400 }
+      );
+    }
+
+    // Utiliser le service role client pour éviter les problèmes de RLS
+    const supabase = getServiceRoleClient() || await getServerClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase non configuré" },
+        { status: 500 }
+      );
+    }
+
+    // Récupérer les achats depuis catalog_access (table correcte pour les accès B2C)
+    // Utiliser une requête optimisée avec limite
+    let query = supabase
+      .from("catalog_access")
+      .select(`
+        id,
+        catalog_item_id,
+        granted_at,
+        access_status,
+        catalog_items!inner (
+          id,
+          title,
+          item_type,
+          thumbnail_url,
+          hero_image_url,
+          content_id,
+          price,
+          creator_id
+        )
+      `)
+      .eq("user_id", userId)
+      .in("access_status", ["purchased", "manually_granted", "free"])
+      .order("granted_at", { ascending: false })
+      .limit(50); // Limiter à 50 résultats
+
+    const { data: access, error } = await query;
+
+    console.log("[api/jessica-contentin/account/purchases] Raw access data:", {
+      userId,
+      jessicaProfileId,
+      accessCount: access?.length || 0,
+      access: access?.map((a: any) => ({
+        id: a.id,
+        catalog_item_id: a.catalog_item_id,
+        access_status: a.access_status,
+        catalog_item: a.catalog_items ? {
+          id: a.catalog_items.id,
+          title: a.catalog_items.title,
+          creator_id: a.catalog_items.creator_id,
+        } : null,
+      })) || [],
+    });
+
+    // Filtrer uniquement les contenus de Jessica Contentin côté serveur si on a son ID
+    // (Le filtre dans la requête Supabase ne fonctionne pas toujours correctement avec les joins)
+    let filteredAccess = access || [];
+    if (jessicaProfileId && filteredAccess.length > 0) {
+      const beforeCount = filteredAccess.length;
+      filteredAccess = filteredAccess.filter((item: any) => {
+        const hasCatalogItem = !!item.catalog_items;
+        // Comparer les IDs en string pour éviter les problèmes de type
+        const creatorMatches = String(item.catalog_items?.creator_id) === String(jessicaProfileId);
+        
+        if (!hasCatalogItem) {
+          console.warn("[api/jessica-contentin/account/purchases] Item without catalog_items:", item);
+        } else if (!creatorMatches) {
+          console.log("[api/jessica-contentin/account/purchases] Item filtered out (wrong creator):", {
+            catalog_item_id: item.catalog_item_id,
+            item_creator_id: item.catalog_items.creator_id,
+            item_creator_id_type: typeof item.catalog_items.creator_id,
+            jessicaProfileId,
+            jessicaProfileId_type: typeof jessicaProfileId,
+            title: item.catalog_items.title,
+            match: String(item.catalog_items.creator_id) === String(jessicaProfileId),
+          });
+        }
+        
+        return hasCatalogItem && creatorMatches;
+      });
+      console.log("[api/jessica-contentin/account/purchases] Filtered access (Jessica only):", {
+        before: beforeCount,
+        after: filteredAccess.length,
+        jessicaProfileId,
+        jessicaProfileId_type: typeof jessicaProfileId,
+      });
+    } else if (!jessicaProfileId) {
+      console.warn("[api/jessica-contentin/account/purchases] No jessicaProfileId provided, returning all access");
+    }
+
+    if (error) {
+      console.error("[api/jessica-contentin/account/purchases] Error:", error);
+      // Ne pas bloquer si c'est juste une erreur de permissions
+      if (error.code !== '42P01' && error.code !== '42501') {
+        return NextResponse.json(
+          { error: "Erreur lors de la récupération des achats", details: error.message },
+          { status: 500 }
+        );
+      }
+      // Si c'est une erreur de permissions, retourner un tableau vide
+      return NextResponse.json({ data: [], error: null });
+    }
+
+    return NextResponse.json({ data: filteredAccess, error: null });
+  } catch (error) {
+    console.error("[api/jessica-contentin/account/purchases] Error:", error);
+    return NextResponse.json(
+      { error: "Erreur lors de la récupération des achats", details: error instanceof Error ? error.message : "Erreur inconnue" },
+      { status: 500 }
+    );
+  }
+}
+

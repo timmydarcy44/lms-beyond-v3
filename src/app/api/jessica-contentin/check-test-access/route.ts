@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
 
     // Vérifier l'accès de l'utilisateur
     const { data: access } = await clientToUse
-      .from("catalog_item_access")
-      .select("access_status, access_type")
+      .from("catalog_access")
+      .select("access_status")
       .eq("user_id", user.id)
       .eq("catalog_item_id", catalogItem.id)
       .in("access_status", ["purchased", "manually_granted", "free"])

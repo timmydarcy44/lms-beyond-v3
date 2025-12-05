@@ -97,6 +97,7 @@ export function JessicaContentinHeader() {
     pathname === "/jessica-contentin/a-propos" ||
     pathname === "/jessica-contentin/specialites" ||
     pathname.startsWith("/jessica-contentin/specialites/") ||
+    pathname === "/test-confiance-en-soi" ||
     pathname.startsWith("/dashboard/catalogue/test/") ||
     pathname.startsWith("/dashboard/catalogue/ressource/") ||
     pathname.startsWith("/dashboard/catalogue/module/");
@@ -108,8 +109,17 @@ export function JessicaContentinHeader() {
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [userFirstName, setUserFirstName] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // S'assurer que le composant est monté côté client avant de faire des opérations client-side
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   useEffect(() => {
+    // Ne rien faire si le composant n'est pas encore monté
+    if (!isMounted) return;
+    
     // Détecter si on est sur app.jessicacontentin.fr
     if (typeof window !== 'undefined') {
       setIsAppDomain(window.location.hostname === 'app.jessicacontentin.fr');
@@ -162,19 +172,25 @@ export function JessicaContentinHeader() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isMounted]);
   
-  // Initialiser l'URL de l'image hero
-  const [heroImageSrc, setHeroImageSrc] = useState(() => {
+  // Initialiser l'URL de l'image hero - utiliser une valeur par défaut pour éviter les problèmes d'hydratation
+  const [heroImageSrc, setHeroImageSrc] = useState<string>(HERO_IMAGE_FALLBACK);
+  
+  // Mettre à jour l'URL de l'image hero une fois que le composant est monté côté client
+  useEffect(() => {
+    if (!isMounted) return;
+    
     const src = getHeroImageSrc();
     if (src) {
       console.log("[jessica-contentin-header] ✅ Hero image URL from Supabase:", src);
+      setHeroImageSrc(src);
     } else {
       console.warn("[jessica-contentin-header] ⚠️ Could not generate Supabase URL, using fallback");
       console.warn("[jessica-contentin-header] NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ Found" : "❌ Not found");
+      setHeroImageSrc(HERO_IMAGE_FALLBACK);
     }
-    return src || HERO_IMAGE_FALLBACK;
-  });
+  }, [isMounted]);
 
   const menuItems = [
     {
@@ -327,7 +343,8 @@ export function JessicaContentinHeader() {
               </Link>
             </Button>
             {/* Mon compte - tout à droite, plus petit, sans bordure */}
-            {isAuthenticated && userFirstName ? (
+            {/* Utiliser isMounted pour éviter les problèmes d'hydratation */}
+            {isMounted && isAuthenticated && userFirstName ? (
               <Link 
                 href="/jessica-contentin/mon-compte"
                 className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
@@ -419,7 +436,8 @@ export function JessicaContentinHeader() {
                   </Link>
                 </Button>
                 {/* Mon compte - plus petit, sans bordure */}
-                {isAuthenticated && userFirstName ? (
+                {/* Utiliser isMounted pour éviter les problèmes d'hydratation */}
+                {isMounted && isAuthenticated && userFirstName ? (
                   <Link 
                     href="/jessica-contentin/mon-compte"
                     className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"

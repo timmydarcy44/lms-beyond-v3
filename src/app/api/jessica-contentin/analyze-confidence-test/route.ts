@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAIClient } from "@/lib/ai/openai-client";
+import { getServiceRoleClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Non authentifié" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
-    const { scores, firstName } = body as {
+    const { testId, scores, answers, firstName } = body as {
+      testId?: string;
       scores: {
         estime: number;
         auto_efficacite: number;
         assertivite: number;
         competences_sociales: number;
       };
+      answers?: Record<string, number>;
       firstName?: string;
     };
 
@@ -106,6 +118,75 @@ IMPORTANT :
 
     try {
       const parsedAnalysis = JSON.parse(analysis);
+      
+      // Sauvegarder les résultats dans test_attempts si testId est fourni
+      if (testId) {
+        try {
+          const supabase = getServiceRoleClient();
+          if (supabase) {
+            const totalScore = scores.estime + scores.auto_efficacite + scores.assertivite + scores.competences_sociales;
+            const maxScore = 24 * 4; // 24 questions * 4 points max
+            const percentage = (totalScore / maxScore) * 100;
+
+            // Construire category_results
+            const categoryResults = [
+              {
+                category: "estime",
+                label: "Estime de soi",
+                score: scores.estime,
+                max_score: 24,
+                percentage: (scores.estime / 24) * 100,
+              },
+              {
+                category: "auto_efficacite",
+                label: "Auto-efficacité",
+                score: scores.auto_efficacite,
+                max_score: 24,
+                percentage: (scores.auto_efficacite / 24) * 100,
+              },
+              {
+                category: "assertivite",
+                label: "Assertivité",
+                score: scores.assertivite,
+                max_score: 24,
+                percentage: (scores.assertivite / 24) * 100,
+              },
+              {
+                category: "competences_sociales",
+                label: "Compétences sociales & Adaptabilité",
+                score: scores.competences_sociales,
+                max_score: 24,
+                percentage: (scores.competences_sociales / 24) * 100,
+              },
+            ];
+
+            // Sauvegarder dans test_attempts
+            const { error: saveError } = await supabase
+              .from("test_attempts")
+              .insert({
+                test_id: testId,
+                user_id: session.id,
+                completed_at: new Date().toISOString(),
+                total_score: totalScore,
+                max_score: maxScore,
+                percentage: percentage,
+                category_results: categoryResults,
+                answers: answers || {},
+              });
+
+            if (saveError) {
+              console.error("[analyze-confidence-test] Error saving attempt:", saveError);
+              // Ne pas bloquer si la sauvegarde échoue
+            } else {
+              console.log("[analyze-confidence-test] Test attempt saved successfully");
+            }
+          }
+        } catch (saveError) {
+          console.error("[analyze-confidence-test] Error saving attempt:", saveError);
+          // Ne pas bloquer si la sauvegarde échoue
+        }
+      }
+
       return NextResponse.json({ analysis: parsedAnalysis });
     } catch (parseError) {
       console.error("[analyze-confidence-test] Error parsing JSON:", parseError);

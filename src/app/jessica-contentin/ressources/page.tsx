@@ -49,21 +49,25 @@ export default async function RessourcesPage() {
 
   // Récupérer l'utilisateur connecté (optionnel) - utiliser getServerClient pour l'auth
   let userFirstName: string | null = null;
+  let userId: string | null = null;
+  let userOrgId: string | null = null;
   try {
     const { getServerClient } = await import("@/lib/supabase/server");
     const authClient = await getServerClient();
     if (authClient) {
       const { data: { user } } = await authClient.auth.getUser();
       if (user) {
+        userId = user.id;
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, email")
+          .select("full_name, email, org_id")
           .eq("id", user.id)
           .maybeSingle();
         
         if (profile) {
           const { getUserName } = await import("@/lib/utils/user-name");
           userFirstName = getUserName(profile.full_name || profile.email || user.email || "");
+          userOrgId = profile.org_id || null;
         }
       }
     }
@@ -185,6 +189,29 @@ export default async function RessourcesPage() {
           enrichedItem.is_free = catalogItem.is_free !== undefined ? catalogItem.is_free : enrichedItem.is_free;
           enrichedItem.category = catalogItem.category || enrichedItem.category;
           enrichedItem.stripe_checkout_url = catalogItem.stripe_checkout_url;
+        }
+
+        // Vérifier l'accès utilisateur dans catalog_access
+        if (userId || userOrgId) {
+          const { data: access } = await supabase
+            .from("catalog_access")
+            .select("access_status")
+            .eq("catalog_item_id", item.id)
+            .or(`user_id.eq.${userId || 'null'},organization_id.eq.${userOrgId || 'null'}`)
+            .in("access_status", ["purchased", "manually_granted", "free"])
+            .maybeSingle();
+          
+          if (access) {
+            enrichedItem.access_status = access.access_status;
+          } else if (enrichedItem.is_free) {
+            enrichedItem.access_status = "free";
+          } else {
+            enrichedItem.access_status = "pending_payment";
+          }
+        } else if (enrichedItem.is_free) {
+          enrichedItem.access_status = "free";
+        } else {
+          enrichedItem.access_status = "pending_payment";
         }
 
         return enrichedItem;

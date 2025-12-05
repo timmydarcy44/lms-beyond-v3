@@ -1,9 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useCart } from "@/lib/stores/use-cart";
 import { ShoppingBag } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 // Couleurs de branding Jessica Contentin
 const primaryColor = "#8B6F47";
@@ -11,9 +13,55 @@ const accentColor = "#D4AF37";
 const bgColor = "#F8F5F0";
 
 export function FloatingCartBadge() {
-  const { getItemCount, items } = useCart();
+  const [mounted, setMounted] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { getItemCount, items, syncWithServer, clearCart } = useCart();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Éviter l'erreur d'hydratation en ne rendant que côté client
+  useEffect(() => {
+    setMounted(true);
+    
+    // Vérifier l'authentification
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    // Vérifier l'état initial
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(!!user);
+      if (user) {
+        // Synchroniser le panier avec le serveur lors de la connexion
+        syncWithServer();
+      } else {
+        // Vider le panier si l'utilisateur n'est pas connecté
+        clearCart();
+      }
+    });
+
+    // Écouter les changements d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const wasAuthenticated = isAuthenticated;
+      const isNowAuthenticated = !!session?.user;
+      
+      setIsAuthenticated(isNowAuthenticated);
+      
+      if (isNowAuthenticated && !wasAuthenticated) {
+        // Utilisateur vient de se connecter : synchroniser avec le serveur
+        syncWithServer();
+      } else if (!isNowAuthenticated && wasAuthenticated) {
+        // Utilisateur vient de se déconnecter : vider le panier
+        clearCart();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [syncWithServer, clearCart, isAuthenticated]);
   
   const itemCount = getItemCount();
   const isJessicaContentin = pathname?.startsWith('/jessica-contentin') || false;
@@ -21,8 +69,17 @@ export function FloatingCartBadge() {
   // Ne pas afficher sur la page panier elle-même
   const isOnCartPage = pathname === '/jessica-contentin/panier';
   
-  // Ne pas afficher si le panier est vide
-  if (itemCount === 0 || isOnCartPage) {
+  // Ne pas afficher si :
+  // - pas encore monté (pour éviter l'erreur d'hydratation)
+  // - utilisateur non authentifié
+  // - panier vide
+  // - sur la page panier elle-même
+  if (!mounted || isAuthenticated === false || itemCount === 0 || isOnCartPage) {
+    return null;
+  }
+  
+  // Ne pas afficher pendant la vérification de l'authentification
+  if (isAuthenticated === null) {
     return null;
   }
 

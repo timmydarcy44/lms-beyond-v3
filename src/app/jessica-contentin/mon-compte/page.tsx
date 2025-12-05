@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { JessicaContentinAccountContent } from "@/components/jessica-contentin/account-content";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
@@ -16,11 +16,23 @@ export default async function JessicaContentinAccountPage() {
   }
 
   // Récupérer l'ID de Jessica Contentin pour vérifier que l'utilisateur a accès à ses contenus
-  const { data: jessicaProfile } = await supabase
+  // Utiliser le service role client pour éviter les problèmes de RLS
+  const serviceClient = getServiceRoleClient();
+  const clientToUse = serviceClient || supabase;
+  
+  const { data: jessicaProfile } = await clientToUse
     .from("profiles")
-    .select("id")
+    .select("id, email")
     .eq("email", JESSICA_CONTENTIN_EMAIL)
     .maybeSingle();
+
+  console.log("[jessica-contentin/mon-compte] Jessica profile:", {
+    found: !!jessicaProfile,
+    id: jessicaProfile?.id,
+    email: jessicaProfile?.email,
+    userId: user.id,
+    userEmail: user.email,
+  });
 
   return (
     <JessicaContentinAccountContent userId={user.id} jessicaProfileId={jessicaProfile?.id} />

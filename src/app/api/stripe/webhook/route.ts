@@ -88,9 +88,69 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
+      let profile: { id: string; email: string } | null = profile || null;
+      
       if (!profile) {
-        console.error("[stripe/webhook] User not found for email:", customerEmail);
-        return NextResponse.json({ received: true });
+        console.warn("[stripe/webhook] ⚠️ User not found for email:", customerEmail);
+        console.warn("[stripe/webhook] Attempting to create user account automatically...");
+        
+        // Créer automatiquement un compte utilisateur si l'email n'existe pas
+        // Cela permet aux nouveaux clients d'acheter sans avoir de compte préalable
+        try {
+          // Générer un mot de passe aléatoire (l'utilisateur pourra le réinitialiser)
+          const randomPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12) + "A1!";
+          
+          // Créer l'utilisateur dans Supabase Auth
+          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: customerEmail,
+            password: randomPassword,
+            email_confirm: true, // Confirmer automatiquement l'email
+          });
+          
+          if (authError || !authData.user) {
+            console.error("[stripe/webhook] ❌ Error creating user:", authError);
+            // Ne pas bloquer le webhook, on essaiera de créer l'accès plus tard
+            return NextResponse.json({ 
+              received: true,
+              warning: "User not found and could not be created automatically. Manual intervention may be required."
+            });
+          }
+          
+          // Créer le profil
+          const { data: newProfile, error: profileError2 } = await supabase
+            .from("profiles")
+            .insert({
+              id: authData.user.id,
+              email: customerEmail,
+              full_name: session.customer_details?.name || customerEmail.split("@")[0],
+            })
+            .select("id, email")
+            .single();
+          
+          if (profileError2 || !newProfile) {
+            console.error("[stripe/webhook] ❌ Error creating profile:", profileError2);
+            // L'utilisateur existe dans Auth mais pas dans profiles, utiliser l'ID de Auth
+            profile = { id: authData.user.id, email: customerEmail };
+          } else {
+            profile = newProfile;
+            console.log("[stripe/webhook] ✅ User and profile created automatically:", profile.id);
+          }
+        } catch (createError: any) {
+          console.error("[stripe/webhook] ❌ Error in user creation process:", createError);
+          // Ne pas bloquer le webhook, on essaiera de créer l'accès plus tard
+          return NextResponse.json({ 
+            received: true,
+            warning: "User creation failed. Manual intervention may be required."
+          });
+        }
+      }
+      
+      if (!profile) {
+        console.error("[stripe/webhook] ❌ Could not find or create user for email:", customerEmail);
+        return NextResponse.json({ 
+          received: true,
+          error: "User not found and creation failed"
+        });
       }
 
       // Si on a un catalog_item_id dans les métadonnées, accorder l'accès directement

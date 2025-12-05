@@ -137,3 +137,55 @@ WHERE ca.transaction_id IS NOT NULL
 ORDER BY ca.purchase_date DESC
 LIMIT 50;
 
+-- 8. DIAGNOSTIC : Voir TOUS les accès (tous statuts) pour comprendre ce qui se passe
+SELECT 
+  ca.id,
+  ca.user_id,
+  p.email as user_email,
+  p.full_name as user_name,
+  ca.catalog_item_id,
+  ci.title as item_title,
+  ci.item_type,
+  ci.price,
+  ca.access_status,
+  ca.granted_at,
+  ca.purchase_date,
+  ca.purchase_amount,
+  ca.transaction_id,
+  ca.created_at,
+  ca.updated_at
+FROM catalog_access ca
+LEFT JOIN profiles p ON p.id = ca.user_id
+LEFT JOIN catalog_items ci ON ci.id = ca.catalog_item_id
+ORDER BY ca.created_at DESC
+LIMIT 100;
+
+-- 9. DIAGNOSTIC : Vérifier si la table catalog_access existe et sa structure
+SELECT 
+  column_name,
+  data_type,
+  is_nullable,
+  column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'catalog_access'
+ORDER BY ordinal_position;
+
+-- 10. DIAGNOSTIC : Vérifier les accès récents (dernières 24h)
+SELECT 
+  ca.id,
+  ca.user_id,
+  p.email as user_email,
+  ca.catalog_item_id,
+  ci.title as item_title,
+  ca.access_status,
+  ca.granted_at,
+  ca.purchase_date,
+  ca.transaction_id,
+  ca.created_at
+FROM catalog_access ca
+LEFT JOIN profiles p ON p.id = ca.user_id
+LEFT JOIN catalog_items ci ON ci.id = ca.catalog_item_id
+WHERE ca.created_at >= NOW() - INTERVAL '24 hours'
+ORDER BY ca.created_at DESC;
+

@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       console.log("[stripe/webhook] Processing payment for email:", customerEmail);
 
       // Trouver l'utilisateur par email
-      const { data: profile, error: profileError } = await supabase
+      let { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("id, email")
         .eq("email", customerEmail)
@@ -87,8 +87,6 @@ export async function POST(request: NextRequest) {
         console.error("[stripe/webhook] Error finding user:", profileError);
         return NextResponse.json({ received: true });
       }
-
-      let profile: { id: string; email: string } | null = profile || null;
       
       if (!profile) {
         console.warn("[stripe/webhook] ⚠️ User not found for email:", customerEmail);

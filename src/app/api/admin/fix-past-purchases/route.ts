@@ -150,14 +150,61 @@ export async function POST(request: NextRequest) {
             catalogItemId = catalogItems[0].id;
             console.log(`[admin/fix-past-purchases] ✅ Found catalog_item_id via checkout URL: ${catalogItemId} for session ${session.id}`);
           } else {
-            console.warn(`[admin/fix-past-purchases] ❌ Could not find catalog_item_id for session ${session.id} (no metadata, no matching checkout URL)`);
-            errors.push({
-              session_id: session.id,
-              error: "No catalog_item_id in metadata and could not find via checkout URL. Please grant access manually.",
-              checkout_url: checkoutUrl,
-              amount: (session.amount_total || 0) / 100,
-            });
-            continue;
+            // Dernière tentative : chercher par montant payé (si le montant correspond à un prix d'item)
+            const amountPaid = (session.amount_total || 0) / 100;
+            if (amountPaid > 0) {
+              console.log(`[admin/fix-past-purchases] Trying to find catalog_item by price: ${amountPaid}€`);
+              
+              // Chercher les items avec un prix correspondant (tolérance de 0.01€)
+              const { data: itemsByPrice } = await supabase
+                .from("catalog_items")
+                .select("id, title, price, created_by")
+                .eq("is_active", true)
+                .gte("price", amountPaid - 0.01)
+                .lte("price", amountPaid + 0.01)
+                .limit(5); // Limiter à 5 résultats
+              
+              // Filtrer pour ne garder que ceux créés par Jessica Contentin
+              const jessicaProfileId = "17364229-fe78-4986-ac69-41b880e34631";
+              const jessicaItems = itemsByPrice?.filter((item: any) => 
+                item.created_by === jessicaProfileId
+              ) || [];
+              
+              if (jessicaItems.length === 1) {
+                // Si un seul item correspond, l'utiliser
+                catalogItemId = jessicaItems[0].id;
+                console.log(`[admin/fix-past-purchases] ✅ Found catalog_item_id via price match: ${catalogItemId} (${jessicaItems[0].title}) for session ${session.id}`);
+              } else if (jessicaItems.length > 1) {
+                // Si plusieurs items correspondent, on ne peut pas être sûr, donc on met en erreur avec les suggestions
+                console.warn(`[admin/fix-past-purchases] ⚠️ Multiple items found with price ${amountPaid}€, cannot auto-assign`);
+                errors.push({
+                  session_id: session.id,
+                  error: "Multiple catalog items found with matching price. Please select manually.",
+                  checkout_url: checkoutUrl,
+                  amount: amountPaid,
+                  suggested_items: jessicaItems.map((item: any) => ({
+                    id: item.id,
+                    title: item.title,
+                    price: item.price,
+                  })),
+                });
+                continue;
+              }
+            }
+            
+            // Si toujours pas trouvé, mettre en erreur
+            if (!catalogItemId) {
+              console.warn(`[admin/fix-past-purchases] ❌ Could not find catalog_item_id for session ${session.id} (no metadata, no matching checkout URL, no price match)`);
+              errors.push({
+                session_id: session.id,
+                error: "No catalog_item_id in metadata and could not find via checkout URL or price. Please grant access manually.",
+                checkout_url: checkoutUrl,
+                amount: (session.amount_total || 0) / 100,
+                currency: session.currency,
+                created: new Date(session.created * 1000).toISOString(),
+              });
+              continue;
+            }
           }
         }
 

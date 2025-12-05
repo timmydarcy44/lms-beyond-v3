@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, CheckCircle2, Loader2, Mail, Calendar, ArrowLeft, Search, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Mail, Calendar, ArrowLeft, Search, RefreshCw, Check } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function FixPurchasesClient() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,63 @@ export function FixPurchasesClient() {
   const [error, setError] = useState<string | null>(null);
   const [checkingSessions, setCheckingSessions] = useState(false);
   const [stripeSessions, setStripeSessions] = useState<any[] | null>(null);
+  const [catalogItems, setCatalogItems] = useState<any[]>([]);
+  const [loadingCatalogItems, setLoadingCatalogItems] = useState(false);
+  const [manualGrants, setManualGrants] = useState<Record<string, string>>({}); // session_id -> catalog_item_id
+
+  // Charger les catalog items de Jessica au montage
+  useEffect(() => {
+    const loadCatalogItems = async () => {
+      setLoadingCatalogItems(true);
+      try {
+        const response = await fetch("/api/admin/jessica-catalog-items");
+        const data = await response.json();
+        if (data.items) {
+          setCatalogItems(data.items);
+        }
+      } catch (error) {
+        console.error("Error loading catalog items:", error);
+      } finally {
+        setLoadingCatalogItems(false);
+      }
+    };
+    loadCatalogItems();
+  }, []);
+
+  const handleManualGrant = async (sessionId: string, catalogItemId: string) => {
+    if (!catalogItemId || !email) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/grant-access-manually", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_email: email,
+          catalog_item_id: catalogItemId,
+          session_id: sessionId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Une erreur est survenue");
+      }
+
+      // Mettre à jour l'état pour refléter l'accès accordé
+      setManualGrants((prev) => ({ ...prev, [sessionId]: catalogItemId }));
+      
+      // Recharger les résultats
+      await handleSubmit(new Event("submit") as any);
+    } catch (err: any) {
+      setError(err.message || "Une erreur est survenue lors de l'octroi de l'accès");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCheckSessions = async () => {
     setCheckingSessions(true);
@@ -331,16 +389,110 @@ export function FixPurchasesClient() {
 
           {result.errors && result.errors.length > 0 && (
             <div className="bg-white rounded-2xl border-2 p-6" style={{ borderColor: "#ef4444" }}>
-              <h3 className="text-lg font-semibold mb-4 text-red-600">Erreurs</h3>
-              <div className="space-y-2">
-                {result.errors.map((err: any, index: number) => (
-                  <div key={index} className="p-3 rounded-lg bg-red-50 border-2 border-red-200">
-                    <div className="text-sm text-red-800">
-                      Session: {err.session_id || "N/A"}
+              <h3 className="text-lg font-semibold mb-4 text-red-600">Erreurs - Accès manuel requis</h3>
+              <div className="space-y-4">
+                {result.errors.map((err: any, index: number) => {
+                  const isGranted = manualGrants[err.session_id];
+                  return (
+                    <div key={index} className={`p-4 rounded-lg border-2 ${isGranted ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-sm font-medium text-red-800">
+                            Session: {err.session_id?.substring(0, 30)}...
+                          </div>
+                          <div className="text-xs text-red-600 mt-1">{err.error}</div>
+                        </div>
+                        
+                        {err.amount && (
+                          <div className="text-sm">
+                            <strong>Montant:</strong> {err.amount} {err.currency?.toUpperCase() || "EUR"}
+                          </div>
+                        )}
+                        
+                        {err.checkout_url && (
+                          <div className="text-xs text-gray-600 break-all">
+                            <strong>URL:</strong> {err.checkout_url}
+                          </div>
+                        )}
+
+                        {err.suggested_items && err.suggested_items.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-xs font-medium text-gray-700 mb-2">Items suggérés (même prix):</div>
+                            <div className="space-y-1">
+                              {err.suggested_items.map((item: any, idx: number) => (
+                                <div key={idx} className="text-xs p-2 bg-gray-100 rounded">
+                                  {item.title} - {item.price}€
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {!isGranted && (
+                          <div className="mt-3">
+                            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                              Sélectionner le contenu à accorder:
+                            </Label>
+                            <div className="flex gap-2">
+                              <Select
+                                value={manualGrants[err.session_id] || ""}
+                                onValueChange={(value) => {
+                                  setManualGrants((prev) => ({ ...prev, [err.session_id]: value }));
+                                }}
+                              >
+                                <SelectTrigger className="flex-1" style={{ borderColor: "#E6D9C6" }}>
+                                  <SelectValue placeholder="Choisir un contenu..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {loadingCatalogItems ? (
+                                    <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                                  ) : catalogItems.length === 0 ? (
+                                    <SelectItem value="none" disabled>Aucun contenu disponible</SelectItem>
+                                  ) : (
+                                    catalogItems.map((item: any) => (
+                                      <SelectItem key={item.id} value={item.id}>
+                                        {item.title} {item.price ? `(${item.price}€)` : ""} - {item.item_type}
+                                      </SelectItem>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                onClick={() => {
+                                  const selectedItemId = manualGrants[err.session_id];
+                                  if (selectedItemId) {
+                                    handleManualGrant(err.session_id, selectedItemId);
+                                  }
+                                }}
+                                disabled={!manualGrants[err.session_id] || loading}
+                                className="rounded-full"
+                                style={{
+                                  backgroundColor: "#C6A664",
+                                  color: "white",
+                                }}
+                              >
+                                {loading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Accorder
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {isGranted && (
+                          <div className="mt-2 p-2 bg-green-100 rounded text-sm text-green-800">
+                            ✓ Accès accordé pour: {catalogItems.find((item: any) => item.id === isGranted)?.title || isGranted}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-red-600 mt-1">{err.error}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

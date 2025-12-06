@@ -485,6 +485,15 @@ export function ConfidenceTestPlayer({
                         const data = await response.json();
 
                         if (!response.ok) {
+                          // Si l'utilisateur a déjà accès, afficher un message spécifique
+                          if (data.alreadyOwned) {
+                            alert("Vous avez déjà accès à cette ressource. Rendez-vous dans votre espace pour y accéder.");
+                            // Rediriger vers la page "mon compte"
+                            window.location.href = "/jessica-contentin/mon-compte";
+                            setCheckingAccess(false);
+                            return;
+                          }
+                          
                           throw new Error(data.error || "Erreur lors de la création de la session de paiement");
                         }
 

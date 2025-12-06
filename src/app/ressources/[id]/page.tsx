@@ -52,8 +52,14 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Ne pas rediriger si l'utilisateur n'est pas connecté - permettre la visualisation de la page
 
   // Récupérer l'ID de Jessica Contentin
+  // IMPORTANT: Utiliser le service role client pour contourner RLS si l'utilisateur n'est pas connecté
+  const serviceClient = getServiceRoleClient();
+  const profileClient = serviceClient || supabase;
+  
   console.log("[ressources/[id]] Looking for Jessica profile with email:", JESSICA_CONTENTIN_EMAIL);
-  const { data: jessicaProfile, error: jessicaProfileError } = await supabase
+  console.log("[ressources/[id]] Using client:", serviceClient ? "Service Role" : "Regular");
+  
+  const { data: jessicaProfile, error: jessicaProfileError } = await profileClient
     .from("profiles")
     .select("id")
     .eq("email", JESSICA_CONTENTIN_EMAIL)
@@ -61,14 +67,20 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
 
   if (jessicaProfileError) {
     console.error("[ressources/[id]] ❌ Error fetching Jessica profile:", jessicaProfileError);
+    // Ne pas appeler notFound() si c'est juste une erreur RLS - continuer quand même
+    // On utilisera l'UUID direct de Jessica si le profil n'est pas trouvé
   }
 
-  if (!jessicaProfile) {
-    console.error("[ressources/[id]] ❌ Jessica profile not found, calling notFound()");
-    notFound();
-  }
+  // Si le profil n'est pas trouvé, utiliser l'UUID direct de Jessica Contentin
+  const jessicaProfileId = jessicaProfile?.id || "17364229-fe78-4986-ac69-41b880e34631";
   
-  console.log("[ressources/[id]] ✅ Jessica profile found:", jessicaProfile.id);
+  if (!jessicaProfile && !jessicaProfileError) {
+    console.warn("[ressources/[id]] ⚠️ Jessica profile not found, using hardcoded UUID:", jessicaProfileId);
+  } else if (jessicaProfile) {
+    console.log("[ressources/[id]] ✅ Jessica profile found:", jessicaProfile.id);
+  } else {
+    console.log("[ressources/[id]] ⚠️ Using hardcoded Jessica UUID due to error:", jessicaProfileId);
+  }
 
   // Récupérer le profil pour obtenir l'organisation (si l'utilisateur est connecté)
   let organizationId: string | undefined = undefined;
@@ -87,12 +99,13 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   let catalogItem = null;
 
   console.log("[ressources/[id]] ========================================");
-  console.log("[ressources/[id]] Starting search for resource:", { id, isIdUUID, jessicaProfileId: jessicaProfile.id });
+  console.log("[ressources/[id]] Starting search for resource:", { id, isIdUUID, jessicaProfileId });
   console.log("[ressources/[id]] ========================================");
 
   // Utiliser le service role client pour contourner RLS lors de la recherche initiale
-  const serviceClient = getServiceRoleClient();
-  const searchClient = serviceClient || supabase;
+  // (on l'a déjà créé plus haut, mais on le recrée ici pour être sûr)
+  const searchServiceClient = getServiceRoleClient();
+  const searchClient = searchServiceClient || supabase;
 
   if (isIdUUID) {
     // C'est un UUID, chercher directement par ID dans catalog_items (sans filtre créateur d'abord)
@@ -407,7 +420,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   console.log("[ressources/[id]] Creator check:", {
     userId: user?.id,
     userEmail: user?.email,
-    jessicaProfileId: jessicaProfile.id,
+    jessicaProfileId,
     isCreator,
     isItemCreatedByJessica,
     catalogItemCreatorId,

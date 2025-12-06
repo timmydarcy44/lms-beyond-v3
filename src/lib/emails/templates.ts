@@ -11,6 +11,7 @@ export interface EmailTemplateData {
   purchaseDate?: string;
   confirmationLink?: string;
   loginLink?: string;
+  resourceLink?: string; // Lien direct vers la ressource achetée
 }
 
 /**
@@ -114,6 +115,7 @@ export function getPurchaseConfirmationEmail(data: EmailTemplateData): { subject
   const resourcePrice = data.resourcePrice || 0;
   const purchaseDate = data.purchaseDate || new Date().toLocaleDateString("fr-FR");
   const loginLink = data.loginLink || "https://www.jessicacontentin.fr/jessica-contentin/ressources";
+  const resourceLink = data.resourceLink || loginLink; // Lien direct vers la ressource, fallback sur loginLink
 
   const html = `
 <!DOCTYPE html>
@@ -150,12 +152,16 @@ export function getPurchaseConfirmationEmail(data: EmailTemplateData): { subject
       </div>
 
       <p style="color: #2F2A25; font-size: 16px; margin-bottom: 20px;">
-        Vous pouvez maintenant accéder à cette ressource depuis votre espace personnel.
+        Vous pouvez maintenant accéder à cette ressource directement ou depuis votre espace personnel.
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${loginLink}" style="display: inline-block; background-color: #C6A664; color: #FFFFFF; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px;">
-          Accéder à mes ressources
+        <a href="${resourceLink}" style="display: inline-block; background-color: #C6A664; color: #FFFFFF; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; margin-bottom: 15px;">
+          Accéder à la ressource
+        </a>
+        <br>
+        <a href="${loginLink}" style="display: inline-block; color: #C6A664; padding: 10px 20px; text-decoration: none; font-size: 14px;">
+          Voir toutes mes ressources
         </a>
       </div>
     </div>
@@ -183,7 +189,10 @@ ${resourceTitle}
 Prix : ${resourcePrice.toFixed(2)} €
 Date d'achat : ${purchaseDate}
 
-Vous pouvez maintenant accéder à cette ressource depuis votre espace personnel :
+Vous pouvez maintenant accéder à cette ressource directement :
+${resourceLink}
+
+Ou depuis votre espace personnel :
 ${loginLink}
 
 Mon compte : ${loginLink}

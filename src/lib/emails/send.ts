@@ -82,15 +82,18 @@ export async function sendPurchaseConfirmationEmail(
   firstName: string | null,
   resourceTitle: string,
   resourcePrice: number,
-  purchaseDate?: string
+  purchaseDate?: string,
+  resourceLink?: string // Lien direct vers la ressource achetée
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
   const template = getPurchaseConfirmationEmail({
     firstName: firstName || undefined,
     email,
     resourceTitle,
     resourcePrice,
     purchaseDate: purchaseDate || new Date().toLocaleDateString("fr-FR"),
-    loginLink: `${process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr"}/jessica-contentin/ressources`,
+    loginLink: `${baseUrl}/jessica-contentin/ressources`,
+    resourceLink: resourceLink || `${baseUrl}/jessica-contentin/ressources`,
   });
 
   return sendEmail({

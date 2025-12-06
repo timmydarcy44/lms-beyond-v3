@@ -213,11 +213,17 @@ export async function POST(request: NextRequest) {
               
               const firstName = userProfile?.full_name?.split(" ")[0] || null;
               
+              // Construire le lien direct vers la ressource
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+              const resourceLink = `${baseUrl}/ressources/${catalogItem.id}`;
+              
               await sendPurchaseConfirmationEmail(
                 customerEmail,
                 firstName,
                 catalogItem.title,
-                catalogItem.price || 0
+                catalogItem.price || 0,
+                undefined, // purchaseDate (sera généré automatiquement)
+                resourceLink // Lien direct vers la ressource
               );
             }
           } catch (emailError) {
@@ -301,11 +307,17 @@ export async function POST(request: NextRequest) {
                 
                 const firstName = userProfile?.full_name?.split(" ")[0] || null;
                 
+                // Construire le lien direct vers la ressource
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+                const resourceLink = `${baseUrl}/ressources/${fullCatalogItem.id}`;
+                
                 await sendPurchaseConfirmationEmail(
                   customerEmail,
                   firstName,
                   fullCatalogItem.title,
-                  fullCatalogItem.price || 0
+                  fullCatalogItem.price || 0,
+                  undefined, // purchaseDate (sera généré automatiquement)
+                  resourceLink // Lien direct vers la ressource
                 );
               }
             } catch (emailError) {

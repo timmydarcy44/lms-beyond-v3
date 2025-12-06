@@ -147,10 +147,10 @@ export async function POST(request: NextRequest) {
         mode: "payment",
         success_url: catalogItem.item_type === "test" 
           ? `${baseUrl}/test-confiance-en-soi?payment=success&session_id={CHECKOUT_SESSION_ID}`
-          : `${baseUrl}/jessica-contentin/ressources?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+          : `${baseUrl}/ressources/${catalogItem.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: catalogItem.item_type === "test"
           ? `${baseUrl}/test-confiance-en-soi`
-          : `${baseUrl}/ressources/${catalogItem.content_id || catalogItem.id}`,
+          : `${baseUrl}/ressources/${catalogItem.id}`,
         metadata: {
           catalog_item_id: catalogItem.id,
           content_id: catalogItem.content_id,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { getCatalogItemById } from "@/lib/queries/catalogue";
 import Stripe from "stripe";
 
@@ -26,6 +26,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Non authentifié" },
         { status: 401 }
+      );
+    }
+
+    // Vérifier si l'utilisateur a déjà accès à cette ressource
+    const serviceClient = getServiceRoleClient();
+    const checkClient = serviceClient || supabase;
+    
+    const { data: existingAccess } = await checkClient
+      .from("catalog_access")
+      .select("access_status")
+      .eq("catalog_item_id", catalogItem.id)
+      .eq("user_id", user.id)
+      .in("access_status", ["purchased", "free", "manually_granted"])
+      .maybeSingle();
+
+    if (existingAccess) {
+      return NextResponse.json(
+        { 
+          error: "Vous avez déjà accès à cette ressource. Rendez-vous dans votre espace pour y accéder.",
+          alreadyOwned: true 
+        },
+        { status: 400 }
       );
     }
 

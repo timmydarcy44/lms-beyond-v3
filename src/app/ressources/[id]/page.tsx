@@ -780,6 +780,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                       price={catalogItem.price || 0}
                       title={catalogItem.title}
                       contentType={catalogItem.item_type as "module" | "test" | "ressource" | "parcours" || "ressource"}
+                      hasAccess={hasAccess}
                       thumbnailUrl={catalogItem.thumbnail_url}
                       className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
                       style={{

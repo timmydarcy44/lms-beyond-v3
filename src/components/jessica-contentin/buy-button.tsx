@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Loader2, ShoppingCart, ArrowRight, Check } from "lucide-react";
+import { CreditCard, Loader2, ShoppingCart, ArrowRight, Check, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useCart } from "@/lib/stores/use-cart";
@@ -17,6 +17,7 @@ type BuyButtonProps = {
   thumbnailUrl?: string | null;
   className?: string;
   style?: React.CSSProperties;
+  hasAccess?: boolean; // Indique si l'utilisateur a déjà accès à cette ressource
 };
 
 export function BuyButton({ 
@@ -28,13 +29,21 @@ export function BuyButton({
   thumbnailUrl = null,
   className = "",
   style = {},
+  hasAccess = false, // Par défaut, pas d'accès
 }: BuyButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [showAlreadyOwnedDialog, setShowAlreadyOwnedDialog] = useState(false);
   const router = useRouter();
   const { addItem } = useCart();
 
   const handleBuy = async () => {
+    // Si l'utilisateur a déjà accès, afficher le pop-up d'information
+    if (hasAccess) {
+      setShowAlreadyOwnedDialog(true);
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Ajouter l'item au panier
@@ -55,6 +64,11 @@ export function BuyButton({
       alert("Une erreur est survenue lors de l'ajout au panier. Veuillez réessayer.");
       setIsLoading(false);
     }
+  };
+
+  const handleGoToAccount = () => {
+    setShowAlreadyOwnedDialog(false);
+    router.push('/jessica-contentin/mon-compte');
   };
 
   const handleGoToCart = () => {
@@ -87,7 +101,7 @@ export function BuyButton({
         )}
       </Button>
 
-      {/* Dialog de confirmation */}
+      {/* Dialog de confirmation d'ajout au panier */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -117,6 +131,34 @@ export function BuyButton({
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
               Passer au paiement
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog "Vous avez déjà cette ressource" */}
+      <Dialog open={showAlreadyOwnedDialog} onOpenChange={setShowAlreadyOwnedDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-blue-600" />
+              Ressource déjà acquise
+            </DialogTitle>
+            <DialogDescription>
+              Vous avez déjà cette ressource. Rendez-vous dans votre espace pour y accéder.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={handleGoToAccount}
+              className="w-full sm:w-auto"
+              style={{
+                backgroundColor: "#C6A664",
+                color: '#FFFFFF',
+              }}
+            >
+              Accéder à mon espace
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </DialogFooter>

@@ -108,37 +108,56 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     // Si toujours pas trouvé, chercher directement dans la table resources
     if (!catalogItem) {
       console.log("[ressources/[id]] Trying direct lookup in resources table:", id);
-      const { data: resourceDirect } = await searchClient
+      const { data: resourceDirect, error: resourceDirectError } = await searchClient
         .from("resources")
-        .select("id, title, created_by, owner_id")
+        .select("id, title, description, price, kind, created_by, owner_id, cover_url, thumbnail_url, slug")
         .eq("id", id)
         .maybeSingle();
       
-      console.log("[ressources/[id]] Direct resources lookup:", { found: !!resourceDirect, id: resourceDirect?.id, created_by: resourceDirect?.created_by });
+      console.log("[ressources/[id]] Direct resources lookup:", { 
+        found: !!resourceDirect, 
+        id: resourceDirect?.id, 
+        created_by: resourceDirect?.created_by,
+        error: resourceDirectError?.message 
+      });
       
       if (resourceDirect) {
-        // Utiliser getCatalogItemById avec l'ID de la ressource (qui cherchera dans resources si pas trouvé dans catalog_items)
-        catalogItem = await getCatalogItemById(resourceDirect.id, organizationId, user?.id, serviceClient);
-        
-        // Si toujours pas trouvé, créer un item virtuel
-        if (!catalogItem) {
-          console.log("[ressources/[id]] Creating virtual catalog item from resource");
-          catalogItem = {
-            id: resourceDirect.id,
-            content_id: resourceDirect.id,
-            item_type: "ressource" as const,
-            title: resourceDirect.title || "",
-            description: null,
-            short_description: null,
-            price: 0,
-            is_free: true,
-            thumbnail_url: null,
-            hero_image_url: null,
-            category: null,
-            created_by: resourceDirect.created_by || resourceDirect.owner_id,
-            creator_id: resourceDirect.created_by || resourceDirect.owner_id,
-            access_status: "pending_payment" as const,
-          } as any;
+        // Chercher d'abord le catalog_item correspondant
+        const { data: catalogItemForResource } = await searchClient
+          .from("catalog_items")
+          .select("*")
+          .eq("content_id", resourceDirect.id)
+          .eq("item_type", "ressource")
+    .maybeSingle();
+
+        if (catalogItemForResource) {
+          console.log("[ressources/[id]] Found catalog_item for resource:", catalogItemForResource.id);
+          catalogItem = await getCatalogItemById(catalogItemForResource.id, organizationId, user?.id, serviceClient);
+        } else {
+          // Utiliser getCatalogItemById avec l'ID de la ressource (qui cherchera dans resources si pas trouvé dans catalog_items)
+          catalogItem = await getCatalogItemById(resourceDirect.id, organizationId, user?.id, serviceClient);
+          
+          // Si toujours pas trouvé, créer un item virtuel avec toutes les données
+          if (!catalogItem) {
+            console.log("[ressources/[id]] Creating virtual catalog item from resource");
+            catalogItem = {
+              id: resourceDirect.id,
+              content_id: resourceDirect.id,
+              item_type: "ressource" as const,
+              title: resourceDirect.title || "",
+              description: resourceDirect.description || null,
+              short_description: resourceDirect.description || null,
+              price: (resourceDirect as any).price || 0,
+              is_free: !(resourceDirect as any).price || (resourceDirect as any).price === 0,
+              thumbnail_url: (resourceDirect as any).thumbnail_url || (resourceDirect as any).cover_url || null,
+              hero_image_url: (resourceDirect as any).cover_url || (resourceDirect as any).thumbnail_url || null,
+              category: (resourceDirect as any).kind || null,
+              created_by: resourceDirect.created_by || resourceDirect.owner_id,
+              creator_id: resourceDirect.created_by || resourceDirect.owner_id,
+              slug: (resourceDirect as any).slug || null,
+              access_status: "pending_payment" as const,
+            } as any;
+          }
         }
       }
     }
@@ -330,11 +349,11 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     // Utiliser le service role client pour contourner RLS si nécessaire
     const accessClient = serviceClient || supabase;
     const { data: access } = await accessClient
-      .from("catalog_access")
-      .select("access_status")
-      .eq("catalog_item_id", catalogItemId)
+    .from("catalog_access")
+    .select("access_status")
+    .eq("catalog_item_id", catalogItemId)
       .or(`user_id.eq.${user?.id || 'null'},organization_id.eq.${organizationId || 'null'}`)
-      .maybeSingle();
+    .maybeSingle();
     userAccess = access;
   }
   

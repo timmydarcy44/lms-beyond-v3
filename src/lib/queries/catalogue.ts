@@ -470,7 +470,7 @@ export async function getCatalogItemById(
 
   // Si l'item n'est pas dans catalog_items, essayer de le trouver directement dans les tables
   if (itemError || !item) {
-    console.log("[catalogue] Item not found in catalog_items, attempting lookup by content_id for:", catalogItemId);
+    console.log("[catalogue] Item not found in catalog_items by id, attempting lookup by content_id for:", catalogItemId);
 
     const { data: byContent, error: byContentError } = await supabase
       .from("catalog_items")
@@ -483,6 +483,19 @@ export async function getCatalogItemById(
       console.log("[catalogue] Found catalog item via content_id:", byContent.id);
       item = byContent;
     } else {
+      // Essayer aussi de chercher dans catalog_items par content_id avec item_type = ressource
+      console.log("[catalogue] Trying to find resource in catalog_items by content_id and item_type:", catalogItemId);
+      const { data: resourceCatalogItem, error: resourceCatalogError } = await supabase
+        .from("catalog_items")
+        .select("*")
+        .eq("content_id", catalogItemId)
+        .eq("item_type", "ressource")
+        .maybeSingle();
+      
+      if (resourceCatalogItem && !resourceCatalogError) {
+        console.log("[catalogue] Found resource catalog item via content_id and item_type:", resourceCatalogItem.id);
+        item = resourceCatalogItem;
+      } else {
       console.log("[catalogue] Item still not found, trying direct table lookup for:", catalogItemId);
       console.log("[catalogue] Original error:", itemError?.message || itemError);
       
@@ -544,15 +557,29 @@ export async function getCatalogItemById(
           target_audience: "all",
         } as any;
       } else {
-        // Essayer de trouver dans resources
+        // Essayer de trouver dans resources (en priorité pour les ressources)
+        console.log("[catalogue] Trying to find resource directly in resources table:", catalogItemId);
         const { data: resourceData, error: resourceError } = await supabase
           .from("resources")
-          .select("id, title, description, price, kind, created_by, owner_id, created_at, updated_at")
+          .select("id, title, description, price, kind, created_by, owner_id, created_at, updated_at, cover_url, thumbnail_url, slug")
           .eq("id", catalogItemId)
           .maybeSingle();
         
         if (!resourceError && resourceData) {
           console.log("[catalogue] Found resource directly in resources table:", resourceData.id);
+          
+          // Chercher le catalog_item correspondant pour récupérer les métadonnées complètes
+          const { data: catalogItemForResource } = await supabase
+            .from("catalog_items")
+            .select("*")
+            .eq("content_id", resourceData.id)
+            .eq("item_type", "ressource")
+            .maybeSingle();
+          
+          if (catalogItemForResource) {
+            console.log("[catalogue] Found catalog_item for resource:", catalogItemForResource.id);
+            item = catalogItemForResource;
+          } else {
           
           // Récupérer le creator_id depuis le profil si possible
           let creatorId = resourceData.created_by || resourceData.owner_id;
@@ -569,25 +596,27 @@ export async function getCatalogItemById(
             }
           }
           
-          // Créer un item de catalogue virtuel depuis la ressource
-          item = {
-            id: resourceData.id,
-            content_id: resourceData.id,
-            item_type: "ressource" as const,
-            title: resourceData.title,
-            description: resourceData.description || "",
-            short_description: resourceData.description || "",
-            price: (resourceData as any).price || 0,
-            is_free: !(resourceData as any).price || (resourceData as any).price === 0,
-            thumbnail_url: null,
-            hero_image_url: null,
-            creator_id: creatorId,
-            created_by: creatorId, // IMPORTANT: Définir created_by aussi
-            created_at: resourceData.created_at,
-            updated_at: resourceData.updated_at,
-            is_active: true,
-            target_audience: "all",
-          } as any;
+            // Créer un item de catalogue virtuel depuis la ressource
+            item = {
+              id: resourceData.id, // Utiliser l'ID de la ressource comme ID du catalog_item virtuel
+              content_id: resourceData.id,
+              item_type: "ressource" as const,
+              title: resourceData.title,
+              description: resourceData.description || "",
+              short_description: resourceData.description || "",
+              price: (resourceData as any).price || 0,
+              is_free: !(resourceData as any).price || (resourceData as any).price === 0,
+              thumbnail_url: (resourceData as any).thumbnail_url || (resourceData as any).cover_url || null,
+              hero_image_url: (resourceData as any).cover_url || (resourceData as any).thumbnail_url || null,
+              creator_id: creatorId,
+              created_by: creatorId,
+              slug: (resourceData as any).slug || null,
+              created_at: resourceData.created_at,
+              updated_at: resourceData.updated_at,
+              is_active: true,
+              target_audience: "all",
+            } as any;
+          }
         } else {
           console.error("[catalogue] Error fetching catalog item from catalog_items:", itemError?.message || itemError);
           console.error("[catalogue] Lookup by content_id error:", byContentError?.message || byContentError);
@@ -597,7 +626,6 @@ export async function getCatalogItemById(
           console.error("[catalogue] Item ID searched:", catalogItemId);
           return null;
         }
-      }
       }
     }
   }

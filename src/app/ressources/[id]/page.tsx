@@ -104,6 +104,44 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
         catalogItem = await getCatalogItemById(catalogItemByContentId.id, organizationId, user?.id, serviceClient);
       }
     }
+    
+    // Si toujours pas trouvé, chercher directement dans la table resources
+    if (!catalogItem) {
+      console.log("[ressources/[id]] Trying direct lookup in resources table:", id);
+      const { data: resourceDirect } = await searchClient
+        .from("resources")
+        .select("id, title, created_by, owner_id")
+        .eq("id", id)
+        .maybeSingle();
+      
+      console.log("[ressources/[id]] Direct resources lookup:", { found: !!resourceDirect, id: resourceDirect?.id, created_by: resourceDirect?.created_by });
+      
+      if (resourceDirect) {
+        // Utiliser getCatalogItemById avec l'ID de la ressource (qui cherchera dans resources si pas trouvé dans catalog_items)
+        catalogItem = await getCatalogItemById(resourceDirect.id, organizationId, user?.id, serviceClient);
+        
+        // Si toujours pas trouvé, créer un item virtuel
+        if (!catalogItem) {
+          console.log("[ressources/[id]] Creating virtual catalog item from resource");
+          catalogItem = {
+            id: resourceDirect.id,
+            content_id: resourceDirect.id,
+            item_type: "ressource" as const,
+            title: resourceDirect.title || "",
+            description: null,
+            short_description: null,
+            price: 0,
+            is_free: true,
+            thumbnail_url: null,
+            hero_image_url: null,
+            category: null,
+            created_by: resourceDirect.created_by || resourceDirect.owner_id,
+            creator_id: resourceDirect.created_by || resourceDirect.owner_id,
+            access_status: "pending_payment" as const,
+          } as any;
+        }
+      }
+    }
   } else {
       // C'est un slug, chercher d'abord dans catalog_items par slug ou titre
       const { data: catalogItemBySlug } = await searchClient

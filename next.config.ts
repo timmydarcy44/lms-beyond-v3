@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     // Qualités d'image supportées
-    qualities: [75, 85],
+    qualities: [75, 80, 85],
   },
 };
 

@@ -403,7 +403,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // 2. Vérifier l'email de l'utilisateur
   // 3. Vérifier que le catalog_item a été créé par Jessica
   let isCreator = false;
-  if (user?.id) {
+  if (user?.id && jessicaProfile?.id) {
     // Méthode 1 : Comparer les IDs
     isCreator = String(user.id) === String(jessicaProfile.id);
     
@@ -424,10 +424,10 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Méthode 3 : Vérifier que le catalog_item a été créé par Jessica (même si l'utilisateur n'est pas connecté)
   // Si le catalog_item a été créé par Jessica, elle a toujours accès
   const catalogItemCreatorId = (catalogItem as any).created_by || (catalogItem as any).creator_id;
-  const isItemCreatedByJessica = catalogItemCreatorId && String(catalogItemCreatorId) === String(jessicaProfile.id);
+  const isItemCreatedByJessica = catalogItemCreatorId && jessicaProfile?.id && String(catalogItemCreatorId) === String(jessicaProfile.id);
   
   // Si l'item a été créé par Jessica ET que l'utilisateur connecté est Jessica, accès garanti
-  if (isItemCreatedByJessica && user?.id && String(user.id) === String(jessicaProfile.id)) {
+  if (isItemCreatedByJessica && user?.id && jessicaProfile?.id && String(user.id) === String(jessicaProfile.id)) {
     isCreator = true;
   }
   
@@ -500,6 +500,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     if (resource) {
       resourceData = {
         ...resource,
+        // Pas d'accès, donc pas d'URLs
         file_url: null,
         video_url: null,
         audio_url: null,
@@ -736,18 +737,27 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                       </Link>
                     </Button>
                   ) : resourceUrl ? (
-                    <Button 
-                      asChild 
-                      className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                      style={{
-                        backgroundColor: primaryColor,
-                      }}
-                    >
-                      <a href={resourceUrl} target="_blank" rel="noopener noreferrer">
-                        {getResourceIcon()}
-                        <span className="ml-2">{getButtonText()}</span>
-                      </a>
-                    </Button>
+                    <div className="space-y-3">
+                      <Button 
+                        asChild 
+                        className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                        style={{
+                          backgroundColor: primaryColor,
+                        }}
+                      >
+                        <a href={resourceUrl} target="_blank" rel="noopener noreferrer" download={resourceData?.file_url ? true : undefined}>
+                          {getResourceIcon()}
+                          <span className="ml-2">
+                            {resourceData?.file_url ? "Télécharger le PDF" : getButtonText()}
+                          </span>
+                        </a>
+                      </Button>
+                      {resourceData?.file_url && (
+                        <p className="text-xs text-center" style={{ color: `${textColor}80` }}>
+                          📄 Format PDF - Téléchargement direct
+                        </p>
+                      )}
+                    </div>
                   ) : null}
                 </div>
               ) : (

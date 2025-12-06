@@ -26,31 +26,49 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 export default async function RessourceDetailPage({ params }: RessourceDetailPageProps) {
+  console.log("[ressources/[id]] ========================================");
+  console.log("[ressources/[id]] PAGE FUNCTION CALLED");
+  console.log("[ressources/[id]] ========================================");
+  
   const { id } = await params;
+  console.log("[ressources/[id]] Params extracted, id:", id);
 
   if (!id) {
+    console.error("[ressources/[id]] ❌ No ID provided, calling notFound()");
     notFound();
   }
 
   const supabase = await getServerClient();
+  console.log("[ressources/[id]] Supabase client:", supabase ? "✅ Created" : "❌ Null");
+  
   if (!supabase) {
+    console.error("[ressources/[id]] ❌ Supabase client is null, calling notFound()");
     notFound();
   }
 
   // Vérifier l'authentification (optionnel pour voir la page, mais requis pour accéder au contenu)
   const { data: { user } } = await supabase.auth.getUser();
+  console.log("[ressources/[id]] User:", user ? `✅ Logged in (${user.id})` : "❌ Not logged in");
   // Ne pas rediriger si l'utilisateur n'est pas connecté - permettre la visualisation de la page
 
   // Récupérer l'ID de Jessica Contentin
-  const { data: jessicaProfile } = await supabase
+  console.log("[ressources/[id]] Looking for Jessica profile with email:", JESSICA_CONTENTIN_EMAIL);
+  const { data: jessicaProfile, error: jessicaProfileError } = await supabase
     .from("profiles")
     .select("id")
     .eq("email", JESSICA_CONTENTIN_EMAIL)
     .maybeSingle();
 
+  if (jessicaProfileError) {
+    console.error("[ressources/[id]] ❌ Error fetching Jessica profile:", jessicaProfileError);
+  }
+
   if (!jessicaProfile) {
+    console.error("[ressources/[id]] ❌ Jessica profile not found, calling notFound()");
     notFound();
   }
+  
+  console.log("[ressources/[id]] ✅ Jessica profile found:", jessicaProfile.id);
 
   // Récupérer le profil pour obtenir l'organisation (si l'utilisateur est connecté)
   let organizationId: string | undefined = undefined;

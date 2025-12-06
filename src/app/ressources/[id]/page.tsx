@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { Play, FileText, Video, Headphones, CreditCard } from "lucide-react";
 import { BuyButton } from "@/components/jessica-contentin/buy-button";
+import { getTenantFromHeaders } from "@/lib/tenant/detection-server";
+import { headers } from "next/headers";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
@@ -29,6 +31,18 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   console.log("[ressources/[id]] ========================================");
   console.log("[ressources/[id]] PAGE FUNCTION CALLED");
   console.log("[ressources/[id]] ========================================");
+  
+  // Vérifier le tenant pour s'assurer que la route est accessible sur jessicacontentin.fr
+  const tenant = await getTenantFromHeaders();
+  const headersList = await headers();
+  const hostname = headersList.get('host') || '';
+  const isLocalhost = hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1');
+  
+  // Si on est en production et que ce n'est pas le tenant jessica-contentin, rediriger
+  if (!isLocalhost && tenant && tenant.id !== 'jessica-contentin' && tenant.id !== 'jessica-contentin-app') {
+    console.log("[ressources/[id]] Not on jessica-contentin tenant, redirecting");
+    redirect('/');
+  }
   
   const { id } = await params;
   console.log("[ressources/[id]] Params extracted, id:", id);

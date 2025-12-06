@@ -133,7 +133,15 @@ async function getCachedCatalogItems(userId: string | null) {
       // Ne pas logger l'erreur si c'est juste que la fonction n'existe pas encore
       // (elle sera créée via le script SQL)
       if (error.code !== '42883') { // 42883 = function does not exist
-        console.error("[RessourcesPage] Error calling get_jessica_catalog_items:", error);
+        console.error("[RessourcesPage] Error calling get_jessica_catalog_items:", {
+          error,
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          errorString: String(error),
+          errorJSON: JSON.stringify(error, null, 2),
+        });
       }
       // Fallback : utiliser l'ancienne méthode avec requêtes multiples
       console.log("[RessourcesPage] Falling back to old method...");

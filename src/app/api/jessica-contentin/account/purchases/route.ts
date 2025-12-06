@@ -23,10 +23,67 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Récupérer les achats depuis catalog_access (table correcte pour les accès B2C)
-    // Utiliser une requête optimisée avec limite
-    // IMPORTANT: Vérifier que user_id n'est pas NULL (accès B2C uniquement)
-    // Utiliser LEFT JOIN au lieu de INNER JOIN pour voir tous les accès même si catalog_item n'existe pas
+    // Si l'utilisateur est Jessica Contentin elle-même, elle a accès à tous ses contenus
+    // même sans entrée dans catalog_access (car elle est le créateur)
+    const isJessicaHerself = jessicaProfileId && String(userId) === String(jessicaProfileId);
+    
+    if (isJessicaHerself) {
+      console.log("[api/jessica-contentin/account/purchases] User is Jessica Contentin herself, returning all her catalog items as purchases");
+      
+      // Récupérer tous les catalog_items créés par Jessica
+      const { data: allItems, error: itemsError } = await supabase
+        .from("catalog_items")
+        .select(`
+          id,
+          title,
+          item_type,
+          thumbnail_url,
+          hero_image_url,
+          content_id,
+          price,
+          creator_id,
+          created_by,
+          slug
+        `)
+        .eq("created_by", jessicaProfileId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (itemsError) {
+        console.error("[api/jessica-contentin/account/purchases] Error fetching Jessica's items:", itemsError);
+        return NextResponse.json({ data: [], error: null });
+      }
+
+      // Transformer les catalog_items en format "purchases" pour Jessica
+      const purchases = (allItems || []).map((item: any) => ({
+        id: `jessica-${item.id}`, // ID unique pour chaque "achat"
+        catalog_item_id: item.id,
+        user_id: userId,
+        organization_id: null,
+        granted_at: new Date().toISOString(),
+        access_status: "manually_granted" as const,
+        purchase_amount: item.price || 0,
+        purchase_date: new Date().toISOString(),
+        catalog_items: {
+          id: item.id,
+          title: item.title,
+          item_type: item.item_type,
+          thumbnail_url: item.thumbnail_url,
+          hero_image_url: item.hero_image_url,
+          content_id: item.content_id,
+          price: item.price || 0,
+          creator_id: item.creator_id,
+          created_by: item.created_by,
+          slug: item.slug,
+        },
+      }));
+
+      console.log("[api/jessica-contentin/account/purchases] Returning", purchases.length, "items for Jessica");
+      return NextResponse.json({ data: purchases, error: null });
+    }
+
+    // Pour les autres utilisateurs, récupérer les accès depuis catalog_access
     let query = supabase
       .from("catalog_access")
       .select(`
@@ -47,31 +104,22 @@ export async function GET(request: NextRequest) {
           content_id,
           price,
           creator_id,
-          created_by
+          created_by,
+          slug
         )
       `)
       .eq("user_id", userId)
       .is("organization_id", null) // S'assurer que c'est un accès B2C (pas B2B)
       .in("access_status", ["purchased", "manually_granted", "free"])
       .order("granted_at", { ascending: false })
-      .limit(50); // Limiter à 50 résultats
+      .limit(50);
 
     const { data: access, error } = await query;
-
-    // Vérifier si des accès existent sans catalog_item (problème de jointure)
-    if (access && access.length > 0) {
-      const accessWithoutCatalogItem = access.filter((a: any) => !a.catalog_items);
-      if (accessWithoutCatalogItem.length > 0) {
-        console.warn("[api/jessica-contentin/account/purchases] ⚠️ Found access without catalog_item:", {
-          count: accessWithoutCatalogItem.length,
-          catalog_item_ids: accessWithoutCatalogItem.map((a: any) => a.catalog_item_id),
-        });
-      }
-    }
 
     // Log de diagnostic détaillé
     console.log("[api/jessica-contentin/account/purchases] Query details:", {
       userId,
+      isJessicaHerself,
       queryParams: {
         user_id: userId,
         organization_id: "IS NULL",
@@ -89,96 +137,32 @@ export async function GET(request: NextRequest) {
         details: error.details,
         hint: error.hint,
       } : null,
-      access: access?.map((a: any) => ({
-        id: a.id,
-        catalog_item_id: a.catalog_item_id,
-        user_id: a.user_id,
-        organization_id: a.organization_id,
-        access_status: a.access_status,
-        granted_at: a.granted_at,
-        catalog_item: a.catalog_items ? {
-          id: a.catalog_items.id,
-          title: a.catalog_items.title,
-          creator_id: a.catalog_items.creator_id,
-          created_by: a.catalog_items.created_by,
-        } : null,
-      })) || [],
     });
 
-    // Vérifier s'il y a des accès avec organization_id au lieu de user_id (erreur de configuration)
-    if (access && access.length === 0) {
-      const { data: accessWithOrg } = await supabase
-        .from("catalog_access")
-        .select("id, user_id, organization_id, catalog_item_id, access_status")
-        .or(`user_id.eq.${userId},organization_id.is.not.null`)
-        .in("access_status", ["purchased", "manually_granted", "free"])
-        .limit(5);
-      
-      console.log("[api/jessica-contentin/account/purchases] ⚠️ No access found with user_id, checking for organization_id access:", {
-        found: accessWithOrg?.length || 0,
-        samples: accessWithOrg?.slice(0, 3) || [],
-      });
-    }
-
     // Filtrer uniquement les contenus de Jessica Contentin côté serveur si on a son ID
-    // (Le filtre dans la requête Supabase ne fonctionne pas toujours correctement avec les joins)
     let filteredAccess = access || [];
-    
-    // Si l'utilisateur est Jessica Contentin elle-même, elle a accès à tous ses contenus
-    // même sans entrée dans catalog_access (car elle est le créateur)
-    const isJessicaHerself = jessicaProfileId && String(userId) === String(jessicaProfileId);
-    
-    if (isJessicaHerself) {
-      console.log("[api/jessica-contentin/account/purchases] User is Jessica Contentin herself, she has access to all her content");
-      // Pour Jessica, on peut retourner un tableau vide car elle a accès à tout
-      // ou on peut récupérer tous ses catalog_items directement
-      // Pour l'instant, on retourne les accès existants (qui peuvent être vides)
-    } else if (jessicaProfileId && filteredAccess.length > 0) {
+    if (jessicaProfileId && filteredAccess.length > 0) {
       const beforeCount = filteredAccess.length;
       filteredAccess = filteredAccess.filter((item: any) => {
         const hasCatalogItem = !!item.catalog_items;
-        // Comparer les IDs en string pour éviter les problèmes de type
-        // Vérifier à la fois creator_id et created_by
         const creatorId = item.catalog_items?.creator_id || item.catalog_items?.created_by;
         const creatorMatches = String(creatorId) === String(jessicaProfileId);
-        
-        if (!hasCatalogItem) {
-          console.warn("[api/jessica-contentin/account/purchases] Item without catalog_items:", item);
-        } else if (!creatorMatches) {
-          console.log("[api/jessica-contentin/account/purchases] Item filtered out (wrong creator):", {
-            catalog_item_id: item.catalog_item_id,
-            item_creator_id: item.catalog_items.creator_id,
-            item_created_by: item.catalog_items.created_by,
-            item_creator_id_type: typeof item.catalog_items.creator_id,
-            jessicaProfileId,
-            jessicaProfileId_type: typeof jessicaProfileId,
-            title: item.catalog_items.title,
-            match: String(creatorId) === String(jessicaProfileId),
-          });
-        }
-        
         return hasCatalogItem && creatorMatches;
       });
       console.log("[api/jessica-contentin/account/purchases] Filtered access (Jessica only):", {
         before: beforeCount,
         after: filteredAccess.length,
-        jessicaProfileId,
-        jessicaProfileId_type: typeof jessicaProfileId,
       });
-    } else if (!jessicaProfileId) {
-      console.warn("[api/jessica-contentin/account/purchases] No jessicaProfileId provided, returning all access");
     }
 
     if (error) {
       console.error("[api/jessica-contentin/account/purchases] Error:", error);
-      // Ne pas bloquer si c'est juste une erreur de permissions
       if (error.code !== '42P01' && error.code !== '42501') {
         return NextResponse.json(
           { error: "Erreur lors de la récupération des achats", details: error.message },
           { status: 500 }
         );
       }
-      // Si c'est une erreur de permissions, retourner un tableau vide
       return NextResponse.json({ data: [], error: null });
     }
 
@@ -191,4 +175,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

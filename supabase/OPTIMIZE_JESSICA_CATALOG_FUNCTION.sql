@@ -104,7 +104,7 @@ BEGIN
     ci.stripe_checkout_url,
     ci.target_audience,
     ci.created_at,
-    COALESCE(ci.slug, r.slug, c.slug, t.slug) as slug
+    COALESCE(r.slug, c.slug, t.slug) as slug
   FROM catalog_items ci
   -- Jointures LEFT pour récupérer les données selon le type
   LEFT JOIN resources r ON ci.item_type = 'ressource' AND ci.content_id = r.id

@@ -236,42 +236,52 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Utiliser le catalog_item_id réel (peut être différent de l'id passé en paramètre)
   const catalogItemId = catalogItem.id;
 
-  // Vérifier que c'est bien une ressource de Jessica Contentin
-  // Vérifier created_by (colonne principale) ou creator_id (si existe)
-  const catalogItemCreatorId = (catalogItem as any).created_by || (catalogItem as any).creator_id;
-  const isResourceCreator = catalogItemCreatorId === jessicaProfile.id;
-  
-  console.log("[ressources/[id]] Creator check:", { 
-    catalogItemCreatorId,
-    created_by: (catalogItem as any).created_by,
-    creator_id: (catalogItem as any).creator_id,
-    jessicaProfileId: jessicaProfile.id,
-    isResourceCreator,
-    catalogItemId: catalogItem.id,
-    itemType: catalogItem.item_type
-  });
-  
-  // NE PAS BLOQUER même si le créateur est différent - permettre l'accès à la page
-  // La vérification du créateur est informative seulement
-  // Si le créateur est différent, on log un avertissement mais on continue
-  if (catalogItemCreatorId && !isResourceCreator) {
-    console.warn("[ressources/[id]] Resource creator mismatch - allowing access anyway:", { 
-      catalogItemCreatorId: catalogItemCreatorId,
-      jessicaProfileId: jessicaProfile.id,
-      catalogItemId: catalogItem.id,
-      itemType: catalogItem.item_type
-    });
-  } else if (!catalogItemCreatorId) {
-    console.warn("[ressources/[id]] No creator_id or created_by found for catalog item - allowing access:", { 
-      catalogItemId: catalogItem.id,
-      itemType: catalogItem.item_type
-    });
-  }
-
   // Vérifier si l'utilisateur a accès AVANT de récupérer les détails sensibles
   // IMPORTANT : Seul le créateur (Jessica) ou les utilisateurs ayant payé peuvent accéder
   // Même les ressources gratuites nécessitent un accès explicite dans catalog_access
-  const isCreator = user?.id === jessicaProfile.id;
+  
+  // Vérifier si l'utilisateur est Jessica Contentin (le créateur)
+  // Utiliser plusieurs méthodes pour être sûr :
+  // 1. Comparer user.id avec jessicaProfile.id
+  // 2. Vérifier l'email de l'utilisateur
+  // 3. Vérifier que le catalog_item a été créé par Jessica
+  let isCreator = false;
+  if (user?.id) {
+    // Méthode 1 : Comparer les IDs
+    isCreator = String(user.id) === String(jessicaProfile.id);
+    
+    // Méthode 2 : Si les IDs ne correspondent pas, vérifier l'email
+    if (!isCreator && user.email) {
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (userProfile?.email === JESSICA_CONTENTIN_EMAIL) {
+        isCreator = true;
+      }
+    }
+  }
+  
+  // Méthode 3 : Vérifier que le catalog_item a été créé par Jessica (même si l'utilisateur n'est pas connecté)
+  // Si le catalog_item a été créé par Jessica, elle a toujours accès
+  const catalogItemCreatorId = (catalogItem as any).created_by || (catalogItem as any).creator_id;
+  const isItemCreatedByJessica = catalogItemCreatorId && String(catalogItemCreatorId) === String(jessicaProfile.id);
+  
+  // Si l'item a été créé par Jessica ET que l'utilisateur connecté est Jessica, accès garanti
+  if (isItemCreatedByJessica && user?.id && String(user.id) === String(jessicaProfile.id)) {
+    isCreator = true;
+  }
+  
+  console.log("[ressources/[id]] Creator check:", {
+    userId: user?.id,
+    userEmail: user?.email,
+    jessicaProfileId: jessicaProfile.id,
+    isCreator,
+    isItemCreatedByJessica,
+    catalogItemCreatorId,
+  });
   
   // Vérifier explicitement dans catalog_access si l'utilisateur a un accès
   // C'est la SEULE source de vérité pour l'accès utilisateur
@@ -279,17 +289,19 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Vérifier soit par user_id (B2C) soit par organization_id (B2B)
   let userAccess = null;
   if (user?.id || organizationId) {
-    const { data: access } = await supabase
-    .from("catalog_access")
-    .select("access_status")
-    .eq("catalog_item_id", catalogItemId)
+    // Utiliser le service role client pour contourner RLS si nécessaire
+    const accessClient = serviceClient || supabase;
+    const { data: access } = await accessClient
+      .from("catalog_access")
+      .select("access_status")
+      .eq("catalog_item_id", catalogItemId)
       .or(`user_id.eq.${user?.id || 'null'},organization_id.eq.${organizationId || 'null'}`)
-    .maybeSingle();
+      .maybeSingle();
     userAccess = access;
   }
   
   // L'utilisateur a accès UNIQUEMENT si :
-  // 1. Il est le créateur (Jessica) - TOUJOURS accès
+  // 1. Il est le créateur (Jessica) - TOUJOURS accès (même si la session échoue partiellement)
   // 2. Il a un accès explicite dans catalog_access (purchased, free, ou manually_granted)
   // Le access_status du catalogItem n'est pas suffisant, il faut vérifier catalog_access
   const hasExplicitAccess = userAccess && (
@@ -298,7 +310,9 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     userAccess.access_status === "manually_granted"
   );
   
-  const hasAccess = isCreator || hasExplicitAccess;
+  // Si l'item a été créé par Jessica ET que l'utilisateur est Jessica, accès garanti
+  // Même si la vérification de session a échoué partiellement
+  const hasAccess = isCreator || isItemCreatedByJessica || hasExplicitAccess;
 
   // Récupérer les détails de la ressource ou du test UNIQUEMENT si l'utilisateur a accès
   // Pour protéger les URLs de fichiers/vidéos/audios

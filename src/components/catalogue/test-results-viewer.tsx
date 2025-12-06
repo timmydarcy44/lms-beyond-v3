@@ -103,7 +103,7 @@ export function TestResultsViewer({
 
         // Exécuter la première requête avec timeout
         const attemptsResult = await executeWithTimeout(
-          attemptsPromise,
+          Promise.resolve(attemptsPromise.then(({ data, error }) => ({ data, error }))),
           timeoutMs,
           "Timeout lors de la récupération des test_attempts"
         );
@@ -122,7 +122,7 @@ export function TestResultsViewer({
             .in("id", testIds);
           
           const testsResult = await executeWithTimeout(
-            testsPromise,
+            Promise.resolve(testsPromise.then(({ data, error }) => ({ data, error }))),
             timeoutMs,
             "Timeout lors de la récupération des détails des tests"
           );
@@ -155,7 +155,7 @@ export function TestResultsViewer({
 
         // Exécuter la deuxième requête avec timeout
         const mentalHealthResult = await executeWithTimeout(
-          mentalHealthPromise,
+          Promise.resolve(mentalHealthPromise.then(({ data, error }) => ({ data, error }))),
           timeoutMs,
           "Timeout lors de la récupération des mental_health_assessments"
         );
@@ -173,7 +173,7 @@ export function TestResultsViewer({
             .in("id", questionnaireIds);
           
           const questionnairesResult = await executeWithTimeout(
-            questionnairesPromise,
+            Promise.resolve(questionnairesPromise.then(({ data, error }) => ({ data, error }))),
             timeoutMs,
             "Timeout lors de la récupération des détails des questionnaires"
           );

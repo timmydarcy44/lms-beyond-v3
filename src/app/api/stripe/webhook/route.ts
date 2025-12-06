@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       }
       
       if (!profile) {
-        console.warn("[stripe/webhook] ⚠️ User not found for email:", customerEmail);
+        console.warn("[stripe/webhook] WARNING: User not found for email:", customerEmail);
         console.warn("[stripe/webhook] Attempting to create user account automatically...");
         
         // Créer automatiquement un compte utilisateur si l'email n'existe pas
@@ -160,9 +160,8 @@ export async function POST(request: NextRequest) {
         catalog_item_id: metadata?.catalog_item_id,
         itemId: metadata?.itemId,
         item_type: metadata?.item_type,
-        itemType: metadata?.itemType,
+        itemType: metadata?.itemType || itemType,
         catalogItemId,
-        itemType,
         user_id: metadata?.user_id,
         profile_id: profile.id,
       });
@@ -315,16 +314,19 @@ export async function POST(request: NextRequest) {
             }
           }
         } else {
-          console.warn("[stripe/webhook] ⚠️ No catalog item found for checkout URL:", checkoutUrl);
+          console.warn("[stripe/webhook] WARNING: No catalog item found for checkout URL:", checkoutUrl);
           console.warn("[stripe/webhook] Session metadata:", metadata);
           console.warn("[stripe/webhook] Session success_url:", session.success_url);
           console.warn("[stripe/webhook] Session cancel_url:", session.cancel_url);
         }
-      } else {
-        console.warn("[stripe/webhook] ⚠️ No catalog_item_id or itemId in metadata");
-        console.warn("[stripe/webhook] Available metadata:", metadata);
-        console.warn("[stripe/webhook] Session ID:", session.id);
-        console.warn("[stripe/webhook] Customer email:", customerEmail);
+        
+        // Si pas de catalog_item_id dans les métadonnées et pas trouvé via URL
+        if (!catalogItemId) {
+          console.warn("[stripe/webhook] WARNING: No catalog_item_id or itemId in metadata");
+          console.warn("[stripe/webhook] Available metadata:", metadata);
+          console.warn("[stripe/webhook] Session ID:", session.id);
+          console.warn("[stripe/webhook] Customer email:", customerEmail);
+        }
       }
     }
 

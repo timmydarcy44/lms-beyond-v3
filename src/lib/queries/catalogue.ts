@@ -496,135 +496,136 @@ export async function getCatalogItemById(
         console.log("[catalogue] Found resource catalog item via content_id and item_type:", resourceCatalogItem.id);
         item = resourceCatalogItem;
       } else {
-      console.log("[catalogue] Item still not found, trying direct table lookup for:", catalogItemId);
-      console.log("[catalogue] Original error:", itemError?.message || itemError);
-      
-      // Essayer de trouver dans tests
-      const { data: testData, error: testError } = await supabase
-        .from("tests")
-        .select("id, title, description, price, category, cover_image, hero_image_url, thumbnail_url, creator_id, created_at, updated_at")
-        .eq("id", catalogItemId)
-        .maybeSingle();
-      
-      if (!testError && testData) {
-        console.log("[catalogue] Found test directement dans tests:", testData.id);
-        item = {
-          id: testData.id,
-          content_id: testData.id,
-          item_type: "test" as const,
-          title: testData.title,
-          description: testData.description || "",
-          short_description: testData.description || "",
-          price: testData.price || 0,
-          is_free: !testData.price || testData.price === 0,
-          thumbnail_url: testData.thumbnail_url || testData.cover_image || testData.hero_image_url,
-          hero_image_url: testData.hero_image_url || testData.cover_image || testData.thumbnail_url,
-          category: testData.category,
-          creator_id: testData.creator_id,
-          created_by: testData.creator_id, // IMPORTANT: Définir created_by aussi
-          created_at: testData.created_at,
-          updated_at: testData.updated_at,
-          is_active: true,
-          target_audience: "all",
-        } as any;
-      } else {
-        // Essayer de trouver dans courses
-      const { data: courseData, error: courseError } = await supabase
-        .from("courses")
-        .select("id, title, description, price, cover_image, hero_image_url, thumbnail_url, creator_id, slug, created_at, updated_at")
-        .eq("id", catalogItemId)
-        .maybeSingle();
-      
-      if (!courseError && courseData) {
-        console.log("[catalogue] Found course directly in courses table:", courseData.id);
-        // Créer un item de catalogue virtuel depuis le course
-        item = {
-          id: courseData.id,
-          content_id: courseData.id,
-          item_type: "module" as const,
-          title: courseData.title,
-          description: courseData.description || "",
-          short_description: courseData.description || "",
-          price: courseData.price || 0,
-          is_free: !courseData.price || courseData.price === 0,
-          thumbnail_url: courseData.thumbnail_url || courseData.cover_image || courseData.hero_image_url,
-          hero_image_url: courseData.hero_image_url || courseData.cover_image || courseData.thumbnail_url,
-          creator_id: courseData.creator_id,
-          created_by: courseData.creator_id, // IMPORTANT: Définir created_by aussi
-          created_at: courseData.created_at,
-          updated_at: courseData.updated_at,
-          is_active: true,
-          target_audience: "all",
-        } as any;
-      } else {
-        // Essayer de trouver dans resources (en priorité pour les ressources)
-        console.log("[catalogue] Trying to find resource directly in resources table:", catalogItemId);
-        const { data: resourceData, error: resourceError } = await supabase
-          .from("resources")
-          .select("id, title, description, price, kind, created_by, owner_id, created_at, updated_at, cover_url, thumbnail_url, slug")
+        console.log("[catalogue] Item still not found, trying direct table lookup for:", catalogItemId);
+        console.log("[catalogue] Original error:", itemError?.message || itemError);
+        
+        // Essayer de trouver dans tests
+        const { data: testData, error: testError } = await supabase
+          .from("tests")
+          .select("id, title, description, price, category, cover_image, hero_image_url, thumbnail_url, creator_id, created_at, updated_at")
           .eq("id", catalogItemId)
           .maybeSingle();
         
-        if (!resourceError && resourceData) {
-          console.log("[catalogue] Found resource directly in resources table:", resourceData.id);
-          
-          // Chercher le catalog_item correspondant pour récupérer les métadonnées complètes
-          const { data: catalogItemForResource } = await supabase
-            .from("catalog_items")
-            .select("*")
-            .eq("content_id", resourceData.id)
-            .eq("item_type", "ressource")
+        if (!testError && testData) {
+          console.log("[catalogue] Found test directement dans tests:", testData.id);
+          item = {
+            id: testData.id,
+            content_id: testData.id,
+            item_type: "test" as const,
+            title: testData.title,
+            description: testData.description || "",
+            short_description: testData.description || "",
+            price: testData.price || 0,
+            is_free: !testData.price || testData.price === 0,
+            thumbnail_url: testData.thumbnail_url || testData.cover_image || testData.hero_image_url,
+            hero_image_url: testData.hero_image_url || testData.cover_image || testData.thumbnail_url,
+            category: testData.category,
+            creator_id: testData.creator_id,
+            created_by: testData.creator_id, // IMPORTANT: Définir created_by aussi
+            created_at: testData.created_at,
+            updated_at: testData.updated_at,
+            is_active: true,
+            target_audience: "all",
+          } as any;
+        } else {
+          // Essayer de trouver dans courses
+          const { data: courseData, error: courseError } = await supabase
+            .from("courses")
+            .select("id, title, description, price, cover_image, hero_image_url, thumbnail_url, creator_id, slug, created_at, updated_at")
+            .eq("id", catalogItemId)
             .maybeSingle();
           
-          if (catalogItemForResource) {
-            console.log("[catalogue] Found catalog_item for resource:", catalogItemForResource.id);
-            item = catalogItemForResource;
-          } else {
-          
-          // Récupérer le creator_id depuis le profil si possible
-          let creatorId = resourceData.created_by || resourceData.owner_id;
-          if (creatorId) {
-            // Vérifier si c'est un Super Admin (Jessica Contentin)
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("id, email")
-              .eq("id", creatorId)
-              .maybeSingle();
-            
-            if (profile?.email === "contentin.cabinet@gmail.com") {
-              creatorId = profile.id;
-            }
-          }
-          
-            // Créer un item de catalogue virtuel depuis la ressource
+          if (!courseError && courseData) {
+            console.log("[catalogue] Found course directly in courses table:", courseData.id);
+            // Créer un item de catalogue virtuel depuis le course
             item = {
-              id: resourceData.id, // Utiliser l'ID de la ressource comme ID du catalog_item virtuel
-              content_id: resourceData.id,
-              item_type: "ressource" as const,
-              title: resourceData.title,
-              description: resourceData.description || "",
-              short_description: resourceData.description || "",
-              price: (resourceData as any).price || 0,
-              is_free: !(resourceData as any).price || (resourceData as any).price === 0,
-              thumbnail_url: (resourceData as any).thumbnail_url || (resourceData as any).cover_url || null,
-              hero_image_url: (resourceData as any).cover_url || (resourceData as any).thumbnail_url || null,
-              creator_id: creatorId,
-              created_by: creatorId,
-              slug: (resourceData as any).slug || null,
-              created_at: resourceData.created_at,
-              updated_at: resourceData.updated_at,
+              id: courseData.id,
+              content_id: courseData.id,
+              item_type: "module" as const,
+              title: courseData.title,
+              description: courseData.description || "",
+              short_description: courseData.description || "",
+              price: courseData.price || 0,
+              is_free: !courseData.price || courseData.price === 0,
+              thumbnail_url: courseData.thumbnail_url || courseData.cover_image || courseData.hero_image_url,
+              hero_image_url: courseData.hero_image_url || courseData.cover_image || courseData.thumbnail_url,
+              creator_id: courseData.creator_id,
+              created_by: courseData.creator_id, // IMPORTANT: Définir created_by aussi
+              created_at: courseData.created_at,
+              updated_at: courseData.updated_at,
               is_active: true,
               target_audience: "all",
             } as any;
+          } else {
+            // Essayer de trouver dans resources (en priorité pour les ressources)
+            console.log("[catalogue] Trying to find resource directly in resources table:", catalogItemId);
+            const { data: resourceData, error: resourceError } = await supabase
+              .from("resources")
+              .select("id, title, description, price, kind, created_by, owner_id, created_at, updated_at, cover_url, thumbnail_url, slug")
+              .eq("id", catalogItemId)
+              .maybeSingle();
+            
+            if (!resourceError && resourceData) {
+              console.log("[catalogue] Found resource directly in resources table:", resourceData.id);
+              
+              // Chercher le catalog_item correspondant pour récupérer les métadonnées complètes
+              const { data: catalogItemForResource } = await supabase
+                .from("catalog_items")
+                .select("*")
+                .eq("content_id", resourceData.id)
+                .eq("item_type", "ressource")
+                .maybeSingle();
+              
+              if (catalogItemForResource) {
+                console.log("[catalogue] Found catalog_item for resource:", catalogItemForResource.id);
+                item = catalogItemForResource;
+              } else {
+                // Récupérer le creator_id depuis le profil si possible
+                let creatorId = resourceData.created_by || resourceData.owner_id;
+                if (creatorId) {
+                  // Vérifier si c'est un Super Admin (Jessica Contentin)
+                  const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("id, email")
+                    .eq("id", creatorId)
+                    .maybeSingle();
+                  
+                  if (profile?.email === "contentin.cabinet@gmail.com") {
+                    creatorId = profile.id;
+                  }
+                }
+                
+                // Créer un item de catalogue virtuel depuis la ressource
+                item = {
+                  id: resourceData.id, // Utiliser l'ID de la ressource comme ID du catalog_item virtuel
+                  content_id: resourceData.id,
+                  item_type: "ressource" as const,
+                  title: resourceData.title,
+                  description: resourceData.description || "",
+                  short_description: resourceData.description || "",
+                  price: (resourceData as any).price || 0,
+                  is_free: !(resourceData as any).price || (resourceData as any).price === 0,
+                  thumbnail_url: (resourceData as any).thumbnail_url || (resourceData as any).cover_url || null,
+                  hero_image_url: (resourceData as any).cover_url || (resourceData as any).thumbnail_url || null,
+                  creator_id: creatorId,
+                  created_by: creatorId,
+                  slug: (resourceData as any).slug || null,
+                  created_at: resourceData.created_at,
+                  updated_at: resourceData.updated_at,
+                  is_active: true,
+                  target_audience: "all",
+                } as any;
+              }
+            } else {
+              console.error("[catalogue] Error fetching catalog item from catalog_items:", itemError?.message || itemError);
+              console.error("[catalogue] Lookup by content_id error:", byContentError?.message || byContentError);
+              console.error("[catalogue] Test lookup error:", testError?.message || testError);
+              console.error("[catalogue] Course lookup error:", courseError?.message || courseError);
+              console.error("[catalogue] Resource lookup error:", resourceError?.message || resourceError);
+              console.error("[catalogue] Item ID searched:", catalogItemId);
+              return null;
+            }
           }
-        } else {
-          console.error("[catalogue] Error fetching catalog item from catalog_items:", itemError?.message || itemError);
-          console.error("[catalogue] Lookup by content_id error:", byContentError?.message || byContentError);
-          console.error("[catalogue] Test lookup error:", testError?.message || testError);
-          console.error("[catalogue] Course lookup error:", courseError?.message || courseError);
-          console.error("[catalogue] Resource lookup error:", resourceError?.message || resourceError);
-          console.error("[catalogue] Item ID searched:", catalogItemId);
-          return null;
         }
       }
     }

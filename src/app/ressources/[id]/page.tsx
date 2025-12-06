@@ -86,7 +86,30 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     console.log("[ressources/[id]] Direct catalog_items lookup:", { found: !!catalogItemDirect, created_by: catalogItemDirect?.created_by, creator_id: catalogItemDirect?.creator_id });
     
     if (catalogItemDirect) {
+      console.log("[ressources/[id]] Found catalog_item_direct, calling getCatalogItemById with:", { id, organizationId, userId: user?.id });
       catalogItem = await getCatalogItemById(id, organizationId, user?.id, serviceClient);
+      console.log("[ressources/[id]] Result from getCatalogItemById:", { found: !!catalogItem, itemType: catalogItem?.item_type });
+      
+      // Si getCatalogItemById ne retourne rien, utiliser directement catalogItemDirect
+      if (!catalogItem && catalogItemDirect) {
+        console.log("[ressources/[id]] getCatalogItemById returned null, using catalogItemDirect directly");
+        catalogItem = {
+          id: catalogItemDirect.id,
+          content_id: catalogItemDirect.content_id,
+          item_type: catalogItemDirect.item_type,
+          title: catalogItemDirect.title,
+          description: catalogItemDirect.description,
+          short_description: catalogItemDirect.short_description,
+          price: catalogItemDirect.price || 0,
+          is_free: catalogItemDirect.is_free || false,
+          thumbnail_url: catalogItemDirect.thumbnail_url,
+          hero_image_url: catalogItemDirect.hero_image_url,
+          category: catalogItemDirect.category,
+          created_by: catalogItemDirect.created_by,
+          creator_id: catalogItemDirect.creator_id,
+          access_status: "pending_payment" as const,
+        } as any;
+      }
     }
     
     // Si pas trouvé, essayer de chercher par content_id dans catalog_items

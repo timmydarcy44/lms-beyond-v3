@@ -68,7 +68,9 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   let resourceId = id;
   let catalogItem = null;
 
+  console.log("[ressources/[id]] ========================================");
   console.log("[ressources/[id]] Starting search for resource:", { id, isIdUUID, jessicaProfileId: jessicaProfile.id });
+  console.log("[ressources/[id]] ========================================");
 
   // Utiliser le service role client pour contourner RLS lors de la recherche initiale
   const serviceClient = getServiceRoleClient();
@@ -86,13 +88,25 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     console.log("[ressources/[id]] Direct catalog_items lookup:", { found: !!catalogItemDirect, created_by: catalogItemDirect?.created_by, creator_id: catalogItemDirect?.creator_id });
     
     if (catalogItemDirect) {
-      console.log("[ressources/[id]] Found catalog_item_direct, calling getCatalogItemById with:", { id, organizationId, userId: user?.id });
+      console.log("[ressources/[id]] ✅ Found catalog_item_direct:", {
+        id: catalogItemDirect.id,
+        item_type: catalogItemDirect.item_type,
+        title: catalogItemDirect.title,
+        content_id: catalogItemDirect.content_id,
+        created_by: catalogItemDirect.created_by,
+        is_active: catalogItemDirect.is_active,
+      });
+      console.log("[ressources/[id]] Calling getCatalogItemById with:", { id, organizationId, userId: user?.id });
       catalogItem = await getCatalogItemById(id, organizationId, user?.id, serviceClient);
-      console.log("[ressources/[id]] Result from getCatalogItemById:", { found: !!catalogItem, itemType: catalogItem?.item_type });
+      console.log("[ressources/[id]] Result from getCatalogItemById:", { 
+        found: !!catalogItem, 
+        itemType: catalogItem?.item_type,
+        itemId: catalogItem?.id,
+      });
       
       // Si getCatalogItemById ne retourne rien, utiliser directement catalogItemDirect
       if (!catalogItem && catalogItemDirect) {
-        console.log("[ressources/[id]] getCatalogItemById returned null, using catalogItemDirect directly");
+        console.log("[ressources/[id]] ⚠️ getCatalogItemById returned null, using catalogItemDirect directly");
         catalogItem = {
           id: catalogItemDirect.id,
           content_id: catalogItemDirect.content_id,
@@ -109,7 +123,14 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
           creator_id: catalogItemDirect.creator_id,
           access_status: "pending_payment" as const,
         } as any;
+        console.log("[ressources/[id]] ✅ Created catalogItem from catalogItemDirect:", {
+          id: catalogItem.id,
+          item_type: catalogItem.item_type,
+          title: catalogItem.title,
+        });
       }
+    } else {
+      console.log("[ressources/[id]] ❌ catalogItemDirect not found for id:", id);
     }
     
     // Si pas trouvé, essayer de chercher par content_id dans catalog_items
@@ -290,9 +311,17 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   }
 
   if (!catalogItem) {
-    console.error("[ressources/[id]] Catalog item not found after all attempts:", { id, isIdUUID });
+    console.error("[ressources/[id]] ❌❌❌ Catalog item not found after all attempts:", { id, isIdUUID });
+    console.error("[ressources/[id]] All search attempts failed. Calling notFound()");
     notFound();
   }
+  
+  console.log("[ressources/[id]] ✅✅✅ Final catalogItem found:", {
+    id: catalogItem.id,
+    item_type: catalogItem.item_type,
+    title: catalogItem.title,
+    content_id: catalogItem.content_id,
+  });
   
   console.log("[ressources/[id]] Catalog item found:", { 
     id: catalogItem.id, 
@@ -309,9 +338,12 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
 
   // Accepter les ressources et les tests
   if (catalogItem.item_type !== "ressource" && catalogItem.item_type !== "test") {
-    console.error("[ressources/[id]] Unsupported item type:", { id, item_type: catalogItem.item_type });
+    console.error("[ressources/[id]] ❌ Unsupported item type:", { id, item_type: catalogItem.item_type });
+    console.error("[ressources/[id]] Calling notFound() due to unsupported item type");
     notFound();
   }
+  
+  console.log("[ressources/[id]] ✅ Item type is valid:", catalogItem.item_type);
 
   // Utiliser le catalog_item_id réel (peut être différent de l'id passé en paramètre)
   const catalogItemId = catalogItem.id;

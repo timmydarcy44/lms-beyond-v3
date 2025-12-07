@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             .replace(/^_+|_+$/g, "")
             .split("_")
             .slice(0, 5) // Prendre les 5 premiers mots
-            .map((word, index, arr) => {
+            .map((word: string, index: number, arr: string[]) => {
               if (index === 0) return word + ".pdf";
               return arr.slice(0, index + 1).join("_") + ".pdf";
             }),

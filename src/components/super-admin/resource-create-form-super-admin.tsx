@@ -27,6 +27,7 @@ export function ResourceCreateFormSuperAdmin() {
   const [type, setType] = useState<string>(resourceOptions[0].value);
   const [price, setPrice] = useState<string>("10");
   const [category, setCategory] = useState<string>("");
+  const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,21 +53,42 @@ export function ResourceCreateFormSuperAdmin() {
     }
 
     try {
-      const response = await fetch("/api/resources", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          type,
-          price: parseFloat(price) || 0,
-          category: category.trim() || null,
-          cover_image_url: coverImageUrl || null,
-          published,
-        }),
-      });
+      // Si un fichier PDF est sélectionné et que le type est "pdf", utiliser FormData
+      const isPdfUpload = type === "pdf" && file;
+      
+      let response: Response;
+      if (isPdfUpload) {
+        const formData = new FormData();
+        formData.append("title", title.trim());
+        formData.append("description", description.trim() || "");
+        formData.append("type", type);
+        formData.append("price", String(parseFloat(price) || 0));
+        formData.append("category", category.trim() || "");
+        formData.append("cover_image_url", coverImageUrl || "");
+        formData.append("published", String(published));
+        formData.append("file", file); // Ajouter le fichier PDF
+
+        response = await fetch("/api/resources", {
+          method: "POST",
+          body: formData, // Pas de Content-Type header, le navigateur le définit automatiquement avec le boundary
+        });
+      } else {
+        response = await fetch("/api/resources", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: title.trim(),
+            description: description.trim() || null,
+            type,
+            price: parseFloat(price) || 0,
+            category: category.trim() || null,
+            cover_image_url: coverImageUrl || null,
+            published,
+          }),
+        });
+      }
 
       if (!response.ok) {
         let errorData;
@@ -264,7 +286,11 @@ export function ResourceCreateFormSuperAdmin() {
                 <input
                   type="file"
                   accept={type === "pdf" ? "application/pdf" : type === "video" ? "video/*" : "audio/*"}
-                  onChange={(event) => setFileName(event.target.files?.[0]?.name ?? null)}
+                  onChange={(event) => {
+                    const selectedFile = event.target.files?.[0] ?? null;
+                    setFile(selectedFile);
+                    setFileName(selectedFile?.name ?? null);
+                  }}
                   className="text-sm text-gray-700"
                 />
                 <p className="text-xs text-gray-500" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>

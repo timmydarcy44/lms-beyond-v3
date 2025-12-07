@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { syncCatalogItem } from "@/lib/utils/sync-catalog-item";
 import { createStripeProduct, updateStripeProduct } from "@/lib/stripe/products";
+import { sendPurchaseConfirmationEmail } from "@/lib/emails/send";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,14 +23,38 @@ export async function POST(request: NextRequest) {
 
     console.log("[api/resources] Utilisateur authentifié:", user.id);
 
-    let body;
-    try {
-      body = await request.json();
-      console.log("[api/resources] Corps de la requête:", { ...body, title: body?.title });
-    } catch (parseError) {
-      console.error("[api/resources] Erreur de parsing JSON:", parseError);
-      return NextResponse.json({ error: "Format JSON invalide" }, { status: 400 });
+    // Vérifier si c'est FormData (upload de fichier) ou JSON
+    const contentType = request.headers.get("content-type") || "";
+    const isFormData = contentType.includes("multipart/form-data");
+
+    let body: any;
+    let pdfFile: File | null = null;
+
+    if (isFormData) {
+      // Parser FormData
+      const formData = await request.formData();
+      body = {
+        title: formData.get("title") as string,
+        description: formData.get("description") as string,
+        type: formData.get("type") as string,
+        price: formData.get("price") ? parseFloat(formData.get("price") as string) : 0,
+        category: formData.get("category") as string,
+        cover_image_url: formData.get("cover_image_url") as string,
+        published: formData.get("published") === "true",
+      };
+      pdfFile = formData.get("file") as File | null;
+      console.log("[api/resources] FormData reçu, fichier PDF:", pdfFile?.name);
+    } else {
+      // Parser JSON
+      try {
+        body = await request.json();
+        console.log("[api/resources] Corps de la requête JSON:", { ...body, title: body?.title });
+      } catch (parseError) {
+        console.error("[api/resources] Erreur de parsing JSON:", parseError);
+        return NextResponse.json({ error: "Format JSON invalide" }, { status: 400 });
+      }
     }
+
     const { 
       resourceId, 
       published = false,
@@ -445,6 +470,66 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Uploader le PDF si type === "pdf" et qu'un fichier est fourni
+        let pdfUrl: string | null = null;
+        if (type === "pdf" && pdfFile) {
+          try {
+            console.log("[api/resources] Upload du PDF:", pdfFile.name);
+            const serviceClient = getServiceRoleClient();
+            if (!serviceClient) {
+              console.error("[api/resources] Service role client non disponible pour l'upload PDF");
+            } else {
+              // Générer un nom de fichier unique
+              const originalFileName = pdfFile.name.split(".")[0];
+              const sanitizedFileName = originalFileName
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, "")
+                .replace(/\s+/g, "-")
+                .replace(/--+/g, "-")
+                .trim();
+              const timestamp = Date.now();
+              const fileName = `${sanitizedFileName}-${timestamp}.pdf`;
+
+              // Convertir le File en ArrayBuffer
+              const arrayBuffer = await pdfFile.arrayBuffer();
+              const buffer = Buffer.from(arrayBuffer);
+
+              // Upload vers Supabase Storage (bucket "pdfs")
+              const { data: uploadData, error: uploadError } = await serviceClient.storage
+                .from("pdfs")
+                .upload(fileName, buffer, {
+                  contentType: "application/pdf",
+                  cacheControl: "3600",
+                  upsert: false,
+                });
+
+              if (uploadError) {
+                console.error("[api/resources] Erreur lors de l'upload du PDF:", uploadError);
+              } else {
+                // Récupérer l'URL publique
+                const { data: { publicUrl } } = serviceClient.storage
+                  .from("pdfs")
+                  .getPublicUrl(fileName);
+                pdfUrl = publicUrl;
+                console.log("[api/resources] PDF uploadé avec succès:", pdfUrl);
+
+                // Mettre à jour la ressource avec l'URL du PDF et kind = "pdf"
+                await supabase
+                  .from("resources")
+                  .update({ 
+                    file_url: pdfUrl,
+                    kind: "pdf",
+                  })
+                  .eq("id", data.id);
+                console.log("[api/resources] Ressource mise à jour avec file_url et kind");
+              }
+            }
+          } catch (pdfError) {
+            console.error("[api/resources] Erreur lors de l'upload du PDF:", pdfError);
+            // Ne pas bloquer la création si l'upload PDF échoue
+          }
+        }
+
         // Synchroniser avec catalog_items si Super Admin
         if (data && data.id) {
           try {
@@ -474,6 +559,39 @@ export async function POST(request: NextRequest) {
               status: published ? "published" : "draft",
               stripeCheckoutUrl: stripeProduct?.checkoutUrl || null, // Passer l'URL de checkout Stripe
             });
+
+            // Si la ressource est créée avec un PDF, envoyer un email de confirmation d'achat à timmydarcy44@gmail.com
+            if (type === "pdf" && pdfUrl && data.id) {
+              try {
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+                const resourceLink = `${baseUrl}/ressources/${data.id}`;
+                
+                // Récupérer le catalog_item_id pour construire le lien correct
+                const { data: catalogItem } = await supabase
+                  .from("catalog_items")
+                  .select("id")
+                  .eq("content_id", data.id)
+                  .eq("item_type", "ressource")
+                  .maybeSingle();
+
+                const finalResourceLink = catalogItem?.id 
+                  ? `${baseUrl}/ressources/${catalogItem.id}`
+                  : resourceLink;
+
+                await sendPurchaseConfirmationEmail(
+                  "timmydarcy44@gmail.com",
+                  "Timmy", // Prénom
+                  title.trim(),
+                  price || 0,
+                  new Date().toLocaleDateString("fr-FR"),
+                  finalResourceLink
+                );
+                console.log("[api/resources] Email de confirmation d'achat envoyé à timmydarcy44@gmail.com");
+              } catch (emailError) {
+                console.error("[api/resources] Erreur lors de l'envoi de l'email:", emailError);
+                // Ne pas bloquer la création si l'email échoue
+              }
+            }
           } catch (syncError) {
             console.error("[api/resources] Erreur lors de la synchronisation avec catalog_items:", syncError);
             // Ne pas bloquer la création si la synchronisation échoue

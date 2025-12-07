@@ -83,17 +83,19 @@ export async function sendPurchaseConfirmationEmail(
   resourceTitle: string,
   resourcePrice: number,
   purchaseDate?: string,
-  resourceLink?: string // Lien direct vers la ressource achetée
+  resourceLink?: string // Lien direct vers la ressource achetée (optionnel, utilisé comme lien secondaire)
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+  // Le CTA principal redirige toujours vers "mon compte" pour éviter les 404
+  const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
   const template = getPurchaseConfirmationEmail({
     firstName: firstName || undefined,
     email,
     resourceTitle,
     resourcePrice,
     purchaseDate: purchaseDate || new Date().toLocaleDateString("fr-FR"),
-    loginLink: `${baseUrl}/jessica-contentin/ressources`,
-    resourceLink: resourceLink || `${baseUrl}/jessica-contentin/ressources`,
+    loginLink: accountLink, // CTA principal vers "mon compte"
+    resourceLink: resourceLink || `${baseUrl}/jessica-contentin/ressources`, // Lien secondaire vers les ressources
   });
 
   return sendEmail({

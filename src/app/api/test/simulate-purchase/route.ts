@@ -86,44 +86,44 @@ export async function POST(request: NextRequest) {
       .eq("catalog_item_id", catalogItemId)
       .maybeSingle();
 
+    let newAccess;
     if (existingAccess) {
-      return NextResponse.json(
-        { 
-          error: "L'utilisateur a déjà accès à cette ressource",
-          existingAccess: {
-            id: existingAccess.id,
-            access_status: existingAccess.access_status,
-          }
-        },
-        { status: 400 }
-      );
-    }
-
-    // Créer l'accès dans catalog_access
-    const { data: newAccess, error: accessError } = await serviceClient
-      .from("catalog_access")
-      .insert({
-        user_id: profile.id,
-        catalog_item_id: catalogItemId,
-        organization_id: null, // B2C
-        access_status: "purchased",
+      // Si l'accès existe déjà, utiliser l'accès existant
+      console.log("[test/simulate-purchase] Access already exists, using existing access:", existingAccess.id);
+      newAccess = {
+        id: existingAccess.id,
+        access_status: existingAccess.access_status,
         granted_at: new Date().toISOString(),
-        transaction_id: `test_sim_${Date.now()}`, // ID de transaction simulé
         purchase_amount: catalogItem.price || 0,
-        purchase_date: new Date().toISOString(),
-      })
-      .select("id, access_status, granted_at, purchase_amount")
-      .single();
+      };
+    } else {
+      // Créer l'accès dans catalog_access
+      const { data: createdAccess, error: accessError } = await serviceClient
+        .from("catalog_access")
+        .insert({
+          user_id: profile.id,
+          catalog_item_id: catalogItemId,
+          organization_id: null, // B2C
+          access_status: "purchased",
+          granted_at: new Date().toISOString(),
+          transaction_id: `test_sim_${Date.now()}`, // ID de transaction simulé
+          purchase_amount: catalogItem.price || 0,
+          purchase_date: new Date().toISOString(),
+        })
+        .select("id, access_status, granted_at, purchase_amount")
+        .single();
 
-    if (accessError) {
-      console.error("[test/simulate-purchase] Error creating access:", accessError);
-      return NextResponse.json(
-        { error: `Erreur lors de la création de l'accès: ${accessError.message}` },
-        { status: 500 }
-      );
+      if (accessError) {
+        console.error("[test/simulate-purchase] Error creating access:", accessError);
+        return NextResponse.json(
+          { error: `Erreur lors de la création de l'accès: ${accessError.message}` },
+          { status: 500 }
+        );
+      }
+
+      newAccess = createdAccess;
+      console.log("[test/simulate-purchase] ✅ Access created:", newAccess);
     }
-
-    console.log("[test/simulate-purchase] ✅ Access created:", newAccess);
 
     // Envoyer l'email de confirmation
     try {
@@ -148,7 +148,8 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: "Achat simulé avec succès et email envoyé",
+        message: existingAccess ? "Email renvoyé avec succès (accès existant)" : "Achat simulé avec succès et email envoyé",
+        accessAlreadyExisted: !!existingAccess,
         access: {
           id: newAccess.id,
           access_status: newAccess.access_status,
@@ -172,7 +173,8 @@ export async function POST(request: NextRequest) {
       // Ne pas échouer la requête si l'email échoue, l'accès a été créé
       return NextResponse.json({
         success: true,
-        message: "Achat simulé avec succès, mais l'email n'a pas pu être envoyé",
+        message: existingAccess ? "Email non envoyé (accès existant)" : "Achat simulé avec succès, mais l'email n'a pas pu être envoyé",
+        accessAlreadyExisted: !!existingAccess,
         access: {
           id: newAccess.id,
           access_status: newAccess.access_status,

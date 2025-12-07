@@ -114,8 +114,10 @@ export function getPurchaseConfirmationEmail(data: EmailTemplateData): { subject
   const resourceTitle = data.resourceTitle || "votre ressource";
   const resourcePrice = data.resourcePrice || 0;
   const purchaseDate = data.purchaseDate || new Date().toLocaleDateString("fr-FR");
-  const loginLink = data.loginLink || "https://www.jessicacontentin.fr/jessica-contentin/ressources";
-  const resourceLink = data.resourceLink || loginLink; // Lien direct vers la ressource, fallback sur loginLink
+  // loginLink est maintenant le lien vers "mon compte" (CTA principal)
+  const accountLink = data.loginLink || "https://www.jessicacontentin.fr/jessicacontentin/mon-compte";
+  // resourceLink est le lien secondaire vers les ressources ou la ressource spécifique
+  const resourceLink = data.resourceLink || "https://www.jessicacontentin.fr/jessica-contentin/ressources";
 
   const html = `
 <!DOCTYPE html>
@@ -152,15 +154,15 @@ export function getPurchaseConfirmationEmail(data: EmailTemplateData): { subject
       </div>
 
       <p style="color: #2F2A25; font-size: 16px; margin-bottom: 20px;">
-        Vous pouvez maintenant accéder à cette ressource directement ou depuis votre espace personnel.
+        Vous pouvez maintenant accéder à cette ressource depuis votre espace personnel.
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${resourceLink}" style="display: inline-block; background-color: #C6A664; color: #FFFFFF; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; margin-bottom: 15px;">
-          Accéder à la ressource
+        <a href="${accountLink}" style="display: inline-block; background-color: #C6A664; color: #FFFFFF; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; margin-bottom: 15px;">
+          Accéder à mon compte
         </a>
         <br>
-        <a href="${loginLink}" style="display: inline-block; color: #C6A664; padding: 10px 20px; text-decoration: none; font-size: 14px;">
+        <a href="${resourceLink}" style="display: inline-block; color: #C6A664; padding: 10px 20px; text-decoration: none; font-size: 14px;">
           Voir toutes mes ressources
         </a>
       </div>
@@ -169,7 +171,7 @@ export function getPurchaseConfirmationEmail(data: EmailTemplateData): { subject
     <!-- Footer -->
     <div style="border-top: 1px solid #E6D9C6; padding-top: 30px; text-align: center;">
       <p style="color: #2F2A25; font-size: 14px; margin-bottom: 10px;">
-        <a href="${loginLink}" style="color: #C6A664; text-decoration: none;">Mon compte</a>
+        <a href="${accountLink}" style="color: #C6A664; text-decoration: none;">Mon compte</a>
       </p>
       <p style="color: #8B6F47; font-size: 12px; margin: 0;">
         © ${new Date().getFullYear()} Jessica CONTENTIN. Tous droits réservés.
@@ -189,13 +191,11 @@ ${resourceTitle}
 Prix : ${resourcePrice.toFixed(2)} €
 Date d'achat : ${purchaseDate}
 
-Vous pouvez maintenant accéder à cette ressource directement :
+Vous pouvez maintenant accéder à cette ressource depuis votre espace personnel :
+${accountLink}
+
+Voir toutes mes ressources :
 ${resourceLink}
-
-Ou depuis votre espace personnel :
-${loginLink}
-
-Mon compte : ${loginLink}
 
 © ${new Date().getFullYear()} Jessica Contentin. Tous droits réservés.
   `.trim();

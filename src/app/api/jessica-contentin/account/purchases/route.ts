@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
           price: item.price || 0,
           creator_id: item.creator_id,
           created_by: item.created_by,
-          slug: item.slug,
+          slug: null, // catalog_items n'a pas de colonne slug
         },
       }));
 
@@ -84,24 +84,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Pour les autres utilisateurs, récupérer les accès depuis catalog_access
-    // IMPORTANT: user_id dans catalog_access correspond à profiles.user_id (qui est auth.users.id)
-    // Mais on peut aussi recevoir profiles.id, donc on doit vérifier les deux
+    // IMPORTANT: user_id dans catalog_access correspond à profiles.id (qui est aussi auth.users.id)
+    // Dans Supabase, profiles.id = auth.users.id, donc pas de colonne user_id séparée
     
-    // D'abord, récupérer le profil pour obtenir le user_id correct
+    // D'abord, récupérer le profil pour vérifier que l'utilisateur existe
     const { data: userProfile } = await supabase
       .from("profiles")
-      .select("id, user_id, email")
-      .or(`id.eq.${userId},user_id.eq.${userId}`)
+      .select("id, email")
+      .eq("id", userId) // profiles.id = auth.users.id
       .maybeSingle();
     
-    // Utiliser le user_id du profil (auth.users.id) pour la requête catalog_access
-    const actualUserId = userProfile?.user_id || userId;
+    // Utiliser directement userId (qui est profiles.id = auth.users.id)
+    const actualUserId = userId;
     
     console.log("[api/jessica-contentin/account/purchases] User lookup:", {
       providedUserId: userId,
       foundProfile: !!userProfile,
       profileId: userProfile?.id,
-      profileUserId: userProfile?.user_id,
       actualUserId,
     });
     
@@ -125,11 +124,10 @@ export async function GET(request: NextRequest) {
           content_id,
           price,
           creator_id,
-          created_by,
-          slug
+          created_by
         )
       `)
-      .eq("user_id", actualUserId) // Utiliser le user_id correct (auth.users.id)
+      .eq("user_id", actualUserId) // Utiliser le user_id correct (profiles.id = auth.users.id)
       .is("organization_id", null) // S'assurer que c'est un accès B2C (pas B2B)
       .in("access_status", ["purchased", "manually_granted", "free"])
       .order("granted_at", { ascending: false })

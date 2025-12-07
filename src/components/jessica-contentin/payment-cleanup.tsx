@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 /**
  * Composant qui nettoie les paramètres de paiement Stripe de l'URL
@@ -9,17 +9,21 @@ import { useRouter, useSearchParams } from "next/navigation";
  */
 export function PaymentCleanup() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     // Vérifier si l'URL contient des paramètres de paiement Stripe
-    const payment = searchParams.get("payment");
-    const sessionId = searchParams.get("session_id");
-    const paymentIntent = searchParams.get("payment_intent");
-    const paymentIntentClientSecret = searchParams.get("payment_intent_client_secret");
+    // Utiliser window.location directement pour éviter les problèmes avec useSearchParams
+    if (typeof window === "undefined") return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const payment = urlParams.get("payment");
+    const sessionId = urlParams.get("session_id");
+    const paymentIntent = urlParams.get("payment_intent");
+    const paymentIntentClientSecret = urlParams.get("payment_intent_client_secret");
+    const redirectStatus = urlParams.get("redirect_status");
 
     // Si des paramètres de paiement sont présents, les nettoyer de l'URL
-    if (payment || sessionId || paymentIntent || paymentIntentClientSecret) {
+    if (payment || sessionId || paymentIntent || paymentIntentClientSecret || redirectStatus) {
       // Créer une nouvelle URL sans les paramètres de paiement
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.delete("payment");
@@ -29,9 +33,12 @@ export function PaymentCleanup() {
       newUrl.searchParams.delete("redirect_status");
 
       // Remplacer l'URL sans recharger la page
-      router.replace(newUrl.pathname + (newUrl.search ? newUrl.search : ""), { scroll: false });
+      const newPath = newUrl.pathname + (newUrl.search ? newUrl.search : "");
+      if (window.location.pathname + window.location.search !== newPath) {
+        router.replace(newPath, { scroll: false });
+      }
     }
-  }, [router, searchParams]);
+  }, [router]);
 
   return null; // Ce composant ne rend rien
 }

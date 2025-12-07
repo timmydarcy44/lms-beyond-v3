@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
         message: "Email envoyé avec succès",
         resource: {
           title: resource.title,
-          pdfProxyUrl: pdfProxyUrl, // URL proxy utilisée dans l'email
           pdfUrl: resource.file_url, // URL Supabase originale (pour référence)
+          accountLink: accountLink, // Lien vers le compte de la personne
           price: price,
         },
         messageId: result.messageId,

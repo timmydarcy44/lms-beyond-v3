@@ -84,6 +84,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Pour les autres utilisateurs, récupérer les accès depuis catalog_access
+    // IMPORTANT: user_id dans catalog_access correspond à profiles.user_id (qui est auth.users.id)
+    // Mais on peut aussi recevoir profiles.id, donc on doit vérifier les deux
+    
+    // D'abord, récupérer le profil pour obtenir le user_id correct
+    const { data: userProfile } = await supabase
+      .from("profiles")
+      .select("id, user_id, email")
+      .or(`id.eq.${userId},user_id.eq.${userId}`)
+      .maybeSingle();
+    
+    // Utiliser le user_id du profil (auth.users.id) pour la requête catalog_access
+    const actualUserId = userProfile?.user_id || userId;
+    
+    console.log("[api/jessica-contentin/account/purchases] User lookup:", {
+      providedUserId: userId,
+      foundProfile: !!userProfile,
+      profileId: userProfile?.id,
+      profileUserId: userProfile?.user_id,
+      actualUserId,
+    });
+    
     let query = supabase
       .from("catalog_access")
       .select(`
@@ -108,7 +129,7 @@ export async function GET(request: NextRequest) {
           slug
         )
       `)
-      .eq("user_id", userId)
+      .eq("user_id", actualUserId) // Utiliser le user_id correct (auth.users.id)
       .is("organization_id", null) // S'assurer que c'est un accès B2C (pas B2B)
       .in("access_status", ["purchased", "manually_granted", "free"])
       .order("granted_at", { ascending: false })

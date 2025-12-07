@@ -8,6 +8,7 @@ import { Play, FileText, Video, Headphones, CreditCard } from "lucide-react";
 import { BuyButton } from "@/components/jessica-contentin/buy-button";
 import { getTenantFromHeaders } from "@/lib/tenant/detection-server";
 import { headers } from "next/headers";
+import { PaymentCleanupWrapper } from "./payment-cleanup-wrapper";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
@@ -603,6 +604,8 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
+      {/* Nettoyer les paramètres de paiement Stripe de l'URL */}
+      <PaymentCleanupWrapper />
       {/* Contenu principal */}
       <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Breadcrumb */}

@@ -34,36 +34,37 @@ export async function GET(
       );
     }
 
+    console.log("[api/resources/[id]/pdf] ID reçu:", id);
+
+    // D'abord, essayer de trouver via catalog_item (car l'ID dans l'email est souvent un catalog_item_id)
+    const { data: catalogItem } = await serviceClient
+      .from("catalog_items")
+      .select("id, content_id, item_type")
+      .eq("id", id)
+      .eq("item_type", "ressource")
+      .maybeSingle();
+
+    console.log("[api/resources/[id]/pdf] Catalog item trouvé:", catalogItem?.id, "content_id:", catalogItem?.content_id);
+
+    let resourceId = id;
+    if (catalogItem?.content_id) {
+      resourceId = catalogItem.content_id;
+      console.log("[api/resources/[id]/pdf] Utilisation du content_id:", resourceId);
+    }
+
     // Récupérer la ressource
     const { data: resource, error: resourceError } = await serviceClient
       .from("resources")
       .select("id, title, file_url, kind, created_by")
-      .eq("id", id)
+      .eq("id", resourceId)
       .maybeSingle();
 
+    console.log("[api/resources/[id]/pdf] Ressource trouvée:", resource?.id, "file_url:", resource?.file_url ? "présent" : "absent");
+
     if (resourceError || !resource) {
-      // Essayer de trouver via catalog_item
-      const { data: catalogItem } = await serviceClient
-        .from("catalog_items")
-        .select("content_id, item_type")
-        .eq("id", id)
-        .eq("item_type", "ressource")
-        .maybeSingle();
-
-      if (catalogItem?.content_id) {
-        const { data: resourceByCatalog } = await serviceClient
-          .from("resources")
-          .select("id, title, file_url, kind, created_by")
-          .eq("id", catalogItem.content_id)
-          .maybeSingle();
-
-        if (resourceByCatalog) {
-          return await servePdf(resourceByCatalog, supabase, serviceClient);
-        }
-      }
-
+      console.error("[api/resources/[id]/pdf] Erreur ou ressource non trouvée:", resourceError);
       return NextResponse.json(
-        { error: "Ressource non trouvée" },
+        { error: "Ressource non trouvée", details: resourceError?.message },
         { status: 404 }
       );
     }
@@ -94,6 +95,8 @@ async function servePdf(
   // Vérifier l'accès de l'utilisateur
   const { data: { user } } = await supabase.auth.getUser();
   
+  console.log("[api/resources/[id]/pdf] User:", user?.id, "Resource created_by:", resource.created_by);
+  
   // Si l'utilisateur est le créateur, accès garanti
   const isCreator = user?.id && resource.created_by && String(user.id) === String(resource.created_by);
   
@@ -108,6 +111,8 @@ async function servePdf(
       .eq("item_type", "ressource")
       .maybeSingle();
 
+    console.log("[api/resources/[id]/pdf] Catalog item:", catalogItem?.id);
+
     if (catalogItem) {
       const { data: access } = await serviceClient
         .from("catalog_access")
@@ -117,18 +122,42 @@ async function servePdf(
         .in("access_status", ["purchased", "manually_granted", "free"])
         .maybeSingle();
 
+      console.log("[api/resources/[id]/pdf] Access:", access?.id);
       hasAccess = !!access;
     }
   }
 
-  // Pour les ressources publiques ou si l'utilisateur a accès
-  // (Vous pouvez ajuster cette logique selon vos besoins)
+  // Pour les emails de confirmation d'achat, permettre l'accès même sans authentification
+  // (l'utilisateur vient d'un email de confirmation)
+  // On permet l'accès si :
+  // 1. L'utilisateur est le créateur
+  // 2. L'utilisateur a un accès explicite via catalog_access
+  // 3. La ressource est gratuite (is_free = true)
+  
+  // Vérifier si la ressource est gratuite
   if (!hasAccess) {
+    const { data: catalogItem } = await serviceClient
+      .from("catalog_items")
+      .select("id, is_free, price")
+      .eq("content_id", resource.id)
+      .eq("item_type", "ressource")
+      .maybeSingle();
+
+    if (catalogItem?.is_free || catalogItem?.price === 0) {
+      console.log("[api/resources/[id]/pdf] Ressource gratuite, accès autorisé");
+      hasAccess = true;
+    }
+  }
+
+  if (!hasAccess) {
+    console.log("[api/resources/[id]/pdf] Accès refusé pour l'utilisateur:", user?.id || "non connecté");
     return NextResponse.json(
-      { error: "Accès non autorisé" },
+      { error: "Accès non autorisé. Veuillez vous connecter ou acheter cette ressource." },
       { status: 403 }
     );
   }
+
+  console.log("[api/resources/[id]/pdf] Accès autorisé, téléchargement du PDF...");
 
   // Extraire le chemin du fichier depuis l'URL Supabase
   // Exemple: https://xxx.supabase.co/storage/v1/object/public/pdfs/filename.pdf

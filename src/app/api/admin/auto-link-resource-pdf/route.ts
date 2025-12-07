@@ -173,18 +173,17 @@ export async function POST(request: NextRequest) {
             }
             
             if (matches) {
-                // Construire l'URL publique
-                const { data: { publicUrl } } = supabase.storage
-                  .from(bucket)
-                  .getPublicUrl(filePath);
+              // Construire l'URL publique
+              const { data: { publicUrl } } = supabase.storage
+                .from(bucket)
+                .getPublicUrl(filePath);
 
-                console.log(`[auto-link-resource-pdf] ✅ Fichier trouvé: ${bucket}/${filePath}`);
-                return {
-                  bucket,
-                  path: filePath,
-                  url: publicUrl,
-                };
-              }
+              console.log(`[auto-link-resource-pdf] ✅ Fichier trouvé: ${bucket}/${filePath}`);
+              return {
+                bucket,
+                path: filePath,
+                url: publicUrl,
+              };
             }
           }
 

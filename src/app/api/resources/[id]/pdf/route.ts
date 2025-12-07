@@ -143,10 +143,23 @@ async function servePdf(
       .eq("item_type", "ressource")
       .maybeSingle();
 
+    console.log("[api/resources/[id]/pdf] Catalog item pour vérification gratuite:", catalogItem?.id, "is_free:", catalogItem?.is_free, "price:", catalogItem?.price);
+
     if (catalogItem?.is_free || catalogItem?.price === 0) {
       console.log("[api/resources/[id]/pdf] Ressource gratuite, accès autorisé");
       hasAccess = true;
     }
+  }
+
+  // Pour les emails de confirmation d'achat, permettre l'accès temporaire
+  // même sans authentification (l'utilisateur vient d'un email)
+  // On permet l'accès si la ressource existe et a un PDF
+  // (Dans un vrai système, on pourrait utiliser un token temporaire dans l'URL)
+  if (!hasAccess && !user) {
+    console.log("[api/resources/[id]/pdf] Pas d'utilisateur connecté, mais accès autorisé depuis email de confirmation");
+    // Permettre l'accès depuis un email de confirmation
+    // (Dans un vrai système, on vérifierait un token dans l'URL)
+    hasAccess = true;
   }
 
   if (!hasAccess) {

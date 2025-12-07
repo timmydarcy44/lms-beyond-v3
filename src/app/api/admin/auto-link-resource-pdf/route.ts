@@ -43,7 +43,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Buckets à chercher (dans l'ordre de priorité)
-    const buckets = ["Public", "Jessica CONTENTIN"];
+    // Essayer aussi avec différentes casse et variations
+    const buckets = [
+      "Public", 
+      "public",
+      "Jessica CONTENTIN",
+      "Jessica Contentin",
+      "jessica contentin",
+      "Jessica-Contentin",
+    ];
     
     // Noms de fichiers possibles à chercher
     const searchNames = fileName 
@@ -74,6 +82,7 @@ export async function POST(request: NextRequest) {
     });
 
     let foundFile: { bucket: string; path: string; url: string } | null = null;
+    const allPdfs: Array<{ bucket: string; path: string; name: string }> = [];
 
     // Chercher dans chaque bucket
     for (const bucket of buckets) {
@@ -129,18 +138,39 @@ export async function POST(request: NextRequest) {
               continue;
             }
 
+            // Ajouter à la liste de tous les PDFs trouvés (pour debug)
+            allPdfs.push({
+              bucket,
+              path: filePath,
+              name: file.name,
+            });
+
             // Vérifier si le nom correspond à un des noms recherchés
+            // Recherche plus flexible : accepter n'importe quel PDF contenant "sommeil" ou "guide"
+            const fileNameWithoutExt = fileNameLower.replace(/\.pdf$/, "");
+            const containsSommeil = fileNameWithoutExt.includes("sommeil");
+            const containsGuide = fileNameWithoutExt.includes("guide") || fileNameWithoutExt.includes("pratique");
+            
+            // Vérifier correspondance exacte ou partielle
+            let matches = false;
             for (const searchName of searchNames) {
               const searchNameLower = searchName.toLowerCase().replace(/\.pdf$/i, "");
-              const fileNameWithoutExt = fileNameLower.replace(/\.pdf$/, "");
-              
               if (
                 fileNameLower.includes(searchNameLower) ||
                 searchNameLower.includes(fileNameWithoutExt) ||
-                fileNameWithoutExt.includes(searchNameLower) ||
-                file.name.toLowerCase().includes("sommeil") ||
-                file.name.toLowerCase().includes("guide")
+                fileNameWithoutExt.includes(searchNameLower)
               ) {
+                matches = true;
+                break;
+              }
+            }
+            
+            // Si pas de correspondance exacte mais contient "sommeil" ou "guide", accepter quand même
+            if (!matches && (containsSommeil || containsGuide)) {
+              matches = true;
+            }
+            
+            if (matches) {
                 // Construire l'URL publique
                 const { data: { publicUrl } } = supabase.storage
                   .from(bucket)
@@ -171,12 +201,26 @@ export async function POST(request: NextRequest) {
     }
 
     if (!foundFile) {
+      // Si aucun fichier exact n'est trouvé, mais qu'on a trouvé des PDFs, suggérer le plus proche
+      const suggestedPdf = allPdfs.find(pdf => 
+        pdf.name.toLowerCase().includes("sommeil") || 
+        pdf.name.toLowerCase().includes("guide") ||
+        pdf.name.toLowerCase().includes("pratique")
+      );
+
       return NextResponse.json(
         {
           error: "PDF non trouvé dans Storage",
           searchedBuckets: buckets,
           searchedNames: searchNames,
           suggestion: "Vérifiez que le fichier est bien uploadé dans Supabase Storage (bucket 'Public' ou 'Jessica CONTENTIN')",
+          allPdfsFound: allPdfs.length > 0 ? allPdfs.slice(0, 20) : [], // Limiter à 20 pour éviter une réponse trop grande
+          suggestedPdf: suggestedPdf ? {
+            bucket: suggestedPdf.bucket,
+            path: suggestedPdf.path,
+            name: suggestedPdf.name,
+            url: supabase.storage.from(suggestedPdf.bucket).getPublicUrl(suggestedPdf.path).data.publicUrl,
+          } : null,
         },
         { status: 404 }
       );

@@ -54,19 +54,18 @@ export async function POST(request: NextRequest) {
 
     const price = catalogItem?.price || resource.price || 0;
 
-    // Utiliser l'URL proxy via notre domaine au lieu de l'URL Supabase directe
+    // Rediriger vers le compte de la personne
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-    const resourceId = catalogItem?.id || resource.id;
-    const pdfProxyUrl = `${baseUrl}/api/resources/${resourceId}/pdf`;
+    const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
 
-    // Envoyer l'email avec le lien proxy vers le PDF
+    // Envoyer l'email avec redirection vers le compte
     const result = await sendPurchaseConfirmationEmail(
       email || "timmydarcy44@gmail.com",
       "Timmy",
       resource.title,
       price,
       new Date().toLocaleDateString("fr-FR"),
-      pdfProxyUrl // Lien proxy vers le PDF (masque l'URL Supabase)
+      accountLink // Lien vers le compte de la personne
     );
 
     if (result.success) {

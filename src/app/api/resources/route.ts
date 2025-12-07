@@ -584,13 +584,11 @@ export async function POST(request: NextRequest) {
             // Si la ressource est créée avec un PDF ET publiée, envoyer un email de confirmation d'achat à timmydarcy44@gmail.com
             if (type === "pdf" && pdfUrl && data.id && published) {
               try {
-                // Utiliser l'URL proxy via notre domaine au lieu de l'URL Supabase directe
+                // Rediriger vers le compte de la personne
                 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-                // Utiliser le catalog_item_id si disponible, sinon l'ID de la ressource
-                const resourceId = catalogItemId || data.id;
-                const finalResourceLink = `${baseUrl}/api/resources/${resourceId}/pdf`;
+                const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
 
-                console.log("[api/resources] Envoi de l'email avec le lien proxy vers le PDF:", finalResourceLink);
+                console.log("[api/resources] Envoi de l'email avec redirection vers le compte:", accountLink);
 
                 await sendPurchaseConfirmationEmail(
                   "timmydarcy44@gmail.com",
@@ -598,9 +596,9 @@ export async function POST(request: NextRequest) {
                   title.trim(),
                   price || 0,
                   new Date().toLocaleDateString("fr-FR"),
-                  finalResourceLink
+                  accountLink
                 );
-                console.log("[api/resources] ✅ Email de confirmation d'achat envoyé à timmydarcy44@gmail.com avec le lien proxy vers le PDF:", finalResourceLink);
+                console.log("[api/resources] ✅ Email de confirmation d'achat envoyé à timmydarcy44@gmail.com avec redirection vers le compte:", accountLink);
               } catch (emailError) {
                 console.error("[api/resources] Erreur lors de l'envoi de l'email:", emailError);
                 // Ne pas bloquer la création si l'email échoue

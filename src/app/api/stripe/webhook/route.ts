@@ -193,6 +193,27 @@ export async function POST(request: NextRequest) {
             hint: accessError.hint,
           });
         } else {
+          // Vérifier que l'accès a bien été créé
+          const { data: verifyAccess, error: verifyError } = await supabase
+            .from("catalog_access")
+            .select("id, access_status, granted_at, purchase_amount")
+            .eq("user_id", profile.id)
+            .eq("catalog_item_id", catalogItemId)
+            .maybeSingle();
+          
+          if (verifyError) {
+            console.error("[stripe/webhook] ⚠️ Error verifying access:", verifyError);
+          } else if (verifyAccess) {
+            console.log("[stripe/webhook] ✅ Access verified successfully:", {
+              access_id: verifyAccess.id,
+              access_status: verifyAccess.access_status,
+              granted_at: verifyAccess.granted_at,
+              purchase_amount: verifyAccess.purchase_amount,
+            });
+          } else {
+            console.warn("[stripe/webhook] ⚠️ Access not found after upsert - this should not happen");
+          }
+          
           console.log("[stripe/webhook] ✅ Access granted successfully for item:", catalogItemId, "to user:", profile.id);
           console.log("[stripe/webhook] Access data:", accessData);
           
@@ -213,9 +234,9 @@ export async function POST(request: NextRequest) {
               
               const firstName = userProfile?.full_name?.split(" ")[0] || null;
               
-              // Construire le lien direct vers la ressource
+              // Rediriger vers le compte de la personne
               const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-              const resourceLink = `${baseUrl}/ressources/${catalogItem.id}`;
+              const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
               
               await sendPurchaseConfirmationEmail(
                 customerEmail,
@@ -223,7 +244,7 @@ export async function POST(request: NextRequest) {
                 catalogItem.title,
                 catalogItem.price || 0,
                 undefined, // purchaseDate (sera généré automatiquement)
-                resourceLink // Lien direct vers la ressource
+                accountLink // Lien vers le compte de la personne
               );
             }
           } catch (emailError) {
@@ -286,9 +307,36 @@ export async function POST(request: NextRequest) {
             });
 
           if (accessError) {
-            console.error("[stripe/webhook] Error granting access:", accessError);
+            console.error("[stripe/webhook] ❌ Error granting access:", accessError);
+            console.error("[stripe/webhook] Error details:", {
+              code: accessError.code,
+              message: accessError.message,
+              details: accessError.details,
+              hint: accessError.hint,
+            });
           } else {
-            console.log("[stripe/webhook] Access granted for catalog item:", catalogItem.title);
+            // Vérifier que l'accès a bien été créé
+            const { data: verifyAccess, error: verifyError } = await supabase
+              .from("catalog_access")
+              .select("id, access_status, granted_at, purchase_amount")
+              .eq("user_id", profile.id)
+              .eq("catalog_item_id", catalogItem.id)
+              .maybeSingle();
+            
+            if (verifyError) {
+              console.error("[stripe/webhook] ⚠️ Error verifying access:", verifyError);
+            } else if (verifyAccess) {
+              console.log("[stripe/webhook] ✅ Access verified successfully:", {
+                access_id: verifyAccess.id,
+                access_status: verifyAccess.access_status,
+                granted_at: verifyAccess.granted_at,
+                purchase_amount: verifyAccess.purchase_amount,
+              });
+            } else {
+              console.warn("[stripe/webhook] ⚠️ Access not found after upsert - this should not happen");
+            }
+            
+            console.log("[stripe/webhook] ✅ Access granted for catalog item:", catalogItem.title);
             
             // Envoyer l'email de confirmation d'achat
             try {
@@ -307,9 +355,9 @@ export async function POST(request: NextRequest) {
                 
                 const firstName = userProfile?.full_name?.split(" ")[0] || null;
                 
-                // Construire le lien direct vers la ressource
+                // Rediriger vers le compte de la personne
                 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-                const resourceLink = `${baseUrl}/ressources/${fullCatalogItem.id}`;
+                const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
                 
                 await sendPurchaseConfirmationEmail(
                   customerEmail,
@@ -317,7 +365,7 @@ export async function POST(request: NextRequest) {
                   fullCatalogItem.title,
                   fullCatalogItem.price || 0,
                   undefined, // purchaseDate (sera généré automatiquement)
-                  resourceLink // Lien direct vers la ressource
+                  accountLink // Lien vers le compte de la personne
                 );
               }
             } catch (emailError) {

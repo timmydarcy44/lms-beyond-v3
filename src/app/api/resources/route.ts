@@ -531,6 +531,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Synchroniser avec catalog_items si Super Admin
+        let catalogItemId: string | null = null;
         if (data && data.id) {
           try {
             // Vérifier si c'est contentin.cabinet@gmail.com
@@ -542,7 +543,8 @@ export async function POST(request: NextRequest) {
 
             const isContentin = profile?.email === "contentin.cabinet@gmail.com";
 
-            await syncCatalogItem({
+            // Synchroniser avec catalog_items et récupérer le catalogItemId
+            const syncResult = await syncCatalogItem({
               supabase,
               userId: user.id,
               contentId: data.id,
@@ -560,23 +562,36 @@ export async function POST(request: NextRequest) {
               stripeCheckoutUrl: stripeProduct?.checkoutUrl || null, // Passer l'URL de checkout Stripe
             });
 
-            // Si la ressource est créée avec un PDF, envoyer un email de confirmation d'achat à timmydarcy44@gmail.com
-            if (type === "pdf" && pdfUrl && data.id) {
+            // Récupérer le catalogItemId depuis le résultat de la synchronisation
+            if (syncResult.success && syncResult.catalogItemId) {
+              catalogItemId = syncResult.catalogItemId;
+              console.log("[api/resources] Catalog item ID récupéré:", catalogItemId);
+            } else {
+              // Si la synchronisation n'a pas retourné d'ID, essayer de le récupérer manuellement
+              const { data: catalogItem } = await supabase
+                .from("catalog_items")
+                .select("id")
+                .eq("content_id", data.id)
+                .eq("item_type", "ressource")
+                .maybeSingle();
+              
+              if (catalogItem?.id) {
+                catalogItemId = catalogItem.id;
+                console.log("[api/resources] Catalog item ID récupéré manuellement:", catalogItemId);
+              }
+            }
+
+            // Si la ressource est créée avec un PDF ET publiée, envoyer un email de confirmation d'achat à timmydarcy44@gmail.com
+            if (type === "pdf" && pdfUrl && data.id && published) {
               try {
                 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-                const resourceLink = `${baseUrl}/ressources/${data.id}`;
                 
-                // Récupérer le catalog_item_id pour construire le lien correct
-                const { data: catalogItem } = await supabase
-                  .from("catalog_items")
-                  .select("id")
-                  .eq("content_id", data.id)
-                  .eq("item_type", "ressource")
-                  .maybeSingle();
+                // Construire l'URL correcte avec le catalog_item_id si disponible
+                const finalResourceLink = catalogItemId
+                  ? `${baseUrl}/ressources/${catalogItemId}`
+                  : `${baseUrl}/ressources/${data.id}`;
 
-                const finalResourceLink = catalogItem?.id 
-                  ? `${baseUrl}/ressources/${catalogItem.id}`
-                  : resourceLink;
+                console.log("[api/resources] Envoi de l'email avec le lien:", finalResourceLink);
 
                 await sendPurchaseConfirmationEmail(
                   "timmydarcy44@gmail.com",
@@ -586,7 +601,7 @@ export async function POST(request: NextRequest) {
                   new Date().toLocaleDateString("fr-FR"),
                   finalResourceLink
                 );
-                console.log("[api/resources] Email de confirmation d'achat envoyé à timmydarcy44@gmail.com");
+                console.log("[api/resources] ✅ Email de confirmation d'achat envoyé à timmydarcy44@gmail.com avec le lien:", finalResourceLink);
               } catch (emailError) {
                 console.error("[api/resources] Erreur lors de l'envoi de l'email:", emailError);
                 // Ne pas bloquer la création si l'email échoue

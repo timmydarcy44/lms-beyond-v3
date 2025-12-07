@@ -12,8 +12,14 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 2. Créer une politique pour permettre l'upload aux super admins (Jessica Contentin)
-CREATE POLICY IF NOT EXISTS "Super admins can upload PDFs"
+-- 2. Supprimer les politiques existantes si elles existent (pour éviter les erreurs)
+DROP POLICY IF EXISTS "Super admins can upload PDFs" ON storage.objects;
+DROP POLICY IF EXISTS "PDFs are publicly readable" ON storage.objects;
+DROP POLICY IF EXISTS "Super admins can update PDFs" ON storage.objects;
+DROP POLICY IF EXISTS "Super admins can delete PDFs" ON storage.objects;
+
+-- 3. Créer une politique pour permettre l'upload aux super admins (Jessica Contentin)
+CREATE POLICY "Super admins can upload PDFs"
 ON storage.objects
 FOR INSERT
 TO authenticated
@@ -26,15 +32,15 @@ WITH CHECK (
   )
 );
 
--- 3. Créer une politique pour permettre la lecture publique des PDFs
-CREATE POLICY IF NOT EXISTS "PDFs are publicly readable"
+-- 4. Créer une politique pour permettre la lecture publique des PDFs
+CREATE POLICY "PDFs are publicly readable"
 ON storage.objects
 FOR SELECT
 TO public
 USING (bucket_id = 'pdfs');
 
--- 4. Créer une politique pour permettre la mise à jour aux super admins
-CREATE POLICY IF NOT EXISTS "Super admins can update PDFs"
+-- 5. Créer une politique pour permettre la mise à jour aux super admins
+CREATE POLICY "Super admins can update PDFs"
 ON storage.objects
 FOR UPDATE
 TO authenticated
@@ -47,8 +53,8 @@ USING (
   )
 );
 
--- 5. Créer une politique pour permettre la suppression aux super admins
-CREATE POLICY IF NOT EXISTS "Super admins can delete PDFs"
+-- 6. Créer une politique pour permettre la suppression aux super admins
+CREATE POLICY "Super admins can delete PDFs"
 ON storage.objects
 FOR DELETE
 TO authenticated

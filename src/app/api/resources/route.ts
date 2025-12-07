@@ -584,14 +584,10 @@ export async function POST(request: NextRequest) {
             // Si la ressource est créée avec un PDF ET publiée, envoyer un email de confirmation d'achat à timmydarcy44@gmail.com
             if (type === "pdf" && pdfUrl && data.id && published) {
               try {
-                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-                
-                // Construire l'URL correcte avec le catalog_item_id si disponible
-                const finalResourceLink = catalogItemId
-                  ? `${baseUrl}/ressources/${catalogItemId}`
-                  : `${baseUrl}/ressources/${data.id}`;
+                // Utiliser directement l'URL du PDF au lieu de la page de ressource
+                const finalResourceLink = pdfUrl; // L'URL directe du PDF dans Supabase Storage
 
-                console.log("[api/resources] Envoi de l'email avec le lien:", finalResourceLink);
+                console.log("[api/resources] Envoi de l'email avec le lien direct vers le PDF:", finalResourceLink);
 
                 await sendPurchaseConfirmationEmail(
                   "timmydarcy44@gmail.com",
@@ -601,7 +597,7 @@ export async function POST(request: NextRequest) {
                   new Date().toLocaleDateString("fr-FR"),
                   finalResourceLink
                 );
-                console.log("[api/resources] ✅ Email de confirmation d'achat envoyé à timmydarcy44@gmail.com avec le lien:", finalResourceLink);
+                console.log("[api/resources] ✅ Email de confirmation d'achat envoyé à timmydarcy44@gmail.com avec le lien direct vers le PDF:", finalResourceLink);
               } catch (emailError) {
                 console.error("[api/resources] Erreur lors de l'envoi de l'email:", emailError);
                 // Ne pas bloquer la création si l'email échoue

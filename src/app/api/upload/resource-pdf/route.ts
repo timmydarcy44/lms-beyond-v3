@@ -99,6 +99,12 @@ export async function POST(request: NextRequest) {
 
     // Utiliser le service role client pour l'upload (bypass RLS)
     const serviceClient = getServiceRoleClient();
+    if (!serviceClient) {
+      return NextResponse.json(
+        { error: "Supabase service client unavailable" },
+        { status: 500 }
+      );
+    }
     
     // Uploader dans le bucket "pdfs" (dédié aux PDFs)
     // Si le bucket n'existe pas, essayer "Public" en fallback

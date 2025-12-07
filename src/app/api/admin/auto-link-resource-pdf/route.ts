@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
         }
       } catch (error) {
         console.error(`[auto-link-resource-pdf] Erreur lors de la recherche dans ${bucket}:`, error);
-        continue;
+        // Continuer avec le bucket suivant en cas d'erreur
       }
     }
 

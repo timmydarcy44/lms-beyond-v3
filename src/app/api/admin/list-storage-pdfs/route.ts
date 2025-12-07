@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    // Chercher dans plusieurs buckets
-    const buckets = [bucketName, "Public", "public", "Jessica CONTENTIN", "Jessica Contentin"];
+    // Chercher dans plusieurs buckets (commencer par le bucket dédié "pdfs")
+    const buckets = [bucketName, "pdfs", "PDFs", "Public", "public", "Jessica CONTENTIN", "Jessica Contentin"];
     const uniqueBuckets = [...new Set(buckets)];
 
     for (const bucket of uniqueBuckets) {

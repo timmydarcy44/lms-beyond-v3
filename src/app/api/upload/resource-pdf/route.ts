@@ -100,61 +100,44 @@ export async function POST(request: NextRequest) {
     // Utiliser le service role client pour l'upload (bypass RLS)
     const serviceClient = getServiceRoleClient();
     
-    // Uploader dans le bucket "Public" ou "Jessica CONTENTIN"
+    // Uploader dans le bucket "pdfs" (dédié aux PDFs)
+    // Si le bucket n'existe pas, essayer "Public" en fallback
+    const bucketName = "pdfs";
     const { data: uploadData, error: uploadError } = await serviceClient.storage
-      .from("Public")
+      .from(bucketName)
       .upload(filePath, buffer, {
         contentType: "application/pdf",
         upsert: true,
       });
 
+    let finalBucket = bucketName;
+    let finalPath = filePath;
+
     if (uploadError) {
-      console.error("[upload/resource-pdf] Upload error:", uploadError);
-      // Essayer avec le bucket "Jessica CONTENTIN" si "Public" échoue
+      console.warn(`[upload/resource-pdf] Erreur avec le bucket ${bucketName}, essai avec "Public":`, uploadError);
+      // Fallback vers "Public" si le bucket "pdfs" n'existe pas encore
       const { data: uploadData2, error: uploadError2 } = await serviceClient.storage
-        .from("Jessica CONTENTIN")
+        .from("Public")
         .upload(filePath, buffer, {
           contentType: "application/pdf",
           upsert: true,
         });
 
       if (uploadError2) {
+        console.error("[upload/resource-pdf] Upload error:", uploadError2);
         return NextResponse.json(
-          { error: `Erreur lors de l'upload: ${uploadError2.message}` },
+          { error: `Erreur lors de l'upload: ${uploadError2.message}. Assurez-vous que le bucket "pdfs" existe ou que le bucket "Public" est accessible.` },
           { status: 500 }
         );
       }
 
-      // Construire l'URL publique
-      const { data: { publicUrl } } = serviceClient.storage
-        .from("Jessica CONTENTIN")
-        .getPublicUrl(filePath);
-
-      // Mettre à jour la ressource avec l'URL du PDF
-      const { error: updateError } = await serviceClient
-        .from("resources")
-        .update({ file_url: publicUrl, updated_at: new Date().toISOString() })
-        .eq("id", resourceId);
-
-      if (updateError) {
-        console.error("[upload/resource-pdf] Update error:", updateError);
-        return NextResponse.json(
-          { error: `Erreur lors de la mise à jour: ${updateError.message}` },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        fileUrl: publicUrl,
-        message: "PDF uploadé avec succès",
-      });
+      finalBucket = "Public";
     }
 
     // Construire l'URL publique
     const { data: { publicUrl } } = serviceClient.storage
-      .from("Public")
-      .getPublicUrl(filePath);
+      .from(finalBucket)
+      .getPublicUrl(finalPath);
 
     // Mettre à jour la ressource avec l'URL du PDF
     const { error: updateError } = await serviceClient

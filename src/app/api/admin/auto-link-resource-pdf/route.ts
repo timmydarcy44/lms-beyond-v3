@@ -43,8 +43,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Buckets à chercher (dans l'ordre de priorité)
-    // Essayer aussi avec différentes casse et variations
+    // Commencer par le bucket dédié "pdfs", puis les autres
     const buckets = [
+      "pdfs", // Bucket dédié aux PDFs
+      "PDFs",
       "Public", 
       "public",
       "Jessica CONTENTIN",

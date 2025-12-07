@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     try {
       const firstName = profile.full_name?.split(" ")[0] || null;
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-      const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
+      const accountLink = `${baseUrl}/jessica-contentin/mon-compte`;
 
       const emailResult = await sendPurchaseConfirmationEmail(
         email,

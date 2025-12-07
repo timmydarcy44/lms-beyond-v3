@@ -87,7 +87,7 @@ export async function sendPurchaseConfirmationEmail(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
   // Le CTA principal redirige toujours vers "mon compte" pour éviter les 404
-  const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
+  const accountLink = `${baseUrl}/jessica-contentin/mon-compte`;
   const template = getPurchaseConfirmationEmail({
     firstName: firstName || undefined,
     email,

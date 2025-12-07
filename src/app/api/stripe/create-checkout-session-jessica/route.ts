@@ -29,6 +29,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Récupérer l'item du catalogue
+    // Prioriser catalogItemId, sinon utiliser contentId pour chercher par content_id
+    const itemId = catalogItemId || contentId;
+    if (!itemId) {
+      return NextResponse.json(
+        { error: "catalogItemId ou contentId requis" },
+        { status: 400 }
+      );
+    }
+    
+    const catalogItem = await getCatalogItemById(itemId, undefined, user.id);
+
+    if (!catalogItem) {
+      console.error("[stripe/create-checkout-session-jessica] Catalog item not found for itemId:", itemId);
+      return NextResponse.json(
+        { error: "Item non trouvé" },
+        { status: 404 }
+      );
+    }
+
     // Vérifier si l'utilisateur a déjà accès à cette ressource
     const serviceClient = getServiceRoleClient();
     const checkClient = serviceClient || supabase;
@@ -51,32 +71,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Récupérer l'item du catalogue
-    // Prioriser catalogItemId, sinon utiliser contentId pour chercher par content_id
-    const itemId = catalogItemId || contentId;
-    if (!itemId) {
-      return NextResponse.json(
-        { error: "catalogItemId ou contentId requis" },
-        { status: 400 }
-      );
-    }
-    
-    const catalogItem = await getCatalogItemById(itemId, undefined, user.id);
-
     console.log("[stripe/create-checkout-session-jessica] Catalog item retrieved:", {
-      id: catalogItem?.id,
-      item_type: catalogItem?.item_type,
-      title: catalogItem?.title,
+      id: catalogItem.id,
+      item_type: catalogItem.item_type,
+      title: catalogItem.title,
       itemId,
     });
-
-    if (!catalogItem) {
-      console.error("[stripe/create-checkout-session-jessica] Catalog item not found for itemId:", itemId);
-      return NextResponse.json(
-        { error: "Item non trouvé" },
-        { status: 404 }
-      );
-    }
 
     // Accepter les ressources et les tests
     console.log("[stripe/create-checkout-session-jessica] Checking item_type:", catalogItem.item_type);

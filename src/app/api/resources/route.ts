@@ -586,7 +586,7 @@ export async function POST(request: NextRequest) {
               try {
                 // Rediriger vers le compte de la personne
                 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-                const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
+                const accountLink = `${baseUrl}/jessica-contentin/mon-compte`;
 
                 console.log("[api/resources] Envoi de l'email avec redirection vers le compte:", accountLink);
 

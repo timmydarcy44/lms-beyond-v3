@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Rediriger vers le compte de la personne
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-    const accountLink = `${baseUrl}/jessicacontentin/mon-compte`;
+    const accountLink = `${baseUrl}/jessica-contentin/mon-compte`;
 
     // Envoyer l'email avec redirection vers le compte
     const result = await sendPurchaseConfirmationEmail(

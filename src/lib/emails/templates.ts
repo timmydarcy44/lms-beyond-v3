@@ -115,7 +115,7 @@ export function getPurchaseConfirmationEmail(data: EmailTemplateData): { subject
   const resourcePrice = data.resourcePrice || 0;
   const purchaseDate = data.purchaseDate || new Date().toLocaleDateString("fr-FR");
   // loginLink est maintenant le lien vers "mon compte" (CTA principal)
-  const accountLink = data.loginLink || "https://www.jessicacontentin.fr/jessicacontentin/mon-compte";
+  const accountLink = data.loginLink || "https://www.jessicacontentin.fr/jessica-contentin/mon-compte";
   // resourceLink est le lien secondaire vers les ressources ou la ressource spécifique
   const resourceLink = data.resourceLink || "https://www.jessicacontentin.fr/jessica-contentin/ressources";
 

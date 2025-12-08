@@ -84,10 +84,11 @@ async function servePdf(
   supabase: any,
   serviceClient: any
 ) {
-  // Vérifier que c'est un PDF
-  if (resource.kind !== "pdf" || !resource.file_url) {
+  // Vérifier que c'est un PDF ou qu'il y a un file_url
+  // Ne pas vérifier resource.kind car il peut être null ou différent de "pdf"
+  if (!resource.file_url) {
     return NextResponse.json(
-      { error: "Cette ressource n'est pas un PDF" },
+      { error: "Cette ressource n'a pas de fichier PDF associé" },
       { status: 400 }
     );
   }

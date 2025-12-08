@@ -599,6 +599,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // URL vers la ressource (si accès) - PROTÉGÉ : null si pas d'accès
   // IMPORTANT: Si l'utilisateur a accès, TOUJOURS récupérer les URLs même si resourceData n'a pas été chargé avec les URLs
   // Cela peut arriver si hasAccess était false au moment du chargement initial
+  // SÉCURITÉ: Utiliser une route proxy pour masquer l'URL Supabase
   let resourceUrl = null;
   
   // Si l'utilisateur a accès, récupérer les données avec les URLs pour s'assurer qu'on a le file_url
@@ -616,12 +617,24 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
       console.error("[ressources/[id]] ❌ Error fetching resource with URLs:", resourceError);
     } else if (resourceWithUrls) {
       resourceData = resourceWithUrls;
-      resourceUrl = resourceWithUrls.file_url || resourceWithUrls.video_url || resourceWithUrls.audio_url;
+      
+      // SÉCURITÉ: Utiliser la route proxy pour masquer l'URL Supabase
+      // Si c'est un PDF, utiliser /api/resources/[id]/pdf au lieu de l'URL Supabase directe
+      if (resourceWithUrls.file_url) {
+        // Utiliser l'ID du catalog_item pour la route proxy (plus sécurisé)
+        resourceUrl = `/api/resources/${catalogItem.id}/pdf`;
+        console.log("[ressources/[id]] ✅ Utilisation de la route proxy pour le PDF:", resourceUrl);
+      } else {
+        // Pour les vidéos/audios, utiliser l'URL directe (ou créer une route proxy similaire si nécessaire)
+        resourceUrl = resourceWithUrls.video_url || resourceWithUrls.audio_url;
+      }
+      
       console.log("[ressources/[id]] ✅ Resource data with URLs fetched (user has access):", {
         hasFileUrl: !!resourceWithUrls.file_url,
         hasVideoUrl: !!resourceWithUrls.video_url,
         hasAudioUrl: !!resourceWithUrls.audio_url,
         resourceUrl,
+        usingProxy: !!resourceWithUrls.file_url,
         fileUrl: resourceWithUrls.file_url,
         videoUrl: resourceWithUrls.video_url,
         audioUrl: resourceWithUrls.audio_url,
@@ -642,7 +655,12 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     }
   } else if (hasAccess && resourceData) {
     // Si on a déjà resourceData avec les URLs, utiliser directement
-    resourceUrl = resourceData.file_url || resourceData.video_url || resourceData.audio_url;
+    // SÉCURITÉ: Utiliser la route proxy pour les PDFs
+    if (resourceData.file_url) {
+      resourceUrl = `/api/resources/${catalogItem.id}/pdf`;
+    } else {
+      resourceUrl = resourceData.video_url || resourceData.audio_url;
+    }
   }
   
   console.log("[ressources/[id]] Resource URL determination:", {
@@ -895,7 +913,12 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                           backgroundColor: primaryColor,
                         }}
                       >
-                        <a href={resourceUrl} target="_blank" rel="noopener noreferrer" download={resourceData?.file_url ? true : undefined}>
+                        <a 
+                          href={resourceUrl} 
+                          target={resourceData?.file_url ? "_blank" : "_blank"} 
+                          rel="noopener noreferrer" 
+                          download={resourceData?.file_url ? `${catalogItem.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf` : undefined}
+                        >
                           {getResourceIcon()}
                           <span className="ml-2">
                             {resourceData?.file_url 
@@ -908,7 +931,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                       </Button>
                       {resourceData?.file_url && (
                         <p className="text-xs text-center" style={{ color: `${textColor}80` }}>
-                          📄 Format PDF - Téléchargement direct
+                          📄 Format PDF - Téléchargement sécurisé via notre serveur
                         </p>
                       )}
                     </div>

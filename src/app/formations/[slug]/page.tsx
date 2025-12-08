@@ -16,9 +16,20 @@ interface FormationDetailPageProps {
 export default async function FormationDetailPage({ params }: FormationDetailPageProps) {
   const { slug } = await params;
 
+  console.log("[formations/[slug]] ========================================");
+  console.log("[formations/[slug]] PAGE FUNCTION CALLED for slug:", slug);
+  console.log("[formations/[slug]] ========================================");
+
   // Récupérer les détails de la formation
   const detail = await getLearnerContentDetail("formations", slug);
+  console.log("[formations/[slug]] getLearnerContentDetail result:", {
+    found: !!detail,
+    cardId: detail?.card?.id,
+    cardTitle: detail?.card?.title,
+  });
+  
   if (!detail) {
+    console.error("[formations/[slug]] ❌ getLearnerContentDetail returned null, calling notFound()");
     notFound();
   }
 
@@ -28,14 +39,23 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
     notFound();
   }
 
-  // Récupérer l'ID de Jessica Contentin
-  const { data: jessicaProfile } = await supabase
+  // Récupérer l'ID de Jessica Contentin (utiliser le service role client pour éviter les erreurs RLS)
+  const { getServiceRoleClient } = await import("@/lib/supabase/server");
+  const serviceClient = getServiceRoleClient();
+  const profileClient = serviceClient || supabase;
+
+  const { data: jessicaProfile, error: jessicaProfileError } = await profileClient
     .from("profiles")
     .select("id")
     .eq("email", JESSICA_CONTENTIN_EMAIL)
     .maybeSingle();
 
+  if (jessicaProfileError) {
+    console.error("[formations/[slug]] Erreur lors de la récupération du profil de Jessica:", jessicaProfileError);
+  }
+
   if (!jessicaProfile) {
+    console.error("[formations/[slug]] Profil de Jessica non trouvé");
     notFound();
   }
 
@@ -70,7 +90,20 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   }
 
   // SÉCURITÉ: Vérifier l'accès de l'utilisateur dans catalog_access
-  const { data: { user } } = await supabase.auth.getUser();
+  // Gérer les erreurs d'authentification gracieusement
+  let user = null;
+  try {
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.warn("[formations/[slug]] Erreur d'authentification (non bloquante):", authError.message);
+      // Continuer sans utilisateur (accès public si gratuit)
+    } else {
+      user = authUser;
+    }
+  } catch (authException) {
+    console.warn("[formations/[slug]] Exception lors de l'authentification (non bloquante):", authException);
+    // Continuer sans utilisateur (accès public si gratuit)
+  }
   
   // Utiliser le service role client pour contourner RLS si nécessaire
   const { getServiceRoleClient } = await import("@/lib/supabase/server");

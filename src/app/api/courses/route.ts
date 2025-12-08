@@ -30,28 +30,71 @@ export async function POST(request: NextRequest) {
       status,
       isUpdate: !!courseId,
     });
+    
+    // IMPORTANT: Vérifier si un course avec le même titre existe déjà (pour éviter les doublons)
+    // Si courseId n'est pas fourni, chercher un course existant avec le même titre et le même créateur
+    let existingCourseId = courseId;
 
     if (!snapshot || !snapshot.general?.title) {
       return NextResponse.json({ error: "Titre de formation requis" }, { status: 400 });
     }
     
-    // Validation importante : si courseId est fourni, vérifier qu'il existe
-    if (courseId) {
+    // IMPORTANT: Vérifier si un course avec le même titre existe déjà (pour éviter les doublons)
+    // Si courseId n'est pas fourni, chercher un course existant avec le même titre et le même créateur
+    let existingCourseId = courseId;
+    
+    if (!existingCourseId) {
+      console.log("[api/courses] Aucun courseId fourni, recherche d'un course existant avec le même titre...");
+      const { data: existingCourseByTitle, error: searchError } = await supabase
+        .from("courses")
+        .select("id, title, creator_id, owner_id")
+        .eq("title", snapshot.general.title.trim())
+        .eq("creator_id", user.id)
+        .maybeSingle();
+      
+      if (searchError) {
+        console.error("[api/courses] Erreur lors de la recherche d'un course existant:", searchError);
+      } else if (existingCourseByTitle) {
+        console.log("[api/courses] ⚠️ Course existant trouvé avec le même titre, utilisation pour mise à jour:", {
+          id: existingCourseByTitle.id,
+          title: existingCourseByTitle.title,
+          creator_id: existingCourseByTitle.creator_id,
+        });
+        existingCourseId = existingCourseByTitle.id;
+      } else {
+        console.log("[api/courses] Aucun course existant trouvé, création d'un nouveau course");
+      }
+    }
+    
+    // Validation importante : si courseId est fourni (ou trouvé), vérifier qu'il existe
+    if (existingCourseId) {
       const { data: existingCourse, error: checkError } = await supabase
         .from("courses")
         .select("id, title, creator_id, owner_id")
-        .eq("id", courseId)
+        .eq("id", existingCourseId)
         .maybeSingle();
       
       if (checkError || !existingCourse) {
         console.error("[api/courses] CourseId fourni mais course introuvable:", {
-          courseId,
+          courseId: existingCourseId,
           error: checkError,
         });
         return NextResponse.json({ 
           error: "Course introuvable pour la mise à jour",
           details: "Le courseId fourni n'existe pas dans la base de données"
         }, { status: 404 });
+      }
+      
+      // Vérifier que l'utilisateur est le créateur/propriétaire
+      if (existingCourse.creator_id !== user.id && existingCourse.owner_id !== user.id) {
+        console.error("[api/courses] Utilisateur non autorisé à modifier ce course:", {
+          courseId: existingCourseId,
+          courseCreatorId: existingCourse.creator_id,
+          userId: user.id,
+        });
+        return NextResponse.json({ 
+          error: "Vous n'êtes pas autorisé à modifier cette formation",
+        }, { status: 403 });
       }
       
       console.log("[api/courses] Course existant trouvé:", {
@@ -71,7 +114,7 @@ export async function POST(request: NextRequest) {
       .replace(/^-+|-+$/g, "");
 
     // Générer le slug final
-    const finalSlug = courseId ? undefined : `${slug || 'course'}-${Date.now()}`;
+    const finalSlug = existingCourseId ? undefined : `${slug || 'course'}-${Date.now()}`;
     
     // Vérifier d'abord si la colonne owner_id existe dans la table
     // (certaines structures utilisent owner_id au lieu de creator_id)
@@ -93,7 +136,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Ne pas modifier creator_id lors d'une mise à jour (pour éviter les problèmes de propriété)
-    if (!courseId) {
+    if (!existingCourseId) {
       // Création : définir creator_id et owner_id
       courseData.creator_id = user.id;
       courseData.owner_id = user.id;
@@ -108,13 +151,13 @@ export async function POST(request: NextRequest) {
     }
 
     let result;
-    if (courseId) {
+    if (existingCourseId) {
       // Mise à jour d'une formation existante
-      // Vérifier d'abord que l'utilisateur est propriétaire/créateur
+      // (La vérification a déjà été faite plus haut)
       const { data: existingCourse, error: checkError } = await supabase
         .from("courses")
         .select("creator_id, owner_id, id")
-        .eq("id", courseId)
+        .eq("id", existingCourseId)
         .single();
 
       if (checkError) {
@@ -131,7 +174,7 @@ export async function POST(request: NextRequest) {
       }
 
       console.log("[api/courses] Mise à jour du course:", JSON.stringify({
-        courseId,
+        courseId: existingCourseId,
         existingCourseId: existingCourse?.id,
         courseData: Object.keys(courseData),
         title: courseData.title,
@@ -141,7 +184,7 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase
         .from("courses")
         .update(courseData)
-        .eq("id", courseId)
+        .eq("id", existingCourseId)
         .select()
         .single();
 

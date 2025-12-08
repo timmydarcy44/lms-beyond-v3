@@ -597,32 +597,39 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   let accroche = catalogItem.short_description || catalogItem.description || resourceData?.description || testData?.description;
 
   // URL vers la ressource (si accès) - PROTÉGÉ : null si pas d'accès
-  // IMPORTANT: Si l'utilisateur a accès, récupérer l'URL même si resourceData n'a pas été chargé avec les URLs
+  // IMPORTANT: Si l'utilisateur a accès, TOUJOURS récupérer les URLs même si resourceData n'a pas été chargé avec les URLs
   // Cela peut arriver si hasAccess était false au moment du chargement initial
   let resourceUrl = null;
-  if (hasAccess && resourceData) {
-    resourceUrl = resourceData.file_url || resourceData.video_url || resourceData.audio_url;
-  }
   
-  // Si l'utilisateur a accès mais que resourceUrl est null, essayer de récupérer les données avec les URLs
-  if (hasAccess && !resourceUrl && catalogItem.item_type === "ressource" && catalogItem.content_id) {
-    console.log("[ressources/[id]] ⚠️ User has access but resourceUrl is null, fetching resource data with URLs...");
-    const { data: resourceWithUrls } = await supabase
+  // Si l'utilisateur a accès, récupérer les données avec les URLs pour s'assurer qu'on a le file_url
+  if (hasAccess && catalogItem.item_type === "ressource" && catalogItem.content_id) {
+    // Toujours récupérer les données avec les URLs si l'utilisateur a accès
+    // Utiliser le service role client pour contourner RLS si nécessaire
+    const resourceClient = serviceClient || supabase;
+    const { data: resourceWithUrls, error: resourceError } = await resourceClient
       .from("resources")
       .select("id, title, description, kind, file_url, video_url, audio_url, slug")
       .eq("id", catalogItem.content_id)
       .maybeSingle();
     
-    if (resourceWithUrls) {
+    if (resourceError) {
+      console.error("[ressources/[id]] ❌ Error fetching resource with URLs:", resourceError);
+    } else if (resourceWithUrls) {
       resourceData = resourceWithUrls;
       resourceUrl = resourceWithUrls.file_url || resourceWithUrls.video_url || resourceWithUrls.audio_url;
-      console.log("[ressources/[id]] ✅ Resource data with URLs fetched:", {
+      console.log("[ressources/[id]] ✅ Resource data with URLs fetched (user has access):", {
         hasFileUrl: !!resourceWithUrls.file_url,
         hasVideoUrl: !!resourceWithUrls.video_url,
         hasAudioUrl: !!resourceWithUrls.audio_url,
         resourceUrl,
+        fileUrl: resourceWithUrls.file_url,
       });
+    } else {
+      console.warn("[ressources/[id]] ⚠️ Resource not found for content_id:", catalogItem.content_id);
     }
+  } else if (hasAccess && resourceData) {
+    // Si on a déjà resourceData avec les URLs, utiliser directement
+    resourceUrl = resourceData.file_url || resourceData.video_url || resourceData.audio_url;
   }
   
   console.log("[ressources/[id]] Resource URL determination:", {
@@ -891,20 +898,22 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                       )}
                     </div>
                   ) : (
-                    // Si l'utilisateur a accès mais que resourceUrl est null, afficher quand même un bouton "Accéder"
-                    // qui redirigera vers la page de la ressource (qui récupérera les URLs)
-                    <Button 
-                      asChild 
-                      className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                      style={{
-                        backgroundColor: primaryColor,
-                      }}
-                    >
-                      <Link href={`/ressources/${catalogItem.id || catalogItem.content_id}`}>
-                        <Play className="h-5 w-5 mr-2" />
-                        <span className="ml-2">Accéder</span>
-                      </Link>
-                    </Button>
+                    // Si l'utilisateur a accès mais que resourceUrl est null (ne devrait pas arriver normalement)
+                    // Afficher un message d'erreur ou un bouton de rechargement
+                    <div className="space-y-3">
+                      <p className="text-sm text-center" style={{ color: `${textColor}AA` }}>
+                        ⚠️ Impossible de charger la ressource. Veuillez réessayer.
+                      </p>
+                      <Button 
+                        onClick={() => window.location.reload()}
+                        className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                        style={{
+                          backgroundColor: primaryColor,
+                        }}
+                      >
+                        <span className="ml-2">Réessayer</span>
+                      </Button>
+                    </div>
                   )}
                 </div>
               ) : (

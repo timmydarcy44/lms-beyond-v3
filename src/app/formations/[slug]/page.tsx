@@ -40,13 +40,31 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   }
 
   // Récupérer le course et vérifier le creator_id
-  const { data: course } = await supabase
+  const { data: course, error: courseError } = await supabase
     .from("courses")
-    .select("id, creator_id")
+    .select("id, creator_id, title")
     .eq("id", slug)
     .maybeSingle();
 
-  if (!course || course.creator_id !== jessicaProfile.id) {
+  console.log("[formations/[slug]] Course lookup:", {
+    slug,
+    courseFound: !!course,
+    courseTitle: course?.title,
+    courseCreatorId: course?.creator_id,
+    jessicaProfileId: jessicaProfile.id,
+    courseError: courseError?.message,
+  });
+
+  if (!course) {
+    console.error("[formations/[slug]] Course not found for slug/id:", slug);
+    notFound();
+  }
+
+  if (course.creator_id !== jessicaProfile.id) {
+    console.warn("[formations/[slug]] Course creator_id does not match Jessica's profile ID:", {
+      courseCreatorId: course.creator_id,
+      jessicaProfileId: jessicaProfile.id,
+    });
     // Si ce n'est pas une formation de Jessica, rediriger vers la page catalogue normale
     notFound();
   }

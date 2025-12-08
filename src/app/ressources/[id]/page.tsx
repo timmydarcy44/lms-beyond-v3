@@ -445,17 +445,61 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // C'est la SEULE source de vérité pour l'accès utilisateur
   // Utiliser le catalog_item_id réel, pas l'id passé en paramètre
   // Vérifier soit par user_id (B2C) soit par organization_id (B2B)
+  // IMPORTANT: user_id dans catalog_access correspond à profiles.id (qui est aussi auth.users.id)
   let userAccess = null;
   if (user?.id || organizationId) {
-    // Utiliser le service role client pour contourner RLS si nécessaire
+    // TOUJOURS utiliser le service role client pour contourner RLS
+    // Cela garantit que la vérification d'accès fonctionne même si l'utilisateur n'a pas les bonnes permissions RLS
     const accessClient = serviceClient || supabase;
-    const { data: access } = await accessClient
-    .from("catalog_access")
-    .select("access_status")
-    .eq("catalog_item_id", catalogItemId)
-      .or(`user_id.eq.${user?.id || 'null'},organization_id.eq.${organizationId || 'null'}`)
-    .maybeSingle();
+    
+    if (!serviceClient) {
+      console.warn("[ressources/[id]] ⚠️ Service role client not available, using regular client (may fail due to RLS)");
+    }
+    
+    console.log("[ressources/[id]] Checking access in catalog_access:", {
+      catalogItemId,
+      userId: user?.id,
+      organizationId,
+      usingServiceClient: !!serviceClient,
+    });
+    
+    // Construire la requête selon qu'on a un user_id ou organization_id
+    // IMPORTANT: user_id dans catalog_access correspond à profiles.id (qui est aussi auth.users.id)
+    let accessQuery = accessClient
+      .from("catalog_access")
+      .select("access_status, user_id, catalog_item_id")
+      .eq("catalog_item_id", catalogItemId);
+    
+    if (user?.id) {
+      // Pour les accès B2C, vérifier user_id et s'assurer que organization_id est null
+      accessQuery = accessQuery.eq("user_id", user.id).is("organization_id", null);
+    } else if (organizationId) {
+      // Pour les accès B2B, vérifier organization_id
+      accessQuery = accessQuery.eq("organization_id", organizationId);
+    }
+    
+    const { data: access, error: accessError } = await accessQuery.maybeSingle();
+    
+    if (accessError) {
+      console.error("[ressources/[id]] ❌ Error checking access:", {
+        error: accessError.message,
+        code: accessError.code,
+        details: accessError.details,
+        hint: accessError.hint,
+      });
+    } else {
+      console.log("[ressources/[id]] ✅ Access check result:", {
+        found: !!access,
+        accessStatus: access?.access_status,
+        userId: access?.user_id,
+        catalogItemId: access?.catalog_item_id,
+        matchesUserId: access?.user_id === user?.id,
+      });
+    }
+    
     userAccess = access;
+  } else {
+    console.log("[ressources/[id]] ⚠️ No user ID or organization ID, skipping access check");
   }
   
   // L'utilisateur a accès UNIQUEMENT si :
@@ -471,6 +515,14 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   // Si l'item a été créé par Jessica ET que l'utilisateur est Jessica, accès garanti
   // Même si la vérification de session a échoué partiellement
   const hasAccess = isCreator || isItemCreatedByJessica || hasExplicitAccess;
+  
+  console.log("[ressources/[id]] Final access determination:", {
+    isCreator,
+    isItemCreatedByJessica,
+    hasExplicitAccess,
+    hasAccess,
+    userAccessStatus: userAccess?.access_status,
+  });
 
   // Récupérer les détails de la ressource ou du test UNIQUEMENT si l'utilisateur a accès
   // Pour protéger les URLs de fichiers/vidéos/audios
@@ -533,6 +585,15 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   const resourceUrl = hasAccess && resourceData
     ? (resourceData.file_url || resourceData.video_url || resourceData.audio_url)
     : null;
+  
+  console.log("[ressources/[id]] Resource URL determination:", {
+    hasAccess,
+    hasResourceData: !!resourceData,
+    fileUrl: resourceData?.file_url,
+    videoUrl: resourceData?.video_url,
+    audioUrl: resourceData?.audio_url,
+    resourceUrl,
+  });
 
   // URL vers la page de paiement (si pas d'accès)
   // Si la ressource a une URL Stripe Checkout configurée, l'utiliser
@@ -601,6 +662,14 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   
   // Pour les tests, si l'utilisateur a accès, on peut afficher le bouton "Accéder" même sans resourceUrl
   const canAccess = hasAccess && (resourceUrl || testPageUrl);
+  
+  console.log("[ressources/[id]] Can access determination:", {
+    hasAccess,
+    resourceUrl,
+    testPageUrl,
+    canAccess,
+    isTest,
+  });
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColor }}>

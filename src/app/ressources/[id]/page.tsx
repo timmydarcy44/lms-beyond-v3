@@ -597,9 +597,33 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   let accroche = catalogItem.short_description || catalogItem.description || resourceData?.description || testData?.description;
 
   // URL vers la ressource (si accès) - PROTÉGÉ : null si pas d'accès
-  const resourceUrl = hasAccess && resourceData
-    ? (resourceData.file_url || resourceData.video_url || resourceData.audio_url)
-    : null;
+  // IMPORTANT: Si l'utilisateur a accès, récupérer l'URL même si resourceData n'a pas été chargé avec les URLs
+  // Cela peut arriver si hasAccess était false au moment du chargement initial
+  let resourceUrl = null;
+  if (hasAccess && resourceData) {
+    resourceUrl = resourceData.file_url || resourceData.video_url || resourceData.audio_url;
+  }
+  
+  // Si l'utilisateur a accès mais que resourceUrl est null, essayer de récupérer les données avec les URLs
+  if (hasAccess && !resourceUrl && catalogItem.item_type === "ressource" && catalogItem.content_id) {
+    console.log("[ressources/[id]] ⚠️ User has access but resourceUrl is null, fetching resource data with URLs...");
+    const { data: resourceWithUrls } = await supabase
+      .from("resources")
+      .select("id, title, description, kind, file_url, video_url, audio_url, slug")
+      .eq("id", catalogItem.content_id)
+      .maybeSingle();
+    
+    if (resourceWithUrls) {
+      resourceData = resourceWithUrls;
+      resourceUrl = resourceWithUrls.file_url || resourceWithUrls.video_url || resourceWithUrls.audio_url;
+      console.log("[ressources/[id]] ✅ Resource data with URLs fetched:", {
+        hasFileUrl: !!resourceWithUrls.file_url,
+        hasVideoUrl: !!resourceWithUrls.video_url,
+        hasAudioUrl: !!resourceWithUrls.audio_url,
+        resourceUrl,
+      });
+    }
+  }
   
   console.log("[ressources/[id]] Resource URL determination:", {
     hasAccess,

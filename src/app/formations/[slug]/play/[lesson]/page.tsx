@@ -28,24 +28,69 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
 
   // Vérifier que c'est bien une formation de Jessica Contentin
   const supabase = await getServerClient();
-  if (supabase) {
-    // Récupérer l'ID de Jessica Contentin
-    const { data: jessicaProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", JESSICA_CONTENTIN_EMAIL)
+  if (!supabase) {
+    notFound();
+  }
+
+  // Récupérer l'ID de Jessica Contentin
+  const { data: jessicaProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", JESSICA_CONTENTIN_EMAIL)
+    .maybeSingle();
+
+  if (!jessicaProfile) {
+    notFound();
+  }
+
+  // Récupérer le course et vérifier le creator_id
+  const { data: course } = await supabase
+    .from("courses")
+    .select("id, creator_id")
+    .eq("id", slug)
+    .maybeSingle();
+
+  if (!course || course.creator_id !== jessicaProfile.id) {
+    notFound();
+  }
+
+  // SÉCURITÉ: Vérifier l'accès de l'utilisateur dans catalog_access
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (user) {
+    // Trouver le catalog_item_id pour ce course
+    const { data: catalogItem } = await supabase
+      .from("catalog_items")
+      .select("id, is_free, price")
+      .eq("content_id", course.id)
+      .eq("item_type", "module")
       .maybeSingle();
 
-    if (jessicaProfile) {
-      // Récupérer le course et vérifier le creator_id
-      const { data: course } = await supabase
-        .from("courses")
-        .select("creator_id")
-        .eq("id", slug)
+    if (catalogItem) {
+      // Vérifier si l'utilisateur est le créateur
+      const isCreator = course.creator_id === user.id;
+      
+      // Vérifier l'accès dans catalog_access
+      const { data: userAccess } = await supabase
+        .from("catalog_access")
+        .select("access_status")
+        .eq("catalog_item_id", catalogItem.id)
+        .eq("user_id", user.id)
+        .is("organization_id", null)
         .maybeSingle();
 
-      if (course && course.creator_id !== jessicaProfile.id) {
-        notFound();
+      const hasExplicitAccess = userAccess && (
+        userAccess.access_status === "purchased" ||
+        userAccess.access_status === "free" ||
+        userAccess.access_status === "manually_granted"
+      );
+
+      const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
+
+      if (!hasAccess) {
+        // Rediriger vers la page de paiement
+        const { redirect } = await import("next/navigation");
+        redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
       }
     }
   }

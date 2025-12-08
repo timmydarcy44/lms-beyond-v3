@@ -5,6 +5,7 @@ import { CatalogTopNavClient } from "@/components/catalogue/catalog-top-nav-clie
 import { BrandingProvider } from "@/components/super-admin/branding-provider";
 import { getSuperAdminBranding } from "@/lib/queries/super-admin-branding";
 import { StripePaymentForm } from "@/components/catalogue/stripe-payment-form";
+import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,26 +27,27 @@ export default async function ModulePaymentPage({ params }: PageProps) {
   }
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    notFound();
+  // Permettre l'accès même sans être connecté (rediriger vers création de compte si nécessaire)
+
+  let organizationId: string | undefined = undefined;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("org_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    organizationId = profile?.org_id || undefined;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id")
-    .eq("id", user.id)
-    .single();
-
-  const organizationId = profile?.org_id || undefined;
-
-  const catalogItem = await getCatalogItemById(id, organizationId, user.id);
+  const catalogItem = await getCatalogItemById(id, organizationId, user?.id);
 
   if (!catalogItem || (catalogItem.item_type !== "module" && catalogItem.item_type !== "parcours")) {
     notFound();
   }
 
   // Vérifier si l'utilisateur est le créateur du contenu
-  const isCreator = (catalogItem as any).creator_id === user.id;
+  const isCreator = user && (catalogItem as any).creator_id === user.id;
   
   // Si déjà acheté, gratuit, ou si c'est le créateur, rediriger vers le module
   if (isCreator || catalogItem.is_free || catalogItem.access_status === "purchased" || catalogItem.access_status === "manually_granted") {
@@ -75,17 +77,49 @@ export default async function ModulePaymentPage({ params }: PageProps) {
             <h1 className="text-3xl font-bold mb-4" style={{ color: textColor }}>
               Paiement - {catalogItem.title}
             </h1>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-600 mb-4">
               Prix: {catalogItem.price}€
             </p>
             
-            <StripePaymentForm
+            {!user && (
+              <div className="mb-6 p-4 rounded-lg border-2" style={{ borderColor: `${primaryColor}40`, backgroundColor: `${primaryColor}05` }}>
+                <p className="text-sm text-center mb-3" style={{ color: textColor }}>
+                  Pour procéder au paiement, vous devez avoir un compte.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Link
+                    href={`/jessica-contentin/inscription?redirect=${encodeURIComponent(`/dashboard/catalogue/module/${id}/payment`)}`}
+                    className="px-4 py-2 rounded-full text-sm font-semibold text-white transition-all hover:opacity-90"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    Créer un compte
+                  </Link>
+                  <Link
+                    href={`/jessica-contentin/login?next=${encodeURIComponent(`/dashboard/catalogue/module/${id}/payment`)}`}
+                    className="px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all hover:opacity-90"
+                    style={{ borderColor: primaryColor, color: primaryColor }}
+                  >
+                    Se connecter
+                  </Link>
+                </div>
+              </div>
+            )}
+            
+            {user ? (
+              <StripePaymentForm
               itemId={id}
               itemType={catalogItem.item_type as "module" | "parcours"}
-              itemTitle={catalogItem.title}
-              price={catalogItem.price}
-              primaryColor={primaryColor}
-            />
+                itemTitle={catalogItem.title}
+                price={catalogItem.price}
+                primaryColor={primaryColor}
+              />
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">
+                  Veuillez créer un compte ou vous connecter pour continuer.
+                </p>
+              </div>
+            )}
           </div>
         </main>
       </div>

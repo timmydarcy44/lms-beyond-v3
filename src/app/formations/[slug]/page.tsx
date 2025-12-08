@@ -54,42 +54,65 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   // SÉCURITÉ: Vérifier l'accès de l'utilisateur dans catalog_access
   const { data: { user } } = await supabase.auth.getUser();
   
-  if (user) {
-    // Trouver le catalog_item_id pour ce course
-    const { data: catalogItem } = await supabase
-      .from("catalog_items")
-      .select("id, is_free, price")
-      .eq("content_id", course.id)
-      .eq("item_type", "module")
+  // Trouver le catalog_item_id pour ce course
+  const { data: catalogItem } = await supabase
+    .from("catalog_items")
+    .select("id, is_free, price")
+    .eq("content_id", course.id)
+    .eq("item_type", "module")
+    .maybeSingle();
+
+  console.log("[formations/[slug]] Access check:", {
+    courseId: course.id,
+    userId: user?.id,
+    catalogItemId: catalogItem?.id,
+    isFree: catalogItem?.is_free,
+  });
+
+  if (user && catalogItem) {
+    // Vérifier si l'utilisateur est le créateur
+    const isCreator = course.creator_id === user.id;
+    
+    // Vérifier l'accès dans catalog_access
+    const { data: userAccess } = await supabase
+      .from("catalog_access")
+      .select("access_status")
+      .eq("catalog_item_id", catalogItem.id)
+      .eq("user_id", user.id)
+      .is("organization_id", null)
       .maybeSingle();
 
-    if (catalogItem) {
-      // Vérifier si l'utilisateur est le créateur
-      const isCreator = course.creator_id === user.id;
-      
-      // Vérifier l'accès dans catalog_access
-      const { data: userAccess } = await supabase
-        .from("catalog_access")
-        .select("access_status")
-        .eq("catalog_item_id", catalogItem.id)
-        .eq("user_id", user.id)
-        .is("organization_id", null)
-        .maybeSingle();
+    const hasExplicitAccess = userAccess && (
+      userAccess.access_status === "purchased" ||
+      userAccess.access_status === "free" ||
+      userAccess.access_status === "manually_granted"
+    );
 
-      const hasExplicitAccess = userAccess && (
-        userAccess.access_status === "purchased" ||
-        userAccess.access_status === "free" ||
-        userAccess.access_status === "manually_granted"
-      );
+    const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
 
-      const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
+    console.log("[formations/[slug]] Access decision:", {
+      isCreator,
+      hasExplicitAccess,
+      isFree: catalogItem.is_free,
+      hasAccess,
+      accessStatus: userAccess?.access_status,
+    });
 
-      if (!hasAccess) {
-        // Rediriger vers la page de paiement
-        const { redirect } = await import("next/navigation");
-        redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
-      }
+    if (!hasAccess) {
+      // Rediriger vers la page de paiement
+      console.log("[formations/[slug]] No access, redirecting to payment:", `/dashboard/catalogue/module/${catalogItem.id}/payment`);
+      const { redirect } = await import("next/navigation");
+      redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
     }
+  } else if (!user && catalogItem && !catalogItem.is_free) {
+    // Si l'utilisateur n'est pas connecté et le module n'est pas gratuit, rediriger vers la page de paiement
+    console.log("[formations/[slug]] User not logged in, redirecting to payment:", `/dashboard/catalogue/module/${catalogItem.id}/payment`);
+    const { redirect } = await import("next/navigation");
+    redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
+  } else if (!catalogItem) {
+    // Si le catalog_item n'existe pas, c'est une erreur
+    console.error("[formations/[slug]] Catalog item not found for course:", course.id);
+    notFound();
   }
 
   const { card, detail: info, related = [] } = detail;

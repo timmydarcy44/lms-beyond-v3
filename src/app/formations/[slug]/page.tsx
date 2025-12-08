@@ -6,6 +6,7 @@ import { getLearnerContentDetail } from "@/lib/queries/apprenant";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { Button } from "@/components/ui/button";
 import { getServerClient } from "@/lib/supabase/server";
+import { BuyButton } from "@/components/jessica-contentin/buy-button";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
@@ -231,29 +232,43 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
       userAccess.access_status === "manually_granted"
     );
 
-    // L'utilisateur a accès uniquement s'il est le créateur, a un accès explicite, ou si le module est gratuit
-    const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
-
-    console.log("[formations/[slug]] Access decision:", {
-      isCreator,
-      hasExplicitAccess,
-      isFree: catalogItem.is_free,
-      hasAccess,
-      accessStatus: userAccess?.access_status,
-    });
-
-    if (!hasAccess) {
-      // Rediriger vers la page de paiement
-      console.log("[formations/[slug]] No access, redirecting to payment:", `/dashboard/catalogue/module/${catalogItem.id}/payment`);
-      const { redirect } = await import("next/navigation");
-      redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
-    }
-  } else if (!user && catalogItem && !catalogItem.is_free) {
-    // Si l'utilisateur n'est pas connecté et le module n'est pas gratuit, rediriger vers la page de paiement
-    console.log("[formations/[slug]] User not logged in, redirecting to payment:", `/dashboard/catalogue/module/${catalogItem.id}/payment`);
-    const { redirect } = await import("next/navigation");
-    redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
+    // Ne pas rediriger - on affichera la page de présentation avec le bon bouton
   }
+  
+  // Déterminer si l'utilisateur a accès (pour afficher le bon bouton)
+  let hasAccess = false;
+  if (catalogItem) {
+    if (catalogItem.is_free) {
+      hasAccess = true;
+    } else if (user) {
+      const isCreator = course && course.creator_id === user.id;
+      const { data: userAccessCheck } = await supabase
+        .from("catalog_access")
+        .select("access_status")
+        .eq("catalog_item_id", catalogItem.id)
+        .eq("user_id", user.id)
+        .is("organization_id", null)
+        .maybeSingle();
+      
+      const hasExplicitAccess = userAccessCheck && (
+        userAccessCheck.access_status === "purchased" ||
+        userAccessCheck.access_status === "free" ||
+        userAccessCheck.access_status === "manually_granted"
+      );
+      
+      hasAccess = isCreator || hasExplicitAccess;
+    }
+  } else if (course && user && course.creator_id === user.id) {
+    // Si pas de catalog_item mais que l'utilisateur est le créateur
+    hasAccess = true;
+  }
+  
+  console.log("[formations/[slug]] Final access decision:", {
+    hasAccess,
+    catalogItemId: catalogItem?.id,
+    isFree: catalogItem?.is_free,
+    userId: user?.id,
+  });
 
   const { card, detail: info, related = [] } = detail;
   const lessons = info.modules.flatMap((module) => module.lessons ?? []);
@@ -369,15 +384,31 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-3 pt-4">
-                  <Button 
-                    asChild 
-                    className="rounded-full px-6 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl"
-                    style={{
-                      backgroundColor: primaryColor,
-                    }}
-                  >
-                    <Link href={playHref}>Accéder au contenu</Link>
-                  </Button>
+                  {hasAccess ? (
+                    <Button 
+                      asChild 
+                      className="rounded-full px-6 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    >
+                      <Link href={playHref}>Accéder au contenu</Link>
+                    </Button>
+                  ) : catalogItem ? (
+                    <BuyButton
+                      catalogItemId={catalogItem.id}
+                      contentId={catalogItem.content_id || catalogItem.id}
+                      price={catalogItem.price || 0}
+                      title={card.title}
+                      contentType="module"
+                      thumbnailUrl={card.coverImage}
+                      hasAccess={false}
+                      className="rounded-full px-6 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    />
+                  ) : null}
                 </div>
               </div>
               <div 

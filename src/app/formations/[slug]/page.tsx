@@ -234,9 +234,8 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
       userAccess.access_status === "manually_granted"
     );
 
-    // Si c'est une formation de Jessica, permettre l'accès même sans vérification explicite
-    const isJessicaCourse = course && course.creator_id === jessicaProfile.id;
-    const hasAccess = isCreator || isJessicaCourse || hasExplicitAccess || catalogItem.is_free;
+    // L'utilisateur a accès uniquement s'il est le créateur, a un accès explicite, ou si le module est gratuit
+    const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
 
     console.log("[formations/[slug]] Access decision:", {
       isCreator,

@@ -169,9 +169,13 @@ export async function POST(request: NextRequest) {
         mode: "payment",
         success_url: catalogItem.item_type === "test" 
           ? `${baseUrl}/test-confiance-en-soi?payment=success&session_id={CHECKOUT_SESSION_ID}`
+          : catalogItem.item_type === "module" || catalogItem.item_type === "parcours"
+          ? `${baseUrl}/dashboard/catalogue/module/${catalogItem.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`
           : `${baseUrl}/ressources/${catalogItem.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: catalogItem.item_type === "test"
           ? `${baseUrl}/test-confiance-en-soi`
+          : catalogItem.item_type === "module" || catalogItem.item_type === "parcours"
+          ? `${baseUrl}/dashboard/catalogue/module/${catalogItem.id}`
           : `${baseUrl}/ressources/${catalogItem.id}`,
         metadata: {
           catalog_item_id: catalogItem.id,

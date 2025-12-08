@@ -623,7 +623,20 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
         hasAudioUrl: !!resourceWithUrls.audio_url,
         resourceUrl,
         fileUrl: resourceWithUrls.file_url,
+        videoUrl: resourceWithUrls.video_url,
+        audioUrl: resourceWithUrls.audio_url,
+        resourceId: resourceWithUrls.id,
+        resourceTitle: resourceWithUrls.title,
       });
+      
+      // Si resourceUrl est toujours null, c'est qu'il n'y a pas de fichier associé
+      if (!resourceUrl) {
+        console.warn("[ressources/[id]] ⚠️ WARNING: User has access but no file_url, video_url, or audio_url found for resource:", {
+          resourceId: resourceWithUrls.id,
+          resourceTitle: resourceWithUrls.title,
+          kind: resourceWithUrls.kind,
+        });
+      }
     } else {
       console.warn("[ressources/[id]] ⚠️ Resource not found for content_id:", catalogItem.content_id);
     }
@@ -639,6 +652,8 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     videoUrl: resourceData?.video_url,
     audioUrl: resourceData?.audio_url,
     resourceUrl,
+    willShowDownloadButton: !!resourceUrl,
+    willShowError: hasAccess && !resourceUrl,
   });
 
   // URL vers la page de paiement (si pas d'accès)

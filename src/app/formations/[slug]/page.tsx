@@ -59,15 +59,19 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
     notFound();
   }
 
-  // Récupérer le course et vérifier le creator_id
-  const { data: course, error: courseError } = await supabase
+  // Utiliser l'ID du course depuis detail.card.id (plus fiable que slug)
+  const courseId = detail.card.id;
+  
+  // Récupérer le course et vérifier le creator_id (utiliser serviceClient pour contourner RLS)
+  const { data: course, error: courseError } = await profileClient
     .from("courses")
     .select("id, creator_id, title")
-    .eq("id", slug)
+    .eq("id", courseId)
     .maybeSingle();
 
   console.log("[formations/[slug]] Course lookup:", {
     slug,
+    courseId,
     courseFound: !!course,
     courseTitle: course?.title,
     courseCreatorId: course?.creator_id,
@@ -76,11 +80,11 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   });
 
   if (!course) {
-    console.error("[formations/[slug]] Course not found for slug/id:", slug);
-    notFound();
-  }
-
-  if (course.creator_id !== jessicaProfile.id) {
+    console.error("[formations/[slug]] Course not found for courseId:", courseId);
+    // Si le course n'est pas trouvé mais que detail existe, continuer quand même
+    // (le course existe puisque getLearnerContentDetail l'a trouvé)
+    console.warn("[formations/[slug]] ⚠️ Course not found in direct query, but detail exists. Continuing with detail data.");
+  } else if (course.creator_id !== jessicaProfile.id) {
     console.warn("[formations/[slug]] Course creator_id does not match Jessica's profile ID:", {
       courseCreatorId: course.creator_id,
       jessicaProfileId: jessicaProfile.id,
@@ -108,11 +112,12 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   // Utiliser le service role client pour contourner RLS si nécessaire (déjà créé plus haut)
   const catalogClient = serviceClient || supabase;
   
-  // Trouver le catalog_item_id pour ce course
+  // Trouver le catalog_item_id pour ce course (utiliser courseId depuis detail si course n'est pas trouvé)
+  const actualCourseId = course?.id || courseId;
   const { data: catalogItem, error: catalogItemError } = await catalogClient
     .from("catalog_items")
     .select("id, is_free, price")
-    .eq("content_id", course.id)
+    .eq("content_id", actualCourseId)
     .eq("item_type", "module")
     .maybeSingle();
   
@@ -121,30 +126,35 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   }
 
   console.log("[formations/[slug]] Access check:", {
-    courseId: course.id,
+    courseId: actualCourseId,
     userId: user?.id,
     catalogItemId: catalogItem?.id,
     isFree: catalogItem?.is_free,
     catalogItemExists: !!catalogItem,
+    courseFound: !!course,
   });
 
   // Si le catalog_item n'existe pas, permettre l'accès au créateur uniquement
   // (pour les anciens cours qui n'ont pas encore de catalog_item)
   if (!catalogItem) {
-    console.warn("[formations/[slug]] Catalog item not found for course:", course.id);
-    if (user && course.creator_id === user.id) {
+    console.warn("[formations/[slug]] Catalog item not found for course:", actualCourseId);
+    // Si on a le course et que l'utilisateur est le créateur, lui donner accès
+    if (course && user && course.creator_id === user.id) {
       // Le créateur peut toujours accéder
       console.log("[formations/[slug]] Creator access granted (no catalog_item)");
+    } else if (course && course.creator_id === jessicaProfile.id) {
+      // Si c'est une formation de Jessica, permettre l'accès même sans catalog_item
+      console.log("[formations/[slug]] Jessica's course, access granted (no catalog_item)");
     } else {
       // Pour les autres utilisateurs, rediriger vers le catalogue
       console.log("[formations/[slug]] No catalog_item and not creator, redirecting to catalogue");
       const { redirect } = await import("next/navigation");
       redirect(`/dashboard/catalogue`);
     }
-    // Continuer l'exécution si c'est le créateur
+    // Continuer l'exécution si c'est le créateur ou Jessica
   } else if (user) {
     // Vérifier si l'utilisateur est le créateur
-    const isCreator = course.creator_id === user.id;
+    const isCreator = course && course.creator_id === user.id;
     
     // Vérifier l'accès dans catalog_access
     const { data: userAccess } = await supabase
@@ -161,10 +171,13 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
       userAccess.access_status === "manually_granted"
     );
 
-    const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
+    // Si c'est une formation de Jessica, permettre l'accès même sans vérification explicite
+    const isJessicaCourse = course && course.creator_id === jessicaProfile.id;
+    const hasAccess = isCreator || isJessicaCourse || hasExplicitAccess || catalogItem.is_free;
 
     console.log("[formations/[slug]] Access decision:", {
       isCreator,
+      isJessicaCourse,
       hasExplicitAccess,
       isFree: catalogItem.is_free,
       hasAccess,
@@ -177,7 +190,7 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
       const { redirect } = await import("next/navigation");
       redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
     }
-  } else if (!user && !catalogItem.is_free) {
+  } else if (!user && catalogItem && !catalogItem.is_free) {
     // Si l'utilisateur n'est pas connecté et le module n'est pas gratuit, rediriger vers la page de paiement
     console.log("[formations/[slug]] User not logged in, redirecting to payment:", `/dashboard/catalogue/module/${catalogItem.id}/payment`);
     const { redirect } = await import("next/navigation");

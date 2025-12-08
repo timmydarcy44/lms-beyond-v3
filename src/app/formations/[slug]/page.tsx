@@ -7,6 +7,7 @@ import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { Button } from "@/components/ui/button";
 import { getServerClient } from "@/lib/supabase/server";
 import { BuyButton } from "@/components/jessica-contentin/buy-button";
+import { ResourcePurchaseSection } from "@/components/jessica-contentin/resource-purchase-section";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
@@ -376,18 +377,19 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
                       <Link href={playHref}>Accéder au contenu</Link>
                     </Button>
                   ) : catalogItem ? (
-                    <BuyButton
+                    <ResourcePurchaseSection
+                      user={user}
+                      hasAccess={hasAccess}
                       catalogItemId={catalogItem.id}
                       contentId={catalogItem.content_id || catalogItem.id}
                       price={catalogItem.price || 0}
                       title={card.title}
                       contentType="module"
-                      thumbnailUrl={card.coverImage}
-                      hasAccess={false}
-                      className="rounded-full px-6 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl"
-                      style={{
-                        backgroundColor: primaryColor,
-                      }}
+                      isFree={catalogItem.is_free || false}
+                      stripeCheckoutUrl={null}
+                      primaryColor={primaryColor}
+                      textColor={textColor}
+                      currentPath={`/formations/${slug}`}
                     />
                   ) : null}
                 </div>

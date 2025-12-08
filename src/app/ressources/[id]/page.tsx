@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { Play, FileText, Video, Headphones, CreditCard } from "lucide-react";
 import { BuyButton } from "@/components/jessica-contentin/buy-button";
+import { ResourcePurchaseSection } from "@/components/jessica-contentin/resource-purchase-section";
 import { getTenantFromHeaders } from "@/lib/tenant/detection-server";
 import { headers } from "next/headers";
 import { PaymentCleanupWrapper } from "./payment-cleanup-wrapper";
@@ -957,58 +958,20 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                   )}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <div 
-                      className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"
-                      style={{ backgroundColor: `${primaryColor}20` }}
-                    >
-                      <div className="text-xl">🔒</div>
-                    </div>
-                    <h3 
-                      className="text-lg font-bold mb-2"
-                      style={{ color: textColor }}
-                    >
-                      {catalogItem.is_free ? "Accès gratuit" : "Acheter cette ressource"}
-                    </h3>
-                    <p 
-                      className="text-sm mb-4"
-                      style={{ color: `${textColor}AA` }}
-                    >
-                      {catalogItem.is_free 
-                        ? "Connectez-vous pour accéder gratuitement à cette ressource"
-                        : "Achetez cette ressource pour y accéder immédiatement"}
-                    </p>
-                  </div>
-                  {stripeCheckoutUrl ? (
-                    <Button 
-                      asChild 
-                      className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                      style={{
-                        backgroundColor: primaryColor,
-                      }}
-                    >
-                      <a href={stripeCheckoutUrl} target="_blank" rel="noopener noreferrer">
-                        <CreditCard className="h-5 w-5" />
-                        <span className="ml-2">{getButtonText()}</span>
-                      </a>
-                    </Button>
-                  ) : (
-                    <BuyButton
-                      catalogItemId={catalogItemId}
-                      contentId={catalogItem.content_id || catalogItemId}
-                      price={catalogItem.price || 0}
-                      title={catalogItem.title}
-                      contentType={catalogItem.item_type as "module" | "test" | "ressource" | "parcours" || "ressource"}
-                      hasAccess={hasAccess}
-                      thumbnailUrl={catalogItem.thumbnail_url}
-                      className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                      style={{
-                        backgroundColor: primaryColor,
-                      }}
-                    />
-                  )}
-                </div>
+                <ResourcePurchaseSection
+                  user={user}
+                  hasAccess={hasAccess}
+                  catalogItemId={catalogItemId}
+                  contentId={catalogItem.content_id || catalogItemId}
+                  price={catalogItem.price || 0}
+                  title={catalogItem.title}
+                  contentType={catalogItem.item_type as "module" | "test" | "ressource" | "parcours" || "ressource"}
+                  isFree={catalogItem.is_free || false}
+                  stripeCheckoutUrl={stripeCheckoutUrl}
+                  primaryColor={primaryColor}
+                  textColor={textColor}
+                  currentPath={`/ressources/${id}`}
+                />
               )}
             </div>
           </div>

@@ -979,18 +979,6 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                         ? "Connectez-vous pour accéder gratuitement à cette ressource"
                         : "Achetez cette ressource pour y accéder immédiatement"}
                     </p>
-                    {!user && (
-                      <p className="text-xs text-center mb-4" style={{ color: `${textColor}80` }}>
-                        Pas encore de compte ?{" "}
-                        <Link 
-                          href={`/jessica-contentin/inscription?redirect=${encodeURIComponent(`/ressources/${id}`)}`}
-                          className="underline font-semibold hover:opacity-80 transition-opacity"
-                          style={{ color: primaryColor }}
-                        >
-                          Créer un compte
-                        </Link>
-                      </p>
-                    )}
                   </div>
                   {stripeCheckoutUrl ? (
                     <Button 

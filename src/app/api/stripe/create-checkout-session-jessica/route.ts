@@ -78,12 +78,12 @@ export async function POST(request: NextRequest) {
       itemId,
     });
 
-    // Accepter les ressources et les tests
+    // Accepter les ressources, tests, modules et parcours
     console.log("[stripe/create-checkout-session-jessica] Checking item_type:", catalogItem.item_type);
-    if (catalogItem.item_type !== "ressource" && catalogItem.item_type !== "test") {
+    if (catalogItem.item_type !== "ressource" && catalogItem.item_type !== "test" && catalogItem.item_type !== "module" && catalogItem.item_type !== "parcours") {
       console.error("[stripe/create-checkout-session-jessica] Unsupported item_type:", catalogItem.item_type);
       return NextResponse.json(
-        { error: `Type d'item non supporté: ${catalogItem.item_type}. Types supportés: ressource, test` },
+        { error: `Type d'item non supporté: ${catalogItem.item_type}. Types supportés: ressource, test, module, parcours` },
         { status: 400 }
       );
     }

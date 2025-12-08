@@ -67,9 +67,24 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
     userId: user?.id,
     catalogItemId: catalogItem?.id,
     isFree: catalogItem?.is_free,
+    catalogItemExists: !!catalogItem,
   });
 
-  if (user && catalogItem) {
+  // Si le catalog_item n'existe pas, permettre l'accès au créateur uniquement
+  // (pour les anciens cours qui n'ont pas encore de catalog_item)
+  if (!catalogItem) {
+    console.warn("[formations/[slug]] Catalog item not found for course:", course.id);
+    if (user && course.creator_id === user.id) {
+      // Le créateur peut toujours accéder
+      console.log("[formations/[slug]] Creator access granted (no catalog_item)");
+    } else {
+      // Pour les autres utilisateurs, rediriger vers le catalogue
+      console.log("[formations/[slug]] No catalog_item and not creator, redirecting to catalogue");
+      const { redirect } = await import("next/navigation");
+      redirect(`/dashboard/catalogue`);
+    }
+    // Continuer l'exécution si c'est le créateur
+  } else if (user) {
     // Vérifier si l'utilisateur est le créateur
     const isCreator = course.creator_id === user.id;
     
@@ -104,15 +119,11 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
       const { redirect } = await import("next/navigation");
       redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
     }
-  } else if (!user && catalogItem && !catalogItem.is_free) {
+  } else if (!user && !catalogItem.is_free) {
     // Si l'utilisateur n'est pas connecté et le module n'est pas gratuit, rediriger vers la page de paiement
     console.log("[formations/[slug]] User not logged in, redirecting to payment:", `/dashboard/catalogue/module/${catalogItem.id}/payment`);
     const { redirect } = await import("next/navigation");
     redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
-  } else if (!catalogItem) {
-    // Si le catalog_item n'existe pas, c'est une erreur
-    console.error("[formations/[slug]] Catalog item not found for course:", course.id);
-    notFound();
   }
 
   const { card, detail: info, related = [] } = detail;

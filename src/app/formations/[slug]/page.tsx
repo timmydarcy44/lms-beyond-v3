@@ -205,16 +205,13 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
     if (course && user && course.creator_id === user.id) {
       // Le créateur peut toujours accéder
       console.log("[formations/[slug]] Creator access granted (no catalog_item)");
-    } else if (course && course.creator_id === jessicaProfile.id) {
-      // Si c'est une formation de Jessica, permettre l'accès même sans catalog_item
-      console.log("[formations/[slug]] Jessica's course, access granted (no catalog_item)");
     } else {
       // Pour les autres utilisateurs, rediriger vers le catalogue
       console.log("[formations/[slug]] No catalog_item and not creator, redirecting to catalogue");
       const { redirect } = await import("next/navigation");
       redirect(`/dashboard/catalogue`);
     }
-    // Continuer l'exécution si c'est le créateur ou Jessica
+    // Continuer l'exécution si c'est le créateur
   } else if (user) {
     // Vérifier si l'utilisateur est le créateur
     const isCreator = course && course.creator_id === user.id;
@@ -239,7 +236,6 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
 
     console.log("[formations/[slug]] Access decision:", {
       isCreator,
-      isJessicaCourse,
       hasExplicitAccess,
       isFree: catalogItem.is_free,
       hasAccess,

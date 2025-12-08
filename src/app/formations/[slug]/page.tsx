@@ -20,19 +20,6 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   console.log("[formations/[slug]] PAGE FUNCTION CALLED for slug:", slug);
   console.log("[formations/[slug]] ========================================");
 
-  // Récupérer les détails de la formation
-  const detail = await getLearnerContentDetail("formations", slug);
-  console.log("[formations/[slug]] getLearnerContentDetail result:", {
-    found: !!detail,
-    cardId: detail?.card?.id,
-    cardTitle: detail?.card?.title,
-  });
-  
-  if (!detail) {
-    console.error("[formations/[slug]] ❌ getLearnerContentDetail returned null, calling notFound()");
-    notFound();
-  }
-
   // Vérifier que c'est bien une formation de Jessica Contentin
   const supabase = await getServerClient();
   if (!supabase) {
@@ -44,11 +31,26 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   const serviceClient = getServiceRoleClient();
   const profileClient = serviceClient || supabase;
 
-  const { data: jessicaProfile, error: jessicaProfileError } = await profileClient
-    .from("profiles")
-    .select("id")
-    .eq("email", JESSICA_CONTENTIN_EMAIL)
+  // Récupérer directement le course avec le service role client (contourner RLS)
+  const { data: courseDirect, error: courseDirectError } = await profileClient
+    .from("courses")
+    .select("id, title, description, slug, cover_image, hero_image_url, thumbnail_url, builder_snapshot, status, creator_id")
+    .eq("id", slug)
     .maybeSingle();
+
+  console.log("[formations/[slug]] Direct course lookup:", {
+    slug,
+    courseFound: !!courseDirect,
+    courseTitle: courseDirect?.title,
+    courseCreatorId: courseDirect?.creator_id,
+    courseError: courseDirectError?.message,
+  });
+
+  const { data: jessicaProfile, error: jessicaProfileError } = await profileClient
+      .from("profiles")
+      .select("id")
+      .eq("email", JESSICA_CONTENTIN_EMAIL)
+      .maybeSingle();
 
   if (jessicaProfileError) {
     console.error("[formations/[slug]] Erreur lors de la récupération du profil de Jessica:", jessicaProfileError);
@@ -59,15 +61,76 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
     notFound();
   }
 
-  // Utiliser l'ID du course depuis detail.card.id (plus fiable que slug)
-  const courseId = detail.card.id;
+  // Vérifier que le course appartient à Jessica
+  if (courseDirect && courseDirect.creator_id !== jessicaProfile.id) {
+    console.warn("[formations/[slug]] Course creator_id does not match Jessica's profile ID:", {
+      courseCreatorId: courseDirect.creator_id,
+      jessicaProfileId: jessicaProfile.id,
+    });
+    notFound();
+  }
+
+  // Si courseDirect existe, utiliser son ID, sinon essayer getLearnerContentDetail
+  let courseId: string;
+  let detail: any = null;
+
+  if (courseDirect) {
+    courseId = courseDirect.id;
+    console.log("[formations/[slug]] Using courseDirect, courseId:", courseId);
+    // Construire un detail minimal depuis courseDirect pour compatibilité avec le reste du code
+    // On récupérera le detail complet via getLearnerContentDetail après
+  } else {
+    console.error("[formations/[slug]] ❌ Course not found directly, trying getLearnerContentDetail...");
+    detail = await getLearnerContentDetail("formations", slug);
+    console.log("[formations/[slug]] getLearnerContentDetail result:", {
+      found: !!detail,
+      cardId: detail?.card?.id,
+      cardTitle: detail?.card?.title,
+    });
+    
+    if (!detail) {
+      console.error("[formations/[slug]] ❌ getLearnerContentDetail also returned null, calling notFound()");
+      notFound();
+    }
+    courseId = detail.card.id;
+  }
+
+  // Si on a courseDirect mais pas detail, récupérer detail maintenant (avec courseId connu)
+  // Utiliser le slug du course si disponible, sinon l'ID
+  if (courseDirect && !detail) {
+    const detailSlug = courseDirect.slug || courseId;
+    detail = await getLearnerContentDetail("formations", detailSlug);
+    if (!detail) {
+      // Si getLearnerContentDetail échoue, essayer avec l'ID directement
+      detail = await getLearnerContentDetail("formations", courseId);
+    }
+    if (!detail) {
+      // Si getLearnerContentDetail échoue encore, construire un detail minimal depuis courseDirect
+      console.warn("[formations/[slug]] getLearnerContentDetail failed, constructing minimal detail from courseDirect");
+      detail = {
+        card: {
+          id: courseDirect.id,
+          title: courseDirect.title,
+          description: courseDirect.description,
+          coverImage: courseDirect.cover_image || courseDirect.hero_image_url || courseDirect.thumbnail_url,
+        },
+        detail: {
+          title: courseDirect.title,
+          description: courseDirect.description,
+          backgroundImage: courseDirect.hero_image_url || courseDirect.cover_image || courseDirect.thumbnail_url,
+          modules: [],
+        },
+      };
+    }
+  }
   
-  // Récupérer le course et vérifier le creator_id (utiliser serviceClient pour contourner RLS)
-  const { data: course, error: courseError } = await profileClient
-    .from("courses")
+  // Utiliser courseDirect si disponible, sinon récupérer le course
+  const course = courseDirect || await profileClient
+        .from("courses")
     .select("id, creator_id, title")
     .eq("id", courseId)
-    .maybeSingle();
+    .maybeSingle()
+    .then(result => result.data);
 
   console.log("[formations/[slug]] Course lookup:", {
     slug,
@@ -76,22 +139,22 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
     courseTitle: course?.title,
     courseCreatorId: course?.creator_id,
     jessicaProfileId: jessicaProfile.id,
-    courseError: courseError?.message,
+    usingCourseDirect: !!courseDirect,
   });
 
   if (!course) {
     console.error("[formations/[slug]] Course not found for courseId:", courseId);
-    // Si le course n'est pas trouvé mais que detail existe, continuer quand même
-    // (le course existe puisque getLearnerContentDetail l'a trouvé)
-    console.warn("[formations/[slug]] ⚠️ Course not found in direct query, but detail exists. Continuing with detail data.");
-  } else if (course.creator_id !== jessicaProfile.id) {
+    notFound();
+  }
+
+  if (course.creator_id !== jessicaProfile.id) {
     console.warn("[formations/[slug]] Course creator_id does not match Jessica's profile ID:", {
       courseCreatorId: course.creator_id,
       jessicaProfileId: jessicaProfile.id,
     });
-    // Si ce n'est pas une formation de Jessica, rediriger vers la page catalogue normale
-    notFound();
-  }
+        // Si ce n'est pas une formation de Jessica, rediriger vers la page catalogue normale
+        notFound();
+      }
 
   // SÉCURITÉ: Vérifier l'accès de l'utilisateur dans catalog_access
   // Gérer les erreurs d'authentification gracieusement
@@ -212,12 +275,12 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   const accentColor = "#D4AF37"; // Doré accent
 
   return (
-    <LearningSessionTracker
-      contentType="course"
-      contentId={card.id}
-      showIndicator={false}
-    >
-      <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
+      <LearningSessionTracker
+        contentType="course"
+        contentId={card.id}
+        showIndicator={false}
+      >
+        <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
           {/* Hero Section */}
           <section 
             className="relative overflow-hidden rounded-3xl border mx-6 mt-6 mb-8 shadow-lg"

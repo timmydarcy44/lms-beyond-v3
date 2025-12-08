@@ -213,29 +213,10 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
       redirect(`/dashboard/catalogue`);
     }
     // Continuer l'exécution si c'est le créateur
-  } else if (user) {
-    // Vérifier si l'utilisateur est le créateur
-    const isCreator = course && course.creator_id === user.id;
-    
-    // Vérifier l'accès dans catalog_access
-    const { data: userAccess } = await supabase
-      .from("catalog_access")
-      .select("access_status")
-      .eq("catalog_item_id", catalogItem.id)
-      .eq("user_id", user.id)
-      .is("organization_id", null)
-      .maybeSingle();
-
-    const hasExplicitAccess = userAccess && (
-      userAccess.access_status === "purchased" ||
-      userAccess.access_status === "free" ||
-      userAccess.access_status === "manually_granted"
-    );
-
-    // Ne pas rediriger - on affichera la page de présentation avec le bon bouton
   }
   
   // Déterminer si l'utilisateur a accès (pour afficher le bon bouton)
+  // Ne pas rediriger - toujours afficher la page de présentation
   let hasAccess = false;
   if (catalogItem) {
     if (catalogItem.is_free) {

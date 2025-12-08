@@ -57,13 +57,22 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
   // SÉCURITÉ: Vérifier l'accès de l'utilisateur dans catalog_access
   const { data: { user } } = await supabase.auth.getUser();
   
+  // Utiliser le service role client pour contourner RLS si nécessaire
+  const { getServiceRoleClient } = await import("@/lib/supabase/server");
+  const serviceClient = getServiceRoleClient();
+  const catalogClient = serviceClient || supabase;
+  
   // Trouver le catalog_item_id pour ce course
-  const { data: catalogItem } = await supabase
+  const { data: catalogItem, error: catalogItemError } = await catalogClient
     .from("catalog_items")
     .select("id, is_free, price")
     .eq("content_id", course.id)
     .eq("item_type", "module")
     .maybeSingle();
+  
+  if (catalogItemError) {
+    console.error("[formations/[slug]/play] Error fetching catalog_item:", catalogItemError);
+  }
 
   console.log("[formations/[slug]/play] Access check:", {
     courseId: course.id,

@@ -58,9 +58,21 @@ export function BuyButton({
 
       if (!response.ok) {
         // Si l'utilisateur n'est pas authentifié (401), rediriger vers inscription/connexion
+        // avec redirection vers la page de paiement après connexion
         if (response.status === 401) {
-          const currentUrl = window.location.pathname;
-          router.push(`/jessica-contentin/inscription?redirect=${encodeURIComponent(currentUrl)}`);
+          // Construire l'URL de la page de paiement selon le type de contenu
+          let paymentUrl = "";
+          if (contentType === "module" || contentType === "parcours") {
+            paymentUrl = `/dashboard/catalogue/module/${catalogItemId}/payment`;
+          } else if (contentType === "test") {
+            paymentUrl = `/dashboard/catalogue/test/${catalogItemId}/payment`;
+          } else {
+            // Pour les ressources, utiliser l'API Stripe directement (pas de page de paiement dédiée)
+            // On redirige vers la page de présentation et le BuyButton réessaiera après connexion
+            paymentUrl = window.location.pathname;
+          }
+          
+          router.push(`/jessica-contentin/inscription?redirect=${encodeURIComponent(paymentUrl)}`);
           setIsLoading(false);
           return;
         }

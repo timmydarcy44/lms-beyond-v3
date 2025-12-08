@@ -151,6 +151,25 @@ export async function POST(request: NextRequest) {
 
       // Créer la session de paiement Stripe
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+      
+      // Déterminer l'URL de redirection selon le type de contenu
+      let successUrl = "";
+      let cancelUrl = "";
+      
+      if (catalogItem.item_type === "test") {
+        successUrl = `${baseUrl}/test-confiance-en-soi?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${baseUrl}/test-confiance-en-soi`;
+      } else if (catalogItem.item_type === "module" || catalogItem.item_type === "parcours") {
+        // Utiliser le slug du course si disponible, sinon l'ID
+        const courseSlug = (catalogItem as any).slug || catalogItem.content_id || catalogItem.id;
+        successUrl = `${baseUrl}/formations/${courseSlug}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${baseUrl}/formations/${courseSlug}`;
+      } else {
+        // Ressource
+        successUrl = `${baseUrl}/ressources/${catalogItem.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${baseUrl}/ressources/${catalogItem.id}`;
+      }
+      
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -167,16 +186,8 @@ export async function POST(request: NextRequest) {
           },
         ],
         mode: "payment",
-        success_url: catalogItem.item_type === "test" 
-          ? `${baseUrl}/test-confiance-en-soi?payment=success&session_id={CHECKOUT_SESSION_ID}`
-          : catalogItem.item_type === "module" || catalogItem.item_type === "parcours"
-          ? `${baseUrl}/dashboard/catalogue/module/${catalogItem.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`
-          : `${baseUrl}/ressources/${catalogItem.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: catalogItem.item_type === "test"
-          ? `${baseUrl}/test-confiance-en-soi`
-          : catalogItem.item_type === "module" || catalogItem.item_type === "parcours"
-          ? `${baseUrl}/dashboard/catalogue/module/${catalogItem.id}`
-          : `${baseUrl}/ressources/${catalogItem.id}`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
         metadata: {
           catalog_item_id: catalogItem.id,
           content_id: catalogItem.content_id,

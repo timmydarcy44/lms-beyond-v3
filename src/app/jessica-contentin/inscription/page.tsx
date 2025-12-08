@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,6 +61,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function JessicaContentinSignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -113,6 +114,16 @@ export default function JessicaContentinSignupPage() {
       }
 
       setSuccess(true);
+      
+      // Rediriger vers l'URL spécifiée dans le paramètre redirect, ou vers les ressources par défaut
+      const redirectUrl = searchParams.get("redirect") || "/jessica-contentin/ressources";
+      
+      // Attendre un peu pour que l'utilisateur voie le message de succès
+      setTimeout(() => {
+        router.push(redirectUrl);
+        router.refresh();
+      }, 2000);
+      
       // Réinitialiser le formulaire
       form.reset();
     } catch (error) {

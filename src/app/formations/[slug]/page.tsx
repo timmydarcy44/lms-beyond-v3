@@ -105,9 +105,7 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
     // Continuer sans utilisateur (accès public si gratuit)
   }
   
-  // Utiliser le service role client pour contourner RLS si nécessaire
-  const { getServiceRoleClient } = await import("@/lib/supabase/server");
-  const serviceClient = getServiceRoleClient();
+  // Utiliser le service role client pour contourner RLS si nécessaire (déjà créé plus haut)
   const catalogClient = serviceClient || supabase;
   
   // Trouver le catalog_item_id pour ce course

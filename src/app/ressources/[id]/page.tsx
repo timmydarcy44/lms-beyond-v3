@@ -532,17 +532,32 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   
   if (catalogItem.item_type === "ressource" && catalogItem.content_id) {
     if (hasAccess) {
-    const { data: resource } = await supabase
-      .from("resources")
+      console.log("[ressources/[id]] ✅ User has access, fetching resource data with URLs for content_id:", catalogItem.content_id);
+      const { data: resource, error: resourceError } = await supabase
+        .from("resources")
         .select("id, title, description, kind, file_url, video_url, audio_url, slug")
-      .eq("id", catalogItem.content_id)
+        .eq("id", catalogItem.content_id)
         .maybeSingle();
 
-    if (resource) {
-      resourceData = resource;
+      if (resourceError) {
+        console.error("[ressources/[id]] ❌ Error fetching resource:", resourceError);
+      } else {
+        console.log("[ressources/[id]] ✅ Resource data fetched:", {
+          id: resource?.id,
+          title: resource?.title,
+          hasFileUrl: !!resource?.file_url,
+          hasVideoUrl: !!resource?.video_url,
+          hasAudioUrl: !!resource?.audio_url,
+          fileUrl: resource?.file_url,
+        });
+      }
+
+      if (resource) {
+        resourceData = resource;
         contentSlug = resource.slug || null;
-    }
+      }
     } else {
+      console.log("[ressources/[id]] ⚠️ User does NOT have access, fetching resource metadata only (no URLs)");
     // Si pas d'accès, récupérer seulement les métadonnées publiques (pas les URLs)
     const { data: resource } = await supabase
       .from("resources")

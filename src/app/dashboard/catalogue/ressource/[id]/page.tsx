@@ -59,13 +59,74 @@ export default async function CatalogResourceDetailPage({ params }: PageProps) {
   // Vérifier si l'utilisateur est le créateur du contenu
   const isCreator = (catalogItem as any).creator_id === user.id;
   
-  // Déterminer le statut d'accès
-  // Le créateur a toujours accès, même si le contenu est payant
-  const hasAccess = isCreator ||
-                    catalogItem.access_status === "purchased" || 
-                    catalogItem.access_status === "manually_granted" || 
-                    catalogItem.access_status === "free" ||
-                    catalogItem.is_free;
+  // SÉCURITÉ: Vérifier explicitement dans catalog_access si l'utilisateur a un accès
+  // C'est la SEULE source de vérité pour l'accès utilisateur
+  // Essayer d'abord avec le catalog_item_id
+  let query = supabase
+    .from("catalog_access")
+    .select("access_status")
+    .eq("catalog_item_id", id);
+  
+  // Construire la condition OR correctement
+  if (organizationId) {
+    query = query.or(`user_id.eq.${user.id},organization_id.eq.${organizationId}`);
+  } else {
+    query = query.eq("user_id", user.id).is("organization_id", null);
+  }
+  
+  let { data: userAccess, error: accessError } = await query.maybeSingle();
+  
+  // Si pas trouvé et qu'on a un content_id, essayer aussi avec le content_id
+  // (au cas où l'accès aurait été créé avec le content_id au lieu du catalog_item_id)
+  if (!userAccess && !accessError && catalogItem.content_id && catalogItem.content_id !== id) {
+    console.log("[catalogue/ressource] Access not found with catalog_item_id, trying with content_id:", catalogItem.content_id);
+    let queryByContentId = supabase
+      .from("catalog_access")
+      .select("access_status, catalog_item_id")
+      .eq("catalog_item_id", catalogItem.content_id);
+    
+    if (organizationId) {
+      queryByContentId = queryByContentId.or(`user_id.eq.${user.id},organization_id.eq.${organizationId}`);
+    } else {
+      queryByContentId = queryByContentId.eq("user_id", user.id).is("organization_id", null);
+    }
+    
+    const { data: accessByContentId } = await queryByContentId.maybeSingle();
+    
+    if (accessByContentId) {
+      userAccess = accessByContentId;
+      console.log("[catalogue/ressource] Found access with content_id:", accessByContentId);
+    }
+  }
+  
+  if (accessError) {
+    console.error("[catalogue/ressource] Error checking access:", accessError);
+  }
+  
+  console.log("[catalogue/ressource] Access check:", {
+    userId: user.id,
+    userEmail: user.email,
+    organizationId,
+    catalogItemId: id,
+    contentId: catalogItem.content_id,
+    userAccess,
+    hasAccess: !!userAccess,
+    accessStatus: userAccess?.access_status,
+    isCreator,
+    isFree: catalogItem.is_free,
+  });
+  
+  // L'utilisateur a accès UNIQUEMENT si :
+  // 1. Il est le créateur (Jessica) - TOUJOURS accès
+  // 2. Il a un accès explicite dans catalog_access (purchased, free, ou manually_granted)
+  // 3. L'item est gratuit (is_free = true)
+  const hasExplicitAccess = userAccess && (
+    userAccess.access_status === "purchased" ||
+    userAccess.access_status === "free" ||
+    userAccess.access_status === "manually_granted"
+  );
+  
+  const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
 
   // Récupérer les détails de la ressource UNIQUEMENT si l'utilisateur a accès
   // Pour protéger les URLs de fichiers/vidéos/audios

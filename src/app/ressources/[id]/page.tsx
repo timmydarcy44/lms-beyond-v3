@@ -899,19 +899,21 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                     </div>
                   ) : (
                     // Si l'utilisateur a accès mais que resourceUrl est null (ne devrait pas arriver normalement)
-                    // Afficher un message d'erreur ou un bouton de rechargement
+                    // Afficher un message d'erreur avec un lien pour recharger la page
                     <div className="space-y-3">
                       <p className="text-sm text-center" style={{ color: `${textColor}AA` }}>
                         ⚠️ Impossible de charger la ressource. Veuillez réessayer.
                       </p>
                       <Button 
-                        onClick={() => window.location.reload()}
+                        asChild
                         className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
                         style={{
                           backgroundColor: primaryColor,
                         }}
                       >
-                        <span className="ml-2">Réessayer</span>
+                        <a href={`/ressources/${catalogItem.id || catalogItem.content_id}`}>
+                          <span className="ml-2">Réessayer</span>
+                        </a>
                       </Button>
                     </div>
                   )}

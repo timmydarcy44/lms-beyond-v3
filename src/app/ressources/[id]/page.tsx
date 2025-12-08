@@ -700,7 +700,9 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   }
   
   // Pour les tests, si l'utilisateur a accès, on peut afficher le bouton "Accéder" même sans resourceUrl
-  const canAccess = hasAccess && (resourceUrl || testPageUrl);
+  // IMPORTANT: Si l'utilisateur a accès, on doit afficher le bouton de téléchargement/accès même si resourceUrl est null
+  // car on peut récupérer les URLs après
+  const canAccess = hasAccess;
   
   console.log("[ressources/[id]] Can access determination:", {
     hasAccess,
@@ -708,6 +710,8 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     testPageUrl,
     canAccess,
     isTest,
+    itemType: catalogItem.item_type,
+    hasFileUrl: !!resourceData?.file_url,
   });
 
   return (
@@ -847,6 +851,19 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                         <span className="ml-2">Accéder au test</span>
                       </Link>
                     </Button>
+                  ) : catalogItem.item_type === "module" || catalogItem.item_type === "parcours" ? (
+                    <Button 
+                      asChild 
+                      className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    >
+                      <Link href={`/dashboard/catalogue/${catalogItem.item_type}/${catalogItem.id || catalogItem.content_id}`}>
+                        <Play className="h-5 w-5 mr-2" />
+                        <span className="ml-2">Accéder au module</span>
+                      </Link>
+                    </Button>
                   ) : resourceUrl ? (
                     <div className="space-y-3">
                       <Button 
@@ -859,7 +876,11 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                         <a href={resourceUrl} target="_blank" rel="noopener noreferrer" download={resourceData?.file_url ? true : undefined}>
                           {getResourceIcon()}
                           <span className="ml-2">
-                            {resourceData?.file_url ? "Télécharger le PDF" : getButtonText()}
+                            {resourceData?.file_url 
+                              ? "Télécharger la ressource" 
+                              : resourceData?.kind === "video" || resourceData?.kind === "audio"
+                              ? "Accéder à la ressource"
+                              : "Accéder"}
                           </span>
                         </a>
                       </Button>
@@ -869,7 +890,22 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                         </p>
                       )}
                     </div>
-                  ) : null}
+                  ) : (
+                    // Si l'utilisateur a accès mais que resourceUrl est null, afficher quand même un bouton "Accéder"
+                    // qui redirigera vers la page de la ressource (qui récupérera les URLs)
+                    <Button 
+                      asChild 
+                      className="w-full rounded-full px-6 py-4 text-base font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                      style={{
+                        backgroundColor: primaryColor,
+                      }}
+                    >
+                      <Link href={`/ressources/${catalogItem.id || catalogItem.content_id}`}>
+                        <Play className="h-5 w-5 mr-2" />
+                        <span className="ml-2">Accéder</span>
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">

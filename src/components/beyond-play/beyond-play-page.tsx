@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Trophy, Target, Zap, Sparkles, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Play, Trophy, Target, Zap, Sparkles, CheckCircle2, Gamepad2 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { EcosystemHeader } from "@/components/beyond-center/ecosystem-header";
@@ -339,6 +339,53 @@ export function BeyondPlayPage() {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Beyond FC Card */}
+      <section className="py-32 bg-[#050910]">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.03] to-white/5 p-10 md:p-14 shadow-[0_60px_160px_-70px_rgba(0,0,0,0.8)]">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-5 text-white">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-1 text-xs uppercase tracking-[0.3em] text-white/60">
+                  Nouveau module
+                </span>
+                <h2 className="text-3xl md:text-4xl font-light">Beyond FC — Serious Game Business Club</h2>
+                <p className="text-sm md:text-base text-white/70 font-light max-w-2xl">
+                  Simulation tour par tour pilotée par IA autour du marketing d’un club de football. Chaque tour mêle narration,
+                  incidents, négociations et décisions tarifaires validées par un moteur de règles.
+                </p>
+                <ul className="space-y-2 text-sm text-white/60">
+                  <li className="flex items-center gap-2">
+                    <Gamepad2 className="h-4 w-4 text-[#FFE66D]" />
+                    IA Game Master + Rules Engine garantissant cohérence économique
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Gamepad2 className="h-4 w-4 text-[#FFE66D]" />
+                    10 tours pédagogiques (pricing, sponsors, communication, crise)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Gamepad2 className="h-4 w-4 text-[#FFE66D]" />
+                    Compatible HUD vidéo‑ludique (dialogues, sliders, scènes, négociations)
+                  </li>
+                </ul>
+              </div>
+              <div className="rounded-[28px] border border-white/15 bg-black/40 p-8 text-white shadow-[0_40px_140px_-90px_rgba(255,230,109,0.35)]">
+                <p className="text-sm uppercase tracking-[0.35em] text-white/50">Super Admin</p>
+                <h3 className="mt-3 text-2xl font-light text-white">Console Beyond FC</h3>
+                <p className="mt-4 text-sm text-white/60">
+                  Accès à l’architecture, au JSON schema, aux seeds de tours et au pipeline IA / Rules Engine.
+                </p>
+                <Link href="/super/beyond-play/architecture" className="mt-6 inline-flex">
+                  <Button className="rounded-full bg-[#FFE66D] px-6 py-3 text-sm font-semibold text-black hover:bg-[#FAD84F]">
+                    Ouvrir Beyond FC
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>

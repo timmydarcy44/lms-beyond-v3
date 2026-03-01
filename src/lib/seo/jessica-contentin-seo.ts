@@ -6,7 +6,7 @@
 // Mots-clés principaux (Primary Keywords)
 export const PRIMARY_KEYWORDS = {
   psychopedagogue: [
-    "psychopédagogue Fleury-sur-Orne",
+    "psychopédagogue Bretteville sur Odon",
     "psychopédagogue Caen",
     "psychopédagogue Normandie",
     "psychopédagogue certifiée neuroéducation",
@@ -42,7 +42,7 @@ export const PRIMARY_KEYWORDS = {
     "guidance parentale Caen",
   ],
   localisation: [
-    "Fleury-sur-Orne",
+    "Bretteville sur Odon",
     "Caen",
     "Normandie",
     "Calvados",
@@ -52,7 +52,7 @@ export const PRIMARY_KEYWORDS = {
 
 // Mots-clés secondaires (Long-tail keywords)
 export const LONG_TAIL_KEYWORDS = [
-  "psychopédagogue spécialisée troubles DYS Fleury-sur-Orne",
+  "psychopédagogue spécialisée troubles DYS Bretteville sur Odon",
   "accompagnement enfant TDA-H Caen",
   "gestion émotions enfant Caen",
   "orientation scolaire post-bac Caen",
@@ -65,16 +65,16 @@ export const LONG_TAIL_KEYWORDS = [
   "stratégies d'apprentissage personnalisées",
   "inclusion scolaire enfant DYS",
   "accompagnement scolarité en ligne",
-  "thérapie psycho-émotionnelle Caen",
+  "accompagnement psycho-émotionnel Caen",
 ];
 
 // Configuration SEO par page
 export const PAGE_SEO_CONFIG = {
   home: {
-    title: "Jessica CONTENTIN - Psychopédagogue certifiée en neuroéducation | Fleury-sur-Orne, Caen",
-    description: "Psychopédagogue certifiée en neuroéducation à Fleury-sur-Orne (Caen). Accompagnement personnalisé pour troubles DYS, TDA-H, harcèlement scolaire, phobie scolaire. Gestion des émotions, confiance en soi, orientation scolaire. Cabinet chaleureux et bienveillant.",
+    title: "Jessica Contentin | Psychopédagogue & Neuroéducation à Caen",
+    description: "Psychopédagogue certifiée à Bretteville sur Odon (Caen). Accompagnement expert pour troubles DYS, TDAH et gestion des émotions. Prenez rendez-vous au cabinet.",
     keywords: [
-      "psychopédagogue Fleury-sur-Orne",
+      "psychopédagogue Bretteville sur Odon",
       "psychopédagogue Caen",
       "troubles DYS Caen",
       "TDA-H Caen",
@@ -85,12 +85,12 @@ export const PAGE_SEO_CONFIG = {
       "gestion émotions Caen",
       "confiance en soi Caen",
     ],
-    h1: "Jessica CONTENTIN - Psychopédagogue certifiée en neuroéducation",
+    h1: "Jessica Contentin : Psychopédagogie et Neuroéducation à Caen",
     canonical: "https://jessicacontentin.fr",
   },
   "a-propos": {
     title: "À propos - Jessica CONTENTIN | Psychopédagogue certifiée neuroéducation | Caen",
-    description: "Découvrez le parcours et l'expertise de Jessica CONTENTIN, psychopédagogue certifiée en neuroéducation à Fleury-sur-Orne. Master IAE Caen, Master MEEF INSPE, professeure certifiée depuis 2015. Spécialisée en troubles DYS, TDA-H, harcèlement et phobie scolaire.",
+    description: "Découvrez le parcours et l'expertise de Jessica CONTENTIN, psychopédagogue certifiée en neuroéducation à Bretteville sur Odon. Master IAE Caen, Master MEEF INSPE, professeure certifiée depuis 2015. Spécialisée en troubles DYS, TDA-H, harcèlement et phobie scolaire.",
     keywords: [
       "psychopédagogue Caen parcours",
       "psychopédagogue neuroéducation formation",
@@ -103,7 +103,7 @@ export const PAGE_SEO_CONFIG = {
   },
   specialites: {
     title: "Spécialités - Psychopédagogie | Troubles DYS, TDA-H, Harcèlement scolaire | Caen",
-    description: "Découvrez toutes les spécialités de Jessica CONTENTIN : accompagnement TND (troubles DYS, TDA-H), harcèlement scolaire, phobie scolaire, gestion des émotions, confiance en soi, orientation scolaire, neuroéducation. Cabinet à Fleury-sur-Orne, Caen.",
+    description: "Découvrez toutes les spécialités de Jessica CONTENTIN : accompagnement TND (troubles DYS, TDA-H), harcèlement scolaire, phobie scolaire, gestion des émotions, confiance en soi, orientation scolaire, neuroéducation. Cabinet à Bretteville sur Odon, Caen.",
     keywords: [
       "spécialités psychopédagogue Caen",
       "accompagnement TND Caen",
@@ -118,7 +118,7 @@ export const PAGE_SEO_CONFIG = {
   },
   "specialites-confiance-en-soi": {
     title: "Gestion de la Confiance en Soi | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Accompagnement personnalisé pour développer la confiance en soi et l'estime de soi. Techniques de valorisation, renforcement de l'assertivité. Cabinet à Fleury-sur-Orne, Caen. Prenez rendez-vous.",
+    description: "Accompagnement personnalisé pour développer la confiance en soi et l'estime de soi. Techniques de valorisation, renforcement de l'assertivité. Cabinet à Bretteville sur Odon, Caen. Prenez rendez-vous.",
     keywords: [
       "confiance en soi Caen",
       "estime de soi enfant Caen",
@@ -131,7 +131,7 @@ export const PAGE_SEO_CONFIG = {
   },
   "specialites-tnd": {
     title: "Accompagnement TND | Troubles DYS et TDA-H | Psychopédagogue Caen",
-    description: "Accompagnement spécialisé pour troubles du neurodéveloppement (DYS, TDA-H) à Caen. Stratégies d'apprentissage personnalisées, soutien inclusion scolaire, collaboration équipes éducatives. Cabinet Jessica CONTENTIN, Fleury-sur-Orne.",
+    description: "Accompagnement spécialisé pour troubles du neurodéveloppement (DYS, TDA-H) à Caen. Stratégies d'apprentissage personnalisées, soutien inclusion scolaire, collaboration équipes éducatives. Cabinet Jessica CONTENTIN, Bretteville sur Odon.",
     keywords: [
       "accompagnement TND Caen",
       "troubles DYS Caen",
@@ -147,7 +147,7 @@ export const PAGE_SEO_CONFIG = {
   },
   "specialites-harcelement": {
     title: "Harcèlement Scolaire | Accompagnement et Soutien | Psychopédagogue Caen",
-    description: "Accompagnement bienveillant pour enfants et adolescents confrontés au harcèlement scolaire. Écoute, soutien psychologique, stratégies de protection. Collaboration avec l'école et la famille. Cabinet à Fleury-sur-Orne, Caen.",
+    description: "Accompagnement bienveillant pour enfants et adolescents confrontés au harcèlement scolaire. Écoute, soutien psychologique, stratégies de protection. Collaboration avec l'école et la famille. Cabinet à Bretteville sur Odon, Caen.",
     keywords: [
       "harcèlement scolaire Caen",
       "accompagnement harcèlement scolaire",
@@ -159,11 +159,11 @@ export const PAGE_SEO_CONFIG = {
     canonical: "https://jessicacontentin.fr/specialites/harcelement",
   },
   consultations: {
-    title: "Consultations | Tarifs et Modalités | Psychopédagogue Fleury-sur-Orne",
-    description: "Consultations psychopédagogiques à Fleury-sur-Orne (Caen). Tarifs : première consultation 90€, suivi 70€. Enfants, adolescents, adultes, parents. Cabinet chaleureux avec coin enfant. Prenez rendez-vous en ligne.",
+    title: "Consultations | Tarifs et Modalités | Psychopédagogue Bretteville sur Odon (Caen)",
+    description: "Consultations psychopédagogiques à Bretteville sur Odon (Caen). Tarifs : première consultation 90€, suivi 75€. Bilans selon les besoins. Cabinet chaleureux avec espace enfant. Prenez rendez-vous en ligne.",
     keywords: [
       "consultation psychopédagogue Caen",
-      "tarif psychopédagogue Fleury-sur-Orne",
+      "tarif psychopédagogue Bretteville sur Odon",
       "rendez-vous psychopédagogue",
       "cabinet psychopédagogie Caen",
       "consultation enfant Caen",
@@ -173,8 +173,8 @@ export const PAGE_SEO_CONFIG = {
     canonical: "https://jessicacontentin.fr/consultations",
   },
   orientation: {
-    title: "Orientation Scolaire et Professionnelle | Parcoursup | Psychopédagogue Caen",
-    description: "Accompagnement à l'orientation scolaire et professionnelle à Caen. Test soft skills, travail sur perspectives métiers, rédaction projet orientation, aide Parcoursup, CV et lettre de motivation. Cabinet Jessica CONTENTIN.",
+    title: "Orientation Scolaire & Bilan Soft Skills à Caen | J. Contentin",
+    description: "Réussissez votre orientation avec notre test de Soft Skills propriétaire. Aide Parcoursup, CV et projet professionnel à Caen. Révélez votre vrai potentiel.",
     keywords: [
       "orientation scolaire Caen",
       "orientation professionnelle Caen",
@@ -184,7 +184,7 @@ export const PAGE_SEO_CONFIG = {
       "projet orientation scolaire",
       "choix métier Caen",
     ],
-    h1: "Accompagnement à l'Orientation Scolaire et Professionnelle",
+    h1: "Orientation Scolaire et Bilan de Compétences Douces (Soft Skills)",
     canonical: "https://jessicacontentin.fr/orientation",
   },
   ressources: {
@@ -255,7 +255,7 @@ export const STRUCTURED_DATA = {
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "41 C",
-      "addressLocality": "Fleury-sur-Orne",
+      "addressLocality": "Bretteville sur Odon",
       "postalCode": "14123",
       "addressRegion": "Normandie",
       "addressCountry": "FR",
@@ -292,7 +292,7 @@ export const STRUCTURED_DATA = {
     "telephone": "+33683477174",
     "address": {
       "@type": "PostalAddress",
-      "addressLocality": "Fleury-sur-Orne",
+      "addressLocality": "Bretteville sur Odon",
       "addressRegion": "Normandie",
       "postalCode": "14123",
       "addressCountry": "FR",
@@ -330,7 +330,7 @@ export const STRUCTURED_DATA = {
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "41 C",
-      "addressLocality": "Fleury-sur-Orne",
+      "addressLocality": "Bretteville sur Odon",
       "postalCode": "14123",
       "addressRegion": "Normandie",
       "addressCountry": "FR",

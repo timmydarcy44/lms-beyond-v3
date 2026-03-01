@@ -39,7 +39,7 @@ export function PhilosophySection() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const }}
           className="text-center"
         >
           {/* Main Heading */}
@@ -57,7 +57,7 @@ export function PhilosophySection() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-            transition={{ duration: 1.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] as const }}
             className="text-left max-w-3xl mx-auto space-y-6"
           >
             <p className="text-xl md:text-2xl text-[#0B0B0C]/70 leading-relaxed font-light" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif', letterSpacing: '-0.01em' }}>
@@ -77,3 +77,4 @@ export function PhilosophySection() {
     </section>
   );
 }
+

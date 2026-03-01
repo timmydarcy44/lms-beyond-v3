@@ -13,29 +13,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // Récupérer les organisations de l'utilisateur
-    const { data: memberships, error: membershipsError } = await supabase
-      .from("org_memberships")
-      .select("org_id, role")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "instructor"]);
-
-    if (membershipsError) {
-      console.error("[beyond-connect/companies] Error fetching memberships:", membershipsError);
-      return NextResponse.json({ error: membershipsError.message }, { status: 500 });
-    }
-
-    if (!memberships || memberships.length === 0) {
-      return NextResponse.json({ companies: [] });
-    }
-
-    const orgIds = memberships.map(m => m.org_id);
-
-    // Récupérer les entreprises liées à ces organisations
+    // Récupérer l'entreprise liée à l'utilisateur (flow entreprise)
     const { data: companies, error: companiesError } = await supabase
       .from("beyond_connect_companies")
       .select("*")
-      .in("organization_id", orgIds);
+      .eq("id", user.id);
 
     if (companiesError) {
       console.error("[beyond-connect/companies] Error fetching companies:", companiesError);

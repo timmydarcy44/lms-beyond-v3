@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Loader2, Save, X } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, Save, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
+import { cn } from "@/lib/utils";
 
 type Flashcard = {
   id: string;
@@ -16,6 +17,7 @@ type Flashcard = {
   chapter_id?: string | null;
   created_at?: string;
   updated_at?: string;
+  isLocal?: boolean;
 };
 
 type FlashcardsManagerProps = {
@@ -31,6 +33,7 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
   const [editFront, setEditFront] = useState("");
   const [editBack, setEditBack] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   
   // Utiliser le snapshot du store pour trouver l'UUID du chapitre
   const snapshot = useCourseBuilder((state) => state.snapshot);
@@ -48,8 +51,15 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length > 0) {
             // Filtrer pour ne garder que celles du chapitre actuel (sécurité supplémentaire)
-            const filtered = parsed.filter((f: any) => (f.chapter_id as any) === chapterId);
-            console.log("[FlashcardsManager] Loading local flashcards from localStorage for chapter:", chapterId, "count:", filtered.length);
+            const filtered = parsed
+              .filter((f: any) => (f.chapter_id as any) === chapterId)
+              .map((f: Flashcard) => ({ ...f, isLocal: true }));
+            console.log(
+              "[FlashcardsManager] Loading local flashcards from localStorage for chapter:",
+              chapterId,
+              "count:",
+              filtered.length,
+            );
             setLocalFlashcards(filtered);
           } else {
             setLocalFlashcards([]);
@@ -124,6 +134,7 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
           course_id: courseId,
           chapter_id: chapterId, // Stocker le chapterId local pour référence
           created_at: new Date().toISOString(),
+          isLocal: true,
         }));
         
         console.log("[FlashcardsManager] Storing local flashcards for chapter:", chapterId, "count:", flashcardsWithChapter.length);
@@ -241,15 +252,20 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
         }
       }
 
+      if (!actualChapterId) {
+        console.log(
+          "[FlashcardsManager] No chapter UUID available; skipping remote flashcards load and relying on local drafts.",
+        );
+        setFlashcards([]);
+        setIsLoading(false);
+        return;
+      }
+
       const params = new URLSearchParams();
       params.append("courseId", courseId);
       // Ne charger que les flashcards du chapitre spécifique si on a un UUID
-      if (actualChapterId) {
-        params.append("chapterId", actualChapterId);
-        console.log("[FlashcardsManager] Loading flashcards for chapter:", actualChapterId);
-      } else {
-        console.log("[FlashcardsManager] Loading all flashcards for course (no chapter UUID)");
-      }
+      params.append("chapterId", actualChapterId);
+      console.log("[FlashcardsManager] Loading flashcards for chapter:", actualChapterId);
 
       const response = await fetch(`/api/flashcards?${params.toString()}`);
       if (!response.ok) {
@@ -263,24 +279,21 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
         flashcards: data.flashcards?.map((f: any) => ({ id: f.id, chapter_id: f.chapter_id }))
       });
       
-      // IMPORTANT: Filtrer les flashcards pour ne garder QUE celles du chapitre actuel
-      // Mais aussi inclure celles avec chapter_id: null (pour tout le cours)
-      let filteredFlashcards = data.flashcards || [];
-      if (actualChapterId) {
-        // Si on a un UUID, filtrer par chapter_id OU null (pour tout le cours)
-        filteredFlashcards = filteredFlashcards.filter((f: any) => 
-          f.chapter_id === actualChapterId || f.chapter_id === null
-        );
-        console.log("[FlashcardsManager] Filtered flashcards for chapter UUID:", actualChapterId, "->", filteredFlashcards.length, "flashcards");
-      } else {
-        // Si on n'a pas d'UUID, charger TOUTES les flashcards du cours (y compris celles avec chapter_id: null)
-        // Elles seront mappées à toutes les leçons côté client
-        console.log("[FlashcardsManager] No UUID found, loading all flashcards for course (including chapter_id: null):", filteredFlashcards.length);
-        // Ne pas filtrer, garder toutes les flashcards du cours
-      }
-      
+      // IMPORTANT: Ne garder que les flashcards du chapitre actuel (et celles partagées course-wide)
+      const filteredFlashcards =
+        data.flashcards?.filter(
+          (f: any) => f.chapter_id === actualChapterId || f.chapter_id === null,
+        ) ?? [];
+      console.log(
+        "[FlashcardsManager] Filtered flashcards for chapter UUID:",
+        actualChapterId,
+        "->",
+        filteredFlashcards.length,
+        "flashcards",
+      );
+
       console.log("[FlashcardsManager] Setting flashcards from DB:", filteredFlashcards.length);
-      setFlashcards(filteredFlashcards);
+      setFlashcards(filteredFlashcards.map((f: Flashcard) => ({ ...f, isLocal: false })));
       
       // Nettoyer les flashcards locales qui sont maintenant en DB
       if (filteredFlashcards.length > 0 && localFlashcards.length > 0) {
@@ -359,17 +372,40 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
         }
       }
 
-      console.log("[FlashcardsManager] Sending flashcard creation request:", JSON.stringify({
-        courseId,
-        chapterId: actualChapterId || null,
-      }));
+      if (!actualChapterId) {
+        const localFlashcard: Flashcard = {
+          id: `local-${Date.now()}`,
+          front: "Question",
+          back: "Réponse",
+          course_id: courseId ?? null,
+          chapter_id: chapterId,
+          created_at: new Date().toISOString(),
+          isLocal: true,
+        };
+
+        setLocalFlashcards((prev) => [...prev, localFlashcard]);
+        setEditingId(localFlashcard.id);
+        setEditFront(localFlashcard.front);
+        setEditBack(localFlashcard.back);
+        setIsOpen(true);
+        toast.success("Flashcard créée (en attente de sauvegarde)");
+        return;
+      }
+
+      console.log(
+        "[FlashcardsManager] Sending flashcard creation request:",
+        JSON.stringify({
+          courseId,
+          chapterId: actualChapterId,
+        }),
+      );
 
       const response = await fetch("/api/flashcards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           courseId,
-          chapterId: actualChapterId || null,
+          chapterId: actualChapterId,
           front: "Question",
           back: "Réponse",
         }),
@@ -403,7 +439,7 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       }
       
       // Ajouter la flashcard créée à la liste immédiatement
-      setFlashcards((prev) => [...prev, data.flashcard]);
+      setFlashcards((prev) => [...prev, { ...data.flashcard, isLocal: false }]);
       
       // Mettre en mode édition immédiatement
       setEditingId(data.flashcard.id);
@@ -441,6 +477,26 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
 
     setIsSaving(true);
     try {
+      const localCard = localFlashcards.find((flashcard) => flashcard.id === id);
+      if (localCard) {
+        setLocalFlashcards((prev) =>
+          prev.map((flashcard) =>
+            flashcard.id === id
+              ? {
+                  ...flashcard,
+                  front: editFront.trim(),
+                  back: editBack.trim(),
+                  updated_at: new Date().toISOString(),
+                  isLocal: true,
+                }
+              : flashcard,
+          ),
+        );
+        setEditingId(null);
+        toast.success("Flashcard sauvegardée (en attente de publication)");
+        return;
+      }
+
       const response = await fetch("/api/flashcards", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -454,7 +510,9 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
       if (!response.ok) throw new Error("Erreur lors de la sauvegarde");
 
       const data = await response.json();
-      setFlashcards((prev) => prev.map((f) => (f.id === id ? data.flashcard : f)));
+      setFlashcards((prev) =>
+        prev.map((f) => (f.id === id ? { ...data.flashcard, isLocal: false } : f)),
+      );
       setEditingId(null);
       toast.success("Flashcard sauvegardée");
     } catch (error) {
@@ -470,6 +528,16 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
 
     setIsSaving(true);
     try {
+      const isLocalCard = localFlashcards.some((flashcard) => flashcard.id === id);
+      if (isLocalCard) {
+        setLocalFlashcards((prev) => prev.filter((flashcard) => flashcard.id !== id));
+        if (editingId === id) {
+          setEditingId(null);
+        }
+        toast.success("Flashcard supprimée (brouillon)");
+        return;
+      }
+
       const response = await fetch(`/api/flashcards?id=${id}`, {
         method: "DELETE",
       });
@@ -495,119 +563,155 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
     setEditBack("");
   };
 
+  const scopedLocalFlashcards = chapterId
+    ? localFlashcards.filter((flashcard) => (flashcard.chapter_id as unknown as string) === chapterId)
+    : localFlashcards;
+
+  const displayedFlashcards = [...flashcards, ...scopedLocalFlashcards];
+  const totalFlashcards = displayedFlashcards.length;
+
   if (!courseId) {
     return (
-      <Card className="border-white/10 bg-white/5 text-white">
+      <Card className="border border-orange-500/30 bg-slate-950 text-white">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Flashcards</CardTitle>
         </CardHeader>
-        <CardContent className="p-6 text-center text-sm text-white/60">
-          <p className="mb-2">Sauvegardez le cours pour gérer les flashcards</p>
-          <p className="text-xs text-white/40">Les flashcards générées automatiquement seront sauvegardées une fois le cours enregistré.</p>
+        <CardContent className="p-6 text-center text-sm text-slate-300">
+          <p className="mb-2">Sauvegardez d’abord la formation pour activer les flashcards.</p>
+          <p className="text-xs text-slate-500">Les cartes générées automatiquement seront disponibles après l’enregistrement.</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-white/10 bg-white/5 text-white">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold">Flashcards</CardTitle>
-        <Button
-          onClick={handleCreate}
-          disabled={isSaving}
-          className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white disabled:opacity-50"
-        >
-          {isSaving ? (
-            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Plus className="mr-2 h-3.5 w-3.5" />
-          )}
-          Ajouter
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-white/60" />
-            <span className="ml-2 text-sm text-white/60">Chargement des flashcards...</span>
-          </div>
-        ) : (flashcards.length === 0 && localFlashcards.length === 0) ? (
-          <div className="py-8 text-center text-sm text-white/60">
-            <p>Aucune flashcard.</p>
-            <p className="mt-2 text-xs text-white/40">
-              {chapterId ? "Les flashcards apparaîtront ici une fois le chapitre sauvegardé." : "Cliquez sur 'Ajouter' pour en créer une."}
+    <Card className="border border-orange-500/40 bg-slate-950 text-white shadow-sm">
+      <CardHeader className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle className="text-lg font-semibold">
+              Flashcards{" "}
+              <span className="ml-2 rounded-full bg-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-300">
+                {totalFlashcards}
+              </span>
+            </CardTitle>
+            <p className="text-xs text-slate-400">
+              Créez des cartes mémoires pour ancrer les points clés de votre chapitre.
             </p>
           </div>
-        ) : (
-          [...flashcards, ...localFlashcards.filter((f: any) => chapterId && (f.chapter_id as any) === chapterId)].map((flashcard) => (
-            <div
-              key={flashcard.id}
-              className="rounded-2xl border border-white/10 bg-black/35 p-4"
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen((prev) => !prev)}
+              className={cn(
+                "flex items-center gap-2 rounded-full border-orange-500/40 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-orange-300 hover:bg-orange-500/10",
+                !totalFlashcards && "cursor-not-allowed opacity-60",
+              )}
+              disabled={!totalFlashcards}
             >
-              {editingId === flashcard.id ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
-                      Question (Recto)
-                    </label>
-                    <Textarea
-                      value={editFront}
-                      onChange={(e) => setEditFront(e.target.value)}
-                      className="min-h-[80px] border-white/15 bg-black/40 text-sm text-white"
-                      placeholder="Question..."
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
-                      Réponse (Verso)
-                    </label>
-                    <Textarea
-                      value={editBack}
-                      onChange={(e) => setEditBack(e.target.value)}
-                      className="min-h-[80px] border-white/15 bg-black/40 text-sm text-white"
-                      placeholder="Réponse..."
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={() => handleSave(flashcard.id)}
-                      disabled={isSaving}
-                      className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white disabled:opacity-50"
-                    >
-                      {isSaving ? (
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                      ) : (
-                        <Save className="mr-1.5 h-3 w-3" />
-                      )}
-                      Enregistrer
-                    </Button>
-                    <Button
-                      onClick={handleCancel}
-                      disabled={isSaving}
-                      variant="ghost"
-                      className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 hover:bg-white/10 disabled:opacity-50"
-                    >
-                      <X className="mr-1.5 h-3 w-3" />
-                      Annuler
-                    </Button>
-                  </div>
-                </div>
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isOpen ? "rotate-180" : "")} />
+              {isOpen ? "Masquer" : "Voir les flashcards"}
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={isSaving}
+              className="rounded-full bg-orange-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-900 hover:bg-orange-400 disabled:opacity-60"
+            >
+              {isSaving ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 space-y-2">
+                <Plus className="mr-2 h-3.5 w-3.5" />
+              )}
+              Ajouter
+            </Button>
+          </div>
+        </div>
+        {!totalFlashcards && (
+          <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3 text-xs text-orange-200">
+            Commencez par créer une flashcard ou générez-les via l’IA depuis l’éditeur pour alimenter ce module.
+          </div>
+        )}
+      </CardHeader>
+      {isOpen && (
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8 text-sm text-orange-200">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Chargement des flashcards…
+            </div>
+          ) : totalFlashcards === 0 ? (
+            <div className="rounded-xl border border-orange-500/20 bg-slate-900/60 px-4 py-10 text-center text-sm text-slate-300">
+              Aucune flashcard enregistrée pour l’instant.
+            </div>
+          ) : (
+            displayedFlashcards.map((flashcard) => (
+              <div
+                key={flashcard.id}
+                className="rounded-2xl border border-orange-500/30 bg-slate-900/80 p-4 shadow-sm"
+              >
+                {editingId === flashcard.id ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.3em] text-orange-300">
+                        Question (Recto)
+                      </label>
+                      <Textarea
+                        value={editFront}
+                        onChange={(e) => setEditFront(e.target.value)}
+                        className="min-h-[80px] border border-orange-500/30 bg-slate-950/80 text-sm text-orange-50"
+                        placeholder="Question..."
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.3em] text-orange-300">
+                        Réponse (Verso)
+                      </label>
+                      <Textarea
+                        value={editBack}
+                        onChange={(e) => setEditBack(e.target.value)}
+                        className="min-h-[80px] border border-orange-500/30 bg-slate-950/80 text-sm text-orange-50"
+                        placeholder="Réponse..."
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => handleSave(flashcard.id)}
+                        disabled={isSaving}
+                        className="rounded-full bg-orange-500 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] text-slate-950 hover:bg-orange-400 disabled:opacity-60"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Save className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Enregistrer
+                      </Button>
+                      <Button
+                        onClick={handleCancel}
+                        disabled={isSaving}
+                        variant="ghost"
+                        className="rounded-full border border-orange-500/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] text-orange-200 hover:bg-orange-500/10 disabled:opacity-60"
+                      >
+                        <X className="mr-1.5 h-3.5 w-3.5" />
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-3">
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-orange-400">
                           Question
                         </span>
-                        <p className="mt-1 text-sm text-white">{flashcard.front}</p>
+                        <p className="mt-1 text-sm text-slate-100">{flashcard.front}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-orange-400">
                           Réponse
                         </span>
-                        <p className="mt-1 text-sm text-white/80">{flashcard.back}</p>
+                        <p className="mt-1 text-sm text-slate-200">{flashcard.back}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -615,7 +719,7 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
                         onClick={() => handleEdit(flashcard)}
                         variant="ghost"
                         size="sm"
-                        className="rounded-full border border-white/20 px-2 py-1 text-white/70 hover:bg-white/10"
+                        className="rounded-full border border-orange-500/30 px-3 py-1.5 text-orange-200 hover:bg-orange-500/10"
                       >
                         <Edit2 className="h-3.5 w-3.5" />
                       </Button>
@@ -623,18 +727,18 @@ export function FlashcardsManager({ courseId, chapterId }: FlashcardsManagerProp
                         onClick={() => handleDelete(flashcard.id)}
                         variant="ghost"
                         size="sm"
-                        className="rounded-full border border-white/20 px-2 py-1 text-white/70 hover:bg-red-500/20 hover:text-red-400"
+                        className="rounded-full border border-orange-500/30 px-3 py-1.5 text-orange-200 hover:bg-red-500/20 hover:text-red-200"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </CardContent>
+                )}
+              </div>
+            ))
+          )}
+        </CardContent>
+      )}
     </Card>
   );
 }

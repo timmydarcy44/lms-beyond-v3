@@ -202,10 +202,11 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
         .or(`user_id.eq.${user.id},learner_id.eq.${user.id}`);
 
       if (enrollError) {
-        console.error("[apprenant] Error fetching enrollments:", enrollError);
-        console.error("[apprenant] Error code:", enrollError.code);
-        console.error("[apprenant] Error message:", enrollError.message);
-        console.error("[apprenant] Error details:", JSON.stringify(enrollError, null, 2));
+        console.warn("[apprenant] Failed to load enrollments:", {
+          code: enrollError.code,
+          message: enrollError.message,
+          details: enrollError.details,
+        });
       } else if (enrollments && enrollments.length > 0) {
         console.log("[apprenant] Found enrollments:", enrollments.length);
         for (const enrollment of enrollments) {

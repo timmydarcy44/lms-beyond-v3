@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { first_name, last_name, phone, birth_date, bio, passions, current_studies, education_level, city, cv_url, cv_file_name, employment_type } = body;
+    const { first_name, last_name, phone, birth_date, bio, passions, current_studies, education_level, city, cv_url, cv_file_name, employment_type, avatar_url } = body;
 
     // Mettre à jour le profil
     const updateData: any = {};
@@ -70,6 +70,7 @@ export async function PATCH(request: NextRequest) {
     if (cv_url !== undefined) updateData.cv_url = cv_url;
     if (cv_file_name !== undefined) updateData.cv_file_name = cv_file_name;
     if (employment_type !== undefined) updateData.employment_type = employment_type;
+    if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
 
     // Mettre à jour full_name si first_name ou last_name changent
     if (first_name || last_name) {

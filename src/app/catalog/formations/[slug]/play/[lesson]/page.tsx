@@ -44,11 +44,13 @@ export default async function FormationLessonPlayPage({
 
   return (
     <DyslexiaModeProvider>
-      <div className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A]">
+      <div className="min-h-screen bg-white text-slate-900">
         <DashboardShell
           title={activeLesson.title}
           breadcrumbs={breadcrumbs}
           initialCollapsed={true}
+          forcedTheme="light"
+          className="bg-white text-slate-900"
         >
         <LessonPlayView
           detail={detail}

@@ -8,15 +8,9 @@ import { env } from "@/lib/env";
 const BREVO_API_KEY = process.env.BREVO_API_KEY || env.brevoApiKey;
 const BREVO_API_URL = "https://api.brevo.com/v3";
 
-// Log de configuration au chargement du module (côté serveur uniquement)
-if (typeof window === 'undefined') {
-  console.log("[BREVO] Module loaded - BREVO_API_KEY exists:", !!BREVO_API_KEY);
-  console.log("[BREVO] Module loaded - BREVO_API_KEY from process.env:", !!process.env.BREVO_API_KEY);
-  console.log("[BREVO] Module loaded - BREVO_API_KEY from env:", !!env.brevoApiKey);
-  if (BREVO_API_KEY) {
-    console.log("[BREVO] Module loaded - BREVO_API_KEY length:", BREVO_API_KEY.length);
-    console.log("[BREVO] Module loaded - BREVO_API_KEY starts with:", BREVO_API_KEY.substring(0, 10));
-  }
+// Log de configuration au chargement du module (dev uniquement)
+if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
+  console.log("[BREVO] Module loaded");
 }
 
 export interface EmailOptions {
@@ -43,17 +37,17 @@ export interface TransactionalEmailOptions extends EmailOptions {
 /**
  * Envoie un email transactionnel via BREVO
  */
-export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  console.log("[BREVO] sendEmail called");
-  console.log("[BREVO] BREVO_API_KEY exists:", !!BREVO_API_KEY);
-  console.log("[BREVO] BREVO_API_KEY length:", BREVO_API_KEY?.length || 0);
-  console.log("[BREVO] To:", options.to);
-  console.log("[BREVO] Subject:", options.subject);
-  
+export async function sendEmail(
+  options: EmailOptions,
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[BREVO] sendEmail called");
+    console.log("[BREVO] To:", options.to);
+    console.log("[BREVO] Subject:", options.subject);
+  }
+
   if (!BREVO_API_KEY) {
     console.error("[BREVO] API key not configured");
-    console.error("[BREVO] process.env.BREVO_API_KEY:", !!process.env.BREVO_API_KEY);
-    console.error("[BREVO] env.brevoApiKey:", !!env.brevoApiKey);
     return { success: false, error: "BREVO_API_KEY not configured" };
   }
 
@@ -92,12 +86,14 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       payload.tags = options.tags;
     }
     
-    console.log("[BREVO] Sending email to BREVO API:", {
-      url: `${BREVO_API_URL}/smtp/email`,
-      to: payload.to,
-      subject: payload.subject,
-      sender: payload.sender,
-    });
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[BREVO] Sending email to BREVO API:", {
+        url: `${BREVO_API_URL}/smtp/email`,
+        to: payload.to,
+        subject: payload.subject,
+        sender: payload.sender,
+      });
+    }
     
     const response = await fetch(`${BREVO_API_URL}/smtp/email`, {
       method: "POST",
@@ -108,12 +104,16 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       body: JSON.stringify(payload),
     });
 
-    console.log("[BREVO] Response status:", response.status);
-    console.log("[BREVO] Response ok:", response.ok);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[BREVO] Response status:", response.status);
+      console.log("[BREVO] Response ok:", response.ok);
+    }
 
     // Lire le body une seule fois
     const responseText = await response.text();
-    console.log("[BREVO] Response text:", responseText);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[BREVO] Response text:", responseText);
+    }
 
     // Brevo retourne 201 (Created) pour un succès, pas 200
     // response.ok est true pour 200-299, donc 201 est considéré comme ok
@@ -142,7 +142,9 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       data = { messageId: `brevo-${Date.now()}` };
     }
     
-    console.log("[BREVO] Email sent successfully:", data);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[BREVO] Email sent successfully:", data);
+    }
     return { success: true, messageId: data.messageId || `brevo-${Date.now()}` };
   } catch (error) {
     console.error("[BREVO] Exception sending email:", error);

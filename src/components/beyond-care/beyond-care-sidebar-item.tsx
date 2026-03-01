@@ -12,13 +12,15 @@ type BeyondCareSidebarItemProps = {
   href: string;
   isOpen: boolean;
   role: "admin" | "formateur" | "apprenant";
+  appearance?: "default" | "apple";
 };
 
-export function BeyondCareSidebarItem({ href, isOpen, role }: BeyondCareSidebarItemProps) {
+export function BeyondCareSidebarItem({ href, isOpen, role, appearance = "default" }: BeyondCareSidebarItemProps) {
   const pathname = usePathname();
   const isActive = pathname?.startsWith(href);
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
+  const isApple = appearance === "apple";
   const router = useRouter();
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -118,43 +120,65 @@ export function BeyondCareSidebarItem({ href, isOpen, role }: BeyondCareSidebarI
         )}
       </AnimatePresence>
 
-      <Link href={href} title="Beyond Care" className="relative" onClick={handleClick}>
+      <Link href={href} title="Beyond Care" className="relative block" onClick={handleClick}>
         <div
           className={cn(
-            "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-            // Style premium avec bordure et couleur orange/verte
-            "border-2",
-            isLight
+            "group flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200",
+            isApple ? "rounded-[20px] border" : "rounded-lg border-2",
+            isApple
               ? isActive
-                ? "bg-gradient-to-r from-[#fde4ef] to-[#fcd3e4] text-[#9f0f4a] border-[#c91459] shadow-sm"
-                : "border-[#c9145955] text-slate-600 hover:bg-[#fde4ef]/60 hover:text-[#b1104a] hover:border-[#c91459]"
-              : isActive
-                ? "bg-gradient-to-r from-[#c91459]/25 to-[#c91459]/10 text-[#ff6fa6] border-[#c91459]/70 backdrop-blur-sm shadow-lg shadow-[#c91459]/30"
-                : "border-[#c91459]/35 text-white/70 hover:bg-[#c91459]/10 hover:text-[#ff6fa6] hover:border-[#c91459]/60",
+                ? "border-[#c91459]/45 bg-[#c91459]/25 text-white shadow-[0_40px_120px_-55px_rgba(201,20,89,0.55)]"
+                : "border-[#c91459]/30 bg-white/8 text-white/85 shadow-[0_22px_65px_-55px_rgba(10,10,25,0.7)] backdrop-blur-xl hover:border-[#c91459]/45 hover:bg-[#c91459]/15 hover:text-white"
+              : isLight
+                ? isActive
+                  ? "bg-gradient-to-r from-[#fde4ef] to-[#fcd3e4] text-[#9f0f4a] border-[#c91459] shadow-sm"
+                  : "border-[#c9145955] text-slate-600 hover:bg-[#fde4ef]/60 hover:text-[#b1104a] hover:border-[#c91459]"
+                : isActive
+                  ? "bg-gradient-to-r from-[#c91459]/25 to-[#c91459]/10 text-[#ff6fa6] border-[#c91459]/70 backdrop-blur-sm shadow-lg shadow-[#c91459]/30"
+                  : "border-[#c91459]/35 text-white/70 hover:bg-[#c91459]/10 hover:text-[#ff6fa6] hover:border-[#c91459]/60",
             isOpen ? "gap-3" : "gap-0 justify-center px-2",
-            isAnimating && "ring-2 ring-[#c91459]/50",
+            isAnimating && !isApple && "ring-2 ring-[#c91459]/50",
           )}
         >
-          <Heart
+          <span
             className={cn(
-              "h-5 w-5 shrink-0 transition-colors",
-              isLight
+              "flex items-center justify-center transition-all",
+              isApple
                 ? isActive
-                  ? "text-[#c91459]"
-                  : "text-[#c91459] group-hover:text-[#b1104a]"
-                : isActive
-                  ? "text-[#ff77b0]"
-                  : "text-[#ff9cc7]/80 group-hover:text-[#ff77b0]",
+                  ? "h-10 w-10 flex-shrink-0 rounded-full border border-white/40 bg-white/20 text-white shadow-[0_22px_60px_-36px_rgba(201,20,89,0.5)]"
+                  : "h-10 w-10 flex-shrink-0 rounded-full border border-white/20 bg-white/10 text-white/80 shadow-[0_22px_60px_-44px_rgba(10,10,25,0.6)] group-hover:border-white/30 group-hover:bg-white/15 group-hover:text-white"
+                : "h-5 w-5 flex-shrink-0",
             )}
-          />
+          >
+            <Heart
+              className={cn(
+                "transition-colors",
+                isApple
+                  ? "h-4 w-4"
+                  : isLight
+                    ? isActive
+                      ? "h-5 w-5 text-[#c91459]"
+                      : "h-5 w-5 text-[#c91459] group-hover:text-[#b1104a]"
+                    : isActive
+                      ? "h-5 w-5 text-[#ff77b0]"
+                      : "h-5 w-5 text-[#ff9cc7]/80 group-hover:text-[#ff77b0]",
+              )}
+            />
+          </span>
           {isOpen && (
             <span className="transition-opacity duration-300">
               Beyond Care
             </span>
           )}
-          {/* Badge premium */}
           {isOpen && (
-            <span className="ml-auto rounded bg-[#c91459]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#c91459]/80">
+            <span
+              className={cn(
+                "ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                isApple
+                  ? "border border-white/20 bg-white/10 text-white/80"
+                  : "rounded bg-[#c91459]/10 text-[#c91459]/80",
+              )}
+            >
               PREMIUM
             </span>
           )}

@@ -284,7 +284,7 @@ export function TestCreateFormSuperAdmin() {
                   </Select>
                   <p className="text-xs text-gray-500 mt-1">
                     {displayFormat === "ranking" && "Pour les tests de soft skills avec catégories (ex: Intelligence émotionnelle, Adaptabilité)"}
-                    {displayFormat === "radar" && "Pour les tests MAI avec visualisation radar des compétences"}
+                    {displayFormat === "radar" && "Pour les tests MAI avec visualisation radar des soft skills"}
                     {displayFormat === "score" && "Affichage simple du score total"}
                     {displayFormat === "detailed" && "Affichage détaillé avec toutes les informations"}
                   </p>

@@ -62,13 +62,16 @@ export default async function LearnerPlayPage({ params }: LearnerPlayPageProps) 
 
   return (
     <DyslexiaModeProvider>
-      <DashboardShell
-        title={activeLesson.title}
-        subtitle={activeModule ? `${activeModule.title} • ${activeLesson.duration}` : undefined}
-        breadcrumbs={breadcrumbs}
-        initialCollapsed
-        compactHeader
-      >
+      <div className="min-h-screen bg-[#f5f5f7] text-slate-900">
+        <DashboardShell
+          title={activeLesson.title}
+          subtitle={activeModule ? `${activeModule.title} • ${activeLesson.duration}` : undefined}
+          breadcrumbs={breadcrumbs}
+          initialCollapsed
+          compactHeader
+          forcedTheme="light"
+          className="bg-[#f5f5f7] text-slate-900"
+        >
         <LessonPlayView
           detail={detail}
           modules={modules}
@@ -84,7 +87,8 @@ export default async function LearnerPlayPage({ params }: LearnerPlayPageProps) 
           courseId={card.id}
           courseTitle={card.title}
         />
-      </DashboardShell>
+        </DashboardShell>
+      </div>
     </DyslexiaModeProvider>
   );
 }

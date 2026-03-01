@@ -61,7 +61,12 @@ export const FontSize = Extension.create<FontSizeOptions>({
       unsetFontSize:
         () =>
         ({ chain }) => {
-          return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
+          const chained = chain() as any;
+          chained.setMark("textStyle", { fontSize: null });
+          if (typeof chained.removeEmptyTextStyle === "function") {
+            chained.removeEmptyTextStyle();
+          }
+          return chained.run();
         },
     };
   },

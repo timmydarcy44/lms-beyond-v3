@@ -1,6 +1,7 @@
 "use client";
 
 import { LessonPlayView } from "@/components/apprenant/lesson-play-view";
+import { FloatingDashboardCTA } from "@/components/apprenant/floating-dashboard-cta";
 import type {
   LearnerDetail,
   LearnerFlashcard,
@@ -529,6 +530,7 @@ export function JessicaLessonPlayView(props: LessonPlayViewProps) {
       `}</style>
       <div style={{ backgroundColor: "#FFFFFF", minHeight: "100vh" }}>
         <LessonPlayView {...props} />
+        <FloatingDashboardCTA />
       </div>
     </>
   );

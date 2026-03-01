@@ -1,323 +1,339 @@
 "use client";
 
-import { motion } from "framer-motion";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Clock, Award, Users, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
-import Image from "next/image";
-import { useState } from "react";
-import { EcosystemHeader } from "@/components/beyond-center/ecosystem-header";
+import type { ReactNode } from "react";
+import { motion, type Variants } from "framer-motion";
+import { BarChart3, Home, Map, Search, Settings, Share2, User, Wallet } from "lucide-react";
 
-// Mock formations data - Style Netflix
-const formations = [
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const as [number, number, number, number] },
+  },
+};
+
+const TRENDING = [
   {
-    id: "1",
-    title: "Développement Web Full Stack",
-    category: "Informatique",
-    duration: "40h",
-    level: "Intermédiaire",
-    image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=2072&auto=format&fit=crop",
-    rating: 4.8
+    title: "Neuro-Négociation",
+    tag: "TOP 10",
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+    coSign: ["Ligue 1"],
+    href: "/beyond-no-school/competences/negociation",
   },
   {
-    id: "2",
-    title: "Marketing Digital Avancé",
-    category: "Marketing",
-    duration: "30h",
-    level: "Avancé",
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop",
-    rating: 4.9
+    title: "IA & Automation",
+    tag: "NEW",
+    image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=800&q=80",
+    coSign: ["Tech-Board"],
+    href: "/beyond-no-school/competences/analyse-donnees-decisionnelle",
   },
   {
-    id: "3",
-    title: "Gestion de Projet Agile",
-    category: "Management",
-    duration: "25h",
-    level: "Débutant",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop",
-    rating: 4.7
+    title: "Immobilier : Le Closing",
+    tag: "TOP 10",
+    image: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80",
+    coSign: ["Nexity", "Bouygues"],
+    href: "/beyond-no-school/competences/gestion-projet-complexe",
   },
   {
-    id: "4",
-    title: "Data Science & IA",
-    category: "Informatique",
-    duration: "50h",
-    level: "Avancé",
-    image: "https://images.unsplash.com/photo-1555255707-c07966088b7b?q=80&w=2032&auto=format&fit=crop",
-    rating: 4.9
+    title: "Stratégie RSE",
+    tag: "NEW",
+    image: "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=800&q=80",
+    coSign: ["Pro A"],
+    href: "/beyond-no-school/competences/rse-impact",
+  },
+];
+
+const CONTINUE = [
+  {
+    title: "Prospection B2B",
+    image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=800&q=80",
+    progress: 62,
   },
   {
-    id: "5",
-    title: "Communication Interpersonnelle",
-    category: "Soft Skills",
-    duration: "20h",
-    level: "Tous niveaux",
-    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop",
-    rating: 4.6
+    title: "Storytelling d'Impact",
+    image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80",
+    progress: 38,
   },
   {
-    id: "6",
-    title: "Finance pour Non-Financiers",
-    category: "Finance",
-    duration: "35h",
-    level: "Débutant",
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070&auto=format&fit=crop",
-    rating: 4.8
-  }
+    title: "Automation CRM",
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
+    progress: 74,
+  },
 ];
 
 export function BeyondNoSchoolPage() {
-  const blue = "#006CFF";
-  const white = "#FFFFFF";
-  const black = "#000000";
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-
   return (
-    <div className="min-h-screen bg-black">
-      <EcosystemHeader ecosystem="no-school" title="Beyond No School" />
-      {/* Hero Section - Style Netflix */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop"
-            alt="Beyond No School"
-            fill
-            className="object-cover opacity-40"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black" />
-        </div>
+    <main className="min-h-screen bg-[#050505] pb-20 text-white md:pb-0">
+      <SideNav />
+      <div className="flex-1 md:pl-20">
+        <DynamicHero />
+        <RailsSection />
+        <OriginalsSection />
+      </div>
+    </main>
+  );
+}
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="space-y-8"
-          >
-            <h1 
-              className="text-7xl md:text-9xl font-bold leading-tight text-white"
-              style={{ 
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                letterSpacing: '-0.04em',
-                fontWeight: 700
-              }}
-            >
-              Beyond No School
-            </h1>
-            <p 
-              className="text-2xl md:text-3xl font-light mb-12 text-white/90 max-w-3xl mx-auto"
-              style={{ 
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif'
-              }}
-            >
-              Apprenez à votre rythme, où vous voulez, quand vous voulez
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/dashboard/catalogue">
-                <Button 
-                  size="lg"
-                  className="rounded-full px-10 py-7 text-lg font-light"
-                  style={{ 
-                    backgroundColor: white,
-                    color: black
-                  }}
-                >
-                  <Play className="mr-2 h-5 w-5" />
-                  Commencer à apprendre
-                </Button>
-              </Link>
-              <Link href="/beyond-center/pre-inscription">
-                <Button 
-                  size="lg"
-                  variant="outline"
-                  className="rounded-full px-10 py-7 text-lg font-light border-2 border-white/30 text-white hover:bg-white/10"
-                >
-                  En savoir plus
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+function SideNav() {
+  return (
+    <>
+      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-16 flex-col items-center gap-6 border-r border-white/10 bg-white/5 px-3 py-6 backdrop-blur-xl transition-all duration-300 hover:w-48 md:flex">
+        <Link
+          href="/beyond-no-school"
+          className="max-w-[120px] text-xs font-semibold uppercase tracking-[0.28em] text-white/80"
+        >
+          Beyond
+        </Link>
+        <button
+          type="button"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white/80"
+          aria-label="Rechercher"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+        <nav className="flex flex-col gap-4 text-white/70">
+          <NavItem icon={<Home className="h-4 w-4" />} label="Accueil" href="/beyond-no-school/catalogue" />
+          <NavItem icon={<Map className="h-4 w-4" />} label="Mon Parcours" href="/beyond-no-school/trajectoire" />
+          <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Progression" href="/beyond-no-school/progression" />
+          <NavItem icon={<Wallet className="h-4 w-4" />} label="Wallet" href="/beyond-no-school/wallet" />
+          <NavItem icon={<Share2 className="h-4 w-4" />} label="Beyond Connect" href="/beyond-connect" />
+          <NavItem icon={<User className="h-4 w-4" />} label="Profil" href="/beyond-no-school/profil" />
+          <NavItem icon={<Settings className="h-4 w-4" />} label="Paramètres" href="/beyond-no-school/compte" />
+        </nav>
+      </aside>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-white/10 bg-black/80 px-4 py-3 text-[10px] uppercase tracking-[0.3em] text-white/70 backdrop-blur md:hidden">
+        <Link href="/beyond-no-school/catalogue" className="flex flex-col items-center gap-1">
+          <Home className="h-4 w-4" />
+          Accueil
+        </Link>
+        <Link href="/beyond-no-school/trajectoire" className="flex flex-col items-center gap-1">
+          <Map className="h-4 w-4" />
+          Parcours
+        </Link>
+        <Link href="/beyond-no-school/wallet" className="flex flex-col items-center gap-1">
+          <Wallet className="h-4 w-4" />
+          Wallet
+        </Link>
+        <Link href="/beyond-no-school/profil" className="flex flex-col items-center gap-1">
+          <User className="h-4 w-4" />
+          Profil
+        </Link>
+      </nav>
+    </>
+  );
+}
 
-      {/* Featured Section - Style Netflix */}
-      <section className="py-20 bg-black">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="mb-12"
-          >
-            <h2 
-              className="text-3xl md:text-4xl font-light text-white mb-2"
-              style={{ 
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                letterSpacing: '-0.02em',
-                fontWeight: 300
-              }}
-            >
-              Formations populaires
-            </h2>
-          </motion.div>
+function NavItem({ icon, label, href }: { icon: ReactNode; label: string; href?: string }) {
+  const content = (
+    <>
+      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10">
+        {icon}
+      </span>
+      <span className="hidden whitespace-nowrap group-hover:inline-block">{label}</span>
+    </>
+  );
 
-          {/* Horizontal Scroll Container */}
-          <div className="relative">
-            <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {formations.map((formation, index) => (
-                <motion.div
-                  key={formation.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  onMouseEnter={() => setHoveredCard(formation.id)}
-                  onMouseLeave={() => setHoveredCard(null)}
-                  className="flex-shrink-0 w-[300px] group cursor-pointer"
-                >
-                  <Link href={`/dashboard/catalogue/module/${formation.id}`}>
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-900">
-                      <Image
-                        src={formation.image}
-                        alt={formation.title}
-                        fill
-                        className={`object-cover transition-transform duration-500 ${
-                          hoveredCard === formation.id ? 'scale-110' : 'scale-100'
-                        }`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-                      
-                      {/* Play Button Overlay */}
-                      {hoveredCard === formation.id && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="absolute inset-0 flex items-center justify-center"
-                        >
-                          <div 
-                            className="w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-md border-2 border-white/30"
-                            style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
-                          >
-                            <Play className="h-10 w-10 text-white ml-1" fill="white" />
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* Info Overlay */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span 
-                            className="text-xs font-light text-white/80 px-2 py-1 rounded"
-                            style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
-                          >
-                            {formation.category}
-                          </span>
-                          <span className="text-xs text-white/60">•</span>
-                          <span className="text-xs text-white/60">{formation.duration}</span>
-                        </div>
-                        <h3 
-                          className="text-lg font-medium text-white mb-1 line-clamp-2"
-                          style={{ 
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif'
-                          }}
-                        >
-                          {formation.title}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-white/80">⭐ {formation.rating}</span>
-                          <span className="text-xs text-white/60">•</span>
-                          <span className="text-xs text-white/60">{formation.level}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Sections - Style Netflix */}
-      {["Informatique", "Marketing", "Soft Skills"].map((category, catIndex) => (
-        <section key={category} className="py-12 bg-black">
-          <div className="max-w-7xl mx-auto px-6">
-            <h3 
-              className="text-2xl font-light text-white mb-6"
-              style={{ 
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif'
-              }}
-            >
-              {category}
-            </h3>
-            <div className="flex gap-4 overflow-x-auto pb-6">
-              {formations
-                .filter(f => f.category === category)
-                .map((formation) => (
-                  <motion.div
-                    key={formation.id}
-                    whileHover={{ scale: 1.05, y: -8 }}
-                    className="flex-shrink-0 w-[250px] cursor-pointer"
-                  >
-                    <Link href={`/dashboard/catalogue/module/${formation.id}`}>
-                      <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-900">
-                        <Image
-                          src={formation.image}
-                          alt={formation.title}
-                          fill
-                          className="object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 p-3">
-                          <h4 className="text-sm font-medium text-white line-clamp-2">{formation.title}</h4>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-            </div>
-          </div>
-        </section>
-      ))}
-
-      {/* CTA Section */}
-      <section className="py-32 bg-black border-t border-white/10">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 
-              className="text-4xl md:text-6xl font-light mb-6 text-white"
-              style={{ 
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                letterSpacing: '-0.03em',
-                fontWeight: 300
-              }}
-            >
-              Prêt à développer<br />
-              vos compétences ?
-            </h2>
-            <Link href="/dashboard/catalogue">
-              <Button 
-                size="lg"
-                className="rounded-full px-10 py-7 text-lg font-light"
-                style={{ 
-                  backgroundColor: white,
-                  color: black
-                }}
-              >
-                Explorer le catalogue
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
+  return href ? (
+    <Link href={href} className="flex items-center gap-3 text-sm font-medium hover:text-white">
+      {content}
+    </Link>
+  ) : (
+    <div className="flex items-center gap-3 text-sm font-medium">
+      {content}
     </div>
   );
 }
+
+function DynamicHero() {
+  return (
+    <section className="relative flex min-h-[70vh] flex-col justify-center overflow-hidden px-8 pb-32 pt-24">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-cover bg-left"
+        style={{
+          backgroundImage:
+            "url(https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1800&q=80)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-black/60 to-black"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 12% 18%, rgba(255,59,48,0.22) 0%, rgba(12,12,18,0.7) 40%, rgba(5,5,7,0.96) 85%)",
+        }}
+      />
+      <Link
+        href="/beyond-no-school/catalogue"
+        className="absolute left-8 top-8 max-w-[120px] text-xs font-semibold uppercase tracking-[0.28em] text-white/85"
+      >
+        Beyond
+      </Link>
+      <div className="relative mx-auto w-full max-w-6xl space-y-6">
+        <motion.h1
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          variants={fadeUp}
+          className="text-[40px] font-semibold leading-[0.92] tracking-tight text-white md:text-[60px] lg:text-[72px]"
+        >
+          IA & AUTOMATION : ASSISTANT
+        </motion.h1>
+        <motion.p
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              variants={fadeUp}
+          className="max-w-2xl text-base text-white/75 md:text-lg"
+        >
+          Une certification co-signée par le consortium Tech & Sport de Haut Niveau.
+        </motion.p>
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              variants={fadeUp}
+          className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.35em] text-zinc-300"
+        >
+          <span>2026</span>
+          <span>Durée : 2h</span>
+          <span>Niveau : Élite</span>
+          <span>★★★★★</span>
+            </motion.div>
+        <div className="mt-4 space-y-4">
+          <div className="h-[3px] w-full max-w-md rounded-full bg-white/20">
+            <div className="h-[3px] w-[90%] rounded-full bg-[#FF3B30]" />
+        </div>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/60">90% complété</p>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href="/beyond-no-school/competences/analyse-donnees-decisionnelle"
+              className="inline-flex items-center justify-center rounded-full bg-[#FF3B30] px-7 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white transition-transform duration-300 hover:scale-[1.04]"
+          >
+              ▶ Commencer la certification
+          </Link>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-full bg-white/10 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white/80 backdrop-blur"
+            >
+              + Ajouter à ma liste
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RailsSection() {
+  return (
+    <section className="space-y-12 px-8 pb-24">
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold text-white">Tendances actuelles</h2>
+        <div className="flex gap-5 overflow-x-auto pb-4">
+          {TRENDING.map((item) => (
+            <Link
+              key={item.title}
+              href={item.href}
+              className="group relative aspect-[2/3] w-56 shrink-0 overflow-hidden rounded-xl bg-white/5 transition-transform duration-300 hover:scale-110"
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                style={{ backgroundImage: `url(${item.image})` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                <span className="rounded-full bg-black/70 px-4 py-2 text-[10px] uppercase tracking-[0.35em] text-white/80">
+                  Preview
+                </span>
+              </div>
+              <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-black">
+                {item.tag}
+              </span>
+              <div className="absolute bottom-4 left-4 right-4 space-y-2">
+                <p className="text-sm font-semibold text-white">{item.title}</p>
+                <div className="flex flex-wrap gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  {item.coSign.map((coSign) => (
+                    <span
+                      key={coSign}
+                      className="rounded-full border border-white/20 bg-black/60 px-2 py-1 text-[9px] uppercase tracking-[0.35em] text-white/75"
+                    >
+                      {coSign}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold text-white">Reprendre votre progression</h2>
+        <div className="flex gap-5 overflow-x-auto pb-4">
+          {CONTINUE.map((item) => (
+            <div
+              key={item.title}
+              className="group relative aspect-video w-80 shrink-0 overflow-hidden rounded-xl bg-white/5 transition-transform duration-300 hover:scale-105"
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                style={{ backgroundImage: `url(${item.image})` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 space-y-3">
+                <p className="text-sm font-semibold text-white">{item.title}</p>
+                <div className="h-[3px] w-full rounded-full bg-white/20">
+                  <div
+                    className="h-[3px] rounded-full bg-[#FF3B30]"
+                    style={{ width: `${item.progress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function OriginalsSection() {
+  return (
+    <section className="px-8 pb-24">
+      <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.05] p-10">
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,59,48,0.25),transparent_60%)]" />
+        <div className="relative space-y-6">
+          <p className="text-xs uppercase tracking-[0.4em] text-zinc-500">Beyond Originals</p>
+          <h2 className="text-3xl font-semibold text-white">
+            Pack Immersion Week-end · 149€
+          </h2>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href="/beyond-no-school/competences/marketing-sportif"
+              className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 text-xs font-semibold uppercase tracking-[0.35em] text-black"
+            >
+              Lecture · Accès Immédiat
+          </Link>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-xs font-semibold uppercase tracking-[0.35em] text-white/80"
+            >
+              + Ajouter à ma liste
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default BeyondNoSchoolPage;
+
+

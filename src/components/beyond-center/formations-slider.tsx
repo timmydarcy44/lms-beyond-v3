@@ -22,8 +22,7 @@ export function FormationsSlider() {
   const [isLoading, setIsLoading] = useState(true);
 
   const blue = "#006CFF";
-  const white = "#FFFFFF";
-  const black = "#000000";
+  const gold = "#D4AF37";
 
   useEffect(() => {
     async function fetchFormations() {
@@ -158,75 +157,43 @@ export function FormationsSlider() {
                   whileHover={{ y: -8 }}
                 >
                   <Link href={`/dashboard/catalogue/module/${formation.id}`}>
-                    <div className="group relative h-full bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-[#006CFF] hover:shadow-[0_0_30px_rgba(0,108,255,0.2)] transition-all duration-500 cursor-pointer">
+                    <div className="group relative flex aspect-video w-full overflow-hidden rounded-xl border border-black/10 bg-black/90 transition-all duration-500 cursor-pointer md:hover:z-10 md:hover:scale-105 md:hover:border-[#D4AF37] md:hover:shadow-[0_20px_60px_-24px_rgba(212,175,55,0.4)]">
                       {/* Image de couverture */}
-                      <div className="relative h-48 w-full overflow-hidden">
-                        {formation.cover_image ? (
-                          <Image
-                            src={formation.cover_image}
-                            alt={formation.title}
-                            fill
-                            className="object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div 
-                            className="w-full h-full flex items-center justify-center"
-                            style={{ backgroundColor: `${blue}20` }}
-                          >
-                            <BookOpen className="h-16 w-16" style={{ color: blue, opacity: 0.5 }} />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                      </div>
-
-                      {/* Contenu */}
-                      <div className="p-6">
-                        <h3 
-                          className="text-2xl font-light mb-3 text-black line-clamp-2"
-                          style={{ 
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                            letterSpacing: '-0.02em'
-                          }}
-                        >
-                          {formation.title}
-                        </h3>
-                        {formation.description && (
-                          <p 
-                            className="text-sm text-gray-600 font-light mb-4 line-clamp-2"
-                            style={{ 
-                              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif'
-                            }}
-                          >
-                            {formation.description}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between">
-                          {formation.price !== undefined && formation.price > 0 ? (
-                            <span 
-                              className="text-lg font-light"
-                              style={{ color: blue }}
-                            >
-                              {formation.price.toFixed(2)} €
-                            </span>
-                          ) : (
-                            <span 
-                              className="text-sm font-light text-gray-400"
-                            >
-                              Gratuit
-                            </span>
-                          )}
-                          <div className="flex items-center gap-2 text-gray-600 group-hover:text-[#006CFF] transition-colors">
-                            <span className="text-sm font-light">Découvrir</span>
-                            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                          </div>
+                      {formation.cover_image ? (
+                        <Image
+                          src={formation.cover_image}
+                          alt={formation.title}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/10 via-white/5 to-transparent">
+                          <BookOpen className="h-16 w-16" style={{ color: gold, opacity: 0.6 }} />
                         </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                      <div className="absolute right-3 top-3 flex flex-col gap-2 text-[11px] text-white/80">
+                        <span className="rounded-full border border-white/20 bg-black/50 px-2 py-1 backdrop-blur">
+                          Formation
+                        </span>
+                        <span className="rounded-full border border-white/20 bg-black/50 px-2 py-1 backdrop-blur">
+                          {formation.price !== undefined && formation.price > 0
+                            ? `${formation.price.toFixed(2)} €`
+                            : "Gratuit"}
+                        </span>
                       </div>
-
-                      {/* Ligne bleue animée au hover */}
-                      <div 
-                        className="absolute bottom-0 left-0 right-0 h-px w-0 group-hover:w-full transition-all duration-500"
-                        style={{ backgroundColor: blue }}
-                      />
+                      <div className="absolute inset-x-0 bottom-0 space-y-1 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-4 pt-10">
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-[#999]">
+                          Beyond No School
+                        </p>
+                        <p className="text-sm font-semibold text-white line-clamp-2">{formation.title}</p>
+                        {formation.description ? (
+                          <p className="text-[11px] text-white/70 line-clamp-2">{formation.description}</p>
+                        ) : null}
+                      </div>
+                      <div className="absolute bottom-0 left-0 h-[2px] w-full bg-white/10">
+                        <div className="h-[2px] w-0 bg-[#D4AF37] transition-all duration-500 group-hover:w-full" />
+                      </div>
                     </div>
                   </Link>
                 </motion.div>

@@ -7,9 +7,9 @@ import { getFormateurPaths, getFormateurLearners, getFormateurGroups, getFormate
 import { ParcoursCardsClient } from "./parcours-cards-client";
 
 const statusConfig: Record<string, { label: string; tone: string }> = {
-  published: { label: "Publié", tone: "bg-emerald-500/20 text-emerald-100" },
-  draft: { label: "Brouillon", tone: "bg-white/10 text-white/70" },
-  scheduled: { label: "Programmé", tone: "bg-sky-500/15 text-sky-100" },
+  published: { label: "Publié", tone: "border border-emerald-400/30 bg-emerald-500/15 text-emerald-100" },
+  draft: { label: "À peaufiner", tone: "border border-amber-400/30 bg-amber-500/15 text-amber-100" },
+  scheduled: { label: "Programmé", tone: "border border-sky-400/30 bg-sky-500/15 text-sky-100" },
 };
 
 

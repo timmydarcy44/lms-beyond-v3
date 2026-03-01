@@ -7,7 +7,7 @@ import { Heart, Brain, TrendingUp, Bell, BarChart3, Users, Shield, Sparkles, Arr
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { Navigation } from "@/components/landing/navigation";
+import Navigation from "@/components/landing/navigation";
 import Image from "next/image";
 
 export function BeyondCarePage() {
@@ -63,7 +63,7 @@ export function BeyondCarePage() {
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={heroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] as const }}
             className="mb-6"
           >
             <span 
@@ -81,7 +81,7 @@ export function BeyondCarePage() {
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={heroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] as const }}
             className="text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-8 leading-[1.1] tracking-tight"
             style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
           >
@@ -95,7 +95,7 @@ export function BeyondCarePage() {
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={heroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] as const }}
             className="text-xl md:text-2xl text-gray-200 mb-12 max-w-3xl mx-auto font-light leading-relaxed"
             style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
           >
@@ -105,7 +105,7 @@ export function BeyondCarePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={heroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Button
@@ -170,7 +170,7 @@ export function BeyondCarePage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] as const }}
             className="text-center mb-20"
           >
             <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-[1.1] tracking-tight" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
@@ -210,7 +210,7 @@ export function BeyondCarePage() {
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.8, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] as const }}
                   className="group relative"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl blur-xl"
@@ -254,7 +254,7 @@ export function BeyondCarePage() {
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] as const }}
               className="max-w-2xl"
             >
               <h2 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-[1.1] tracking-tight" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
@@ -289,7 +289,7 @@ export function BeyondCarePage() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={benefitsInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] as const }}
             className="text-center mb-20"
           >
             <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-[1.1] tracking-tight" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
@@ -327,7 +327,7 @@ export function BeyondCarePage() {
                   key={benefit.title}
                   initial={{ opacity: 0, y: 30 }}
                   animate={benefitsInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                  transition={{ duration: 1.2, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 1.2, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] as const }}
                   className="text-center group"
                 >
                   <div 
@@ -405,7 +405,7 @@ export function BeyondCarePage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] as const }}
           >
             <h2 className="text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1] tracking-tight" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
               Prêt à transformer
@@ -447,3 +447,4 @@ export function BeyondCarePage() {
     </div>
   );
 }
+

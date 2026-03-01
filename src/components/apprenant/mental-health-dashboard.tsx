@@ -100,16 +100,16 @@ export function MentalHealthDashboard() {
   });
 
   const getTrend = (current: number, previous: number) => {
-    if (current > previous) return { icon: TrendingUp, color: "text-green-500", label: "Amélioration" };
-    if (current < previous) return { icon: TrendingDown, color: "text-red-500", label: "Dégradation" };
-    return { icon: Minus, color: "text-gray-500", label: "Stable" };
+    if (current > previous) return { icon: TrendingUp, color: "text-emerald-300", label: "Amélioration" };
+    if (current < previous) return { icon: TrendingDown, color: "text-rose-300", label: "Dégradation" };
+    return { icon: Minus, color: "text-white/60", label: "Stable" };
   };
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-white/10 bg-white/10">
         <CardContent className="pt-6">
-          <p className="text-center text-gray-600">Chargement...</p>
+          <p className="text-center text-white/60">Chargement...</p>
         </CardContent>
       </Card>
     );
@@ -117,15 +117,15 @@ export function MentalHealthDashboard() {
 
   if (indicators.length === 0) {
     return (
-      <Card>
+      <Card className="border-white/10 bg-white/10">
         <CardHeader>
-          <CardTitle>Évolution de ma santé mentale</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">Évolution de ma santé mentale</CardTitle>
+          <CardDescription className="text-white/65">
             Suivez votre évolution au fil du temps
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-gray-600 py-8">
+          <p className="py-8 text-center text-white/60">
             Aucune donnée disponible pour le moment. Répondez aux questionnaires pour voir votre évolution.
           </p>
         </CardContent>
@@ -134,7 +134,7 @@ export function MentalHealthDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-10 text-white">
       {latestScore && (
         <MentalHealthScoreDisplay
           score={latestScore.score}
@@ -143,13 +143,15 @@ export function MentalHealthDashboard() {
           categoryScores={latestScore.categoryScores}
         />
       )}
-      <Card>
+      <Card className="border-white/10 bg-white/10 shadow-[0_40px_85px_-60px_rgba(15,23,42,0.6)]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-3 text-white">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white">
+              <Brain className="h-4 w-4" />
+            </span>
             Évolution de ma santé mentale
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-white/65">
             Suivez votre évolution au fil du temps
           </CardDescription>
         </CardHeader>
@@ -212,8 +214,16 @@ export function MentalHealthDashboard() {
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="week" />
                           <YAxis domain={[0, 100]} />
-                          <Tooltip />
-                          <Legend />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "rgba(15,23,42,0.92)",
+                              borderRadius: 16,
+                              border: "1px solid rgba(255,255,255,0.08)",
+                              color: "#f8fafc",
+                            }}
+                            itemStyle={{ color: "#f8fafc" }}
+                          />
+                          <Legend wrapperStyle={{ color: "#f8fafc" }} />
                           <Line
                             type="monotone"
                             dataKey="value"
@@ -233,28 +243,30 @@ export function MentalHealthDashboard() {
       </Card>
 
       {/* Historique des réponses */}
-      <Card>
+      <Card className="border-white/10 bg-white/10 shadow-[0_35px_70px_-45px_rgba(15,23,42,0.6)]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-3 text-white">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white">
+              <Calendar className="h-4 w-4" />
+            </span>
             Historique
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-white/65">
             Vos réponses aux questionnaires précédents
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {Object.entries(indicatorsByType).map(([type, values]) => (
-              <div key={type} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={type} className="flex items-center justify-between rounded-[20px] border border-white/10 bg-white/5 px-4 py-3">
                 <div>
-                  <p className="font-medium">{values[0]?.indicator_label || type}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="font-medium text-white">{values[0]?.indicator_label || type}</p>
+                  <p className="text-sm text-white/60">
                     Dernière mise à jour: {new Date(values[values.length - 1]?.calculated_at).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold">{values[values.length - 1]?.indicator_value.toFixed(1)}</p>
+                  <p className="text-2xl font-semibold text-white">{values[values.length - 1]?.indicator_value.toFixed(1)}</p>
                 </div>
               </div>
             ))}

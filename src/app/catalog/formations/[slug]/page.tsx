@@ -5,11 +5,9 @@ import {
   type LearnerCategory,
 } from "@/lib/queries/apprenant";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
-import Image from "next/image";
-import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SectionSlider } from "@/components/dashboard/section-slider";
-import { Button } from "@/components/ui/button";
+import { FormationDetailView, type Episode } from "./view";
 
 const CATEGORY_LABEL: Record<LearnerCategory, string> = {
   formations: "Formation",
@@ -48,105 +46,72 @@ export default async function FormationDetailPage({
 
   const contentType = "course";
 
+  const getSequenceFallbackImage = (index: number) => {
+    const images = [
+      "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1521791055366-0d553872125f?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=80",
+    ];
+    return images[index % images.length];
+  };
+
+  const episodes: Episode[] = [];
+  let episodeIndex = 1;
+  info.modules.forEach((module: any) => {
+    (module.lessons ?? []).forEach((lesson: any) => {
+      const resolvedImage =
+        lesson.imageUrl
+        ?? module.imageUrl
+        ?? lesson.thumbnailUrl
+        ?? info.backgroundImage
+        ?? getSequenceFallbackImage(episodeIndex - 1);
+      episodes.push({
+        id: lesson.id,
+        index: episodeIndex,
+        title: lesson.title,
+        description: lesson.summary ?? lesson.description ?? undefined,
+        imageUrl: resolvedImage,
+        href: `${card.href}/play/${lesson.id}`,
+        progress: lesson.progress ?? module.progress ?? null,
+        durationLabel: typeof lesson.durationLabel === "string" ? lesson.durationLabel : null,
+        locked: Boolean(lesson.locked ?? lesson.isLocked),
+      });
+      episodeIndex += 1;
+    });
+  });
+
   return (
-    <LearningSessionTracker
-      contentType={contentType}
-      contentId={card.id}
-    >
-      <div className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A]">
+    <LearningSessionTracker contentType={contentType} contentId={card.id}>
+      <div className="min-h-screen bg-black text-white">
         <DashboardShell
           title={info.title}
           breadcrumbs={breadcrumbs}
+          forcedTheme="dark"
+          className="bg-black text-white"
         >
-        {/* Hero Section */}
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/60 shadow-[0_40px_140px_rgba(221,36,118,0.35)]">
-          <div className="absolute inset-0">
-            {info.backgroundImage && info.backgroundImage.trim() !== "" ? (
-              <Image
-                src={info.backgroundImage}
-                alt={info.title}
-                fill
-                priority
-                className="object-cover"
-              />
-            ) : null}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(128,26,70,0.85),_transparent_60%)]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-[#FF512F]/35 to-[#DD2476]/55" />
-          </div>
-
-          <div className="relative z-10 flex flex-col gap-8 px-6 py-10 md:px-12 md:py-16">
-            <div className="space-y-4 text-white md:max-w-3xl">
-              {info.badge ? (
-                <span className="inline-flex items-center rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/90">
-                  {info.badge.label}
-                </span>
-              ) : null}
-              <h1 className="text-3xl font-semibold leading-tight md:text-5xl">{info.title}</h1>
-              {info.description ? (
-                <p className="text-sm text-white/75 md:text-base">{info.description}</p>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-white/70 md:text-sm">
-                {info.meta.map((meta, index) => (
-                  <span key={index} className="rounded-full border border-white/30 px-3 py-1 text-white/85">
-                    {meta}
-                  </span>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Button
-                  asChild
-                  className="flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#FF512F,#DD2476)] px-6 py-2 text-sm font-semibold text-white shadow-[0_16px_50px_rgba(221,36,118,0.35)] hover:brightness-110"
-                >
-                  <Link href={playHref}>Démarrer</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Modules et Lessons */}
-        {info.modules && info.modules.length > 0 && (
-          <section className="space-y-6">
-            <h2 className="text-2xl font-semibold text-white">Programme</h2>
-            <div className="space-y-4">
-              {info.modules.map((module: any) => (
-                <div key={module.id} className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                  <h3 className="mb-4 text-xl font-semibold text-white">{module.title}</h3>
-                  {module.lessons && module.lessons.length > 0 && (
-                    <div className="space-y-2">
-                      {module.lessons.map((lesson: any) => (
-                        <Link
-                          key={lesson.id}
-                          href={`${card.href}/play/${lesson.id}`}
-                          className="block rounded-lg border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
-                        >
-                          <p className="font-medium text-white">{lesson.title}</p>
-                          {lesson.summary && (
-                            <p className="mt-1 text-sm text-white/60">{lesson.summary}</p>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Contenu similaire */}
-        {related.length > 0 && (
-          <SectionSlider 
-            title="Vous aimerez aussi" 
-            cards={related.map(card => ({ 
-              ...card, 
-              cta: card.cta ?? undefined,
-              meta: card.meta ?? undefined,
-              progress: card.progress ?? undefined,
-            }))} 
-            accent="learner" 
+          <FormationDetailView
+            card={card}
+            info={info}
+            related={related}
+            playHref={playHref}
+            episodes={episodes}
+            breadcrumbs={breadcrumbs}
           />
-        )}
+          {related.length > 0 && (
+            <SectionSlider
+              title="Vous aimerez aussi"
+              cards={related.map((card) => ({
+                ...card,
+                cta: card.cta ?? undefined,
+                meta: card.meta ?? undefined,
+                progress: card.progress ?? undefined,
+              }))}
+              accent="learner"
+              theme="dark"
+              variant="compact"
+            />
+          )}
         </DashboardShell>
       </div>
     </LearningSessionTracker>

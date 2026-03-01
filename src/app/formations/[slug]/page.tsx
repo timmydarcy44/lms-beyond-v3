@@ -232,11 +232,11 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
         .is("organization_id", null)
         .maybeSingle();
       
-      const hasExplicitAccess = userAccessCheck && (
-        userAccessCheck.access_status === "purchased" ||
-        userAccessCheck.access_status === "free" ||
-        userAccessCheck.access_status === "manually_granted"
-      );
+      const hasExplicitAccess =
+        !!userAccessCheck &&
+        (userAccessCheck.access_status === "purchased" ||
+          userAccessCheck.access_status === "free" ||
+          userAccessCheck.access_status === "manually_granted");
       
       hasAccess = isCreator || hasExplicitAccess;
     }
@@ -253,11 +253,23 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
   });
 
   const { card, detail: info, related = [] } = detail;
-  const lessons = info.modules.flatMap((module) => module.lessons ?? []);
-  const firstLesson = lessons[0];
+  type LessonSummary = { id?: string } & Record<string, unknown>;
+
+  const modules = Array.isArray(info.modules)
+    ? (info.modules as Array<{ lessons?: LessonSummary[] }>)
+    : ([] as Array<{ lessons?: LessonSummary[] }>);
+  const lessons = modules.flatMap((module) => module.lessons ?? []);
+  const metaItems = Array.isArray(info.meta) ? (info.meta as string[]) : [];
+  const skillItems = Array.isArray(info.skills) ? (info.skills as string[]) : [];
+  const objectiveItems = Array.isArray(info.objectives) ? (info.objectives as string[]) : [];
+  const firstLesson = lessons[0] as LessonSummary | undefined;
+  const catalogContentId =
+    (catalogItem as { content_id?: string } | null | undefined)?.content_id ??
+    catalogItem?.id ??
+    card.id;
   // Utiliser la route formations au lieu de catalog/formations
   const baseHref = `/formations/${slug}`;
-  const playHref = firstLesson ? `${baseHref}/play/${firstLesson.id}` : baseHref;
+  const playHref = firstLesson?.id ? `${baseHref}/play/${firstLesson.id}` : baseHref;
 
   // Couleurs de branding Jessica Contentin
   const bgColor = "#FFFFFF"; // Blanc
@@ -331,7 +343,7 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
                   </div>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm" style={{ color: `${textColor}AA` }}>
-                  {info.meta.map((item) => (
+                  {metaItems.map((item) => (
                     <span 
                       key={item} 
                       className="rounded-full border px-3 py-1"
@@ -349,9 +361,9 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
                     {info.description}
                   </p>
                 )}
-                {info.skills && info.skills.length > 0 && (
+                {skillItems.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {info.skills.map((skill) => (
+                    {skillItems.map((skill) => (
                       <span 
                         key={skill} 
                         className="rounded-full px-3 py-1 text-xs uppercase tracking-wide"
@@ -381,7 +393,7 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
                       user={user}
                       hasAccess={hasAccess}
                       catalogItemId={catalogItem.id}
-                      contentId={catalogItem.content_id || catalogItem.id}
+                      contentId={catalogContentId}
                       price={catalogItem.price || 0}
                       title={card.title}
                       contentType="module"
@@ -457,7 +469,7 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
                     Objectifs pédagogiques
                   </h2>
                   <ul className="space-y-3 text-sm" style={{ color: `${textColor}CC` }}>
-                    {info.objectives.map((objective, idx) => (
+                    {objectiveItems.map((objective, idx) => (
                       <li key={idx} className="flex items-start gap-3">
                         <span 
                           className="mt-1 inline-flex h-2 w-2 flex-none rounded-full"
@@ -497,7 +509,7 @@ export default async function FormationDetailPage({ params }: FormationDetailPag
                     Compétences développées
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {info.skills.map((skill, idx) => (
+                    {skillItems.map((skill, idx) => (
                       <span
                         key={idx}
                         className="rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide"

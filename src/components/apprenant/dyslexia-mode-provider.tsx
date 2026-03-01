@@ -90,13 +90,36 @@ export function DyslexiaModeProvider({ children }: { children: ReactNode }) {
   }, [isDyslexiaMode, preferences]);
 
   const toggleDyslexiaMode = () => {
-    setIsDyslexiaMode((prev) => !prev);
+    setIsDyslexiaMode((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("beyond_neuro_mode", next ? "on" : "off");
+        } catch (error) {
+          console.warn("[dyslexia-provider] Unable to persist neuro mode:", error);
+        }
+      }
+      return next;
+    });
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = localStorage.getItem("beyond_neuro_mode");
+      if (stored === "on") {
+        setIsDyslexiaMode(true);
+      } else if (stored === "off") {
+        setIsDyslexiaMode(false);
+      }
+    } catch (error) {
+      console.warn("[dyslexia-provider] Unable to read neuro mode from storage:", error);
+    }
+  }, []);
 
   const updatePreferences = (prefs: AccessibilityPreferences) => {
     setPreferences(prefs);
-    // Toujours activer le mode dyslexie quand on met à jour les préférences (c'est pour le preview)
-    setIsDyslexiaMode(true);
+    setIsDyslexiaMode(Boolean(prefs.dyslexia_mode_enabled));
   };
 
   return (

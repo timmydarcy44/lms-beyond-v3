@@ -70,12 +70,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer la session de paiement Stripe
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/catalogue/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/catalogue/checkout`,
+      success_url: `${baseUrl}/dashboard/catalogue/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/dashboard/catalogue/checkout`,
       metadata: {
         user_id: user.id,
         items_count: items.length.toString(),

@@ -1,7 +1,29 @@
+import type { Metadata } from "next";
 import { getTenantFromHeaders } from "@/lib/tenant/detection-server";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { generateSpecialityMetadata } from "@/app/jessica-contentin/specialites/[slug]/metadata";
 import { default as SpecialiteSlugPage } from "@/app/jessica-contentin/specialites/[slug]/page";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const tenant = await getTenantFromHeaders();
+  const headersList = await headers();
+  const hostname = headersList.get("host") || "";
+  const isLocalhost = hostname.startsWith("localhost") || hostname.startsWith("127.0.0.1");
+  const { slug } = await params;
+
+  if ((tenant?.id === "jessica-contentin" && !isLocalhost) || isLocalhost) {
+    return generateSpecialityMetadata(slug);
+  }
+
+  return {};
+}
 
 export default async function SpecialiteSlugRoute({
   params,

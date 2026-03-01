@@ -62,36 +62,42 @@ const ACTIONS = [
   {
     id: "rephrase",
     label: "Reformuler",
+    shortLabel: "Reformuler",
     description: "Simplifie ou enrichit le passage sélectionné",
     icon: Sparkles,
   },
   {
     id: "mindmap",
     label: "Créer une map",
+    shortLabel: "Transformer en map",
     description: "Génère une carte mentale des idées clés",
     icon: Map,
   },
   {
     id: "schema",
     label: "Créer un schéma",
+    shortLabel: "Transformer en schéma",
     description: "Propose un schéma visuel pour visualiser le concept",
     icon: Shapes,
   },
   {
     id: "translate",
     label: "Traduire",
+    shortLabel: "Traduire",
     description: "Traduit le contenu dans la langue de votre choix",
     icon: Languages,
   },
   {
     id: "audio",
     label: "Transformer en audio",
+    shortLabel: "Transformer en audio",
     description: "Crée une version audio du passage",
     icon: AudioLines,
   },
   {
     id: "insights",
     label: "Analyser",
+    shortLabel: "Analyser",
     description: "Identifie exemples, analogies et questions de révision",
     icon: Brain,
   },
@@ -156,6 +162,7 @@ export function LessonSmartAssist({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRephraseOptions, setShowRephraseOptions] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string>(VOICE_OPTIONS[0].id);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -375,6 +382,9 @@ const executeAction = async (actionId: AIAction, options: Record<string, any> = 
       originalText: textToTransform,
       audio: data.audio ?? null,
     });
+    if (actionId === "audio") {
+      setShowVoiceSettings(true);
+    }
     setShowResultModal(true);
     setSelection(null);
     setSelectionExcerpt("");
@@ -410,6 +420,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
 
   let finalOptions = options ?? {};
   if (actionId === "audio") {
+    setShowVoiceSettings(true);
     finalOptions = { ...finalOptions, voice: selectedVoice };
   }
 
@@ -466,6 +477,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
       originalText: item.selection_excerpt ?? "",
       audio: audioData,
     });
+    setShowVoiceSettings(item.action === "audio");
     setShowResultModal(true);
     setShowHistoryModal(false);
   };
@@ -767,97 +779,37 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
       {hideAssistantPanel ? null : (
         <div
           className={cn(
-            "mt-8 rounded-3xl border p-6 transition-colors",
-            isLight
-              ? "border-slate-200 bg-white text-slate-800 shadow-xl shadow-slate-200/60"
-              : "border-white/10 bg-gradient-to-br from-[#0f172a]/70 via-[#111827]/80 to-[#1f2937]/70 text-white shadow-[0_30px_80px_-45px_rgba(15,23,42,0.9)]",
+            "mt-8 rounded-3xl p-6 transition-colors bg-white/90 text-black shadow-[0_25px_55px_-34px_rgba(15,23,42,0.25)]",
           )}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className={cn("text-xs font-semibold uppercase tracking-[0.3em]", isLight ? "text-slate-400" : "text-white/60")}>
-                Outils immédiats du chapitre
-              </p>
-              <h3 className={cn("text-lg font-semibold", isLight ? "text-slate-900" : "text-white")}>
-                Transformez ce contenu selon vos besoins
-              </h3>
-            </div>
-            <Button
-              variant="outline"
-              className={cn(
-                "rounded-full text-xs font-semibold uppercase tracking-[0.3em]",
-                isLight
-                  ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-                  : "border-white/30 bg-white/10 text-white hover:bg-white/20",
-              )}
-              onClick={() => {
-                toast("Sélectionnez un passage", {
-                  description: "Surlignez le texte à transformer pour lancer l'aide IA.",
-                });
-              }}
-            >
-              Comment ça marche ?
-            </Button>
-          </div>
-
-          {selectionExcerpt ? (
-            <div
-              className={cn(
-                "mt-4 space-y-3 rounded-2xl border p-4 text-sm",
-                isLight
-                  ? "border-slate-200 bg-slate-50 text-slate-700"
-                  : "border-white/10 bg-white/5 text-white/80",
-              )}
-            >
-              <p className={cn("text-xs font-semibold uppercase tracking-[0.3em]", isLight ? "text-slate-400" : "text-white/50")}>Passage sélectionné</p>
-              <p className="leading-relaxed">{selectionExcerpt}</p>
-            </div>
-          ) : (
-            <p className={cn("mt-4 text-sm", isLight ? "text-slate-500" : "text-white/60")}>
-              Surlignez n'importe quel passage pour lancer une reformulation, une traduction, une carte mentale ou une version audio instantanée.
+          <div className="mb-6 space-y-1 text-left">
+            <p className="apprenant-force-text text-sm font-light tracking-[0.15em]" style={{ fontFamily: "\"SF Pro Text\", \"SF Pro Display\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif" }}>
+              Beyond Note Ai
             </p>
-          )}
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <h3 className="apprenant-force-text text-xl font-semibold" style={{ fontFamily: "\"SF Pro Display\", \"SF Pro Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif" }}>
+              Transformez et personnalisez le contenu de votre cours
+            </h3>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ACTIONS.map((action) => {
               const Icon = action.icon;
-              const isHovered = hoveredAction === action.id;
               return (
                 <button
                   key={action.id}
                   type="button"
-                  className={cn(
-                    "flex h-full flex-col justify-between rounded-2xl border p-4 text-left transition",
-                    isLight
-                      ? "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-100"
-                      : "border-white/10 bg-white/5 text-white hover:border-white/30 hover:bg-white/10",
-                  )}
+                  className="flex h-full flex-col items-center justify-center gap-2 rounded-3xl bg-white p-4 text-center text-black shadow-[0_25px_45px_-34px_rgba(15,23,42,0.25)] transition-all duration-200 hover:-translate-y-0.5"
                   onClick={() => handleAction(action.id)}
                   onMouseEnter={() => setHoveredAction(action.id)}
                   onMouseLeave={() => setHoveredAction((prev) => (prev === action.id ? null : prev))}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#00C6FF]/70 via-[#8E2DE2]/70 to-[#FF6FD8]/70 text-white">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span
-                      className={cn(
-                        "text-sm font-semibold uppercase tracking-[0.3em]",
-                        isHovered ? "text-transparent" : isLight ? "text-slate-700" : "text-white/80",
-                      )}
-                      style={isHovered ? gradientTextStyle : undefined}
-                    >
-                      {action.label}
-                    </span>
-                  </div>
-                  <p className={cn("mt-3 text-xs", isLight ? "text-slate-500" : "text-white/60")}>{action.description}</p>
-                  {action.id === "audio" ? (
-                    <p
-                      className={cn(
-                        "mt-2 text-xs font-semibold",
-                        isLight ? "text-slate-600" : "text-white/70",
-                      )}
-                    >
+                  <span className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-gradient-to-br from-[#00C6FF] via-[#8E2DE2] to-[#FF6FD8] text-white shadow-[0_15px_35px_-25px_rgba(8,47,73,0.75)]">
+                    <Icon className="h-6 w-6" />
+                  </span>
+                  <span className="text-sm font-semibold tracking-tight apprenant-force-text text-black">
+                    {action.shortLabel ?? action.label}
+                  </span>
+                  {action.id === "audio" && showVoiceSettings ? (
+                    <p className="text-[11px] font-medium apprenant-force-text text-black">
                       Voix actuelle : {getVoiceLabel(selectedVoice)}
                     </p>
                   ) : null}
@@ -866,38 +818,32 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
             })}
           </div>
 
-          <div
-            className={cn(
-              "mt-6 rounded-2xl border p-4",
-              isLight
-                ? "border-slate-200 bg-white text-slate-700"
-                : "border-white/10 bg-white/5 text-white/80",
-            )}
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+          {showVoiceSettings ? (
+          <div className="mt-6 rounded-3xl bg-white p-5 text-black shadow-[0_25px_45px_-34px_rgba(15,23,42,0.25)]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1.5">
                 <p
                   className={cn(
-                    "text-xs font-semibold uppercase tracking-[0.3em]",
-                    isLight ? "text-slate-400" : "text-white/50",
+                    "inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] apprenant-force-text text-black",
                   )}
                 >
+                  <span className="inline-block h-1.5 w-8 rounded-full bg-gradient-to-r from-[#00C6FF] via-[#8E2DE2] to-[#FF6FD8]" />
                   Voix IA
                 </p>
-                <p className={cn("text-sm", isLight ? "text-slate-600" : "text-white/70")}>
+                <p className="text-sm leading-relaxed apprenant-force-text text-black">
                   Choisissez la voix utilisée pour la transformation audio.
                 </p>
               </div>
               <Select value={selectedVoice} onValueChange={setSelectedVoice}>
                 <SelectTrigger
                   className={cn(
-                    "mt-1 w-full min-w-[220px] rounded-full text-left sm:mt-0",
-                    isLight ? "border-slate-200 bg-white text-slate-700" : "border-white/20 bg-white/10 text-white",
+                    "mt-1 w-full min-w-[220px] rounded-full text-left shadow-sm sm:mt-0 apprenant-force-text",
+                    "border border-slate-200 bg-white text-black hover:border-slate-300",
                   )}
                 >
                   <SelectValue placeholder="Sélectionner une voix" />
                 </SelectTrigger>
-                <SelectContent className={cn(isLight ? "" : "bg-[#0f172a] text-white")}>
+                <SelectContent>
                   {VOICE_OPTIONS.map((voice) => (
                     <SelectItem key={voice.id} value={voice.id}>
                       {voice.label}
@@ -907,19 +853,17 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
               </Select>
             </div>
           </div>
+          ) : null}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className={cn("text-xs", isLight ? "text-slate-500" : "text-white/60")}>
+            <p className="text-xs apprenant-force-text text-black">
               {history.length > 0
                 ? `${history.length} transformation${history.length > 1 ? "s" : ""} sauvegardée${history.length > 1 ? "s" : ""} pour ce chapitre.`
                 : "Aucune transformation sauvegardée pour ce chapitre pour le moment."}
             </p>
             <Button
-              variant="outline"
-              className={cn(
-                "flex items-center gap-2 rounded-full text-xs font-semibold uppercase tracking-[0.3em]",
-                isLight ? "border-slate-200 text-slate-700 hover:bg-slate-100" : "border-white/20 text-white hover:bg-white/10",
-              )}
+              variant="ghost"
+              className="flex items-center gap-2 rounded-full border-0 bg-white text-xs font-semibold uppercase tracking-[0.3em] apprenant-force-text text-black shadow-sm hover:bg-slate-50"
               onClick={() => setShowHistoryModal(true)}
               disabled={isHistoryLoading}
             >

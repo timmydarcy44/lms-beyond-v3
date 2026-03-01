@@ -3,8 +3,15 @@
  * et les rôles stockés dans la base de données (anglais)
  */
 
-export type FrontendRole = "formateur" | "apprenant" | "admin" | "tuteur";
-export type DatabaseRole = "instructor" | "student" | "admin" | "tutor";
+export type FrontendRole = "formateur" | "apprenant" | "admin" | "tuteur" | "entreprise" | "ecole";
+export type DatabaseRole =
+  | "instructor"
+  | "student"
+  | "admin"
+  | "tutor"
+  | "entreprise"
+  | "ecole"
+  | "apprenant";
 
 /**
  * Convertit un rôle du frontend vers la base de données
@@ -15,6 +22,8 @@ export function frontendToDatabaseRole(role: FrontendRole): DatabaseRole {
     apprenant: "student",
     admin: "admin",
     tuteur: "tutor",
+    entreprise: "entreprise",
+    ecole: "ecole",
   };
   return mapping[role] ?? "student";
 }
@@ -23,11 +32,23 @@ export function frontendToDatabaseRole(role: FrontendRole): DatabaseRole {
  * Convertit un rôle de la base de données vers le frontend
  */
 export function databaseToFrontendRole(role: DatabaseRole): FrontendRole {
+  if (role === "entreprise") {
+    return "entreprise";
+  }
+  if (role === "ecole") {
+    return "ecole";
+  }
+  if (role === "apprenant") {
+    return "apprenant";
+  }
   const mapping: Record<DatabaseRole, FrontendRole> = {
     instructor: "formateur",
     student: "apprenant",
     admin: "admin",
     tutor: "tuteur",
+    entreprise: "entreprise",
+    ecole: "ecole",
+    apprenant: "apprenant",
   };
   return mapping[role] ?? "apprenant";
 }

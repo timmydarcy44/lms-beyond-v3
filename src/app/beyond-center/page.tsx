@@ -1,6 +1,5 @@
-import { BeyondCenterLandingPage } from "@/components/beyond-center/beyond-center-landing-page";
+import { BeyondNoSchoolLanding } from "@/app/beyond-no-school/landing-client";
 
 export default function BeyondCenterPage() {
-  return <BeyondCenterLandingPage />;
+  return <BeyondNoSchoolLanding />;
 }
-

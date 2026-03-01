@@ -150,25 +150,26 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
   };
 
   return (
-    <div className="space-y-8 pb-12">
-      <Card className="border-white/10 bg-white/5 text-white backdrop-blur">
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-5">
-          <div className="max-w-xl space-y-1">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/40">Structure & contenus</p>
-            <p className="text-sm text-white/70">
-              Segmentez votre parcours en sections, chapitres et sous-chapitres. Les ressources et évaluations restent synchronisées tant que l&apos;onglet est ouvert.
+    <div className="formateur-theme space-y-8 pb-12">
+      <Card className="border border-slate-200 bg-slate-50/70 shadow-sm">
+        <CardContent className="flex flex-wrap items-center justify-between gap-6 px-6 py-6">
+          <div className="max-w-xl space-y-2">
+            <p className="text-xs font-medium uppercase tracking-[0.32em] text-slate-500">Structure & contenus</p>
+            <h2 className="text-lg font-semibold text-slate-900">Organisez votre parcours avec clarté</h2>
+            <p className="text-sm leading-relaxed text-slate-600">
+              Composez des sections, chapitres et sous-chapitres cohérents. Chaque bloc reste synchronisé avec vos ressources tant que l&apos;onglet est ouvert.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
-              variant="ghost"
+              variant="secondary"
               disabled={isPending}
               onClick={() =>
                 startTransition(() => {
                   reset();
                 })
               }
-              className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 hover:border-white/40 hover:text-white"
+              className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
             >
               Réinitialiser
             </Button>
@@ -176,36 +177,42 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
               asChild
               variant="ghost"
               disabled={isSaving || isPublishing}
-              className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 hover:border-white/40 hover:text-white"
+              className="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
             >
-              <Link href={pathname?.includes('/super/studio/modules') 
-                ? "/super/studio/modules/new/metadata" 
-                : pathname?.includes('/super/studio/formations')
-                ? "/super/studio/formations/new/metadata"
-                : "/dashboard/formateur/formations/new"}>Retour infos</Link>
+              <Link
+                href={
+                  pathname?.includes("/super/studio/modules")
+                    ? "/super/studio/modules/new/metadata"
+                    : pathname?.includes("/super/studio/formations")
+                    ? "/super/studio/formations/new/metadata"
+                    : "/dashboard/formateur/formations/new"
+                }
+              >
+                Retour aux informations
+              </Link>
             </Button>
             <Button
               onClick={() => handleSave("draft")}
               disabled={isSaving || isPublishing}
-              className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white disabled:opacity-50"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Enregistrement...
                 </>
               ) : (
-                "Enregistrer en brouillon"
+                "Enregistrer le brouillon"
               )}
             </Button>
             <Button
               onClick={() => handleSave("published")}
               disabled={isSaving || isPublishing}
-              className="rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow-[0_12px_40px_rgba(255,81,47,0.35)] hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-indigo-600 disabled:opacity-60"
             >
               {isPublishing ? (
                 <>
-                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Publication...
                 </>
               ) : (
@@ -223,9 +230,9 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
             <CourseResourcesManager />
           </>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/60">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
             <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-            <p className="mt-4 text-sm">Chargement de l'éditeur...</p>
+            <p className="mt-4 text-sm">Chargement de l&apos;éditeur...</p>
           </div>
         )}
       </div>

@@ -79,7 +79,7 @@ export default function OrientationPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Orientation Scolaire et Professionnelle - Accompagnement Parcoursup | Psychopédagogue Caen
+              Orientation Scolaire et Bilan de Compétences Douces (Soft Skills)
             </h1>
             <p
               className="text-xl md:text-2xl text-[#2F2A25]/80 max-w-3xl mx-auto leading-relaxed"
@@ -87,7 +87,7 @@ export default function OrientationPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Accompagnement personnalisé à l'<strong>orientation scolaire et professionnelle</strong> à Caen. <strong>Test soft skills</strong>, travail sur perspectives métiers, rédaction projet orientation, aide <strong>Parcoursup</strong>, CV et lettre de motivation. Cabinet Jessica CONTENTIN, Fleury-sur-Orne.
+              Accompagnement personnalisé à l'<strong>orientation scolaire et professionnelle</strong> à Caen. <strong>Test soft skills</strong>, travail sur perspectives métiers, rédaction projet orientation, aide <strong>Parcoursup</strong>, CV et lettre de motivation. Cabinet Jessica CONTENTIN, Bretteville sur Odon.
             </p>
           </motion.div>
           </div>

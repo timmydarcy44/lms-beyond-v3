@@ -18,6 +18,14 @@ export function JessicaContentinFooter() {
               Jessica Contentin
             </h3>
             <p
+              className="text-[#2F2A25]/80"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+              }}
+            >
+              Professeure en santé
+            </p>
+            <p
               className="text-[#2F2A25]/80 mb-4"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
@@ -31,8 +39,7 @@ export function JessicaContentinFooter() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              41 C route d'Harcourt<br />
-              14123 FLEURY SUR ORNE
+              134 rue Elise Deroche - 14760 Bretteville sur Odon (Quartier Koenig)
             </p>
             <p
               className="text-sm text-[#2F2A25]/70 mt-2"
@@ -58,11 +65,6 @@ export function JessicaContentinFooter() {
               <li>
                 <Link href="/" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Accueil
-                </Link>
-              </li>
-              <li>
-                <Link href="/a-propos" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
-                  À propos
                 </Link>
               </li>
               <li>

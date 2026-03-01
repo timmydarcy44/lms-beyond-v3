@@ -7,23 +7,63 @@ import { MessageSquare } from "lucide-react";
 
 import { useCommunityConversations } from "@/hooks/use-community-conversations";
 
-const POLLING_INTERVAL_MS = 10000;
+const BASE_POLL_INTERVAL_MS = 10000;
+const MAX_BACKOFF_MULTIPLIER = 4;
 
 export function MessageNotificationsWatcher() {
   const pathname = usePathname();
   const router = useRouter();
   const setUnreadTotal = useCommunityConversations((state) => state.setUnreadTotal);
-  const unreadTotal = useCommunityConversations((state) => state.unreadTotal);
 
   const lastCheckRef = useRef<string | null>(null); // null pour la première vérification
   const lastNotifiedMessageIdRef = useRef<string | null>(null);
   const toastIdRef = useRef<string | number | null>(null);
   const isInitializedRef = useRef<boolean>(false);
+  const pollTimeoutRef = useRef<number | null>(null);
+  const failureCountRef = useRef(0);
+  const failureLoggedRef = useRef(false);
+  const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    const fetchUnread = async () => {
+    const clearScheduledPoll = () => {
+      if (pollTimeoutRef.current !== null) {
+        window.clearTimeout(pollTimeoutRef.current);
+        pollTimeoutRef.current = null;
+      }
+    };
+
+    const schedulePoll = (delay: number) => {
+      clearScheduledPoll();
+      if (!isMounted) return;
+      pollTimeoutRef.current = window.setTimeout(runPoll, delay);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        failureCountRef.current = 0;
+        failureLoggedRef.current = false;
+        controllerRef.current?.abort();
+        schedulePoll(250);
+      } else {
+        controllerRef.current?.abort();
+        clearScheduledPoll();
+      }
+    };
+
+    const runPoll = async () => {
+      if (!isMounted) return;
+
+      if (document.visibilityState !== "visible") {
+        schedulePoll(BASE_POLL_INTERVAL_MS);
+        return;
+      }
+
+      controllerRef.current?.abort();
+      const controller = new AbortController();
+      controllerRef.current = controller;
+
       try {
         const headers: HeadersInit = {
           "Cache-Control": "no-store",
@@ -38,10 +78,15 @@ export function MessageNotificationsWatcher() {
           method: "GET",
           headers,
           cache: "no-store",
+          signal: controller.signal,
         });
 
-        if (!response.ok || !isMounted) {
+        if (!isMounted) {
           return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Polling failed with status ${response.status}`);
         }
 
         const data: {
@@ -58,18 +103,10 @@ export function MessageNotificationsWatcher() {
         // Toujours mettre à jour le nombre de messages non lus (pour le badge)
         if (typeof data.unreadCount === "number") {
           setUnreadTotal(data.unreadCount);
-          console.log("[messaging] Unread count updated:", data.unreadCount, "Previous:", unreadTotal);
         }
 
-        // Afficher une notification toast seulement pour les NOUVEAUX messages (pas lors de la première vérification)
-        // et seulement si on n'est pas déjà sur la page de messagerie
-        console.log("[messaging] Checking notification conditions:", {
-          isInitialized: isInitializedRef.current,
-          hasNewMessages: data.hasNewMessages,
-          hasLatestMessage: !!data.latestMessage,
-          isOnMessagingPage: pathname.startsWith("/dashboard/communaute"),
-          unreadCount: data.unreadCount,
-        });
+        failureCountRef.current = 0;
+        failureLoggedRef.current = false;
 
         if (
           isInitializedRef.current && // Ne pas afficher de notification lors de la première vérification
@@ -80,123 +117,123 @@ export function MessageNotificationsWatcher() {
           const latestId = data.latestMessage.id ?? null;
           if (latestId && lastNotifiedMessageIdRef.current === latestId) {
             // Already displayed this notification
-            console.log("[messaging] Notification already displayed for message:", latestId);
           } else {
-            console.log("[messaging] ✅ New message detected, showing notification:", {
-              messageId: latestId,
-              senderName: data.latestMessage.senderName,
-              unreadCount: data.unreadCount,
-              content: data.latestMessage.content?.substring(0, 50),
-            });
-
             lastNotifiedMessageIdRef.current = latestId;
 
-          const messageContent =
-            data.latestMessage.content?.trim() || "Vous avez reçu un nouveau message.";
-          const senderName = data.latestMessage.senderName?.trim() || "Nouveau message";
+            const messageContent =
+              data.latestMessage.content?.trim() || "Vous avez reçu un nouveau message.";
+            const senderName = data.latestMessage.senderName?.trim() || "Nouveau message";
 
-          // Truncate content for display
-          const displayContent = messageContent.length > 80 
-            ? messageContent.substring(0, 80) + "..." 
-            : messageContent;
+            const displayContent =
+              messageContent.length > 80 ? `${messageContent.substring(0, 80)}...` : messageContent;
 
-          // Check if it's an attachment
-          const isAttachment = messageContent.toLowerCase().includes("pièce jointe") || 
-                               messageContent.toLowerCase().includes("(pièce jointe)");
+            const isAttachment =
+              messageContent.toLowerCase().includes("pièce jointe") ||
+              messageContent.toLowerCase().includes("(pièce jointe)");
 
-          // Format time
-          const timeStr = data.latestMessage.createdAt
-            ? new Date(data.latestMessage.createdAt).toLocaleTimeString("fr-FR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "À l'instant";
+            const timeStr = data.latestMessage.createdAt
+              ? new Date(data.latestMessage.createdAt).toLocaleTimeString("fr-FR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "À l'instant";
 
-          // Dismiss previous toast if exists
-          if (toastIdRef.current) {
-            toast.dismiss(toastIdRef.current);
-          }
+            if (toastIdRef.current) {
+              toast.dismiss(toastIdRef.current);
+            }
 
-                   // Show new toast notification (style iPhone/WhatsApp)
-                   toastIdRef.current = toast(
-                     <div 
-                       className="flex items-start gap-3 w-full cursor-pointer"
-                       onClick={() => {
-                         router.push("/dashboard/communaute");
-                         toast.dismiss(toastIdRef.current || undefined);
-                       }}
-                     >
-                       {/* Avatar */}
-                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white text-sm font-semibold shadow-lg">
-                         {senderName.charAt(0).toUpperCase()}
-                       </div>
-                       
-                       {/* Content */}
-                       <div className="flex-1 min-w-0">
-                         <div className="flex items-center gap-2 mb-1">
-                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                             {senderName}
-                           </p>
-                           <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                             {timeStr}
-                           </span>
-                         </div>
-                         
-                         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-2">
-                           {isAttachment ? (
-                             <span className="flex items-center gap-1.5">
-                               <span className="text-gray-400">📎</span>
-                               <span className="italic">{messageContent}</span>
-                             </span>
-                           ) : (
-                             displayContent
-                           )}
-                         </p>
-                       </div>
-                     </div>,
-                     {
-                       duration: 6000,
-                       position: "top-right",
-                       action: {
-                         label: "Ouvrir",
-                         onClick: () => {
-                           router.push("/dashboard/communaute");
-                           toast.dismiss(toastIdRef.current || undefined);
-                         },
-                       },
-                       cancel: {
-                         label: "Fermer",
-                         onClick: () => {
-                           toast.dismiss(toastIdRef.current || undefined);
-                         },
-                       },
-                       icon: <MessageSquare className="h-5 w-5 text-blue-500" />,
-                       className: "cursor-pointer",
-                     }
-                   );
+            toastIdRef.current = toast(
+              <div
+                className="flex w-full cursor-pointer items-start gap-3"
+                onClick={() => {
+                  router.push("/dashboard/communaute");
+                  toast.dismiss(toastIdRef.current || undefined);
+                }}
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-sm font-semibold text-white shadow-lg">
+                  {senderName.charAt(0).toUpperCase()}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                      {senderName}
+                    </p>
+                    <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{timeStr}</span>
+                  </div>
+
+                  <p className="line-clamp-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                    {isAttachment ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-gray-400">📎</span>
+                        <span className="italic">{messageContent}</span>
+                      </span>
+                    ) : (
+                      displayContent
+                    )}
+                  </p>
+                </div>
+              </div>,
+              {
+                duration: 6000,
+                position: "top-right",
+                action: {
+                  label: "Ouvrir",
+                  onClick: () => {
+                    router.push("/dashboard/communaute");
+                    toast.dismiss(toastIdRef.current || undefined);
+                  },
+                },
+                cancel: {
+                  label: "Fermer",
+                  onClick: () => {
+                    toast.dismiss(toastIdRef.current || undefined);
+                  },
+                },
+                icon: <MessageSquare className="h-5 w-5 text-blue-500" />,
+                className: "cursor-pointer",
+              },
+            );
           }
         }
 
         // Marquer comme initialisé après la première vérification
         if (!isInitializedRef.current) {
           isInitializedRef.current = true;
-          console.log("[messaging] Initial check completed, unread count:", data.unreadCount);
         }
-      } catch (error) {
-        console.error("[messagerie] Failed to poll new messages:", error);
-      } finally {
-        // Mettre à jour lastCheckTime seulement après avoir traité les données
+
         lastCheckRef.current = new Date().toISOString();
+        schedulePoll(BASE_POLL_INTERVAL_MS);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        if ((error as Error).name === "AbortError") {
+          return;
+        }
+
+        failureCountRef.current += 1;
+        if (!failureLoggedRef.current) {
+          console.warn("[messaging] Polling temporarily paused:", error);
+          failureLoggedRef.current = true;
+        }
+        const multiplier = Math.min(
+          MAX_BACKOFF_MULTIPLIER,
+          Math.pow(2, Math.max(0, failureCountRef.current - 1)),
+        );
+        schedulePoll(BASE_POLL_INTERVAL_MS * multiplier);
       }
     };
 
-    // Initial fetch
-    fetchUnread();
-    const interval = setInterval(fetchUnread, POLLING_INTERVAL_MS);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    schedulePoll(0);
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      controllerRef.current?.abort();
+      clearScheduledPoll();
       if (toastIdRef.current) {
         toast.dismiss(toastIdRef.current);
       }

@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TurnPackage",
+  "description": "Placeholder schema ensuring valid JSON for Beyond Play turn packages.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": true
+}

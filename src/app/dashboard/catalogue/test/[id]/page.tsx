@@ -448,7 +448,7 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
   const surfaceColor = branding?.surface_color || '#F5F0E8';
   const textColor = branding?.text_primary_color || '#5D4037';
   const primaryColor = branding?.primary_color || '#8B6F47';
-  const accentColor = branding?.accent_color || '#D4AF37';
+  const accentColor = branding?.accent_color || "#007AFF";
 
   // isSoftSkillsTest est déjà défini plus haut
 

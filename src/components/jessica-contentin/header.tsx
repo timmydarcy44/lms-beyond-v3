@@ -4,7 +4,26 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Menu, X, Heart, Brain, Users, BookOpen, Shield, Target, Lightbulb, Baby, GraduationCap, BookMarked, User } from "lucide-react";
+import {
+  ChevronDown,
+  Menu,
+  X,
+  User,
+  Heart,
+  Brain,
+  BookOpen,
+  BrainCircuit,
+  Shield,
+  Sparkles,
+  Compass,
+  Target,
+  Activity,
+  Briefcase,
+  Lightbulb,
+  Users,
+  Puzzle,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { env } from "@/lib/env";
@@ -56,17 +75,49 @@ const HERO_IMAGE_FALLBACK = "https://images.unsplash.com/photo-1519389950473-47b
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
-const specialitesWithIcons = [
-  { label: "Gestion de la confiance en soi", href: "/jessica-contentin/specialites/confiance-en-soi", icon: Heart },
-  { label: "Gestion du stress", href: "/jessica-contentin/specialites/gestion-stress", icon: Brain },
-  { label: "Accompagnement TND", href: "/jessica-contentin/specialites/tnd", icon: Users },
-  { label: "Guidance parentale", href: "/jessica-contentin/specialites/guidance-parentale", icon: Baby },
-  { label: "Tests de connaissance de soi", href: "/jessica-contentin/specialites/tests", icon: BookOpen },
-  { label: "Harcèlement Scolaire", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
-  { label: "Orientation professionnelle", href: "/jessica-contentin/specialites/orientation-professionnelle", icon: Target },
-  { label: "Thérapie psycho-émotionnelle", href: "/jessica-contentin/specialites/therapie", icon: Lightbulb },
-  { label: "Neuroéducation", href: "/jessica-contentin/specialites/neuroeducation", icon: GraduationCap },
-  { label: "Stratégie d'apprentissage", href: "/jessica-contentin/specialites/strategie-apprentissage", icon: BookMarked },
+const specialitesMegaMenu: {
+  title: string;
+  items: { label: string; href: string; icon: LucideIcon }[];
+}[] = [
+  {
+    title: "ENFANTS & ADOS",
+    items: [
+      { label: "Accompagnement TND", href: "/jessica-contentin/specialites/tnd", icon: Puzzle },
+      { label: "Harcèlement scolaire", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
+      { label: "Gestion des émotions", href: "/jessica-contentin/specialites/therapie", icon: Heart },
+      { label: "Neuroéducation", href: "/jessica-contentin/specialites/neuroeducation", icon: BrainCircuit },
+    ],
+  },
+  {
+    title: "ÉTUDIANTS",
+    items: [
+      { label: "Orientation & projet de vie", href: "/jessica-contentin/specialites/orientation-professionnelle", icon: Compass },
+      { label: "Stratégie d'apprentissage", href: "/jessica-contentin/specialites/strategie-apprentissage", icon: Target },
+      { label: "Gestion du stress examens", href: "/jessica-contentin/specialites/gestion-stress", icon: Activity },
+      { label: "Neuroéducation", href: "/jessica-contentin/specialites/neuroeducation", icon: Brain },
+      { label: "Confiance en soi", href: "/jessica-contentin/specialites/confiance-en-soi", icon: Sparkles },
+    ],
+  },
+  {
+    title: "ADULTES",
+    items: [
+      { label: "Orientation professionnelle", href: "/jessica-contentin/specialites/orientation-professionnelle", icon: Briefcase },
+      { label: "Gestion des émotions", href: "/jessica-contentin/specialites/therapie", icon: Heart },
+      { label: "Confiance en soi", href: "/jessica-contentin/specialites/confiance-en-soi", icon: Sparkles },
+      { label: "Gestion du stress", href: "/jessica-contentin/specialites/gestion-stress", icon: Activity },
+      { label: "Soft skills & reconversion", href: "/orientation", icon: Lightbulb },
+    ],
+  },
+  {
+    title: "PARENTS",
+    items: [
+      { label: "Guidance parentale", href: "/jessica-contentin/specialites/guidance-parentale", icon: Users },
+      { label: "Comprendre le TND de mon enfant", href: "/jessica-contentin/specialites/tnd", icon: Puzzle },
+      { label: "Accompagnement parental TND", href: "/jessica-contentin/specialites/tnd", icon: Heart },
+      { label: "Harcèlement — que faire ?", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
+      { label: "Stratégies éducatives", href: "/jessica-contentin/specialites/guidance-parentale", icon: BookOpen },
+    ],
+  },
 ];
 
 export function JessicaContentinHeader() {
@@ -97,7 +148,6 @@ export function JessicaContentinHeader() {
     pathname === "/jessica-contentin/a-propos" ||
     pathname === "/jessica-contentin/specialites" ||
     pathname.startsWith("/jessica-contentin/specialites/") ||
-    pathname === "/test-confiance-en-soi" ||
     pathname.startsWith("/dashboard/catalogue/test/") ||
     pathname.startsWith("/dashboard/catalogue/ressource/") ||
     pathname.startsWith("/dashboard/catalogue/module/");
@@ -194,17 +244,13 @@ export function JessicaContentinHeader() {
 
   const menuItems = [
     {
-      label: "A propos",
-      href: "/a-propos",
-    },
-    {
       label: "Consultations",
       href: "/consultations",
     },
     {
       label: "Spécialités",
       href: "/jessica-contentin/specialites",
-      submenu: specialitesWithIcons,
+      submenuColumns: specialitesMegaMenu,
     },
     {
       label: "Ressources",
@@ -241,7 +287,7 @@ export function JessicaContentinHeader() {
                 key={item.href}
                 className="relative group"
                 onMouseEnter={() => {
-                  if (item.submenu) {
+                  if (item.submenuColumns) {
                     // Annuler le timeout de fermeture s'il existe
                     if (dropdownTimeoutRef.current) {
                       clearTimeout(dropdownTimeoutRef.current);
@@ -265,18 +311,18 @@ export function JessicaContentinHeader() {
                   )}
                 >
                   {item.label}
-                  {item.submenu && <ChevronDown className="h-4 w-4" />}
+                  {item.submenuColumns && <ChevronDown className="h-4 w-4" />}
                 </Link>
 
                 {/* Dropdown Menu avec icônes et colonnes */}
                 <AnimatePresence>
-                  {item.submenu && activeDropdown === item.href && (
+                  {item.submenuColumns && activeDropdown === item.href && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3, ease: "easeOut" }}
-                      className="absolute left-0 top-full mt-2 w-[900px] rounded-xl bg-[#F8F5F0] border border-[#E6D9C6] shadow-lg py-4 z-50"
+                      className="absolute left-1/2 top-full mt-3 w-[1040px] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl bg-[#F8F5F0] border border-[#E6D9C6] shadow-xl py-6 z-50"
                       onMouseEnter={() => {
                         // Annuler le timeout de fermeture quand la souris entre dans le menu
                         if (dropdownTimeoutRef.current) {
@@ -291,22 +337,29 @@ export function JessicaContentinHeader() {
                         }, 300);
                       }}
                     >
-                      <div className="grid grid-cols-3 gap-4 px-4">
-                        {item.submenu.map((subItem) => {
-                          const Icon = subItem.icon;
-                          return (
-                            <Link
-                              key={subItem.href}
-                              href={subItem.href}
-                              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#E6D9C6]/50 transition-colors group"
-                            >
-                              <div className="p-1.5 bg-[#E6D9C6]/30 rounded-lg group-hover:bg-[#C6A664]/20 transition-colors">
-                                <Icon className="h-4 w-4 text-[#C6A664]" />
-                              </div>
-                              <span className="text-sm text-[#2F2A25] font-medium">{subItem.label}</span>
-                            </Link>
-                          );
-                        })}
+                      <div className="grid grid-cols-4 gap-8 px-8">
+                        {item.submenuColumns.map((column) => (
+                          <div key={column.title} className="space-y-4">
+                            <div className="text-[11px] font-semibold text-[#8B6F47] uppercase tracking-[0.18em]">
+                              {column.title}
+                            </div>
+                            <div className="h-px w-full bg-[#E6D9C6]" />
+                            <div className="space-y-2">
+                              {column.items.map((subItem) => (
+                                <Link
+                                  key={subItem.href + subItem.label}
+                                  href={subItem.href}
+                                  className="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-[#2F2A25] hover:text-[#8B6F47] hover:bg-[#E6D9C6]/40 transition-colors"
+                                >
+                                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 ring-1 ring-[#E6D9C6]">
+                                    <subItem.icon className="h-4 w-4 text-[#8B6F47]" />
+                                  </span>
+                                  <span className="leading-snug">{subItem.label}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </motion.div>
                   )}
@@ -385,26 +438,31 @@ export function JessicaContentinHeader() {
                   <Link
                     href={item.href}
                     className="block px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
-                    onClick={() => !item.submenu && setMobileMenuOpen(false)}
+                    onClick={() => !item.submenuColumns && setMobileMenuOpen(false)}
                   >
                     {item.label}
                   </Link>
-                  {item.submenu && (
-                    <div className="pl-6 mt-1 space-y-1">
-                      {item.submenu.map((subItem) => {
-                        const Icon = subItem.icon;
-                        return (
-                          <Link
-                            key={subItem.href}
-                            href={subItem.href}
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            <Icon className="h-4 w-4 text-[#C6A664]" />
-                            {subItem.label}
-                          </Link>
-                        );
-                      })}
+                  {item.submenuColumns && (
+                    <div className="pl-6 mt-3 space-y-4">
+                      {item.submenuColumns.map((column) => (
+                        <div key={column.title} className="space-y-2">
+                          <div className="text-xs font-semibold text-[#8B6F47] uppercase tracking-wider">
+                            {column.title}
+                          </div>
+                          <div className="space-y-1">
+                            {column.items.map((subItem) => (
+                              <Link
+                                key={subItem.href + subItem.label}
+                                href={subItem.href}
+                                className="block px-4 py-2 text-sm text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
+                                onClick={() => setMobileMenuOpen(false)}
+                              >
+                                {subItem.label}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -555,7 +613,7 @@ export function JessicaContentinHeader() {
               >
               <div className="relative h-48 overflow-hidden">
                 <video
-                  src={getSupabaseStorageUrl("Jessica CONTENTIN", "IMG_7452.mp4")}
+                  src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Jessica%20CONTENTIN/video_cabinet.MOV"
                   autoPlay
                   loop
                   muted
@@ -570,7 +628,7 @@ export function JessicaContentinHeader() {
               </div>
               <div className="p-6 flex flex-col items-center">
                 <div className="p-3 bg-[#E6D9C6]/30 rounded-full mb-3 group-hover:bg-[#C6A664]/20 transition-colors">
-                  <Heart className="h-6 w-6 text-[#C6A664]" />
+                  <Heart className="h-6 w-6 text-[#C6A664]"/>
                 </div>
                 <span
                   className="text-lg font-semibold text-[#2F2A25]"

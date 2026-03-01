@@ -31,7 +31,7 @@ export function CTASection() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const }}
         >
           {/* Main Message */}
           <h2 className="text-5xl md:text-7xl font-semibold text-white mb-12 leading-[1.1] tracking-[-0.02em]" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
@@ -51,7 +51,7 @@ export function CTASection() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
-            transition={{ duration: 1.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] as const }}
           >
             <Button
               asChild
@@ -70,3 +70,4 @@ export function CTASection() {
     </section>
   );
 }
+

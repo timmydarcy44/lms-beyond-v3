@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createOrganizationWithAdminAction } from "@/app/super/organisations/new/actions";
 import { toast } from "sonner";
 import { Loader2, Plus, X, Upload, Building2 } from "lucide-react";
 import Image from "next/image";
@@ -40,6 +39,7 @@ export function CreateOrganizationFormWithAdmin() {
   });
   const [members, setMembers] = useState<MemberInput[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleAdminChange = (field: keyof AdminInput, value: string) => {
     setAdmin({ ...admin, [field]: value });
@@ -75,27 +75,39 @@ export function CreateOrganizationFormWithAdmin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setFieldErrors({});
 
     try {
-      const result = await createOrganizationWithAdminAction({
-        name,
-        slug: slug || undefined,
-        description: description || undefined,
-        admin: admin.email ? {
-          firstName: admin.firstName,
-          lastName: admin.lastName,
-          email: admin.email,
-          phone: admin.phone || undefined,
-          logo: admin.logo || undefined,
-        } : undefined,
-        members: members.filter((m) => m.email && m.fullName),
+      const res = await fetch("/api/super-admin/organizations/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          slug: slug || undefined,
+          description: description || undefined,
+          admin: admin.email ? {
+            firstName: admin.firstName,
+            lastName: admin.lastName,
+            email: admin.email,
+            phone: admin.phone || undefined,
+            logo: admin.logo || undefined,
+          } : undefined,
+          members: members.filter((m) => m.email && m.fullName),
+        }),
       });
 
-      if (result.success) {
+      const json = await res.json().catch(() => null);
+
+      if (res.ok && json?.ok) {
         toast.success("Organisation créée avec succès !");
-        router.push(`/super/organisations/${result.organizationId}`);
+        router.push(`/super/organisations/${json.organization?.id}`);
       } else {
-        toast.error(result.error || "Erreur lors de la création");
+        if (json?.fieldErrors) {
+          setFieldErrors(json.fieldErrors);
+        }
+        toast.error(json?.error ? `Impossible de créer l'organisation : ${json.error}` : "Erreur lors de la création");
       }
     } catch (error) {
       toast.error("Une erreur est survenue");
@@ -119,8 +131,11 @@ export function CreateOrganizationFormWithAdmin() {
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: Beyond Learning"
             required
-            className="mt-2 border-gray-300 bg-white text-gray-900 focus:border-gray-900 h-11"
+            className={`mt-2 h-11 border-gray-300 bg-white text-gray-900 focus:border-gray-900 ${fieldErrors.name ? "border-red-500" : ""}`}
           />
+          {fieldErrors.name ? (
+            <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>
+          ) : null}
         </div>
 
         <div>
@@ -177,8 +192,11 @@ export function CreateOrganizationFormWithAdmin() {
               onChange={(e) => handleAdminChange("firstName", e.target.value)}
               placeholder="Jean"
               required={!!admin.email}
-              className="mt-2 border-gray-300 bg-white text-gray-900 focus:border-gray-900 h-11"
+              className={`mt-2 h-11 border-gray-300 bg-white text-gray-900 focus:border-gray-900 ${fieldErrors.adminFirstName ? "border-red-500" : ""}`}
             />
+            {fieldErrors.adminFirstName ? (
+              <p className="mt-1 text-xs text-red-600">{fieldErrors.adminFirstName}</p>
+            ) : null}
           </div>
 
           <div>
@@ -191,8 +209,11 @@ export function CreateOrganizationFormWithAdmin() {
               onChange={(e) => handleAdminChange("lastName", e.target.value)}
               placeholder="Dupont"
               required={!!admin.email}
-              className="mt-2 border-gray-300 bg-white text-gray-900 focus:border-gray-900 h-11"
+              className={`mt-2 h-11 border-gray-300 bg-white text-gray-900 focus:border-gray-900 ${fieldErrors.adminLastName ? "border-red-500" : ""}`}
             />
+            {fieldErrors.adminLastName ? (
+              <p className="mt-1 text-xs text-red-600">{fieldErrors.adminLastName}</p>
+            ) : null}
           </div>
         </div>
 

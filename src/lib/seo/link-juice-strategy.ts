@@ -39,9 +39,9 @@ export const LINK_JUICE_STRATEGY: Record<string, LinkJuiceLink[]> = {
     {
       url: "/consultations",
       anchor: "Prendre rendez-vous",
-      context: "Consultations psychopédagogiques à Fleury-sur-Orne",
+      context: "Consultations psychopédagogiques à Bretteville sur Odon",
       priority: "high",
-      keywords: ["consultation", "rendez-vous", "Fleury-sur-Orne"],
+      keywords: ["consultation", "rendez-vous", "Bretteville sur Odon"],
     },
     {
       url: "/orientation",
@@ -137,10 +137,10 @@ export const LINK_JUICE_STRATEGY: Record<string, LinkJuiceLink[]> = {
     },
     {
       url: "/specialites/therapie",
-      anchor: "Thérapie psycho-émotionnelle",
+      anchor: "Gestion des émotions",
       context: "Gestion des traumatismes liés au harcèlement",
       priority: "high",
-      keywords: ["thérapie", "traumatisme", "émotions"],
+      keywords: ["gestion des émotions", "traumatisme", "émotions"],
     },
     {
       url: "/consultations",
@@ -317,9 +317,9 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   }[];
 }> = {
   "tnd": {
-    title: "Accompagnement TND | Troubles DYS et TDA-H | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Accompagnement spécialisé pour troubles du neurodéveloppement (DYS, TDA-H, TSA, HPI, TOP) à Caen. Expertise CRA Basse-Normandie et MDPH. Stratégies d'apprentissage personnalisées, inclusion scolaire. Cabinet Fleury-sur-Orne.",
-    h1: "Accompagnement des Troubles du Neurodéveloppement (TND) - Troubles DYS, TDA-H, TSA, HPI, TOP",
+    title: "Troubles DYS & TDA-H à Caen | Accompagnement Psychopédagogique",
+    description: "Spécialiste TND à Caen : stratégies pour DYS, TDA-H et HPI. Expertise reconnue (CRA & MDPH) pour aider votre enfant à réussir. Consultez au cabinet.",
+    h1: "Accompagnement des Troubles du Neurodéveloppement (TND)",
     keywords: [
       "accompagnement TND Caen",
       "troubles DYS Caen",
@@ -348,7 +348,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "harcelement": {
     title: "Harcèlement Scolaire | Accompagnement et Soutien | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Accompagnement bienveillant pour enfants et adolescents victimes de harcèlement scolaire à Caen. Écoute, soutien psychologique, stratégies de protection. Collaboration école et famille. Cabinet Fleury-sur-Orne.",
+    description: "Accompagnement bienveillant pour enfants et adolescents victimes de harcèlement scolaire à Caen. Écoute, soutien psychologique, stratégies de protection. Collaboration école et famille. Cabinet Bretteville sur Odon.",
     h1: "Accompagnement face au Harcèlement Scolaire - Soutien et Protection",
     keywords: [
       "harcèlement scolaire Caen",
@@ -374,7 +374,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "confiance-en-soi": {
     title: "Confiance en Soi | Estime de Soi | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Accompagnement pour développer la confiance en soi et l'estime de soi à Caen. Techniques de valorisation, renforcement assertivité. Pour enfants, adolescents et adultes. Cabinet Fleury-sur-Orne.",
+    description: "Accompagnement pour développer la confiance en soi et l'estime de soi à Caen. Techniques de valorisation, renforcement assertivité. Pour enfants, adolescents et adultes. Cabinet Bretteville sur Odon.",
     h1: "Gestion de la Confiance en Soi - Développement de l'Estime de Soi",
     keywords: [
       "confiance en soi Caen",
@@ -399,7 +399,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "gestion-stress": {
     title: "Gestion du Stress | Techniques de Relaxation | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Accompagnement pour mieux gérer le stress au quotidien à Caen. Techniques de relaxation, gestion du temps, stratégies d'adaptation. Pour enfants, adolescents et adultes. Cabinet Fleury-sur-Orne.",
+    description: "Accompagnement pour mieux gérer le stress au quotidien à Caen. Techniques de relaxation, gestion du temps, stratégies d'adaptation. Pour enfants, adolescents et adultes. Cabinet Bretteville sur Odon.",
     h1: "Gestion du Stress - Techniques et Stratégies d'Adaptation",
     keywords: [
       "gestion stress Caen",
@@ -424,7 +424,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "guidance-parentale": {
     title: "Guidance Parentale | Accompagnement Parents | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Soutien et conseils pour les parents dans leur rôle éducatif à Caen. Stratégies éducatives adaptées, gestion conflits familiaux, renforcement lien parent-enfant. Cabinet Fleury-sur-Orne.",
+    description: "Soutien et conseils pour les parents dans leur rôle éducatif à Caen. Stratégies éducatives adaptées, gestion conflits familiaux, renforcement lien parent-enfant. Cabinet Bretteville sur Odon.",
     h1: "Guidance Parentale - Accompagnement et Soutien pour les Parents",
     keywords: [
       "guidance parentale Caen",
@@ -449,7 +449,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "tests": {
     title: "Tests de Connaissance de Soi | Bilans Psychopédagogiques | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Bilans psychopédagogiques approfondis à Caen pour mieux se connaître et identifier ses forces. Évaluations, recommandations personnalisées. Cabinet Fleury-sur-Orne.",
+    description: "Bilans psychopédagogiques approfondis à Caen pour mieux se connaître et identifier ses forces. Évaluations, recommandations personnalisées. Cabinet Bretteville sur Odon.",
     h1: "Tests de Connaissance de Soi - Bilans Psychopédagogiques",
     keywords: [
       "tests connaissance de soi Caen",
@@ -473,34 +473,34 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "therapie": {
-    title: "Thérapie Psycho-émotionnelle | Gestion des Émotions | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Accompagnement thérapeutique pour la gestion des émotions à Caen. Techniques de régulation émotionnelle, gestion anxiété, travail sur traumatismes. Cabinet Fleury-sur-Orne.",
-    h1: "Thérapie Psycho-émotionnelle - Gestion des Émotions et Résilience",
+    title: "Accompagnement Psycho-émotionnel | Gestion des Émotions | Psychopédagogue Caen | Jessica CONTENTIN",
+    description: "Accompagnement pour la gestion des émotions à Caen. Techniques de régulation émotionnelle, gestion anxiété, travail sur traumatismes. Cabinet Bretteville sur Odon.",
+    h1: "Accompagnement Psycho-émotionnel - Gestion des Émotions et Résilience",
     keywords: [
-      "thérapie psycho-émotionnelle Caen",
+      "accompagnement psycho-émotionnel Caen",
       "gestion émotions Caen",
       "régulation émotionnelle",
       "gestion anxiété",
       "traumatismes",
-      "psychopédagogue thérapie",
+      "psychopédagogue gestion émotions",
     ],
     contentSections: [
       {
-        title: "Comprendre la thérapie psycho-émotionnelle",
-        content: "La thérapie psycho-émotionnelle vise à mieux comprendre et gérer ses émotions pour développer sa résilience et retrouver un équilibre émotionnel. Elle peut être utile pour gérer l'anxiété, le stress, les traumatismes, les difficultés relationnelles ou les troubles de l'humeur. L'approche intègre les dimensions cognitive, émotionnelle et comportementale.",
-        keywords: ["thérapie", "émotions", "résilience"],
+        title: "Comprendre l'accompagnement psycho-émotionnel",
+        content: "L'accompagnement psycho-émotionnel vise à mieux comprendre et gérer ses émotions pour développer sa résilience et retrouver un équilibre émotionnel. Il peut être utile pour gérer l'anxiété, le stress, les traumatismes, les difficultés relationnelles ou les troubles de l'humeur. L'approche intègre les dimensions cognitive, émotionnelle et comportementale.",
+        keywords: ["accompagnement", "émotions", "résilience"],
       },
       {
-        title: "Mon approche thérapeutique",
-        content: "Mon accompagnement en thérapie psycho-émotionnelle inclut l'apprentissage de techniques de régulation émotionnelle, la gestion de l'anxiété, le travail sur les traumatismes, le développement de la résilience et l'amélioration de la compréhension de soi. Chaque parcours est personnalisé selon les besoins et les objectifs de la personne, dans un cadre bienveillant et sécurisant.",
+        title: "Mon approche d'accompagnement",
+        content: "Mon accompagnement psycho-émotionnel inclut l'apprentissage de techniques de régulation émotionnelle, la gestion de l'anxiété, le travail sur les traumatismes, le développement de la résilience et l'amélioration de la compréhension de soi. Chaque parcours est personnalisé selon les besoins et les objectifs de la personne, dans un cadre bienveillant et sécurisant.",
         keywords: ["régulation", "anxiété", "traumatismes"],
       },
     ],
   },
   "neuroeducation": {
-    title: "Neuroéducation | Neurosciences et Apprentissage | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Approche basée sur les neurosciences pour optimiser les apprentissages à Caen. Comprendre le fonctionnement du cerveau, stratégies d'apprentissage efficaces. Cabinet Fleury-sur-Orne.",
-    h1: "Neuroéducation - Optimiser les Apprentissages grâce aux Neurosciences",
+    title: "Neuroéducation à Caen | Optimiser l'Apprentissage par la Science",
+    description: "Découvrez comment le cerveau apprend. Expertise en neurosciences pour étudiants et professionnels à Caen. Boostez vos capacités cognitives et votre mémoire.",
+    h1: "Apprendre à apprendre grâce à la Neuroéducation",
     keywords: [
       "neuroéducation Caen",
       "neurosciences apprentissage",
@@ -524,7 +524,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "strategie-apprentissage": {
     title: "Stratégies d'Apprentissage | Méthodes Personnalisées | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Développement de méthodes et techniques d'apprentissage personnalisées à Caen. Organisation du travail, mémorisation, concentration, gestion du temps. Cabinet Fleury-sur-Orne.",
+    description: "Développement de méthodes et techniques d'apprentissage personnalisées à Caen. Organisation du travail, mémorisation, concentration, gestion du temps. Cabinet Bretteville sur Odon.",
     h1: "Stratégies d'Apprentissage - Méthodes Personnalisées pour la Réussite",
     keywords: [
       "stratégies apprentissage Caen",
@@ -549,7 +549,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "orientation": {
     title: "Orientation Scolaire et Professionnelle | Parcoursup | Psychopédagogue Caen | Jessica CONTENTIN",
-    description: "Accompagnement à l'orientation scolaire et professionnelle à Caen. Test soft skills, exploration métiers, aide Parcoursup, CV et lettre de motivation. Cabinet Fleury-sur-Orne.",
+    description: "Accompagnement à l'orientation scolaire et professionnelle à Caen. Test soft skills, exploration métiers, aide Parcoursup, CV et lettre de motivation. Cabinet Bretteville sur Odon.",
     h1: "Orientation Scolaire et Professionnelle - Accompagnement Complet",
     keywords: [
       "orientation scolaire Caen",

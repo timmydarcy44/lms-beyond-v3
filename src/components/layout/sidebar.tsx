@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   HardDrive,
@@ -21,7 +21,6 @@ import {
   CheckSquare,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -36,73 +35,47 @@ import { BeyondNoteSidebarWrapper } from "@/components/beyond-note/beyond-note-s
 import { BeyondConnectSidebarWrapper } from "@/components/beyond-connect/beyond-connect-sidebar-wrapper";
 import { useCommunityConversations } from "@/hooks/use-community-conversations";
 import { useUserRole } from "@/hooks/use-user-role";
-import { databaseToFrontendRole, type DatabaseRole } from "@/lib/utils/role-mapping";
+import { databaseToFrontendRole, type DatabaseRole, type FrontendRole } from "@/lib/utils/role-mapping";
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   organizationLogo?: string | null;
+  forcedTheme?: "light" | "dark";
 }
 
-export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) => {
+export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: SidebarProps) => {
   const pathname = usePathname();
   const isFormateurArea = pathname?.startsWith("/dashboard/formateur");
   const isTutorArea = pathname?.startsWith("/dashboard/tuteur");
+  const isCatalogueSurface = pathname?.startsWith("/catalog");
   const isBeyondCareArea = pathname?.includes("beyond-care");
   const { resolvedTheme } = useTheme();
-  const isLight = resolvedTheme === "light";
+  const desiredTheme = forcedTheme ?? (resolvedTheme === "light" ? "light" : "dark");
+  const isLight = desiredTheme === "light";
   const unreadMessages = useCommunityConversations((state) => state.unreadTotal);
   const { data: userRoleDB, isLoading: isLoadingRole } = useUserRole();
 
-  // Debug: log unread messages count
-  useEffect(() => {
-    if (unreadMessages > 0) {
-      console.log("[sidebar] Unread messages count:", unreadMessages);
-    }
-  }, [unreadMessages]);
-
-  // Convertir le rôle DB (anglais) en rôle frontend (français)
-  // Le hook useUserRole retourne le rôle de la DB (instructor, student, etc.)
-  let roleForNav: "formateur" | "apprenant" | "admin" | "tuteur";
-  
-  if (userRoleDB) {
-    // Convertir le rôle DB en rôle frontend
-    roleForNav = databaseToFrontendRole(userRoleDB as DatabaseRole);
-    console.log("[sidebar] User role from DB:", userRoleDB, "→ Frontend:", roleForNav);
-  } else if (!isLoadingRole) {
-    // Fallback basé sur le pathname seulement si le rôle n'est pas encore chargé
-    // Mais on évite de changer le rôle si on est en train de charger
-    if (isTutorArea) {
-      roleForNav = "tuteur";
-    } else if (isFormateurArea) {
-      roleForNav = "formateur";
-    } else {
-      roleForNav = "apprenant";
-    }
-    console.log("[sidebar] Using pathname-based fallback role:", roleForNav, "pathname:", pathname);
-  } else {
-    // Pendant le chargement, utiliser le pathname comme fallback temporaire
-    if (isTutorArea) {
-      roleForNav = "tuteur";
-    } else if (isFormateurArea) {
-      roleForNav = "formateur";
-    } else {
-      roleForNav = "apprenant";
-    }
-  }
-
+  const roleForNav = userRoleDB ? databaseToFrontendRole(userRoleDB as DatabaseRole) : undefined;
   const isInstructor = roleForNav === "formateur";
   const isTutorRole = roleForNav === "tuteur";
   const isAdminRole = roleForNav === "admin";
+  const resolvedRoleForNav: FrontendRole = roleForNav ?? "apprenant";
+  const connectRole: FrontendRole =
+    resolvedRoleForNav === "tuteur" ? "formateur" : resolvedRoleForNav;
+  const connectRoleForWrapper: "admin" | "formateur" | "apprenant" =
+    connectRole === "admin"
+      ? "admin"
+      : connectRole === "formateur"
+        ? "formateur"
+        : "apprenant";
 
   const navItems = useMemo(() => {
-    // Si le rôle n'est pas encore chargé, retourner un tableau vide pour éviter les liens incorrects
-    // Le fallback basé sur le pathname sera utilisé pour déterminer le rôle temporairement
-    if (isLoadingRole && !userRoleDB) {
-      console.log("[sidebar] Role is loading, using pathname-based navigation items");
+    if (!roleForNav || isLoadingRole) {
+      return [];
     }
 
-    if (isTutorRole) {
+    if (roleForNav === "tuteur") {
       return [
         { label: "Mes alternants", icon: Users, href: "/dashboard/tuteur" },
         { label: "Formulaires", icon: ClipboardList, href: "/dashboard/tuteur/formulaires" },
@@ -119,15 +92,14 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
       {
         label: "Formations",
         icon: GraduationCap,
-        href: isInstructor ? "/dashboard/formateur/formations" : "/dashboard/formations",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/formations" : "/dashboard/formations",
       },
       {
         label: "Parcours",
         icon: Layers,
-        href: isInstructor ? "/dashboard/formateur/parcours" : "/dashboard/parcours",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/parcours" : "/dashboard/parcours",
       },
-      // "Mes apprenants" uniquement pour les formateurs
-      ...(isInstructor
+      ...(roleForNav === "formateur"
         ? [
             {
               label: "Mes apprenants",
@@ -139,48 +111,48 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
       {
         label: "Ressources",
         icon: BookOpen,
-        href: isInstructor ? "/dashboard/formateur/ressources" : "/dashboard/ressources",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/ressources" : "/dashboard/ressources",
       },
       {
         label: "Drive",
         icon: HardDrive,
-        href: isInstructor ? "/dashboard/formateur/drive" : "/dashboard/drive",
-        showBadge: isInstructor,
-        badgeCount: isInstructor ? 1 : 0,
+        href: roleForNav === "formateur" ? "/dashboard/formateur/drive" : "/dashboard/drive",
+        showBadge: roleForNav === "formateur",
+        badgeCount: roleForNav === "formateur" ? 1 : 0,
       },
       {
         label: "Tests",
         icon: PenTool,
-        href: isInstructor ? "/dashboard/formateur/tests" : "/dashboard/tests",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/tests" : "/dashboard/tests",
       },
       {
         label: "To-Do List",
         icon: CheckSquare,
-        href: isInstructor
-          ? "/dashboard/formateur/todo"
-          : isAdminRole
-            ? "/dashboard/admin/todo"
-            : "/dashboard/apprenant/todo",
+        href:
+          roleForNav === "formateur"
+            ? "/dashboard/formateur/todo"
+            : roleForNav === "admin"
+              ? "/dashboard/admin/todo"
+              : "/dashboard/apprenant/todo",
       },
       {
         label: "Messagerie",
         icon: MessageCircle,
         href: "/dashboard/communaute",
       },
-      // "Mon compte" et "Messagerie" supprimés pour tous (déjà dans le header)
-      // "Paramètres" supprimé de la sidebar (sera dans le header)
-      // "No School" retiré pour les formateurs et apprenants (réservé aux admin et tuteurs)
-      ...(isInstructor || (!isAdminRole && !isTutorRole) ? [] : [
-        {
-          label: "No School",
-          icon: Store,
-          href: "/dashboard/catalogue",
-        },
-      ]),
+      ...(roleForNav === "admin"
+        ? [
+            {
+              label: "No School",
+              icon: Store,
+              href: "/dashboard/catalogue",
+            },
+          ]
+        : []),
     ];
 
     return baseItems;
-  }, [isInstructor, isTutorRole, isAdminRole, isLoadingRole, userRoleDB]);
+  }, [isLoadingRole, roleForNav]);
 
   // Ajouter Beyond Care après No School si l'accès est disponible
   // (sera géré par le composant BeyondCareSidebarWrapper qui vérifie l'accès)
@@ -190,6 +162,363 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
     roleForNav === "admin" ? "admin" : roleForNav === "formateur" ? "formateur" : "apprenant";
   const beyondNoteRole =
     roleForNav === "admin" ? "admin" : roleForNav === "formateur" ? "formateur" : "apprenant";
+
+  const learnerApplePrefixes = [
+    "/dashboard/apprenant",
+    "/dashboard/formations",
+    "/dashboard/parcours",
+    "/dashboard/ressources",
+    "/dashboard/tests",
+    "/dashboard/apprenant/todo",
+    "/dashboard/todo",
+    "/dashboard/drive",
+    "/dashboard/beyond-care",
+    "/dashboard/beyond-connect",
+    "/dashboard/catalogue",
+    "/dashboard/catalog",
+  ];
+
+  const isLearnerAppleSurface =
+    pathname ? learnerApplePrefixes.some((prefix) => pathname.startsWith(prefix)) : false;
+
+  const isLearnerApple = (isCatalogueSurface || isLearnerAppleSurface) && !isBeyondCareArea;
+
+  const renderSkeletonNav = (context: "mobile" | "desktop") => {
+    const isMobileContext = context === "mobile";
+    const collapsed = !isMobileContext && !isOpen;
+    const baseClasses = cn(
+      "flex items-center gap-3 px-3 py-2.5 transition-all duration-200 animate-pulse",
+      collapsed ? "justify-center px-0" : undefined,
+      isLearnerApple ? "rounded-[20px]" : "rounded-lg",
+      isBeyondCareArea
+        ? "bg-white/10"
+        : isLearnerApple
+          ? "border border-white/10 bg-white/8"
+          : isLight
+            ? "bg-white/10"
+            : "bg-white/[0.08]",
+    );
+
+    return Array.from({ length: 6 }).map((_, index) => (
+      <div key={`sidebar-skeleton-${context}-${index}`} className={baseClasses}>
+        <span
+          className={cn(
+            "h-9 w-9 flex-shrink-0 rounded-full",
+            isBeyondCareArea ? "bg-white/30" : "bg-white/12",
+          )}
+        />
+        {!collapsed ? <span className="h-2.5 flex-1 rounded-full bg-white/12" /> : null}
+      </div>
+    ));
+  };
+
+  const renderNavLinks = (context: "mobile" | "desktop") => {
+    const isMobileContext = context === "mobile";
+    const collapsed = !isMobileContext && !isOpen;
+
+    if (!navItems.length) {
+      return renderSkeletonNav(context);
+    }
+
+    return navItems.map((item) => {
+      const Icon = item.icon;
+      const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+      const isCatalogue = item.label === "No School";
+      const badgeValue = item.label === "Messagerie" ? unreadMessages : item.badgeCount ?? 0;
+
+      const linkClasses = cn(
+        "group flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200",
+        isLearnerApple ? "rounded-[20px]" : "rounded-lg",
+        isBeyondCareArea
+          ? isActive
+            ? "bg-white/15 text-white shadow-[0_12px_28px_rgba(255,255,255,0.12)]"
+            : "text-white/80 hover:bg-white/10 hover:text-white"
+          : isLearnerApple
+            ? cn(
+                "border border-white/12 bg-white/6 text-white/80 shadow-[0_35px_120px_-70px_rgba(8,8,24,0.75)]",
+                isActive
+                  ? "border-white/35 bg-white/12 text-white shadow-[0_45px_140px_-60px_rgba(225,225,255,0.35)]"
+                  : "hover:border-white/25 hover:bg-white/9 hover:text-white",
+              )
+            : isLight
+              ? isActive
+                ? "bg-white text-slate-900 shadow-[0_18px_32px_-30px_rgba(15,23,42,0.2)]"
+                : "text-slate-500 hover:bg-white/80 hover:text-slate-900"
+              : isActive
+                ? "bg-white/10 text-white backdrop-blur-sm"
+                : "text-white/70 hover:bg-white/5 hover:text-white",
+        collapsed ? "justify-center px-0" : undefined,
+      );
+
+      const iconNode = isLearnerApple ? (
+        <span
+          className={cn(
+            "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border transition-all",
+            isActive
+              ? "border-white/40 bg-white/15 text-white shadow-[0_22px_60px_-36px_rgba(255,255,255,0.55)]"
+              : "border-white/20 bg-white/8 text-white/80 shadow-[0_18px_50px_-38px_rgba(8,8,24,0.6)] group-hover:border-white/30 group-hover:bg-white/12 group-hover:text-white",
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+      ) : (
+        <Icon
+          className={cn(
+            "h-5 w-5 shrink-0",
+            isBeyondCareArea
+              ? isActive
+                ? "text-white"
+                : "text-white/75 group-hover:text-white"
+              : isLight
+                ? isActive
+                  ? "text-slate-800"
+                  : "text-slate-400 group-hover:text-slate-600"
+                : isActive
+                  ? "text-white"
+                  : "text-white/60 group-hover:text-white",
+          )}
+        />
+      );
+
+      const inlineBadge =
+        (isMobileContext || !collapsed) && badgeValue > 0 ? (
+          <span className="ml-auto inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-md ring-1 ring-white/20">
+            {badgeValue > 99 ? "99+" : badgeValue}
+          </span>
+        ) : null;
+
+      const collapsedBadge =
+        !isMobileContext && collapsed && badgeValue > 0 ? (
+          <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-lg ring-2 ring-white dark:ring-gray-900">
+            {badgeValue > 9 ? "9+" : badgeValue}
+          </span>
+        ) : null;
+
+      return (
+        <div key={item.label} className="relative">
+          <Link href={item.href} title={item.label} className="relative block" prefetch={false}>
+            <div className={linkClasses}>
+              {iconNode}
+              <div
+                className={cn(
+                  "flex flex-1 items-center gap-2",
+                  collapsed ? "justify-center" : undefined,
+                )}
+              >
+                <span
+                  className={cn(
+                    "transition-opacity duration-300",
+                    collapsed ? "opacity-0 pointer-events-none" : "opacity-100",
+                  )}
+                >
+                  {item.label}
+                </span>
+                {inlineBadge}
+              </div>
+            </div>
+          </Link>
+          {collapsedBadge}
+          {!isLearnerApple && isCatalogue && !isTutorArea && (
+            <>
+              <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
+              <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
+            </>
+          )}
+        </div>
+      );
+    });
+  };
+
+  const renderAppleApps = (context: "mobile" | "desktop") => {
+    if (!isLearnerApple || !roleForNav || isLoadingRole) {
+      return null;
+    }
+    return (
+      <div className="mt-8 space-y-3">
+        <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500">
+          Apps
+        </p>
+        <div className="space-y-2">
+          <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} appearance="apple" />
+          <BeyondConnectSidebarWrapper isOpen={isOpen} role={connectRoleForWrapper} appearance="apple" />
+          <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} appearance="apple" />
+        </div>
+      </div>
+    );
+  };
+
+  if (isLearnerApple) {
+    const renderAppleNavLinks = (context: "mobile" | "desktop") => {
+      const isMobileContext = context === "mobile";
+      const collapsed = !isMobileContext && !isOpen;
+      if (!navItems.length) {
+        return renderSkeletonNav(context);
+      }
+      return navItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+        const badgeValue = item.label === "Messagerie" ? unreadMessages : item.badgeCount ?? 0;
+
+        return (
+          <div key={item.label} className="relative">
+            <Link href={item.href} title={item.label} className="relative block" prefetch={false}>
+              <div
+                className={cn(
+                  "group flex items-center gap-3 rounded-[26px] border px-4 py-3 text-sm font-medium transition-all duration-200",
+                  "border-white/80 bg-white/90 text-slate-600 shadow-[0_35px_110px_-60px_rgba(15,23,42,0.28)] hover:-translate-y-0.5 hover:shadow-[0_45px_120px_-60px_rgba(15,23,42,0.35)] hover:text-slate-900",
+                  isActive && "border-white bg-white text-slate-900 shadow-[0_45px_140px_-60px_rgba(15,23,42,0.45)]",
+                  collapsed && "justify-center px-0",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[18px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 text-slate-500 transition-all duration-200",
+                    "shadow-[0_18px_45px_-34px_rgba(15,23,42,0.25)] group-hover:border-slate-300 group-hover:text-slate-700",
+                    isActive && "border-slate-300 text-slate-900 shadow-[0_25px_55px_-32px_rgba(15,23,42,0.28)]",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+
+                <div
+                  className={cn(
+                    "flex flex-1 items-center gap-2",
+                    collapsed ? "opacity-0 pointer-events-none -translate-x-2" : "opacity-100 translate-x-0",
+                    "transition-all duration-200",
+                  )}
+                >
+                  <span className="text-sm">{item.label}</span>
+                  {badgeValue > 0 ? (
+                    <span className="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full bg-slate-900/10 px-2 py-0.5 text-[11px] font-semibold text-slate-600 shadow-[0_8px_20px_-16px_rgba(15,23,42,0.35)]">
+                      {badgeValue > 99 ? "99+" : badgeValue}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </Link>
+            {!isMobileContext && collapsed && badgeValue > 0 ? (
+              <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white shadow-lg ring-2 ring-white">
+                {badgeValue > 9 ? "9+" : badgeValue}
+              </span>
+            ) : null}
+          </div>
+        );
+      });
+    };
+
+    const desktopNav = renderAppleNavLinks("desktop");
+    const mobileNav = renderAppleNavLinks("mobile");
+
+    return (
+      <>
+        <AnimatePresence>
+          {isOpen ? (
+            <motion.aside
+              key="sidebar-mobile-apple"
+              initial={{ x: -320, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -320, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 240, damping: 28 }}
+              className="fixed inset-y-0 left-0 z-40 w-72 rounded-e-[32px] border border-white/90 bg-[#f5f5f7]/95 text-slate-900 backdrop-blur-[40px] md:hidden shadow-[0_55px_140px_-60px_rgba(15,23,42,0.35)]"
+            >
+              <div className="flex h-full flex-col px-6 py-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white bg-white text-slate-900 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.25)]">
+                      <BeyondLogo size="sm" className="text-slate-900" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Espace apprenant</p>
+                      <p className="text-base font-semibold text-slate-900">Beyond</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-slate-500 hover:bg-white hover:text-slate-900"
+                    onClick={onToggle}
+                    aria-label="Fermer la navigation"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                <div className="mt-10 flex-1 space-y-4 overflow-y-auto pb-8">
+                  <nav className="space-y-3">{mobileNav}</nav>
+                  {renderAppleApps("mobile")}
+                </div>
+
+                <div className="space-y-3 pt-4">
+                  <ThemeToggle className="w-full justify-center rounded-full border border-white bg-white/80 text-slate-700 hover:bg-white" />
+                  <form action="/logout" method="POST">
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      className="w-full rounded-full border border-slate-200 bg-white/90 text-slate-700 hover:bg-white"
+                    >
+                      Déconnexion
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            </motion.aside>
+          ) : null}
+        </AnimatePresence>
+
+        <aside
+          className={cn(
+            "hidden md:fixed md:top-0 md:left-0 md:z-30 md:flex md:h-screen md:flex-col md:transition-all md:duration-300 md:ease-in-out",
+            isOpen ? "md:w-72" : "md:w-24",
+            "rounded-e-[36px] border border-white/90 bg-[#f5f5f7]/95 text-slate-800 backdrop-blur-[50px] shadow-[0_70px_180px_-70px_rgba(15,23,42,0.25)]",
+          )}
+        >
+          <div className={cn("flex items-center px-6 pt-9 pb-7", isOpen ? "justify-between" : "justify-center")}>
+            <div
+              className={cn(
+                "flex items-center gap-3 transition-all duration-300",
+                isOpen ? "opacity-100 translate-x-0" : "pointer-events-none opacity-0 -translate-x-4",
+              )}
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white bg-white text-slate-900 shadow-[0_20px_55px_-28px_rgba(15,23,42,0.25)]">
+                <BeyondLogo size="sm" className="text-slate-900" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Espace apprenant</p>
+                <p className="text-base font-semibold text-slate-900">Beyond</p>
+              </div>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full border border-white/90 text-slate-500 hover:bg-white hover:text-slate-900"
+              onClick={onToggle}
+              aria-label={isOpen ? "Réduire la navigation" : "Déployer la navigation"}
+            >
+              {isOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-hidden px-4">
+            <nav className="space-y-3">{desktopNav}</nav>
+            {renderAppleApps("desktop")}
+          </div>
+
+          <div className="mt-auto space-y-3 px-6 pb-8 pt-6">
+            <ThemeToggle className="w-full justify-center rounded-full border border-white bg-white/80 text-slate-700 hover:bg-white" />
+            <form action="/logout" method="POST">
+              <Button
+                type="submit"
+                variant="ghost"
+                className="w-full rounded-full border border-slate-200 bg-white/90 text-slate-700 hover:bg-white"
+              >
+                Déconnexion
+              </Button>
+            </form>
+          </div>
+        </aside>
+      </>
+    );
+  }
 
   return (
     <>
@@ -202,12 +531,14 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
             exit={{ x: -320, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 30 }}
             className={cn(
-              "fixed inset-y-0 left-0 z-40 w-72 md:hidden",
+              "fixed inset-y-0 left-0 z-40 w-72 rounded-e-3xl md:hidden",
               isBeyondCareArea
                 ? "bg-[#c91459] text-white shadow-[0_25px_50px_rgba(201,20,89,0.35)] rounded-e-3xl"
-                : isLight
-                  ? "bg-white shadow-2xl shadow-slate-200/60 rounded-e-3xl"
-                  : "bg-[#252525] shadow-xl shadow-black/50 rounded-e-3xl",
+                : isLearnerApple
+                  ? "border border-white/15 bg-[#101018]/85 text-white backdrop-blur-[80px] shadow-[0_45px_140px_-60px_rgba(10,10,25,0.8)]"
+                  : isLight
+                    ? "bg-white/95 text-slate-900 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.45)] border border-white/80 backdrop-blur-2xl"
+                    : "border border-white/10 bg-black/85 text-white backdrop-blur-2xl shadow-[0_35px_80px_rgba(0,0,0,0.65)]",
             )}
           >
             <div className="flex h-full flex-col py-10 pl-8 pr-6">
@@ -228,98 +559,39 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                   <BeyondWordmark
                     size="md"
                     className={cn(
-                      isLight ? "text-slate-900" : "text-white",
+                      isLearnerApple ? "text-white" : isLight ? "text-slate-900" : "text-white",
                     )}
                   />
                 ) : (
-                  <BeyondLogo size="md" className={isLight ? "text-slate-900" : "text-white"} />
+                  <BeyondLogo size="md" className={isLearnerApple ? "text-white" : isLight ? "text-slate-900" : "text-white"} />
                 )}
                 <Button
                   size="icon"
                   variant="ghost"
                   className={cn(
-                    isLight ? "text-slate-600 hover:bg-slate-100" : "text-white hover:bg-white/10",
+                    isLearnerApple
+                      ? "text-white/80 hover:bg-white/15 hover:text-white"
+                      : isLight
+                        ? "text-slate-600 hover:bg-slate-100"
+                        : "text-white hover:bg-white/10",
                   )}
                   onClick={onToggle}
                 >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              <nav className="space-y-1 px-3">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-                  const isCatalogue = item.label === "No School";
-                  const isMessaging = item.label === "Messagerie";
-                  const displayUnread = isMessaging ? unreadMessages : 0;
-                  return (
-                    <div key={item.label}>
-                      <Link href={item.href} prefetch={false}>
-                        <div
-                          className={cn(
-                            "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                            isBeyondCareArea
-                              ? isActive
-                                ? "bg-white/20 text-white shadow-[0_12px_24px_rgba(255,255,255,0.08)]"
-                                : "text-white/80 hover:bg-white/10 hover:text-white"
-                              : isLight
-                                ? isActive
-                                  ? "bg-slate-100 text-slate-900"
-                                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                                : isActive
-                                  ? "bg-white/10 text-white"
-                                  : "text-white/70 hover:bg-white/5 hover:text-white",
-                          )}
-                        >
-                          <Icon
-                            className={cn(
-                              "h-5 w-5 shrink-0",
-                              isBeyondCareArea
-                                ? isActive
-                                  ? "text-white"
-                                  : "text-white/75 group-hover:text-white"
-                                : isLight 
-                                  ? isActive 
-                                    ? "text-slate-700" 
-                                    : "text-slate-500 group-hover:text-slate-700"
-                                  : isActive
-                                    ? "text-white"
-                                    : "text-white/60 group-hover:text-white",
-                            )}
-                          />
-                          <div className="flex flex-1 items-center gap-2">
-                            <span
-                              className={cn(
-                                "transition-opacity duration-300",
-                                isOpen ? "opacity-100" : "opacity-0 pointer-events-none",
-                              )}
-                            >
-                              {item.label}
-                            </span>
-                            {displayUnread > 0 && (
-                              <span className="ml-auto inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white shadow-md ring-1 ring-white/20">
-                                {displayUnread > 99 ? "99+" : displayUnread}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                      {/* Beyond Care - conditionnel, juste après No School */}
-                      {isCatalogue && !isTutorArea && (
-                        <>
-                          <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
-                          <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-                {/* Beyond Care et Beyond Note pour les apprenants (même si No School n'est pas affiché) */}
-                {!isTutorArea && !isInstructor && !isAdminRole && (
-                  <>
-                    <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
-                    <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
-                  </>
+              <nav className={cn("space-y-1 px-3", isLearnerApple && "space-y-6")}>
+                <div className="space-y-1">{renderNavLinks("mobile")}</div>
+                {isLearnerApple ? (
+                  renderAppleApps("mobile")
+                ) : (
+                  !isTutorArea && !isInstructor && !isAdminRole && (
+                    <>
+                      <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
+                      <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
+                      <BeyondConnectSidebarWrapper isOpen={isOpen} role={connectRoleForWrapper} />
+                    </>
+                  )
                 )}
               </nav>
             </div>
@@ -329,12 +601,15 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
 
       <aside
         className={cn(
-          "hidden md:flex md:flex-col md:gap-6 md:transition-all md:duration-300 md:ease-in-out",
-          "md:h-screen md:text-white md:fixed md:top-0 md:left-0 md:z-30",
+          "hidden md:fixed md:top-0 md:left-0 md:z-30 md:flex md:h-screen md:flex-col md:gap-6 md:transition-all md:duration-300 md:ease-in-out",
           isOpen ? "md:w-72" : "md:w-20",
           isBeyondCareArea
             ? "bg-[#c91459] text-white shadow-[0_30px_60px_rgba(201,20,89,0.25)] rounded-e-[2.5rem]"
-            : "rounded-e-[2.5rem]"
+            : isLearnerApple
+              ? "rounded-e-[2.5rem] border border-white/15 bg-[#0c0c18]/85 text-white backdrop-blur-[90px] shadow-[0_55px_160px_-65px_rgba(8,8,24,0.75)]"
+              : isLight
+                ? "rounded-e-[2.5rem] text-slate-900"
+                : "rounded-e-[2.5rem] border border-white/10 bg-black/75 backdrop-blur-[80px] shadow-[0_40px_120px_-60px_rgba(0,0,0,0.9)]"
         )}
         style={
           isBeyondCareArea
@@ -343,10 +618,20 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                 background: '#c91459',
                 zIndex: 30,
               }
-            : {
-                backgroundColor: 'transparent',
-                background: 'none',
-              }
+            : isLearnerApple
+              ? {
+                  background: 'linear-gradient(155deg, rgba(12,12,26,0.92) 0%, rgba(18,18,34,0.88) 55%, rgba(26,26,44,0.82) 100%)',
+                  backdropFilter: 'blur(90px)',
+                }
+              : isLight
+                ? {
+                    backgroundColor: 'transparent',
+                    background: 'none',
+                  }
+                : {
+                    background: 'linear-gradient(140deg, rgba(18,18,18,0.94) 0%, rgba(12,12,12,0.9) 100%)',
+                    backdropFilter: 'blur(60px)',
+                  }
         }
       >
         <div
@@ -374,14 +659,16 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                 className={cn(
                   isBeyondCareArea
                     ? "text-white"
-                    : isLight
-                      ? "text-slate-900"
-                      : "text-white",
+                    : isLearnerApple
+                      ? "text-white"
+                      : isLight
+                        ? "text-slate-900"
+                        : "text-white",
                 )}
               />
             )
           ) : (
-            <BeyondLogo size="md" className={isBeyondCareArea ? "text-white" : isLight ? "text-slate-900" : "text-white"} />
+            <BeyondLogo size="md" className={isBeyondCareArea ? "text-white" : isLearnerApple ? "text-white" : isLight ? "text-slate-900" : "text-white"} />
           )}
           <Button
             size="icon"
@@ -389,9 +676,11 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
             className={cn(
               isBeyondCareArea
                 ? "text-white hover:bg-white/15"
-                : isLight
-                  ? "text-slate-600 hover:bg-slate-100"
-                  : "text-white hover:bg-white/10",
+                : isLearnerApple
+                  ? "text-white/80 hover:bg-white/15 hover:text-white"
+                  : isLight
+                    ? "text-slate-600 hover:bg-slate-100"
+                    : "text-white hover:bg-white/10",
             )}
             onClick={onToggle}
             aria-label={isOpen ? "Réduire la navigation" : "Déployer la navigation"}
@@ -400,90 +689,18 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
           </Button>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-            const isCatalogue = item.label === "No School";
-            const isMessaging = item.label === "Messagerie";
-            const baseBadge = item.badgeCount ?? 0;
-            const showBadge = isMessaging ? unreadMessages : baseBadge;
-            return (
-              <div key={item.label}>
-                <Link href={item.href} title={item.label} className="relative" prefetch={false}>
-                    <div
-                      className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                        isBeyondCareArea
-                          ? isActive
-                            ? "bg-white/15 text-white shadow-[0_12px_28px_rgba(255,255,255,0.12)]"
-                            : "text-white/80 hover:bg-white/10 hover:text-white"
-                          : isLight
-                            ? isActive
-                              ? "bg-slate-100 text-slate-900"
-                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                            : isActive
-                              ? "bg-white/10 text-white backdrop-blur-sm"
-                              : "text-white/70 hover:bg-white/5 hover:text-white",
-                        !isOpen && "justify-center px-0",
-                      )}
-                    >
-                    <Icon
-                      className={cn(
-                        "h-5 w-5 shrink-0",
-                        isBeyondCareArea
-                          ? isActive
-                            ? "text-white"
-                            : "text-white/75 group-hover:text-white"
-                          : isLight 
-                            ? isActive 
-                              ? "text-slate-700" 
-                              : "text-slate-500 group-hover:text-slate-700"
-                            : isActive
-                              ? "text-white"
-                              : "text-white/60 group-hover:text-white",
-                      )}
-                    />
-                    {!isOpen && showBadge ? (
-                      <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-lg ring-2 ring-white dark:ring-gray-900">
-                        {showBadge > 9 ? "9+" : showBadge}
-                      </span>
-                    ) : null}
-                    {isOpen ? (
-                      <div
-                        className={cn(
-                          "relative flex flex-1 items-center gap-2 transition-opacity duration-300",
-                          isOpen ? "opacity-100" : "opacity-0",
-                        )}
-                      >
-                        <span className="flex-1">{item.label}</span>
-                        {showBadge ? (
-                          <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-md ring-1 ring-white/20">
-                            {showBadge > 99 ? "99+" : showBadge}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                </Link>
-                {/* Beyond Care, Beyond Note et Beyond Connect - conditionnels, juste après No School */}
-                {isCatalogue && !isTutorArea && (
-                  <>
-                    <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
-                    <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
-                    <BeyondConnectSidebarWrapper isOpen={isOpen} role={roleForNav === "tuteur" ? "formateur" : roleForNav} />
-                  </>
-                )}
-              </div>
-            );
-          })}
-          {/* Beyond Care, Beyond Note et Beyond Connect pour les apprenants (même si No School n'est pas affiché) */}
-          {!isTutorArea && !isInstructor && !isAdminRole && (
-            <>
-              <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
-              <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
-              <BeyondConnectSidebarWrapper isOpen={isOpen} role={roleForNav === "tuteur" ? "formateur" : roleForNav} />
-            </>
+        <nav className={cn("flex-1 space-y-1 px-3", isLearnerApple && "space-y-6")}>
+          <div className="space-y-1">{renderNavLinks("desktop")}</div>
+          {isLearnerApple ? (
+            renderAppleApps("desktop")
+          ) : (
+            !isTutorArea && !isInstructor && !isAdminRole && (
+              <>
+                <BeyondCareSidebarWrapper isOpen={isOpen} role={beyondCareRole} />
+                <BeyondNoteSidebarWrapper isOpen={isOpen} role={beyondNoteRole} />
+                <BeyondConnectSidebarWrapper isOpen={isOpen} role={connectRoleForWrapper} />
+              </>
+            )
           )}
         </nav>
 
@@ -494,9 +711,11 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                 "w-full justify-center",
                 isBeyondCareArea
                   ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
-                  : isLight
-                    ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-                    : "border-white/10 bg-white/5 text-white hover:bg-white/10",
+                  : isLearnerApple
+                    ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                    : isLight
+                      ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                      : "border-white/10 bg-white/5 text-white hover:bg-white/10",
               )}
             />
             <form action="/logout" method="POST">
@@ -507,9 +726,11 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                   "w-full rounded-full border text-sm font-semibold",
                   isBeyondCareArea
                     ? "border-white/25 text-white hover:bg-white/15"
-                    : isLight
-                      ? "border-slate-200 text-slate-600 hover:bg-slate-100"
-                      : "border-white/10 text-white hover:bg-white/10",
+                    : isLearnerApple
+                      ? "border-white/20 text-white hover:bg-white/15"
+                      : isLight
+                        ? "border-slate-200 text-slate-600 hover:bg-slate-100"
+                        : "border-white/10 text-white hover:bg-white/10",
                 )}
               >
                 Déconnexion
@@ -524,9 +745,11 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                 "rounded-full",
                 isBeyondCareArea
                   ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
-                  : isLight
-                    ? "border-slate-200 bg-white/90 text-slate-700 hover:bg-white"
-                    : "border-white/10 bg-white/5 text-white",
+                  : isLearnerApple
+                    ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                    : isLight
+                      ? "border-slate-200 bg-white/90 text-slate-700 hover:bg-white"
+                      : "border-white/10 bg-white/5 text-white",
               )}
             />
             <Button
@@ -536,9 +759,11 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo }: SidebarProps) =>
                 "rounded-full border",
                 isBeyondCareArea
                   ? "border-white/25 text-white hover:bg-white/15"
-                  : isLight
-                    ? "border-slate-300 text-slate-600 hover:bg-slate-100"
-                    : "border-white/10 text-white hover:bg-white/10",
+                  : isLearnerApple
+                    ? "border-white/20 text-white hover:bg-white/15"
+                    : isLight
+                      ? "border-slate-300 text-slate-600 hover:bg-slate-100"
+                      : "border-white/10 text-white hover:bg-white/10",
               )}
               onClick={onToggle}
               aria-label="Déployer la navigation"

@@ -32,6 +32,7 @@ type DashboardHeaderProps = {
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
   compact?: boolean; // Mode compact pour réduire l'affichage
+  forcedTheme?: "light" | "dark";
 };
 
 export const DashboardHeader = ({
@@ -41,12 +42,22 @@ export const DashboardHeader = ({
   onToggleSidebar,
   isSidebarOpen = true,
   compact = false,
+  forcedTheme,
 }: DashboardHeaderProps) => {
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
   const pathname = usePathname();
   const isBeyondCareArea = pathname?.includes("beyond-care");
-  const trail = breadcrumbs.length ? breadcrumbs : [{ label: title }];
+  const desiredTheme = forcedTheme ?? (isLight ? "light" : "dark");
+  const useDark = desiredTheme === "dark" && !isBeyondCareArea;
+  const showTitle = Boolean(title && title.trim().length > 0);
+  const trail =
+    breadcrumbs.length > 0
+      ? breadcrumbs
+      : showTitle
+        ? [{ label: title }]
+        : [];
+  const showBreadcrumbs = !compact && trail.length > 0;
 
   return (
     <>
@@ -56,12 +67,12 @@ export const DashboardHeader = ({
         compact && "py-1.5 gap-1 md:py-2",
         isBeyondCareArea
           ? "border-b border-[#f6cada] bg-white/95 text-[#c91459]"
-          : isLight
-            ? "border-b border-slate-200 bg-white/90 text-slate-900"
-            : "bg-transparent text-white",
+          : useDark
+            ? "bg-transparent text-white"
+            : "border-b border-slate-200 bg-white/90 text-slate-900",
       )}
       style={
-        !isLight && !isBeyondCareArea
+        useDark
           ? {
               backgroundColor: 'transparent',
               border: 'none',
@@ -73,15 +84,15 @@ export const DashboardHeader = ({
         <div className="md:hidden" />
 
         <div className={cn("space-y-2", compact && "space-y-1")}>
-          {!compact && (
+          {showBreadcrumbs && (
             <nav
               className={cn(
                 "flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em]",
                 isBeyondCareArea
                   ? "text-[#c91459]/60"
-                  : isLight
-                    ? "text-slate-400"
-                    : "text-white/40",
+                  : useDark
+                    ? "text-white/40"
+                    : "text-slate-400",
               )}
             >
               {trail.map((crumb, index) => {
@@ -95,9 +106,9 @@ export const DashboardHeader = ({
                           "transition",
                           isBeyondCareArea
                             ? "hover:text-[#c91459]"
-                            : isLight
-                              ? "hover:text-slate-600"
-                              : "hover:text-white/70",
+                            : useDark
+                              ? "hover:text-white/70"
+                              : "hover:text-slate-600",
                         )}
                       >
                         {crumb.label}
@@ -107,10 +118,10 @@ export const DashboardHeader = ({
                         className={cn(
                           isLast
                             ? isBeyondCareArea
-                              ? "text-[#c91459]"
-                              : isLight
-                                ? "text-slate-600"
-                                : "text-white/70"
+                            ? "text-[#c91459]"
+                            : useDark
+                              ? "text-white/70"
+                              : "text-slate-600"
                             : "",
                         )}
                       >
@@ -123,9 +134,9 @@ export const DashboardHeader = ({
                           "h-3 w-3",
                           isBeyondCareArea
                             ? "text-[#f1c2d2]"
-                            : isLight
-                              ? "text-slate-300"
-                              : "text-white/30",
+                            : useDark
+                              ? "text-white/30"
+                              : "text-slate-300",
                         )}
                       />
                     )}
@@ -135,24 +146,30 @@ export const DashboardHeader = ({
             </nav>
           )}
           <div className={cn("space-y-1", compact && "space-y-0.5")}>
-            <h1 className={cn(
-              "text-2xl font-semibold md:text-3xl",
-              compact && "text-lg md:text-xl",
-              isBeyondCareArea
-                ? "text-[#c91459]"
-                : isLight
-                  ? "text-slate-900"
-                  : "text-white"
-            )}>{title}</h1>
-            {subtitle && !compact && (
+            {showTitle ? (
+              <h1
+                className={cn(
+                  "text-2xl font-semibold md:text-3xl",
+                  compact && "text-lg md:text-xl",
+                  isBeyondCareArea
+                    ? "text-[#c91459]"
+                    : useDark
+                      ? "text-white"
+                      : "text-slate-900",
+                )}
+              >
+                {title}
+              </h1>
+            ) : null}
+            {subtitle && !compact && showTitle && (
               <p
                 className={cn(
                   "text-sm",
                   isBeyondCareArea
                     ? "text-slate-500"
-                    : isLight
-                      ? "text-slate-500"
-                      : "text-white/60",
+                    : useDark
+                      ? "text-white/60"
+                      : "text-slate-500",
                 )}
               >
                 {subtitle}
@@ -171,11 +188,11 @@ export const DashboardHeader = ({
             variant="ghost"
             className={cn(
               "md:hidden",
-              isBeyondCareArea
-                ? "text-[#c91459] hover:bg-[#f9d7e5]"
-                : isLight
-                  ? "text-slate-600 hover:bg-slate-100"
-                  : "text-white hover:bg-white/10",
+            isBeyondCareArea
+              ? "text-[#c91459] hover:bg-[#f9d7e5]"
+              : useDark
+                ? "text-white hover:bg-white/10"
+                : "text-slate-600 hover:bg-slate-100",
             )}
             onClick={onToggleSidebar}
             aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
@@ -188,9 +205,9 @@ export const DashboardHeader = ({
             "hidden items-center gap-2 rounded-full border px-3 py-1.5 text-sm md:flex backdrop-blur-sm",
             isBeyondCareArea
               ? "border-[#f6cada] bg-white text-[#c91459]"
-              : isLight
-                ? "border-slate-200 bg-white text-slate-500"
-                : "border-white/10 bg-white/5 text-white/60",
+              : useDark
+                ? "border-white/10 bg-white/5 text-white/60"
+                : "border-slate-200 bg-white text-slate-500",
           )}
         >
           <Search
@@ -198,9 +215,9 @@ export const DashboardHeader = ({
               "h-4 w-4",
               isBeyondCareArea
                 ? "text-[#c91459]"
-                : isLight
-                  ? "text-slate-400"
-                  : "text-white/60",
+                : useDark
+                  ? "text-white/60"
+                  : "text-slate-400",
             )}
           />
           <Input
@@ -209,9 +226,9 @@ export const DashboardHeader = ({
               "h-auto border-0 bg-transparent p-0 text-sm focus-visible:ring-0",
               isBeyondCareArea
                 ? "text-[#c91459] placeholder:text-[#d8769b]"
-                : isLight
-                  ? "text-slate-600 placeholder:text-slate-400"
-                  : "text-white placeholder:text-white/50",
+                : useDark
+                  ? "text-white placeholder:text-white/50"
+                  : "text-slate-600 placeholder:text-slate-400",
             )}
           />
         </div>
@@ -222,9 +239,9 @@ export const DashboardHeader = ({
             "hidden md:flex",
             isBeyondCareArea
               ? "text-[#c91459] hover:bg-[#f9d7e5]"
-              : isLight
-                ? "text-slate-600 hover:bg-slate-100"
-                : "text-white hover:bg-white/10",
+              : useDark
+                ? "text-white hover:bg-white/10"
+                : "text-slate-600 hover:bg-slate-100",
           )}
           aria-label="Notifications"
         >
@@ -238,9 +255,9 @@ export const DashboardHeader = ({
             "hidden md:flex",
             isBeyondCareArea
               ? "text-[#c91459] hover:bg-[#f9d7e5]"
-              : isLight
-                ? "text-slate-600 hover:bg-slate-100"
-                : "text-white hover:bg-white/10",
+              : useDark
+                ? "text-white hover:bg-white/10"
+                : "text-slate-600 hover:bg-slate-100",
           )}
           aria-label="Paramètres"
         >
@@ -255,9 +272,9 @@ export const DashboardHeader = ({
           className={cn(
             isBeyondCareArea
               ? "text-[#c91459] hover:bg-[#f9d7e5]"
-              : isLight
-                ? "text-slate-600 hover:bg-slate-100"
-                : "text-white hover:bg-white/10",
+              : useDark
+                ? "text-white hover:bg-white/10"
+                : "text-slate-600 hover:bg-slate-100",
           )}
           aria-label="Mon compte"
         >

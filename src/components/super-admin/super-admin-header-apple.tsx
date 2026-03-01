@@ -73,6 +73,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "Voir No School", href: "/super/catalogue/preview" },
       { label: "Voir les contenus", href: "/super/catalogue" },
+      { label: "Preuves (builder)", href: "/super/no-school/preuves" },
     ],
   },
   { label: "Chiffre d'affaires", href: "/super/chiffre-affaires" },

@@ -1,312 +1,108 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import { useSupabase } from "@/components/providers/supabase-provider";
-import { BeyondWordmark } from "@/components/ui/beyond-wordmark";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-const loginSchema = z.object({
-  email: z.string().email({ message: "Email invalide" }),
-  password: z.string().min(6, { message: "Mot de passe trop court" }),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-
-function LoginRedirectHandler() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Rediriger vers reset-password si un code de réinitialisation est présent
-  useEffect(() => {
-    const code = searchParams.get("code");
-    const type = searchParams.get("type");
-    const tokenHash = searchParams.get("token_hash");
-    const next = searchParams.get("next");
-    
-    // Si c'est un lien de réinitialisation de mot de passe, rediriger vers la page dédiée
-    // Supabase peut envoyer soit "code" avec "type=recovery", soit "token_hash"
-    if (code && type === "recovery") {
-      const redirectUrl = `/reset-password?code=${code}${next ? `&next=${next}` : ""}`;
-      router.replace(redirectUrl);
-    } else if (tokenHash) {
-      // Format alternatif avec token_hash
-      const redirectUrl = `/reset-password?token_hash=${tokenHash}${next ? `&next=${next}` : ""}`;
-      router.replace(redirectUrl);
-    } else if (code && !type) {
-      // Si on a un code sans type, vérifier si c'est un code de réinitialisation
-      // En essayant d'échanger le code, on saura s'il est valide
-      // Pour l'instant, on redirige vers reset-password si on a un code
-      const redirectUrl = `/reset-password?code=${code}${next ? `&next=${next}` : ""}`;
-      router.replace(redirectUrl);
-    }
-  }, [searchParams, router]);
-
-  return null;
-}
-
-function LoginForm() {
-  const router = useRouter();
-  const supabase = useSupabase();
+  const supabase = createSupabaseBrowserClient();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
-    
+    setIsSubmitting(true);
+
     if (!supabase) {
-      const errorMsg = "Supabase n'est pas configuré. Vérifiez les variables d'environnement sur Vercel.";
-      setError(errorMsg);
-      console.error("[login] Supabase provider not available");
-      console.error("[login] Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel environment variables");
-      toast.error("Erreur de configuration", {
-        description: "Les variables d'environnement Supabase ne sont pas configurées. Vérifiez Vercel.",
-      });
+      setError("Supabase n'est pas configuré.");
+      setIsSubmitting(false);
       return;
     }
 
-    try {
-      console.log("[login] Attempting sign in via API route for:", values.email);
-      
-      // Utiliser une route API Next.js pour éviter les problèmes de timeout côté client
-      console.log("[login] Calling /api/auth/signin...");
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-        }),
-      });
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      console.log("[login] API response status:", response.status, response.statusText);
-      const result = await response.json();
-      console.log("[login] API response data:", { hasUser: !!result.user, hasSession: !!result.session, error: result.error });
-
-      if (!response.ok) {
-        console.error("[login] API error:", result.error);
-        setError(result.error || "Erreur de connexion");
-        toast.error("Erreur de connexion", {
-          description: result.error,
-        });
-        return;
-      }
-
-      // Si la connexion réussit via l'API, on doit maintenant créer la session côté client
-      if (result.session && result.user) {
-        console.log("[login] ✅ Sign in successful via API, setting session...");
-        
-        // Créer la session côté client avec Supabase
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: result.session.access_token,
-          refresh_token: result.session.refresh_token,
-        });
-
-        if (sessionError) {
-          console.error("[login] Error setting session:", sessionError);
-          setError("Erreur lors de la création de la session");
-          toast.error("Erreur de connexion", {
-            description: "Impossible de créer la session",
-          });
-          return;
-        }
-
-        console.log("[login] ✅ Sign in succeeded for:", result.user.email);
-        toast.success("Connexion réussie !");
-        console.log("[login] Sign in succeeded, redirecting to /loading");
-        // Rediriger vers la page de chargement qui affichera "Bonjour (prénom)" puis redirigera vers le dashboard
-        router.push("/loading");
-        router.refresh(); // Forcer le rafraîchissement pour récupérer la session
-        return;
-      } else {
-        console.warn("[login] ⚠️ Sign in returned no user data");
-        setError("Aucune donnée utilisateur reçue");
-        return;
-      }
-    } catch (err) {
-      console.error("[login] Unexpected error during sign in:", err);
-      const errorMessage = err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
-      
-      // Gérer spécifiquement les erreurs de timeout
-      if (errorMessage.includes("Timeout") || errorMessage.includes("timeout")) {
-        setError("La connexion a pris trop de temps. Vérifiez votre connexion internet.");
-        toast.error("Timeout de connexion", {
-          description: "La connexion à Supabase a pris trop de temps. Vérifiez votre connexion internet ou réessayez.",
-        });
-      } else {
-        setError(errorMessage);
-        toast.error("Erreur de connexion", {
-          description: errorMessage,
-        });
-      }
+    if (signInError || !data.session) {
+      setError(signInError?.message || "Identifiants incorrects.");
+      setIsSubmitting(false);
+      return;
     }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("disc_status, disc_scores")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    const hasDisc = profile?.disc_status === "completed" || !!profile?.disc_scores;
+    router.push(hasDisc ? "/dashboard/profil" : "/onboarding");
   };
 
-  const isLoading = form.formState.isSubmitting;
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="w-full"
-    >
-      {/* Logo Beyond - visible uniquement sur mobile */}
-      <div className="mb-12 flex justify-center lg:hidden">
-        <BeyondWordmark 
-          size="lg" 
-          className="text-white"
-        />
-      </div>
-
-      {/* Card de connexion */}
-      <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl">
-        {/* En-tête */}
-        <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-semibold text-white">
-            Connexion
-          </h1>
-          <p className="text-sm text-white/60">
-            Accédez à votre espace d&apos;apprentissage
-          </p>
-        </div>
-
-        {/* Message d'erreur */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400"
-          >
-            <AlertCircle className="h-5 w-5 shrink-0" />
-            <span>{error}</span>
-          </motion.div>
-        )}
-
-        {/* Formulaire */}
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-white/90">
-                    Email
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
-                      <Input
-                        type="email"
-                        placeholder="vous@example.com"
-                        autoComplete="email"
-                        className="h-12 rounded-xl border-white/20 bg-white/5 pl-12 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/10 focus:ring-2 focus:ring-white/20"
-                        {...field}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-red-400" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-white/90">
-                    Mot de passe
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        autoComplete="current-password"
-                        className="h-12 rounded-xl border-white/20 bg-white/5 pl-12 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/10 focus:ring-2 focus:ring-white/20"
-                        {...field}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-red-400" />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="submit"
-              className="h-12 w-full rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connexion en cours...
-                </>
-              ) : (
-                "Se connecter"
-              )}
-            </Button>
-          </form>
-        </Form>
-
-        {/* Liens supplémentaires */}
-        <div className="mt-8 space-y-4 border-t border-white/10 pt-6">
-          <Link
-            href="/forgot-password"
-            className="block text-center text-sm text-white/70 transition-colors hover:text-white"
-          >
-            Mot de passe oublié ?
+    <div className="min-h-screen bg-[#0B0B0B] px-6 py-16 text-white">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-8">
+        <div className="flex items-center justify-between">
+          <div className="text-[14px] font-semibold tracking-[0.3em] text-white">BEYOND</div>
+          <Link href="/register" className="text-[12px] text-white/60 hover:text-white">
+            Créer un compte
           </Link>
-          <p className="text-center text-sm text-white/60">
-            Pas encore de compte ?{" "}
-            <Link
-              href="/signup"
-              className="font-medium text-white transition-colors hover:text-blue-400"
-            >
-              Créer un compte
-            </Link>
-          </p>
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="rounded-3xl border border-white/10 bg-white/[0.03] p-6"
+        >
+          <h1 className="text-2xl font-semibold">Se connecter</h1>
+          <p className="mt-2 text-[13px] text-white/60">
+            Accédez à votre profil certifié.
+          </p>
+
+          <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
+            <label className="text-[12px] text-white/70">
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
+                placeholder="vous@email.com"
+                required
+              />
+            </label>
+            <label className="text-[12px] text-white/70">
+              Mot de passe
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
+                placeholder="••••••••"
+                required
+              />
+            </label>
+
+            {error ? <p className="text-[12px] text-red-400">{error}</p> : null}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-2 rounded-full bg-[#FF6B00] px-4 py-3 text-[13px] font-semibold text-[#111827] shadow-[0_0_25px_rgba(255,107,0,0.35)] transition hover:shadow-[0_0_40px_rgba(255,107,0,0.6)]"
+            >
+              {isSubmitting ? "Connexion..." : "Se connecter"}
+            </button>
+          </form>
+        </motion.div>
       </div>
-    </motion.div>
+    </div>
   );
 }
-
-export default function LoginPage() {
-  return (
-    <>
-      <Suspense fallback={null}>
-        <LoginRedirectHandler />
-      </Suspense>
-      <LoginForm />
-    </>
-  );
-}
-
-

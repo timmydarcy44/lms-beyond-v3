@@ -22,7 +22,7 @@ import type { TestBuilderQuestion } from "@/types/test-builder";
 const gradeRanges = [
   { id: "A", label: "Excellent", min: 85, description: "Maîtrise avancée du sujet" },
   { id: "B", label: "Solide", min: 70, description: "Bon niveau, quelques optimisations" },
-  { id: "C", label: "À renforcer", min: 55, description: "Compétences en construction" },
+  { id: "C", label: "À renforcer", min: 55, description: "Soft Skills en construction" },
   { id: "D", label: "Prioritaire", min: 0, description: "Diagnostic et accompagnement" },
 ];
 
@@ -373,7 +373,7 @@ function FormateurTestCreatePageContent() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
-                    placeholder="Expliquez le contexte, l'intention pédagogique et les compétences mesurées."
+                    placeholder="Expliquez le contexte, l'intention pédagogique et les soft skills mesurées."
                     className="border-white/15 bg-black/40 text-sm text-white placeholder:text-white/40"
                   />
                 </div>
@@ -398,7 +398,7 @@ function FormateurTestCreatePageContent() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs uppercase tracking-[0.3em] text-white/50">Compétences visées</label>
+                  <label className="text-xs uppercase tracking-[0.3em] text-white/50">Soft Skills visées</label>
                   <Input
                     value={skills}
                     onChange={(e) => setSkills(e.target.value)}

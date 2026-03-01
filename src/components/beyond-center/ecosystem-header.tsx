@@ -37,8 +37,8 @@ const ECOSYSTEM_BRANDING = {
     textColor: "#000000",
   },
   center: {
-    color: "#FF00FF",
-    bgColor: "#FF00FF",
+    color: "#000000",
+    bgColor: "#000000",
     textColor: "#FFFFFF",
   },
 };

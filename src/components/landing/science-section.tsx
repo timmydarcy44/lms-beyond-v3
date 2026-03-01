@@ -58,7 +58,7 @@ export function ScienceSection() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const }}
           className="text-center mb-20"
         >
           <h2 className="text-5xl md:text-7xl font-medium text-white mb-8 leading-[1.1] tracking-[-0.02em]" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
@@ -80,7 +80,7 @@ export function ScienceSection() {
                 key={pillar.title}
                 initial={{ opacity: 0, y: 30 }}
                 animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                transition={{ duration: 1.5, delay: 0.3 + index * 0.15, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 1.5, delay: 0.3 + index * 0.15, ease: [0.22, 1, 0.36, 1] as const }}
                 className="bg-white/5 backdrop-blur-xl rounded-3xl p-10 border border-white/10 hover:border-white/20 transition-all duration-700 hover:bg-white/8"
               >
                 <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-8">
@@ -100,3 +100,4 @@ export function ScienceSection() {
     </section>
   );
 }
+

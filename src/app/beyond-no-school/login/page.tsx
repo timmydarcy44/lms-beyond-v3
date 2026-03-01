@@ -59,6 +59,7 @@ function LoginForm() {
   const supabase = useSupabase();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const confirmed = searchParams.get("confirmed") === "1";
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -198,6 +199,15 @@ function LoginForm() {
               <span>{error}</span>
             </motion.div>
           )}
+          {confirmed ? (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200"
+            >
+              Compte confirmé ✅ Connecte-toi.
+            </motion.div>
+          ) : null}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -270,6 +280,9 @@ function LoginForm() {
           </Form>
 
           <div className="mt-8 space-y-4 border-t border-white/20 pt-6">
+            <p className="text-center text-xs text-white/50">
+              Si tu ne reçois pas l’email, retourne sur /activation et renvoie-le.
+            </p>
             <Link
               href="/forgot-password"
               className="block text-center text-sm text-white/60 transition-colors hover:text-white"

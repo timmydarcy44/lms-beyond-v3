@@ -34,7 +34,7 @@ const questionVariants = {
     scale: 1,
     transition: {
       duration: 0.45,
-      ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+      ease: [0.16, 1, 0.3, 1] as const as [number, number, number, number],
     },
   },
   exit: {
@@ -530,4 +530,5 @@ function QuestionRenderer({
     </div>
   );
 }
+
 

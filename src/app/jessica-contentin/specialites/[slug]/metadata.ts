@@ -8,7 +8,7 @@ export function generateSpecialityMetadata(slug: string): Metadata {
     // Métadonnées par défaut si pas de config spécifique
     return {
       title: `Spécialité - Jessica CONTENTIN | Psychopédagogue Caen`,
-      description: "Accompagnement psychopédagogique personnalisé à Caen. Cabinet Jessica CONTENTIN, Fleury-sur-Orne.",
+    description: "Accompagnement psychopédagogique personnalisé à Caen. Cabinet Jessica CONTENTIN, Bretteville sur Odon.",
       metadataBase: new URL("https://jessicacontentin.fr"),
     };
   }

@@ -7,9 +7,10 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 type BeyondNoteSidebarWrapperProps = {
   isOpen: boolean;
   role: "admin" | "formateur" | "apprenant";
+  appearance?: "default" | "apple";
 };
 
-export function BeyondNoteSidebarWrapper({ isOpen, role }: BeyondNoteSidebarWrapperProps) {
+export function BeyondNoteSidebarWrapper({ isOpen, role, appearance = "default" }: BeyondNoteSidebarWrapperProps) {
   const [hasAccess, setHasAccess] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -74,6 +75,6 @@ export function BeyondNoteSidebarWrapper({ isOpen, role }: BeyondNoteSidebarWrap
 
   const href = "/beyond-note-app";
 
-  return <BeyondNoteSidebarItem href={href} isOpen={isOpen} />;
+  return <BeyondNoteSidebarItem href={href} isOpen={isOpen} appearance={appearance} />;
 }
 

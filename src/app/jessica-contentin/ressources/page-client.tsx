@@ -22,6 +22,24 @@ type RessourcesPageClientProps = {
 
 // Composant interne qui utilise useSearchParams (doit être enveloppé dans Suspense)
 function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstName }: RessourcesPageClientProps) {
+  const logDev = (...args: unknown[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(...args);
+    }
+  };
+  const warnDev = (...args: unknown[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn(...args);
+    }
+  };
+  const errorDev = (...args: unknown[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.error(...args);
+    }
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcome, setShowWelcome] = useState(false);
@@ -33,15 +51,23 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
   const sliderRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [userFirstName] = useState<string | null>(initialUserFirstName);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isConfidenceTest = (item: CatalogItem) => {
+    const titleLower = (item.title || "").toLowerCase();
+    const slug = (item as any).slug || "";
+    const slugLower = slug.toLowerCase();
+    return (
+      titleLower.includes("confiance en soi") ||
+      slugLower === "test-confiance-en-soi" ||
+      item.id === "c2ac900f-7adc-4d32-b1b3-516a4dfd9fcf" ||
+      item.content_id === "bc07c56a-8d9a-415a-adf3-20ff420af4d3"
+    );
+  };
 
   // Vérifier les paramètres d'erreur dans l'URL
   useEffect(() => {
     const error = searchParams.get("error");
-    const test = searchParams.get("test");
     
-    if (error === "no_access" && test === "confiance-en-soi") {
-      setErrorMessage("Vous n'avez pas encore accès au Test de Confiance en soi. Veuillez contacter Jessica Contentin pour obtenir l'accès.");
-    } else if (error === "test_not_found") {
+    if (error === "test_not_found") {
       setErrorMessage("Le test demandé n'a pas été trouvé. Veuillez réessayer plus tard.");
     } else if (error === "catalog_item_not_found") {
       setErrorMessage("L'élément de catalogue n'a pas été trouvé. Veuillez réessayer plus tard.");
@@ -76,11 +102,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
             // Construire l'URL selon le type d'item
             if (purchasedItem) {
               if (purchasedItem.item_type === "test") {
-                if (purchasedItem.title?.toLowerCase().includes("confiance en soi") || purchasedItem.title === "Test de Confiance en soi") {
-                  itemUrl = `/test-confiance-en-soi`;
-                } else {
-                  itemUrl = `/dashboard/catalogue/test/${purchasedItem.content_id || purchasedItem.id}`;
-                }
+                itemUrl = `/dashboard/catalogue/test/${purchasedItem.content_id || purchasedItem.id}`;
               } else if (purchasedItem.item_type === "ressource") {
                 itemUrl = `/ressources/${purchasedItem.id || purchasedItem.content_id}`;
               } else if (purchasedItem.item_type === "module") {
@@ -89,11 +111,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
             } else {
               // Si l'item n'est pas dans la liste, utiliser les données de l'API
               if (data.itemType === "test") {
-                if (data.title?.toLowerCase().includes("confiance en soi")) {
-                  itemUrl = `/test-confiance-en-soi`;
-                } else {
-                  itemUrl = `/dashboard/catalogue/test/${data.contentId || data.catalogItemId}`;
-                }
+                itemUrl = `/dashboard/catalogue/test/${data.contentId || data.catalogItemId}`;
               } else if (data.itemType === "ressource") {
                 itemUrl = `/ressources/${data.catalogItemId}`;
               } else if (data.itemType === "module") {
@@ -111,7 +129,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                 
                 if (accessData.hasAccess && itemUrl) {
                   // Accès accordé, rediriger
-                  console.log("[RessourcesPageClient] ✅ Access granted, redirecting to:", itemUrl);
+                  logDev("[RessourcesPageClient] ✅ Access granted, redirecting to:", itemUrl);
                   router.push(itemUrl);
                 } else if (pollCount < maxPolls) {
                   // Pas encore d'accès, réessayer dans 500ms
@@ -119,7 +137,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                   setTimeout(checkAccess, 500);
                 } else {
                   // Timeout après 10 secondes
-                  console.warn("[RessourcesPageClient] ⚠️ Timeout waiting for access, redirecting anyway");
+                  warnDev("[RessourcesPageClient] ⚠️ Timeout waiting for access, redirecting anyway");
                   if (itemUrl) {
                     router.push(itemUrl);
                   } else {
@@ -128,7 +146,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                   }
                 }
               } catch (error) {
-                console.error("[RessourcesPageClient] Error checking access:", error);
+              errorDev("[RessourcesPageClient] Error checking access:", error);
                 // En cas d'erreur, rediriger quand même après un délai
                 if (pollCount < maxPolls) {
                   pollCount++;
@@ -144,30 +162,30 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
           }
         })
         .catch(error => {
-          console.error("[RessourcesPageClient] Error fetching session item:", error);
+        errorDev("[RessourcesPageClient] Error fetching session item:", error);
         });
     }
   }, [searchParams, catalogItems, router]);
 
   // Mettre à jour les items si initialItems change (pour le SSR/hydration)
   useEffect(() => {
-    console.log("[RessourcesPageClient] Initial items received:", {
+    logDev("[RessourcesPageClient] Initial items received:", {
       count: initialItems?.length || 0,
       items: initialItems?.map(item => ({ id: item.id, title: item.title, item_type: item.item_type })) || [],
     });
     
     if (initialItems && initialItems.length > 0) {
-      setCatalogItems(initialItems);
-      console.log("[RessourcesPageClient] Items updated in state:", initialItems.length);
+      setCatalogItems(initialItems.filter((item) => !isConfidenceTest(item)));
+      logDev("[RessourcesPageClient] Items updated in state:", initialItems.length);
     } else {
-      console.warn("[RessourcesPageClient] No initial items received!");
+      warnDev("[RessourcesPageClient] No initial items received!");
       setCatalogItems([]);
     }
   }, [initialItems]);
   
   // Log quand catalogItems change
   useEffect(() => {
-    console.log("[RessourcesPageClient] catalogItems state:", {
+  logDev("[RessourcesPageClient] catalogItems state:", {
       count: catalogItems.length,
       items: catalogItems.map(item => ({ id: item.id, title: item.title })),
     });
@@ -215,10 +233,6 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
       // Utiliser item.id (catalog_item_id) en priorité, car getCatalogItemById cherche d'abord par id
       return `/ressources/${item.id || item.content_id}`;
     } else if (item.item_type === "test") {
-      // Pour le test de confiance en soi, utiliser l'URL spéciale
-      if (item.title?.toLowerCase().includes("confiance en soi") || item.title === "Test de Confiance en soi") {
-        return `/test-confiance-en-soi`;
-      }
       // Pour le test Soft Skills, utiliser la route catalogue test (qui gère la redirection vers le questionnaire)
       if (item.title?.toLowerCase().includes("soft skills") || item.title === "Soft Skills – Profil 360") {
         return `/dashboard/catalogue/test/${item.id || item.content_id}`;
@@ -230,41 +244,12 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
   };
 
   // Ressources mises en avant pour le hero (2-3 premières avec images)
-  // Exclure le test de confiance en soi car il est déjà dans sa catégorie
   const featuredItems = catalogItems
-    .filter((item) => {
-      // Vérifier si c'est le test de confiance en soi
-      const titleLower = (item.title || "").toLowerCase();
-      const slug = (item as any).slug || "";
-      const slugLower = slug.toLowerCase();
-      
-      const isConfidenceTest = 
-        titleLower.includes("confiance") || 
-        titleLower.includes("confiance en soi") ||
-        slugLower.includes("confiance") ||
-        slugLower === "test-confiance-en-soi" ||
-        item.id === "c2ac900f-7adc-4d32-b1b3-516a4dfd9fcf" || // ID du catalog_item du test (corrigé)
-        item.content_id === "bc07c56a-8d9a-415a-adf3-20ff420af4d3" || // ID du test lui-même
-        (item.item_type === "test" && (titleLower.includes("confiance") || slugLower.includes("confiance")));
-      
-      // Exclure le test de confiance et ne garder que les items avec images
-      if (isConfidenceTest) {
-        console.log("[RessourcesPageClient] Excluding confidence test from featured:", {
-          title: item.title,
-          id: item.id,
-          content_id: item.content_id,
-          item_type: item.item_type,
-          slug: slug
-        });
-        return false;
-      }
-      
-      return !!(item.hero_image_url || item.thumbnail_url);
-    })
+    .filter((item) => !!(item.hero_image_url || item.thumbnail_url))
     .slice(0, 3);
   
   // Log pour debug
-  console.log("[RessourcesPageClient] Featured items count:", featuredItems.length, "out of", catalogItems.length);
+  logDev("[RessourcesPageClient] Featured items count:", featuredItems.length, "out of", catalogItems.length);
 
   // Grouper les ressources par catégorie
   const itemsByCategory = catalogItems.reduce((acc, item) => {

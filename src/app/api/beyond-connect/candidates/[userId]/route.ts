@@ -89,6 +89,7 @@ export async function GET(
         avatar_url: profile.avatar_url,
         phone: profile.phone,
         birth_date: profile.birth_date,
+        is_certified: profile.is_certified ?? false,
       },
       experiences: experiences.data || [],
       education: education.data || [],

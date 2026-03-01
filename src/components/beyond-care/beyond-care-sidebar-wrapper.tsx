@@ -6,9 +6,10 @@ import { BeyondCareSidebarItem } from "./beyond-care-sidebar-item";
 type BeyondCareSidebarWrapperProps = {
   isOpen: boolean;
   role: "admin" | "formateur" | "apprenant";
+  appearance?: "default" | "apple";
 };
 
-export function BeyondCareSidebarWrapper({ isOpen, role }: BeyondCareSidebarWrapperProps) {
+export function BeyondCareSidebarWrapper({ isOpen, role, appearance = "default" }: BeyondCareSidebarWrapperProps) {
   const [hasAccess, setHasAccess] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,6 @@ export function BeyondCareSidebarWrapper({ isOpen, role }: BeyondCareSidebarWrap
     role === "admin" ? "/admin/beyond-care" :
     "/dashboard/apprenant/beyond-care";
 
-  return <BeyondCareSidebarItem href={href} isOpen={isOpen} role={role} />;
+  return <BeyondCareSidebarItem href={href} isOpen={isOpen} role={role} appearance={appearance} />;
 }
 

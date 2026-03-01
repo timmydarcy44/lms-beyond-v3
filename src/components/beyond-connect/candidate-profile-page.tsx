@@ -24,6 +24,7 @@ type ProfileData = {
     avatar_url?: string;
     phone?: string;
     birth_date?: string;
+    is_certified?: boolean;
   };
   experiences: Array<{
     id: string;
@@ -174,9 +175,16 @@ export function CandidateProfilePage({ candidateUserId, jobOfferId, viewerUserId
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2 break-words">
-                  {profile.full_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || profile.email}
-                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2 break-words">
+                    {profile.full_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || profile.email}
+                  </h1>
+                  {profile.is_certified && (
+                    <span className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#ff6b00] text-xs font-semibold text-white">
+                      B
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm sm:text-base text-gray-600 mb-4">
                   {profile.email && (
                     <span className="flex items-center gap-1">
@@ -212,13 +220,13 @@ export function CandidateProfilePage({ candidateUserId, jobOfferId, viewerUserId
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-sm text-gray-700">
-                      <div>Compétences: {matchData.skills_match}%</div>
+                      <div>Soft Skills: {matchData.skills_match}%</div>
                       <div>Expérience: {matchData.experience_match}%</div>
                       <div>Formation: {matchData.education_match}%</div>
                     </div>
                     {matchData.details.matched_skills.length > 0 && (
                       <div className="mt-2">
-                        <p className="text-sm font-medium text-gray-700 mb-1">Compétences correspondantes:</p>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Soft Skills correspondantes:</p>
                         <div className="flex flex-wrap gap-1">
                           {matchData.details.matched_skills.map((skill, idx) => (
                             <Badge key={idx} className="bg-green-600 text-white">{skill}</Badge>
@@ -228,7 +236,7 @@ export function CandidateProfilePage({ candidateUserId, jobOfferId, viewerUserId
                     )}
                     {matchData.details.missing_skills.length > 0 && (
                       <div className="mt-2">
-                        <p className="text-sm font-medium text-gray-700 mb-1">Compétences manquantes:</p>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Soft Skills manquantes:</p>
                         <div className="flex flex-wrap gap-1">
                           {matchData.details.missing_skills.map((skill, idx) => (
                             <Badge key={idx} variant="outline" className="border-red-600 text-red-600">{skill}</Badge>
@@ -310,12 +318,12 @@ export function CandidateProfilePage({ candidateUserId, jobOfferId, viewerUserId
             </CardContent>
           </Card>
 
-          {/* Compétences */}
+          {/* Soft Skills */}
           <Card className="border-gray-200 bg-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Code className="h-5 w-5 text-[#003087]" />
-                Compétences
+                Soft Skills
               </CardTitle>
             </CardHeader>
             <CardContent>

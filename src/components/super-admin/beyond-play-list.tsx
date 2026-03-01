@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Video, Gamepad2, Calendar } from "lucide-react";
+import { Plus, Video, Gamepad2, Calendar, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -96,6 +96,47 @@ export function BeyondPlayList() {
           </Button>
         </div>
       </div>
+
+      {/* Beyond FC Card */}
+      <Card className="border border-dashed border-blue-200 bg-blue-50/40">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-xl text-blue-900">
+              <Gamepad2 className="h-5 w-5 text-blue-600" />
+              Beyond FC — Serious Game
+            </CardTitle>
+            <CardDescription>
+              Simulation IA tour par tour pour gérer le marketing d’un club de football. Accès réservé au Super Admin.
+            </CardDescription>
+          </div>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+            <Link href="/super/beyond-play/architecture">
+              Ouvrir Beyond FC
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-3 text-sm text-blue-900/80">
+          <div className="rounded-2xl bg-white/70 p-4">
+            <p className="font-semibold text-blue-900">IA Game Master</p>
+            <p>
+              Génère narration, événements, décisions et négociations selon les 10 tours pédagogiques seedés.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white/70 p-4">
+            <p className="font-semibold text-blue-900">Rules Engine</p>
+            <p>
+              Valide cohérence économique, applique impacts cash/fans/sponsors et borne les variables.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white/70 p-4">
+            <p className="font-semibold text-blue-900">UI Ready</p>
+            <p>
+              Compatible HUD jeu vidéo (dialogues, sliders, scènes, négociations multi-étapes).
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Liste des scénarios */}
       {scenarios.length === 0 ? (

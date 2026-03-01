@@ -34,8 +34,12 @@ export function LearningStrategyModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl border-white/20 bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A] shadow-2xl">
-          <DialogHeader className="space-y-3 pb-6">
+        <DialogContent className="flex h-[100dvh] w-full max-w-none flex-col overflow-hidden border-white/20 bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A] p-0 shadow-2xl">
+          <DialogTitle className="sr-only">Stratégie d'apprentissage</DialogTitle>
+          <DialogDescription className="sr-only">
+            Présentation et actions liées à la stratégie d'apprentissage
+          </DialogDescription>
+          <DialogHeader className="space-y-3 px-6 pb-6 pt-6">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 p-3">
                 <Sparkles className="h-6 w-6 text-blue-400" />
@@ -51,7 +55,7 @@ export function LearningStrategyModal({
             </div>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <div className="flex-1 space-y-3 overflow-y-auto px-6 pb-6">
             {/* Neuro Adapter */}
             <button
               onClick={() => {
@@ -178,11 +182,11 @@ export function LearningStrategyModal({
             </button>
           </div>
 
-          <div className="flex justify-end pt-6 mt-6 border-t border-white/10">
+          <div className="border-t border-white/10 px-6 py-4">
             <Button
               variant="ghost"
               onClick={onClose}
-              className="rounded-full border border-white/20 bg-white/5 text-white hover:bg-white/10 px-6"
+              className="rounded-full border border-white/20 bg-white/5 px-6 text-white hover:bg-white/10"
             >
               Fermer
             </Button>

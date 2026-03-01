@@ -1,389 +1,285 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { 
-  Heart, 
-  TrendingUp, 
-  TrendingDown, 
-  Calendar,
-  ArrowRight,
-  BarChart3,
-  CheckCircle2,
-  Clock,
-  User,
-  LineChart,
-  Sparkles,
-  BookOpenCheck
+import {
+  Activity,
+  Moon,
+  Zap,
 } from "lucide-react";
-import Link from "next/link";
-import { toast } from "sonner";
+import {
+  Line,
+  LineChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Legend,
+} from "recharts";
 
-type LearnerDashboardData = {
-  overallScore: number | null;
-  scoreTrend: "up" | "down" | "stable";
-  nextQuestionnaireDate: string | null;
-  indicators: {
-    stress: number;
-    wellbeing: number;
-    motivation: number;
-  };
-  recentScores: Array<{
-    date: string;
-    score: number;
-  }>;
-  completedQuestionnaires: number;
-  pendingQuestionnaires: number;
+type PlayerInfo = {
+  displayName: string;
+  statusLabel: string;
+  lastUpdatedAt: string;
 };
 
+type BaselinePillar = {
+  key: string;
+  label: string;
+  value: number;
+};
+
+type WeeklyMetric = {
+  weekLabel: string;
+  stress: number;
+  cognitiveLoad: number;
+};
+
+type Kpis = {
+  sleepQuality: number;
+  mentalLoad: number;
+  flowState: "low" | "medium" | "high";
+};
+
+type BeyondCareDashboardData = {
+  player: PlayerInfo;
+  baseline: BaselinePillar[];
+  weekly: WeeklyMetric[];
+  kpis: Kpis;
+};
+
+const DASHBOARD_DATA: BeyondCareDashboardData = {
+  player: {
+    displayName: "J. Contentin",
+    statusLabel: "Prêt pour la performance",
+    lastUpdatedAt: "2026-01-27T18:45:00.000Z",
+  },
+  baseline: [
+    { key: "focus", label: "Focus", value: 78 },
+    { key: "emotion", label: "Régulation émotionnelle", value: 72 },
+    { key: "memory", label: "Mémoire", value: 80 },
+    { key: "recovery", label: "Récupération", value: 68 },
+    { key: "adaptability", label: "Adaptabilité", value: 75 },
+  ],
+  weekly: [
+    { weekLabel: "Semaine 1", stress: 58, cognitiveLoad: 62 },
+    { weekLabel: "Semaine 2", stress: 64, cognitiveLoad: 70 },
+    { weekLabel: "Semaine 3", stress: 72, cognitiveLoad: 76 },
+    { weekLabel: "Semaine 4", stress: 79, cognitiveLoad: 82 },
+  ],
+  kpis: {
+    sleepQuality: 62,
+    mentalLoad: 78,
+    flowState: "medium",
+  },
+};
+
+const formatDateFR = (date: Date) =>
+  new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+
+const getJessicaAdvice = (data: BeyondCareDashboardData) => {
+  const latest = data.weekly[data.weekly.length - 1];
+  if (latest.stress >= 80 || latest.cognitiveLoad >= 80) {
+    return "Semaine chargée : active le protocole de récupération mentale";
+  }
+  if (data.kpis.sleepQuality < 60) {
+    return "Priorité sommeil : micro-ajustements ce soir";
+  }
+  return "Continue comme ça : maintien du rythme";
+};
+
+const GlassCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div
+    className={`rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_30px_60px_-40px_rgba(0,0,0,0.6)] ${className}`}
+  >
+    {children}
+  </div>
+);
+
+const SectionHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
+  <div className="space-y-2">
+    <p className="text-xs uppercase tracking-[0.35em] text-white/50">{subtitle}</p>
+    <h2 className="text-2xl md:text-3xl font-semibold text-[#E5E7EB]">{title}</h2>
+  </div>
+);
+
+const ProgressBar = ({ value }: { value: number }) => (
+  <div className="h-2 w-full rounded-full bg-white/10">
+    <div
+      className="h-full rounded-full bg-[#3B82F6]"
+      style={{ width: `${value}%` }}
+    />
+  </div>
+);
+
+const FlowIndicator = ({ level }: { level: "low" | "medium" | "high" }) => {
+  const levels = ["low", "medium", "high"] as const;
+  return (
+    <div className="flex items-center gap-2">
+      {levels.map((item) => (
+        <span
+          key={item}
+          className={`h-2.5 w-2.5 rounded-full ${
+            item === level ? "bg-[#3B82F6]" : "bg-white/20"
+          }`}
+        />
+      ))}
+      <span className="text-xs text-white/60">
+        {level === "low" ? "Bas" : level === "medium" ? "Moyen" : "Élevé"}
+      </span>
+    </div>
+  );
+};
+
+const KpiCard = ({
+  title,
+  value,
+  helper,
+  icon,
+  children,
+}: {
+  title: string;
+  value: string;
+  helper: string;
+  icon: React.ReactNode;
+  children?: React.ReactNode;
+}) => (
+  <GlassCard className="p-5 transition hover:shadow-[0_0_40px_rgba(59,130,246,0.25)]">
+    <div className="flex items-center justify-between">
+      <div className="space-y-1">
+        <p className="text-sm text-white/60">{title}</p>
+        <p className="text-2xl font-semibold text-[#E5E7EB]">{value}</p>
+        <p className="text-xs text-white/50">{helper}</p>
+      </div>
+      <div className="rounded-2xl bg-[#3B82F6]/15 p-3 text-[#3B82F6]">
+        {icon}
+      </div>
+    </div>
+    {children ? <div className="mt-4">{children}</div> : null}
+  </GlassCard>
+);
+
 export function LearnerBeyondCareDashboard() {
-  const [data, setData] = useState<LearnerDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const brandColor = "#c91459"; // Rouge Beyond Care
-
-  const quickMenuItems = [
-    { label: "Mon profil", icon: User },
-    { label: "Mes résultats", icon: LineChart },
-    { label: "Programmes", icon: Calendar },
-    { label: "Mes conseils", icon: Sparkles },
-    { label: "Ressources", icon: BookOpenCheck },
-  ];
-
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/beyond-care/learner/dashboard");
-      if (response.ok) {
-        const dashboardData = await response.json();
-        setData(dashboardData);
-      }
-    } catch (error) {
-      console.error("[learner-beyond-care] Error loading data:", error);
-      toast.error("Erreur lors du chargement des données");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-1/3 rounded bg-[#f9d7e5]"></div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 rounded bg-[#fce8f1]"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">Aucune donnée disponible</p>
-      </div>
-    );
-  }
+  const todayLabel = formatDateFR(new Date());
+  const advice = getJessicaAdvice(DASHBOARD_DATA);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="flex items-center gap-3 text-3xl font-bold" style={{ color: brandColor }}>
-            <Heart className="h-8 w-8" style={{ color: brandColor }} />
-            Beyond Care
+    <div className="flex flex-col gap-10 text-[#E5E7EB]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6]" />
+            {DASHBOARD_DATA.player.statusLabel}
+          </div>
+          <h1 className="text-3xl md:text-4xl font-semibold">
+            {DASHBOARD_DATA.player.displayName}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Suivez votre évolution et accédez à vos rituels de bien-être.
+          <p className="text-sm text-white/50">
+            Dernière mise à jour :{" "}
+            {formatDateFR(new Date(DASHBOARD_DATA.player.lastUpdatedAt))}
           </p>
         </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-6 rounded-full bg-white px-6 py-4 shadow-[0_20px_40px_rgba(0,0,0,0.05)]">
-          {quickMenuItems.map(({ label, icon: Icon }) => (
-            <button
-              key={label}
-              type="button"
-              className="flex flex-col items-center gap-2 text-xs font-semibold text-slate-800 transition-transform hover:scale-[1.02]"
-            >
-              <Icon className="h-7 w-7 text-black" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
+        <div className="text-sm text-white/60">{todayLabel}</div>
       </div>
 
-      {/* Hero tiles */}
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <GlassCard className="p-6">
+          <SectionHeader
+            title="Baseline Cognitif"
+            subtitle="Votre profil de référence"
+          />
+          <div className="mt-6 h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={DASHBOARD_DATA.baseline} outerRadius="70%">
+                <PolarGrid stroke="rgba(255,255,255,0.12)" />
+                <PolarAngleAxis dataKey="label" tick={{ fill: "#9CA3AF", fontSize: 12 }} />
+                <PolarRadiusAxis tick={false} axisLine={false} />
+                <Radar
+                  dataKey="value"
+                  stroke="#3B82F6"
+                  fill="#3B82F6"
+                  fillOpacity={0.35}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <SectionHeader title="Baromètre Hebdo" subtitle="Stress & charge cognitive" />
+          <div className="mt-6 h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={DASHBOARD_DATA.weekly}>
+                <XAxis dataKey="weekLabel" tick={{ fill: "#9CA3AF", fontSize: 12 }} />
+                <YAxis tick={{ fill: "#9CA3AF", fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0B0B0B",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "12px",
+                    color: "#E5E7EB",
+                  }}
+                />
+                <Legend wrapperStyle={{ color: "#9CA3AF", fontSize: "12px" }} />
+                <Line type="monotone" dataKey="stress" stroke="#3B82F6" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="cognitiveLoad" stroke="#93C5FD" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </GlassCard>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-3xl border border-[#f6cada] bg-gradient-to-br from-[#fef5f9] to-white p-6 shadow-[0_18px_36px_rgba(201,20,89,0.12)]">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.35em] text-[#c91459]/70">Focus du jour</h2>
-          <p className="mt-3 text-lg font-semibold text-[#c91459]">Respirer pour relâcher la pression</p>
-          <p className="mt-2 text-sm text-slate-500">Une routine guidée en 5 minutes pour apaiser l&apos;esprit et rééquilibrer votre énergie.</p>
-          <Button className="mt-4 bg-[#c91459] hover:bg-[#b2124f]">Lancer le rituel</Button>
-        </div>
-        <div className="relative overflow-hidden rounded-3xl border border-[#f6cada] bg-[#101828] text-white shadow-[0_25px_45px_rgba(16,24,40,0.25)]">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80')] bg-cover bg-center opacity-60" />
-          <div className="relative z-10 p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.35em] text-white/70">Inspiration</h2>
-            <p className="mt-3 text-lg font-semibold">Retrouver l&apos;équilibre</p>
-            <p className="mt-2 text-sm text-white/80">Des actions concrètes et des exercices de respiration à intégrer dans votre semaine.</p>
-            <Button variant="outline" className="mt-4 border-white/40 text-white hover:bg-white/10">Découvrir</Button>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-3xl border border-[#f6cada] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.08)]">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=900&q=80')] bg-cover bg-center opacity-40" />
-          <div className="relative z-10 p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.35em] text-[#c91459]/80">Coach Beyond Care</h2>
-            <p className="mt-3 text-lg font-semibold text-slate-900">Prendre le temps pour soi</p>
-            <p className="mt-2 text-sm text-slate-700">Planifiez un temps calme guidé par nos coachs. Vos données restent privées et protégées.</p>
-            <Button variant="ghost" className="mt-4 text-[#c91459] hover:bg-[#fef0f6]">Planifier</Button>
-          </div>
-        </div>
+        <KpiCard
+          title="Qualité du sommeil"
+          value={`${DASHBOARD_DATA.kpis.sleepQuality}%`}
+          helper="Sur les 7 derniers jours"
+          icon={<Moon className="h-5 w-5" />}
+        />
+        <KpiCard
+          title="Charge mentale"
+          value={`${DASHBOARD_DATA.kpis.mentalLoad}%`}
+          helper="Charge perçue"
+          icon={<Activity className="h-5 w-5" />}
+        >
+          <ProgressBar value={DASHBOARD_DATA.kpis.mentalLoad} />
+        </KpiCard>
+        <KpiCard
+          title="État de flux"
+          value="Niveau"
+          helper="Synchronisation cognitive"
+          icon={<Zap className="h-5 w-5" />}
+        >
+          <FlowIndicator level={DASHBOARD_DATA.kpis.flowState} />
+        </KpiCard>
       </div>
 
-      {/* Score global */}
-      <Card className="border border-[#f6cada] bg-gradient-to-br from-[#fef5f9] to-white">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" style={{ color: brandColor }} />
-            Score global
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-4">
-            <div className="flex-1">
-              {data.overallScore !== null ? (
-                <>
-                  <div className="mb-2 text-5xl font-bold" style={{ color: brandColor }}>
-                    {data.overallScore.toFixed(1)}
-                    <span className="text-2xl text-gray-500">/100</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    {data.scoreTrend === "up" ? (
-                      <>
-                        <TrendingUp className="h-4 w-4 text-green-500" />
-                        <span className="text-green-600 font-medium">En amélioration</span>
-                      </>
-                    ) : data.scoreTrend === "down" ? (
-                      <>
-                        <TrendingDown className="h-4 w-4 text-red-500" />
-                        <span className="text-red-600 font-medium">En baisse</span>
-                      </>
-                    ) : (
-                      <span className="text-slate-500">Stable</span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-slate-500">
-                  Aucun score disponible pour le moment
-                </div>
-              )}
-            </div>
-            {data.recentScores.length > 0 && (
-              <div className="text-right">
-                <div className="mb-1 text-sm text-slate-500">Dernière évaluation</div>
-                <div className="text-lg font-semibold">
-                  {new Date(data.recentScores[0].date).toLocaleDateString("fr-FR")}
-                </div>
-              </div>
-            )}
+      <GlassCard className="p-6 border-[#3B82F6]/40 bg-gradient-to-r from-[#3B82F6]/20 via-white/5 to-transparent">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-white/60">
+              Le conseil de Jessica
+            </p>
+            <h3 className="mt-3 text-2xl font-semibold text-[#E5E7EB]">
+              {advice}
+            </h3>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Indicateurs clés */}
-       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border border-[#f6cada] bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium" style={{ color: brandColor }}>Stress</CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold" style={{ color: brandColor }}>
-              S
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" style={{ color: brandColor }}>
-              {data.indicators.stress}/100
-            </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#f7d1e0]">
-              <div
-                className="h-full transition-all"
-                style={{
-                  width: `${data.indicators.stress}%`,
-                  backgroundColor: brandColor,
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-[#f6cada] bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium" style={{ color: brandColor }}>Bien-être</CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold" style={{ color: brandColor }}>
-              B
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" style={{ color: brandColor }}>
-              {data.indicators.wellbeing}/100
-            </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#f7d1e0]">
-              <div
-                className="h-full transition-all"
-                style={{
-                  width: `${data.indicators.wellbeing}%`,
-                  backgroundColor: brandColor,
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-[#f6cada] bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium" style={{ color: brandColor }}>Motivation</CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fce7f0] text-xs font-bold" style={{ color: brandColor }}>
-              M
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" style={{ color: brandColor }}>
-              {data.indicators.motivation}/100
-            </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#f7d1e0]">
-              <div
-                className="h-full transition-all"
-                style={{
-                  width: `${data.indicators.motivation}%`,
-                  backgroundColor: brandColor,
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-       </div>
-
-      {/* Prochain questionnaire */}
-      {data.nextQuestionnaireDate && (
-        <Card className="border border-[#f6cada] bg-[#fef5f9]">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2" style={{ color: brandColor }}>
-              <Calendar className="h-5 w-5" style={{ color: brandColor }} />
-              Prochain questionnaire
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="mb-1 text-lg font-semibold" style={{ color: brandColor }}>
-                  {new Date(data.nextQuestionnaireDate).toLocaleDateString("fr-FR", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </div>
-                <div className="text-sm text-slate-600">
-                  Vous recevrez une notification et un email pour compléter le questionnaire
-                </div>
-              </div>
-              <Clock className="h-8 w-8" style={{ color: brandColor }} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Questionnaires */}
-      <Card className="border border-[#f1d8e3] bg-white">
-        <CardHeader>
-          <CardTitle style={{ color: brandColor }}>Mes questionnaires</CardTitle>
-          <CardDescription className="text-slate-500">
-            Historique de vos questionnaires de santé mentale
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border border-[#f3c3d6] bg-[#fef5f9] p-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5" style={{ color: brandColor }} />
-                <div>
-                  <div className="font-medium" style={{ color: brandColor }}>Questionnaires complétés</div>
-                  <div className="text-sm text-slate-500">
-                    {data.completedQuestionnaires} questionnaire{data.completedQuestionnaires > 1 ? "s" : ""}
-                  </div>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="border-[#f1c5d9]"
-                style={{ color: brandColor }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#fef0f6"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-              >
-                <Link href="/dashboard/apprenant/questionnaires">
-                  Voir l'historique
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Link>
-              </Button>
-            </div>
-
-            {data.pendingQuestionnaires > 0 && (
-              <div className="flex items-center justify-between rounded-lg border border-[#f6cada] bg-[#fef5f9] p-4">
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5" style={{ color: brandColor }} />
-                  <div>
-                    <div className="font-medium" style={{ color: brandColor }}>Questionnaires en attente</div>
-                    <div className="text-sm text-slate-600">
-                      {data.pendingQuestionnaires} questionnaire{data.pendingQuestionnaires > 1 ? "s" : ""} à compléter
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  className="bg-[#c91459] hover:bg-[#b2124f]"
-                  size="sm"
-                  asChild
-                >
-                  <Link href="/dashboard/apprenant/questionnaires">
-                    Compléter
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Évolution */}
-      {data.recentScores.length > 0 && (
-        <Card className="border border-[#f1d8e3] bg-white">
-          <CardHeader>
-            <CardTitle style={{ color: brandColor }}>Évolution</CardTitle>
-            <CardDescription className="text-slate-500">
-              Votre progression sur les 30 derniers jours
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex h-64 items-center justify-center text-slate-400">
-              Graphique d'évolution (à implémenter)
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          <button
+            type="button"
+            className="rounded-full border border-[#3B82F6] bg-[#3B82F6]/15 px-6 py-3 text-sm font-semibold text-[#E5E7EB] transition hover:bg-[#3B82F6]/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3B82F6]"
+          >
+            Voir le protocole
+          </button>
+        </div>
+      </GlassCard>
     </div>
   );
 }
-
-

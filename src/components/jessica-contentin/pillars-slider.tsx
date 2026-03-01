@@ -31,17 +31,11 @@ const BUCKET_NAME = "Jessica CONTENTIN";
 
 const pillars = [
   {
-    id: "confiance",
-    title: "Confiance en soi",
-    description: "Développez votre estime de vous et révélez votre potentiel",
-    image: getSupabaseStorageUrl(BUCKET_NAME, "Confiance_en_soi.jpg") || "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80",
-    href: "/jessica-contentin/specialites/confiance-en-soi",
-  },
-  {
     id: "stress",
     title: "Gestion du stress",
     description: "Apprenez à gérer votre stress et retrouvez votre sérénité",
-    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200&q=80",
+    image: "",
+    video: "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Jessica%20CONTENTIN/Video_gest_du_stress.mp4",
     href: "/jessica-contentin/specialites/gestion-stress",
   },
   {
@@ -66,8 +60,15 @@ const pillars = [
     href: "/jessica-contentin/specialites/strategie-apprentissage",
   },
   {
+    id: "guidance-parentale",
+    title: "Guidance parentale",
+    description: "Soutien et conseils pour les parents dans leur rôle éducatif",
+    image: "https://images.unsplash.com/photo-1504151932400-72d4384f04b3?w=1200&q=80",
+    href: "/jessica-contentin/specialites/guidance-parentale",
+  },
+  {
     id: "orientation",
-    title: "Orientation scolaire",
+    title: "Orientation",
     description: "Trouvez votre voie et construisez votre projet professionnel",
     image: getSupabaseStorageUrl(BUCKET_NAME, "parcoursup.jpg") || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80",
     href: "/jessica-contentin/specialites/orientation",
@@ -213,21 +214,33 @@ export function PillarsSlider() {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.5 }}
                 className="relative w-full h-full"
-              >
-                <Image
-                  src={activePillar.image}
-                  alt={activePillar.title}
-                  fill
-                  className="object-cover"
-                  priority
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    // Fallback vers une image par défaut si l'image Supabase ne charge pas
-                    if (!target.src.includes('unsplash')) {
-                      target.src = "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80";
-                    }
-                  }}
-                />
+              >                {activePillar.video ? (
+                  <video
+                    className="h-full w-full object-cover"
+                    src={activePillar.video}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                  />
+                ) : (
+                  <Image
+                    src={activePillar.image}
+                    alt={activePillar.title}
+                    fill
+                    className="object-cover"
+                    priority
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      // Fallback vers une image par défaut si l"image Supabase ne charge pas
+                      if (!target.src.includes("unsplash")) {
+                        target.src =
+                          "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80";
+                      }
+                    }}
+                  />
+                )}
               </motion.div>
             </AnimatePresence>
           </motion.div>
@@ -267,4 +280,6 @@ export function PillarsSlider() {
     </motion.section>
   );
 }
+
+
 

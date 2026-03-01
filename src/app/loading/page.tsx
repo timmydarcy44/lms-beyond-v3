@@ -23,15 +23,21 @@ export default async function LoadingPage() {
         firstName = getUserName(profile?.full_name || authUser.email || "");
         
         // Récupérer l'organisation de l'utilisateur
-        const { data: membership } = await supabase
+        const { data: memberships } = await supabase
           .from("org_memberships")
           .select("org_id")
           .eq("user_id", authUser.id)
-          .limit(1)
-          .single();
-        
-        if (membership?.org_id) {
-          organizationLogo = await getOrganizationLogo(membership.org_id);
+          .limit(10);
+
+        if (memberships && memberships.length > 0) {
+          for (const membership of memberships) {
+            if (!membership?.org_id) continue;
+            const logo = await getOrganizationLogo(membership.org_id);
+            if (logo) {
+              organizationLogo = logo;
+              break;
+            }
+          }
         }
       }
     } catch (error) {

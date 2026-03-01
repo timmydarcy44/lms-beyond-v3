@@ -1,9 +1,13 @@
 import { AdminDashboardView } from "@/components/admin/AdminDashboardView";
-import { getKpis, getRecentActivity } from "@/lib/queries/admin";
+import { getKpis, getRecentActivity, getQualiopiOverview } from "@/lib/queries/admin";
 import { getSession } from "@/lib/auth/session";
 
 export default async function AdminPage() {
-  const [kpis, activity] = await Promise.all([getKpis(), getRecentActivity()]);
+  const [kpis, activity, qualiopi] = await Promise.all([
+    getKpis(),
+    getRecentActivity(),
+    getQualiopiOverview(),
+  ]);
   const session = await getSession();
 
   const kpiCards = [
@@ -77,10 +81,11 @@ export default async function AdminPage() {
   ];
 
   return (
-    <AdminDashboardView 
-      kpis={kpiCards} 
-      quickItems={quickItems} 
+    <AdminDashboardView
+      kpis={kpiCards}
+      quickItems={quickItems}
       activity={activity}
+      qualiopi={qualiopi}
       firstName={session?.fullName ?? null}
       email={session?.email ?? null}
     />

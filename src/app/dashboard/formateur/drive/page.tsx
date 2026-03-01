@@ -29,34 +29,41 @@ export default async function FormateurDrivePage() {
       firstName={session?.fullName ?? null}
       email={session?.email ?? null}
     >
-      <section className="flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-white md:text-3xl">Espace de dépôt apprenants</h1>
-          <p className="max-w-3xl text-sm text-white/70">
-            Visualisez les documents créés dans le studio apprenant et concentrez-vous sur ceux qui exploitent fortement l'IA. Chaque
-            fichier est horodaté et attribué à son auteur pour faciliter vos retours personnalisés.
-          </p>
-        </div>
-        <Button
-          asChild
-          className="rounded-full bg-gradient-to-r from-[#00C6FF] via-[#8E2DE2] to-[#FF6FD8] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-[#8E2DE2]/40"
-        >
-          <Link href="#drive-consigne">Créer une consigne</Link>
-        </Button>
-      </section>
+      <div className="space-y-16 pt-2">
+        <section className="rounded-3xl border border-white/10 bg-slate-950/80 px-6 py-10 md:px-12">
+          <div className="flex flex-wrap items-center justify-between gap-6">
+            <div className="space-y-4">
+              <h1 className="text-2xl font-semibold text-white md:text-[2.4rem] md:leading-tight">
+                Espace de lecture et d’analyse des productions apprenantes
+              </h1>
+              <p className="max-w-3xl text-sm leading-relaxed text-white/70 md:text-base">
+                Consultez les documents déposés par vos apprenants, identifiez ceux qui méritent un retour prioritaire et
+                apportez un regard pédagogique contextualisé. Les indicateurs IA sont fournis à titre d’aide et restent non
+                déterminants.
+              </p>
+            </div>
+            <Button
+              asChild
+              className="rounded-full border border-cyan-400/30 bg-cyan-500/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/40 hover:bg-cyan-500/30 focus-visible:ring-2 focus-visible:ring-cyan-300"
+            >
+              <Link href="#drive-consigne">Créer une consigne</Link>
+            </Button>
+          </div>
+        </section>
 
-      <Card className="border-white/10 bg-white/5 text-white">
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">
-            Synthèse du drive • mise à jour {format(new Date(), "PPPp", { locale: fr })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DriveStorageSummary documents={documents} />
-        </CardContent>
-      </Card>
+        <Card className="border border-white/10 bg-slate-950/75 text-white">
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold uppercase tracking-[0.3em] text-white/55">
+              Synthèse rapide • mise à jour {format(new Date(), "PPPp", { locale: fr })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DriveStorageSummary documents={documents} />
+          </CardContent>
+        </Card>
 
-      <DriveStorageTable documents={documents} learners={learners} groups={groups} />
+        <DriveStorageTable documents={documents} learners={learners} groups={groups} />
+      </div>
       <div id="drive-consigne" className="h-1" />
     </DashboardShell>
   );

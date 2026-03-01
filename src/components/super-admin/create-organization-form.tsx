@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createOrganizationWithAdminAction } from "@/app/super/organisations/new/actions";
 import { toast } from "sonner";
 import { Loader2, Plus, X } from "lucide-react";
 
@@ -23,6 +22,7 @@ export function CreateOrganizationForm() {
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [members, setMembers] = useState<MemberInput[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleAddMember = () => {
     setMembers([...members, { email: "", role: "learner", fullName: "" }]);
@@ -41,20 +41,32 @@ export function CreateOrganizationForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setFieldErrors({});
 
     try {
-      const result = await createOrganizationWithAdminAction({
-        name,
-        slug: slug || undefined,
-        description: description || undefined,
-        members: members.filter((m) => m.email && m.fullName),
+      const res = await fetch("/api/super-admin/organizations/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          slug: slug || undefined,
+          description: description || undefined,
+          members: members.filter((m) => m.email && m.fullName),
+        }),
       });
 
-      if (result.success) {
+      const json = await res.json().catch(() => null);
+
+      if (res.ok && json?.ok) {
         toast.success("Organisation créée avec succès !");
-        router.push(`/super/organisations/${result.organizationId}`);
+        router.push(`/super/organisations/${json.organization?.id}`);
       } else {
-        toast.error(result.error || "Erreur lors de la création");
+        if (json?.fieldErrors) {
+          setFieldErrors(json.fieldErrors);
+        }
+        toast.error(json?.error ? `Impossible de créer l'organisation : ${json.error}` : "Erreur lors de la création");
       }
     } catch (error) {
       toast.error("Une erreur est survenue");
@@ -78,8 +90,11 @@ export function CreateOrganizationForm() {
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: Beyond Learning"
             required
-            className="mt-2 border-gray-300 bg-white text-gray-900 focus:border-gray-900"
+            className={`mt-2 border-gray-300 bg-white text-gray-900 focus:border-gray-900 ${fieldErrors.name ? "border-red-500" : ""}`}
           />
+          {fieldErrors.name ? (
+            <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>
+          ) : null}
         </div>
 
         <div>

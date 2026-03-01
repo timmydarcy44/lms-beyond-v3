@@ -30,8 +30,18 @@ export default async function SuperDashboard() {
     getTopPerformers(),
   ]);
 
+  type QuickAction = {
+    title: string;
+    description: string;
+    href: string;
+    image: string;
+    icon: typeof Building2;
+    color: string;
+    category?: string;
+  };
+
   // Actions rapides pour contentin.cabinet@gmail.com
-  const contentinQuickActions = [
+  const contentinQuickActions: QuickAction[] = [
     {
       title: "Créer une formation",
       description: "Créer une nouvelle formation pour votre catalogue",
@@ -59,13 +69,14 @@ export default async function SuperDashboard() {
   ];
 
   // Actions rapides pour les autres super admins
-  const defaultQuickActions = [
+  const defaultQuickActions: QuickAction[] = [
     {
       title: "Créer une Organisation",
       description: "Initialiser une nouvelle structure organisationnelle",
       href: "/super/organisations/new",
       image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80",
       icon: Building2,
+      category: "Organisation",
       color: "from-blue-500/20 via-blue-400/30 to-transparent",
     },
     {
@@ -74,6 +85,7 @@ export default async function SuperDashboard() {
       href: "/super/utilisateurs/new?role=admin",
       image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80",
       icon: Users,
+      category: "Administration",
       color: "from-purple-500/20 via-purple-400/30 to-transparent",
     },
     {
@@ -82,7 +94,17 @@ export default async function SuperDashboard() {
       href: "/super/utilisateurs/new",
       image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80",
       icon: Users,
+      category: "Utilisateurs",
       color: "from-green-500/20 via-green-400/30 to-transparent",
+    },
+    {
+      title: "Gérer les Open Badges",
+      description: "Créer des badges, définir critères, suivre les demandes et émettre.",
+      href: "/super/open-badges/badgeclasses",
+      image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
+      icon: Award,
+      category: "Certifications",
+      color: "from-amber-500/20 via-amber-400/30 to-transparent",
     },
     {
       title: "Créer une formation pour Beyond No School",
@@ -90,6 +112,7 @@ export default async function SuperDashboard() {
       href: "/super/studio/modules/new/choose?assignment_type=no_school",
       image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80",
       icon: Building2,
+      category: "Utilisateurs",
       color: "from-orange-500/20 via-orange-400/30 to-transparent",
     },
     {
@@ -98,6 +121,7 @@ export default async function SuperDashboard() {
       href: "/super/studio/modules/new/choose?assignment_type=organization",
       image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
       icon: Building2,
+      category: "Utilisateurs",
       color: "from-indigo-500/20 via-indigo-400/30 to-transparent",
     },
   ];
@@ -139,7 +163,12 @@ export default async function SuperDashboard() {
                   {/* Badge discret en haut */}
                   <div className="mb-2">
                     <span className="text-xs font-medium uppercase tracking-wider text-white/70">
-                      {action.title.includes("Organisation") ? "Organisation" : action.title.includes("Administrateur") ? "Administration" : "Utilisateurs"}
+                      {action.category ??
+                        (action.title.includes("Organisation")
+                          ? "Organisation"
+                          : action.title.includes("Administrateur")
+                            ? "Administration"
+                            : "Utilisateurs")}
                     </span>
                   </div>
                   {/* Titre principal - style Apple */}

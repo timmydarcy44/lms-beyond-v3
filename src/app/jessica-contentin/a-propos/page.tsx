@@ -77,9 +77,9 @@ const specialites = [
   },
   {
     id: "therapie",
-    title: "Thérapie psycho-émotionnelle",
+    title: "Accompagnement psycho-émotionnel",
     icon: Lightbulb,
-    description: "Accompagnement thérapeutique pour la gestion des émotions.",
+    description: "Accompagnement pour la gestion des émotions.",
   },
   {
     id: "neuroeducation",
@@ -123,7 +123,7 @@ export default function AProposPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Psychopédagogue certifiée en neuroéducation à Fleury-sur-Orne (Caen)
+              Psychopédagogue certifiée en neuroéducation à Bretteville sur Odon (Caen)
             </p>
             <p
               className="text-lg text-[#2F2A25]/70 max-w-2xl mx-auto mt-4"
@@ -131,7 +131,7 @@ export default function AProposPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Accompagnement personnalisé pour troubles DYS, TDA-H, harcèlement scolaire et phobie scolaire. Cabinet à Fleury-sur-Orne, près de Caen en Normandie.
+              Accompagnement personnalisé pour troubles DYS, TDA-H, harcèlement scolaire et phobie scolaire. Cabinet à Bretteville sur Odon, près de Caen en Normandie.
             </p>
           </motion.div>
         </div>
@@ -407,7 +407,7 @@ export default function AProposPage() {
             "telephone": "+33683477174",
             "address": {
               "@type": "PostalAddress",
-              "addressLocality": "Fleury-sur-Orne",
+              "addressLocality": "Bretteville sur Odon",
               "addressRegion": "Normandie",
               "postalCode": "14123",
               "addressCountry": "FR",

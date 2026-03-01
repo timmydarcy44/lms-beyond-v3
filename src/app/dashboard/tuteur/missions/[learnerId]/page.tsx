@@ -117,7 +117,7 @@ export default async function TutorLearnerMissionsPage({ params }: TutorLearnerM
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-white/70">
             <div>
-              <p className="font-semibold text-white/80">Compétences clés</p>
+              <p className="font-semibold text-white/80">Soft Skills clés</p>
               <div className="mt-2 flex flex-wrap gap-2 text-xs">
                 {referential.skillFocus.map((skill) => (
                   <span

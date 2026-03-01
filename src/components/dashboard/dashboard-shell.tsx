@@ -24,6 +24,9 @@ type DashboardShellProps = {
   email?: string | null;
   compactHeader?: boolean; // Mode compact pour réduire le header
   organizationLogo?: string | null;
+  forcedTheme?: "light" | "dark";
+  className?: string;
+  mainClassName?: string;
 };
 
 const getDesktopMatch = () =>
@@ -39,12 +42,33 @@ export const DashboardShell = ({
   email,
   compactHeader = false,
   organizationLogo,
+  forcedTheme,
+  className,
+  mainClassName,
 }: DashboardShellProps) => {
   const { resolvedTheme } = useTheme();
   const pathname = usePathname();
   const isLight = resolvedTheme === "light";
-  const isApprenantDashboard = pathname?.startsWith("/dashboard/apprenant");
+  const learnerPrefixes = [
+    "/dashboard/apprenant",
+    "/dashboard/formations",
+    "/dashboard/parcours",
+    "/dashboard/ressources",
+    "/dashboard/tests",
+    "/dashboard/apprenant/todo",
+    "/dashboard/drive",
+    "/dashboard/beyond-care",
+    "/dashboard/beyond-connect",
+    "/dashboard/catalogue",
+    "/catalog",
+  ];
+  const isLearnerSurface = learnerPrefixes.some((prefix) => pathname?.startsWith(prefix));
   const isBeyondCareArea = pathname?.includes("beyond-care");
+  const effectiveTheme =
+    forcedTheme ??
+    (isBeyondCareArea ? "light" : isLight ? "light" : "dark");
+  const useDarkBackground = effectiveTheme === "dark";
+  const useSidebar = !isLearnerSurface;
   
   // Initialiser avec false pour éviter les problèmes d'hydratation
   // On mettra à jour après le montage dans useEffect
@@ -91,20 +115,27 @@ export const DashboardShell = ({
       ? `Vous êtes dans ${breadcrumbs.map((crumb) => crumb.label).join(" › ")}`
       : "Bienvenue sur votre espace de pilotage.");
 
-  const sidebarWidth = isDesktop ? (isOpen ? "18rem" : "5rem") : "0";
+  const sidebarWidth = useSidebar
+    ? isDesktop
+      ? isOpen
+        ? "18rem"
+        : "5rem"
+      : "0"
+    : "0";
 
   return (
     <div
       className={cn(
         "flex min-h-screen transition-colors relative overflow-hidden",
+        className,
         isBeyondCareArea
           ? "bg-white text-slate-900"
-          : isLight
-            ? "bg-slate-50 text-slate-900"
-            : "text-white",
+          : useDarkBackground
+            ? "text-white"
+            : "bg-slate-50 text-slate-900",
       )}
       style={
-        !isLight && !isBeyondCareArea
+        useDarkBackground
           ? {
               backgroundColor: 'transparent',
             }
@@ -113,93 +144,108 @@ export const DashboardShell = ({
     >
       <MessageNotificationsWatcher />
       {/* Fond avec gradient bleu et formes abstraites - appliqué partout */}
-      {!isLight && !isBeyondCareArea && (
+      {useDarkBackground && (
         <>
-          {/* Gradient de base bleu-gris inspiré Revolut */}
+          {/* Gradient de base noir satiné */}
           <div 
             className="fixed inset-0 -z-10"
             style={{
-              background: 'linear-gradient(135deg, #1a1b2e 0%, #16213e 30%, #0f172a 60%, #0a0f1a 100%)',
+              background: 'linear-gradient(130deg, #050505 0%, #0b0b0b 45%, #111111 100%)',
             }}
           />
-          {/* Formes abstraites - cercles dégradés avec blur */}
+          {/* Halos subtils */}
           <div 
             className="fixed top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 blur-3xl -z-10"
             style={{
-              background: 'radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(148, 163, 184, 0.28) 0%, transparent 70%)',
             }}
           />
           <div 
             className="fixed top-1/3 left-0 w-[500px] h-[500px] rounded-full opacity-15 blur-3xl -z-10"
             style={{
-              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(209, 213, 219, 0.22) 0%, transparent 70%)',
             }}
           />
           <div 
             className="fixed bottom-0 right-1/4 w-[400px] h-[400px] rounded-full opacity-12 blur-2xl -z-10"
             style={{
-              background: 'radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(148, 163, 184, 0.2) 0%, transparent 70%)',
             }}
           />
           <div 
             className="fixed bottom-1/3 left-1/4 w-[350px] h-[350px] rounded-full opacity-10 blur-2xl -z-10"
             style={{
-              background: 'radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(226, 232, 240, 0.16) 0%, transparent 70%)',
             }}
           />
           {/* Formes géométriques subtiles */}
           <div 
             className="fixed top-0 left-0 w-64 h-64 opacity-5 -z-10"
             style={{
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%)',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 100%)',
               clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
             }}
           />
           <div 
             className="fixed bottom-0 right-0 w-80 h-80 opacity-4 -z-10"
             style={{
-              background: 'linear-gradient(45deg, transparent 0%, rgba(139, 92, 246, 0.08) 100%)',
+              background: 'linear-gradient(45deg, transparent 0%, rgba(209, 213, 219, 0.08) 100%)',
               clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
             }}
           />
         </>
       )}
       {/* Sidebar intégrée */}
-      <Sidebar isOpen={isOpen} onToggle={() => setIsOpen((prev) => !prev)} organizationLogo={organizationLogo} />
+      {useSidebar ? (
+        <>
+          <Sidebar
+            isOpen={isOpen}
+            onToggle={() => setIsOpen((prev) => !prev)}
+            organizationLogo={organizationLogo}
+            forcedTheme={effectiveTheme}
+          />
 
-      {!isDesktop && isOpen ? (
-        <button
-          type="button"
-          aria-label="Fermer la navigation"
-          className="fixed inset-0 z-30 bg-black/60 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
+          {!isDesktop && isOpen ? (
+            <button
+              type="button"
+              aria-label="Fermer la navigation"
+              className="fixed inset-0 z-30 bg-black/60 md:hidden"
+              onClick={() => setIsOpen(false)}
+            />
+          ) : null}
+        </>
       ) : null}
 
       <div 
         className="flex flex-1 flex-col relative transition-[margin-left] duration-300 ease-in-out min-w-0"
         style={{
           marginLeft: sidebarWidth,
-          backgroundColor: isBeyondCareArea ? "#ffffff" : !isLight ? "transparent" : undefined,
+          backgroundColor: isBeyondCareArea ? "#ffffff" : useDarkBackground ? "transparent" : undefined,
         }}
       >
-        <DashboardHeader
-          title={displayTitle}
-          subtitle={displaySubtitle}
-          breadcrumbs={breadcrumbs}
-          onToggleSidebar={isDesktop ? undefined : () => setIsOpen((prev) => !prev)}
-          isSidebarOpen={isDesktop ? true : isOpen}
-          compact={compactHeader}
-        />
+        {useSidebar ? (
+          <DashboardHeader
+            title={displayTitle}
+            subtitle={displaySubtitle}
+            breadcrumbs={breadcrumbs}
+            onToggleSidebar={
+              useSidebar && !isDesktop ? () => setIsOpen((prev) => !prev) : undefined
+            }
+            isSidebarOpen={useSidebar ? (isDesktop ? true : isOpen) : false}
+            compact={compactHeader}
+            forcedTheme={effectiveTheme}
+          />
+        ) : null}
         <main
           className={cn(
             "relative flex-1 overflow-x-hidden overflow-y-auto px-4 pb-16 md:px-10 transition-colors w-full",
-            isApprenantDashboard ? "pt-4" : "pt-8",
+            mainClassName,
+            isLearnerSurface ? "pt-0 md:pt-0 apprenant-theme" : "pt-8",
             !isDesktop && isOpen ? "blur-sm" : "",
-            isLight ? "bg-slate-50" : "bg-transparent",
+            useDarkBackground ? "bg-transparent" : "bg-slate-50",
           )}
           style={
-            !isLight
+            useDarkBackground
               ? {
                   backgroundColor: 'transparent',
                 }

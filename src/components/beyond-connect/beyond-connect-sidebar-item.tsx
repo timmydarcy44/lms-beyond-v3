@@ -12,13 +12,15 @@ type BeyondConnectSidebarItemProps = {
   href: string;
   isOpen: boolean;
   role: "admin" | "formateur" | "apprenant";
+  appearance?: "default" | "apple";
 };
 
-export function BeyondConnectSidebarItem({ href, isOpen, role }: BeyondConnectSidebarItemProps) {
+export function BeyondConnectSidebarItem({ href, isOpen, role, appearance = "default" }: BeyondConnectSidebarItemProps) {
   const pathname = usePathname();
   const isActive = pathname?.startsWith(href);
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
+  const isApple = appearance === "apple";
   const router = useRouter();
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -118,43 +120,65 @@ export function BeyondConnectSidebarItem({ href, isOpen, role }: BeyondConnectSi
         )}
       </AnimatePresence>
 
-      <Link href={href} title="Beyond Connect" className="relative" onClick={handleClick}>
+      <Link href={href} title="Beyond Connect" className="relative block" onClick={handleClick}>
         <div
           className={cn(
-            "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-            // Style premium avec bordure et couleur bleue
-            "border-2",
-            isLight
+            "group flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200",
+            isApple ? "rounded-[20px] border" : "rounded-lg border-2",
+            isApple
               ? isActive
-                ? "bg-gradient-to-r from-[#e6edf7] to-[#d4e1f0] text-[#002a6b] border-[#003087] shadow-sm"
-                : "border-[#00308755] text-slate-600 hover:bg-[#e6edf7]/60 hover:text-[#002a6b] hover:border-[#003087]"
-              : isActive
-                ? "bg-gradient-to-r from-[#003087]/25 to-[#003087]/10 text-[#4a7bc8] border-[#003087]/70 backdrop-blur-sm shadow-lg shadow-[#003087]/30"
-                : "border-[#003087]/35 text-white/70 hover:bg-[#003087]/10 hover:text-[#4a7bc8] hover:border-[#003087]/60",
+                ? "border-[#003087]/45 bg-[#003087]/25 text-white shadow-[0_40px_120px_-55px_rgba(0,48,135,0.55)]"
+                : "border-[#003087]/30 bg-white/8 text-white/85 shadow-[0_22px_65px_-55px_rgba(8,8,24,0.7)] backdrop-blur-xl hover:border-[#003087]/45 hover:bg-[#003087]/12 hover:text-white"
+              : isLight
+                ? isActive
+                  ? "bg-gradient-to-r from-[#e6edf7] to-[#d4e1f0] text-[#002a6b] border-[#003087] shadow-sm"
+                  : "border-[#00308755] text-slate-600 hover:bg-[#e6edf7]/60 hover:text-[#002a6b] hover:border-[#003087]"
+                : isActive
+                  ? "bg-gradient-to-r from-[#003087]/25 to-[#003087]/10 text-[#4a7bc8] border-[#003087]/70 backdrop-blur-sm shadow-lg shadow-[#003087]/30"
+                  : "border-[#003087]/35 text-white/70 hover:bg-[#003087]/10 hover:text-[#4a7bc8] hover:border-[#003087]/60",
             isOpen ? "gap-3" : "gap-0 justify-center px-2",
-            isAnimating && "ring-2 ring-[#003087]/50",
+            isAnimating && !isApple && "ring-2 ring-[#003087]/50",
           )}
         >
-          <Briefcase
+          <span
             className={cn(
-              "h-5 w-5 shrink-0 transition-colors",
-              isLight
+              "flex items-center justify-center transition-all",
+              isApple
                 ? isActive
-                  ? "text-[#003087]"
-                  : "text-[#003087] group-hover:text-[#002a6b]"
-                : isActive
-                  ? "text-[#4a7bc8]"
-                  : "text-[#6b8fd4]/80 group-hover:text-[#4a7bc8]",
+                  ? "h-10 w-10 flex-shrink-0 rounded-full border border-white/40 bg-white/18 text-white shadow-[0_22px_60px_-36px_rgba(0,48,135,0.5)]"
+                  : "h-10 w-10 flex-shrink-0 rounded-full border border-white/20 bg-white/10 text-white/80 shadow-[0_22px_60px_-44px_rgba(8,8,24,0.6)] group-hover:border-white/30 group-hover:bg-white/15 group-hover:text-white"
+                : "h-5 w-5 flex-shrink-0",
             )}
-          />
+          >
+            <Briefcase
+              className={cn(
+                "transition-colors",
+                isApple
+                  ? "h-4 w-4"
+                  : isLight
+                    ? isActive
+                      ? "h-5 w-5 text-[#003087]"
+                      : "h-5 w-5 text-[#003087] group-hover:text-[#002a6b]"
+                    : isActive
+                      ? "h-5 w-5 text-[#4a7bc8]"
+                      : "h-5 w-5 text-[#6b8fd4]/80 group-hover:text-[#4a7bc8]",
+              )}
+            />
+          </span>
           {isOpen && (
             <span className="transition-opacity duration-300">
               Beyond Connect
             </span>
           )}
-          {/* Badge premium */}
           {isOpen && (
-            <span className="ml-auto rounded bg-[#003087]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#003087]/80">
+            <span
+              className={cn(
+                "ml-auto px-1.5 py-0.5 text-[10px] font-semibold",
+                isApple
+                  ? "rounded-full border border-white/20 bg-white/10 text-white/80"
+                  : "rounded bg-[#003087]/10 text-[#003087]/80",
+              )}
+            >
               PREMIUM
             </span>
           )}

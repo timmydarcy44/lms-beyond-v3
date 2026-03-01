@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  EVALUATOR
+  EARNER
+}
+
+enum BadgeClassStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ReceivabilityReviewMode {
+  AI
+  HUMAN
+  MIXED
+}
+
+enum EvidenceType {
+  FILE
+  URL
+  TEXT
+}
+
+enum AssessmentStatus {
+  DRAFT
+  SUBMITTED
+  NEEDS_INFO
+  APPROVED
+  REJECTED
+}
+
+enum VerificationType {
+  HOSTED
+  SIGNED
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  users      User[]
+  issuers    IssuerProfile[]
+  frameworks CompetencyFramework[]
+  badges     BadgeClass[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  orgId     String
+  email     String   @unique
+  name      String?
+  role      UserRole @default(EARNER)
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  assessmentsAsEarner    Assessment[] @relation("AssessmentEarner")
+  assessmentsAsEvaluator Assessment[] @relation("AssessmentEvaluator")
+  evidenceSubmissions    Evidence[]   @relation("EvidenceSubmitter")
+  assertions             Assertion[]  @relation("AssertionEarner")
+  auditLogs              AuditLog[]   @relation("AuditActor")
+  createdBadgeClasses    BadgeClass[] @relation("BadgeClassCreator")
+}
+
+model IssuerProfile {
+  id          String   @id @default(uuid())
+  orgId       String
+  name        String
+  url         String
+  email       String
+  description String?
+  imageUrl    String?
+  publicKeys  Json?
+  createdAt   DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  badgeClasses BadgeClass[]
+  assertions   Assertion[]
+  revocations  RevocationEntry[]
+  statusLists  StatusList[]
+}
+
+model CompetencyFramework {
+  id          String   @id @default(uuid())
+  orgId       String
+  name        String
+  description String?
+  url         String?
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  competencies Competency[]
+}
+
+model Competency {
+  id           String   @id @default(uuid())
+  frameworkId  String
+  name         String
+  description  String?
+  category     String?
+  level        String?
+  tags         String[]
+  createdAt    DateTime @default(now())
+
+  framework CompetencyFramework @relation(fields: [frameworkId], references: [id])
+}
+
+model BadgeClass {
+  id               String           @id @default(uuid())
+  orgId            String
+  issuerId         String
+  createdByUserId  String
+  name             String
+  description      String
+  imageTemplateUrl String
+  imageUrl         String?
+  criteriaUrl      String?
+  criteriaText     String?
+  criteriaMarkdown String?
+  alignment        Json?
+  tags             String[]
+  version          Int              @default(1)
+  status           BadgeClassStatus @default(DRAFT)
+  receivabilityReviewMode ReceivabilityReviewMode @default(HUMAN)
+  requiresEnrollment Boolean        @default(false)
+  requiredCourseId String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  issuer       IssuerProfile @relation(fields: [issuerId], references: [id])
+  createdBy    User          @relation("BadgeClassCreator", fields: [createdByUserId], references: [id])
+  assessments  Assessment[]
+  assertions   Assertion[]
+  criteria     BadgeCriteria[]
+  receivability BadgeReceivability?
+
+  @@index([orgId])
+  @@index([issuerId])
+  @@index([requiredCourseId])
+}
+
+model BadgeCriteria {
+  id           String     @id @default(uuid())
+  badgeClassId String
+  label        String
+  description  String?
+  sortOrder    Int
+  createdAt    DateTime   @default(now())
+
+  badgeClass BadgeClass @relation(fields: [badgeClassId], references: [id], onDelete: Cascade)
+
+  @@index([badgeClassId])
+}
+
+model BadgeReceivability {
+  id                 String     @id @default(uuid())
+  badgeClassId       String     @unique
+  expectedModalities String
+  aiEvaluationPrompt String
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  badgeClass BadgeClass @relation(fields: [badgeClassId], references: [id], onDelete: Cascade)
+}
+
+model Evidence {
+  id            String       @id @default(uuid())
+  assessmentId  String?
+  type          EvidenceType
+  url           String?
+  fileKey       String?
+  mime          String?
+  title         String?
+  description   String?
+  submittedById String
+  submittedAt   DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+
+  assessment Assessment? @relation(fields: [assessmentId], references: [id])
+  submittedBy User @relation("EvidenceSubmitter", fields: [submittedById], references: [id])
+}
+
+model Assessment {
+  id           String           @id @default(uuid())
+  badgeClassId String
+  earnerId     String
+  evaluatorId  String?
+  status       AssessmentStatus @default(DRAFT)
+  rubric       Json?
+  decisionAt   DateTime?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  badgeClass BadgeClass @relation(fields: [badgeClassId], references: [id])
+  earner     User       @relation("AssessmentEarner", fields: [earnerId], references: [id])
+  evaluator  User?      @relation("AssessmentEvaluator", fields: [evaluatorId], references: [id])
+  evidence   Evidence[]
+  assertions Assertion[]
+}
+
+model Assertion {
+  id                     String           @id @default(uuid())
+  badgeClassId           String
+  issuerId               String
+  earnerId               String
+  assessmentId           String?
+  recipientIdentifierHash String
+  recipientSalt          String
+  issuedOn               DateTime
+  expires                DateTime?
+  evidenceRefs           Json?
+  verificationType       VerificationType @default(HOSTED)
+  hostedUrl              String?
+  signedJws              String?
+  bakedImageUrl          String?
+  revoked                Boolean          @default(false)
+  revokedAt              DateTime?
+  revokedByUserId        String?
+  revocationReason       String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  badgeClass BadgeClass @relation(fields: [badgeClassId], references: [id])
+  issuer     IssuerProfile @relation(fields: [issuerId], references: [id])
+  earner     User @relation("AssertionEarner", fields: [earnerId], references: [id])
+  assessment Assessment? @relation(fields: [assessmentId], references: [id])
+  revocationEntry RevocationEntry?
+
+  @@index([revokedAt])
+}
+
+model RevocationEntry {
+  id          String   @id @default(uuid())
+  issuerId    String
+  assertionId String   @unique
+  reason      String?
+  revokedAt   DateTime @default(now())
+
+  issuer    IssuerProfile @relation(fields: [issuerId], references: [id])
+  assertion Assertion     @relation(fields: [assertionId], references: [id])
+}
+
+model StatusList {
+  id            String   @id @default(uuid())
+  issuerId      String
+  type          String
+  statusPurpose String
+  encodedList   String?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  issuer IssuerProfile @relation(fields: [issuerId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id])
+}
+
+enum ProfileRole {
+  ADMIN
+  ENTREPRISE
+  PARTICULIER
+  APPRENANT
+  ECOLE
+  SALARIE
+}
+
+model Profile {
+  id          String      @id @default(uuid()) @db.Uuid
+  email       String?
+  full_name   String?
+  first_name  String?
+  last_name   String?
+  phone       String?
+  avatar_url  String?
+  role        ProfileRole @default(PARTICULIER)
+  disc_profile String?
+  disc_score   Int?
+  disc_scores  Json?
+  disc_status  String?
+  score_d      Int?
+  score_i      Int?
+  score_s      Int?
+  score_c      Int?
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  @@map("profiles")
+}

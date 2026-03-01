@@ -77,7 +77,7 @@ export function BlogEditor() {
         },
       }),
       TextStyle,
-      FontSize,
+      FontSize as unknown as any,
       Color,
       TextAlign.configure({
         types: ["heading", "paragraph"],
@@ -93,7 +93,7 @@ export function BlogEditor() {
         },
       }),
       Underline,
-    ],
+    ] as unknown as any[],
     content: "",
     immediatelyRender: false, // Évite les problèmes d'hydratation SSR
     editorProps: {
@@ -105,7 +105,7 @@ export function BlogEditor() {
         ),
       },
     },
-  });
+  } as any);
 
   // Calcul du score SEO (après la déclaration de editor)
   const seoScore = useMemo(() => {

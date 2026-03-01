@@ -28,7 +28,7 @@ export function TestimonialsSection() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const }}
           className="text-center mb-24"
         >
           <h2 className="text-5xl md:text-7xl font-medium text-[#0B0B0C] mb-6 leading-[1.1] tracking-[-0.02em]" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
@@ -45,7 +45,7 @@ export function TestimonialsSection() {
               key={index}
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-              transition={{ duration: 1.5, delay: index * 0.2, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 1.5, delay: index * 0.2, ease: [0.22, 1, 0.36, 1] as const }}
               className="text-center max-w-3xl mx-auto"
             >
               <blockquote className="text-2xl md:text-3xl text-[#0B0B0C] mb-8 leading-relaxed font-light italic" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif', letterSpacing: '-0.01em' }}>
@@ -61,3 +61,4 @@ export function TestimonialsSection() {
     </section>
   );
 }
+

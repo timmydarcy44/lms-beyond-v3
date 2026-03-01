@@ -56,7 +56,7 @@ export function HeroSection() {
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const }}
           className="text-3xl md:text-4xl lg:text-5xl font-medium text-white mb-4 leading-[1.15] tracking-[-0.02em]"
           style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
         >
@@ -69,7 +69,7 @@ export function HeroSection() {
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] as const }}
           className="text-sm md:text-base text-white/60 mb-8 max-w-2xl mx-auto leading-relaxed font-light"
           style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif', letterSpacing: '-0.01em' }}
         >
@@ -84,7 +84,7 @@ export function HeroSection() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.5, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.5, delay: 0.4, ease: [0.22, 1, 0.36, 1] as const }}
           className="flex flex-col sm:flex-row items-center justify-center gap-3"
         >
           <Button
@@ -134,3 +134,4 @@ export function HeroSection() {
     </section>
   );
 }
+

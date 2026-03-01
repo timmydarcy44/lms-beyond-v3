@@ -32,7 +32,8 @@ export function DyslexiaSettingsPalette({
   onClose,
   onPreferencesChange,
 }: DyslexiaSettingsPaletteProps) {
-  const { preferences: contextPrefs, updatePreferences: updateContextPrefs } = useDyslexiaMode();
+  const { preferences: contextPrefs, updatePreferences: updateContextPrefs, isDyslexiaMode, toggleDyslexiaMode } =
+    useDyslexiaMode();
   const [preferences, setPreferences] = useState<AccessibilityPreferences>({
     dyslexia_mode_enabled: false,
     letter_spacing: 0.15,
@@ -80,7 +81,7 @@ export function DyslexiaSettingsPalette({
   const handleSave = async () => {
     try {
       setSaving(true);
-      const prefsToSave = { ...preferences, dyslexia_mode_enabled: true };
+      const prefsToSave = { ...preferences };
 
       const response = await fetch("/api/accessibility/preferences", {
         method: "PUT",
@@ -105,7 +106,7 @@ export function DyslexiaSettingsPalette({
 
   const updatePreference = (key: keyof AccessibilityPreferences, value: any) => {
     try {
-      const newPrefs = { ...preferences, [key]: value, dyslexia_mode_enabled: true };
+      const newPrefs = { ...preferences, [key]: value };
       setPreferences(newPrefs);
 
       if (key === "font_family") {
@@ -133,7 +134,10 @@ export function DyslexiaSettingsPalette({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div
+      className="no-dyslexia fixed inset-0 z-[10002] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      data-neuro-palette
+    >
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#1A1A1A] p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -156,6 +160,19 @@ export function DyslexiaSettingsPalette({
           </div>
         ) : (
           <div className="space-y-6">
+            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <div>
+                <div className="text-sm font-semibold text-white">Neuro adaptation</div>
+                <div className="text-xs text-white/60">Activer / désactiver l'adaptation</div>
+              </div>
+              <Switch
+                checked={isDyslexiaMode}
+                onCheckedChange={() => {
+                  toggleDyslexiaMode();
+                  updatePreference("dyslexia_mode_enabled", !isDyslexiaMode);
+                }}
+              />
+            </div>
             <div className="space-y-3">
               <Label className="flex items-center gap-2 text-white">
                 <Type className="h-4 w-4" />

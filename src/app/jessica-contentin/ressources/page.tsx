@@ -2,6 +2,27 @@ import { Suspense } from "react";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import RessourcesPageClient from "./page-client";
 
+export const dynamic = "force-dynamic";
+
+const logDev = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+const warnDev = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.warn(...args);
+  }
+};
+const errorDev = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.error(...args);
+  }
+};
+
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 const JESSICA_CONTENTIN_UUID = "17364229-fe78-4986-ac69-41b880e34631"; // UUID direct de Jessica Contentin
 
@@ -118,7 +139,7 @@ async function getCatalogItemsFallback(supabase: any, userId: string | null) {
 async function getCachedCatalogItems(userId: string | null) {
   const supabase = getServiceRoleClient();
   if (!supabase) {
-    console.warn("[RessourcesPage] Supabase client is null");
+    warnDev("[RessourcesPage] Supabase client is null");
     return [];
   }
 
@@ -133,7 +154,7 @@ async function getCachedCatalogItems(userId: string | null) {
       // Ne pas logger l'erreur si c'est juste que la fonction n'existe pas encore
       // (elle sera créée via le script SQL)
       if (error.code !== '42883') { // 42883 = function does not exist
-        console.error("[RessourcesPage] Error calling get_jessica_catalog_items:", {
+        errorDev("[RessourcesPage] Error calling get_jessica_catalog_items:", {
           error,
           code: error.code,
           message: error.message,
@@ -144,15 +165,15 @@ async function getCachedCatalogItems(userId: string | null) {
         });
       }
       // Fallback : utiliser l'ancienne méthode avec requêtes multiples
-      console.log("[RessourcesPage] Falling back to old method...");
+      logDev("[RessourcesPage] Falling back to old method...");
       return await getCatalogItemsFallback(supabase, userId);
     }
 
     return data || [];
   } catch (error) {
-    console.error("[RessourcesPage] Exception calling get_jessica_catalog_items:", error);
+    errorDev("[RessourcesPage] Exception calling get_jessica_catalog_items:", error);
     // Fallback : utiliser l'ancienne méthode
-    console.log("[RessourcesPage] Falling back to old method due to exception...");
+    logDev("[RessourcesPage] Falling back to old method due to exception...");
     return await getCatalogItemsFallback(supabase, userId);
   }
 }
@@ -194,7 +215,7 @@ export default async function RessourcesPage() {
     }
   } catch (error) {
     // Ignorer les erreurs d'auth pour cette page publique
-    console.log("[RessourcesPage] Could not get user (non-blocking):", error);
+    logDev("[RessourcesPage] Could not get user (non-blocking)");
   }
 
   // Récupérer les items (1 seule requête optimisée au lieu de 60-80)
@@ -202,7 +223,7 @@ export default async function RessourcesPage() {
   // Les index SQL et la fonction optimisée suffisent pour les performances
   const items = await getCachedCatalogItems(userId);
 
-  console.log("[RessourcesPage] Retrieved items count:", items.length, "with cache");
+  logDev("[RessourcesPage] Retrieved items count:", items.length, "with cache");
 
   // Sérialiser les items pour éviter les problèmes de sérialisation Next.js
   const serializedItems = items.map((item: any) => ({

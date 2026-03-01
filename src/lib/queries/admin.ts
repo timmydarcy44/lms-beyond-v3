@@ -178,6 +178,43 @@ export type ActivityFeedItem = {
   created_at: string;
 };
 
+export type QualiopiLearnerSummary = {
+  id: string;
+  fullName: string | null;
+  email: string | null;
+  groups: Array<{ id: string; name: string }>;
+  totalDurationSeconds: number;
+  activeDurationSeconds: number;
+  coursesFollowed: number;
+  averageCompletion: number;
+  completionSampleCount: number;
+  testsTaken: number;
+  testsAverageScore: number | null;
+  badgesCount: number;
+  lastActivityAt: string | null;
+};
+
+export type QualiopiLearnerPublicSummary = Omit<QualiopiLearnerSummary, "completionSampleCount">;
+
+export type QualiopiGroupSummary = {
+  id: string;
+  name: string;
+  memberCount: number;
+  totalDurationSeconds: number;
+  activeDurationSeconds: number;
+  coursesFollowed: number;
+  averageCompletion: number;
+  averageScore: number | null;
+  testsTaken: number;
+  badgesCount: number;
+  learners: QualiopiLearnerPublicSummary[];
+};
+
+export type QualiopiOverview = {
+  groups: QualiopiGroupSummary[];
+  learners: QualiopiLearnerPublicSummary[];
+};
+
 // No fallback data - return zeros if no data
 const emptyKpis: AdminKpiResult = {
   totalCourses: 0,
@@ -195,6 +232,11 @@ const fallbackAssignableCatalog: AdminAssignableCatalog = {
   paths: [],
   resources: [],
   tests: [],
+};
+
+const emptyQualiopiOverview: QualiopiOverview = {
+  groups: [],
+  learners: [],
 };
 
 // ============================================================================
@@ -304,6 +346,296 @@ export const getRecentActivity = async (): Promise<ActivityFeedItem[]> => {
 
   // In the future, this could query activity specific to the organization
   return [];
+};
+
+// ============================================================================
+// QUALIOPI OVERVIEW
+// ============================================================================
+
+export const getQualiopiOverview = async (): Promise<QualiopiOverview> => {
+  const orgId = await getAdminOrgId();
+
+  if (!orgId) {
+    console.warn("[admin|getQualiopiOverview] No organization found for admin");
+    return emptyQualiopiOverview;
+  }
+
+  const supabase = getServiceRoleClient();
+  if (!supabase) return emptyQualiopiOverview;
+
+  try {
+    const toNumber = (value: unknown): number => {
+      if (typeof value === "number") return value;
+      if (typeof value === "bigint") return Number(value);
+      if (typeof value === "string") {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
+    const { data: groupsData, error: groupsError } = await supabase
+      .from("groups")
+      .select("id, name")
+      .eq("org_id", orgId);
+
+    if (groupsError) {
+      throw groupsError;
+    }
+
+    const { data: membershipRows, error: membershipsError } = await supabase
+      .from("org_memberships")
+      .select("user_id")
+      .eq("org_id", orgId)
+      .eq("role", "student");
+
+    if (membershipsError) {
+      throw membershipsError;
+    }
+
+    if (!membershipRows || membershipRows.length === 0) {
+      return emptyQualiopiOverview;
+    }
+
+    const learnerIds = membershipRows
+      .map((row) => row.user_id)
+      .filter((value): value is string => Boolean(value));
+
+    if (learnerIds.length === 0) {
+      return emptyQualiopiOverview;
+    }
+
+    const groupIds = (groupsData || []).map((group) => group.id);
+    const groupMap = new Map((groupsData || []).map((group) => [group.id, group]));
+
+    const [
+      { data: profiles, error: profilesError },
+      groupMembersResult,
+      { data: sessionRows, error: sessionsError },
+      { data: progressRows, error: progressError },
+      { data: enrollmentRows, error: enrollmentsError },
+      { data: testRows, error: testsError },
+      { data: badgeRows, error: badgesError },
+    ] = await Promise.all([
+      supabase.from("profiles").select("id, full_name, email").in("id", learnerIds),
+      groupIds.length > 0
+        ? supabase
+            .from("group_members")
+            .select("user_id, group_id")
+            .in("user_id", learnerIds)
+            .in("group_id", groupIds)
+        : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from("learning_sessions")
+        .select("user_id, duration_seconds, duration_active_seconds, started_at, ended_at")
+        .in("user_id", learnerIds),
+      supabase
+        .from("course_progress")
+        .select("user_id, progress_percent")
+        .in("user_id", learnerIds),
+      supabase
+        .from("enrollments")
+        .select("user_id, course_id, created_at")
+        .in("user_id", learnerIds),
+      supabase
+        .from("test_attempts")
+        .select("user_id, score")
+        .in("user_id", learnerIds),
+      supabase
+        .from("user_badges")
+        .select("user_id")
+        .in("user_id", learnerIds),
+    ]);
+
+    if (profilesError) throw profilesError;
+    if (sessionsError) throw sessionsError;
+    if (progressError) throw progressError;
+    if (enrollmentsError) throw enrollmentsError;
+    if (testsError) throw testsError;
+    if (badgesError) throw badgesError;
+
+    const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+    (profiles || []).forEach((profile) => {
+      if (profile?.id) {
+        profileMap.set(profile.id, { full_name: profile.full_name ?? null, email: profile.email ?? null });
+      }
+    });
+
+    const groupsByUserId = new Map<string, Array<{ id: string; name: string }>>();
+    (groupMembersResult.data || []).forEach((membership: { user_id?: string; group_id?: string }) => {
+      if (membership?.user_id && membership?.group_id) {
+        const group = groupMap.get(membership.group_id);
+        if (group) {
+          if (!groupsByUserId.has(membership.user_id)) {
+            groupsByUserId.set(membership.user_id, []);
+          }
+          groupsByUserId.get(membership.user_id)!.push({ id: group.id, name: group.name });
+        }
+      }
+    });
+
+    type SessionStats = { total: number; active: number; lastActivity: string | null };
+    const sessionStats = new Map<string, SessionStats>();
+    (sessionRows || []).forEach((row) => {
+      if (!row?.user_id) return;
+      const total = toNumber(row.duration_seconds);
+      const active = toNumber(row.duration_active_seconds);
+      const current = sessionStats.get(row.user_id) ?? { total: 0, active: 0, lastActivity: null };
+      const candidate = (row.ended_at as string | null) ?? (row.started_at as string | null) ?? null;
+      current.total += total;
+      current.active += active;
+      if (candidate) {
+        if (!current.lastActivity || new Date(candidate).getTime() > new Date(current.lastActivity).getTime()) {
+          current.lastActivity = candidate;
+        }
+      }
+      sessionStats.set(row.user_id, current);
+    });
+
+    type CompletionStats = { total: number; count: number };
+    const completionStats = new Map<string, CompletionStats>();
+    (progressRows || []).forEach((row) => {
+      if (!row?.user_id) return;
+      const percent = toNumber(row.progress_percent);
+      const current = completionStats.get(row.user_id) ?? { total: 0, count: 0 };
+      current.total += percent;
+      current.count += 1;
+      completionStats.set(row.user_id, current);
+    });
+
+    const courseSets = new Map<string, Set<string>>();
+    const enrollmentLastMap = new Map<string, string>();
+    (enrollmentRows || []).forEach((row) => {
+      if (!row?.user_id || !row?.course_id) return;
+      if (!courseSets.has(row.user_id)) {
+        courseSets.set(row.user_id, new Set());
+      }
+      courseSets.get(row.user_id)!.add(String(row.course_id));
+      if (row.created_at) {
+        const current = enrollmentLastMap.get(row.user_id);
+        if (!current || new Date(row.created_at).getTime() > new Date(current).getTime()) {
+          enrollmentLastMap.set(row.user_id, row.created_at as string);
+        }
+      }
+    });
+
+    type TestStats = { totalScore: number; count: number };
+    const testStats = new Map<string, TestStats>();
+    (testRows || []).forEach((row) => {
+      if (!row?.user_id) return;
+      const numericScore = row?.score !== null && row?.score !== undefined ? Number(row.score) : NaN;
+      if (!Number.isFinite(numericScore)) return;
+      const current = testStats.get(row.user_id) ?? { totalScore: 0, count: 0 };
+      current.totalScore += numericScore;
+      current.count += 1;
+      testStats.set(row.user_id, current);
+    });
+
+    const badgeCounts = new Map<string, number>();
+    (badgeRows || []).forEach((row) => {
+      if (!row?.user_id) return;
+      const current = badgeCounts.get(row.user_id) ?? 0;
+      badgeCounts.set(row.user_id, current + 1);
+    });
+
+    const learnerSummaries: QualiopiLearnerSummary[] = learnerIds.map((userId) => {
+      const profile = profileMap.get(userId);
+      const session = sessionStats.get(userId) ?? { total: 0, active: 0, lastActivity: null };
+      const completion = completionStats.get(userId) ?? { total: 0, count: 0 };
+      const completionSamples = completion.count;
+      const coursesFollowed = courseSets.get(userId)?.size ?? 0;
+      const tests = testStats.get(userId) ?? { totalScore: 0, count: 0 };
+      const badges = badgeCounts.get(userId) ?? 0;
+      const groups = groupsByUserId.get(userId) || [];
+
+      const averageCompletion = completionSamples > 0 ? completion.total / completionSamples : 0;
+      const testsTaken = tests.count;
+      const testsAverageScore = testsTaken > 0 ? tests.totalScore / testsTaken : null;
+
+      let lastActivity = session.lastActivity;
+      const enrollmentFallback = enrollmentLastMap.get(userId);
+      if (
+        (!lastActivity && enrollmentFallback) ||
+        (lastActivity && enrollmentFallback && new Date(enrollmentFallback).getTime() > new Date(lastActivity).getTime())
+      ) {
+        lastActivity = enrollmentFallback;
+      }
+
+      return {
+        id: userId,
+        fullName: profile?.full_name ?? null,
+        email: profile?.email ?? null,
+        groups,
+        totalDurationSeconds: session.total,
+        activeDurationSeconds: session.active,
+        coursesFollowed,
+        averageCompletion,
+        completionSampleCount: completionSamples,
+        testsTaken,
+        testsAverageScore,
+        badgesCount: badges,
+        lastActivityAt: lastActivity ?? null,
+      };
+    });
+
+    const sanitizedLearners: QualiopiLearnerPublicSummary[] = learnerSummaries.map(
+      ({ completionSampleCount, ...rest }) => rest,
+    );
+
+    const groupSummaries: QualiopiGroupSummary[] = (groupsData || []).map((group) => {
+      const groupLearners = learnerSummaries.filter((learner) =>
+        learner.groups.some((membership) => membership.id === group.id),
+      );
+
+      const memberCount = groupLearners.length;
+      const totalDurationSeconds = groupLearners.reduce((sum, learner) => sum + learner.totalDurationSeconds, 0);
+      const activeDurationSeconds = groupLearners.reduce((sum, learner) => sum + learner.activeDurationSeconds, 0);
+      const coursesFollowed = groupLearners.reduce((sum, learner) => sum + learner.coursesFollowed, 0);
+      const completionNumerator = groupLearners.reduce(
+        (sum, learner) => sum + learner.averageCompletion * learner.completionSampleCount,
+        0,
+      );
+      const completionDenominator = groupLearners.reduce(
+        (sum, learner) => sum + learner.completionSampleCount,
+        0,
+      );
+      const averageCompletion =
+        completionDenominator > 0 ? completionNumerator / completionDenominator : 0;
+
+      const testsTaken = groupLearners.reduce((sum, learner) => sum + learner.testsTaken, 0);
+      const testsNumerator = groupLearners.reduce((sum, learner) => {
+        if (learner.testsTaken > 0 && learner.testsAverageScore !== null) {
+          return sum + learner.testsAverageScore * learner.testsTaken;
+        }
+        return sum;
+      }, 0);
+      const testsDenominator = groupLearners.reduce((sum, learner) => sum + learner.testsTaken, 0);
+      const averageScore = testsDenominator > 0 ? testsNumerator / testsDenominator : null;
+      const badgesCount = groupLearners.reduce((sum, learner) => sum + learner.badgesCount, 0);
+
+      return {
+        id: group.id,
+        name: group.name,
+        memberCount,
+        totalDurationSeconds,
+        activeDurationSeconds,
+        coursesFollowed,
+        averageCompletion,
+        averageScore,
+        testsTaken,
+        badgesCount,
+        learners: groupLearners.map(({ completionSampleCount, ...rest }) => rest),
+      };
+    });
+
+    return {
+      groups: groupSummaries,
+      learners: sanitizedLearners,
+    };
+  } catch (error) {
+    console.error("[admin|getQualiopiOverview] error:", error);
+    return emptyQualiopiOverview;
+  }
 };
 
 // ============================================================================

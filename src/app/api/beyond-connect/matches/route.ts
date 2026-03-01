@@ -18,58 +18,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const companyId = searchParams.get("company_id");
+    const companyId = searchParams.get("company_id") || user.id;
     const jobOfferId = searchParams.get("job_offer_id");
 
-    // Récupérer les organisations de l'utilisateur
-    const { data: memberships } = await supabase
-      .from("org_memberships")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "instructor"]);
-
-    if (!memberships || memberships.length === 0) {
-      return NextResponse.json({ matches: [] });
-    }
-
-    const orgIds = memberships.map(m => m.org_id);
-
-    // Récupérer les entreprises de ces organisations
-    const { data: companies } = await supabase
-      .from("beyond_connect_companies")
-      .select("id")
-      .in("organization_id", orgIds);
-
-    if (!companies || companies.length === 0) {
-      return NextResponse.json({ matches: [] });
-    }
-
-    const companyIds = companies.map(c => c.id);
-
     let query = supabase
-      .from("beyond_connect_matches")
-      .select(`
-        *,
-        beyond_connect_companies(
-          id,
-          name,
-          is_premium
-        ),
-        beyond_connect_job_offers(
-          id,
-          title,
-          contract_type
-        ),
-        profiles!beyond_connect_matches_user_id_fkey(
-          id,
-          email,
-          first_name,
-          last_name,
-          full_name,
-          avatar_url
-        )
-      `)
-      .in("company_id", companyIds);
+      .from("matches")
+      .select("*, profiles(*)")
+      .eq("company_id", companyId);
 
     if (companyId) {
       query = query.eq("company_id", companyId);
@@ -90,9 +45,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ matches: [] });
     }
 
-    // Pour les matchings, on affiche tous les candidats qui matchent
-    // (pas de filtre BtoC/BtoB pour les matchings)
-    return NextResponse.json({ matches });
+    const offerIds = Array.from(new Set(matches.map((m: any) => m.job_offer_id).filter(Boolean)));
+    const offersRes = offerIds.length > 0
+      ? await supabase.from("job_offers").select("id, title, contract_type").in("id", offerIds)
+      : { data: [] as any[] };
+    const offerMap = new Map((offersRes.data || []).map((o: any) => [o.id, o]));
+
+    const hydratedMatches = matches.map((match: any) => ({
+      ...match,
+      profiles: match.profiles || null,
+      beyond_connect_job_offers: offerMap.get(match.job_offer_id) || null,
+    }));
+
+    return NextResponse.json({ matches: hydratedMatches });
   } catch (error) {
     console.error("[beyond-connect/matches] Error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

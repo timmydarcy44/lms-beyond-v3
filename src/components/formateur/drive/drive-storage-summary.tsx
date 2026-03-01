@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 import { FormateurDriveDocument } from "@/lib/queries/formateur";
 
@@ -28,54 +29,63 @@ export function DriveStorageSummary({ documents }: DriveStorageSummaryProps) {
       label: "Documents",
       value: totalDocuments,
       hint: "Total stocké",
-      gradient: "from-[#0f172a] via-[#0b1120] to-[#1f2937]",
+      tone: "neutral",
     },
     {
       label: "Non lus",
       value: unreadDocuments,
       hint: "En attente de revue",
-      gradient: "from-[#111827] via-[#1e293b] to-[#2563eb]/30",
+      tone: "priority",
     },
     {
       label: "Score IA moyen",
       value: formatScore(aiAverage),
       hint: "Utilisation moyenne",
-      gradient: "from-[#0b1120] via-[#4f46e5]/40 to-[#8b5cf6]/40",
+      tone: "neutral",
     },
     {
       label: "IA intense",
       value: highAiDocuments,
       hint: ">= 75% d'usage IA",
-      gradient: "from-[#0f172a] via-[#db2777]/40 to-[#f472b6]/30",
+      tone: "focus",
     },
     {
       label: "En retard",
       value: lateDocuments,
       hint: "Dossiers à relancer",
-      gradient: "from-[#1f2937] via-[#ef4444]/40 to-[#f59e0b]/20",
+      tone: "alert",
     },
     {
       label: "Dossiers créés",
       value: pendingFolders,
       hint: "Espaces dédiés",
-      gradient: "from-[#101828] via-[#22d3ee]/40 to-[#2563eb]/20",
+      tone: "neutral",
     },
   ];
+
+  const toneClasses: Record<string, string> = {
+    neutral: "border border-white/10 bg-white/5",
+    priority: "border border-cyan-400/35 bg-cyan-500/12",
+    focus: "border border-blue-400/30 bg-blue-500/12",
+    alert: "border border-red-400/35 bg-red-500/12",
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
       {tiles.map((tile) => (
         <Card
           key={tile.label}
-          className={`relative overflow-hidden border border-white/10 bg-gradient-to-br ${tile.gradient} text-white shadow-lg shadow-black/30`}
+          className={cn(
+            "relative overflow-hidden rounded-2xl text-white shadow-lg shadow-black/25 backdrop-blur-sm",
+            toneClasses[tile.tone] ?? toneClasses.neutral,
+          )}
         >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10/5 via-transparent to-transparent" />
           <CardContent className="relative flex h-full flex-col justify-between gap-6 p-6">
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">{tile.label}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">{tile.label}</p>
               <p className="text-3xl font-semibold tracking-tight text-white">{tile.value}</p>
             </div>
-            <p className="inline-flex w-fit rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.3em] text-white/80">
+            <p className="inline-flex w-fit rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.3em] text-white/70">
               {tile.hint}
             </p>
           </CardContent>
@@ -84,5 +94,4 @@ export function DriveStorageSummary({ documents }: DriveStorageSummaryProps) {
     </div>
   );
 }
-
 

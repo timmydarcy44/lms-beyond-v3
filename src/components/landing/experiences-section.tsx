@@ -60,7 +60,7 @@ export function ExperiencesSection() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const }}
           className="text-center mb-24"
         >
           <h2 className="text-5xl md:text-7xl font-medium text-[#0B0B0C] mb-6 leading-[1.1] tracking-[-0.02em]" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
@@ -81,7 +81,7 @@ export function ExperiencesSection() {
                 key={experience.title}
                 initial={{ opacity: 0, y: 30 }}
                 animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                transition={{ duration: 1.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 1.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] as const }}
                 className="group"
               >
                 <div className="bg-white/60 backdrop-blur-xl rounded-3xl p-10 h-full border border-[#0B0B0C]/5 hover:border-[#0B0B0C]/10 transition-all duration-700 hover:shadow-xl hover:shadow-[#0B0B0C]/5">
@@ -113,3 +113,4 @@ export function ExperiencesSection() {
     </section>
   );
 }
+

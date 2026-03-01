@@ -27,6 +27,17 @@ export function ResourcesSection() {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const isConfidenceTest = (item: CatalogItem) => {
+    const titleLower = (item.title || "").toLowerCase();
+    const slug = (item as any).slug || "";
+    const slugLower = slug.toLowerCase();
+    return (
+      titleLower.includes("confiance en soi") ||
+      slugLower === "test-confiance-en-soi" ||
+      item.id === "c2ac900f-7adc-4d32-b1b3-516a4dfd9fcf" ||
+      item.content_id === "bc07c56a-8d9a-415a-adf3-20ff420af4d3"
+    );
+  };
 
   useEffect(() => {
     loadLatestResources();
@@ -46,8 +57,9 @@ export function ResourcesSection() {
       if (response.ok) {
         const data = await response.json();
         const items = data.items || [];
+        const filtered = items.filter((item: CatalogItem) => !isConfidenceTest(item));
         // Prendre les 4-5 derniers contenus (les plus récents)
-        const latest = items.slice(-5);
+        const latest = filtered.slice(-5);
         setLatestResources(latest);
       }
     } catch (error) {
@@ -122,7 +134,7 @@ export function ResourcesSection() {
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                 }}
               >
-                Découvrez une collection de ressources pour vous accompagner dans votre développement personnel et professionnel.
+                Découvrez des ressources, des tests ou encore des accompagnements digitalisés pour continuer à avancer.
               </p>
             </div>
 
@@ -184,39 +196,6 @@ export function ResourcesSection() {
                 </div>
               </div>
 
-              {/* Test de confiance en soi - Carte spéciale */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                whileHover={{ scale: 1.02 }}
-                className="mt-6 p-6 bg-gradient-to-r from-[#C6A664] to-[#B89654] rounded-2xl shadow-lg cursor-pointer group"
-                onClick={() => router.push('/test-confiance-en-soi')}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
-                    <Heart className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3
-                      className="text-lg font-semibold text-white mb-1"
-                      style={{
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                      }}
-                    >
-                      Test de Confiance en soi
-                    </h3>
-                    <p className="text-white/90 text-sm mb-3">
-                      Évaluez votre estime de soi, auto-efficacité, assertivité et compétences sociales
-                    </p>
-                    <div className="flex items-center text-white text-sm font-medium">
-                      Passer le test
-                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
             </div>
 
             <motion.div

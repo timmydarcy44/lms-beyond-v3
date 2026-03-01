@@ -25,6 +25,7 @@ type ProfileData = {
   passions?: string;
   current_studies?: string;
   education_level?: string;
+  is_certified?: boolean;
 };
 
 export function CandidateProfileEditPage({ userId }: CandidateProfileEditPageProps) {
@@ -64,6 +65,7 @@ export function CandidateProfileEditPage({ userId }: CandidateProfileEditPagePro
             passions: data.profile.passions || "",
             current_studies: data.profile.current_studies || "",
             education_level: data.profile.education_level || "",
+            is_certified: data.profile.is_certified || false,
           });
         }
       }
@@ -131,7 +133,14 @@ export function CandidateProfileEditPage({ userId }: CandidateProfileEditPagePro
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-4xl px-6 py-12">
         <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold text-gray-900">Mon profil</h1>
+          <div className="mb-2 flex items-center gap-3">
+            <h1 className="text-4xl font-bold text-gray-900">Mon profil</h1>
+            {profileData.is_certified && (
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6b00] text-xs font-semibold text-white">
+                B
+              </span>
+            )}
+          </div>
           <p className="text-lg text-gray-600">Gérez vos informations personnelles</p>
         </div>
 

@@ -6,15 +6,28 @@ import { BeyondConnectSidebarItem } from "./beyond-connect-sidebar-item";
 type BeyondConnectSidebarWrapperProps = {
   isOpen: boolean;
   role: "admin" | "formateur" | "apprenant";
+  appearance?: "default" | "apple";
 };
 
-export function BeyondConnectSidebarWrapper({ isOpen, role }: BeyondConnectSidebarWrapperProps) {
+export function BeyondConnectSidebarWrapper({ isOpen, role, appearance = "default" }: BeyondConnectSidebarWrapperProps) {
   const [hasAccess, setHasAccess] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const logDev = (...args: unknown[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(...args);
+    }
+  };
+  const errorDev = (...args: unknown[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.error(...args);
+    }
+  };
 
   useEffect(() => {
-    console.log("[beyond-connect-sidebar] Component mounted, role:", role);
+    logDev("[beyond-connect-sidebar] Component mounted, role:", role);
     // Vérifier immédiatement
     checkAccess();
     // Re-vérifier après un court délai pour éviter les problèmes de cache
@@ -29,7 +42,7 @@ export function BeyondConnectSidebarWrapper({ isOpen, role }: BeyondConnectSideb
 
   const checkAccess = async () => {
     try {
-      console.log("[beyond-connect-sidebar] Checking access...");
+      logDev("[beyond-connect-sidebar] Checking access...");
       // Vérifier si l'organisation a accès à Beyond Connect via API
       // Utiliser un timestamp pour éviter le cache
       const response = await fetch(`/api/beyond-connect/check-access?t=${Date.now()}`, {
@@ -40,26 +53,33 @@ export function BeyondConnectSidebarWrapper({ isOpen, role }: BeyondConnectSideb
         },
       });
       
-      console.log("[beyond-connect-sidebar] Response status:", response.status);
+      logDev("[beyond-connect-sidebar] Response status:", response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log("[beyond-connect-sidebar] ✅ Access check result:", data);
+        logDev("[beyond-connect-sidebar] ✅ Access check result:", data);
         const newHasAccess = data.hasAccess === true;
         const newIsAdmin = data.isAdmin === true;
-        console.log("[beyond-connect-sidebar] Setting state - hasAccess:", newHasAccess, "isAdmin:", newIsAdmin, "role:", role);
+        logDev(
+          "[beyond-connect-sidebar] Setting state - hasAccess:",
+          newHasAccess,
+          "isAdmin:",
+          newIsAdmin,
+          "role:",
+          role,
+        );
         setHasAccess(newHasAccess);
         setIsAdmin(newIsAdmin);
         setLoading(false);
       } else {
         const errorText = await response.text();
-        console.error("[beyond-connect-sidebar] ❌ API error:", response.status, errorText);
+        errorDev("[beyond-connect-sidebar] ❌ API error:", response.status, errorText);
         setHasAccess(false);
         setIsAdmin(false);
         setLoading(false);
       }
     } catch (error) {
-      console.error("[beyond-connect-sidebar] Error checking access:", error);
+      errorDev("[beyond-connect-sidebar] Error checking access:", error);
       setHasAccess(false);
       setIsAdmin(false);
       setLoading(false);
@@ -71,13 +91,24 @@ export function BeyondConnectSidebarWrapper({ isOpen, role }: BeyondConnectSideb
   // Note: hasAccess devrait être true si l'organisation a Beyond Connect activé
   const shouldShow = hasAccess === true || (role === "admin" && isAdmin === true);
 
-  console.log("[beyond-connect-sidebar] shouldShow:", shouldShow, "hasAccess:", hasAccess, "isAdmin:", isAdmin, "role:", role, "loading:", loading);
+  logDev(
+    "[beyond-connect-sidebar] shouldShow:",
+    shouldShow,
+    "hasAccess:",
+    hasAccess,
+    "isAdmin:",
+    isAdmin,
+    "role:",
+    role,
+    "loading:",
+    loading,
+  );
 
   if (loading || !shouldShow) {
     if (loading) {
-      console.log("[beyond-connect-sidebar] Not showing: loading");
+      logDev("[beyond-connect-sidebar] Not showing: loading");
     } else {
-      console.log("[beyond-connect-sidebar] Not showing: !shouldShow");
+      logDev("[beyond-connect-sidebar] Not showing: !shouldShow");
     }
     return null;
   }
@@ -87,6 +118,6 @@ export function BeyondConnectSidebarWrapper({ isOpen, role }: BeyondConnectSideb
     role === "admin" ? "/admin/beyond-connect" :
     "/beyond-connect-app";
 
-  return <BeyondConnectSidebarItem href={href} isOpen={isOpen} role={role} />;
+  return <BeyondConnectSidebarItem href={href} isOpen={isOpen} role={role} appearance={appearance} />;
 }
 

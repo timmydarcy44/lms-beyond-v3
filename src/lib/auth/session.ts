@@ -31,7 +31,7 @@ export const getSession = async () => {
 
   let { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, avatar_url, role")
+    .select("id, email, full_name, avatar_url, role, role_type")
     .eq("id", user.id)
     .single();
 
@@ -42,7 +42,7 @@ export const getSession = async () => {
     if (serviceClient) {
       const { data: serviceProfile, error: serviceError } = await serviceClient
         .from("profiles")
-        .select("id, email, full_name, avatar_url, role")
+        .select("id, email, full_name, avatar_url, role, role_type")
         .eq("id", user.id)
         .single();
 
@@ -76,6 +76,10 @@ export const getSession = async () => {
       role:
         (user.user_metadata && typeof user.user_metadata.role === "string"
           ? user.user_metadata.role
+          : null) ?? null,
+      role_type:
+        (user.user_metadata && typeof user.user_metadata.role_type === "string"
+          ? user.user_metadata.role_type
           : null) ?? null,
     };
   }
@@ -112,10 +116,15 @@ export const getSession = async () => {
   // Le rôle dans profiles est le rôle principal de l'utilisateur et doit TOUJOURS être utilisé s'il existe
   let dbRole: DatabaseRole;
   
-  // Utiliser le rôle de profiles en priorité ABSOLUE s'il existe
-  if (profile.role && profile.role !== null && profile.role !== "" && profile.role !== "null") {
+  // Utiliser role_type en priorité ABSOLUE si present
+  if (profile.role_type && profile.role_type !== null && profile.role_type !== "" && profile.role_type !== "null") {
+    dbRole = profile.role_type as DatabaseRole;
+    console.log(
+      `[session] ✅ Using profiles role_type (PRIORITY): "${profile.role_type}" for ${user.email}`
+    );
+  } else if (profile.role && profile.role !== null && profile.role !== "" && profile.role !== "null") {
     dbRole = profile.role as DatabaseRole;
-    console.log(`[session] ✅ Using profiles role (PRIORITY): "${profile.role}" for ${user.email}`);
+    console.log(`[session] ✅ Using profiles role (fallback): "${profile.role}" for ${user.email}`);
   } else if (membership?.role) {
     // Fallback : utiliser org_memberships.role SEULEMENT si profiles.role est vraiment vide/null
     // Mapping des rôles de org_memberships (peut être "learner" au lieu de "student")
@@ -131,7 +140,9 @@ export const getSession = async () => {
   const frontendRole = databaseToFrontendRole(dbRole);
   
   // Debug: logger le mapping pour diagnostiquer
-  console.log(`[session] Role mapping for ${user.email}: Profile="${profile.role}", Membership="${membership?.role}", Final DB="${dbRole}" → Frontend="${frontendRole}"`);
+  console.log(
+    `[session] Role mapping for ${user.email}: role_type="${profile.role_type}", role="${profile.role}", Membership="${membership?.role}", Final DB="${dbRole}" → Frontend="${frontendRole}"`
+  );
 
   const sessionData = {
     id: profile.id,

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { getApprenantDashboardData } from "@/lib/queries/apprenant";
+import { CinematicHero } from "@/components/dashboard/cinematic-hero";
 
 import LatestTestResults from "./latest-results";
 
@@ -43,13 +44,32 @@ export default async function LearnerTestsPage() {
 
   return (
     <DashboardShell
-      title="Tests"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/apprenant" },
-        { label: "Tests" },
-      ]}
+      title=""
+      breadcrumbs={[]}
+      forcedTheme="dark"
+      className="bg-[#050505] text-white"
+      mainClassName="bg-transparent"
     >
-      <div className="space-y-12">
+      <CinematicHero
+        hero={{
+          title: spotlight?.title ?? "Mesurez votre progression",
+          description:
+            spotlight?.meta ??
+            "Des diagnostics immersifs pour explorer vos soft skills et alimenter vos tableaux de bord personnels.",
+          badge: spotlight ? "Test du moment" : "Évaluations",
+          backgroundImage: spotlight?.image ?? null,
+          meta: "Tests",
+          tags: ["Tests"],
+        }}
+        featured={tests}
+        stats={[
+          { label: "Tests disponibles", value: `${tests.length}` },
+          { label: "Recommandés", value: `${recommended.length}` },
+        ]}
+        activeHref="/dashboard/tests"
+      />
+
+      <div className="relative z-10 -mt-24 mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 pb-20 md:px-10">
         {spotlight ? (
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
             <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#1C1C1C] via-[#101010] to-[#050505] p-10 shadow-[0_60px_140px_-60px_rgba(0,114,255,0.55)]">
@@ -128,6 +148,7 @@ export default async function LearnerTestsPage() {
             progress: card.progress ?? undefined,
           }))} 
           accent="learner" 
+          theme="dark"
         />
 
         <div className="space-y-8">
@@ -142,6 +163,7 @@ export default async function LearnerTestsPage() {
                 progress: card.progress ?? undefined,
               }))} 
               accent="learner" 
+              theme="dark"
             />
           ))}
         </div>

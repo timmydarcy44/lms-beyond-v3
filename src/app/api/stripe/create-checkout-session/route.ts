@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer la session de paiement Stripe
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -70,8 +71,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/catalogue/${itemType}/${itemId}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/catalogue/${itemType}/${itemId}`,
+      success_url: `${baseUrl}/dashboard/catalogue/${itemType}/${itemId}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/dashboard/catalogue/${itemType}/${itemId}`,
       metadata: {
         itemId,
         itemType,

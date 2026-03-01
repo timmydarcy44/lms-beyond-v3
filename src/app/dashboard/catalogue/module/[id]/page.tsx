@@ -19,6 +19,7 @@ type PageProps = {
 
 export default async function CatalogModuleDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const catalogItemId = id;
 
   if (!id) {
     notFound();
@@ -234,51 +235,72 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
   
   // SÉCURITÉ: Vérifier explicitement dans catalog_access si l'utilisateur a un accès
   // C'est la SEULE source de vérité pour l'accès utilisateur
-  // Essayer d'abord avec le catalog_item_id
-  let query = supabase
-    .from("catalog_access")
-    .select("access_status")
-    .eq("catalog_item_id", catalogItemId);
-  
-  // Construire la condition OR correctement
-  if (organizationId) {
-    query = query.or(`user_id.eq.${user.id},organization_id.eq.${organizationId}`);
-  } else {
-    query = query.eq("user_id", user.id).is("organization_id", null);
-  }
-  
-  let { data: userAccess, error: accessError } = await query.maybeSingle();
-  
-  // Si pas trouvé et qu'on a un content_id, essayer aussi avec le content_id
-  // (au cas où l'accès aurait été créé avec le content_id au lieu du catalog_item_id)
-  if (!userAccess && !accessError && catalogItem.content_id && catalogItem.content_id !== catalogItemId) {
-    console.log("[catalogue/module] Access not found with catalog_item_id, trying with content_id:", catalogItem.content_id);
-    let queryByContentId = supabase
+  let userAccess: { access_status: string; catalog_item_id?: string } | null = null;
+  let accessError: unknown = null;
+
+  if (user?.id) {
+    let accessQuery = supabase
       .from("catalog_access")
       .select("access_status, catalog_item_id")
-      .eq("catalog_item_id", catalogItem.content_id);
-    
+      .eq("catalog_item_id", catalogItemId);
+
     if (organizationId) {
-      queryByContentId = queryByContentId.or(`user_id.eq.${user.id},organization_id.eq.${organizationId}`);
+      accessQuery = accessQuery.or(`user_id.eq.${user.id},organization_id.eq.${organizationId}`);
     } else {
-      queryByContentId = queryByContentId.eq("user_id", user.id).is("organization_id", null);
+      accessQuery = accessQuery.eq("user_id", user.id).is("organization_id", null);
     }
-    
-    const { data: accessByContentId } = await queryByContentId.maybeSingle();
-    
-    if (accessByContentId) {
-      userAccess = accessByContentId;
-      console.log("[catalogue/module] Found access with content_id:", accessByContentId);
+
+    const accessResult = await accessQuery.maybeSingle();
+    userAccess = accessResult.data;
+    accessError = accessResult.error;
+
+    // Si pas trouvé et qu'on a un content_id, essayer aussi avec le content_id
+    // (au cas où l'accès aurait été créé avec le content_id au lieu du catalog_item_id)
+    if (
+      !userAccess &&
+      !accessError &&
+      catalogItem.content_id &&
+      catalogItem.content_id !== catalogItemId
+    ) {
+      console.log(
+        "[catalogue/module] Access not found with catalog_item_id, trying with content_id:",
+        catalogItem.content_id,
+      );
+      let queryByContentId = supabase
+        .from("catalog_access")
+        .select("access_status, catalog_item_id")
+        .eq("catalog_item_id", catalogItem.content_id);
+
+      if (organizationId) {
+        queryByContentId = queryByContentId.or(
+          `user_id.eq.${user.id},organization_id.eq.${organizationId}`,
+        );
+      } else {
+        queryByContentId = queryByContentId.eq("user_id", user.id).is("organization_id", null);
+      }
+
+      const accessByContentIdResult = await queryByContentId.maybeSingle();
+
+      if (accessByContentIdResult.data) {
+        userAccess = accessByContentIdResult.data;
+        console.log("[catalogue/module] Found access with content_id:", accessByContentIdResult.data);
+      }
+
+      if (accessByContentIdResult.error) {
+        accessError = accessByContentIdResult.error;
+      }
     }
-  }
-  
-  if (accessError) {
-    console.error("[catalogue/module] Error checking access:", accessError);
+
+    if (accessError) {
+      console.error("[catalogue/module] Error checking access:", accessError);
+    }
+  } else {
+    console.log("[catalogue/module] Access check skipped: no authenticated user");
   }
   
   console.log("[catalogue/module] Access check:", {
-    userId: user.id,
-    userEmail: user.email,
+    userId: user?.id ?? null,
+    userEmail: user?.email ?? null,
     organizationId,
     catalogItemId,
     contentId: catalogItem.content_id,
@@ -334,7 +356,7 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
   const surfaceColor = branding?.surface_color || '#F5F0E8';
   const textColor = branding?.text_primary_color || '#5D4037';
   const primaryColor = branding?.primary_color || '#8B6F47';
-  const accentColor = branding?.accent_color || '#D4AF37';
+  const accentColor = branding?.accent_color || "#007AFF";
 
   return (
     <BrandingProvider initialBranding={branding}>
@@ -435,7 +457,7 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Section Objectifs et Compétences */}
+      {/* Section Objectifs et Soft Skills */}
       {(objectives.length > 0 || skills.length > 0) && (
         <div 
           className="py-12 px-6 md:px-12 border-b"
@@ -472,7 +494,7 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
                 </div>
               )}
 
-              {/* Compétences développées */}
+              {/* Soft Skills développées */}
               {skills.length > 0 && (
                 <div className="space-y-4">
                   <h2 
@@ -482,7 +504,7 @@ export default async function CatalogModuleDetailPage({ params }: PageProps) {
                       color: primaryColor,
                     }}
                   >
-                    Compétences développées
+                    Soft Skills développées
                   </h2>
                   <div className="flex flex-wrap gap-3">
                     {skills.map((skill, idx) => (

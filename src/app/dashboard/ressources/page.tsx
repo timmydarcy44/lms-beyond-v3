@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Button } from "@/components/ui/button";
 import { getApprenantDashboardData } from "@/lib/queries/apprenant";
 import { ResourcePreviewButton } from "@/components/resources/resource-preview-button";
+import { CinematicHero } from "@/components/dashboard/cinematic-hero";
 
 const RESOURCE_TABS = [
   { key: "guide", label: "Guides" },
@@ -37,15 +38,37 @@ export default async function LearnerResourcesPage() {
 
   const firstResource = data.ressources[0];
 
+  const heroTags = RESOURCE_TABS.map((tab) => tab.label);
+
   return (
     <DashboardShell
-      title="Ressources"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/apprenant" },
-        { label: "Ressources" },
-      ]}
+      title=""
+      breadcrumbs={[]}
+      forcedTheme="dark"
+      className="bg-[#050505] text-white"
+      mainClassName="bg-transparent"
     >
-      <div className="space-y-12">
+      <CinematicHero
+        hero={{
+          title: firstResource?.title ?? "Ressources premium à portée de main",
+          description:
+            firstResource?.meta ??
+            "Guides, fiches, audios et vidéos pour nourrir vos ateliers et scénariser vos sessions en un clin d’œil.",
+          badge: firstResource ? "Focus ressource" : "Bibliothèque Beyond",
+          backgroundImage: firstResource?.image ?? null,
+          meta: "Ressources",
+          tags: heroTags,
+        }}
+        featured={data.ressources}
+        stats={[
+          { label: "Catalogue", value: `${data.ressources.length}` },
+          { label: "Guides", value: `${resourcesByType.guide?.length ?? 0}` },
+          { label: "Audios", value: `${resourcesByType.audio?.length ?? 0}` },
+        ]}
+        activeHref="/dashboard/ressources"
+      />
+
+      <div className="relative z-10 -mt-24 mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 pb-20 md:px-10">
         {firstResource ? (
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#FF512F]/25 via-[#DD2476]/20 to-transparent p-8 shadow-[0_40px_120px_-40px_rgba(221,36,118,0.45)]">
@@ -152,7 +175,11 @@ export default async function LearnerResourcesPage() {
                       <div className="mt-auto grid grid-cols-2 gap-3">
                         <ResourcePreviewButton
                           title={resource.title}
-                          contentType={guessResourceType(resource.title, resource.meta ?? undefined, (resource as any).contentType)}
+                          contentType={guessResourceType(
+                            resource.title,
+                            resource.meta ?? undefined,
+                            (resource as any).contentType,
+                          )}
                           contentUrl={(resource as any).contentUrl}
                         />
                         <Button
@@ -160,7 +187,11 @@ export default async function LearnerResourcesPage() {
                           variant="outline"
                           className="rounded-full border-white/25 bg-white/5 px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 hover:border-white/40 hover:text-white"
                         >
-                          <a href={(resource as any).downloadUrl ?? (resource as any).contentUrl ?? resource.href} target="_blank" rel="noreferrer">
+                          <a
+                            href={(resource as any).downloadUrl ?? (resource as any).contentUrl ?? resource.href}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
                             Télécharger
                           </a>
                         </Button>

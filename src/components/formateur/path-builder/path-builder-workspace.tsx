@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormateurContentLibrary } from "@/lib/queries/formateur";
 import { cn } from "@/lib/utils";
+import { ScenarioBuilderModal } from "@/components/formateur/path-scenarios/scenario-builder-modal";
+import type { ScenarioBuilderAvailableContent } from "@/components/parcours/scenarios/scenario-builder";
+import { useSearchParams } from "next/navigation";
 
 type PathBuilderWorkspaceProps = {
   library: FormateurContentLibrary;
@@ -50,6 +53,7 @@ export function PathBuilderWorkspace({
   extraHeaderSlot,
 }: PathBuilderWorkspaceProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState(initialData?.title || "Parcours neuro-pédagogie immersive");
   const [subtitle, setSubtitle] = useState(
     initialData?.subtitle || "Faites monter en puissance vos formateurs avec un enchaînement haute intensité de modules neurosciences",
@@ -76,6 +80,11 @@ export function PathBuilderWorkspace({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isScenarioModalOpen, setScenarioModalOpen] = useState(false);
+  const [pendingScenarioAutoOpen, setPendingScenarioAutoOpen] = useState<boolean>(
+    () => searchParams?.get("onboarding") === "1",
+  );
+  const hasAutoOpenedModalRef = useRef(false);
 
   // Log des données initiales pour déboguer
   console.log("[path-builder] Initial data:", {
@@ -167,10 +176,17 @@ export function PathBuilderWorkspace({
         throw new Error(errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage);
       }
 
-      setSavedPathId(data.path.id);
-      toast.success(status === "published" ? "Parcours publié !" : savedPathId ? "Parcours mis à jour !" : "Parcours sauvegardé", {
+      const createdPathId = data.path.id as string;
+      const isNewPath = !savedPathId || savedPathId !== createdPathId;
+
+      setSavedPathId(createdPathId);
+      toast.success(status === "published" ? "Parcours publié !" : isNewPath ? "Parcours sauvegardé !" : "Parcours mis à jour !", {
         description: data.message,
       });
+
+      if (isNewPath && status !== "published") {
+        setPendingScenarioAutoOpen(true);
+      }
 
       // Rediriger vers la liste des parcours après publication
       if (status === "published") {
@@ -234,9 +250,50 @@ export function PathBuilderWorkspace({
     [library.resources],
   );
 
+  const scenarioAvailableContent: ScenarioBuilderAvailableContent = useMemo(() => {
+    const selectedCoursesContent = library.courses.filter((course) =>
+      course.id ? selectedCourses.includes(course.id) : false,
+    );
+    const selectedTestsContent = library.tests.filter((test) =>
+      test.id ? selectedTests.includes(test.id) : false,
+    );
+    const selectedResourcesContent = library.resources.filter((resource) =>
+      resource.id ? selectedResources.includes(resource.id) : false,
+    );
+
+    return {
+      courses: selectedCoursesContent.map((course) => ({
+        id: String(course.id),
+        title: course.title ?? "Formation",
+      })),
+      tests: selectedTestsContent.map((test) => ({
+        id: String(test.id),
+        title: test.title ?? "Test",
+      })),
+      resources: selectedResourcesContent.map((resource) => ({
+        id: String(resource.id),
+        title: resource.title ?? "Ressource",
+      })),
+    };
+  }, [library.courses, library.tests, library.resources, selectedCourses, selectedTests, selectedResources]);
+
   const toggleItem = (id: string, selected: string[], setter: (value: string[]) => void) => {
     setter(selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id]);
   };
+
+  useEffect(() => {
+    if (searchParams?.get("onboarding") === "1" && !hasAutoOpenedModalRef.current) {
+      setPendingScenarioAutoOpen(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (savedPathId && pendingScenarioAutoOpen && !hasAutoOpenedModalRef.current) {
+      setScenarioModalOpen(true);
+      hasAutoOpenedModalRef.current = true;
+      setPendingScenarioAutoOpen(false);
+    }
+  }, [savedPathId, pendingScenarioAutoOpen]);
 
   return (
     <div className="space-y-8 pb-16">
@@ -326,6 +383,35 @@ export function PathBuilderWorkspace({
             </CardContent>
           </Card>
 
+          <Card className="border-cyan-500/30 bg-cyan-500/10 text-white">
+            <CardContent className="flex flex-col gap-4 py-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl space-y-2">
+                <p className="text-sm font-semibold uppercase tracking-[0.32em] text-cyan-200/80">
+                  Automatisations pédagogiques
+                </p>
+                <p className="text-base text-cyan-100">
+                  Composez un scénario automatisé façon Zapier : déclencheur, condition optionnelle, pile
+                  d’actions pédagogiques.
+                </p>
+                {!savedPathId ? (
+                  <p className="text-xs text-cyan-100/70">
+                    Enregistrez d’abord le parcours pour activer la création de scénario.
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  className="rounded-full border-white/25 px-4 py-2 text-sm font-semibold text-white hover:border-white/40 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setScenarioModalOpen(true)}
+                  disabled={!savedPathId}
+                >
+                  Créer un scénario pour le parcours
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <SelectionZone
             title="Formations"
             description="Sélectionnez les formations que vous avez créées pour structurer votre parcours. L'ordre pourra être ajusté avec le drag and drop bientôt disponible."
@@ -394,6 +480,15 @@ export function PathBuilderWorkspace({
           </Card>
         </div>
       </div>
+      <ScenarioBuilderModal
+        open={Boolean(savedPathId) && isScenarioModalOpen}
+        onOpenChange={setScenarioModalOpen}
+        pathId={savedPathId}
+        availableContent={scenarioAvailableContent}
+        onScenarioCreated={() => {
+          toast.success("Scénario créé pour ce parcours.");
+        }}
+      />
     </div>
   );
 }

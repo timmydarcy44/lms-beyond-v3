@@ -28,7 +28,7 @@ export function ProblemSection() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] as const }}
           className="text-center"
         >
           <h2 className="text-5xl md:text-7xl font-normal text-[#0B0B0C] mb-12 leading-[1.1] tracking-[-0.02em] max-w-5xl mx-auto" style={{ fontFamily: '"Playfair Display", serif' }}>
@@ -45,14 +45,14 @@ export function ProblemSection() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
-            transition={{ duration: 1.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] as const }}
             className="mt-20 relative h-80 md:h-96 rounded-3xl overflow-hidden bg-white/40 backdrop-blur-xl border border-[#0B0B0C]/5"
           >
             {/* Overloaded State */}
             <motion.div
               initial={{ opacity: 1 }}
               animate={isInView ? { opacity: 0 } : { opacity: 1 }}
-              transition={{ duration: 2, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 2, delay: 0.8, ease: [0.22, 1, 0.36, 1] as const }}
               className="absolute inset-0 flex items-center justify-center p-8"
             >
               <div className="grid grid-cols-3 gap-4 w-full">
@@ -61,7 +61,7 @@ export function ProblemSection() {
                     key={i}
                     initial={{ scale: 0.8, opacity: 0.4 }}
                     animate={isInView ? { scale: 1, opacity: 0.6 } : { scale: 0.8, opacity: 0.4 }}
-                    transition={{ duration: 0.8, delay: 0.5 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 0.8, delay: 0.5 + i * 0.1, ease: [0.22, 1, 0.36, 1] as const }}
                     className="w-full h-20 bg-[#0B0B0C]/10 rounded-xl"
                   />
                 ))}
@@ -72,14 +72,14 @@ export function ProblemSection() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              transition={{ duration: 2, delay: 1.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 2, delay: 1.5, ease: [0.22, 1, 0.36, 1] as const }}
               className="absolute inset-0 flex items-center justify-center"
             >
               <div className="text-center space-y-6">
                 <motion.div
                   initial={{ scale: 0.8 }}
                   animate={isInView ? { scale: 1 } : { scale: 0.8 }}
-                  transition={{ duration: 1.5, delay: 1.8, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 1.5, delay: 1.8, ease: [0.22, 1, 0.36, 1] as const }}
                   className="w-32 h-32 mx-auto bg-white/80 backdrop-blur-xl rounded-full flex items-center justify-center border border-[#0B0B0C]/5 shadow-lg"
                 >
                   <svg className="w-16 h-16 text-[#99A7FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -89,7 +89,7 @@ export function ProblemSection() {
                 <motion.p
                   initial={{ opacity: 0, y: 10 }}
                   animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-                  transition={{ duration: 1.2, delay: 2, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 1.2, delay: 2, ease: [0.22, 1, 0.36, 1] as const }}
                   className="text-[#0B0B0C]/60 text-lg font-light" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif', letterSpacing: '-0.01em' }}
                 >
                   Espace calme
@@ -102,3 +102,4 @@ export function ProblemSection() {
     </section>
   );
 }
+

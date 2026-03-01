@@ -9,6 +9,7 @@ import { BeyondCareSidebarWrapper } from "@/components/beyond-care/beyond-care-s
 import { BeyondConnectSidebarWrapper } from "@/components/beyond-connect/beyond-connect-sidebar-wrapper";
 
 import {
+  BadgeCheck,
   GraduationCap,
   Layers,
   LayoutDashboard,
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
   { label: "Parcours", icon: Route, href: "/admin/parcours" },
   { label: "Formations", icon: GraduationCap, href: "/admin/formations" },
+  { label: "Open Badges", icon: BadgeCheck, href: "/admin/open-badges" },
   { label: "Mes tests", icon: PenTool, href: "/admin/tests" },
   { label: "Mes ressources", icon: Library, href: "/admin/ressources" },
   { label: "Mes apprenants", icon: Users, href: "/admin/apprenants" },

@@ -150,15 +150,16 @@ export async function POST(request: NextRequest) {
       });
 
       // Créer la session de paiement Stripe
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.jessicacontentin.fr";
       
       // Déterminer l'URL de redirection selon le type de contenu
       let successUrl = "";
       let cancelUrl = "";
       
       if (catalogItem.item_type === "test") {
-        successUrl = `${baseUrl}/test-confiance-en-soi?payment=success&session_id={CHECKOUT_SESSION_ID}`;
-        cancelUrl = `${baseUrl}/test-confiance-en-soi`;
+        const testSlug = (catalogItem as any).slug || catalogItem.content_id || catalogItem.id;
+        successUrl = `${baseUrl}/dashboard/catalogue/test/${testSlug}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+        cancelUrl = `${baseUrl}/dashboard/catalogue/test/${testSlug}`;
       } else if (catalogItem.item_type === "module" || catalogItem.item_type === "parcours") {
         // Utiliser le slug du course si disponible, sinon l'ID
         const courseSlug = (catalogItem as any).slug || catalogItem.content_id || catalogItem.id;

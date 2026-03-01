@@ -17,35 +17,10 @@ export async function GET(request: NextRequest) {
     const companyId = searchParams.get("company_id");
     const isActive = searchParams.get("is_active");
 
-    // Récupérer les organisations de l'utilisateur
-    const { data: memberships } = await supabase
-      .from("org_memberships")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "instructor"]);
-
-    if (!memberships || memberships.length === 0) {
-      return NextResponse.json({ jobOffers: [] });
-    }
-
-    const orgIds = memberships.map(m => m.org_id);
-
-    // Récupérer les entreprises de ces organisations
-    const { data: companies } = await supabase
-      .from("beyond_connect_companies")
-      .select("id")
-      .in("organization_id", orgIds);
-
-    if (!companies || companies.length === 0) {
-      return NextResponse.json({ jobOffers: [] });
-    }
-
-    const companyIds = companies.map(c => c.id);
-
     let query = supabase
-      .from("beyond_connect_job_offers")
+      .from("job_offers")
       .select("*")
-      .in("company_id", companyIds);
+      .eq("company_id", user.id);
 
     if (companyId) {
       query = query.eq("company_id", companyId);
@@ -86,20 +61,20 @@ export async function POST(request: NextRequest) {
       company_id,
       title,
       description,
-      company_presentation,
       contract_type,
       location,
-      remote_allowed,
+      remote_policy,
+      weekend_work,
       salary_min,
       salary_max,
-      currency,
-      hours_per_week,
-      required_skills,
+      tjm_range,
+      mission_duration,
+      objectives,
+      scope_brief,
+      deliverables,
       required_soft_skills,
-      required_experience,
-      required_education,
       benefits,
-      application_deadline,
+      start_date,
       is_active,
     } = body;
 
@@ -128,26 +103,26 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from("beyond_connect_job_offers")
+      .from("job_offers")
       .insert({
         company_id,
         created_by: user.id,
         title,
         description: description || "",
-        company_presentation: company_presentation || null,
         contract_type,
-        location: remote_allowed ? null : location,
-        remote_allowed: remote_allowed || false,
+        location,
+        remote_policy: remote_policy || null,
+        weekend_work: weekend_work || null,
         salary_min,
         salary_max,
-        currency: currency || "EUR",
-        hours_per_week,
-        required_skills: required_skills || [],
+        tjm_range: tjm_range || null,
+        mission_duration: mission_duration || null,
+        objectives: objectives || null,
+        scope_brief: scope_brief || null,
+        deliverables: deliverables || null,
         required_soft_skills: required_soft_skills || [],
-        required_experience,
-        required_education,
         benefits: benefits || [],
-        application_deadline,
+        start_date,
         is_active: is_active !== undefined ? is_active : true,
       })
       .select()

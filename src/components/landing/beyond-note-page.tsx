@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { FileText, Camera, Sparkles, Languages, FileCheck, Volume2, Image as ImageIcon, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Navigation } from "@/components/landing/navigation";
+import Navigation from "@/components/landing/navigation";
 import Link from "next/link";
 
 export function BeyondNoteMarketingPage() {

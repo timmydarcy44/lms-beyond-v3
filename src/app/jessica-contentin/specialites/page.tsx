@@ -62,10 +62,10 @@ const specialites = [
   },
   {
     id: "therapie",
-    title: "Thérapie psycho-émotionnelle",
+    title: "Accompagnement psycho-émotionnel",
     icon: Lightbulb,
-    description: "Accompagnement thérapeutique pour la gestion des émotions.",
-    presentation: "Un accompagnement thérapeutique pour mieux comprendre et gérer vos émotions. Techniques de régulation émotionnelle, gestion de l'anxiété et travail sur les traumatismes pour développer votre résilience et retrouver un équilibre émotionnel.",
+    description: "Accompagnement pour la gestion des émotions.",
+    presentation: "Un accompagnement pour mieux comprendre et gérer vos émotions. Techniques de régulation émotionnelle, gestion de l'anxiété et travail sur les traumatismes pour développer votre résilience et retrouver un équilibre émotionnel.",
   },
   {
     id: "neuroeducation",
@@ -109,7 +109,7 @@ export default function SpecialitesPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Un accompagnement personnalisé adapté à chaque besoin spécifique. Découvrez mes spécialités : <strong>accompagnement TND (troubles DYS, TDA-H)</strong>, <strong>harcèlement scolaire</strong>, <strong>phobie scolaire</strong>, <strong>gestion des émotions</strong>, <strong>confiance en soi</strong>, <strong>orientation scolaire</strong> et <strong>neuroéducation</strong>. Cabinet à Fleury-sur-Orne, près de Caen.
+              Un accompagnement personnalisé adapté à chaque besoin spécifique. Découvrez mes spécialités : <strong>accompagnement TND (troubles DYS, TDA-H)</strong>, <strong>harcèlement scolaire</strong>, <strong>phobie scolaire</strong>, <strong>gestion des émotions</strong>, <strong>confiance en soi</strong>, <strong>orientation scolaire</strong> et <strong>neuroéducation</strong>. Cabinet à Bretteville sur Odon, près de Caen.
             </p>
           </motion.div>
         </div>

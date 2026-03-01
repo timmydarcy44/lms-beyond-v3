@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -60,6 +60,14 @@ const signupSchema = z
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function JessicaContentinSignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F8F5F0]" />}>
+      <JessicaContentinSignupPageContent />
+    </Suspense>
+  );
+}
+
+function JessicaContentinSignupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);

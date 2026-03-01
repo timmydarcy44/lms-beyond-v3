@@ -162,7 +162,7 @@ export default function TestExperience({ card, detail, questions }: TestExperien
             </div>
             {detail.skills && detail.skills.length > 0 ? (
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-white/80">Compétences développées</h3>
+                <h3 className="text-sm font-medium text-white/80">Soft Skills développées</h3>
                 <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.3em] text-white/50">
                   {detail.skills?.map((skill) => (
                     <Badge key={skill} variant="outline" className="rounded-full border-white/30 text-white/70">

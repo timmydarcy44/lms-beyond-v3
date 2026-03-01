@@ -7,9 +7,48 @@ import { CourseBuilderSnapshot } from "@/types/course-builder";
 
 export type FormateurKpis = {
   totalLearners: number;
-  activeCourses: number;
+  publishedCourses: number;
   publishedTests: number;
-  pendingReviews: number;
+  publishedResources: number;
+};
+
+export type FormateurRecentLearner = {
+  id: string;
+  name: string;
+  courseTitle?: string | null;
+  avatarUrl?: string | null;
+  connectedAt: string;
+};
+
+export type FormateurActivityLog = {
+  id: string;
+  actionType: string;
+  summary: string | null;
+  entityType: string | null;
+  entityId: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type FormateurDashboardAlert = {
+  id: string;
+  title: string;
+  message: string | null;
+  severity: string;
+  status: string;
+  createdAt: string;
+  metadata: Record<string, unknown>;
+};
+
+export type FormateurFavorite = {
+  id: string;
+  resourceType: string;
+  resourceId: string | null;
+  resourceSlug: string | null;
+  resourceTitle: string | null;
+  metadata: Record<string, unknown>;
+  sortOrder: number;
+  createdAt: string;
 };
 
 export type FormateurHighlight = {
@@ -28,6 +67,10 @@ export type FormateurDashboardData = {
   featuredTests: FormateurHighlight[];
   resources: FormateurHighlight[];
   paths: FormateurHighlight[];
+  recentLearners: FormateurRecentLearner[];
+  activityLogs: FormateurActivityLog[];
+  alerts: FormateurDashboardAlert[];
+  favorites: FormateurFavorite[];
 };
 
 type CourseRow = {
@@ -48,9 +91,9 @@ type SessionRow = {
 const emptyDashboardData: FormateurDashboardData = {
   kpis: {
     totalLearners: 0,
-    activeCourses: 0,
+    publishedCourses: 0,
     publishedTests: 0,
-    pendingReviews: 0,
+    publishedResources: 0,
   },
   activeCourses: [],
   recommendedCourses: [],
@@ -58,6 +101,10 @@ const emptyDashboardData: FormateurDashboardData = {
   featuredTests: [],
   resources: [],
   paths: [],
+  recentLearners: [],
+  activityLogs: [],
+  alerts: [],
+  favorites: [],
 };
 
 export const getFormateurDashboardData = async (): Promise<FormateurDashboardData> => {
@@ -76,35 +123,132 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
     }
 
     const userId = authData.user.id;
+    const privilegedClient = await getServiceRoleClientOrFallback();
+    const countingClient = privilegedClient ?? supabase;
 
-    // Récupérer les données du formateur uniquement
-    const [enrollmentsResult, coursesResult, testsResult] = await Promise.all([
-      supabase
-        .from("enrollments")
-        .select("user_id", { head: true, count: "exact" })
-        .eq("role", "student"),
-      supabase
+    const interpretBoolean = (value: unknown): boolean => {
+      if (typeof value === "boolean") return value;
+      if (typeof value === "number") return value === 1;
+      if (typeof value === "string") {
+        const normalized = value.toLowerCase();
+        return ["true", "t", "1", "yes", "y", "active", "published", "enabled"].includes(normalized);
+      }
+      return false;
+    };
+
+    const interpretStatus = (status: unknown): boolean => {
+      if (typeof status !== "string") return false;
+      const normalized = status.toLowerCase();
+      return ["published", "active", "live", "public", "visible", "ready", "open", "enabled"].includes(normalized);
+    };
+
+    const [
+      publishedCoursesResult,
+      publishedTestsResult,
+      publishedResourcesResult,
+      activityLogsResult,
+      alertsResult,
+      favoritesResult,
+    ] = await Promise.all([
+      countingClient
         .from("courses")
-        .select("id", { head: true, count: "exact" })
-        .or(`creator_id.eq.${userId},owner_id.eq.${userId}`)
-        .eq("status", "published"),
-      supabase
+        .select("id, status")
+        .or(`creator_id.eq.${userId},owner_id.eq.${userId}`),
+      countingClient
         .from("tests")
-        .select("id", { head: true, count: "exact" })
-        .or(`created_by.eq.${userId},owner_id.eq.${userId}`)
-        .eq("status", "published"),
+        .select("id, status, published")
+        .or(`created_by.eq.${userId},owner_id.eq.${userId}`),
+      countingClient
+        .from("resources")
+        .select("id, status, published")
+        .or(`created_by.eq.${userId},owner_id.eq.${userId}`),
+      countingClient
+        .from("dashboard_activity_logs")
+        .select("id, action_type, summary, entity_type, entity_id, metadata, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(40),
+      countingClient
+        .from("dashboard_alerts")
+        .select("id, title, message, severity, status, metadata, created_at, user_id, scope")
+        .eq("status", "active")
+        .or(`user_id.eq.${userId},user_id.is.null`)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      countingClient
+        .from("user_favorites")
+        .select("id, resource_type, resource_id, resource_slug, resource_title, metadata, sort_order, created_at")
+        .eq("user_id", userId)
+        .order("sort_order", { ascending: true })
+        .limit(24),
     ]);
 
-    if (enrollmentsResult.error) throw enrollmentsResult.error;
-    if (coursesResult.error) throw coursesResult.error;
-    if (testsResult.error) throw testsResult.error;
+    if (publishedCoursesResult.error) throw publishedCoursesResult.error;
+    if (publishedTestsResult.error) throw publishedTestsResult.error;
+    if (publishedResourcesResult.error) throw publishedResourcesResult.error;
+    if (activityLogsResult.error) throw activityLogsResult.error;
+    if (alertsResult.error) throw alertsResult.error;
+    if (favoritesResult.error) throw favoritesResult.error;
 
-    const pendingReviewsResult = await supabase
-      .from("assignments")
-      .select("id", { head: true, count: "exact" })
-      .eq("status", "pending_review");
+    const courseRows = (publishedCoursesResult.data || []) as Array<{ id?: unknown; status?: unknown; published?: unknown }>;
+    const allCourseIdsForUser = Array.from(
+      new Set(
+        courseRows
+          .map((row) => (row?.id ? String(row.id) : null))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    );
+    const testRows = (publishedTestsResult.data || []) as Array<{ id?: unknown; status?: unknown; published?: unknown }>;
+    const resourceRows = (publishedResourcesResult.data || []) as Array<{ id?: unknown; status?: unknown; published?: unknown }>;
 
-    if (pendingReviewsResult.error) throw pendingReviewsResult.error;
+    const publishedCourseIdsForMetrics = Array.from(
+      new Set(
+        courseRows
+          .filter((row) => interpretStatus(row.status) || interpretBoolean(row.published))
+          .map((row) => (row?.id ? String(row.id) : null))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    );
+    const publishedCoursesCountForMetrics = publishedCourseIdsForMetrics.length;
+
+    const publishedTestsCountForMetrics = Array.from(
+      new Set(
+        testRows
+          .filter((row) => interpretStatus(row.status) || interpretBoolean(row.published))
+          .map((row) => (row?.id ? String(row.id) : null))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ).length;
+
+    const publishedResourcesCountForMetrics = Array.from(
+      new Set(
+        resourceRows
+          .filter((row) => interpretBoolean(row.published) || interpretStatus(row.status))
+          .map((row) => (row?.id ? String(row.id) : null))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ).length;
+
+    let totalLearners = 0;
+    const courseIdsForLearners =
+      publishedCourseIdsForMetrics.length > 0 ? publishedCourseIdsForMetrics : allCourseIdsForUser;
+    if (courseIdsForLearners.length > 0) {
+      const { data: learnerRows, error: learnersError } = await countingClient
+        .from("enrollments")
+        .select("user_id")
+        .in("course_id", courseIdsForLearners)
+        .eq("role", "student");
+
+      if (learnersError) throw learnersError;
+
+      const learnerIds = new Set<string>();
+      (learnerRows || []).forEach((row) => {
+        if (row?.user_id) {
+          learnerIds.add(String(row.user_id));
+        }
+      });
+      totalLearners = learnerIds.size;
+    }
 
     // Récupérer les formations du formateur (tous les statuts pour le dashboard)
     // Utiliser deux requêtes séparées au lieu de .or() pour éviter les problèmes RLS
@@ -114,13 +258,13 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
         .select("id, title, cover_image, status")
         .eq("creator_id", userId)
         .order("updated_at", { ascending: false })
-        .limit(10),
+        .limit(50),
       supabase
         .from("courses")
         .select("id, title, cover_image, status")
         .eq("owner_id", userId)
         .order("updated_at", { ascending: false })
-        .limit(10),
+        .limit(50),
     ]);
 
     // Combiner les résultats et dédupliquer
@@ -128,10 +272,11 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
       ...(coursesByCreator.data || []),
       ...(coursesByOwner.data || []),
     ];
-    
-    const uniqueCourses = Array.from(
-      new Map(allCourses.map(c => [c.id, c])).values()
-    ).slice(0, 6);
+
+    const uniqueCoursesAll = Array.from(
+      new Map(allCourses.map((c) => [c.id, c])).values(),
+    );
+    const uniqueCourses = uniqueCoursesAll.slice(0, 6);
 
     console.log("[formateur] Courses found for dashboard:", {
       byCreator: coursesByCreator.data?.length || 0,
@@ -147,14 +292,7 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
       error: coursesByCreator.error || coursesByOwner.error || null,
     };
 
-    const sessionsQuery = await supabase
-      .from("sessions")
-      .select("id, title, cover_image, starts_at")
-      .gte("starts_at", new Date().toISOString())
-      .order("starts_at", { ascending: true })
-      .limit(6);
-
-    if (sessionsQuery.error) throw sessionsQuery.error;
+    const sessionsQuery: { data: SessionRow[] | null } = { data: [] };
 
     // Récupérer les tests du formateur (tous les statuts pour le dashboard)
     const testsQuery = await supabase
@@ -192,7 +330,7 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
       console.warn("[formateur] Error fetching paths:", pathsQuery.error);
     }
 
-    const mapCoursesToHighlights = (items?: CourseRow[] | null): FormateurHighlight[] => {
+  const mapCoursesToHighlights = (items?: CourseRow[] | null): FormateurHighlight[] => {
       if (!items || !items.length) return [];
       return items.map((item) => ({
         id: String(item.id ?? randomUUID()),
@@ -246,12 +384,156 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
       }));
     };
 
+    const activityLogs: FormateurActivityLog[] =
+      (activityLogsResult.data || []).map((item) => ({
+        id: String(item.id),
+        actionType: item.action_type,
+        summary: item.summary ?? null,
+        entityType: item.entity_type ?? null,
+        entityId: item.entity_id ? String(item.entity_id) : null,
+        metadata: item.metadata ?? {},
+        createdAt: item.created_at,
+      })) ?? [];
+
+    let recentLearners: FormateurRecentLearner[] = activityLogs
+      .filter((log) =>
+        ["learner_login", "learner_connected", "learner_activity"].includes(log.actionType),
+      )
+      .slice(0, 6)
+      .map((log) => ({
+        id: log.id,
+        name:
+          (typeof log.metadata?.learner_name === "string" ? log.metadata.learner_name : null) ??
+          log.summary ??
+          "Apprenant",
+        courseTitle:
+          (typeof log.metadata?.course_title === "string" ? log.metadata.course_title : null) ?? null,
+        avatarUrl:
+          (typeof log.metadata?.avatar_url === "string" ? log.metadata.avatar_url : null) ?? null,
+        connectedAt: log.createdAt,
+      }));
+
+    if (recentLearners.length === 0 && courseIdsForLearners.length > 0) {
+      const fallbackResult = await countingClient
+        .from("course_progress")
+        .select(
+          `
+            user_id,
+            course_id,
+            last_accessed_at,
+            profiles:profiles!course_progress_user_id_fkey(full_name,email,avatar_url),
+            courses:courses!course_progress_course_id_fkey(title)
+          `,
+        )
+        .in("course_id", publishedCourseIdsForMetrics)
+        .order("last_accessed_at", { ascending: false, nullsFirst: false })
+        .limit(6);
+
+      if (!fallbackResult.error && fallbackResult.data) {
+        const fallbackRows = fallbackResult.data as Array<{
+          user_id?: string | null;
+          course_id?: string | null;
+          last_accessed_at?: string | null;
+          profiles?: { full_name?: string | null; email?: string | null; avatar_url?: string | null } | null;
+          courses?: { title?: string | null } | null;
+        }>;
+
+        recentLearners = fallbackRows.map((row, index) => ({
+          id: `fallback-${row.user_id ?? "unknown"}-${row.course_id ?? index}`,
+          name:
+            row.profiles?.full_name ??
+            row.profiles?.email ??
+            "Apprenant",
+          courseTitle: row.courses?.title ?? null,
+          avatarUrl: row.profiles?.avatar_url ?? null,
+          connectedAt: row.last_accessed_at ?? new Date().toISOString(),
+        }));
+      } else if (fallbackResult.error) {
+        console.warn("[formateur] Unable to fetch fallback recent learners:", fallbackResult.error);
+      }
+
+      if (recentLearners.length === 0) {
+        const enrollmentFallback = await countingClient
+          .from("enrollments")
+          .select(
+            `
+              user_id,
+              course_id,
+              created_at,
+              profiles:profiles!enrollments_user_id_fkey(full_name,email,avatar_url),
+              courses:courses!enrollments_course_id_fkey(title)
+            `,
+          )
+          .in("course_id", courseIdsForLearners)
+          .order("created_at", { ascending: false })
+          .limit(6);
+
+        if (!enrollmentFallback.error && enrollmentFallback.data) {
+          const enrollmentRows = enrollmentFallback.data as Array<{
+            user_id?: string | null;
+            course_id?: string | null;
+            created_at?: string | null;
+            profiles?: { full_name?: string | null; email?: string | null; avatar_url?: string | null } | null;
+            courses?: { title?: string | null } | null;
+          }>;
+
+          recentLearners = enrollmentRows.map((row, index) => ({
+            id: `enrollment-${row.user_id ?? "unknown"}-${row.course_id ?? index}`,
+            name:
+              row.profiles?.full_name ??
+              row.profiles?.email ??
+              "Apprenant",
+            courseTitle: row.courses?.title ?? null,
+            avatarUrl: row.profiles?.avatar_url ?? null,
+            connectedAt: row.created_at ?? new Date().toISOString(),
+          }));
+        } else if (enrollmentFallback.error) {
+          console.warn("[formateur] Unable to fetch enrollment fallback learners:", enrollmentFallback.error);
+        }
+      }
+    }
+
+    const alerts: FormateurDashboardAlert[] =
+      (alertsResult.data || []).map((item) => ({
+        id: String(item.id),
+        title: item.title,
+        message: item.message ?? null,
+        severity: item.severity ?? "info",
+        status: item.status ?? "active",
+        metadata: item.metadata ?? {},
+        createdAt: item.created_at,
+      })) ?? [];
+
+    const favorites: FormateurFavorite[] =
+      (favoritesResult.data || []).map((item) => ({
+        id: String(item.id),
+        resourceType: item.resource_type,
+        resourceId: item.resource_id ? String(item.resource_id) : null,
+        resourceSlug: item.resource_slug ?? null,
+        resourceTitle: item.resource_title ?? null,
+        metadata: item.metadata ?? {},
+        sortOrder: item.sort_order ?? 0,
+        createdAt: item.created_at,
+      })) ?? [];
+
+    console.log("[formateur] KPI snapshot:", {
+      userId,
+      totalLearners,
+      publishedCoursesCount: publishedCoursesCountForMetrics,
+      publishedTestsCount: publishedTestsCountForMetrics,
+      publishedResourcesCount: publishedResourcesCountForMetrics,
+      publishedCourseIdsForMetrics,
+      courseRows: courseRows.slice(0, 5),
+      testRows: testRows.slice(0, 5),
+      resourceRows: resourceRows.slice(0, 5),
+    });
+
     return {
       kpis: {
-        totalLearners: enrollmentsResult.count ?? 0,
-        activeCourses: coursesResult.count ?? 0,
-        publishedTests: testsResult.count ?? 0,
-        pendingReviews: pendingReviewsResult.count ?? 0,
+        totalLearners,
+        publishedCourses: publishedCoursesCountForMetrics,
+        publishedTests: publishedTestsCountForMetrics,
+        publishedResources: publishedResourcesCountForMetrics,
       },
       activeCourses: mapCoursesToHighlights(activeCoursesQuery.data || []),
       recommendedCourses: mapCoursesToHighlights((activeCoursesQuery.data || [])?.slice(0, 3)),
@@ -259,6 +541,10 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
       featuredTests: mapTestsToHighlights(testsQuery.data),
       resources: mapResourcesToHighlights(resourcesQuery.data),
       paths: mapPathsToHighlights(pathsQuery.data),
+      recentLearners,
+      activityLogs,
+      alerts,
+      favorites,
     };
   } catch (error) {
     console.warn("[formateur] Supabase query failed, returning empty data", error);

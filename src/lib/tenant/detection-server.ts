@@ -13,7 +13,8 @@ export async function getTenantFromHeaders(): Promise<TenantConfig | null> {
   if (tenantId) {
     // Le middleware a déjà détecté le tenant
     const domain = headersList.get('x-tenant-domain') || '';
-    const name = headersList.get('x-tenant-name') || '';
+    const encodedName = headersList.get('x-tenant-name') || '';
+    const name = encodedName ? decodeURIComponent(encodedName) : '';
     const superAdminEmail = headersList.get('x-super-admin-email') || '';
     
     return {

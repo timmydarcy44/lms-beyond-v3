@@ -1,379 +1,234 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Search, Menu, X, ShoppingBag, ChevronDown, Heart, Gamepad2, Timer, Focus, Accessibility, FileText } from "lucide-react";
+import { 
+  ChevronDown, Users, ShieldCheck, Zap, Gamepad2, 
+  BarChart3, Target, HeartPulse, BrainCircuit,
+  ArrowUpRight, CheckCircle2, Sparkles
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
 
-const features = [
+// Icône LMS : Flèche avec label LMS au-dessus
+const LmsIcon = () => (
+  <div className="flex flex-col items-center justify-center">
+    <span className="text-[9px] font-black leading-none mb-0.5 text-purple-600">LMS</span>
+    <ArrowUpRight className="w-5 h-5 text-purple-600" />
+  </div>
+);
+
+const menuVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2 },
+  },
+};
+
+const suiteData = [
   {
-    id: "beyond-care",
-    icon: Heart,
+    title: "Beyond LMS",
+    icon: <LmsIcon />,
+    desc: "Efficience Cognitive.",
+    path: "/produits/lms",
+    bullets: ["Adaptation Neurologique", "Ancrage Mémoriel +90%", "Réduction temps formation"]
+  },
+  {
+    title: "Beyond Connect",
+    icon: <Users className="w-6 h-6 text-blue-600" />,
+    desc: "Recrutement Prédictif.",
+    path: "/produits/connect",
+    bullets: ["Matching Culturel", "Détection Soft Skills", "Zéro erreur de casting"]
+  },
+  {
     title: "Beyond Care",
-    description: "Suivre son équilibre mental grâce à des questionnaires intelligents",
-    href: "/pages/beyond-care",
-    color: "from-rose-500 to-pink-500",
+    icon: <ShieldCheck className="w-6 h-6 text-red-600" />,
+    desc: "Rétention Stratégique.",
+    path: "/produits/care",
+    bullets: ["Signaux Faibles", "Prévention Burnout", "Météo Humaine temps réel"]
   },
   {
-    id: "beyond-play",
-    icon: Gamepad2,
-    title: "Beyond Play",
-    description: "Apprendre par immersion, émotions et scénarios",
-    href: "/pages/fonctionnalites#beyond-play",
-    color: "from-orange-500 to-red-500",
-  },
-  {
-    id: "beyond-note",
-    icon: FileText,
     title: "Beyond Note",
-    description: "Scanner et transformer vos documents avec l'IA",
-      href: "/pages/beyond-note",
-    color: "from-violet-500 to-purple-500",
-  },
-  {
-    id: "pomodoro",
-    icon: Timer,
-    title: "Méthode Pomodoro",
-    description: "Trouver le bon rythme entre effort et récupération",
-    href: "/pages/fonctionnalites#pomodoro",
-    color: "from-blue-500 to-purple-500",
-  },
-  {
-    id: "focus",
-    icon: Focus,
-    title: "Mode Focus",
-    description: "Apprendre dans le calme, sans distractions",
-    href: "/pages/fonctionnalites#focus",
-    color: "from-indigo-500 to-blue-500",
-  },
-  {
-    id: "accessibility",
-    icon: Accessibility,
-    title: "Accessibilité DYS",
-    description: "Un apprentissage sans friction ni fatigue visuelle",
-    href: "/pages/fonctionnalites#accessibility",
-    color: "from-emerald-500 to-teal-500",
-  },
+    icon: <Zap className="w-6 h-6 text-orange-500" />,
+    desc: "Intelligence Collective.",
+    path: "/produits/note",
+    bullets: ["Capitalisation Savoir", "Recherche Sémantique", "Synthèse IA intelligente"]
+  }
 ];
 
-export function Navigation() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+const solutionsData = [
+  {
+    title: "Performance RH",
+    icon: <Target className="w-5 h-5 text-orange-600" />,
+    items: [
+      { t: "ROI Formation", d: "Maximisez l'impact de chaque minute de formation via la neuro-adaptation." },
+      { t: "Sécurisation Recrutement", d: "Divisez par deux vos coûts d'acquisition en sécurisant le fit humain." }
+    ]
+  },
+  {
+    title: "Culture & Rétention",
+    icon: <HeartPulse className="w-5 h-5 text-red-600" />,
+    items: [
+      { t: "Protection Capital Humain", d: "Identifiez les risques de désengagement 3 mois avant le départ." },
+      { t: "Météo Humaine", d: "Pilotez le climat social avec des données objectives et anonymisées." }
+    ]
+  },
+  {
+    title: "Intelligence & Flux",
+    icon: <BrainCircuit className="w-5 h-5 text-purple-600" />,
+    items: [
+      { t: "Capitalisation du Savoir", d: "Transformez vos échanges informels en actifs de connaissance." },
+      { t: "Engagement par le Flux", d: "Atteignez l'état de performance collective par la gamification." }
+    ]
+  }
+];
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+type NavigationProps = {
+  primaryCtaLabel?: string;
+  primaryCtaHref?: string;
+  onPrimaryCtaClick?: () => void;
+  secondaryCtaLabel?: string;
+  secondaryCtaHref?: string;
+  showSecondaryCta?: boolean;
+  variant?: "default" | "clean";
+};
 
-  const navItems = [
-    { label: "Pourquoi Beyond", href: "/pages/pourquoi-beyond" },
-    { label: "La plateforme", href: "/pages/lms" },
-    { label: "Fonctionnalités", href: "/pages/fonctionnalites", hasDropdown: true },
-    { label: "Tarif", href: "#tarifs" },
-    { label: "Blog", href: "#blog" },
-  ];
-
+export default function Navigation({
+  primaryCtaLabel = "DEMANDER UNE DÉMO",
+  primaryCtaHref = "/demo",
+  onPrimaryCtaClick,
+  secondaryCtaLabel = "CRÉER UN COMPTE",
+  secondaryCtaHref = "/signup",
+  showSecondaryCta = true,
+  variant = "default",
+}: NavigationProps) {
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const navBase =
+    "fixed top-0 w-full z-[1000] h-20 flex items-center";
   return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        isScrolled
-          ? "bg-white/90 backdrop-blur-xl border-b border-gray-200 shadow-sm"
-          : "bg-transparent"
-      }`}
-      style={{
-        color: isScrolled ? undefined : "white",
-      }}
-    >
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
-          {/* Logo Beyond - Style Apple */}
-              <Link href="/landing" className="flex items-center">
-                <div 
-                  className={`text-lg font-semibold tracking-tight transition-colors ${isScrolled ? "text-gray-900" : "text-white"}`}
-                  style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
-                >
-                  Beyond
-                </div>
-              </Link>
+    <nav className="fixed top-0 w-full z-[1000] bg-white border-b border-gray-100 h-20 flex items-center shadow-sm">
+      <div className="max-w-[1440px] mx-auto px-10 w-full flex items-center justify-between font-inter">
+        
+        <Link href="/" className="text-2xl font-black tracking-tighter text-black">BEYOND</Link>
 
-          {/* Desktop Navigation - Centré comme Apple */}
-          <div className="hidden md:flex items-center justify-center flex-1">
-            <div className="flex items-center space-x-8">
-              {navItems.map((item) => {
-                if (item.hasDropdown) {
-                  return (
-                    <div
-                      key={item.label}
-                      className="relative"
-                      onMouseEnter={() => setHoveredItem("fonctionnalites")}
-                      onMouseLeave={() => setHoveredItem(null)}
-                    >
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
                       <button
-                        className={cn(
-                          "flex items-center gap-1 text-sm transition-colors font-medium",
-                          isScrolled 
-                            ? "text-gray-700 hover:text-gray-900" 
-                            : "text-white/80 hover:text-white"
-                        )}
-                        style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
-                      >
-                        {item.label}
-                        <ChevronDown className={cn("h-4 w-4 transition-transform", hoveredItem === "fonctionnalites" && "rotate-180")} />
-                      </button>
-
-                      {/* Dropdown Menu - Style 360Learning */}
-                      {hoveredItem === "fonctionnalites" && (
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[800px] rounded-xl border border-gray-200 bg-white shadow-2xl p-6 z-50">
-                          <div className="grid grid-cols-2 gap-6">
-                            {/* Left Column - Features List */}
-                            <div className="space-y-1">
-                              {features.map((feature) => {
-                                const Icon = feature.icon;
-                                return (
-                                  <Link
-                                    key={feature.id}
-                                    href={feature.href}
-                                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                                    onClick={() => setHoveredItem(null)}
-                                  >
-                                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                                      <Icon className="h-5 w-5 text-white" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <h3 className="text-sm font-semibold text-gray-900 mb-1" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                        {feature.title}
-                                      </h3>
-                                      <p className="text-xs text-gray-600 leading-relaxed" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                        {feature.description}
-                                      </p>
-                                    </div>
-                                  </Link>
-                                );
-                              })}
-                            </div>
-
-                            {/* Right Column - Featured Feature Details */}
-                            <div className="border-l border-gray-200 pl-6">
-                              <div className="mb-4">
-                                <Link
-                                  href="/pages/fonctionnalites"
-                                  className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center gap-1"
-                                  style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
-                                  onClick={() => setHoveredItem(null)}
-                                >
-                                  Découvrir toutes les fonctionnalités →
-                                </Link>
-                              </div>
-                              <div className="space-y-4">
-                                <Link
-                                  href="/pages/suivi-sante-mentale"
-                                  className="block group"
-                                  onClick={() => setHoveredItem(null)}
-                                >
-                                  <h4 className="text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide group-hover:text-blue-600 transition-colors" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                    Suivi de santé mentale
-                                  </h4>
-                                  <ul className="space-y-1.5 text-xs text-gray-600" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                    <li>• Questionnaires intelligents</li>
-                                    <li>• Analyse des tendances</li>
-                                    <li>• Alertes préventives</li>
-                                    <li>• Tableaux de bord personnalisés</li>
-                                  </ul>
-                                </Link>
-                                <Link
-                                  href="/pages/apprentissage-immersif"
-                                  className="block group"
-                                  onClick={() => setHoveredItem(null)}
-                                >
-                                  <h4 className="text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide group-hover:text-blue-600 transition-colors" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                    Apprentissage immersif
-                                  </h4>
-                                  <ul className="space-y-1.5 text-xs text-gray-600" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                    <li>• Simulations réalistes</li>
-                                    <li>• Scénarios interactifs</li>
-                                    <li>• Feedback en temps réel</li>
-                                    <li>• Gamification avancée</li>
-                                  </ul>
-                                </Link>
-                                <Link
-                                  href="/pages/productivite"
-                                  className="block group"
-                                  onClick={() => setHoveredItem(null)}
-                                >
-                                  <h4 className="text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide group-hover:text-blue-600 transition-colors" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                    Productivité
-                                  </h4>
-                                  <ul className="space-y-1.5 text-xs text-gray-600" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                    <li>• Méthode Pomodoro</li>
-                                    <li>• Mode Focus</li>
-                                    <li>• Accessibilité DYS</li>
-                                    <li>• Neuro-adaptation</li>
-                                  </ul>
-                                </Link>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={`text-sm transition-colors font-medium ${
-                      isScrolled 
-                        ? "text-gray-700 hover:text-gray-900" 
-                        : "text-white/80 hover:text-white"
-                    }`}
-                    style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right Icons - Style Apple */}
-          <div className="hidden md:flex items-center space-x-6">
-            {/* No School - Icône à droite */}
-            <Link
-              href="/pages/catalogue"
-              className={`transition-colors ${
-                isScrolled 
-                  ? "text-gray-700 hover:text-gray-900" 
-                  : "text-white/80 hover:text-white"
-              }`}
-              aria-label="No School"
-              title="No School"
+              onMouseEnter={() => setActiveMenu('suite')}
+              className="flex items-center gap-1 text-[14px] font-bold py-8 text-black drop-shadow-[0_1px_0_rgba(255,255,255,0.6)] hover:text-orange-600 transition-colors"
             >
-              <ShoppingBag className="h-5 w-5" />
-            </Link>
+              Beyond Suite <ChevronDown className="w-3 h-3" />
+            </button>
             <button
-              className={`transition-colors ${
-                isScrolled 
-                  ? "text-gray-700 hover:text-gray-900" 
-                  : "text-white/80 hover:text-white"
-              }`}
-              aria-label="Rechercher"
+              onMouseEnter={() => setActiveMenu('solutions')}
+              className="flex items-center gap-1 text-[14px] font-bold py-8 text-black drop-shadow-[0_1px_0_rgba(255,255,255,0.6)] hover:text-orange-600 transition-colors"
             >
-              <Search className="h-5 w-5" />
+              Solutions <ChevronDown className="w-3 h-3" />
             </button>
             <Link
-              href="/login"
-              className={`text-sm transition-colors font-medium ${
-                isScrolled 
-                  ? "text-gray-700 hover:text-gray-900" 
-                  : "text-white/80 hover:text-white"
-              }`}
-              style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
+              href="/tarifications"
+              className="text-[14px] font-bold text-black drop-shadow-[0_1px_0_rgba(255,255,255,0.6)] hover:text-orange-600 transition-colors"
             >
-              Connexion
+              Tarifications
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
+          <div className="flex items-center gap-4 border-l pl-8 border-gray-100">
+            {onPrimaryCtaClick ? (
           <button
-            className="md:hidden p-2 text-gray-700"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Menu"
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-6 w-6" />
+                type="button"
+                onClick={onPrimaryCtaClick}
+                className="bg-[#FF6B00] text-white px-6 py-3 rounded-full text-[12px] font-black hover:bg-black transition-all shadow-lg shadow-orange-100"
+              >
+                {primaryCtaLabel}
+              </button>
             ) : (
-              <Menu className="h-6 w-6" />
+              <Link
+                href={primaryCtaHref}
+                className="bg-[#FF6B00] text-white px-6 py-3 rounded-full text-[12px] font-black hover:bg-black transition-all shadow-lg shadow-orange-100"
+              >
+                {primaryCtaLabel}
+              </Link>
             )}
-          </button>
-        </div>
+            {showSecondaryCta ? (
+              <Link
+                href={secondaryCtaHref}
+                className="border-2 border-black text-black px-6 py-3 rounded-full text-[12px] font-black hover:bg-black hover:text-white transition-all"
+              >
+                {secondaryCtaLabel}
+              </Link>
+            ) : null}
+          </div>
       </div>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
-        {isMobileMenuOpen && (
+          {activeMenu && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100"
-          >
-            <div className="px-6 py-6 space-y-4">
-              {navItems.map((item) => {
-                if (item.hasDropdown) {
-                  return (
-                    <div key={item.label} className="space-y-2">
-                      <div className="text-sm font-medium text-gray-700" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                        {item.label}
+              variants={menuVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              onMouseLeave={() => setActiveMenu(null)}
+              className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[90%] bg-white shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1)] rounded-3xl border border-gray-100 overflow-hidden"
+              style={{ backgroundColor: "#ffffff" }}
+            >
+              <div className="p-12 bg-white">
+                {activeMenu === 'suite' ? (
+                  <div className="grid grid-cols-4 gap-12 bg-white">
+                    {suiteData.map((item, idx) => (
+                      <Link key={idx} href={item.path} className="group block">
+                        <div className="mb-4 p-3 bg-white shadow-sm border border-gray-100 rounded-xl w-fit group-hover:scale-110 transition-transform">
+                          {item.icon}
                       </div>
-                      <div className="pl-4 space-y-2">
-                        {features.map((feature) => {
-                          const Icon = feature.icon;
-                          return (
-                            <Link
-                              key={feature.id}
-                              href={feature.href}
-                              className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                              onClick={() => setIsMobileMenuOpen(false)}
+                        <h4 className="font-black text-[16px] mb-2 uppercase tracking-tight text-black">
+                          {item.title}
+                        </h4>
+                        <p className="text-[13px] text-gray-700 font-medium mb-4">
+                          {item.desc}
+                        </p>
+                        <ul className="space-y-2">
+                          {item.bullets.map((b, i) => (
+                            <li
+                              key={i}
+                              className="flex items-center gap-2 text-[12px] text-gray-700 font-semibold"
                             >
-                              <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center flex-shrink-0`}>
-                                <Icon className="h-4 w-4 text-white" />
+                              <CheckCircle2 className="w-3 h-3 text-[#FF6B00]" /> {b}
+                            </li>
+                          ))}
+                        </ul>
+                      </Link>
+                    ))}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-xs font-semibold text-gray-900 mb-0.5" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                  {feature.title}
+                ) : (
+                  <div className="grid grid-cols-3 gap-16">
+                    {solutionsData.map((sol, idx) => (
+                      <div key={idx}>
+                        <div className="flex items-center gap-2 mb-8 border-b border-gray-50 pb-3">
+                          {sol.icon}
+                          <h3 className="font-black text-black uppercase text-[11px] tracking-[0.2em]">
+                            {sol.title}
                                 </h3>
-                                <p className="text-xs text-gray-600 leading-relaxed" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                                  {feature.description}
-                                </p>
+                        </div>
+                        <div className="space-y-8">
+                          {sol.items.map((sub, i) => (
+                            <div key={i} className="group cursor-pointer">
+                              <h4 className="font-bold text-[17px] group-hover:text-orange-600 transition-colors mb-2 flex items-center gap-2">
+                                {sub.t} <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </h4>
+                              <p className="text-[13px] text-gray-700 leading-relaxed">{sub.d}</p>
+                            </div>
+                          ))}
                               </div>
-                            </Link>
-                          );
-                        })}
                       </div>
+                    ))}
                     </div>
-                  );
-                }
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className="block text-gray-700 hover:text-gray-900 transition-colors text-sm font-medium"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-              <Link
-                href="/pages/catalogue"
-                className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors text-sm font-medium pt-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                No School
-              </Link>
-              <Link
-                href="/login"
-                className="block text-gray-700 hover:text-gray-900 transition-colors text-sm font-medium pt-4 border-t border-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}
-              >
-                Connexion
-              </Link>
+                )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.nav>
+      </div>
+    </nav>
   );
 }

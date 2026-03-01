@@ -289,11 +289,6 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
         console.log("[ressources/[id]] Search in tests table:", { found: !!test, id: test?.id, title: test?.title });
 
         if (test) {
-          // Si c'est le test de confiance en soi, rediriger vers la page dédiée
-          const testTitle = (test as any).title;
-          if (id === "test-confiance-en-soi" || (testTitle && testTitle.toLowerCase().includes("confiance en soi"))) {
-            redirect("/test-confiance-en-soi");
-          }
           resourceId = test.id;
           catalogItem = await getCatalogItemById(resourceId, organizationId, user?.id, serviceClient);
         } else {
@@ -377,11 +372,6 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     created_by: (catalogItem as any).created_by,
     creator_id: (catalogItem as any).creator_id
   });
-
-  // Si c'est un test de confiance en soi, rediriger vers la page dédiée
-  if (catalogItem.item_type === "test" && catalogItem.slug === "test-confiance-en-soi") {
-    redirect("/test-confiance-en-soi");
-  }
 
   // Accepter les ressources et les tests
   if (catalogItem.item_type !== "ressource" && catalogItem.item_type !== "test") {
@@ -717,10 +707,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
   const isTest = catalogItem.item_type === "test";
   let testPageUrl: string | null = null;
   if (isTest) {
-    // Pour le test de confiance en soi, utiliser l'URL spéciale
-    if (contentSlug === "test-confiance-en-soi" || catalogItem.title?.toLowerCase().includes("confiance en soi")) {
-      testPageUrl = `/test-confiance-en-soi`;
-    } else if (catalogItem.title?.toLowerCase().includes("soft skills") || catalogItem.title === "Soft Skills – Profil 360") {
+    if (catalogItem.title?.toLowerCase().includes("soft skills") || catalogItem.title === "Soft Skills – Profil 360") {
       // Pour le test Soft Skills, chercher le questionnaire mental_health
       const { data: questionnaire } = await supabase
         .from("mental_health_questionnaires")

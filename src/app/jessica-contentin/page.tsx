@@ -81,7 +81,7 @@ export default function JessicaContentinHomePage() {
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}
                 >
-                  Jessica CONTENTIN - Psychopédagogue certifiée en neuroéducation à Fleury-sur-Orne (Caen)
+                  Jessica Contentin : Psychopédagogie et Neuroéducation à Caen
                 </h1>
                 <p
                   className="text-xl text-[#2F2A25]/80 mb-8"
@@ -89,7 +89,6 @@ export default function JessicaContentinHomePage() {
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}
                 >
-                  Accompagnement personnalisé pour troubles DYS, TDA-H, harcèlement scolaire et phobie scolaire. Cabinet à Fleury-sur-Orne, près de Caen en Normandie.
                 </p>
               </div>
 
@@ -105,7 +104,7 @@ export default function JessicaContentinHomePage() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.3 }}
                 >
-                  Diplômée d'un <strong>Master en Ingénierie des Politiques Sanitaires et Sociales (IAE de Caen)</strong> et d'un <strong>Master MEEF (mention Très Bien)</strong>, je suis également <strong>professeure certifiée en Santé, titulaire d'un concours national de l'Éducation nationale</strong>.
+                  Diplômée d'un <strong>Master en Ingénierie des Politiques Sanitaires et Sociales (IAE de Caen)</strong> et d'un <strong>Master MEEF</strong>, je suis également <strong>professeure certifiée en Santé, titulaire d'un concours national de l'Éducation nationale</strong>.
                 </motion.p>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -232,9 +231,9 @@ export default function JessicaContentinHomePage() {
             "url": "https://jessicacontentin.fr",
             "address": {
               "@type": "PostalAddress",
-              "streetAddress": "41 C",
-              "addressLocality": "Fleury-sur-Orne",
-              "postalCode": "14123",
+              "streetAddress": "134 rue Elise Deroche",
+              "addressLocality": "Bretteville sur Odon",
+              "postalCode": "14760",
               "addressRegion": "Normandie",
               "addressCountry": "FR",
             },
@@ -275,9 +274,9 @@ export default function JessicaContentinHomePage() {
             "telephone": "+33683477174",
             "address": {
               "@type": "PostalAddress",
-              "addressLocality": "Fleury-sur-Orne",
+              "addressLocality": "Bretteville sur Odon",
               "addressRegion": "Normandie",
-              "postalCode": "14123",
+              "postalCode": "14760",
               "addressCountry": "FR",
             },
             "alumniOf": [
@@ -296,4 +295,5 @@ export default function JessicaContentinHomePage() {
     </div>
   );
 }
+
 

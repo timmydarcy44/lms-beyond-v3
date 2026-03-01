@@ -1,3 +1,5 @@
+import { Clock } from "lucide-react";
+
 import { DashboardShellWrapper } from "@/components/dashboard/dashboard-shell-wrapper";
 import { TasksBanner } from "@/components/dashboard/tasks-banner";
 import { SectionSlider } from "@/components/dashboard/section-slider";
@@ -5,6 +7,26 @@ import { QuickCreateSlider } from "@/components/admin/QuickCreateSlider";
 import { KPIGrid, type KpiCard } from "@/components/admin/KPIGrid";
 import { getFormateurDashboardData } from "@/lib/queries/formateur";
 import { getSession } from "@/lib/auth/session";
+
+const formatRelativeTime = (dateString: string | null | undefined): string => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 1) return "À l'instant";
+  if (minutes < 60) return `Il y a ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `Il y a ${hours} h`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `Il y a ${days} j`;
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+};
 
 export default async function FormateurDashboardPage() {
   const data = await getFormateurDashboardData();
@@ -22,28 +44,28 @@ export default async function FormateurDashboardPage() {
 
   const kpis: KpiCard[] = [
     {
-      label: "Apprenants actifs",
+      label: "Apprenants inscrits",
       value: data.kpis.totalLearners,
-      hint: "+12% vs semaine dernière",
+      hint: "Inclut l’ensemble de vos cohortes",
       trend: "up",
     },
     {
       label: "Formations publiées",
-      value: data.kpis.activeCourses,
-      hint: "Cours en ligne",
+      value: data.kpis.publishedCourses,
+      hint: "Cours actuellement visibles",
       trend: "up",
     },
     {
       label: "Tests en production",
       value: data.kpis.publishedTests,
-      hint: "Derniers 30 jours",
+      hint: "Questionnaires activés",
       trend: "up",
     },
     {
-      label: "Copies à corriger",
-      value: data.kpis.pendingReviews,
-      hint: "En attente d&apos;évaluation",
-      trend: data.kpis.pendingReviews > 5 ? "down" : null,
+      label: "Ressources publiées",
+      value: data.kpis.publishedResources,
+      hint: "Documents & masterclass disponibles",
+      trend: "up",
     },
   ];
 
@@ -94,33 +116,61 @@ export default async function FormateurDashboardPage() {
     >
       <TasksBanner roleFilter="instructor" todoHref="/dashboard/formateur/todo" />
       
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#18181b]/90 via-[#11111f]/90 to-[#050505]/80 px-7 py-10 shadow-[0_40px_120px_rgba(59,130,246,0.15)] lg:px-12 lg:py-14 w-full">
-        <div className="pointer-events-none absolute -left-28 -top-32 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.45),_transparent_70%)] blur-3xl" />
-        <div className="pointer-events-none absolute -right-24 bottom-[-160px] h-96 w-96 rounded-full bg-[radial-gradient(circle_at_center,_rgba(244,114,182,0.35),_transparent_65%)] blur-3xl" />
-        <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl space-y-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-sky-300/90">
-              Espace Formateur
-            </p>
-            <h1 className="text-3xl font-semibold leading-tight md:text-[36px]">
+      <section className="relative overflow-hidden rounded-4xl border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.35),_transparent_65%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.28),_transparent_60%),linear-gradient(140deg,#080810,#111123,#050508)] px-7 py-12 shadow-[0_45px_140px_-60px_rgba(56,189,248,0.45)] lg:px-12 lg:py-16">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08),_transparent_40%)] opacity-60" />
+        <div className="relative z-10 grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-white/85">
+              Espace formateur
+              <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-medium tracking-[0.4em] text-emerald-200">
+                Premium
+              </span>
+            </div>
+            <h1 className="text-3xl font-semibold leading-tight text-white md:text-[38px]">
               Orchestrer vos formations, suivez vos cohortes et boostez l&apos;engagement de vos apprenants.
             </h1>
-            <p className="text-sm text-white/75">
-              Visualisez instantanément vos indicateurs clés, planifiez vos prochaines sessions et partagez les ressources qui font la différence.
+            <p className="max-w-2xl text-base text-white/80">
+              Visualisez d&apos;un coup d&apos;œil vos indicateurs clés, planifiez vos prochaines sessions et partagez les ressources qui créent des expériences mémorables.
             </p>
-          </div>
-          <div className="flex flex-col gap-3 text-sm text-white/70 lg:text-right">
-            <span className="rounded-full border border-white/20 px-4 py-2 text-white/80">
-              📈 Focus : progression moyenne des cohortes à +8% cette semaine
-            </span>
-            <div className="flex items-center gap-3">
-              <button className="rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/10">
-                Exporter le reporting
-              </button>
-              <button className="rounded-full bg-[linear-gradient(135deg,#00C6FF,#0072FF)] px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_50px_rgba(0,114,255,0.35)] transition hover:scale-105">
+            <div className="flex flex-wrap items-center gap-3">
+              <button className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#60a5fa] via-[#38bdf8] to-[#2dd4bf] px-6 py-2.5 text-sm font-semibold text-black shadow-[0_18px_60px_-35px_rgba(56,189,248,0.6)] transition hover:scale-105 hover:shadow-[0_25px_70px_-35px_rgba(45,212,191,0.45)]">
                 Inviter un apprenant
               </button>
+              <button className="inline-flex items-center gap-2 rounded-full border border-white/25 px-6 py-2.5 text-sm font-semibold text-white/85 transition hover:bg-white/10">
+                Exporter le reporting
+              </button>
+              <button className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/70 transition hover:bg-white/10">
+                Planifier une session
+              </button>
             </div>
+          </div>
+          <div className="space-y-4 rounded-3xl border border-white/10 bg-white/4 p-6 backdrop-blur-lg">
+            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+              Prochaines étapes
+            </span>
+            <div className="space-y-3 text-sm text-white/80">
+              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                <div>
+                  <p className="font-medium text-white">Finaliser votre prochaine cohorte</p>
+                  <p className="text-xs text-white/60">3 sections à confirmer</p>
+                </div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-200">
+                  10 min
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                <div>
+                  <p className="font-medium text-white">Partager la masterclass engageante</p>
+                  <p className="text-xs text-white/60">Embed recommandée pour vos mentors</p>
+                </div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-200">
+                  5 min
+                </span>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/75">
+              📈 Focus : progression moyenne des cohortes +8% cette semaine
+            </span>
           </div>
         </div>
       </section>
@@ -129,38 +179,73 @@ export default async function FormateurDashboardPage() {
 
       <QuickCreateSlider items={quickItems} />
 
-      <section className="relative grid gap-10 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0f172a]/80 via-[#111827]/80 to-[#020617]/80 px-7 py-10 shadow-[0_32px_120px_rgba(29,78,216,0.25)] lg:grid-cols-[1.1fr_1fr] lg:px-12 lg:py-14">
-        <div className="space-y-5">
-          <span className="inline-flex items-center rounded-full border border-white/20 px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
-            Masterclass vidéo
-          </span>
-          <h2 className="text-3xl font-semibold leading-tight md:text-[34px]">
-            Neurosciences &amp; engagement : des leviers concrets pour transformer vos parcours.
-          </h2>
-          <p className="max-w-2xl text-sm text-white/75">
-            Une immersion de 12 minutes où Timmy Darcy décortique les mécaniques attentionnelles et les rituels d&apos;ancrage. Idéal pour préparer votre prochaine session ou inspirer votre équipe.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <button className="rounded-full bg-gradient-to-r from-sky-400 via-cyan-300 to-emerald-300 px-5 py-2 text-sm font-semibold text-black shadow-[0_12px_40px_rgba(56,189,248,0.35)] transition hover:scale-105">
-              Visionner l&apos;aperçu
-            </button>
-            <button className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/10">
-              Consulter le programme
-            </button>
+      <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0f172a]/85 via-[#111827]/85 to-[#020617]/85 px-7 py-8 shadow-[0_32px_120px_-60px_rgba(59,130,246,0.45)] lg:px-10">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10">
+              <Clock className="h-4 w-4 text-white/80" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-white/70">
+                Timeline pédagogique
+              </p>
+              <h3 className="text-xl font-semibold text-white">Historique des actions</h3>
+            </div>
           </div>
+          <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
+            {data.activityLogs.length}
+          </span>
         </div>
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-[0_24px_80px_rgba(15,118,110,0.25)]">
-          <div className="pointer-events-none absolute -right-10 top-10 h-40 w-40 rounded-full bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.3),_transparent_70%)] blur-2xl" />
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            poster="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=900&q=80"
-            className="h-full w-full object-cover"
-          >
-            <source src="https://cdn.coverr.co/videos/coverr-business-team-in-a-training-session-7020/1080p.mp4" type="video/mp4" />
-          </video>
+        <div className="space-y-4">
+          {data.activityLogs.length > 0 ? (
+            data.activityLogs.slice(0, 8).map((log) => {
+              const metadata = log.metadata as Record<string, unknown>;
+              const courseTitle =
+                typeof metadata?.course_title === "string" ? metadata.course_title : null;
+              const learnerName =
+                typeof metadata?.learner_name === "string" ? metadata.learner_name : null;
+
+              let description = log.summary;
+              if (!description) {
+                switch (log.actionType) {
+                  case "course_published":
+                    description = `Publication d’une formation${courseTitle ? ` : ${courseTitle}` : ""}`;
+                    break;
+                  case "test_published":
+                    description = `Mise en ligne d’un test${courseTitle ? ` : ${courseTitle}` : ""}`;
+                    break;
+                  case "resource_added":
+                    description = "Nouvelle ressource partagée";
+                    break;
+                  case "learner_login":
+                    description = `Connexion de ${learnerName ?? "un apprenant"}`;
+                    break;
+                  default:
+                    description = `Action ${log.actionType}`;
+                }
+              }
+
+              return (
+                <div
+                  key={log.id}
+                  className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white/80"
+                >
+                  <span className="mt-1 h-2 w-2 rounded-full bg-sky-400" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-white">{description}</p>
+                    {courseTitle ? (
+                      <p className="text-xs text-white/60">Formation : {courseTitle}</p>
+                    ) : null}
+                    <p className="mt-1 text-[11px] text-white/60">{formatRelativeTime(log.createdAt)}</p>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/60">
+              Les prochaines actions apparaîtront ici dès que vos équipes publient un contenu ou qu’un apprenant interagit avec la plateforme.
+            </div>
+          )}
         </div>
       </section>
 

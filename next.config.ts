@@ -35,6 +35,15 @@ const nextConfig: NextConfig = {
     // Qualités d'image supportées
     qualities: [75, 80, 85],
   },
+  async redirects() {
+    return [
+      {
+        source: "/badges/:badgeClassId/criteria",
+        destination: "/badgeclasses/:badgeClassId/criteria",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

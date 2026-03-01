@@ -30,7 +30,7 @@ export function HumanCenteredSection() {
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -40 }}
-            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const }}
           >
             <h2 className="text-5xl md:text-7xl font-medium text-[#0B0B0C] mb-12 leading-[1.1] tracking-[-0.02em]" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
               Pensé avec l'humain,
@@ -56,7 +56,7 @@ export function HumanCenteredSection() {
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 40 }}
-            transition={{ duration: 1.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] as const }}
             className="relative h-[500px] rounded-3xl overflow-hidden border border-[#0B0B0C]/5 shadow-2xl"
           >
             <div 
@@ -73,4 +73,5 @@ export function HumanCenteredSection() {
     </section>
   );
 }
+
 

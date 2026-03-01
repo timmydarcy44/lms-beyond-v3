@@ -136,7 +136,7 @@ export function VideoHero() {
               textShadow: '0 2px 10px rgba(0,0,0,0.5)',
             }}
           >
-            Comblez l'écart entre où vous êtes et où vous voulez être
+            Un accompagnement personnalisé pour comprendre, ajuster et progresser
           </motion.p>
 
           <motion.div

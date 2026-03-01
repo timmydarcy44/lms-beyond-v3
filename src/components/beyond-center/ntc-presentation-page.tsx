@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { JoinPromoModal } from "@/components/beyond-center/join-promo-modal";
 import { 
   ArrowRight, 
   CheckCircle2, 
@@ -237,19 +238,11 @@ export function NTCPresentationPage() {
                 Un titre reconnu par l'État pour accélérer votre carrière dans le commerce B2B.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/beyond-center/pre-inscription">
-                  <Button 
-                    size="lg"
-                    className="rounded-full px-8 py-6 text-lg font-light"
-                    style={{ 
-                      backgroundColor: blue,
-                      color: white
-                    }}
-                  >
-                    S'inscrire maintenant
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
+                <JoinPromoModal
+                  programName="Négociateur Technico-Commercial"
+                  programRef="tp_ntc"
+                  triggerLabel="S'inscrire maintenant"
+                />
                 <Link href="#programme">
                   <Button 
                     size="lg"

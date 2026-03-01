@@ -1,0 +1,1 @@
+﻿{"organizationId":"org-1","name":"Badge test","description":"Desc","imageUrl":"https://example.com/badge.png","criteria":[],"receivability":{"expectedModalities":"x","aiEvaluationPrompt":"y"},"receivabilityReviewMode":"HUMAN"}

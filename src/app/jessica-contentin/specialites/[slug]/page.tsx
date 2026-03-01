@@ -328,11 +328,11 @@ const specialitesContent: Record<string, {
     forWho: [],
   },
   "therapie": {
-    title: "Thérapie psycho-émotionnelle",
-    subtitle: "Accompagnement thérapeutique pour la gestion des émotions",
-    description: "Un accompagnement thérapeutique pour mieux comprendre et gérer vos émotions.",
+    title: "Accompagnement psycho-émotionnel",
+    subtitle: "Accompagnement pour la gestion des émotions",
+    description: "Un accompagnement pour mieux comprendre et gérer vos émotions.",
     whatIs: {
-      title: "Qu'est-ce que la thérapie psycho-émotionnelle ?",
+      title: "Qu'est-ce que l'accompagnement psycho-émotionnel ?",
       description: "Un accompagnement pour la gestion des émotions.",
       details: [
         "Techniques de régulation émotionnelle",

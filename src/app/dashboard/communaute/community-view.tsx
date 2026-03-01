@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SourceChip } from "@/components/ui/source-chip";
 
 const bubbleVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -79,6 +80,24 @@ export default function CommunityView({ initialConversations, availableContacts 
     content: string;
     createdAt?: string;
   } | null>(null);
+  const [workflowNotice, setWorkflowNotice] = useState<{ resource?: string | null } | null>(null);
+  const normalizedNoticeResource = workflowNotice?.resource?.toLowerCase() ?? null;
+  const workflowNoticeText = workflowNotice
+    ? `Tâche associée clôturée dans To-Do${workflowNotice.resource ? ` · ${workflowNotice.resource}` : ""}`
+    : null;
+  const canSend = message.trim().length > 0 && (activeConversation || selectedContactId);
+  const conversationContextHint = useMemo(() => {
+    if (!activeConversation) return null;
+    const hasConsigne = activeConversation.messages.some((message) => message.type === "consigne");
+    if (hasConsigne) {
+      return "Échange lié à une validation de contenu";
+    }
+    const roleLabel = activeConversation.role?.toLowerCase() ?? "";
+    if (roleLabel.includes("suivi") || roleLabel.includes("coach") || roleLabel.includes("tuteur")) {
+      return "Discussion de suivi pédagogique";
+    }
+    return null;
+  }, [activeConversation]);
 
   // Calculer le nombre de messages non lus
   const unreadCount = useMemo(() => {
@@ -88,6 +107,21 @@ export default function CommunityView({ initialConversations, availableContacts 
   useEffect(() => {
     setUnreadTotal(unreadCount);
   }, [unreadCount, setUnreadTotal]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = sessionStorage.getItem("trainerWorkflow:lastCompletedSource");
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as { key?: string; resource?: string; at?: number };
+      if (parsed?.key === "messaging" && typeof parsed.at === "number" && Date.now() - parsed.at < 5 * 60 * 1000) {
+        setWorkflowNotice({ resource: parsed.resource ?? null });
+        sessionStorage.removeItem("trainerWorkflow:lastCompletedSource");
+      }
+    } catch (error) {
+      console.warn("[messaging] Cannot read completion source", error);
+    }
+  }, []);
 
   // Fonction pour supprimer une conversation
   const handleDeleteConversation = async (conversationId: string) => {
@@ -401,6 +435,11 @@ export default function CommunityView({ initialConversations, availableContacts 
       <>
         {notificationToast}
         <div className="flex flex-col gap-8">
+        {workflowNoticeText ? (
+          <p className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-xs text-white/60">
+            {workflowNoticeText}
+          </p>
+        ) : null}
         <Card className="border-white/10 bg-gradient-to-br from-[#141414] via-[#101010] to-[#050505] text-white">
           <CardContent className="flex flex-wrap items-center gap-4 p-6">
             <Badge className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-4 py-1 text-[10px] uppercase tracking-[0.35em] text-white">
@@ -411,7 +450,7 @@ export default function CommunityView({ initialConversations, availableContacts 
             </p>
           </CardContent>
         </Card>
-        <div className="grid min-h-[600px] gap-6 rounded-3xl border border-white/10 bg-white/5 p-4 text-white md:grid-cols-[280px_1fr] md:p-6">
+      <div className="grid min-h-[520px] gap-6 rounded-3xl border border-white/4 bg-transparent p-6 text-white shadow-sm shadow-black/30 md:grid-cols-[280px_1fr]">
           <div className="flex flex-col gap-4">
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
@@ -426,42 +465,46 @@ export default function CommunityView({ initialConversations, availableContacts 
               {filteredConversations.map((conversation) => {
                 const isActive = conversation.id === activeConversationId;
                 const lastMessage = conversation.messages[conversation.messages.length - 1];
+                const lastMessagePreview =
+                  lastMessage?.type === "consigne"
+                    ? "📋 Consigne reçue"
+                    : lastMessage?.content ?? "Aucun message";
+                const lastMessageTime =
+                  lastMessage?.sentAt &&
+                  new Date(lastMessage.sentAt).toLocaleTimeString("fr-FR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                const hasUnread = (conversation.unreadCount ?? 0) > 0;
                 return (
                   <button
                     key={conversation.id}
                     type="button"
                     onClick={() => setActiveConversation(conversation.id)}
                     className={cn(
-                      "flex w-full items-center gap-4 rounded-2xl border border-transparent px-4 py-3 text-left transition duration-300",
-                      isActive ? "bg-white/15" : "hover:bg-white/10",
+                      "flex w-full items-center gap-4 rounded-2xl border border-transparent px-5 py-4 text-left transition duration-300",
+                      isActive ? "bg-white/6 border-white/12" : "hover:bg-white/8",
                     )}
                   >
                     <div className="relative h-12 w-12 overflow-hidden rounded-full">
                       <Image src={conversation.avatarUrl} alt={conversation.name} fill className="object-cover" />
                     </div>
                     <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-white">{conversation.name}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-white/90">{conversation.name}</p>
                         <div className="flex items-center gap-2">
-                          {conversation.unreadCount && conversation.unreadCount > 0 ? (
-                            <Badge className="h-5 min-w-5 rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-1.5 text-[10px] text-white">
-                              {conversation.unreadCount}
-                            </Badge>
+                          {lastMessageTime ? (
+                            <span className="text-xs text-white/45">{lastMessageTime}</span>
                           ) : null}
-                          <span
-                            className={cn(
-                              "h-2 w-2 rounded-full",
-                              conversation.status === "en ligne" && "bg-emerald-400",
-                              conversation.status === "occupé" && "bg-amber-400",
-                              conversation.status === "hors ligne" && "bg-white/40",
-                            )}
-                          />
+                          {hasUnread ? <span className="h-2.5 w-2.5 rounded-full bg-cyan-400/55" aria-hidden /> : null}
                         </div>
                       </div>
                       <p className="text-xs uppercase tracking-[0.3em] text-white/40">{conversation.role}</p>
-                      <p className="line-clamp-1 text-xs text-white/60">
-                        {lastMessage?.type === "consigne" ? "📋 Consigne reçue" : lastMessage?.content}
-                      </p>
+                      <p className="line-clamp-1 text-xs text-white/55">{lastMessagePreview}</p>
+                      {normalizedNoticeResource &&
+                      normalizedNoticeResource === conversation.name.toLowerCase() ? (
+                        <p className="text-[11px] text-white/45">Tâche associée clôturée dans To-Do</p>
+                      ) : null}
                     </div>
                   </button>
                 );
@@ -491,6 +534,11 @@ export default function CommunityView({ initialConversations, availableContacts 
     const selectedContact = availableContacts.find((c) => c.id === selectedContactId);
     return (
       <div className="flex flex-col gap-8">
+        {workflowNoticeText ? (
+          <p className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-xs text-white/60">
+            {workflowNoticeText}
+          </p>
+        ) : null}
         <Card className="border-white/10 bg-gradient-to-br from-[#141414] via-[#101010] to-[#050505] text-white">
           <CardContent className="flex flex-wrap items-center gap-4 p-6">
             <Badge className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-4 py-1 text-[10px] uppercase tracking-[0.35em] text-white">
@@ -502,7 +550,7 @@ export default function CommunityView({ initialConversations, availableContacts 
           </CardContent>
         </Card>
         {/* Réutiliser la même structure mais avec un placeholder pour les messages */}
-        <div className="grid min-h-[600px] gap-6 rounded-3xl border border-white/10 bg-white/5 p-4 text-white md:grid-cols-[280px_1fr] md:p-6">
+        <div className="grid min-h-[520px] gap-6 rounded-3xl border border-white/6 bg-white/[0.02] p-6 text-white shadow-md shadow-black/35 md:grid-cols-[280px_1fr]">
           {/* Sidebar des conversations */}
           <div className="flex flex-col gap-4">
             <div className="relative">
@@ -518,27 +566,42 @@ export default function CommunityView({ initialConversations, availableContacts 
               {filteredConversations.map((conversation) => {
                 const isActive = conversation.id === activeConversationId;
                 const lastMessage = conversation.messages[conversation.messages.length - 1];
+                const lastMessagePreview =
+                  lastMessage?.type === "consigne"
+                    ? "📋 Consigne reçue"
+                    : lastMessage?.content ?? "Aucun message";
+                const lastMessageTime =
+                  lastMessage?.sentAt &&
+                  new Date(lastMessage.sentAt).toLocaleTimeString("fr-FR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                const hasUnread = (conversation.unreadCount ?? 0) > 0;
                 return (
                   <button
                     key={conversation.id}
                     type="button"
                     onClick={() => setActiveConversation(conversation.id)}
                     className={cn(
-                      "flex w-full items-center gap-4 rounded-2xl border border-transparent px-4 py-3 text-left transition duration-300",
-                      isActive ? "bg-white/15" : "hover:bg-white/10",
+                      "flex w-full items-center gap-4 rounded-2xl border border-transparent px-5 py-4 text-left transition duration-300",
+                      isActive ? "bg-white/6 border-white/10" : "hover:bg-white/8",
                     )}
                   >
                     <div className="relative h-12 w-12 overflow-hidden rounded-full">
                       <Image src={conversation.avatarUrl} alt={conversation.name} fill className="object-cover" />
                     </div>
                     <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-white">{conversation.name}</p>
+                        <div className="flex items-center gap-2">
+                          {lastMessageTime ? (
+                            <span className="text-xs text-white/45">{lastMessageTime}</span>
+                          ) : null}
+                          {hasUnread ? <span className="h-2.5 w-2.5 rounded-full bg-cyan-400/55" aria-hidden /> : null}
+                        </div>
                       </div>
                       <p className="text-xs uppercase tracking-[0.3em] text-white/40">{conversation.role}</p>
-                      <p className="line-clamp-1 text-xs text-white/60">
-                        {lastMessage?.type === "consigne" ? "📋 Consigne reçue" : lastMessage?.content}
-                      </p>
+                      <p className="line-clamp-1 text-xs text-white/60">{lastMessagePreview}</p>
                     </div>
                   </button>
                 );
@@ -546,38 +609,39 @@ export default function CommunityView({ initialConversations, availableContacts 
             </div>
           </div>
           {/* Zone de conversation */}
-          <div className="flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/20">
-            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/10">
-                  <Image src={selectedContact?.avatarUrl || ""} alt={selectedContact?.name || ""} fill className="object-cover" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">{selectedContact?.name}</p>
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-                    {selectedContact?.type === "group" ? "Groupe" : "Contact"}
-                  </p>
-                </div>
+          <div className="flex flex-col overflow-hidden rounded-3xl border border-white/6 bg-white/[0.02] shadow-md shadow-black/35">
+            <div className="flex items-center gap-3 border-b border-white/10 px-6 py-4">
+              <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/10">
+                <Image src={selectedContact?.avatarUrl || ""} alt={selectedContact?.name || ""} fill className="object-cover" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">{selectedContact?.name}</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/40">
+                  {selectedContact?.type === "group" ? "Groupe" : "Contact"}
+                </p>
               </div>
             </div>
-            <div className="relative flex-1 overflow-hidden">
-              <div className="flex h-full flex-col items-center justify-center gap-4 px-6 pb-6 pt-8">
-                <p className="text-sm text-white/60">Commencez la conversation en envoyant un message</p>
+            <div className="relative flex flex-1 flex-col overflow-hidden">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-black/50 via-black/25 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/55 via-black/25 to-transparent" />
+              <div className="mx-auto flex h-full w-full max-w-3xl flex-col items-center justify-center gap-3 rounded-3xl border border-white/8 bg-white/[0.02] px-7 py-12 text-center text-sm text-white/65">
+                <p>Commencez la conversation en envoyant un message.</p>
+                <p className="text-xs text-white/45">Une réponse courte suffit pour lancer l’échange.</p>
               </div>
             </div>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-white/10 bg-black/30 px-6 py-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3 border-t border-white/10 bg-black/25 px-6 py-5">
               <div className="flex items-end gap-3">
                 <Textarea
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
-                  placeholder="Écrire un message..."
+                  placeholder="Écrire un message (une réponse courte suffit)"
                   rows={1}
-                  className="resize-none rounded-2xl border border-white/15 bg-white/5 text-sm text-white placeholder:text-white/40 focus-visible:ring-white/30"
+                  className="min-h-[60px] resize-none rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-3 text-sm text-white placeholder:text-white/45 focus-visible:ring-white/30"
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
                       if (message.trim()) {
-                        const form = event.currentTarget.closest('form') as HTMLFormElement;
+                        const form = event.currentTarget.closest("form") as HTMLFormElement;
                         if (form) {
                           handleSubmit(form);
                         }
@@ -589,7 +653,12 @@ export default function CommunityView({ initialConversations, availableContacts 
                   <Button
                     type="submit"
                     disabled={!message.trim()}
-                    className="rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white shadow-lg shadow-[#ff512f]/30"
+                    className={cn(
+                      "rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition",
+                      message.trim()
+                        ? "border border-cyan-300/30 bg-cyan-500/12 text-white hover:border-cyan-200/40 hover:bg-cyan-500/18"
+                        : "border border-white/18 bg-white/8 text-white/45",
+                    )}
                   >
                     Envoyer
                     <Send className="ml-2 h-3.5 w-3.5" />
@@ -607,40 +676,43 @@ export default function CommunityView({ initialConversations, availableContacts 
     <>
       {notificationToast}
       <div className="flex flex-col gap-8">
+      {workflowNoticeText ? (
+        <p className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-xs text-white/65">
+          {workflowNoticeText}
+        </p>
+      ) : null}
       <Card className="border-white/10 bg-gradient-to-br from-[#141414] via-[#101010] to-[#050505] text-white">
         <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
-          <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Badge className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-4 py-1 text-[10px] uppercase tracking-[0.35em] text-white">
             Messagerie temps réel
           </Badge>
           <p className="text-sm text-white/70">
             Discutez avec vos formateurs, partagez vos rituels, posez vos questions. L&apos;historique sera synchronisé avec Supabase pour faciliter le suivi pédagogique.
           </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Badge de notification */}
-            {unreadCount > 0 && (
-              <div className="relative">
-                <Bell className="h-5 w-5 text-white/70" />
-                <Badge className="absolute -right-2 -top-2 h-5 min-w-5 rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-1.5 text-[10px] text-white border-2 border-[#141414]">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Badge>
-              </div>
-            )}
-            {/* Bouton Écrire un nouveau message */}
-            <Button
-              type="button"
-              onClick={() => setShowNewMessageModal(true)}
-              className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white shadow-lg shadow-[#00c6ff]/30 hover:shadow-[#00c6ff]/50 transition-shadow"
-            >
-              <MessageSquarePlus className="mr-2 h-3.5 w-3.5" />
-              Écrire un nouveau message
-            </Button>
-          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {unreadCount > 0 ? (
+            <div className="relative">
+              <Bell className="h-5 w-5 text-white/70" />
+              <Badge className="absolute -right-2 -top-2 h-5 min-w-5 rounded-full bg-cyan-500/60 px-1.5 text-[10px] text-white border-2 border-[#141414]">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Badge>
+            </div>
+          ) : null}
+          <Button
+            type="button"
+            onClick={() => setShowNewMessageModal(true)}
+            className="rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-white/25 hover:text-white"
+          >
+            <MessageSquarePlus className="mr-2 h-3.5 w-3.5" />
+            Nouvelle conversation
+          </Button>
+        </div>
         </CardContent>
       </Card>
 
-      <div className="grid min-h-[600px] gap-6 rounded-3xl border border-white/10 bg-white/5 p-4 text-white md:grid-cols-[280px_1fr] md:p-6">
+      <div className="grid min-h-[520px] gap-6 rounded-3xl border border-white/10 bg-transparent p-6 text-white shadow-sm shadow-black/25 md:grid-cols-[280px_1fr]">
         <div className="flex flex-col gap-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
@@ -651,54 +723,47 @@ export default function CommunityView({ initialConversations, availableContacts 
               className="pl-11 pr-4 text-sm text-white placeholder:text-white/40"
             />
           </div>
-          <div className="space-y-2 overflow-y-auto pr-1">
+            <div className="space-y-2 overflow-y-auto pr-1">
             {filteredConversations.map((conversation) => {
               const isActive = conversation.id === activeConversation?.id;
               const lastMessage = conversation.messages[conversation.messages.length - 1];
-              
-              // Marquer la conversation comme lue quand on clique dessus
-              const handleConversationClick = async () => {
-                setActiveConversation(conversation.id);
-                // Les messages seront marqués comme lus automatiquement lors de l'affichage
-                // On peut améliorer cela plus tard avec un système de marquage global
-              };
-              
+              const lastMessagePreview =
+                lastMessage?.type === "consigne"
+                  ? "📋 Consigne reçue"
+                  : lastMessage?.content ?? "Aucun message";
+              const lastMessageTime =
+                lastMessage?.sentAt &&
+                new Date(lastMessage.sentAt).toLocaleTimeString("fr-FR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+              const hasUnread = (conversation.unreadCount ?? 0) > 0;
+
               return (
                 <button
                   key={conversation.id}
                   type="button"
-                  onClick={handleConversationClick}
+                  onClick={() => setActiveConversation(conversation.id)}
                   className={cn(
-                    "flex w-full items-center gap-4 rounded-2xl border border-transparent px-4 py-3 text-left transition duration-300",
-                    isActive ? "bg-white/15" : "hover:bg-white/10",
+                      "flex w-full items-center gap-4 rounded-2xl border border-transparent px-5 py-4 text-left transition duration-300",
+                      isActive ? "bg-white/6 border-white/12" : "hover:bg-white/8",
                   )}
                 >
                   <div className="relative h-12 w-12 overflow-hidden rounded-full">
                     <Image src={conversation.avatarUrl} alt={conversation.name} fill className="object-cover" />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-white">{conversation.name}</p>
-                        <div className="flex items-center gap-2">
-                          {conversation.unreadCount && conversation.unreadCount > 0 ? (
-                            <Badge className="h-5 min-w-5 rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-1.5 text-[10px] text-white">
-                              {conversation.unreadCount}
-                            </Badge>
-                          ) : null}
-                      <span
-                        className={cn(
-                          "h-2 w-2 rounded-full",
-                          conversation.status === "en ligne" && "bg-emerald-400",
-                          conversation.status === "occupé" && "bg-amber-400",
-                          conversation.status === "hors ligne" && "bg-white/40",
-                        )}
-                      />
-                        </div>
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-white/90">{conversation.name}</p>
+                      <div className="flex items-center gap-2">
+                        {lastMessageTime ? (
+                          <span className="text-xs text-white/45">{lastMessageTime}</span>
+                        ) : null}
+                        {hasUnread ? <span className="h-2.5 w-2.5 rounded-full bg-cyan-400/55" aria-hidden /> : null}
+                      </div>
                     </div>
                     <p className="text-xs uppercase tracking-[0.3em] text-white/40">{conversation.role}</p>
-                      <p className="line-clamp-1 text-xs text-white/60">
-                        {lastMessage?.type === "consigne" ? "📋 Consigne reçue" : lastMessage?.content}
-                      </p>
+                      <p className="line-clamp-1 text-xs text-white/55">{lastMessagePreview}</p>
                   </div>
                 </button>
               );
@@ -706,8 +771,8 @@ export default function CommunityView({ initialConversations, availableContacts 
           </div>
         </div>
 
-        <div className="flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/20">
-          <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
+        <div className="flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.01] shadow-sm shadow-black/20">
+          <div className="flex items-center justify-between gap-4 border-b border-white/12 px-6 py-5">
             <div className="flex items-center gap-3">
               <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/10">
                 <Image src={activeConversation.avatarUrl} alt={activeConversation.name} fill className="object-cover" />
@@ -715,6 +780,13 @@ export default function CommunityView({ initialConversations, availableContacts 
               <div>
                 <p className="text-sm font-semibold text-white">{activeConversation.name}</p>
                 <p className="text-xs uppercase tracking-[0.3em] text-white/40">{activeConversation.role}</p>
+                <div className="mt-1">
+                  <SourceChip label="Message" />
+                  {workflowNoticeText &&
+                  normalizedNoticeResource === activeConversation.name.toLowerCase() ? (
+                    <p className="mt-1 text-[11px] text-white/50">{workflowNoticeText}</p>
+                  ) : null}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 text-white/60">
@@ -754,70 +826,144 @@ export default function CommunityView({ initialConversations, availableContacts 
               <Wifi className="h-3.5 w-3.5" />
               En conversation privée
             </div>
-            <div className="flex h-full flex-col justify-end gap-6 overflow-y-auto px-6 pb-6 pt-8">
-              <AnimatePresence initial={false}>
-                {activeConversation.messages.map((message) => {
-                  const isLearner = message.author === "learner";
-                  return (
-                    <motion.div
-                      key={message.id}
-                      variants={bubbleVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                      className={cn("flex w-full", isLearner ? "justify-end" : "justify-start")}
-                    >
-                      <div
-                        className={cn(
-                          "max-w-[80%] rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-lg",
-                          message.type === "consigne"
-                            ? "bg-gradient-to-r from-[#00C6FF] via-[#8E2DE2] to-[#FF6FD8] text-white"
-                            : isLearner
-                            ? "bg-gradient-to-r from-[#FF512F] to-[#DD2476] text-white"
-                            : "bg-white/10 text-white/80 backdrop-blur",
-                        )}
-                      >
-                        {message.type === "consigne" && (
-                          <div className="mb-2 flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            <span className="text-xs font-semibold uppercase tracking-[0.3em]">Consigne</span>
-                          </div>
-                        )}
-                        {message.subject && (
-                          <div className="mb-2 border-b border-white/20 pb-2">
-                            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
-                              {message.subject}
-                            </p>
-                          </div>
-                        )}
-                        <div className={cn(message.type === "consigne" && "prose prose-invert prose-headings:text-white prose-p:text-white/90 max-w-none")} dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, "<br />") }} />
-                        {message.type === "consigne" && (
-                          <div className="mt-3 pt-3 border-t border-white/20">
-                            <Button
-                              asChild
-                              size="sm"
-                              className="w-full rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] text-xs font-semibold uppercase tracking-[0.2em] text-white hover:opacity-90"
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-black/45 via-black/20 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
+            <div className="flex h-full flex-col overflow-y-auto px-5 pb-12 pt-12">
+              <div className="mx-auto w-full max-w-4xl">
+                <div className="flex flex-col gap-6 rounded-[28px] border border-white/12 bg-white/[0.012] px-6 py-8 shadow-sm shadow-black/15">
+                  {conversationContextHint ? (
+                    <p className="mx-auto max-w-md text-center text-xs text-white/40">{conversationContextHint}</p>
+                  ) : null}
+                  {activeConversation.messages.length <= 1 ? (
+                    <p className="mx-auto max-w-md text-center text-xs text-white/45">
+                      Vous pouvez commencer l’échange ici. Une réponse simple suffit.
+                    </p>
+                  ) : null}
+                  <AnimatePresence initial={false}>
+                    {(() => {
+                      let lastDateLabel: string | null = null;
+                      return activeConversation.messages.map((message, index) => {
+                        const messageDate = new Date(message.sentAt);
+                        const dateLabel = Number.isNaN(messageDate.getTime())
+                          ? null
+                          : messageDate.toLocaleDateString("fr-FR", {
+                              weekday: "short",
+                              day: "2-digit",
+                              month: "short",
+                            });
+                        const showDateDivider = dateLabel !== null && dateLabel !== lastDateLabel;
+                        if (dateLabel) {
+                          lastDateLabel = dateLabel;
+                        }
+                        const isLearner = message.author === "learner";
+                        const previousMessage = index > 0 ? activeConversation.messages[index - 1] : null;
+                        const isSameAuthor = previousMessage?.author === message.author;
+                        const bubbleTime = Number.isNaN(messageDate.getTime())
+                          ? ""
+                          : messageDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                        const contentLength = (message.content || "").trim().length;
+                        const isCompact = contentLength > 0 && contentLength <= 32;
+
+                        return (
+                          <Fragment key={message.id}>
+                            {showDateDivider ? (
+                              <div className="flex items-center gap-4 text-[11px] uppercase tracking-[0.4em] text-white/35">
+                                <span className="flex-1 border-t border-white/10" />
+                                <span>{dateLabel}</span>
+                                <span className="flex-1 border-t border-white/10" />
+                              </div>
+                            ) : null}
+                            <motion.div
+                              variants={bubbleVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="hidden"
+                              transition={{ duration: 0.25, ease: "easeOut" }}
+                              className={cn(
+                                "flex w-full",
+                                isLearner ? "justify-end" : "justify-start",
+                                isSameAuthor ? "mt-2" : "mt-5",
+                              )}
                             >
-                              <Link href={`/dashboard/drive/new?consigne=${activeConversation?.id}&message=${message.id}`}>
-                                📁 Ouvrir un fichier dans mon drive
-                              </Link>
-                            </Button>
-                          </div>
-                        )}
-                        <span className="mt-2 block text-[10px] uppercase tracking-[0.3em] text-white/50">
-                          {message.sentAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-              <div ref={messagesEndRef} />
+                              <div
+                                className={cn(
+                                  "min-w-[112px] max-w-[82%] border text-sm leading-relaxed shadow-sm transition-colors",
+                                  isCompact ? "rounded-3xl" : "rounded-[26px]",
+                                  isSameAuthor ? "rounded-t-xl" : "",
+                                  message.type === "consigne"
+                                    ? cn(
+                                        "bg-[#22364a]/90 border-cyan-300/20 px-6 py-3 text-white shadow-[0_16px_40px_-26px_rgba(14,165,233,0.35)]",
+                                        isCompact && "py-2.5",
+                                      )
+                                    : isLearner
+                                      ? cn(
+                                          "bg-[#0d1724]/92 border-white/12 px-5 text-white/82",
+                                          isCompact ? "py-2.5" : "py-3",
+                                          "mr-[2px]",
+                                        )
+                                      : cn(
+                                          "bg-[#21384a]/92 border-cyan-200/22 px-6 text-white/92 shadow-[0_18px_42px_-24px_rgba(56,189,248,0.45)]",
+                                          isCompact ? "py-2.5" : "py-3",
+                                          "ml-[3px]",
+                                        ),
+                                )}
+                              >
+                                {message.type === "consigne" && (
+                                  <div className="mb-2 flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-white/80" />
+                                    <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
+                                      Consigne
+                                    </span>
+                                  </div>
+                                )}
+                                {message.subject && (
+                                  <div className="mb-2 border-b border-white/15 pb-2">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/75">
+                                      {message.subject}
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="text-white/90">
+                                  <div
+                                    className={cn(
+                                      message.type === "consigne" &&
+                                        "prose prose-invert prose-headings:text-white prose-p:text-white/90 max-w-none",
+                                    )}
+                                    dangerouslySetInnerHTML={{
+                                      __html: message.content.replace(/\n/g, "<br />"),
+                                    }}
+                                  />
+                                </div>
+                                {message.type === "consigne" && (
+                                  <div className="mt-3 border-t border-cyan-300/20 pt-3">
+                                    <Button
+                                      asChild
+                                      size="sm"
+                                      className="w-full rounded-full border border-cyan-300/30 bg-cyan-500/15 text-xs font-semibold uppercase tracking-[0.2em] text-white hover:border-cyan-200/40 hover:bg-cyan-500/25"
+                                    >
+                                      <Link href={`/dashboard/drive/new?consigne=${activeConversation?.id}&message=${message.id}`}>
+                                        Valider le document
+                                      </Link>
+                                    </Button>
+                                  </div>
+                                )}
+                                {bubbleTime ? (
+                                  <span className="mt-2 block text-xs text-white/55">{bubbleTime}</span>
+                                ) : null}
+                              </div>
+                            </motion.div>
+                          </Fragment>
+                        );
+                      });
+                    })()}
+                  </AnimatePresence>
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-white/10 bg-black/30 px-6 py-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 border-t border-white/12 bg-black/20 px-6 py-5">
             {!activeConversation && (
               <div className="mb-2">
                 <ContactSelector
@@ -832,10 +978,14 @@ export default function CommunityView({ initialConversations, availableContacts 
               <Textarea
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                placeholder={activeConversation ? "Écrire un message..." : "Sélectionnez un contact d'abord..."}
+                placeholder={
+                  activeConversation
+                    ? "Écrire un message (une réponse courte suffit)"
+                    : "Sélectionnez un contact d'abord..."
+                }
                 rows={1}
                 disabled={!activeConversation && !selectedContactId}
-                className="resize-none rounded-2xl border border-white/15 bg-white/5 text-sm text-white placeholder:text-white/40 focus-visible:ring-white/30 disabled:opacity-50"
+                className="min-h-[60px] resize-none rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-3 text-sm text-white placeholder:text-white/45 focus-visible:ring-white/30 disabled:opacity-50"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
@@ -859,8 +1009,13 @@ export default function CommunityView({ initialConversations, availableContacts 
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!message.trim() || (!activeConversation && !selectedContactId)}
-                  className="rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white shadow-lg shadow-[#ff512f]/30 disabled:opacity-50"
+                  disabled={!canSend}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition",
+                    canSend
+                      ? "border border-cyan-300/30 bg-cyan-500/12 text-white hover:border-cyan-200/40 hover:bg-cyan-500/18"
+                      : "border border-white/18 bg-white/8 text-white/45",
+                  )}
                 >
                   Envoyer
                   <Send className="ml-2 h-3.5 w-3.5" />

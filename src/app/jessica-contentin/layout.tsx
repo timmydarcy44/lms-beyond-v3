@@ -28,7 +28,7 @@ export function JessicaContentinLayout({
 }) {
   return (
     <div className="min-h-screen bg-[#F8F5F0]">
-      <JessicaContentinHeader />
+      <JessicaContentinHeader/>
       <main className="pt-0">{children}</main>
       <JessicaContentinFooter />
       <FloatingCartBadge />

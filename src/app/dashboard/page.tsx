@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowRight, BookOpen, BriefcaseBusiness, HeartPulse, Sparkles } from "lucide-react";
+import type { ComponentType } from "react";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { requireSession } from "@/lib/auth/session";
 
@@ -104,57 +106,160 @@ export default async function DashboardPage() {
     },
   ];
 
+  const firstName =
+    session.fullName?.trim().split(/\s+/)[0] ||
+    session.email?.split("@")[0] ||
+    "utilisateur";
+  const productVisuals: Record<
+    string,
+    { icon: ComponentType<{ className?: string }>; glow: string; ring: string }
+  > = {
+    connect: {
+      icon: Sparkles,
+      glow: "from-amber-400/35 via-orange-500/10 to-transparent",
+      ring: "hover:border-amber-300/50 hover:shadow-[0_0_0_1px_rgba(251,191,36,0.35),0_24px_60px_-24px_rgba(251,146,60,0.55)]",
+    },
+    lms: {
+      icon: BookOpen,
+      glow: "from-cyan-400/35 via-blue-500/10 to-transparent",
+      ring: "hover:border-cyan-300/50 hover:shadow-[0_0_0_1px_rgba(103,232,249,0.35),0_24px_60px_-24px_rgba(56,189,248,0.55)]",
+    },
+    care: {
+      icon: HeartPulse,
+      glow: "from-emerald-400/35 via-green-500/10 to-transparent",
+      ring: "hover:border-emerald-300/50 hover:shadow-[0_0_0_1px_rgba(110,231,183,0.35),0_24px_60px_-24px_rgba(16,185,129,0.55)]",
+    },
+    pro: {
+      icon: BriefcaseBusiness,
+      glow: "from-purple-400/35 via-violet-500/10 to-transparent",
+      ring: "hover:border-purple-300/50 hover:shadow-[0_0_0_1px_rgba(196,181,253,0.35),0_24px_60px_-24px_rgba(139,92,246,0.55)]",
+    },
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 px-6 py-12 text-white">
-      <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="rounded-2xl border border-white/15 bg-white/5 p-5">
-          <p className="text-xs uppercase tracking-[0.22em] text-white/60">Navigation Beyond</p>
-          <div className="mt-4 grid gap-2">
-            {sidebarLinks.map((item) => (
+    <div className="min-h-screen bg-black text-white">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-black/90 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-6">
+            <span className="text-sm font-bold tracking-[0.24em] text-white">BEYOND</span>
+            <nav className="hidden items-center gap-4 text-xs text-white/70 md:flex">
+              {cards.map((card) =>
+                card.enabled ? (
+                  <Link key={`top-${card.key}`} href={card.href} className="transition hover:text-white">
+                    {card.title.replace("Beyond ", "")}
+                  </Link>
+                ) : (
+                  <span key={`top-${card.key}`} className="text-white/35">
+                    {card.title.replace("Beyond ", "")}
+                  </span>
+                ),
+              )}
+            </nav>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-xs font-semibold text-white">
+              {firstName.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="text-sm text-white/80">{firstName}</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="px-4 pb-8 pt-20">
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          {[
+            { label: "Mon profil", href: "/dashboard/apprenant" },
+            { label: "Mes tests", href: "/dashboard/apprenant" },
+            ...(hasLms ? [{ label: "Ma formation", href: lmsHref }] : []),
+          ].map((item) => (
+            <Link
+              key={`quick-${item.label}-${item.href}`}
+              href={item.href}
+              className="shrink-0 rounded-full bg-white/10 px-4 py-1 text-sm text-white/85 transition hover:bg-white/15"
+            >
+              {item.label}
+            </Link>
+          ))}
+          {sidebarLinks
+            .filter((item) =>
+              item.label !== "Mon profil Beyond" &&
+              item.label !== "Mes tests" &&
+              item.label !== "Ma formation",
+            )
+            .map((item) => (
               <Link
-                key={`${item.label}-${item.href}`}
+                key={`quick-extra-${item.label}-${item.href}`}
                 href={item.href}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 transition hover:bg-white/10"
+                className="shrink-0 rounded-full bg-white/10 px-4 py-1 text-sm text-white/70 transition hover:bg-white/15 hover:text-white"
               >
                 {item.label}
               </Link>
             ))}
-          </div>
-        </aside>
+        </div>
 
-        <main className="space-y-4">
-          <header className="rounded-2xl border border-white/15 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.22em] text-white/60">Dashboard universel Beyond</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Mes espaces</h1>
-            <p className="mt-2 text-sm text-white/70">
-              Accedez a vos suites actives depuis un point d entree unique.
-            </p>
-          </header>
+        <main className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {cards.map((card, index) => {
+            const visual = productVisuals[card.key] ?? productVisuals.connect;
+            const Icon = visual.icon;
+            const dramaticGradient =
+              card.key === "connect"
+                ? "from-orange-900 to-black"
+                : card.key === "lms"
+                  ? "from-blue-900 to-black"
+                  : card.key === "care"
+                    ? "from-emerald-900 to-black"
+                    : "from-violet-900 to-black";
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {cards.map((card) =>
-              card.enabled ? (
-                <Link
-                  key={card.key}
-                  href={card.href}
-                  className="rounded-2xl border border-white/15 bg-white/5 p-5 transition hover:bg-white/10"
-                >
-                  <p className="text-lg font-semibold">{card.title}</p>
-                  <p className="mt-2 text-sm text-white/70">{card.description}</p>
-                </Link>
-              ) : (
+            if (!card.enabled) {
+              return (
                 <div
                   key={card.key}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 opacity-70"
+                  className={`relative min-h-[280px] overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${dramaticGradient} p-6 opacity-40`}
+                  style={{ animation: "fadeUp 600ms ease-out forwards", animationDelay: `${index * 100}ms`, opacity: 0 }}
                 >
-                  <p className="text-lg font-semibold text-white/80">{card.title}</p>
-                  <p className="mt-2 text-sm text-white/55">Bientot disponible</p>
+                  <span className="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85">
+                    BIENTOT
+                  </span>
+                  <Icon className="h-9 w-9 text-white/70" />
+                  <p className="mt-10 text-4xl font-black leading-none text-white">{card.title}</p>
+                  <p className="mt-3 max-w-md text-sm text-white/70">{card.description}</p>
                 </div>
-              ),
-            )}
-          </div>
+              );
+            }
+
+            return (
+              <Link
+                key={card.key}
+                href={card.href}
+                className={`group relative min-h-[280px] cursor-pointer overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br ${dramaticGradient} p-6 transition-all duration-300 hover:scale-[1.02] hover:brightness-110`}
+                style={{ animation: "fadeUp 600ms ease-out forwards", animationDelay: `${index * 100}ms`, opacity: 0 }}
+              >
+                <span className="absolute right-4 top-4 rounded-full bg-emerald-500/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+                  ACTIF
+                </span>
+                <Icon className="h-10 w-10 text-white" />
+                <p className="mt-10 text-4xl font-black leading-none text-white">{card.title}</p>
+                <p className="mt-3 max-w-md text-sm text-white/70">{card.description}</p>
+                <span className="mt-8 inline-flex items-center gap-1 text-sm text-white/80 transition group-hover:text-white">
+                  Ouvrir <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+            );
+          })}
         </main>
       </div>
+      <style>{`
+        @keyframes fadeUp {
+          from {
+            opacity: 0;
+            transform: translateY(14px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

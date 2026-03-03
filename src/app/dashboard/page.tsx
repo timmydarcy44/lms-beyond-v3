@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { requireSession } from "@/lib/auth/session";
 
 type ProfileAccessRow = {
   id: string;
@@ -17,17 +18,7 @@ type ProfileAccessRow = {
 const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
 export default async function DashboardPage() {
-  const supabase = await getServerClient();
-  if (!supabase) {
-    redirect("/login");
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/login");
-  }
+  const session = await requireSession();
 
   const service = await getServiceRoleClientOrFallback();
   if (!service) {
@@ -39,18 +30,18 @@ export default async function DashboardPage() {
   const { data: byId } = await service
     .from("profiles")
     .select(profileSelect)
-    .eq("id", user.id)
+    .eq("id", session.id)
     .maybeSingle();
 
   let profile = (byId as ProfileAccessRow | null) ?? null;
-  if (!profile && user.email) {
+  if (!profile && session.email) {
     const { data: byEmail } = await service
       .from("profiles")
       .select(profileSelect)
-      .eq("email", user.email)
+      .eq("email", session.email)
       .limit(10);
     const rows = (byEmail as ProfileAccessRow[] | null) ?? [];
-    profile = rows.find((row) => row.id === user.id) ?? rows[0] ?? null;
+    profile = rows.find((row) => row.id === session.id) ?? rows[0] ?? null;
   }
 
   const role = normalize(profile?.role || profile?.role_type);
@@ -60,11 +51,18 @@ export default async function DashboardPage() {
   const hasConnect = profile?.access_connect !== false;
   const hasCare = profile?.access_care === true;
   const hasPro = profile?.access_pro === true;
+  const sessionRole = normalize(session.role);
+  const lmsHref =
+    sessionRole === "admin" || sessionRole === "formateur"
+      ? "/dashboard/formateur"
+      : sessionRole === "tuteur"
+        ? "/dashboard/tuteur"
+        : "/dashboard/student/learning";
 
   const sidebarLinks = [
     { label: "Mon profil Beyond", href: "/dashboard/apprenant" },
     { label: "Mes tests", href: "/dashboard/apprenant" },
-    ...(hasLms ? [{ label: "Ma formation", href: "/dashboard/student/learning" }] : []),
+    ...(hasLms ? [{ label: "Ma formation", href: lmsHref }] : []),
     ...(hasLms && (isAdmin || isMentor) ? [{ label: "Studio", href: "/dashboard/formateur" }] : []),
     ...(hasCare ? [{ label: "Mon suivi", href: "/dashboard/formateur/beyond-care" }] : []),
   ];
@@ -80,7 +78,7 @@ export default async function DashboardPage() {
     {
       key: "lms",
       title: "Beyond LMS",
-      href: "/dashboard/student/learning",
+      href: lmsHref,
       enabled: hasLms,
       description: "Parcours de formation, progression et contenus pedagogiques.",
     },

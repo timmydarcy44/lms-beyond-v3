@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   const { data: profileById } = await service
     .from("profiles")
-    .select("id, email, role, role_type")
+    .select("id, email, role, role_type, school_id")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   if (!profile && emailValue) {
     const { data: profileByEmail } = await service
       .from("profiles")
-      .select("id, email, role, role_type")
+      .select("id, email, role, role_type, school_id")
       .eq("email", emailValue)
       .limit(10);
     const rows = (profileByEmail as Record<string, unknown>[] | null) ?? [];
@@ -41,6 +41,20 @@ export async function POST(request: Request) {
   const role = String(profile?.role ?? "").trim().toLowerCase();
   const roleType = String(profile?.role_type ?? "").trim().toLowerCase();
   const effectiveRole = role || roleType;
+  const hasSchool = Boolean(profile?.school_id);
+  const isParticulierOrStudent = effectiveRole === "student" || effectiveRole === "particulier";
+
+  if (isParticulierOrStudent && !hasSchool) {
+    return NextResponse.json({ destination: "/dashboard/apprenant" });
+  }
+  if (isParticulierOrStudent && hasSchool) {
+    return NextResponse.json({ destination: "/dashboard" });
+  }
+
+  if (effectiveRole === "tuteur") {
+    return NextResponse.json({ destination: "/dashboard/tuteur" });
+  }
+
   if (effectiveRole === "admin" || effectiveRole === "super_admin" || effectiveRole === "mentor") {
     return NextResponse.json({ destination: "/dashboard/formateur" });
   }

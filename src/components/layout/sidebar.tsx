@@ -61,8 +61,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
   const isTutorRole = roleForNav === "tuteur";
   const isAdminRole = roleForNav === "admin";
   const resolvedRoleForNav: FrontendRole = roleForNav ?? "apprenant";
-  const connectRole: FrontendRole =
-    resolvedRoleForNav === "tuteur" ? "formateur" : resolvedRoleForNav;
+  const connectRole: FrontendRole = resolvedRoleForNav;
   const connectRoleForWrapper: "admin" | "formateur" | "apprenant" =
     connectRole === "admin"
       ? "admin"
@@ -77,27 +76,26 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
 
     if (roleForNav === "tuteur") {
       return [
-        { label: "Mes alternants", icon: Users, href: "/dashboard/tuteur" },
+        { label: "Tableau de bord", icon: Users, href: "/dashboard/tuteur" },
+        { label: "Mes missions", icon: ListChecks, href: "/dashboard/tuteur/missions" },
+        { label: "To-Do", icon: CheckSquare, href: "/dashboard/tuteur/todo" },
         { label: "Formulaires", icon: ClipboardList, href: "/dashboard/tuteur/formulaires" },
-        { label: "Missions", icon: ListChecks, href: "/dashboard/tuteur/missions" },
-        { label: "To-Do List", icon: CheckSquare, href: "/dashboard/tuteur/todo" },
         { label: "Messagerie", icon: MessageCircle, href: "/dashboard/student/community" },
-        { label: "No School", icon: Store, href: "/dashboard/catalogue" },
-        { label: "Ressources", icon: BookOpen, href: "/dashboard/ressources" },
-        { label: "Paramètres", icon: Settings, href: "/dashboard/parametres" },
       ];
     }
+
+    const isTrainerOrAdmin = roleForNav === "formateur" || roleForNav === "admin";
 
     const baseItems = [
       {
         label: "Formations",
         icon: GraduationCap,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/formations" : "/dashboard/student/learning/formations",
+        href: isTrainerOrAdmin ? "/dashboard/formateur/formations" : "/dashboard/student/learning/formations",
       },
       {
         label: "Parcours",
         icon: Layers,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/parcours" : "/dashboard/student/learning/parcours",
+        href: isTrainerOrAdmin ? "/dashboard/formateur/parcours" : "/dashboard/student/learning/parcours",
       },
       ...(roleForNav === "formateur"
         ? [
@@ -111,19 +109,19 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
       {
         label: "Ressources",
         icon: BookOpen,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/ressources" : "/dashboard/ressources",
+        href: isTrainerOrAdmin ? "/dashboard/formateur/ressources" : "/dashboard/ressources",
       },
       {
         label: "Drive",
         icon: HardDrive,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/drive" : "/dashboard/student/tools/drive",
+        href: isTrainerOrAdmin ? "/dashboard/formateur/drive" : "/dashboard/student/tools/drive",
         showBadge: roleForNav === "formateur",
         badgeCount: roleForNav === "formateur" ? 1 : 0,
       },
       {
         label: "Tests",
         icon: PenTool,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/tests" : "/dashboard/student/learning/tests",
+        href: isTrainerOrAdmin ? "/dashboard/formateur/tests" : "/dashboard/student/learning/tests",
       },
       {
         label: "To-Do List",
@@ -138,7 +136,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
       {
         label: "Messagerie",
         icon: MessageCircle,
-        href: "/dashboard/student/community",
+        href: isTrainerOrAdmin ? "/dashboard/formateur/communaute" : "/dashboard/student/community",
       },
       ...(roleForNav === "admin"
         ? [

@@ -12,4 +12,11 @@ export const DASHBOARD_ROUTES = {
   tuteur: "/dashboard/tuteur",
 } as const;
 
+export const PROTECTED_ROUTES = [
+  DASHBOARD_ROUTES.formateur,
+  DASHBOARD_ROUTES.apprenant,
+  DASHBOARD_ROUTES.admin,
+  DASHBOARD_ROUTES.tuteur,
+] as const;
+
 

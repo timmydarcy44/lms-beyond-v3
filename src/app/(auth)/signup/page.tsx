@@ -39,7 +39,6 @@ const signupSchema = z
     poste_actuel: z.string().optional(),
     entreprise: z.string().optional(),
     type_contrat: z.string().optional(),
-    rythme_teletravail: z.string().optional(),
     tjm: z.string().optional(),
     expertise: z.string().optional(),
     stack_technique: z.string().optional(),
@@ -79,7 +78,6 @@ export default function SignupPage() {
       poste_actuel: "",
       entreprise: "",
       type_contrat: "",
-      rythme_teletravail: "",
       tjm: "",
       expertise: "",
       stack_technique: "",
@@ -197,8 +195,6 @@ export default function SignupPage() {
         poste_actuel: values.type_profil === "emploi" ? emptyToNull(values.poste_actuel) : null,
         entreprise: values.type_profil === "emploi" ? emptyToNull(values.entreprise) : null,
         type_contrat: values.type_profil === "emploi" ? emptyToNull(values.type_contrat) : null,
-        rythme_teletravail:
-          values.type_profil === "emploi" ? emptyToNull(values.rythme_teletravail) : null,
         tjm: values.type_profil === "freelance" ? emptyToNull(values.tjm) : null,
         expertise: values.type_profil === "freelance" ? emptyToNull(values.expertise) : null,
         stack_technique: values.type_profil === "freelance" ? emptyToNull(values.stack_technique) : null,
@@ -361,20 +357,17 @@ export default function SignupPage() {
                     <FormItem>
                       <FormLabel>Type de contrat</FormLabel>
                       <FormControl>
-                        <Input placeholder="CDI, CDD, Freelance..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="rythme_teletravail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rythme télétravail</FormLabel>
-                      <FormControl>
-                        <Input placeholder="2j / semaine" {...field} />
+                        <select
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          {...field}
+                        >
+                          <option value="">Choisir</option>
+                          <option value="CDI">CDI</option>
+                          <option value="CDD">CDD</option>
+                          <option value="Alternance">Alternance</option>
+                          <option value="Freelance">Freelance</option>
+                          <option value="Interim">Intérim</option>
+                        </select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

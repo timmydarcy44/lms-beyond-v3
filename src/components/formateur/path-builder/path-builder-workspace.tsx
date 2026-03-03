@@ -191,7 +191,7 @@ export function PathBuilderWorkspace({
       // Rediriger vers la liste des parcours après publication
       if (status === "published") {
         setTimeout(() => {
-          router.push("/dashboard/formateur/parcours");
+          router.push("/dashboard/student/studio/parcours");
           router.refresh();
         }, 1500);
       }
@@ -419,7 +419,7 @@ export function PathBuilderWorkspace({
             selected={selectedCourses}
             onToggle={(id) => toggleItem(id, selectedCourses, setSelectedCourses)}
             emptyCta="Créer une formation"
-            emptyHref="/dashboard/formateur/formations/new"
+            emptyHref="/dashboard/student/studio/formations/new"
           />
 
           <SelectionZone
@@ -429,7 +429,7 @@ export function PathBuilderWorkspace({
             selected={selectedTests}
             onToggle={(id) => toggleItem(id, selectedTests, setSelectedTests)}
             emptyCta="Créer un test"
-            emptyHref="/dashboard/formateur/tests/new"
+            emptyHref="/dashboard/student/studio/tests/new"
           />
 
           <SelectionZone
@@ -439,7 +439,7 @@ export function PathBuilderWorkspace({
             selected={selectedResources}
             onToggle={(id) => toggleItem(id, selectedResources, setSelectedResources)}
             emptyCta="Créer une ressource"
-            emptyHref="/dashboard/formateur/ressources/new"
+            emptyHref="/dashboard/student/studio/ressources/new"
           />
         </div>
 

@@ -172,11 +172,11 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
           // Sinon, rediriger vers la page de test classique
           const testSlug = testData.slug;
           if (testSlug) {
-            redirect(`/dashboard/tests/${testSlug}`);
+            redirect(`/dashboard/student/learning/tests/${testSlug}`);
           }
 
           // Fallback vers l'ID du test
-          redirect(`/dashboard/tests/${testData.id}`);
+          redirect(`/dashboard/student/learning/tests/${testData.id}`);
         }
       }
 
@@ -292,11 +292,11 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
         // Sinon, rediriger vers la page de test classique
         const testSlug = testData.slug;
         if (testSlug) {
-          redirect(`/dashboard/tests/${testSlug}`);
+          redirect(`/dashboard/student/learning/tests/${testSlug}`);
         }
 
         // Fallback vers l'ID du test
-        redirect(`/dashboard/tests/${testData.id}`);
+        redirect(`/dashboard/student/learning/tests/${testData.id}`);
       }
     }
 

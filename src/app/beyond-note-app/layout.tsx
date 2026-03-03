@@ -17,7 +17,13 @@ export default async function BeyondNoteAppLayout({
   return (
     <DyslexiaModeProvider>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <BeyondNoteHeader user={session} />
+        <BeyondNoteHeader
+          user={{
+            email: session.email ?? "",
+            fullName: session.fullName ?? null,
+            avatarUrl: session.avatarUrl ?? null,
+          }}
+        />
         <main>{children}</main>
       </div>
     </DyslexiaModeProvider>

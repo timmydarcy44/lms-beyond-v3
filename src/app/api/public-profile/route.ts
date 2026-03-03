@@ -3,13 +3,6 @@ import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const slugToNameParts = (slug: string) => {
-  const parts = slug.split("-").filter(Boolean);
-  if (parts.length < 2) return null;
-  const [firstName, ...rest] = parts;
-  return { firstName, lastName: rest.join(" ") };
-};
-
 type AxisKey = "A1" | "A2" | "A3" | "A4" | "A5" | "A6" | "A7" | "A8";
 
 const AXES_LABELS: Record<AxisKey, string> = {
@@ -83,47 +76,45 @@ export async function GET(request: Request) {
   }
 
   if (!resolvedUserId && slug) {
-    const nameParts = slugToNameParts(slug);
-    if (nameParts) {
-      const fullName = `${nameParts.firstName} ${nameParts.lastName}`.trim();
-      const { data: fullNameMatch } = await supabase
+    const slugParts = slug
+      .split("-")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const firstPart = slugParts[0] ?? "";
+    const lastPart = slugParts.slice(1).join(" ");
+    if (firstPart) {
+      const { data: profileByNames } = await supabase
         .from("profiles")
         .select("*")
-        .ilike("full_name", `%${fullName}%`)
+        .ilike("first_name", firstPart)
+        .ilike("last_name", lastPart || "%")
+        .limit(1)
         .maybeSingle();
-      if (fullNameMatch?.id) {
-        resolvedUserId = String(fullNameMatch.id);
-        profileRow = fullNameMatch as Record<string, unknown>;
-      }
-      if (!resolvedUserId) {
-        const { data: nameMatch } = await supabase
-          .from("profiles")
-          .select("*")
-          .ilike("first_name", nameParts.firstName)
-          .ilike("last_name", nameParts.lastName)
-          .maybeSingle();
-        if (nameMatch?.id) {
-          resolvedUserId = String(nameMatch.id);
-          profileRow = nameMatch as Record<string, unknown>;
-        }
-      }
-      if (!resolvedUserId) {
-        const { data: emailMatch } = await supabase
-          .from("profiles")
-          .select("*")
-          .ilike("email", `%${nameParts.firstName}%`)
-          .ilike("email", `%${nameParts.lastName}%`)
-          .maybeSingle();
-        if (emailMatch?.id) {
-          resolvedUserId = String(emailMatch.id);
-          profileRow = emailMatch as Record<string, unknown>;
-        }
+      if (profileByNames) {
+        profileRow = profileByNames as Record<string, unknown>;
+        resolvedUserId = String((profileByNames as { id?: string }).id ?? "");
       }
     }
   }
 
   if (!resolvedUserId && !profileRow) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({
+      publicUserId: null,
+      profileRow: null,
+      skillsMetadata: {},
+      hardSkills: [],
+      stackTools: [],
+      discScores: [],
+      idmcAxes: null,
+      idmcScores: null,
+      idmcResponses: null,
+      discScoreValue: null,
+      idmcScoreValue: null,
+      softSkillsAll: [],
+      experiences: [],
+      diplomas: [],
+      settings: null,
+    });
   }
 
   if (!profileRow && resolvedUserId) {
@@ -196,18 +187,41 @@ export async function GET(request: Request) {
     .limit(1)
     .maybeSingle();
 
+  const profileIdsToQuery = new Set<string>();
+  if (resolvedUserId) profileIdsToQuery.add(resolvedUserId);
+  const profileIdFromRow =
+    profileRow && typeof (profileRow as { id?: unknown }).id === "string"
+      ? String((profileRow as { id?: string }).id)
+      : null;
+  if (profileIdFromRow) profileIdsToQuery.add(profileIdFromRow);
+  const profileEmail =
+    profileRow && typeof (profileRow as { email?: unknown }).email === "string"
+      ? String((profileRow as { email?: string }).email).trim()
+      : "";
+  if (profileEmail) {
+    const { data: siblingProfiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", profileEmail);
+    (siblingProfiles ?? []).forEach((row) => {
+      if (row?.id) profileIdsToQuery.add(String(row.id));
+    });
+  }
+  const profileIds = Array.from(profileIdsToQuery);
+
   const [
     discResultats,
     discTestResult,
     idmcResultatsRow,
-    softSkillsResult,
+    softSkillsByLearner,
+    softSkillsByProfile,
     experiencesData,
     diplomeData,
   ] = await Promise.all([
     supabase
       .from("disc_resultats")
       .select("scores")
-      .eq("profile_id", resolvedUserId)
+      .in("profile_id", profileIds)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -226,7 +240,7 @@ export async function GET(request: Request) {
     supabase
       .from("idmc_resultats")
       .select("responses, scores, global_score, level, updated_at")
-      .eq("profile_id", resolvedUserId)
+      .in("profile_id", profileIds)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -234,7 +248,15 @@ export async function GET(request: Request) {
     supabase
       .from("soft_skills_resultats")
       .select("scores")
-      .eq("learner_id", resolvedUserId)
+      .in("learner_id", profileIds)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => data),
+    supabase
+      .from("soft_skills_resultats")
+      .select("scores")
+      .in("profile_id", profileIds)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -242,13 +264,13 @@ export async function GET(request: Request) {
     supabase
       .from("experiences_pro")
       .select("*")
-      .eq("learner_id", resolvedUserId)
+      .in("learner_id", profileIds)
       .order("date_debut", { ascending: false })
       .then(({ data }) => data),
     supabase
       .from("diplomes")
       .select("*")
-      .eq("learner_id", resolvedUserId)
+      .in("learner_id", profileIds)
       .order("annee_obtention", { ascending: false })
       .then(({ data }) => data),
   ]);
@@ -266,6 +288,7 @@ export async function GET(request: Request) {
   const idmcResponses = idmcResultatsRow?.responses ?? null;
   const idmcAxes = resolveIdmcAxesServer(idmcScores ?? idmcResponses);
 
+  const softSkillsResult = softSkillsByLearner ?? softSkillsByProfile;
   const softSkillsAll =
     softSkillsResult?.scores && typeof softSkillsResult.scores === "object"
       ? Object.entries(softSkillsResult.scores as Record<string, number>).map(([skill, score]) => ({

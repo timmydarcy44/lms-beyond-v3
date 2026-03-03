@@ -46,7 +46,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: SidebarProps) => {
   const pathname = usePathname();
-  const isFormateurArea = pathname?.startsWith("/dashboard/formateur");
+  const isFormateurArea = pathname?.startsWith("/dashboard/student/studio");
   const isTutorArea = pathname?.startsWith("/dashboard/tuteur");
   const isCatalogueSurface = pathname?.startsWith("/catalog");
   const isBeyondCareArea = pathname?.includes("beyond-care");
@@ -81,7 +81,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
         { label: "Formulaires", icon: ClipboardList, href: "/dashboard/tuteur/formulaires" },
         { label: "Missions", icon: ListChecks, href: "/dashboard/tuteur/missions" },
         { label: "To-Do List", icon: CheckSquare, href: "/dashboard/tuteur/todo" },
-        { label: "Messagerie", icon: MessageCircle, href: "/dashboard/communaute" },
+        { label: "Messagerie", icon: MessageCircle, href: "/dashboard/student/community" },
         { label: "No School", icon: Store, href: "/dashboard/catalogue" },
         { label: "Ressources", icon: BookOpen, href: "/dashboard/ressources" },
         { label: "Paramètres", icon: Settings, href: "/dashboard/parametres" },
@@ -92,45 +92,45 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
       {
         label: "Formations",
         icon: GraduationCap,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/formations" : "/dashboard/formations",
+        href: roleForNav === "formateur" ? "/dashboard/student/studio/formations" : "/dashboard/student/learning/formations",
       },
       {
         label: "Parcours",
         icon: Layers,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/parcours" : "/dashboard/parcours",
+        href: roleForNav === "formateur" ? "/dashboard/student/studio/parcours" : "/dashboard/student/learning/parcours",
       },
       ...(roleForNav === "formateur"
         ? [
             {
               label: "Mes apprenants",
               icon: Users,
-              href: "/dashboard/formateur/apprenants",
+              href: "/dashboard/student/studio/apprenants",
             },
           ]
         : []),
       {
         label: "Ressources",
         icon: BookOpen,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/ressources" : "/dashboard/ressources",
+        href: roleForNav === "formateur" ? "/dashboard/student/studio/ressources" : "/dashboard/ressources",
       },
       {
         label: "Drive",
         icon: HardDrive,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/drive" : "/dashboard/drive",
+        href: roleForNav === "formateur" ? "/dashboard/student/studio/drive" : "/dashboard/student/tools/drive",
         showBadge: roleForNav === "formateur",
         badgeCount: roleForNav === "formateur" ? 1 : 0,
       },
       {
         label: "Tests",
         icon: PenTool,
-        href: roleForNav === "formateur" ? "/dashboard/formateur/tests" : "/dashboard/tests",
+        href: roleForNav === "formateur" ? "/dashboard/student/studio/tests" : "/dashboard/student/learning/tests",
       },
       {
         label: "To-Do List",
         icon: CheckSquare,
         href:
           roleForNav === "formateur"
-            ? "/dashboard/formateur/todo"
+            ? "/dashboard/student/studio/todo"
             : roleForNav === "admin"
               ? "/dashboard/admin/todo"
               : "/dashboard/apprenant/todo",
@@ -138,7 +138,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
       {
         label: "Messagerie",
         icon: MessageCircle,
-        href: "/dashboard/communaute",
+        href: "/dashboard/student/community",
       },
       ...(roleForNav === "admin"
         ? [
@@ -165,13 +165,13 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
 
   const learnerApplePrefixes = [
     "/dashboard/apprenant",
-    "/dashboard/formations",
-    "/dashboard/parcours",
+    "/dashboard/student/learning/formations",
+    "/dashboard/student/learning/parcours",
     "/dashboard/ressources",
-    "/dashboard/tests",
+    "/dashboard/student/learning/tests",
     "/dashboard/apprenant/todo",
     "/dashboard/todo",
-    "/dashboard/drive",
+    "/dashboard/student/tools/drive",
     "/dashboard/beyond-care",
     "/dashboard/beyond-connect",
     "/dashboard/catalogue",

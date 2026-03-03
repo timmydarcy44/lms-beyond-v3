@@ -160,7 +160,7 @@ export function PillarsSlider() {
                   className={cn(
                     "w-full flex items-center justify-between p-4 rounded-lg transition-all duration-300 text-left group",
                     index === activeIndex
-                      ? "bg-[#C6A664] text-white"
+                      ? "!bg-[#C6A664] text-white shadow-[0_8px_24px_rgba(198,166,100,0.35)]"
                       : "bg-[#F8F5F0] text-[#2F2A25] hover:bg-[#E6D9C6]"
                   )}
                 >
@@ -185,7 +185,7 @@ export function PillarsSlider() {
                         asChild
                         variant="outline"
                         size="sm"
-                        className="bg-white/20 border-white/30 text-white hover:bg-white/30 rounded-full"
+                        className="rounded-full border border-white/40 bg-white/15 text-white hover:bg-white/25"
                       >
                         <Link href={pillar.href}>
                           Explorer <ArrowRight className="ml-1 h-4 w-4 inline" />
@@ -214,7 +214,8 @@ export function PillarsSlider() {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.5 }}
                 className="relative w-full h-full"
-              >                {activePillar.video ? (
+              >
+                {activePillar.video ? (
                   <video
                     className="h-full w-full object-cover"
                     src={activePillar.video}
@@ -233,7 +234,7 @@ export function PillarsSlider() {
                     priority
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      // Fallback vers une image par défaut si l"image Supabase ne charge pas
+                      // Fallback vers une image par défaut si l'image Supabase ne charge pas
                       if (!target.src.includes("unsplash")) {
                         target.src =
                           "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80";
@@ -280,6 +281,4 @@ export function PillarsSlider() {
     </motion.section>
   );
 }
-
-
 

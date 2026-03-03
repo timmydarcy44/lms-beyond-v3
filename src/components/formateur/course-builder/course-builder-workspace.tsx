@@ -118,7 +118,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
         } else if (isFormationContext) {
           newUrl = `/super/studio/formations/${newCourseId}/structure`;
         } else {
-          newUrl = `/dashboard/formateur/formations/${newCourseId}/structure`;
+          newUrl = `/dashboard/student/studio/formations/${newCourseId}/structure`;
         }
         router.replace(newUrl);
       }
@@ -132,7 +132,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
           } else if (isFormationContext) {
             redirectUrl = "/super/studio/formations";
           } else {
-            redirectUrl = "/dashboard/formateur/formations";
+            redirectUrl = "/dashboard/student/studio/formations";
           }
           router.push(redirectUrl);
           router.refresh();
@@ -185,7 +185,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
                     ? "/super/studio/modules/new/metadata"
                     : pathname?.includes("/super/studio/formations")
                     ? "/super/studio/formations/new/metadata"
-                    : "/dashboard/formateur/formations/new"
+                    : "/dashboard/student/studio/formations/new"
                 }
               >
                 Retour aux informations

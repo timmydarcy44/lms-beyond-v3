@@ -285,7 +285,7 @@ export const DashboardHeader = ({
       </div>
     </header>
     <Link
-      href="/dashboard/communaute"
+      href="/dashboard/student/community"
       className="md:hidden"
       aria-label="Ouvrir la messagerie"
     >

@@ -48,6 +48,33 @@ const techBadges = [
   },
 ];
 
+const businessBadges = [
+  {
+    title: "Négociation stratégique",
+    status: "Obtenu",
+    accent: "text-emerald-200",
+    badge: "bg-emerald-500/20",
+    image:
+      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Business Development",
+    status: "En progression",
+    accent: "text-white/80",
+    badge: "bg-white/10",
+    image:
+      "https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Sport business",
+    status: "À obtenir",
+    accent: "text-white/70",
+    badge: "bg-white/10",
+    image:
+      "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1200&q=80",
+  },
+];
+
 export default function ApprenantBadgesPage() {
   const supabase = createSupabaseBrowserClient();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -133,72 +160,104 @@ export default function ApprenantBadgesPage() {
 
         <main
           className="flex-1 overflow-y-auto px-6 py-10 lg:px-12"
-          style={{ marginLeft: isSidebarCollapsed ? "5rem" : "16rem" }}
         >
           <div className="mb-8">
             <div className="text-[12px] uppercase tracking-[0.3em] text-white/50">Mes badges</div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              C&apos;est quoi un Open Badge ?
+              Votre collection certifiante
             </h1>
           </div>
 
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8">
-            <div className="absolute inset-0 bg-[url('/uploads/editor/1766949485698-6fac6828-2cc5-4352-9b89-2306e7e38b80.jpeg')] bg-cover bg-center opacity-60" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-            <div className="relative max-w-xl space-y-4">
-              <p className="text-sm text-white/70">
-                Un Open Badge certifie vos compétences et votre progression. Il s&apos;affiche
-                partout : CV, LinkedIn, candidature.
-              </p>
-              <Link
-                href="/dashboard/apprenant/results"
-                className="inline-flex rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-black"
-              >
-                Découvrir mes badges
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {badgeCategories.map((category) => (
-              <div
-                key={category.title}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6"
-              >
-                <div className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${category.color}`}>
-                  {category.title}
-                </div>
-                <div className="mt-4 text-sm text-white/70">{category.count}</div>
-                <div className="mt-6 h-24 rounded-2xl border border-white/10 bg-white/5" />
+          <section className="relative overflow-hidden rounded-3xl border border-white/10 p-8">
+            <div className="absolute inset-0 bg-[url('/uploads/editor/1766949485698-6fac6828-2cc5-4352-9b89-2306e7e38b80.jpeg')] bg-cover bg-center opacity-70" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/15" />
+            <div className="relative max-w-2xl space-y-4">
+              <div className="inline-flex rounded-full border border-white/20 bg-black/30 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white/75">
+                Feature Film
               </div>
-            ))}
-          </div>
-
-          <div className="mt-12">
-            <div className="text-[12px] uppercase tracking-[0.3em] text-white/50">Catégorie Tech</div>
-            <div className="mt-6 grid gap-6 md:grid-cols-3">
-              {techBadges.map((badge) => (
-                <div
-                  key={badge.title}
-                  className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6"
+              <h2 className="text-2xl font-semibold text-white sm:text-3xl">Open Badges Beyond</h2>
+              <p className="text-sm text-white/75">
+                Vos badges certifient vos compétences avec preuve vérifiable. Publiez-les sur votre CV, votre
+                profil LinkedIn et vos candidatures.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/dashboard/apprenant/results"
+                  className="inline-flex rounded-full bg-white px-5 py-2 text-xs font-semibold text-black"
                 >
-                  <div
-                    className="absolute inset-0 bg-cover bg-center opacity-40"
-                    style={{ backgroundImage: `url('${badge.image}')` }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
-                  <div className="relative space-y-3">
-                    <div className="text-lg font-semibold text-white">{badge.title}</div>
-                    <div
-                      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${badge.badge} ${badge.accent}`}
-                    >
-                      {badge.status}
-                    </div>
+                  Voir mes résultats
+                </Link>
+                <button
+                  type="button"
+                  className="inline-flex rounded-full border border-white/25 bg-white/10 px-5 py-2 text-xs font-semibold text-white"
+                >
+                  Continuer ma progression
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-10">
+            <div className="text-[12px] uppercase tracking-[0.3em] text-white/50">Genres</div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {badgeCategories.map((category) => (
+                <div key={category.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <div className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${category.color}`}>
+                    {category.title}
                   </div>
+                  <div className="mt-3 text-sm text-white/70">{category.count}</div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
+
+          <section className="mt-12">
+            <div className="text-[12px] uppercase tracking-[0.3em] text-white/50">Tendances pour vous</div>
+            <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+              {techBadges.map((badge) => (
+                <article
+                  key={badge.title}
+                  className="group relative h-56 min-w-[280px] overflow-hidden rounded-2xl border border-white/10"
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+                    style={{ backgroundImage: `url('${badge.image}')` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-4">
+                    <div className="text-base font-semibold text-white">{badge.title}</div>
+                    <div className={`mt-2 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${badge.badge} ${badge.accent}`}>
+                      {badge.status}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-10">
+            <div className="text-[12px] uppercase tracking-[0.3em] text-white/50">Nouveautés business</div>
+            <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+              {businessBadges.map((badge) => (
+                <article
+                  key={badge.title}
+                  className="group relative h-48 min-w-[260px] overflow-hidden rounded-2xl border border-white/10"
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+                    style={{ backgroundImage: `url('${badge.image}')` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-4">
+                    <div className="text-sm font-semibold text-white">{badge.title}</div>
+                    <div className={`mt-2 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${badge.badge} ${badge.accent}`}>
+                      {badge.status}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
         </main>
       </div>
     </div>

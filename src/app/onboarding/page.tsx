@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { saveDiscResults } from "@/lib/supabase/saveDiscResults";
@@ -38,6 +38,40 @@ export default function OnboardingPage() {
   const [selectedMinus, setSelectedMinus] = useState<DiscLabel | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+
+  useEffect(() => {
+    const guardRole = async () => {
+      if (!supabase) return;
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user?.id) return;
+      const { data: profileById } = await supabase
+        .from("profiles")
+        .select("role_type, school_id")
+        .eq("id", userData.user.id)
+        .maybeSingle();
+      let profile = profileById;
+      if (!profile && userData.user.email) {
+        const { data: profileByEmail } = await supabase
+          .from("profiles")
+          .select("role_type, school_id")
+          .eq("email", userData.user.email)
+          .maybeSingle();
+        profile = profileByEmail ?? null;
+      }
+      const normalizedRole = String(profile?.role_type ?? "").trim().toLowerCase();
+      const isSchoolRole = ["ecole", "school", "cfa", "admin_ecole", "admin_school"].includes(normalizedRole);
+      const isEnterpriseRole = ["entreprise", "enterprise"].includes(normalizedRole);
+      const hasSchoolScope = Boolean(profile?.school_id);
+      if (isSchoolRole || hasSchoolScope) {
+        window.location.href = "/dashboard/ecole";
+        return;
+      }
+      if (isEnterpriseRole) {
+        window.location.href = "/dashboard/entreprise";
+      }
+    };
+    guardRole();
+  }, [supabase]);
 
   const current = discQuestions[index];
   const progress = Math.round(((index + 1) / discQuestions.length) * 100);
@@ -96,7 +130,7 @@ export default function OnboardingPage() {
       });
 
       setTimeout(() => {
-        window.location.href = "/dashboard/profil";
+        window.location.href = "/dashboard/apprenant";
       }, 900);
     } finally {
       setSubmitting(false);

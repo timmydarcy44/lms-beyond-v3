@@ -63,10 +63,10 @@ export default async function LearnerDetailPage({ params }: LearnerDetailPagePro
   const contentType = contentTypeMap[category];
 
   const categoryReturnHref: Record<LearnerCategory, string> = {
-    formations: "/dashboard/formations",
-    parcours: "/dashboard/parcours",
+    formations: "/dashboard/student/learning/formations",
+    parcours: "/dashboard/student/learning/parcours",
     ressources: "/dashboard/ressources",
-    tests: "/dashboard/tests",
+    tests: "/dashboard/student/learning/tests",
   };
   const returnHref = categoryReturnHref[category] ?? "/dashboard/apprenant";
 

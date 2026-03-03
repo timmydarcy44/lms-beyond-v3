@@ -92,6 +92,7 @@ type NavigationProps = {
   secondaryCtaHref?: string;
   showSecondaryCta?: boolean;
   variant?: "default" | "clean";
+  topOffsetClass?: "top-0" | "top-10";
 };
 
 export default function Navigation({
@@ -102,12 +103,11 @@ export default function Navigation({
   secondaryCtaHref = "/signup",
   showSecondaryCta = true,
   variant = "default",
+  topOffsetClass = "top-0",
 }: NavigationProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const navBase =
-    "fixed top-0 w-full z-[1000] h-20 flex items-center";
   return (
-    <nav className="fixed top-0 w-full z-[1000] bg-white border-b border-gray-100 h-20 flex items-center shadow-sm">
+    <nav className={`fixed ${topOffsetClass} w-full z-[1000] bg-white border-b border-gray-100 h-20 flex items-center shadow-sm`}>
       <div className="max-w-[1440px] mx-auto px-10 w-full flex items-center justify-between font-inter">
         
         <Link href="/" className="text-2xl font-black tracking-tighter text-black">BEYOND</Link>

@@ -16,6 +16,7 @@ import { env } from "@/lib/env";
 import Script from "next/script";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
+const HERO_IMAGE_PATH = "Copie de Copie de Copie de Copie de Sans titre.png";
 
 // Fonction pour construire l'URL Supabase Storage
 function getSupabaseStorageUrl(bucket: string, path: string): string {
@@ -41,9 +42,52 @@ const BUCKET_NAME = "Jessica CONTENTIN";
 
 export default function JessicaContentinHomePage() {
   const photoUrl = getSupabaseStorageUrl(BUCKET_NAME, JESSICA_PHOTO_PATH) || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80";
+  const heroImageUrl =
+    getSupabaseStorageUrl(BUCKET_NAME, HERO_IMAGE_PATH) ||
+    "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80";
 
   return (
     <div className="min-h-screen bg-[#F8F5F0]">
+      <section className="relative mx-4 mb-4 h-[calc(100vh-4rem)] min-h-[560px] overflow-hidden rounded-2xl bg-[#D9D9DB]">
+        <img
+          src={heroImageUrl}
+          alt="Jessica Contentin"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            if (!target.src.includes("unsplash")) {
+              target.src =
+                "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80";
+            }
+          }}
+        />
+        <div className="absolute inset-0 bg-black/30" />
+        <div className="relative z-10 flex h-full items-center px-6 lg:px-16">
+          <div className="max-w-3xl">
+            <h1
+              className="text-5xl font-bold leading-tight text-white lg:text-7xl"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+              }}
+            >
+              Ensemble, revelons votre potentiel
+            </h1>
+            <Button
+              asChild
+              size="lg"
+              className="mt-8 rounded-full bg-[#C6A664] px-8 py-6 text-lg text-white hover:bg-[#B88A44]"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+              }}
+            >
+              <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                Prendre rendez-vous
+              </a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Pillars Slider */}
       <PillarsSlider />
 
@@ -83,13 +127,6 @@ export default function JessicaContentinHomePage() {
                 >
                   Jessica Contentin : Psychopédagogie et Neuroéducation à Caen
                 </h1>
-                <p
-                  className="text-xl text-[#2F2A25]/80 mb-8"
-                  style={{
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                  }}
-                >
-                </p>
               </div>
 
               <div
@@ -147,7 +184,7 @@ export default function JessicaContentinHomePage() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.8 }}
                 >
-                  Passionnée par la <strong>psychologie de l'éducation</strong>, j'adopte une approche globale intégrant les dimensions cognitive, émotionnelle et comportementale de chaque enfant ou adolescent. Je suis formée à l'accompagnement des <Link href="/specialites/tnd" className="text-[#C6A664] hover:underline font-semibold">TND (troubles DYS, TDAH, TSA, HPI, TOP)</Link>, ainsi qu'aux problématiques telles que le <Link href="/specialites/harcelement" className="text-[#C6A664] hover:underline font-semibold">harcèlement scolaire</Link>, la <strong>phobie scolaire</strong>, les difficultés émotionnelles et la perte de confiance.
+                  Passionnée par la <strong>psychologie de l'éducation</strong>, j'adopte une approche globale intégrant les dimensions cognitive, émotionnelle et comportementale de chaque enfant ou adolescent. Je suis formée à l'accompagnement des <Link href="/jessica-contentin/specialites/tnd" className="text-[#C6A664] hover:underline font-semibold">TND (troubles DYS, TDAH, TSA, HPI, TOP)</Link>, ainsi qu'aux problématiques telles que le <Link href="/jessica-contentin/specialites/harcelement" className="text-[#C6A664] hover:underline font-semibold">harcèlement scolaire</Link>, la <strong>phobie scolaire</strong>, les difficultés émotionnelles et la perte de confiance.
                 </motion.p>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -155,7 +192,7 @@ export default function JessicaContentinHomePage() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.9 }}
                 >
-                  La <strong>gestion des émotions</strong> constitue le fil conducteur de mon travail, car elle est essentielle à la réussite scolaire et au bien-être. Mon objectif est de révéler les forces de chaque jeune, renforcer leur <Link href="/specialites/confiance-en-soi" className="text-[#C6A664] hover:underline font-semibold">confiance</Link>, apaiser les tensions et favoriser leur inclusion tout en accompagnant les familles avec douceur.
+                  La <strong>gestion des émotions</strong> constitue le fil conducteur de mon travail, car elle est essentielle à la réussite scolaire et au bien-être. Mon objectif est de révéler les forces de chaque jeune, renforcer leur <Link href="/jessica-contentin/specialites/confiance-en-soi" className="text-[#C6A664] hover:underline font-semibold">confiance</Link>, apaiser les tensions et favoriser leur inclusion tout en accompagnant les familles avec douceur.
                 </motion.p>
               </div>
 
@@ -295,5 +332,4 @@ export default function JessicaContentinHomePage() {
     </div>
   );
 }
-
 

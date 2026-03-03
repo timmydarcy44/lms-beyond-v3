@@ -63,12 +63,12 @@ export function JessicaContentinFooter() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
+                <Link href="/jessica-contentin" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Accueil
                 </Link>
               </li>
               <li>
-                <Link href="/consultations" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
+                <Link href="/jessica-contentin/consultations" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Consultations
                 </Link>
               </li>
@@ -78,7 +78,7 @@ export function JessicaContentinFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/orientation" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
+                <Link href="/jessica-contentin/orientation" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Orientation
                 </Link>
               </li>
@@ -88,7 +88,7 @@ export function JessicaContentinFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
+                <Link href="/jessica-contentin/blog" className="text-sm text-[#2F2A25]/80 hover:text-[#C6A664] transition-colors">
                   Blog
                 </Link>
               </li>

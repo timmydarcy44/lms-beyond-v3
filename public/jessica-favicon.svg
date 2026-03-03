@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="jg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E6D9C6" />
+      <stop offset="100%" stop-color="#C6A664" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#2F2A25" />
+  <circle cx="32" cy="32" r="24" fill="url(#jg)" />
+  <text
+    x="32"
+    y="37"
+    text-anchor="middle"
+    font-size="20"
+    font-family="Arial, Helvetica, sans-serif"
+    font-weight="700"
+    fill="#2F2A25"
+  >
+    J
+  </text>
+</svg>

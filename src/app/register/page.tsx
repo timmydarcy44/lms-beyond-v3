@@ -21,7 +21,6 @@ export default function RegisterPage() {
   const [posteActuel, setPosteActuel] = useState("");
   const [entreprise, setEntreprise] = useState("");
   const [typeContrat, setTypeContrat] = useState("");
-  const [rythmeTeletravail, setRythmeTeletravail] = useState("");
   const [tjm, setTjm] = useState("");
   const [expertise, setExpertise] = useState("");
   const [stackTechnique, setStackTechnique] = useState("");
@@ -88,7 +87,6 @@ export default function RegisterPage() {
           poste_actuel: typeProfil === "emploi" ? emptyToNull(posteActuel) : null,
           entreprise: typeProfil === "emploi" ? emptyToNull(entreprise) : null,
           type_contrat: typeProfil === "emploi" ? emptyToNull(typeContrat) : null,
-          rythme_teletravail: typeProfil === "emploi" ? emptyToNull(rythmeTeletravail) : null,
           tjm: typeProfil === "freelance" ? emptyToNull(tjm) : null,
           expertise: typeProfil === "freelance" ? emptyToNull(expertise) : null,
           stack_technique: typeProfil === "freelance" ? emptyToNull(stackTechnique) : null,
@@ -105,6 +103,39 @@ export default function RegisterPage() {
         },
         { onConflict: "id" }
       );
+      try {
+        await fetch("/api/bootstrap-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: data.user.id,
+            email,
+            fullName,
+            firstName: first_name,
+            lastName: last_name,
+            roleType: "particulier",
+            typeProfil,
+            posteActuel: typeProfil === "emploi" ? emptyToNull(posteActuel) : null,
+            entreprise: typeProfil === "emploi" ? emptyToNull(entreprise) : null,
+            typeContrat: typeProfil === "emploi" ? emptyToNull(typeContrat) : null,
+            tjm: typeProfil === "freelance" ? emptyToNull(tjm) : null,
+            expertise: typeProfil === "freelance" ? emptyToNull(expertise) : null,
+            stackTechnique: typeProfil === "freelance" ? emptyToNull(stackTechnique) : null,
+            disponibilite: typeProfil === "freelance" ? emptyToNull(disponibilite) : null,
+            langues: typeProfil === "freelance" ? emptyToNull(langues) : null,
+            ancienMetier: typeProfil === "reconversion" ? emptyToNull(ancienMetier) : null,
+            metierVise: typeProfil === "reconversion" ? emptyToNull(metierVise) : null,
+            organismeFormation: typeProfil === "reconversion" ? emptyToNull(organismeFormation) : null,
+            echeance: typeProfil === "reconversion" ? emptyToNull(echeance) : null,
+            ecole: typeProfil === "alternance" ? emptyToNull(ecole) : null,
+            niveauEtude: typeProfil === "alternance" ? emptyToNull(niveauEtude) : null,
+            rythmeAlternance: typeProfil === "alternance" ? emptyToNull(rythmeAlternance) : null,
+            dateFinContrat: typeProfil === "alternance" ? emptyToNull(dateFinContrat) : null,
+          }),
+        });
+      } catch {
+        // ignore bootstrap errors
+      }
     }
 
     router.push("/dashboard/apprenant/test-comportemental-intro");
@@ -190,21 +221,18 @@ export default function RegisterPage() {
                 </label>
                 <label className="text-[12px] text-white/70">
                   Type de contrat
-                  <input
+                  <select
                     value={typeContrat}
                     onChange={(event) => setTypeContrat(event.target.value)}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
-                    placeholder="CDI, CDD..."
-                  />
-                </label>
-                <label className="text-[12px] text-white/70">
-                  Rythme télétravail
-                  <input
-                    value={rythmeTeletravail}
-                    onChange={(event) => setRythmeTeletravail(event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
-                    placeholder="2j / semaine"
-                  />
+                  >
+                    <option value="">Choisir</option>
+                    <option value="CDI">CDI</option>
+                    <option value="CDD">CDD</option>
+                    <option value="Alternance">Alternance</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Interim">Intérim</option>
+                  </select>
                 </label>
               </>
             ) : null}
@@ -292,10 +320,10 @@ export default function RegisterPage() {
                 <label className="text-[12px] text-white/70">
                   Échéance
                   <input
+                    type="date"
                     value={echeance}
                     onChange={(event) => setEcheance(event.target.value)}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
-                    placeholder="Décembre 2026"
                   />
                 </label>
               </>
@@ -332,10 +360,10 @@ export default function RegisterPage() {
                 <label className="text-[12px] text-white/70">
                   Date de fin de contrat
                   <input
+                    type="date"
                     value={dateFinContrat}
                     onChange={(event) => setDateFinContrat(event.target.value)}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
-                    placeholder="30/09/2026"
                   />
                 </label>
               </>

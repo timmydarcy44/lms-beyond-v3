@@ -9,6 +9,8 @@ import {
   BookOpen,
   Briefcase,
   CalendarX,
+  ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
   Home,
@@ -31,6 +33,12 @@ import {
   resolveIdmcAxes,
 } from "@/components/idmc/IdmcRadarChart";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
+import {
+  GLOBAL_SKILL_REFERENTIAL,
+  GLOBAL_STACK_REFERENTIAL,
+  resolveToolLogo,
+} from "@/lib/profile/competency-referential";
+import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 
 type IdmcData = {
   scores?: Record<string, unknown> | null;
@@ -67,15 +75,6 @@ const NAV_ITEMS = [
   { label: "Carrière", href: "/dashboard/apprenant/career", icon: BookOpen },
 ];
 
-
-const TOOL_LOGOS: Record<string, string> = {
-  Notion: "https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png",
-  Wordpress: "https://upload.wikimedia.org/wikipedia/commons/2/20/WordPress_logo.svg",
-  Cursor: "https://avatars.githubusercontent.com/u/157243072?s=200&v=4",
-  Zapier: "https://upload.wikimedia.org/wikipedia/commons/7/75/Zapier_logo.svg",
-  "n8n": "https://upload.wikimedia.org/wikipedia/commons/5/5a/N8n-logo-new.svg",
-  Webflow: "https://upload.wikimedia.org/wikipedia/commons/3/3b/Webflow_logo.svg",
-};
 
 const DISC_LABELS: Record<keyof DiscScores, string> = {
   D: "Dominance",
@@ -135,6 +134,7 @@ export default function ApprenantDashboardPage() {
     email?: string;
     user_metadata?: { first_name?: string | null; last_name?: string | null };
   } | null>(null);
+  const [cachedFirstName, setCachedFirstName] = useState("");
   const [profile, setProfile] = useState<{
     first_name?: string | null;
     last_name?: string | null;
@@ -156,6 +156,7 @@ export default function ApprenantDashboardPage() {
     niveau_etude?: string | null;
     rythme_alternance?: string | null;
     date_fin_contrat?: string | null;
+    access_connect?: boolean | null;
   } | null>(null);
   const [discScores, setDiscScores] = useState<DiscScores | null>(null);
   const [idmcAxes, setIdmcAxes] = useState<Record<AxisKey, number> | null>(null);
@@ -175,8 +176,16 @@ export default function ApprenantDashboardPage() {
   const [hardSkills, setHardSkills] = useState<string[]>([]);
   const [showSkillModal, setShowSkillModal] = useState(false);
   const [skillSearch, setSkillSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("IA & Automatisation");
+  const [activeCategory, setActiveCategory] = useState<string>(
+    GLOBAL_SKILL_REFERENTIAL[0]?.category ?? ""
+  );
+  const [showOnboardingStackCatalog, setShowOnboardingStackCatalog] = useState(false);
+  const [onboardingStackSearch, setOnboardingStackSearch] = useState("");
+  const [onboardingStackCategory, setOnboardingStackCategory] = useState<string>(
+    GLOBAL_STACK_REFERENTIAL[0]?.category ?? ""
+  );
   const [pendingHardSkill, setPendingHardSkill] = useState<string | null>(null);
+  const [pendingSkillProof, setPendingSkillProof] = useState(false);
   const [manualSkillName, setManualSkillName] = useState("");
   const [showManualSkillInput, setShowManualSkillInput] = useState(false);
   const [manualSkillLevel, setManualSkillLevel] = useState<"Débutant" | "Intermédiaire" | "Expert">(
@@ -187,22 +196,31 @@ export default function ApprenantDashboardPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [isSavingOnboarding, setIsSavingOnboarding] = useState(false);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
+  const [isProfileGaugeExpanded, setIsProfileGaugeExpanded] = useState(true);
   const [onboardingForm, setOnboardingForm] = useState({
     first_name: "",
     last_name: "",
+    birth_date: "",
     city: "",
     telephone: "",
+    poste_actuel: "",
+    entreprise: "",
+    type_contrat: "",
     tjm: "",
     expertise: "",
     stack_technique: "",
     disponibilite: "",
     langues: "",
+    ancien_metier: "",
+    metier_vise: "",
+    organisme_formation: "",
+    echeance: "",
     ecole: "",
     niveau_etude: "",
     rythme_alternance: "",
     date_fin_contrat: "",
   });
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
   const slugify = (value: string) =>
     value
@@ -213,6 +231,9 @@ export default function ApprenantDashboardPage() {
       .replace(/(^-|-$)+/g, "");
 
   const hasOrganisation = Boolean(profile?.entreprise_id || profile?.school_id);
+  const learnerIdentifier = user?.id
+    ? `APP-${user.id.replace(/-/g, "").slice(0, 8).toUpperCase()}`
+    : "—";
   const navItems = useMemo(() => {
     const items = [...NAV_ITEMS];
     if (hasOrganisation) {
@@ -250,6 +271,14 @@ export default function ApprenantDashboardPage() {
   });
 
   useEffect(() => {
+    try {
+      setCachedFirstName(localStorage.getItem("beyond_firstname") ?? "");
+    } catch {
+      setCachedFirstName("");
+    }
+  }, []);
+
+  useEffect(() => {
     const load = async () => {
       setIsLoading(true);
       if (!supabase) {
@@ -263,6 +292,7 @@ export default function ApprenantDashboardPage() {
           return;
         }
         const userId = userData.user.id;
+        const profileIdsToQuery = [userId];
         const rawMeta = (userData.user.user_metadata ?? {}) as Record<string, unknown>;
         const metaFullName = typeof rawMeta.full_name === "string" ? rawMeta.full_name.trim() : "";
         const emailValue = userData.user.email ?? "";
@@ -285,13 +315,27 @@ export default function ApprenantDashboardPage() {
           user_metadata: rawMeta as { first_name?: string | null; last_name?: string | null },
         });
 
-        console.log("Tentative de fetch pour l'ID:", userId);
         try {
           let { data: profileData } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", userId)
           .maybeSingle();
+          if (!profileData && userData.user.email) {
+            const { data: legacyProfileData } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("email", userData.user.email)
+              .maybeSingle();
+            profileData = legacyProfileData ?? null;
+          }
+          const resolvedProfileId =
+            profileData && typeof (profileData as Record<string, unknown>).id === "string"
+              ? String((profileData as Record<string, unknown>).id)
+              : null;
+          if (resolvedProfileId && resolvedProfileId !== userId) {
+            profileIdsToQuery.push(resolvedProfileId);
+          }
           if (!profileData) {
             const { data: created } = await supabase
               .from("profiles")
@@ -328,13 +372,26 @@ export default function ApprenantDashboardPage() {
             setOnboardingForm({
               first_name: String(profileData.first_name ?? metaFirstName ?? "").trim(),
               last_name: String(profileData.last_name ?? metaLastName ?? "").trim(),
+              birth_date: String(profileData.birth_date ?? profileData.date_naissance ?? "").trim(),
               city: String(profileData.city ?? "").trim(),
               telephone: String(profileData.telephone ?? "").trim(),
+              poste_actuel: String(profileData.poste_actuel ?? "").trim(),
+              entreprise: String(profileData.entreprise ?? "").trim(),
+              type_contrat: String(profileData.type_contrat ?? "").trim(),
               tjm: String(profileData.tjm ?? "").trim(),
               expertise: String(profileData.expertise ?? "").trim(),
               stack_technique: String(profileData.stack_technique ?? "").trim(),
-              disponibilite: String(profileData.disponibilite ?? "").trim(),
+              disponibilite:
+                profileData.disponibilite === true || String(profileData.disponibilite ?? "").toLowerCase() === "oui"
+                  ? "Oui"
+                  : profileData.disponibilite === false || String(profileData.disponibilite ?? "").toLowerCase() === "non"
+                    ? "Non"
+                    : "",
               langues: String(profileData.langues ?? "").trim(),
+              ancien_metier: String(profileData.ancien_metier ?? "").trim(),
+              metier_vise: String(profileData.metier_vise ?? "").trim(),
+              organisme_formation: String(profileData.organisme_formation ?? "").trim(),
+              echeance: String(profileData.echeance ?? "").trim(),
               ecole: String(profileData.ecole ?? "").trim(),
               niveau_etude: String(profileData.niveau_etude ?? "").trim(),
               rythme_alternance: String(profileData.rythme_alternance ?? "").trim(),
@@ -431,14 +488,24 @@ export default function ApprenantDashboardPage() {
         }
 
         try {
-          const { data: discResult, error: discError } = await supabase
-            .from("disc_resultats")
-            .select("scores")
-            .eq("profile_id", userId)
-            .maybeSingle();
-          if (discError) {
-            console.error("[disc] disc_resultats error:", discError);
-          } else if (discResult?.scores && typeof discResult.scores === "object") {
+          let discResult: { scores?: Record<string, unknown> | null } | null = null;
+          for (const candidateId of profileIdsToQuery) {
+            const { data, error } = await supabase
+              .from("disc_resultats")
+              .select("scores")
+              .eq("profile_id", candidateId)
+              .maybeSingle();
+            if (error) {
+              console.error("[disc] disc_resultats error:", error);
+              continue;
+            }
+            if (data) {
+              discResult = data as { scores?: Record<string, unknown> | null };
+              break;
+            }
+          }
+
+          if (discResult?.scores && typeof discResult.scores === "object") {
             const scores = discResult.scores as Record<string, unknown>;
             setDiscScores({
               D: Number(scores.D || 0),
@@ -454,25 +521,36 @@ export default function ApprenantDashboardPage() {
         }
 
         try {
-          console.log("Tentative de fetch pour l'ID:", userId);
-          const { data: idmcResult, error: idmcError } = await supabase
-            .from("idmc_resultats")
-            .select("*")
-            .eq("profile_id", userId)
-            .maybeSingle();
-          if (idmcError) {
-            console.error("[idmc] idmc_resultats error:", idmcError);
-            return;
+          let idmcResult: Record<string, unknown> | null = null;
+          for (const candidateId of profileIdsToQuery) {
+            const { data, error } = await supabase
+              .from("idmc_resultats")
+              .select("*")
+              .eq("profile_id", candidateId)
+              .maybeSingle();
+            if (error) {
+              console.error("[idmc] idmc_resultats error:", error);
+              continue;
+            }
+            if (data) {
+              idmcResult = data as Record<string, unknown>;
+              break;
+            }
           }
           setIdmcData(idmcResult ?? null);
           console.log("Données IDMC chargées pour:", userId, idmcResult);
-          const axes = resolveIdmcAxes(idmcResult?.scores ?? idmcResult?.responses);
+          const axes = resolveIdmcAxes(
+            (idmcResult as { scores?: Record<string, unknown> | null; responses?: Record<string, unknown> | null } | null)?.scores ??
+              (idmcResult as { scores?: Record<string, unknown> | null; responses?: Record<string, unknown> | null } | null)?.responses,
+          );
           if (axes) {
             setIdmcAxes(axes);
           } else if (idmcResult) {
             console.log("Test trouvé mais données vides");
           }
-          setIdmcUpdatedAt(idmcResult?.updated_at ?? null);
+          setIdmcUpdatedAt(
+            String((idmcResult as { updated_at?: string | null } | null)?.updated_at ?? "") || null,
+          );
         } catch {
           setIdmcData(null);
           setIdmcAxes(null);
@@ -480,21 +558,28 @@ export default function ApprenantDashboardPage() {
 
         try {
           if (!userId) return;
-          const { data, error: fetchError } = await supabase
-            .from("soft_skills_resultats")
-            .select("*")
-            .eq("learner_id", userId)
-            .maybeSingle();
-          if (fetchError) {
-            console.error("[soft-skills] Détail complet de l'erreur:", fetchError);
-            return;
+          let latestSoftSkills: Record<string, unknown> | null = null;
+          for (const candidateId of profileIdsToQuery) {
+            const { data, error } = await supabase
+              .from("soft_skills_resultats")
+              .select("*")
+              .eq("learner_id", candidateId)
+              .maybeSingle();
+            if (error) {
+              console.error("[soft-skills] Détail complet de l'erreur:", error);
+              continue;
+            }
+            if (data) {
+              latestSoftSkills = data as Record<string, unknown>;
+              break;
+            }
           }
 
-          console.log("DATA SOFT SKILLS RECUE:", data);
+          console.log("DATA SOFT SKILLS RECUE:", latestSoftSkills);
 
-          setSoftSkillsData(data ?? null);
+          setSoftSkillsData(latestSoftSkills);
 
-          const rawScores = data?.scores;
+          const rawScores = latestSoftSkills?.scores;
           if (rawScores && typeof rawScores === "object" && !Array.isArray(rawScores)) {
             const mapped = Object.entries(rawScores as Record<string, number>)
               .map(([skill, score]) => ({ skill, score: Number(score) }))
@@ -518,7 +603,7 @@ export default function ApprenantDashboardPage() {
           const { data: expData, error: expError } = await supabase
             .from("experiences_pro")
             .select("*")
-            .eq("learner_id", userId)
+            .in("learner_id", profileIdsToQuery)
             .order("date_debut", { ascending: false });
           if (expError) {
             console.error("[experiences_pro] error:", expError);
@@ -534,7 +619,7 @@ export default function ApprenantDashboardPage() {
           const { data: diplomeData, error: diplomeError } = await supabase
             .from("diplomes")
             .select("*")
-            .eq("learner_id", userId)
+            .in("learner_id", profileIdsToQuery)
             .order("annee_obtention", { ascending: false });
           if (diplomeError) {
             console.error("[diplomes] error:", diplomeError);
@@ -551,16 +636,13 @@ export default function ApprenantDashboardPage() {
     load();
   }, [supabase]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    console.log("Session User ID:", user.id);
-    console.log("Session Email:", user.email);
-    console.log("Profile trouvé:", profile);
-  }, [user, profile]);
-
   const fallbackIdentity = user?.email?.split("@")[0];
   const firstName =
-    profile?.first_name || user?.user_metadata?.first_name || fallbackIdentity || "Apprenant";
+    profile?.first_name ||
+    user?.user_metadata?.first_name ||
+    cachedFirstName ||
+    fallbackIdentity ||
+    "Apprenant";
   const greeting = `Bonjour ${firstName}`;
   const hasAnyTest = Boolean(idmcAxes);
   const discAnalysisText = String(
@@ -704,12 +786,18 @@ export default function ApprenantDashboardPage() {
     if (!supabase || !user?.id) return;
     setIsSavingDiplome(true);
     try {
-      const yearValue = Number(diplomeForm.annee_obtention);
+      const selectedDate = diplomeForm.annee_obtention
+        ? new Date(diplomeForm.annee_obtention)
+        : null;
+      const yearValue =
+        selectedDate && !Number.isNaN(selectedDate.getTime())
+          ? selectedDate.getFullYear()
+          : null;
     const payload = {
         learner_id: user.id,
         intitule: diplomeForm.intitule || null,
         ecole: diplomeForm.ecole || null,
-        annee_obtention: Number.isFinite(yearValue) ? yearValue : null,
+        annee_obtention: yearValue,
         mode: diplomeForm.mode || null,
       };
       const { error } = await supabase.from("diplomes").insert(payload);
@@ -778,99 +866,32 @@ export default function ApprenantDashboardPage() {
       console.error("[skills] update error:", error);
     }
   };
-  const HARD_SKILL_LIBRARY = [
-    {
-      category: "IA & Automatisation",
-      items: [
-        "Prompt Engineering (ChatGPT, Claude)",
-        "Cursor",
-        "Windsurf",
-        "n8n",
-        "Zapier",
-        "Make (Integromat)",
-        "Airtable Automation",
-        "Midjourney",
-      ],
-    },
-    {
-      category: "Bureautique & Data",
-      items: [
-        "Excel (TCD/VBA)",
-        "Google Sheets",
-        "Notion (Databases)",
-        "Word",
-        "PowerPoint",
-        "Canva",
-        "SQL",
-        "Power BI",
-        "Google Analytics",
-      ],
-    },
-    {
-      category: "Marketing & Com",
-      items: [
-        "SEO",
-        "SEA (Google Ads)",
-        "Copywriting",
-        "Community Management",
-        "Marketing Automation",
-        "Content Marketing",
-        "CRM (Hubspot/Salesforce)",
-      ],
-    },
-    {
-      category: "Développement Web",
-      items: [
-        "WordPress",
-        "Webflow",
-        "Shopify",
-        "WooCommerce",
-        "Magento",
-        "Joomla",
-        "HTML/CSS",
-        "JavaScript",
-        "Bubble (No-code)",
-        "FlutterFlow",
-      ],
-    },
-    {
-      category: "RH & Management",
-      items: [
-        "Recrutement/Sourcing",
-        "Gestion de la paie",
-        "Droit du travail",
-        "Onboarding",
-        "GPEC",
-        "Management d'équipe",
-        "Dialogue social",
-      ],
-    },
-    {
-      category: "RSE & Impact",
-      items: [
-        "Bilan Carbone",
-        "Stratégie RSE",
-        "Éco-conception",
-        "Management inclusif",
-        "Reporting extra-financier",
-        "Éthique des affaires",
-      ],
-    },
-    {
-      category: "Vente & Business",
-      items: [
-        "Prospection (Cold mailing/calling)",
-        "Négociation",
-        "Social Selling",
-        "Gestion des stocks",
-        "Gestion de point de vente",
-        "Business Development",
-      ],
-    },
-  ];
+  const HARD_SKILL_LIBRARY = GLOBAL_SKILL_REFERENTIAL;
   const filteredHardSkills = HARD_SKILL_LIBRARY.flatMap((group) =>
     group.items.map((item) => ({ name: item, category: group.category }))
   ).filter((item) => item.name.toLowerCase().includes(skillSearch.toLowerCase()));
+  const onboardingSelectedStacks = useMemo(
+    () =>
+      onboardingForm.stack_technique
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    [onboardingForm.stack_technique]
+  );
+  const onboardingStackItems = useMemo(
+    () =>
+      GLOBAL_STACK_REFERENTIAL
+        .filter((group) => !onboardingStackCategory || group.category === onboardingStackCategory)
+        .flatMap((group) => group.items)
+        .filter((item) => item.toLowerCase().includes(onboardingStackSearch.toLowerCase())),
+    [onboardingStackCategory, onboardingStackSearch]
+  );
+  const toggleOnboardingStack = (stack: string) => {
+    const next = onboardingSelectedStacks.includes(stack)
+      ? onboardingSelectedStacks.filter((item) => item !== stack)
+      : [...onboardingSelectedStacks, stack];
+    setOnboardingForm((prev) => ({ ...prev, stack_technique: next.join(", ") }));
+  };
   const hardSkillItems = hardSkills;
   const CATEGORY_LIST = HARD_SKILL_LIBRARY.map((group) => ({ type: "hard" as const, name: group.category }));
   const softSkillsMax = softSkillsRadar.length
@@ -933,61 +954,109 @@ export default function ApprenantDashboardPage() {
     }
   }, [displayFirstName]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    try {
-      const alreadySeen = localStorage.getItem("onboarding_seen_global");
-      setHasSeenOnboarding(alreadySeen === "true");
-    } catch {
-      setHasSeenOnboarding(false);
-    }
-  }, [user?.id]);
-
   const needsOnboarding = useMemo(() => {
     if (!user?.id || !profile) return false;
-    if (onboardingCompleted === true) return false;
-    if (hasSeenOnboarding) return false;
-    return true;
-  }, [profile, user?.id, hasSeenOnboarding, onboardingCompleted]);
+    return onboardingCompleted !== true;
+  }, [profile, user?.id, onboardingCompleted]);
 
   useEffect(() => {
     if (!isLoading && needsOnboarding) {
       setShowOnboardingModal(true);
-      try {
-        localStorage.setItem("onboarding_seen_global", "true");
-        setHasSeenOnboarding(true);
-        if (supabase && user?.id) {
-          (async () => {
-            const { error } = await supabase
-              .from("user_profile_settings")
-              .upsert({ user_id: user.id, onboarding_completed: true }, { onConflict: "user_id" });
-            if (!error) {
-              setOnboardingCompleted(true);
-            }
-          })();
-        }
-      } catch {
-        // ignore
-      }
     }
-  }, [isLoading, needsOnboarding, supabase, user?.id]);
+  }, [isLoading, needsOnboarding]);
+
+  const computeAgeFromBirthDate = (birthDate: string) => {
+    if (!birthDate) return null;
+    const date = new Date(birthDate);
+    if (Number.isNaN(date.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - date.getFullYear();
+    const monthDiff = now.getMonth() - date.getMonth();
+    const dayDiff = now.getDate() - date.getDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age -= 1;
+    }
+    return age >= 0 ? age : null;
+  };
 
   const handleSaveOnboarding = async () => {
     if (!supabase || !user?.id) return;
+    const hasValue = (value: string) => value.trim().length > 0;
+    const requiredCommon = [
+      onboardingForm.first_name,
+      onboardingForm.last_name,
+      onboardingForm.city,
+      onboardingForm.telephone,
+      onboardingForm.birth_date,
+    ];
+    const typeProfil = String((profile as Record<string, unknown> | null)?.type_profil ?? "").trim();
+    const requiredRole =
+      typeProfil === "freelance"
+        ? [
+            onboardingForm.tjm,
+            onboardingForm.expertise,
+            onboardingForm.stack_technique,
+            onboardingForm.disponibilite,
+            onboardingForm.langues,
+          ]
+        : typeProfil === "alternance"
+          ? [
+              onboardingForm.ecole,
+              onboardingForm.niveau_etude,
+              onboardingForm.rythme_alternance,
+              onboardingForm.date_fin_contrat,
+            ]
+          : typeProfil === "reconversion"
+            ? [
+                onboardingForm.ancien_metier,
+                onboardingForm.metier_vise,
+                onboardingForm.organisme_formation,
+                onboardingForm.echeance,
+              ]
+            : typeProfil === "emploi"
+              ? [
+                  onboardingForm.poste_actuel,
+                  onboardingForm.entreprise,
+                  onboardingForm.type_contrat,
+                ]
+              : [];
+    if (![...requiredCommon, ...requiredRole].every(hasValue)) {
+      setOnboardingError("Merci de compléter tous les champs requis pour votre profil.");
+      return;
+    }
+    setOnboardingError(null);
     setIsSavingOnboarding(true);
     try {
-      const payload: Record<string, string | null> = {
+      const payload: Record<string, string | number | boolean | null> = {
         first_name: onboardingForm.first_name || null,
         last_name: onboardingForm.last_name || null,
         city: onboardingForm.city || null,
         telephone: onboardingForm.telephone || null,
+        birth_date: onboardingForm.birth_date || null,
+        age: computeAgeFromBirthDate(onboardingForm.birth_date),
       };
+      if (profile?.type_profil === "emploi") {
+        payload.poste_actuel = onboardingForm.poste_actuel || null;
+        payload.entreprise = onboardingForm.entreprise || null;
+        payload.type_contrat = onboardingForm.type_contrat || null;
+      }
       if (profile?.type_profil === "freelance") {
         payload.tjm = onboardingForm.tjm || null;
         payload.expertise = onboardingForm.expertise || null;
         payload.stack_technique = onboardingForm.stack_technique || null;
-        payload.disponibilite = onboardingForm.disponibilite || null;
+        payload.disponibilite =
+          onboardingForm.disponibilite === "Oui"
+            ? true
+            : onboardingForm.disponibilite === "Non"
+              ? false
+              : null;
         payload.langues = onboardingForm.langues || null;
+      }
+      if (profile?.type_profil === "reconversion") {
+        payload.ancien_metier = onboardingForm.ancien_metier || null;
+        payload.metier_vise = onboardingForm.metier_vise || null;
+        payload.organisme_formation = onboardingForm.organisme_formation || null;
+        payload.echeance = onboardingForm.echeance || null;
       }
       if (profile?.type_profil === "alternance") {
         payload.ecole = onboardingForm.ecole || null;
@@ -1005,8 +1074,6 @@ export default function ApprenantDashboardPage() {
         setProfile(updated);
       }
       try {
-        localStorage.setItem("onboarding_seen_global", "true");
-        setHasSeenOnboarding(true);
         setOnboardingCompleted(true);
         if (supabase && user?.id) {
           await supabase
@@ -1021,6 +1088,76 @@ export default function ApprenantDashboardPage() {
       setIsSavingOnboarding(false);
     }
   };
+
+  const profileCompletion = useMemo(() => {
+    const source = (profile ?? {}) as Record<string, unknown>;
+    const typeProfil = String(source.type_profil ?? "").trim().toLowerCase();
+    const hasValue = (value: unknown) => String(value ?? "").trim().length > 0;
+    const checklist = [
+      { key: "idmc", label: "Test IDMC", weight: 30, done: Boolean(idmcAxes) },
+      { key: "disc", label: "Test comportemental", weight: 25, done: Boolean(discScores) },
+      { key: "soft", label: "Soft Skills", weight: 20, done: Boolean(softSkillsData) },
+      {
+        key: "base",
+        label: "Infos de base (ville + telephone)",
+        weight: 10,
+        done: hasValue(source.city) && hasValue(source.telephone),
+      },
+      {
+        key: "role",
+        label:
+          typeProfil === "freelance"
+            ? "Infos freelance (TJM + expertise + stack)"
+            : typeProfil === "alternance"
+              ? "Infos alternance (ecole + rythme + fin contrat)"
+              : typeProfil === "reconversion"
+                ? "Infos reconversion (ancien + vise + echeance)"
+                : "Infos emploi/profil",
+        weight: 15,
+        done:
+          typeProfil === "freelance"
+            ? hasValue(source.tjm) && hasValue(source.expertise) && hasValue(source.stack_technique)
+            : typeProfil === "alternance"
+              ? hasValue(source.ecole) &&
+                hasValue(source.niveau_etude) &&
+                hasValue(source.rythme_alternance) &&
+                hasValue(source.date_fin_contrat)
+              : typeProfil === "reconversion"
+                ? hasValue(source.ancien_metier) &&
+                  hasValue(source.metier_vise) &&
+                  hasValue(source.organisme_formation) &&
+                  hasValue(source.echeance)
+                : hasValue(source.poste_actuel) ||
+                  hasValue(source.entreprise) ||
+                  hasValue(source.type_profil),
+      },
+    ] as const;
+
+    const score = checklist.reduce((sum, item) => sum + (item.done ? item.weight : 0), 0);
+    const level =
+      score >= 85
+        ? "Profil tres complet"
+        : score >= 65
+          ? "Profil solide"
+          : score >= 40
+            ? "Profil en progression"
+            : "Profil a completer";
+    return { score, level, checklist };
+  }, [profile, idmcAxes, discScores, softSkillsData]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 px-6 py-20 text-white">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
+          Chargement du profil...
+        </div>
+      </div>
+    );
+  }
+
+  if (profile?.access_connect === false) {
+    return <PaywallConnect />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -1143,7 +1280,59 @@ export default function ApprenantDashboardPage() {
                       className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
                     />
                   </label>
+                  <label className="text-sm text-white/70 md:col-span-2">
+                    Date de naissance
+                    <input
+                      type="date"
+                      value={onboardingForm.birth_date}
+                      onChange={(event) =>
+                        setOnboardingForm((prev) => ({ ...prev, birth_date: event.target.value }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                    />
+                  </label>
                 </div>
+                {profile?.type_profil === "emploi" ? (
+                  <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    <label className="text-sm text-white/70">
+                      Poste actuel
+                      <input
+                        value={onboardingForm.poste_actuel}
+                        onChange={(event) =>
+                          setOnboardingForm((prev) => ({ ...prev, poste_actuel: event.target.value }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                      />
+                    </label>
+                    <label className="text-sm text-white/70">
+                      Entreprise
+                      <input
+                        value={onboardingForm.entreprise}
+                        onChange={(event) =>
+                          setOnboardingForm((prev) => ({ ...prev, entreprise: event.target.value }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                      />
+                    </label>
+                    <label className="text-sm text-white/70">
+                      Type de contrat
+                      <select
+                        value={onboardingForm.type_contrat}
+                        onChange={(event) =>
+                          setOnboardingForm((prev) => ({ ...prev, type_contrat: event.target.value }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                      >
+                        <option value="">Choisir</option>
+                        <option value="CDI">CDI</option>
+                        <option value="CDD">CDD</option>
+                        <option value="Alternance">Alternance</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Interim">Intérim</option>
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
                 {profile?.type_profil === "freelance" ? (
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
                     <label className="text-sm text-white/70">
@@ -1157,7 +1346,7 @@ export default function ApprenantDashboardPage() {
                       />
                     </label>
                     <label className="text-sm text-white/70">
-                      Expertise
+                      Prestations
                       <input
                         value={onboardingForm.expertise}
                         onChange={(event) =>
@@ -1168,23 +1357,63 @@ export default function ApprenantDashboardPage() {
                     </label>
                     <label className="text-sm text-white/70 md:col-span-2">
                       Stack technique
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOnboardingStackCategory(GLOBAL_STACK_REFERENTIAL[0]?.category ?? "");
+                            setOnboardingStackSearch("");
+                            setShowOnboardingStackCatalog(true);
+                          }}
+                          className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white"
+                        >
+                          Ouvrir le catalogue
+                        </button>
+                        {onboardingSelectedStacks.length ? (
+                          onboardingSelectedStacks.map((stack) => (
+                            <span
+                              key={stack}
+                              className="rounded-full border border-emerald-300/40 bg-emerald-300/15 px-2 py-1 text-[11px] text-emerald-100"
+                            >
+                              {stack}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-white/60">Aucune stack sélectionnée</span>
+                        )}
+                      </div>
                       <input
                         value={onboardingForm.stack_technique}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, stack_technique: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                        readOnly
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/70"
                       />
                     </label>
                     <label className="text-sm text-white/70">
                       Disponibilité
-                      <input
-                        value={onboardingForm.disponibilite}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, disponibilite: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
+                      <div className="mt-2 inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setOnboardingForm((prev) => ({ ...prev, disponibilite: "Oui" }))}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                            onboardingForm.disponibilite === "Oui"
+                              ? "bg-emerald-400/25 text-emerald-200"
+                              : "text-white/70"
+                          }`}
+                        >
+                          Oui
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOnboardingForm((prev) => ({ ...prev, disponibilite: "Non" }))}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                            onboardingForm.disponibilite === "Non"
+                              ? "bg-rose-400/25 text-rose-200"
+                              : "text-white/70"
+                          }`}
+                        >
+                          Non
+                        </button>
+                      </div>
                     </label>
                     <label className="text-sm text-white/70">
                       Langues
@@ -1192,6 +1421,51 @@ export default function ApprenantDashboardPage() {
                         value={onboardingForm.langues}
                         onChange={(event) =>
                           setOnboardingForm((prev) => ({ ...prev, langues: event.target.value }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                      />
+                    </label>
+                  </div>
+                ) : null}
+                {profile?.type_profil === "reconversion" ? (
+                  <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    <label className="text-sm text-white/70">
+                      Ancien métier
+                      <input
+                        value={onboardingForm.ancien_metier}
+                        onChange={(event) =>
+                          setOnboardingForm((prev) => ({ ...prev, ancien_metier: event.target.value }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                      />
+                    </label>
+                    <label className="text-sm text-white/70">
+                      Métier visé
+                      <input
+                        value={onboardingForm.metier_vise}
+                        onChange={(event) =>
+                          setOnboardingForm((prev) => ({ ...prev, metier_vise: event.target.value }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                      />
+                    </label>
+                    <label className="text-sm text-white/70">
+                      Organisme de formation
+                      <input
+                        value={onboardingForm.organisme_formation}
+                        onChange={(event) =>
+                          setOnboardingForm((prev) => ({ ...prev, organisme_formation: event.target.value }))
+                        }
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
+                      />
+                    </label>
+                    <label className="text-sm text-white/70">
+                      Échéance
+                      <input
+                        type="date"
+                        value={onboardingForm.echeance}
+                        onChange={(event) =>
+                          setOnboardingForm((prev) => ({ ...prev, echeance: event.target.value }))
                         }
                         className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
                       />
@@ -1243,14 +1517,91 @@ export default function ApprenantDashboardPage() {
                     </label>
                   </div>
                 ) : null}
+                {onboardingError ? (
+                  <p className="mt-4 text-sm text-red-300">{onboardingError}</p>
+                ) : null}
+                {showOnboardingStackCatalog ? (
+                  <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-black/75 px-4">
+                    <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-[#0D111A] text-white shadow-2xl">
+                      <div className="border-b border-white/10 px-6 py-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.3em] text-white/50">
+                              Ajouter une stack
+                            </div>
+                            <div className="mt-1 text-lg font-semibold text-white">Catalogue stack technique</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={onboardingStackSearch}
+                              onChange={(event) => setOnboardingStackSearch(event.target.value)}
+                              placeholder="Rechercher une stack..."
+                              className="w-72 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowOnboardingStackCatalog(false)}
+                              className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/75"
+                            >
+                              Fermer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid min-h-[420px] grid-cols-[260px_1fr]">
+                        <aside className="border-r border-white/10 bg-white/[0.03] p-4">
+                          <div className="space-y-2">
+                            {GLOBAL_STACK_REFERENTIAL.map((group) => (
+                              <button
+                                key={group.category}
+                                type="button"
+                                onClick={() => setOnboardingStackCategory(group.category)}
+                                className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                                  onboardingStackCategory === group.category
+                                    ? "bg-white/15 text-white"
+                                    : "text-white/65 hover:bg-white/10 hover:text-white"
+                                }`}
+                              >
+                                {group.category}
+                              </button>
+                            ))}
+                          </div>
+                        </aside>
+                        <div className="p-4">
+                          <div className="max-h-[350px] space-y-2 overflow-y-auto pr-1">
+                            {onboardingStackItems.map((item) => {
+                              const active = onboardingSelectedStacks.includes(item);
+                              const logo = resolveToolLogo(item);
+                              return (
+                                <button
+                                  key={item}
+                                  type="button"
+                                  onClick={() => toggleOnboardingStack(item)}
+                                  className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left ${
+                                    active
+                                      ? "border-emerald-300/40 bg-emerald-300/10"
+                                      : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
+                                  }`}
+                                >
+                                  <span className="flex items-center gap-3">
+                                    {logo ? (
+                                      <img src={logo} alt={item} className="h-5 w-5 rounded-sm object-contain" />
+                                    ) : (
+                                      <span className="h-5 w-5 rounded-sm bg-white/10" />
+                                    )}
+                                    <span className="text-sm text-white/85">{item}</span>
+                                  </span>
+                                  <span className="text-xs text-white/55">{active ? "Ajouté" : "Ajouter"}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-6 flex flex-wrap justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowOnboardingModal(false)}
-                    className="rounded-full border border-white/20 px-4 py-2 text-sm text-white/70"
-                  >
-                    Plus tard
-                  </button>
                   <button
                     type="button"
                     onClick={handleSaveOnboarding}
@@ -1272,48 +1623,127 @@ export default function ApprenantDashboardPage() {
             </div>
           </div>
 
-          <section className="mt-6 rounded-2xl border border-white/10 bg-slate-950 p-6 text-white shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Identité & Bio</div>
-                <div className="mt-2 text-lg font-semibold text-white">{fullName}</div>
+          <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
+            <section className="rounded-2xl border border-white/10 bg-slate-950 p-6 text-white shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Identité & Bio</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{fullName}</div>
+                </div>
+                <label className="group relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/5">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-white/60">Photo</span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) handleAvatarUpload(file);
+                    }}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
+                </label>
               </div>
-              <label className="group relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/5">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-xs text-white/60">Photo</span>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) handleAvatarUpload(file);
-                  }}
-                  className="absolute inset-0 cursor-pointer opacity-0"
+              <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-3">
+                <div>Email : {profileEmail || "—"}</div>
+                <div>Téléphone : {profilePhone || "—"}</div>
+                <div>Ville : {profileCity || "—"}</div>
+                <div>Âge : {profileAge || "—"}</div>
+                <div>ID apprenant : {learnerIdentifier}</div>
+              </div>
+              <div className="mt-3 text-sm text-white/60">Situation : {profileSituation}</div>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
+                {profileBio || "Présentation en cours de rédaction."}
+              </div>
+              {isUploadingAvatar ? <div className="mt-2 text-xs text-white/60">Upload en cours...</div> : null}
+            </section>
+
+            <section className="rounded-2xl border border-white/10 bg-slate-950 p-6 text-white shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Jauge de profil</div>
+                <button
+                  type="button"
+                  onClick={() => setIsProfileGaugeExpanded((prev) => !prev)}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-white/70"
+                >
+                  {isProfileGaugeExpanded ? "Réduire" : "Détails"}
+                  {isProfileGaugeExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <div className="text-3xl font-extrabold text-white">{profileCompletion.score}%</div>
+                <div className="text-xs font-semibold text-emerald-200">{profileCompletion.level}</div>
+              </div>
+              <div className="mt-3 h-2 w-full rounded-full bg-white/10">
+                <div
+                  className="h-2 rounded-full bg-emerald-300 transition-all"
+                  style={{ width: `${profileCompletion.score}%` }}
                 />
-              </label>
+              </div>
+              {isProfileGaugeExpanded ? (
+                <div className="mt-4 space-y-2 text-[11px] text-white/70">
+                  {profileCompletion.checklist.map((item) => (
+                    <div key={item.key} className="flex items-center justify-between gap-3">
+                      <span>{item.label}</span>
+                      <span className={item.done ? "text-emerald-200" : "text-white/50"}>
+                        {item.done ? `+${item.weight}` : "0"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          </div>
+
+          <section className="mt-6 rounded-2xl border border-white/10 bg-slate-950 p-6 text-white shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Matchings</div>
+              <span className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-white/70">
+                Bientôt disponible
+              </span>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-3 text-sm text-white/70">
-              <div>Email : {profileEmail || "—"}</div>
-              <div>Téléphone : {profilePhone || "—"}</div>
-              <div>Ville : {profileCity || "—"}</div>
-              <div>Âge : {profileAge || "—"}</div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {[
+                "Product Manager IA",
+                "Growth Automation Specialist",
+                "Chef de projet data",
+              ].map((title, index) => (
+                <div
+                  key={title}
+                  className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04] p-5"
+                >
+                  <div
+                    className="absolute inset-0 scale-105 bg-cover bg-center blur-md"
+                    style={{
+                      backgroundImage:
+                        index === 0
+                          ? "url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80')"
+                          : index === 1
+                            ? "url('https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80')"
+                            : "url('https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80')",
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" />
+                  <div className="relative">
+                    <div className="text-sm font-semibold text-white/90">{title}</div>
+                    <div className="mt-2 text-xs text-white/65">
+                      Contenu flouté jusqu’à activation de la fonctionnalité matching.
+                    </div>
+                    <div className="mt-4 h-2 w-2/3 rounded-full bg-white/20" />
+                    <div className="mt-2 h-2 w-1/2 rounded-full bg-white/20" />
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="mt-3 text-sm text-white/60">Situation : {profileSituation}</div>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
-              {profileBio || "Présentation en cours de rédaction."}
-            </div>
-            {isUploadingAvatar ? (
-              <div className="mt-2 text-xs text-white/60">Upload en cours...</div>
-            ) : null}
           </section>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             <div className="relative overflow-hidden rounded-[34px] bg-white text-slate-900 shadow-[0_25px_60px_rgba(15,23,42,0.25)]">
               <div className="h-44 w-full overflow-hidden">
-                <div className="h-full w-full bg-[url('/images/road.jpg')] bg-cover bg-center" />
+                <div className="h-full w-full bg-[url('https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center" />
               </div>
               <div className="flex flex-col gap-3 px-5 py-5">
                 <div className="text-[11px] uppercase tracking-[0.35em] text-slate-500">IDMC</div>
@@ -1331,7 +1761,7 @@ export default function ApprenantDashboardPage() {
 
             <div className="relative overflow-hidden rounded-[34px] bg-white text-slate-900 shadow-[0_25px_60px_rgba(15,23,42,0.25)]">
               <div className="h-44 w-full overflow-hidden">
-                <div className="h-full w-full bg-[url('/uploads/editor/1766949485698-6fac6828-2cc5-4352-9b89-2306e7e38b80.jpeg')] bg-cover bg-center" />
+                <div className="h-full w-full bg-[url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center" />
               </div>
               <div className="flex flex-col gap-3 px-5 py-5">
                 <div className="text-[11px] uppercase tracking-[0.35em] text-slate-500">Soft Skills</div>
@@ -1349,7 +1779,7 @@ export default function ApprenantDashboardPage() {
 
             <div className="relative overflow-hidden rounded-[34px] bg-white text-slate-900 shadow-[0_25px_60px_rgba(15,23,42,0.25)]">
               <div className="h-44 w-full overflow-hidden">
-                <div className="h-full w-full bg-[url('/uploads/openbadges/81f19902-bc19-4cd2-a232-205c1c57e75d-1769416377419-20260126_0846_image-generation_remix_01kfwm7ajjecmtt88qza2t6cjr.png')] bg-cover bg-center" />
+                <div className="h-full w-full bg-[url('https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center" />
               </div>
               <div className="flex flex-col gap-3 px-5 py-5">
                 <div className="text-[11px] uppercase tracking-[0.35em] text-slate-500">Test comportemental</div>
@@ -1416,103 +1846,110 @@ export default function ApprenantDashboardPage() {
 
 
           {showSkillModal ? (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
-              <div className="w-full max-w-5xl rounded-3xl border border-white/10 bg-slate-950 p-6 text-white">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.3em] text-white/60">
-                      Catalogue de compétences
+            <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 px-4">
+              <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-[#0D111A] text-white shadow-2xl">
+                <div className="border-b border-white/10 px-6 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/50">
+                        Ajouter une compétence
+                      </div>
+                      <div className="mt-1 text-lg font-semibold text-white">Catalogue de compétences</div>
                     </div>
-                    <p className="mt-2 text-sm text-white/70">
-                      Choisissez une compétence par catégorie ou recherchez directement.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSkillModal(false);
-                      setSkillSearch("");
-                      setPendingHardSkill(null);
-                      setShowManualSkillInput(false);
-                      setManualSkillName("");
-                    }}
-                    className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/70"
-                  >
-                    Fermer
-                  </button>
-                </div>
-
-                <div className="mt-4">
-                  <input
-                    value={skillSearch}
-                    onChange={(event) => setSkillSearch(event.target.value)}
-                    placeholder="Rechercher une compétence..."
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none"
-                  />
-                </div>
-
-                <div className="mt-6 grid gap-6 lg:grid-cols-[220px_1fr]">
-                  <aside className="space-y-2">
-                    {CATEGORY_LIST.map((category) => (
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={skillSearch}
+                        onChange={(event) => setSkillSearch(event.target.value)}
+                        placeholder="Rechercher une compétence..."
+                        className="w-72 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                      />
                       <button
-                        key={`${category.type}-${category.name}`}
                         type="button"
-                        onClick={() => setActiveCategory(category.name)}
-                        className={`w-full rounded-xl px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] ${
-                          activeCategory === category.name
-                            ? "bg-white/10 text-white"
-                            : "text-white/50 hover:text-white"
-                        }`}
+                        onClick={() => {
+                          setShowSkillModal(false);
+                          setSkillSearch("");
+                          setPendingHardSkill(null);
+                          setPendingSkillProof(false);
+                          setShowManualSkillInput(false);
+                          setManualSkillName("");
+                        }}
+                        className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/75"
                       >
-                        {category.name}
+                        Fermer
                       </button>
-                    ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid min-h-[430px] grid-cols-[280px_1fr]">
+                  <aside className="border-r border-white/10 bg-white/[0.03] p-4">
+                    <div className="space-y-2">
+                      {CATEGORY_LIST.map((category) => (
+                        <button
+                          key={`${category.type}-${category.name}`}
+                          type="button"
+                          onClick={() => setActiveCategory(category.name)}
+                          className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                            activeCategory === category.name
+                              ? "bg-white/15 text-white"
+                              : "text-white/65 hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          {category.name}
+                        </button>
+                      ))}
+                    </div>
                   </aside>
-                  <div>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {(skillSearch ? [...filteredHardSkills] : [])
-                        .filter((item) => item.name)
-                        .map((item) => (
+
+                  <div className="p-4">
+                    <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+                      {(skillSearch
+                        ? [...filteredHardSkills].map((item) => item.name)
+                        : HARD_SKILL_LIBRARY.filter((group) => group.category === activeCategory).flatMap(
+                            (group) => group.items
+                          )
+                      ).map((skill) => {
+                        const logo = resolveToolLogo(skill);
+                        return (
                           <button
-                            key={`${item.category}-${item.name}`}
+                            key={skill}
                             type="button"
-                            onClick={() => setPendingHardSkill(item.name)}
-                            className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left text-sm text-white/80"
+                            onClick={() => {
+                              setPendingHardSkill(skill);
+                              setPendingSkillProof(Boolean(skillsMetadata[skill]?.validated));
+                            }}
+                            className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left hover:bg-white/[0.07]"
                           >
-                            <div className="text-xs text-white/50">{item.category}</div>
-                            <div className="mt-2 text-sm font-semibold">{item.name}</div>
+                            <span className="flex items-center gap-3">
+                              {logo ? (
+                                <img src={logo} alt={skill} className="h-5 w-5 rounded-sm object-contain" />
+                              ) : (
+                                <span className="h-5 w-5 rounded-sm bg-white/10" />
+                              )}
+                              <span className="text-sm text-white/85">{skill}</span>
+                            </span>
+                            <span className="text-xs text-white/55">Configurer</span>
                           </button>
-                        ))}
-                      {skillSearch === "" &&
-                        HARD_SKILL_LIBRARY.filter((group) => group.category === activeCategory)
-                          .flatMap((group) => group.items)
-                          .map((skill) => (
-                            <button
-                              key={skill}
-                              type="button"
-                              onClick={() => setPendingHardSkill(skill)}
-                              className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left text-sm text-white/80"
-                            >
-                              <div className="text-xs text-white/50">Hard Skill</div>
-                              <div className="mt-2 text-sm font-semibold">{skill}</div>
-                            </button>
-                          ))}
+                        );
+                      })}
+
                       <button
                         type="button"
                         onClick={() => {
                           setManualSkillName("");
                           setShowManualSkillInput(true);
                         }}
-                        className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left text-sm text-white/70"
+                        className="flex w-full items-center justify-between rounded-xl border border-dashed border-white/20 bg-white/[0.03] px-3 py-2 text-left hover:bg-white/[0.07]"
                       >
-                        Autre (ajouter manuellement)
+                        <span className="text-sm text-white/80">Autre (ajouter manuellement)</span>
+                        <span className="text-xs text-white/55">Nouveau</span>
                       </button>
                     </div>
                   </div>
                 </div>
 
                 {pendingHardSkill ? (
-                  <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="border-t border-white/10 bg-white/[0.02] p-4">
                     <div className="text-sm text-white/80">
                       Quel est votre niveau pour <strong>{pendingHardSkill}</strong> ?
                     </div>
@@ -1527,13 +1964,18 @@ export default function ApprenantDashboardPage() {
                               { level: "Débutant" | "Intermédiaire" | "Expert"; validated: boolean; source: "manual" | "badge" }
                             > = {
                               ...skillsMetadata,
-                              [pendingHardSkill]: { level, validated: false, source: "manual" },
+                              [pendingHardSkill]: {
+                                level,
+                                validated: pendingSkillProof,
+                                source: pendingSkillProof ? "badge" : "manual",
+                              },
                             };
                             const nextHard = Array.from(new Set([...hardSkills, pendingHardSkill]));
                             setSkillsMetadata(next);
                             setHardSkills(nextHard);
                             persistSkills(next, nextHard);
                             setPendingHardSkill(null);
+                            setPendingSkillProof(false);
                           }}
                           className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white"
                         >
@@ -1541,6 +1983,14 @@ export default function ApprenantDashboardPage() {
                         </button>
                       ))}
                     </div>
+                    <label className="mt-3 flex items-center gap-2 text-xs text-white/75">
+                      <input
+                        type="checkbox"
+                        checked={pendingSkillProof}
+                        onChange={(event) => setPendingSkillProof(event.target.checked)}
+                      />
+                      Je peux prouver cette compétence
+                    </label>
                   </div>
                 ) : null}
 
@@ -1788,9 +2238,9 @@ export default function ApprenantDashboardPage() {
                     key={tool}
                     className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80"
                   >
-                    {TOOL_LOGOS[tool] ? (
+                    {resolveToolLogo(tool) ? (
                       <img
-                        src={TOOL_LOGOS[tool]}
+                        src={resolveToolLogo(tool) ?? ""}
                         alt={tool}
                         className="h-4 w-4 rounded-sm object-contain shadow-[0_0_6px_rgba(255,255,255,0.25)]"
                       />
@@ -2000,12 +2450,11 @@ export default function ApprenantDashboardPage() {
                   />
                   <div className="grid gap-4 sm:grid-cols-2">
                     <input
-                      type="number"
+                      type="date"
                       value={diplomeForm.annee_obtention}
                       onChange={(event) =>
                         setDiplomeForm((prev) => ({ ...prev, annee_obtention: event.target.value }))
                       }
-                      placeholder="Année d'obtention"
                       className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
                     />
                     <select

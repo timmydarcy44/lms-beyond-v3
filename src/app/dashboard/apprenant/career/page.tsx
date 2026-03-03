@@ -9,8 +9,11 @@ import {
   BookOpen,
   Briefcase,
   Building2,
+  ChevronDown,
+  ChevronUp,
   GraduationCap,
   Home,
+  Plus,
   Share2,
   Sparkles,
   UserCircle,
@@ -22,6 +25,10 @@ import {
   IdmcRadarChart,
   resolveIdmcAxes,
 } from "@/components/idmc/IdmcRadarChart";
+import {
+  GLOBAL_SKILL_REFERENTIAL,
+  resolveToolLogo,
+} from "@/lib/profile/competency-referential";
 
 type IdmcData = {
   scores?: Record<string, unknown> | null;
@@ -103,7 +110,6 @@ const CareerPage = () => {
     poste_actuel: string;
     entreprise: string;
     type_contrat: string;
-    rythme_teletravail: string;
     ecole: string;
     date_fin_contrat: string;
     rythme_alternance: string;
@@ -125,7 +131,6 @@ const CareerPage = () => {
     poste_actuel: "",
     entreprise: "",
     type_contrat: "",
-    rythme_teletravail: "",
     ecole: "",
     date_fin_contrat: "",
     rythme_alternance: "",
@@ -138,21 +143,34 @@ const CareerPage = () => {
   const [educations, setEducations] = useState<EducationItem[]>([]);
   const [experiencesPro, setExperiencesPro] = useState<ExperiencePro[]>([]);
   const [diplomes, setDiplomes] = useState<Diplome[]>([]);
-  const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [softSkillsTop, setSoftSkillsTop] = useState<Array<{ skill: string; score: number }>>(
     []
   );
   const [isRegeneratingBio, setIsRegeneratingBio] = useState(false);
   const [showQualificationModal, setShowQualificationModal] = useState(false);
   const [isSavingQualification, setIsSavingQualification] = useState(false);
+  const [isProfileGaugeExpanded, setIsProfileGaugeExpanded] = useState(true);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [editableSkillsMetadata, setEditableSkillsMetadata] = useState<
+    Record<string, { level: "Débutant" | "Intermédiaire" | "Expert"; validated: boolean; source: "manual" | "badge" }>
+  >({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addModalType, setAddModalType] = useState<"stack" | "skill">("stack");
+  const [catalogCategory, setCatalogCategory] = useState("");
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [pendingSkillForLevel, setPendingSkillForLevel] = useState<string | null>(null);
+  const [pendingSkillProof, setPendingSkillProof] = useState(false);
   const [hasSchool, setHasSchool] = useState<boolean | null>(null);
   const [qualificationForm, setQualificationForm] = useState({
+    first_name: "",
+    last_name: "",
+    city: "",
+    telephone: "",
+    birth_date: "",
     poste_actuel: "",
     entreprise: "",
     type_contrat: "",
-    rythme_teletravail: "",
     tjm: "",
     expertise: "",
     disponibilite: "",
@@ -179,21 +197,27 @@ const CareerPage = () => {
     const typeProfil = String((profile as Record<string, unknown> | null)?.type_profil ?? "").trim();
     if (!typeProfil) return false;
     const field = (value: unknown) => String(value ?? "").trim();
+    const baseMissing =
+      !field((profile as Record<string, unknown> | null)?.first_name) ||
+      !field((profile as Record<string, unknown> | null)?.last_name) ||
+      !field((profile as Record<string, unknown> | null)?.city) ||
+      !field((profile as Record<string, unknown> | null)?.telephone) ||
+      !field((profile as Record<string, unknown> | null)?.birth_date);
     if (typeProfil === "freelance") {
-      return (
+      return baseMissing || (
         !field((profile as Record<string, unknown> | null)?.tjm) ||
         !field((profile as Record<string, unknown> | null)?.expertise)
       );
     }
     if (typeProfil === "emploi") {
-      return (
+      return baseMissing || (
         !field((profile as Record<string, unknown> | null)?.poste_actuel) ||
         !field((profile as Record<string, unknown> | null)?.entreprise) ||
         !field((profile as Record<string, unknown> | null)?.type_contrat)
       );
     }
     if (typeProfil === "reconversion") {
-      return (
+      return baseMissing || (
         !field((profile as Record<string, unknown> | null)?.ancien_metier) ||
         !field((profile as Record<string, unknown> | null)?.metier_vise) ||
         !field((profile as Record<string, unknown> | null)?.organisme_formation) ||
@@ -201,51 +225,56 @@ const CareerPage = () => {
       );
     }
     if (typeProfil === "alternance") {
-      return (
+      return baseMissing || (
         !field((profile as Record<string, unknown> | null)?.ecole) ||
         !field((profile as Record<string, unknown> | null)?.niveau_etude) ||
         !field((profile as Record<string, unknown> | null)?.rythme_alternance) ||
         !field((profile as Record<string, unknown> | null)?.date_fin_contrat)
       );
     }
-    return false;
+    return baseMissing;
   }, [profile]);
 
-  const TOOL_OPTIONS = [
-    "Notion",
-    "Wordpress",
-    "Cursor",
-    "Zapier",
-    "n8n",
-    "Webflow",
-  ];
-  const SKILL_OPTIONS = [
-    "Acquisition",
-    "SEO",
-    "Négociation",
-    "Développement web",
-    "Automation",
-  ];
-  const TOOL_LOGOS: Record<string, string> = {
-    Notion: "https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png",
-    Wordpress: "https://upload.wikimedia.org/wikipedia/commons/2/20/WordPress_logo.svg",
-    Cursor: "https://avatars.githubusercontent.com/u/157243072?s=200&v=4",
-    Zapier: "https://upload.wikimedia.org/wikipedia/commons/7/75/Zapier_logo.svg",
-    "n8n": "https://upload.wikimedia.org/wikipedia/commons/5/5a/N8n-logo-new.svg",
-    Webflow: "https://upload.wikimedia.org/wikipedia/commons/3/3b/Webflow_logo.svg",
+  const STACK_REFERENTIAL = GLOBAL_SKILL_REFERENTIAL;
+  const SKILL_REFERENTIAL = GLOBAL_SKILL_REFERENTIAL;
+  const activeCatalog = addModalType === "stack" ? STACK_REFERENTIAL : SKILL_REFERENTIAL;
+  const catalogCategories = activeCatalog.map((group) => group.category);
+  const catalogItems = activeCatalog
+    .filter((group) => !catalogCategory || group.category === catalogCategory)
+    .flatMap((group) => group.items)
+    .filter((item) => item.toLowerCase().includes(catalogSearch.toLowerCase()));
+
+  const openAddModal = (type: "stack" | "skill") => {
+    setAddModalType(type);
+    const initialCategory =
+      type === "stack" ? STACK_REFERENTIAL[0]?.category : SKILL_REFERENTIAL[0]?.category;
+    setCatalogCategory(initialCategory ?? "");
+    setCatalogSearch("");
+    setPendingSkillForLevel(null);
+    setPendingSkillProof(false);
+    setShowAddModal(true);
   };
 
   useEffect(() => {
     if (!profile) return;
     if (qualificationMissing) {
       setQualificationForm({
+        first_name: String((profile as Record<string, unknown> | null)?.first_name ?? ""),
+        last_name: String((profile as Record<string, unknown> | null)?.last_name ?? ""),
+        city: String((profile as Record<string, unknown> | null)?.city ?? ""),
+        telephone: String((profile as Record<string, unknown> | null)?.telephone ?? ""),
+        birth_date: String((profile as Record<string, unknown> | null)?.birth_date ?? ""),
         poste_actuel: String((profile as Record<string, unknown> | null)?.poste_actuel ?? ""),
         entreprise: String((profile as Record<string, unknown> | null)?.entreprise ?? ""),
         type_contrat: String((profile as Record<string, unknown> | null)?.type_contrat ?? ""),
-        rythme_teletravail: String((profile as Record<string, unknown> | null)?.rythme_teletravail ?? ""),
         tjm: String((profile as Record<string, unknown> | null)?.tjm ?? ""),
         expertise: String((profile as Record<string, unknown> | null)?.expertise ?? ""),
-        disponibilite: String((profile as Record<string, unknown> | null)?.disponibilite ?? ""),
+        disponibilite:
+          (profile as Record<string, unknown> | null)?.disponibilite === true
+            ? "Oui"
+            : (profile as Record<string, unknown> | null)?.disponibilite === false
+              ? "Non"
+              : String((profile as Record<string, unknown> | null)?.disponibilite ?? ""),
         ancien_metier: String((profile as Record<string, unknown> | null)?.ancien_metier ?? ""),
         metier_vise: String((profile as Record<string, unknown> | null)?.metier_vise ?? ""),
         organisme_formation: String((profile as Record<string, unknown> | null)?.organisme_formation ?? ""),
@@ -255,7 +284,6 @@ const CareerPage = () => {
         rythme_alternance: String((profile as Record<string, unknown> | null)?.rythme_alternance ?? ""),
         date_fin_contrat: String((profile as Record<string, unknown> | null)?.date_fin_contrat ?? ""),
       });
-      setShowQualificationModal(true);
     }
   }, [profile, qualificationMissing]);
 
@@ -279,7 +307,6 @@ const CareerPage = () => {
       poste_actuel: field((profile as Record<string, unknown> | null)?.poste_actuel),
       entreprise: field((profile as Record<string, unknown> | null)?.entreprise),
       type_contrat: field((profile as Record<string, unknown> | null)?.type_contrat),
-      rythme_teletravail: field((profile as Record<string, unknown> | null)?.rythme_teletravail),
     };
     const freelance = {
       tjm: field((profile as Record<string, unknown> | null)?.tjm),
@@ -315,15 +342,25 @@ const CareerPage = () => {
     setIsSavingQualification(true);
     try {
       const payload: Record<string, unknown> = {};
+      payload.first_name = qualificationForm.first_name;
+      payload.last_name = qualificationForm.last_name;
+      payload.city = qualificationForm.city;
+      payload.telephone = qualificationForm.telephone;
+      payload.birth_date = qualificationForm.birth_date || null;
       if (typeProfil === "freelance") {
         payload.tjm = qualificationForm.tjm;
         payload.expertise = qualificationForm.expertise;
+        payload.disponibilite =
+          qualificationForm.disponibilite === "Oui"
+            ? true
+            : qualificationForm.disponibilite === "Non"
+              ? false
+              : null;
       }
       if (typeProfil === "emploi") {
         payload.poste_actuel = qualificationForm.poste_actuel;
         payload.entreprise = qualificationForm.entreprise;
         payload.type_contrat = qualificationForm.type_contrat;
-        payload.rythme_teletravail = qualificationForm.rythme_teletravail;
       }
       if (typeProfil === "reconversion") {
         payload.ancien_metier = qualificationForm.ancien_metier;
@@ -363,6 +400,7 @@ const CareerPage = () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user?.id) return;
       const userId = userData.user.id;
+      const profileIdsToQuery = [userId];
       setUserId(userId);
       setUser({
         email: userData.user.email ?? undefined,
@@ -377,9 +415,25 @@ const CareerPage = () => {
           .select("*")
           .eq("id", userId)
           .maybeSingle();
-        setProfile(profileData ?? null);
-        if (profileData) {
-          const rawStack = profileData.stack_technique as unknown;
+        let resolvedProfile = profileData ?? null;
+        if (!resolvedProfile && userData.user.email) {
+          const { data: legacyProfileData } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("email", userData.user.email)
+            .maybeSingle();
+          resolvedProfile = legacyProfileData ?? null;
+        }
+        const resolvedProfileId =
+          resolvedProfile && typeof (resolvedProfile as Record<string, unknown>).id === "string"
+            ? String((resolvedProfile as Record<string, unknown>).id)
+            : null;
+        if (resolvedProfileId && resolvedProfileId !== userId) {
+          profileIdsToQuery.push(resolvedProfileId);
+        }
+        setProfile(resolvedProfile ?? null);
+        if (resolvedProfile) {
+          const rawStack = resolvedProfile.stack_technique as unknown;
           if (typeof rawStack === "string" && rawStack.trim()) {
             try {
               const parsed = JSON.parse(rawStack) as { tools?: string[]; skills?: string[] };
@@ -395,31 +449,30 @@ const CareerPage = () => {
             setSelectedSkills([]);
           }
           setEditableProfile({
-            first_name: String(profileData.first_name ?? ""),
-            last_name: String(profileData.last_name ?? ""),
-            age: String(profileData.age ?? ""),
-            city: String(profileData.city ?? ""),
-            phone: String(profileData.telephone ?? profileData.phone ?? profileData.phone_number ?? ""),
-            bio: String(profileData.bio ?? ""),
-            tjm: String(profileData.tjm ?? ""),
-            expertise: String(profileData.expertise ?? ""),
-            disponibilite: Boolean(profileData.disponibilite),
-            anciennete_freelance: String(profileData.anciennete_freelance ?? ""),
-            poste_actuel: String(profileData.poste_actuel ?? ""),
-            entreprise: String(profileData.entreprise ?? ""),
-            type_contrat: String(profileData.type_contrat ?? ""),
-            rythme_teletravail: String(profileData.rythme_teletravail ?? ""),
-            ecole: String(profileData.ecole ?? ""),
-            date_fin_contrat: String(profileData.date_fin_contrat ?? ""),
-            rythme_alternance: String(profileData.rythme_alternance ?? ""),
-            niveau_etude: String(profileData.niveau_etude ?? ""),
-            ancien_metier: String(profileData.ancien_metier ?? ""),
-            metier_vise: String(profileData.metier_vise ?? ""),
-            echeance: String(profileData.echeance ?? ""),
+            first_name: String(resolvedProfile.first_name ?? ""),
+            last_name: String(resolvedProfile.last_name ?? ""),
+            age: String(resolvedProfile.age ?? ""),
+            city: String(resolvedProfile.city ?? ""),
+            phone: String(resolvedProfile.telephone ?? resolvedProfile.phone ?? resolvedProfile.phone_number ?? ""),
+            bio: String(resolvedProfile.bio ?? ""),
+            tjm: String(resolvedProfile.tjm ?? ""),
+            expertise: String(resolvedProfile.expertise ?? ""),
+            disponibilite: Boolean(resolvedProfile.disponibilite),
+            anciennete_freelance: String(resolvedProfile.anciennete_freelance ?? ""),
+            poste_actuel: String(resolvedProfile.poste_actuel ?? ""),
+            entreprise: String(resolvedProfile.entreprise ?? ""),
+            type_contrat: String(resolvedProfile.type_contrat ?? ""),
+            ecole: String(resolvedProfile.ecole ?? ""),
+            date_fin_contrat: String(resolvedProfile.date_fin_contrat ?? ""),
+            rythme_alternance: String(resolvedProfile.rythme_alternance ?? ""),
+            niveau_etude: String(resolvedProfile.niveau_etude ?? ""),
+            ancien_metier: String(resolvedProfile.ancien_metier ?? ""),
+            metier_vise: String(resolvedProfile.metier_vise ?? ""),
+            echeance: String(resolvedProfile.echeance ?? ""),
           });
-          setHasSchool(Boolean(String(profileData.ecole ?? "").trim()));
-          const rawExperience = profileData.experience as unknown;
-          const rawEducation = profileData.education as unknown;
+          setHasSchool(Boolean(String(resolvedProfile.ecole ?? "").trim()));
+          const rawExperience = resolvedProfile.experience as unknown;
+          const rawEducation = resolvedProfile.education as unknown;
           setExperiences(Array.isArray(rawExperience) ? (rawExperience as ExperienceItem[]) : []);
           setEducations(Array.isArray(rawEducation) ? (rawEducation as EducationItem[]) : []);
         }
@@ -428,14 +481,33 @@ const CareerPage = () => {
       }
 
       try {
-        const { data: idmcResult, error: idmcError } = await supabase
-          .from("idmc_resultats")
-          .select("responses, scores, global_score, level, updated_at")
-          .eq("profile_id", userId)
-          .maybeSingle();
-        if (idmcError) {
-          console.error("[idmc] idmc_resultats error:", idmcError);
-          return;
+        let idmcResult: {
+          responses?: Record<string, unknown> | null;
+          scores?: Record<string, unknown> | null;
+          global_score?: number | null;
+          level?: string | null;
+          updated_at?: string | null;
+        } | null = null;
+        for (const candidateId of profileIdsToQuery) {
+          const { data, error } = await supabase
+            .from("idmc_resultats")
+            .select("responses, scores, global_score, level, updated_at")
+            .eq("profile_id", candidateId)
+            .maybeSingle();
+          if (error) {
+            console.error("[idmc] idmc_resultats error:", error);
+            continue;
+          }
+          if (data) {
+            idmcResult = data as {
+              responses?: Record<string, unknown> | null;
+              scores?: Record<string, unknown> | null;
+              global_score?: number | null;
+              level?: string | null;
+              updated_at?: string | null;
+            };
+            break;
+          }
         }
         console.log("Données IDMC chargées pour:", userId, idmcResult);
         setIdmcData(idmcResult ?? null);
@@ -447,14 +519,21 @@ const CareerPage = () => {
       }
 
       try {
-        const { data: discResult, error: discError } = await supabase
-          .from("disc_resultats")
-          .select("scores")
-          .eq("profile_id", userId)
-          .maybeSingle();
-        if (discError) {
-          console.error("[disc] disc_resultats error:", discError);
-          return;
+        let discResult: { scores?: Record<string, unknown> | null } | null = null;
+        for (const candidateId of profileIdsToQuery) {
+          const { data, error } = await supabase
+            .from("disc_resultats")
+            .select("scores")
+            .eq("profile_id", candidateId)
+            .maybeSingle();
+          if (error) {
+            console.error("[disc] disc_resultats error:", error);
+            continue;
+          }
+          if (data) {
+            discResult = data as { scores?: Record<string, unknown> | null };
+            break;
+          }
         }
         if (discResult?.scores && typeof discResult.scores === "object") {
           const scores = discResult.scores as Record<string, unknown>;
@@ -476,7 +555,7 @@ const CareerPage = () => {
         const { data: expData, error: expError } = await supabase
           .from("experiences_pro")
           .select("*")
-          .eq("learner_id", userId)
+          .in("learner_id", profileIdsToQuery)
           .order("date_debut", { ascending: false });
         if (expError) {
           console.error("[experiences_pro] error:", expError);
@@ -491,7 +570,7 @@ const CareerPage = () => {
         const { data: diplomeData, error: diplomeError } = await supabase
           .from("diplomes")
           .select("*")
-          .eq("learner_id", userId)
+          .in("learner_id", profileIdsToQuery)
           .order("annee_obtention", { ascending: false });
         if (diplomeError) {
           console.error("[diplomes] error:", diplomeError);
@@ -503,25 +582,31 @@ const CareerPage = () => {
       }
 
       try {
-        const { data: softSkillsData, error: softSkillsError } = await supabase
-          .from("soft_skills_resultats")
-          .select("scores")
-          .eq("learner_id", userId)
-          .maybeSingle();
-        if (softSkillsError) {
-          console.error("[soft-skills] soft_skills_resultats error:", softSkillsError);
-          setSoftSkillsTop([]);
-        } else {
-          const rawScores = softSkillsData?.scores;
-          if (rawScores && typeof rawScores === "object" && !Array.isArray(rawScores)) {
-            const mapped = Object.entries(rawScores as Record<string, number>)
-              .map(([skill, score]) => ({ skill, score: Number(score) }))
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 5);
-            setSoftSkillsTop(mapped);
-          } else {
-            setSoftSkillsTop([]);
+        let softSkillsData: { scores?: Record<string, unknown> | null } | null = null;
+        for (const candidateId of profileIdsToQuery) {
+          const { data, error } = await supabase
+            .from("soft_skills_resultats")
+            .select("scores")
+            .eq("learner_id", candidateId)
+            .maybeSingle();
+          if (error) {
+            console.error("[soft-skills] soft_skills_resultats error:", error);
+            continue;
           }
+          if (data) {
+            softSkillsData = data as { scores?: Record<string, unknown> | null };
+            break;
+          }
+        }
+        const rawScores = softSkillsData?.scores;
+        if (rawScores && typeof rawScores === "object" && !Array.isArray(rawScores)) {
+          const mapped = Object.entries(rawScores as Record<string, number>)
+            .map(([skill, score]) => ({ skill, score: Number(score) }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5);
+          setSoftSkillsTop(mapped);
+        } else {
+          setSoftSkillsTop([]);
         }
       } catch {
         setSoftSkillsTop([]);
@@ -562,6 +647,9 @@ const CareerPage = () => {
   const city = String(profile?.city ?? "").trim();
   const postalCode = String(profile?.postal_code ?? "").trim();
   const location = [address, [postalCode, city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "—";
+  const learnerIdentifier = userId
+    ? `APP-${userId.replace(/-/g, "").slice(0, 8).toUpperCase()}`
+    : "—";
   const age = useMemo(() => {
     const birthDate = (profile as Record<string, unknown> | null)?.date_naissance ?? profile?.birth_date;
     if (!birthDate || typeof birthDate !== "string") return "—";
@@ -636,7 +724,6 @@ const CareerPage = () => {
         { label: "Poste actuel", value: field((profile as Record<string, unknown> | null)?.poste_actuel) },
         { label: "Entreprise", value: field((profile as Record<string, unknown> | null)?.entreprise) },
         { label: "Type de contrat", value: field((profile as Record<string, unknown> | null)?.type_contrat) },
-        { label: "Rythme télétravail", value: field((profile as Record<string, unknown> | null)?.rythme_teletravail) },
       ];
     }
     if (profileType === "alternance") {
@@ -684,36 +771,45 @@ const CareerPage = () => {
     }
     return [];
   }, [profile]);
-  const skillsMetadata = useMemo(() => {
+  useEffect(() => {
     const raw = (profile as Record<string, unknown> | null)?.skills_metadata;
-    if (!raw) return {};
+    if (!raw) {
+      setEditableSkillsMetadata({});
+      return;
+    }
     if (typeof raw === "string") {
       try {
-        return JSON.parse(raw) as Record<
-          string,
-          { level: "Débutant" | "Intermédiaire" | "Expert"; validated: boolean; source: "manual" | "badge" }
-        >;
+        setEditableSkillsMetadata(
+          JSON.parse(raw) as Record<
+            string,
+            { level: "Débutant" | "Intermédiaire" | "Expert"; validated: boolean; source: "manual" | "badge" }
+          >
+        );
       } catch {
-        return {};
+        setEditableSkillsMetadata({});
       }
+      return;
     }
     if (typeof raw === "object") {
-      return raw as Record<
-        string,
-        { level: "Débutant" | "Intermédiaire" | "Expert"; validated: boolean; source: "manual" | "badge" }
-      >;
+      setEditableSkillsMetadata(
+        raw as Record<
+          string,
+          { level: "Débutant" | "Intermédiaire" | "Expert"; validated: boolean; source: "manual" | "badge" }
+        >
+      );
+      return;
     }
-    return {};
+    setEditableSkillsMetadata({});
   }, [profile]);
 
   const skillEntries = useMemo(
     () =>
-      Object.entries(skillsMetadata).map(([name, meta]) => ({
+      Object.entries(editableSkillsMetadata).map(([name, meta]) => ({
         name,
         level: meta?.level ?? "Débutant",
         validated: Boolean(meta?.validated),
       })),
-    [skillsMetadata]
+    [editableSkillsMetadata]
   );
   const certifiedSkills = skillEntries.filter((item) => item.validated);
   const nonValidatedSkills = skillEntries.filter((item) => !item.validated);
@@ -759,6 +855,62 @@ const CareerPage = () => {
       detail: "Profil apprenant solide.",
     };
   }, [idmcGlobalScore]);
+
+  const profileCompletion = useMemo(() => {
+    const source = (profile ?? {}) as Record<string, unknown>;
+    const typeProfil = String(source.type_profil ?? "").trim().toLowerCase();
+    const hasValue = (value: unknown) => String(value ?? "").trim().length > 0;
+    const checklist = [
+      { key: "idmc", label: "Test IDMC", weight: 30, done: Boolean(idmcAxes) },
+      { key: "disc", label: "Test comportemental", weight: 25, done: Boolean(discScores) },
+      { key: "soft", label: "Soft Skills", weight: 20, done: softSkillsTop.length > 0 },
+      {
+        key: "base",
+        label: "Infos de base (ville + telephone)",
+        weight: 10,
+        done: hasValue(source.city) && hasValue(source.telephone),
+      },
+      {
+        key: "role",
+        label:
+          typeProfil === "freelance"
+            ? "Infos freelance (TJM + expertise + stack)"
+            : typeProfil === "alternance"
+              ? "Infos alternance (ecole + rythme + fin contrat)"
+              : typeProfil === "reconversion"
+                ? "Infos reconversion (ancien + vise + echeance)"
+                : "Infos emploi/profil",
+        weight: 15,
+        done:
+          typeProfil === "freelance"
+            ? hasValue(source.tjm) && hasValue(source.expertise) && hasValue(source.stack_technique)
+            : typeProfil === "alternance"
+              ? hasValue(source.ecole) &&
+                hasValue(source.niveau_etude) &&
+                hasValue(source.rythme_alternance) &&
+                hasValue(source.date_fin_contrat)
+              : typeProfil === "reconversion"
+                ? hasValue(source.ancien_metier) &&
+                  hasValue(source.metier_vise) &&
+                  hasValue(source.organisme_formation) &&
+                  hasValue(source.echeance)
+                : hasValue(source.poste_actuel) ||
+                  hasValue(source.entreprise) ||
+                  hasValue(source.type_profil),
+      },
+    ] as const;
+
+    const score = checklist.reduce((sum, item) => sum + (item.done ? item.weight : 0), 0);
+    const level =
+      score >= 85
+        ? "Profil tres complet"
+        : score >= 65
+          ? "Profil solide"
+          : score >= 40
+            ? "Profil en progression"
+            : "Profil a completer";
+    return { score, level, checklist };
+  }, [profile, idmcAxes, discScores, softSkillsTop]);
 
   const navItems = useMemo(() => {
     const items = [...NAV_ITEMS];
@@ -859,7 +1011,6 @@ const CareerPage = () => {
         poste_actuel: toNull(editableProfile.poste_actuel),
         entreprise: toNull(editableProfile.entreprise),
         type_contrat: toNull(editableProfile.type_contrat),
-        rythme_teletravail: toNull(editableProfile.rythme_teletravail),
         ecole: toNull(editableProfile.ecole),
         date_fin_contrat: toNull(editableProfile.date_fin_contrat),
         rythme_alternance: toNull(editableProfile.rythme_alternance),
@@ -868,6 +1019,7 @@ const CareerPage = () => {
         metier_vise: toNull(editableProfile.metier_vise),
         echeance: toNull(editableProfile.echeance),
         stack_technique: JSON.stringify({ tools: selectedTools, skills: selectedSkills }),
+        skills_metadata: editableSkillsMetadata,
       };
       console.log("Saving profile:", payload);
       const { error } = await supabase.from("profiles").update(payload).eq("id", userId);
@@ -893,7 +1045,6 @@ const CareerPage = () => {
   const handleShareProfile = async () => {
     if (!userId) return;
     if (!supabase) {
-      setShareStatus("Service indisponible.");
       return;
     }
     const firstName = String((profile as Record<string, unknown> | null)?.first_name ?? "").trim();
@@ -910,17 +1061,14 @@ const CareerPage = () => {
           text: "Découvrez mon profil Beyond.",
           url: shareUrl,
         });
-        setShareStatus("Lien partagé.");
         return;
       }
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
-        setShareStatus("Lien copié.");
         return;
       }
-      setShareStatus(shareUrl);
     } catch {
-      setShareStatus("Impossible de partager pour le moment.");
+      // ignore share errors
     }
   };
 
@@ -1052,7 +1200,6 @@ const CareerPage = () => {
 
           <main
             className="flex-1 overflow-y-auto px-6 py-10 lg:px-12"
-            style={{ marginLeft: isSidebarCollapsed ? "5rem" : "16rem" }}
           >
             <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-[12px] uppercase tracking-[0.3em] text-white/50">Carrière</div>
@@ -1093,13 +1240,49 @@ const CareerPage = () => {
                   <Share2 className="h-3.5 w-3.5" />
                   Partager mon profil
                 </button>
-                {shareStatus ? (
-                  <span className="text-xs text-white/60">{shareStatus}</span>
-                ) : null}
               </div>
             </div>
 
             <div className="flex flex-col gap-12">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Jauge de profil</div>
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileGaugeExpanded((prev) => !prev)}
+                    className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-white/70"
+                  >
+                    {isProfileGaugeExpanded ? "Réduire" : "Détails"}
+                    {isProfileGaugeExpanded ? (
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
+                <div className="mt-3 flex items-end justify-between gap-4">
+                  <div className="text-3xl font-extrabold text-white">{profileCompletion.score}%</div>
+                  <div className="text-xs font-semibold text-emerald-200">{profileCompletion.level}</div>
+                </div>
+                <div className="mt-3 h-2 w-full rounded-full bg-white/10">
+                  <div
+                    className="h-2 rounded-full bg-emerald-300 transition-all"
+                    style={{ width: `${profileCompletion.score}%` }}
+                  />
+                </div>
+                {isProfileGaugeExpanded ? (
+                  <div className="mt-4 grid gap-2 text-[11px] text-white/70 sm:grid-cols-2">
+                    {profileCompletion.checklist.map((item) => (
+                      <div key={item.key} className="flex items-center justify-between gap-3">
+                        <span>{item.label}</span>
+                        <span className={item.done ? "text-emerald-200" : "text-white/50"}>
+                          {item.done ? `+${item.weight}` : "0"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
               <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
                 <div className="absolute inset-0">
                   <div className="h-full w-full bg-[url('/images/road.jpg')] bg-cover bg-center opacity-20" />
@@ -1146,6 +1329,7 @@ const CareerPage = () => {
                           <div>Ville : {String(profile?.city ?? "").trim() || "—"}</div>
                           <div>Email : {email}</div>
                           <div>Téléphone : {String(profile?.telephone ?? "—")}</div>
+                          <div>ID apprenant : {learnerIdentifier}</div>
                         </div>
                       </div>
 
@@ -1287,9 +1471,9 @@ const CareerPage = () => {
                           key={tool}
                           className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80"
                         >
-                          {TOOL_LOGOS[tool] ? (
+                          {resolveToolLogo(tool) ? (
                             <img
-                              src={TOOL_LOGOS[tool]}
+                              src={resolveToolLogo(tool) ?? ""}
                               alt={tool}
                               className="h-4 w-4 rounded-sm object-contain shadow-[0_0_6px_rgba(255,255,255,0.25)]"
                             />
@@ -1632,23 +1816,18 @@ const CareerPage = () => {
                 </label>
                 <label className="text-xs text-white/70">
                   Type de contrat
-                  <input
-                    type="text"
+                  <select
                     value={editableProfile.type_contrat}
                     onChange={(event) => handleProfileFieldChange("type_contrat", event.target.value)}
                     className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none"
-                  />
-                </label>
-                <label className="text-xs text-white/70">
-                  Rythme télétravail
-                  <input
-                    type="text"
-                    value={editableProfile.rythme_teletravail}
-                    onChange={(event) =>
-                      handleProfileFieldChange("rythme_teletravail", event.target.value)
-                    }
-                    className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none"
-                  />
+                  >
+                    <option value="">Choisir</option>
+                    <option value="CDI">CDI</option>
+                    <option value="CDD">CDD</option>
+                    <option value="Alternance">Alternance</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Interim">Intérim</option>
+                  </select>
                 </label>
               </div>
             ) : null}
@@ -1779,63 +1958,75 @@ const CareerPage = () => {
             ) : null}
 
             <div className="mt-6">
-              <div className="text-xs uppercase tracking-[0.3em] text-white/50">
-                Ma Stack Technique
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs uppercase tracking-[0.3em] text-white/50">
+                  Ma Stack Technique
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAddModal("stack")}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white/75"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Ajouter
+                </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                {TOOL_OPTIONS.map((tool) => {
-                  const active = selectedTools.includes(tool);
-                  return (
+                {selectedTools.length ? (
+                  selectedTools.map((tool) => (
                     <button
                       key={tool}
                       type="button"
-                      onClick={() =>
-                        setSelectedTools((prev) =>
-                          prev.includes(tool)
-                            ? prev.filter((item) => item !== tool)
-                            : [...prev, tool]
-                        )
-                      }
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                        active
-                          ? "border-emerald-300/50 bg-emerald-300/20 text-emerald-100"
-                          : "border-white/15 bg-white/5 text-white/70"
-                      }`}
+                      onClick={() => setSelectedTools((prev) => prev.filter((item) => item !== tool))}
+                      className="rounded-full border border-emerald-300/50 bg-emerald-300/20 px-3 py-1 text-xs font-semibold text-emerald-100"
                     >
-                      {tool}
+                      {tool} ×
                     </button>
-                  );
-                })}
+                  ))
+                ) : (
+                  <div className="text-xs text-white/55">Aucune stack sélectionnée pour le moment.</div>
+                )}
               </div>
             </div>
             <div className="mt-6">
-              <div className="text-xs uppercase tracking-[0.3em] text-white/50">
-                Mes Compétences
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs uppercase tracking-[0.3em] text-white/50">
+                  Mes Compétences
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAddModal("skill")}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white/75"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Ajouter
+                </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                {SKILL_OPTIONS.map((skill) => {
-                  const active = selectedSkills.includes(skill);
-                  return (
+                {selectedSkills.length ? (
+                  selectedSkills.map((skill) => (
                     <button
                       key={skill}
                       type="button"
-                      onClick={() =>
-                        setSelectedSkills((prev) =>
-                          prev.includes(skill)
-                            ? prev.filter((item) => item !== skill)
-                            : [...prev, skill]
-                        )
-                      }
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                        active
-                          ? "border-sky-300/50 bg-sky-300/20 text-sky-100"
-                          : "border-white/15 bg-white/5 text-white/70"
-                      }`}
+                      onClick={() => {
+                        setSelectedSkills((prev) => prev.filter((item) => item !== skill));
+                        setEditableSkillsMetadata((prev) => {
+                          const next = { ...prev };
+                          delete next[skill];
+                          return next;
+                        });
+                      }}
+                      className="rounded-full border border-sky-300/50 bg-sky-300/20 px-3 py-1 text-xs font-semibold text-sky-100"
                     >
                       {skill}
+                      {editableSkillsMetadata[skill]?.level ? ` · ${editableSkillsMetadata[skill].level}` : ""}
+                      {editableSkillsMetadata[skill]?.validated ? " ✓" : ""}
+                      {" ×"}
                     </button>
-                  );
-                })}
+                  ))
+                ) : (
+                  <div className="text-xs text-white/55">Aucune compétence sélectionnée pour le moment.</div>
+                )}
               </div>
             </div>
 
@@ -1860,14 +2051,202 @@ const CareerPage = () => {
         </div>
       ) : null}
 
+      {showAddModal ? (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 px-4">
+          <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-[#0D111A] text-white shadow-2xl">
+            <div className="border-b border-white/10 px-6 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.3em] text-white/50">
+                    {addModalType === "stack" ? "Ajouter une stack" : "Ajouter une compétence"}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-white">
+                    {addModalType === "stack" ? "Stack technique" : "Compétences métier"}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={catalogSearch}
+                    onChange={(event) => setCatalogSearch(event.target.value)}
+                    placeholder={`Rechercher ${addModalType === "stack" ? "une stack..." : "une compétence..."}`}
+                    className="w-72 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setPendingSkillForLevel(null);
+                    }}
+                    className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/75"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid min-h-[430px] grid-cols-[260px_1fr]">
+              <aside className="border-r border-white/10 bg-white/[0.03] p-4">
+                <div className="space-y-2">
+                  {catalogCategories.map((category) => {
+                    const active = catalogCategory === category;
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setCatalogCategory(category)}
+                        className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                          active ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    );
+                  })}
+                </div>
+              </aside>
+
+              <div className="p-4">
+                <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+                  {catalogItems.map((item) => {
+                    const selected = addModalType === "stack" ? selectedTools.includes(item) : selectedSkills.includes(item);
+                    const logo = resolveToolLogo(item);
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => {
+                          if (addModalType === "stack") {
+                            setSelectedTools((prev) =>
+                              prev.includes(item) ? prev.filter((tool) => tool !== item) : [...prev, item]
+                            );
+                            return;
+                          }
+                          setPendingSkillForLevel(item);
+                          setPendingSkillProof(Boolean(editableSkillsMetadata[item]?.validated));
+                        }}
+                        className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left ${
+                          selected
+                            ? "border-emerald-300/40 bg-emerald-300/10"
+                            : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          {logo ? (
+                            <img src={logo} alt={item} className="h-5 w-5 rounded-sm object-contain" />
+                          ) : (
+                            <span className="h-5 w-5 rounded-sm bg-white/10" />
+                          )}
+                          <span className="text-sm text-white/85">{item}</span>
+                        </span>
+                        <span className="text-xs text-white/55">
+                          {addModalType === "stack"
+                            ? selected
+                              ? "Ajouté"
+                              : "Ajouter"
+                            : selected
+                              ? "Configurer"
+                              : "Sélectionner"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {addModalType === "skill" && pendingSkillForLevel ? (
+                  <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="text-sm text-white/80">
+                      Niveau pour <strong>{pendingSkillForLevel}</strong>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(["Débutant", "Intermédiaire", "Expert"] as const).map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSkills((prev) =>
+                              prev.includes(pendingSkillForLevel) ? prev : [...prev, pendingSkillForLevel]
+                            );
+                            setEditableSkillsMetadata((prev) => ({
+                              ...prev,
+                              [pendingSkillForLevel]: {
+                                level,
+                                validated: pendingSkillProof,
+                                source: pendingSkillProof ? "badge" : "manual",
+                              },
+                            }));
+                            setPendingSkillForLevel(null);
+                          }}
+                          className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white"
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="mt-3 flex items-center gap-2 text-xs text-white/75">
+                      <input
+                        type="checkbox"
+                        checked={pendingSkillProof}
+                        onChange={(event) => setPendingSkillProof(event.target.checked)}
+                      />
+                      Je peux prouver cette compétence
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showQualificationModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
           <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/5 p-6 text-white backdrop-blur-xl">
-            <h2 className="text-lg font-semibold">Finalisons votre profil</h2>
+            <h2 className="text-lg font-semibold">Compléter mon profil</h2>
             <p className="mt-2 text-sm text-white/70">
               Complétez ces informations pour terminer votre qualification.
             </p>
             <div className="mt-6 grid gap-4">
+              <input
+                value={qualificationForm.first_name}
+                onChange={(event) =>
+                  setQualificationForm((prev) => ({ ...prev, first_name: event.target.value }))
+                }
+                placeholder="Prénom"
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
+              />
+              <input
+                value={qualificationForm.last_name}
+                onChange={(event) =>
+                  setQualificationForm((prev) => ({ ...prev, last_name: event.target.value }))
+                }
+                placeholder="Nom"
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
+              />
+              <input
+                value={qualificationForm.city}
+                onChange={(event) =>
+                  setQualificationForm((prev) => ({ ...prev, city: event.target.value }))
+                }
+                placeholder="Ville"
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
+              />
+              <input
+                value={qualificationForm.telephone}
+                onChange={(event) =>
+                  setQualificationForm((prev) => ({ ...prev, telephone: event.target.value }))
+                }
+                placeholder="Téléphone"
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
+              />
+              <input
+                type="date"
+                value={qualificationForm.birth_date}
+                onChange={(event) =>
+                  setQualificationForm((prev) => ({ ...prev, birth_date: event.target.value }))
+                }
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
+              />
               {String((profile as Record<string, unknown> | null)?.type_profil ?? "") ===
               "freelance" ? (
                 <>
@@ -1887,6 +2266,31 @@ const CareerPage = () => {
                     placeholder="Expertise (tags)"
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
                   />
+                  <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white">
+                    <span className="text-white/70">Disponibilité</span>
+                    <button
+                      type="button"
+                      onClick={() => setQualificationForm((prev) => ({ ...prev, disponibilite: "Oui" }))}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        qualificationForm.disponibilite === "Oui"
+                          ? "bg-emerald-400/25 text-emerald-200"
+                          : "bg-white/5 text-white/65"
+                      }`}
+                    >
+                      Oui
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQualificationForm((prev) => ({ ...prev, disponibilite: "Non" }))}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        qualificationForm.disponibilite === "Non"
+                          ? "bg-rose-400/25 text-rose-200"
+                          : "bg-white/5 text-white/65"
+                      }`}
+                    >
+                      Non
+                    </button>
+                  </div>
                 </>
               ) : null}
               {String((profile as Record<string, unknown> | null)?.type_profil ?? "") ===
@@ -1908,14 +2312,20 @@ const CareerPage = () => {
                     placeholder="Entreprise"
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
                   />
-                  <input
+                  <select
                     value={qualificationForm.type_contrat}
                     onChange={(event) =>
                       setQualificationForm((prev) => ({ ...prev, type_contrat: event.target.value }))
                     }
-                    placeholder="Type de contrat"
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
-                  />
+                  >
+                    <option value="">Type de contrat</option>
+                    <option value="CDI">CDI</option>
+                    <option value="CDD">CDD</option>
+                    <option value="Alternance">Alternance</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Interim">Intérim</option>
+                  </select>
                 </>
               ) : null}
               {String((profile as Record<string, unknown> | null)?.type_profil ?? "") ===
@@ -1949,11 +2359,11 @@ const CareerPage = () => {
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
                   />
                   <input
+                    type="date"
                     value={qualificationForm.echeance}
                     onChange={(event) =>
                       setQualificationForm((prev) => ({ ...prev, echeance: event.target.value }))
                     }
-                    placeholder="Échéance"
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
                   />
                 </>
@@ -1989,6 +2399,7 @@ const CareerPage = () => {
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
                   />
                   <input
+                    type="date"
                     value={qualificationForm.date_fin_contrat}
                     onChange={(event) =>
                       setQualificationForm((prev) => ({
@@ -1996,7 +2407,6 @@ const CareerPage = () => {
                         date_fin_contrat: event.target.value,
                       }))
                     }
-                    placeholder="Date de fin de contrat"
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white"
                   />
                 </>

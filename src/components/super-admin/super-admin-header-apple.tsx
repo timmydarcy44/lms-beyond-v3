@@ -398,7 +398,7 @@ export function SuperAdminHeaderApple() {
             
             {/* Icône Messagerie */}
             <Link
-              href="/dashboard/communaute"
+              href="/dashboard/student/community"
               className={cn(
                 "flex items-center justify-center w-8 h-8 rounded-full transition-colors",
                 isContentin

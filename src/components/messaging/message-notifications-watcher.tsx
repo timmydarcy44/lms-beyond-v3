@@ -112,7 +112,7 @@ export function MessageNotificationsWatcher() {
           isInitializedRef.current && // Ne pas afficher de notification lors de la première vérification
           data.hasNewMessages &&
           data.latestMessage &&
-          !pathname.startsWith("/dashboard/communaute")
+          !pathname.startsWith("/dashboard/student/community")
         ) {
           const latestId = data.latestMessage.id ?? null;
           if (latestId && lastNotifiedMessageIdRef.current === latestId) {
@@ -146,7 +146,7 @@ export function MessageNotificationsWatcher() {
               <div
                 className="flex w-full cursor-pointer items-start gap-3"
                 onClick={() => {
-                  router.push("/dashboard/communaute");
+                  router.push("/dashboard/student/community");
                   toast.dismiss(toastIdRef.current || undefined);
                 }}
               >
@@ -180,7 +180,7 @@ export function MessageNotificationsWatcher() {
                 action: {
                   label: "Ouvrir",
                   onClick: () => {
-                    router.push("/dashboard/communaute");
+                    router.push("/dashboard/student/community");
                     toast.dismiss(toastIdRef.current || undefined);
                   },
                 },

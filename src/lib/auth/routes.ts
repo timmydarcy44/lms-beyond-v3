@@ -6,7 +6,7 @@ export const AUTH_ROUTES = {
 } as const;
 
 export const DASHBOARD_ROUTES = {
-  formateur: "/dashboard/formateur",
+  formateur: "/dashboard/student/studio",
   apprenant: "/dashboard/apprenant",
   admin: "/admin",
   tuteur: "/dashboard/tuteur",

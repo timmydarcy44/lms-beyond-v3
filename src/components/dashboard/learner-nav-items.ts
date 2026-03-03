@@ -25,17 +25,19 @@ export type LearnerNavItem = {
 };
 
 export const learnerNavItems: LearnerNavItem[] = [
-  { label: "Accueil", href: "/dashboard/apprenant", icon: "home" },
-  { label: "Formations", href: "/dashboard/formations", icon: "film" },
-  { label: "Parcours", href: "/dashboard/parcours", icon: "layers" },
+  { label: "Accueil", href: "/dashboard/student", icon: "home" },
+  { label: "Studio", href: "/dashboard/student/studio", icon: "sparkles" },
+  { label: "Formations", href: "/dashboard/student/learning/formations", icon: "film" },
+  { label: "Parcours", href: "/dashboard/student/learning/parcours", icon: "layers" },
   { label: "Ressources", href: "/dashboard/ressources", icon: "library" },
-  { label: "Drive", href: "/dashboard/drive", icon: "drive" },
-  { label: "Tests", href: "/dashboard/tests", icon: "trophy" },
-  { label: "À faire", href: "/dashboard/apprenant/todo", icon: "checklist" },
-  { label: "Messagerie", href: "/dashboard/communaute", icon: "message" },
+  { label: "Drive", href: "/dashboard/student/tools/drive", icon: "drive" },
+  { label: "Tests", href: "/dashboard/student/learning/tests", icon: "trophy" },
+  { label: "À faire", href: "/dashboard/student/studio/todo", icon: "checklist" },
+  { label: "Messagerie", href: "/dashboard/student/community", icon: "message" },
+  { label: "Achievements", href: "/dashboard/student/achievements", icon: "trophy" },
   {
     label: "Beyond Care",
-    href: "/dashboard/beyond-care",
+    href: "/dashboard/care",
     icon: "sparkles",
     group: "apps",
     brandColor: {

@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,14 +37,63 @@ export default function LoginPage() {
       return;
     }
 
-    const { data: profile } = await supabase
+    const { data: profileById } = await supabase
       .from("profiles")
-      .select("disc_status, disc_scores")
+      .select("disc_status, disc_scores, first_name, last_name, full_name, type_profil, role_type, role, school_id, school_subscription")
       .eq("id", data.user.id)
       .maybeSingle();
+    let profile = profileById;
 
-    const hasDisc = profile?.disc_status === "completed" || !!profile?.disc_scores;
-    router.push(hasDisc ? "/dashboard/profil" : "/onboarding");
+    const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+    const emailPrefix = String(data.user.email ?? "").split("@")[0] ?? "";
+    const metaFirst =
+      String(meta.first_name ?? "").trim() ||
+      String(meta.full_name ?? "").trim().split(" ").filter(Boolean)[0] ||
+      (emailPrefix ? emailPrefix.split(/[.\-_]/)[0] : "");
+    const firstName =
+      String(profile?.first_name ?? "").trim() ||
+      metaFirst ||
+      "Bonjour";
+    try {
+      localStorage.setItem("beyond_firstname", firstName);
+    } catch {
+      // ignore
+    }
+    if (!profile) {
+      try {
+        await fetch("/api/bootstrap-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: data.user.id,
+            email: data.user.email,
+            fullName: String(meta.full_name ?? "").trim(),
+            firstName: String(meta.first_name ?? "").trim(),
+            lastName: String(meta.last_name ?? "").trim(),
+            roleType: String(meta.role_type ?? "particulier"),
+            typeProfil: String(meta.type_profil ?? ""),
+          }),
+        });
+      } catch {
+        // ignore bootstrap errors
+      }
+    }
+    const source = String(searchParams.get("from") ?? "").trim().toLowerCase();
+    try {
+      const response = await fetch("/api/auth/resolve-destination", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { destination?: string };
+      const destination = String(payload.destination ?? "").trim() || "/dashboard/apprenant";
+      router.push(destination);
+      return;
+    } catch {
+      // fallback in case resolve API is unreachable
+      router.push("/dashboard/apprenant");
+      return;
+    }
   };
 
   return (

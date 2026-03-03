@@ -79,7 +79,7 @@ export function MentalHealthAlertEmailTemplate({
     
     <p style="font-size: 14px; color: #6b7280; margin-top: 10px;">
       Vous pouvez également consulter les détails dans votre tableau de bord : 
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://beyond-lms.com"}/dashboard/formateur/sante-mentale" style="color: #3b82f6; text-decoration: none;">Tableau de bord</a>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://beyond-lms.com"}/dashboard/student/studio/sante-mentale" style="color: #3b82f6; text-decoration: none;">Tableau de bord</a>
     </p>
   </div>
   

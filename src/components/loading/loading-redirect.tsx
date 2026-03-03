@@ -61,7 +61,7 @@ export function LoadingRedirect() {
             path = "/admin";
             break;
           case "instructor":
-            path = "/dashboard/formateur";
+            path = "/dashboard/student/studio";
             break;
           case "tutor":
             path = "/dashboard/tuteur";

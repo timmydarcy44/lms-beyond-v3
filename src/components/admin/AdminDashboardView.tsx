@@ -140,7 +140,7 @@ export const AdminDashboardView = ({
               />
             </div>
             <Link
-              href="/dashboard/communaute"
+              href="/dashboard/student/community"
               className="flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#8E2DE2,#4A00E0)] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_45px_rgba(78,0,224,0.35)] transition hover:scale-105"
             >
               <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/25 text-white">

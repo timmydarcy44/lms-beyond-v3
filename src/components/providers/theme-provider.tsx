@@ -4,8 +4,10 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 export const ThemeProvider = ({
   children,
+  forcedTheme,
 }: {
   children: React.ReactNode;
+  forcedTheme?: "light" | "dark";
 }) => {
   return (
     <NextThemesProvider
@@ -13,6 +15,7 @@ export const ThemeProvider = ({
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      forcedTheme={forcedTheme}
     >
       {children}
     </NextThemesProvider>

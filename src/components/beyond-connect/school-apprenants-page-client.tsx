@@ -47,6 +47,7 @@ export function SchoolApprenantsPageClient({
   const supabase = createSupabaseBrowserClient();
   const [localRows, setLocalRows] = useState<ProfileRow[]>(studentsRows);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [linkToken, setLinkToken] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -107,6 +108,7 @@ export function SchoolApprenantsPageClient({
   }, [dialogOpen, schoolId, supabase]);
 
   const resetForm = () => {
+    setLinkToken("");
     setFirstName("");
     setLastName("");
     setEmail("");
@@ -193,7 +195,11 @@ export function SchoolApprenantsPageClient({
 
   const handleCreate = async () => {
     if (!schoolId || isSubmitting || !supabase) return;
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+    const token = linkToken.trim();
+    const normalizedToken = token.toUpperCase().startsWith("APP-")
+      ? token.slice(4).trim()
+      : token;
+    if (!token && (!firstName.trim() || !lastName.trim() || !email.trim())) {
       setFormError("Merci de renseigner Nom, Prenom et Email.");
       return;
     }
@@ -217,41 +223,117 @@ export function SchoolApprenantsPageClient({
         : {}),
     };
     console.log("Payload complet envoyé :", payloadBase);
-    const { data: existing } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", payloadBase.email)
-      .maybeSingle();
-
-    let profileId = existing?.id;
+    let profileId: string | undefined;
     let profileData: ProfileRow | null = null;
-    if (existing?.id) {
-      const { data, error } = await supabase
+
+    if (token) {
+      const tokenLower = normalizedToken.toLowerCase();
+      const isEmailToken = tokenLower.includes("@");
+      let existingByToken: Record<string, unknown> | null = null;
+      if (isEmailToken) {
+        const { data, error: tokenError } = await supabase
+          .from("profiles")
+          .select("*")
+          .ilike("email", normalizedToken)
+          .maybeSingle();
+        if (tokenError) {
+          setFormError(tokenError.message);
+          setIsSubmitting(false);
+          return;
+        }
+        existingByToken = data as Record<string, unknown> | null;
+      } else {
+        const { data: exact, error: exactError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", normalizedToken)
+          .maybeSingle();
+        if (exactError) {
+          setFormError(exactError.message);
+          setIsSubmitting(false);
+          return;
+        }
+        if (exact) {
+          existingByToken = exact as Record<string, unknown>;
+        } else {
+          const { data: partial, error: partialError } = await supabase
+            .from("profiles")
+            .select("*")
+            .ilike("id", `${normalizedToken}%`)
+            .limit(2);
+          if (partialError) {
+            setFormError(partialError.message);
+            setIsSubmitting(false);
+            return;
+          }
+          if ((partial ?? []).length > 1) {
+            setFormError("Plusieurs apprenants correspondent à cet identifiant. Ajoutez plus de caractères.");
+            setIsSubmitting(false);
+            return;
+          }
+          existingByToken = (partial ?? [])[0] as Record<string, unknown> | undefined ?? null;
+        }
+      }
+      if (!existingByToken) {
+        setFormError("Aucun apprenant trouvé avec cet email ou identifiant.");
+        setIsSubmitting(false);
+        return;
+      }
+      profileId = String((existingByToken as { id?: string }).id ?? "");
+      const patch = {
+        school_id: schoolId,
+        role_type: "apprenant",
+        ...(className.trim() ? { school_class: className.trim() } : {}),
+        ...(contractType.trim() ? { contract_type: contractType.trim() } : {}),
+      };
+      const { data: updatedData, error: updateError } = await supabase
         .from("profiles")
-        .update(payloadBase)
-        .eq("id", existing.id)
+        .update(patch)
+        .eq("id", profileId)
         .select("*")
         .single();
-      if (error) {
-        setFormError(error.message);
+      if (updateError) {
+        setFormError(updateError.message);
         setIsSubmitting(false);
         return;
       }
-      profileData = data as ProfileRow;
+      profileData = updatedData as ProfileRow;
     } else {
-      const newId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      const payloadInsert = { id: newId, ...payloadBase };
-      const { data, error } = await supabase.from("profiles").insert(payloadInsert).select("*").single();
-      if (error) {
-        setFormError(error.message);
-        setIsSubmitting(false);
-        return;
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", payloadBase.email)
+        .maybeSingle();
+
+      profileId = existing?.id;
+      if (existing?.id) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .update(payloadBase)
+          .eq("id", existing.id)
+          .select("*")
+          .single();
+        if (error) {
+          setFormError(error.message);
+          setIsSubmitting(false);
+          return;
+        }
+        profileData = data as ProfileRow;
+      } else {
+        const newId =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const payloadInsert = { id: newId, ...payloadBase };
+        const { data, error } = await supabase.from("profiles").insert(payloadInsert).select("*").single();
+        if (error) {
+          setFormError(error.message);
+          setIsSubmitting(false);
+          return;
+        }
+        profileId = newId;
+        profileData = data as ProfileRow;
       }
-      profileId = newId;
-      profileData = data as ProfileRow;
     }
 
     if (profileId) {
@@ -259,7 +341,7 @@ export function SchoolApprenantsPageClient({
         school_id: schoolId,
         student_id: profileId,
       });
-      if (enrollmentError) {
+      if (enrollmentError && enrollmentError.code !== "23505") {
         setFormError(enrollmentError.message);
         setIsSubmitting(false);
         return;
@@ -267,9 +349,16 @@ export function SchoolApprenantsPageClient({
     }
 
     if (profileData) {
-      setLocalRows((prev) => [profileData as ProfileRow, ...prev]);
+      setLocalRows((prev) => {
+        const next = prev.filter((row) => row.id !== profileData?.id);
+        return [profileData as ProfileRow, ...next];
+      });
     }
-    await sendInvitation(email);
+    if (!token) {
+      await sendInvitation(email);
+    } else {
+      toast.success("Apprenant rattaché à l'école avec succès.");
+    }
     setDialogOpen(false);
     resetForm();
     setIsSubmitting(false);
@@ -307,6 +396,18 @@ export function SchoolApprenantsPageClient({
             <DialogTitle>Ajouter un apprenant</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 text-sm md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-semibold text-white/70">Rattacher un apprenant existant</label>
+              <input
+                value={linkToken}
+                onChange={(event) => setLinkToken(event.target.value)}
+                placeholder="Email ou identifiant apprenant (APP-XXXXXXXX ou UUID)"
+                className="w-full rounded-lg border border-white/10 bg-[#1C1C1E] px-3 py-2 text-white"
+              />
+              <p className="text-[11px] text-white/45">
+                Si ce champ est rempli, on rattache directement le compte existant à l'école.
+              </p>
+            </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-white/70">Prenom</label>
               <input

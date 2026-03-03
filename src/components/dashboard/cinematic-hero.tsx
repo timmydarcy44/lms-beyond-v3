@@ -170,14 +170,14 @@ export function CinematicHero({
             <p className="text-lg text-white/70 md:text-xl">{hero.description}</p>
             <div className="flex flex-wrap items-center gap-3">
               <Link
-                href={featured[0]?.href ?? "/dashboard/formations"}
+                href={featured[0]?.href ?? "/dashboard/student/learning/formations"}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
               >
                 <Play className="h-4 w-4" />
                 Reprendre
               </Link>
               <Link
-                href="/dashboard/formations"
+                href="/dashboard/student/learning/formations"
                 className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
               >
                 Explorer les programmes

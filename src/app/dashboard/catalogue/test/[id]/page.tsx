@@ -403,16 +403,16 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
         // Sinon, utiliser la page de test classique
         const testSlug = (testData as any)?.slug || null;
         testUrl = testSlug
-          ? `/dashboard/tests/${testSlug}`
+          ? `/dashboard/student/learning/tests/${testSlug}`
           : catalogItem.content_id
-            ? `/dashboard/tests/${catalogItem.content_id}`
+            ? `/dashboard/student/learning/tests/${catalogItem.content_id}`
             : null;
         console.log("[catalogue/test] Using test slug/content_id:", testUrl);
       }
     } else {
       // Pour les autres tests sans testData, utiliser l'ID du test comme URL
       testUrl = catalogItem.content_id 
-        ? `/dashboard/tests/${catalogItem.content_id}`
+        ? `/dashboard/student/learning/tests/${catalogItem.content_id}`
         : `/dashboard/catalogue/test/${id}`;
       console.log("[catalogue/test] Using content_id as testUrl:", testUrl);
     }
@@ -513,7 +513,7 @@ export default async function CatalogTestDetailPage({ params }: PageProps) {
                   ) : (
                     // Si pas de testUrl mais accès, créer une URL de fallback
                     <a
-                      href={catalogItem.content_id ? `/dashboard/tests/${catalogItem.content_id}` : `/dashboard/catalogue/test/${id}`}
+                      href={catalogItem.content_id ? `/dashboard/student/learning/tests/${catalogItem.content_id}` : `/dashboard/catalogue/test/${id}`}
                       className="px-8 py-6 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all text-white cursor-pointer"
                       style={{
                         backgroundColor: primaryColor,

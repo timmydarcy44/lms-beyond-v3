@@ -36,7 +36,7 @@ import type {
   LearnerLesson,
   LearnerModule,
 } from "@/lib/queries/apprenant";
-import TestFlow from "@/app/dashboard/tests/[slug]/test-flow";
+import TestFlow from "@/app/dashboard/student/learning/tests/[slug]/test-flow";
 import type { TestQuestion } from "@/hooks/use-test-sessions";
 import { toast } from "sonner";
 import {

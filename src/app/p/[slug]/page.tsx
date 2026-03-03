@@ -58,7 +58,7 @@ const DEFAULT_SETTINGS: ProfileSettings = {
 const DEFAULT_PROFILE: ProfilePublic = {
   name: "Profil Beyond",
   birthDate: "01/01/2004",
-  title: "Talent en alternance",
+  title: "Profil en alternance",
   avatar:
     "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&q=80&w=300",
   cover:
@@ -94,6 +94,48 @@ const TOOL_LOGOS: Record<string, string> = {
   Zapier: "https://upload.wikimedia.org/wikipedia/commons/7/75/Zapier_logo.svg",
   "n8n": "https://upload.wikimedia.org/wikipedia/commons/5/5a/N8n-logo-new.svg",
   Webflow: "https://upload.wikimedia.org/wikipedia/commons/3/3b/Webflow_logo.svg",
+};
+
+const getToolLogoForLabel = (label: string) => {
+  const normalized = label.trim().toLowerCase();
+  const match = Object.entries(TOOL_LOGOS).find(([key]) => key.toLowerCase() === normalized);
+  return match?.[1] ?? null;
+};
+
+const PLACEHOLDER_IDENTITIES = new Set([
+  "john wick",
+  "johan wick",
+  "john doe",
+  "jane doe",
+  "test user",
+  "profil beyond",
+]);
+
+const normalizeIdentity = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const isPlaceholderIdentity = (value: string) =>
+  Boolean(value.trim()) && PLACEHOLDER_IDENTITIES.has(normalizeIdentity(value));
+
+const slugToDisplayName = (value: string) => {
+  const parts = value.split("-").filter(Boolean);
+  if (!parts.length) return "";
+  if (parts.length === 1) {
+    const only = parts[0];
+    return only ? `${only.charAt(0).toUpperCase()}${only.slice(1).toLowerCase()}` : "";
+  }
+  const first = parts.slice(0, -1).join(" ");
+  const last = parts[parts.length - 1];
+  const firstFormatted = first
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`)
+    .join(" ");
+  return `${firstFormatted} ${last.toUpperCase()}`.trim();
 };
 
 
@@ -162,8 +204,22 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       const response = await fetch(`/api/public-profile?${params.toString()}`, {
         cache: "no-store",
       });
+      if (response.status === 404) {
+        setPublicUserId(null);
+        setProfileData(null);
+        setSkillsMetadata({});
+        setHardSkills([]);
+        setStackTools([]);
+        setDiscScores([]);
+        setIdmcAxes(null);
+        setSoftSkillsAll([]);
+        setSoftSkillsTop([]);
+        setExperiences([]);
+        setDiplomas([]);
+        return;
+      }
       if (!response.ok) {
-        throw new Error("Public profile API error");
+        return;
       }
       const data = (await response.json()) as {
         publicUserId: string | null;
@@ -227,8 +283,8 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
           theme: data.settings?.theme === "light" ? "light" : "dark",
         }));
       }
-    } catch (error) {
-      console.error("Erreur chargement profil public", error);
+    } catch {
+      // Keep the public page stable even when API is temporarily unavailable.
     }
   }, [searchParams, slug, extractIdmcAxes]);
 
@@ -265,15 +321,25 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
     [settings, settingsOverrides],
   );
 
+  const fallbackDisplayNameFromSlug = useMemo(() => {
+    const value = slugToDisplayName(slug);
+    return value && !isPlaceholderIdentity(value) ? value : "Profil public";
+  }, [slug]);
+
   const displayName = profileData
     ? (() => {
         const first = String(profileData.first_name ?? "").trim();
         const last = String(profileData.last_name ?? "").trim();
-        if (first || last) {
+        const fullName = String(profileData.full_name ?? "").trim();
+        const firstLast = `${first} ${last}`.trim();
+        const hasPlaceholderFirstLast = isPlaceholderIdentity(firstLast);
+        const hasPlaceholderFullName = isPlaceholderIdentity(fullName);
+
+        if ((first || last) && !hasPlaceholderFirstLast) {
           return `${first} ${last.toUpperCase()}`.trim();
         }
-        const fullName = String(profileData.full_name ?? "").trim();
-        if (fullName) {
+
+        if (fullName && !hasPlaceholderFullName) {
           const parts = fullName.split(/\s+/).filter(Boolean);
           if (parts.length >= 2) {
             const firstPart = parts.slice(0, -1).join(" ");
@@ -294,30 +360,49 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
             return formatted.trim() || profile.name;
           }
         }
-        if (!isUuid && slug) {
-          return slug
-            .split("-")
-            .map((part, idx) =>
-              idx === slug.split("-").length - 1
-                ? part.toUpperCase()
-                : part.charAt(0).toUpperCase() + part.slice(1)
-            )
-            .join(" ")
-            .trim();
+        const fromSlug = slugToDisplayName(slug);
+        if (fromSlug && !isPlaceholderIdentity(fromSlug)) {
+          return fromSlug;
         }
-        return profile.name;
+        return "Profil public";
       })()
-    : profile.name;
+    : fallbackDisplayNameFromSlug;
   const profileTypeLabel = {
-    alternance: "Talent en alternance",
-    freelance: "Talent freelance",
-    emploi: "Talent en poste",
-    reconversion: "Talent en reconversion",
+    alternance: "Profil en alternance",
+    freelance: "Profil freelance",
+    emploi: "Profil en poste",
+    reconversion: "Profil en reconversion",
   } as Record<string, string>;
   const displayTitle = profileData
     ? profileTypeLabel[String(profileData.type_profil ?? "").toLowerCase()] ??
-      String(profileData.type_profil ?? "Talent en alternance")
+      String(profileData.type_profil ?? "Profil en alternance")
     : profile.title;
+  const isFreelanceProfile =
+    String(profileData?.type_profil ?? "")
+      .trim()
+      .toLowerCase() === "freelance";
+  const displayTjm = useMemo(() => {
+    if (!isFreelanceProfile || !profileData) return "";
+    const raw = String((profileData as Record<string, unknown>).tjm ?? "")
+      .trim()
+      .replace(",", ".");
+    if (!raw) return "";
+    const numeric = Number(raw.replace(/[^\d.]/g, ""));
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return `${Math.round(numeric)} EUR/jour`;
+    }
+    return raw;
+  }, [isFreelanceProfile, profileData]);
+  const expertiseChips = useMemo(() => {
+    if (!isFreelanceProfile || !profileData) return [] as string[];
+    const raw = (profileData as Record<string, unknown>).expertise;
+    const values = Array.isArray(raw)
+      ? raw.map((item) => String(item).trim())
+      : String(raw ?? "")
+          .split(/[,\n;|]/)
+          .map((item) => item.trim());
+    return values.filter(Boolean);
+  }, [isFreelanceProfile, profileData]);
   const displayAvatar = profileData?.avatar_url ? String(profileData.avatar_url) : "";
   const hardSkillEntries = (hardSkills.length ? hardSkills : Object.keys(skillsMetadata))
     .map((skill) => ({
@@ -350,6 +435,17 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
   useEffect(() => {
     if (!profileData) return;
     const stored = String((profileData as Record<string, unknown>).bio_ai ?? "").trim();
+    const firstName = String((profileData as Record<string, unknown>).first_name ?? "").trim();
+    const lastName = String((profileData as Record<string, unknown>).last_name ?? "").trim();
+    const fullName = String((profileData as Record<string, unknown>).full_name ?? "").trim();
+    const hasPlaceholderName =
+      isPlaceholderIdentity(`${firstName} ${lastName}`.trim()) || isPlaceholderIdentity(fullName);
+    const placeholderMentionRegex = /\b(john|johan)\s+wick\b/i;
+    if (hasPlaceholderName || placeholderMentionRegex.test(stored)) {
+      setAiSummary("");
+      setIsLoadingSummary(false);
+      return;
+    }
     if (stored) {
       setAiSummary(stored);
       setIsLoadingSummary(false);
@@ -366,8 +462,12 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
     const payload = {
       userId: publicUserId,
       force,
-      firstName: String(profileData.first_name ?? ""),
-      lastName: String(profileData.last_name ?? ""),
+      firstName: isPlaceholderIdentity(String(profileData.first_name ?? ""))
+        ? ""
+        : String(profileData.first_name ?? ""),
+      lastName: isPlaceholderIdentity(String(profileData.last_name ?? ""))
+        ? ""
+        : String(profileData.last_name ?? ""),
       experiences: experiences.map((exp) => ({ title: exp.title, company: exp.company })),
       diplomas: diplomas.map((dip) => ({ title: dip.title, school: dip.school })),
       certifiedSkills,
@@ -397,6 +497,7 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
     if (stored) return;
     generatePublicSummary(false);
   }, [aiSummary, profileData]);
+
 
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(publicUrl);
@@ -519,16 +620,45 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
                     User
                   </div>
                 )}
-                <div className="md:text-center md:mx-auto">
+                <div className="md:mx-auto md:text-left">
                   <h1 className="text-[26px] font-extrabold">
                     {displayName}
                     {profileData?.age ? ` · ${profileData.age} ans` : ""}
+                    {displayTjm ? (
+                      <span className="ml-3 inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-300/15 px-3 py-1 align-middle text-[12px] font-semibold text-emerald-200">
+                        TJM {displayTjm}
+                      </span>
+                    ) : null}
                   </h1>
                   <p className="text-[14px] text-muted">{displayTitle}</p>
+                  {expertiseChips.length ? (
+                    <div className="mt-3 flex flex-wrap justify-start gap-2">
+                      {expertiseChips.slice(0, 4).map((chip) => (
+                        <span
+                          key={chip}
+                          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/85"
+                        >
+                          {getToolLogoForLabel(chip) ? (
+                            <img
+                              src={String(getToolLogoForLabel(chip))}
+                              alt={chip}
+                              className="h-3.5 w-3.5 rounded-sm object-contain"
+                            />
+                          ) : null}
+                          {chip}
+                        </span>
+                      ))}
+                      {expertiseChips.length > 4 ? (
+                        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/70">
+                          ...
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/60">
-                Talent certifié
+                Profil certifie
               </div>
             </div>
 

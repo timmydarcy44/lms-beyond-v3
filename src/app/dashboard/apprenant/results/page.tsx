@@ -57,27 +57,60 @@ export default function ApprenantResultsPage() {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user?.id) return;
       const userId = userData.user.id;
+      const profileIdsToQuery = [userId];
 
       try {
-        const { data: profileData } = await supabase
+        let { data: profileData } = await supabase
           .from("profiles")
-          .select("first_name, entreprise_id, school_id")
+          .select("id, first_name, entreprise_id, school_id")
           .eq("id", userId)
           .maybeSingle();
+        if (!profileData && userData.user.email) {
+          const { data: legacyProfileData } = await supabase
+            .from("profiles")
+            .select("id, first_name, entreprise_id, school_id")
+            .eq("email", userData.user.email)
+            .maybeSingle();
+          profileData = legacyProfileData ?? null;
+        }
+        const resolvedProfileId =
+          profileData && typeof (profileData as Record<string, unknown>).id === "string"
+            ? String((profileData as Record<string, unknown>).id)
+            : null;
+        if (resolvedProfileId && resolvedProfileId !== userId) {
+          profileIdsToQuery.push(resolvedProfileId);
+        }
         setProfile(profileData ?? null);
       } catch {
         setProfile(null);
       }
 
       try {
-        const { data: idmcResult, error: idmcError } = await supabase
-          .from("idmc_resultats")
-          .select("responses, scores, global_score, level")
-          .eq("profile_id", userId)
-          .maybeSingle();
-        if (idmcError) {
-          console.error("[idmc] idmc_resultats error:", idmcError);
-          return;
+        let idmcResult: {
+          responses?: Record<string, unknown> | null;
+          scores?: Record<string, unknown> | null;
+          global_score?: number | null;
+          level?: string | null;
+        } | null = null;
+        for (const candidateId of profileIdsToQuery) {
+          const { data, error } = await supabase
+            .from("idmc_resultats")
+            .select("responses, scores, global_score, level")
+            .eq("profile_id", candidateId)
+            .maybeSingle();
+          if (error) {
+            console.error("[idmc] idmc_resultats error:", error);
+            continue;
+          }
+          if (data) {
+            idmcResult = data as {
+              responses?: Record<string, unknown> | null;
+              scores?: Record<string, unknown> | null;
+              global_score?: number | null;
+              level?: string | null;
+            };
+            break;
+          }
         }
         console.log("Données IDMC chargées pour:", userId, idmcResult);
         setIdmcData(idmcResult ?? null);
@@ -142,7 +175,6 @@ export default function ApprenantResultsPage() {
 
         <main
           className="flex-1 overflow-y-auto px-6 py-10 lg:px-12"
-          style={{ marginLeft: isSidebarCollapsed ? "5rem" : "16rem" }}
         >
           <div className="mb-8">
             <div className="text-[12px] uppercase tracking-[0.3em] text-white/50">Mes résultats</div>

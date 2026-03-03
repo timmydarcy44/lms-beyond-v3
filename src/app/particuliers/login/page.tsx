@@ -39,7 +39,28 @@ export default function ParticuliersLoginPage() {
         console.log("Login réussi pour:", data.user.email);
       }
 
-      window.location.href = "/dashboard/apprenant";
+      const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const emailPrefix = String(data?.user?.email ?? "").split("@")[0] ?? "";
+      const metaFirst =
+        String(meta.first_name ?? "").trim() ||
+        String(meta.full_name ?? "").trim().split(" ").filter(Boolean)[0] ||
+        (emailPrefix ? emailPrefix.split(/[.\-_]/)[0] : "");
+      try {
+        if (metaFirst) {
+          localStorage.setItem("beyond_firstname", metaFirst);
+        }
+      } catch {
+        // ignore
+      }
+
+      const response = await fetch("/api/auth/resolve-destination", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "connect" }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { destination?: string };
+      const destination = String(payload.destination ?? "").trim() || "/dashboard/apprenant";
+      window.location.href = destination;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion impossible.");
     } finally {

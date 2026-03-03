@@ -31,6 +31,7 @@ export function VideoHero() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [useIframe, setUseIframe] = useState(false);
+  const [mediaFailed, setMediaFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const videoUrl = getSupabaseStorageUrl(BUCKET_NAME, VIDEO_PATH);
@@ -67,7 +68,13 @@ export function VideoHero() {
     >
       {/* Vidéo en arrière-plan - Iframe ou Video */}
       <div className="absolute inset-0">
-        {useIframe && iframeUrl ? (
+        {mediaFailed ? (
+          <img
+            src="https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=1920&q=80"
+            alt="Accompagnement personnalisé"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : useIframe && iframeUrl ? (
           <iframe
             src={iframeUrl}
             className="absolute inset-0 w-full h-full"
@@ -75,8 +82,8 @@ export function VideoHero() {
             allowFullScreen
             style={{ border: "none" }}
             onError={() => {
-              console.error("[VideoHero] Erreur lors du chargement de l'iframe");
               setUseIframe(false);
+              setMediaFailed(true);
             }}
           />
         ) : (
@@ -89,20 +96,21 @@ export function VideoHero() {
               muted={isMuted}
               playsInline
               className="absolute inset-0 w-full h-full object-cover"
-              onError={(e) => {
-                console.error("[VideoHero] Erreur lors du chargement de la vidéo:", e);
+              onError={() => {
                 // Si la vidéo échoue, essayer l'iframe si disponible
                 if (iframeUrl) {
                   setUseIframe(true);
+                  return;
                 }
-              }}
-              onLoadedData={() => {
-                console.log("[VideoHero] ✅ Vidéo chargée avec succès");
+                setMediaFailed(true);
               }}
             />
             {/* Overlay sombre pour améliorer la lisibilité */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
           </>
+        )}
+        {mediaFailed && (
+          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/50" />
         )}
       </div>
 
@@ -162,7 +170,7 @@ export function VideoHero() {
       </div>
 
       {/* Contrôles vidéo (optionnels, en bas à droite) */}
-      {!useIframe && (
+      {!useIframe && !mediaFailed && (
         <div className="absolute bottom-4 right-4 z-20 flex gap-2">
           <button
             onClick={togglePlay}

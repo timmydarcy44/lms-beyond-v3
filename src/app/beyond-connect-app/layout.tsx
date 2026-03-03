@@ -31,7 +31,13 @@ export default async function BeyondConnectAppLayout({
   return (
     <BeyondConnectAppLayoutWrapper>
       <div className="min-h-screen bg-white">
-        <BeyondConnectHeader user={session} />
+        <BeyondConnectHeader
+          user={{
+            id: session.id,
+            email: session.email ?? "",
+            fullName: session.fullName ?? undefined,
+          }}
+        />
         <main>{children}</main>
       </div>
     </BeyondConnectAppLayoutWrapper>

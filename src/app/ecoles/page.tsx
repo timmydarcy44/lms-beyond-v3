@@ -5,7 +5,7 @@ export default async function EcolesPage() {
   const session = await requireSession();
 
   if (session.role === "formateur") {
-    redirect("/dashboard/formateur");
+    redirect("/dashboard/student/studio");
   }
 
   if (session.role === "apprenant") {

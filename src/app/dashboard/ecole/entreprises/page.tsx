@@ -14,15 +14,25 @@ export default async function SchoolEntreprisesPage() {
     redirect("/login?next=/dashboard/ecole/entreprises");
   }
 
-  const { data: currentProfile } = await supabase
+  const { data: profileById } = await supabase
     .from("profiles")
     .select("id, role_type, school_id")
     .eq("id", session.id)
     .maybeSingle();
+  let currentProfile = profileById;
+  if (!currentProfile && session.email) {
+    const { data: profileByEmail } = await supabase
+      .from("profiles")
+      .select("id, role_type, school_id")
+      .eq("email", session.email)
+      .maybeSingle();
+    currentProfile = profileByEmail ?? null;
+  }
 
-  const isSchoolProfile = currentProfile?.role_type === "ecole";
-  const allowTestAccess = session?.email === "jean@test.fr" && !!currentProfile?.school_id;
-  if (!currentProfile || (!isSchoolProfile && !allowTestAccess)) {
+  const normalizedRole = String(currentProfile?.role_type ?? "").trim().toLowerCase();
+  const isSchoolProfile = ["ecole", "school", "cfa", "admin_ecole", "admin_school"].includes(normalizedRole);
+  const hasSchoolScope = Boolean(currentProfile?.school_id);
+  if (!currentProfile || (!isSchoolProfile && !hasSchoolScope)) {
     redirect("/dashboard/apprenant");
   }
 

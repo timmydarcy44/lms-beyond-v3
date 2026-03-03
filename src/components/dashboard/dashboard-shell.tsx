@@ -51,12 +51,12 @@ export const DashboardShell = ({
   const isLight = resolvedTheme === "light";
   const learnerPrefixes = [
     "/dashboard/apprenant",
-    "/dashboard/formations",
-    "/dashboard/parcours",
+    "/dashboard/student/learning/formations",
+    "/dashboard/student/learning/parcours",
     "/dashboard/ressources",
-    "/dashboard/tests",
+    "/dashboard/student/learning/tests",
     "/dashboard/apprenant/todo",
-    "/dashboard/drive",
+    "/dashboard/student/tools/drive",
     "/dashboard/beyond-care",
     "/dashboard/beyond-connect",
     "/dashboard/catalogue",

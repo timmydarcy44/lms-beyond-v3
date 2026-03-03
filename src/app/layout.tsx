@@ -48,6 +48,11 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       ...generateSEOMetadata("home"),
       metadataBase: new URL("https://jessicacontentin.fr"),
+      icons: {
+        icon: "/jessica-favicon.svg",
+        shortcut: "/jessica-favicon.svg",
+        apple: "/jessica-favicon.svg",
+      },
     };
   }
 
@@ -56,6 +61,19 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       ...generateSEOMetadata("ressources"),
       metadataBase: new URL("https://app.jessicacontentin.fr"),
+      icons: {
+        icon: "/jessica-favicon.svg",
+        shortcut: "/jessica-favicon.svg",
+        apple: "/jessica-favicon.svg",
+      },
+    };
+  }
+
+  if (hostname === "beyondcenter.fr" || hostname === "www.beyondcenter.fr") {
+    return {
+      title: "Beyond Center",
+      description: "Plateforme d'apprentissage Beyond Center",
+      metadataBase: new URL("https://beyondcenter.fr"),
     };
   }
 
@@ -67,30 +85,41 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const tenantHeader = headersList.get("x-site-tenant");
+  const host = (headersList.get("host") || "").split(":")[0];
+  const tenant =
+    tenantHeader ||
+    (host.includes("jessicacontentin.fr") ? "jessica" : host.includes("beyondcenter.fr") ? "beyond" : "");
+  const tenantClass = tenant ? `tenant-${tenant}` : "";
+  const lockJessicaTheme = tenant === "jessica";
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${spaceGrotesk.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${spaceGrotesk.variable} antialiased ${tenantClass}`}
+      >
         <SupabaseProvider>
           <SessionProvider>
             <QueryProvider>
-              <ThemeProvider>
+              <ThemeProvider forcedTheme={lockJessicaTheme ? "light" : undefined}>
                 <PomodoroProvider>
                   <PomodoroFocusManager />
                   <FloatingDashboardCTAWrapper>
                     {children}
-                    <PomodoroFloatingTimer />
+                    {!lockJessicaTheme ? <PomodoroFloatingTimer /> : null}
                   </FloatingDashboardCTAWrapper>
                   <PomodoroCompletionScreen />
-                  <ThemeFloatingToggle />
-                  <NeuroAccessibilityCTA />
+                  {!lockJessicaTheme ? <ThemeFloatingToggle /> : null}
+                  {!lockJessicaTheme ? <NeuroAccessibilityCTA /> : null}
                 </PomodoroProvider>
                 <Toaster richColors position="top-center" />
               </ThemeProvider>

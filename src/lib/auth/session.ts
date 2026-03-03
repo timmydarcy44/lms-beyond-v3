@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/types/database";
 import { databaseToFrontendRole, type DatabaseRole } from "@/lib/utils/role-mapping";
+import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 
 export interface SessionUser {
   id: string;
@@ -13,51 +14,29 @@ export interface SessionUser {
 }
 
 export const getSession = async () => {
+  const profileContext = await getCurrentProfileWithAccess();
+  const user = profileContext.user;
+  let profile = profileContext.profile as {
+    id: string;
+    email: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+    role: string | null;
+    role_type: string | null;
+  } | null;
+  if (!user) {
+    return null;
+  }
   const supabase = await getServerClient();
   if (!supabase) {
     console.warn("[session] Supabase indisponible, retour null");
     return null;
   }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return null;
-  }
 
   // Log pour debug
   console.log(`[session] Fetching session for user: ${user.email} (${user.id})`);
-
-  let { data: profile, error } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, avatar_url, role, role_type")
-    .eq("id", user.id)
-    .single();
-
-  if ((error || !profile) && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn("[session] Unable to fetch profile with user session, trying service role:", error?.message);
-    const serviceClient = getServiceRoleClient();
-
-    if (serviceClient) {
-      const { data: serviceProfile, error: serviceError } = await serviceClient
-        .from("profiles")
-        .select("id, email, full_name, avatar_url, role, role_type")
-        .eq("id", user.id)
-        .single();
-
-      if (serviceProfile) {
-        profile = serviceProfile;
-        error = null;
-      } else if (serviceError) {
-        console.error("[session] Service role profile fetch failed:", serviceError.message);
-      }
-    }
-  }
-
-  if (error || !profile) {
+  if (!profile) {
     console.error("[session] Unable to retrieve user profile, falling back to auth user metadata:", {
-      error: error?.message,
       userId: user.id,
       email: user.email,
     });

@@ -147,7 +147,7 @@ export default function TalentProfilePage() {
               <p className="mt-2 text-sm text-black/70">Certification premium, paiement securise.</p>
             </div>
             <Link
-              href="/dashboard/talent/certification"
+              href="/dashboard/student/achievements"
               className="rounded-full bg-black px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white"
             >
               En savoir plus

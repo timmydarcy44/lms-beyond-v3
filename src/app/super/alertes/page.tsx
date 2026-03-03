@@ -50,9 +50,9 @@ export default async function AlertsPage() {
       case "user":
         return `/super/utilisateurs/${alert.entityId}`;
       case "course":
-        return `/dashboard/formateur/formations/${alert.entityId}`;
+        return `/dashboard/student/studio/formations/${alert.entityId}`;
       case "path":
-        return `/dashboard/formateur/parcours/${alert.entityId}`;
+        return `/dashboard/student/studio/parcours/${alert.entityId}`;
       default:
         return null;
     }

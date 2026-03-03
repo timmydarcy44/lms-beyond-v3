@@ -58,6 +58,12 @@ export default async function DashboardPage() {
       : sessionRole === "tuteur"
         ? "/dashboard/tuteur"
         : "/dashboard/student/learning";
+  const connectHref =
+    sessionRole === "tuteur" || sessionRole === "entreprise"
+      ? "/dashboard/entreprise"
+      : sessionRole === "admin" || sessionRole === "formateur" || sessionRole === "ecole"
+        ? "/dashboard/ecole"
+        : "/dashboard/apprenant";
 
   const sidebarLinks = [
     { label: "Mon profil Beyond", href: "/dashboard/apprenant" },
@@ -71,7 +77,7 @@ export default async function DashboardPage() {
     {
       key: "connect",
       title: "Beyond Connect",
-      href: "/dashboard/apprenant",
+      href: connectHref,
       enabled: hasConnect,
       description: "Profil, tests de personnalite et matching.",
     },

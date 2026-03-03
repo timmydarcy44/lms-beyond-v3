@@ -94,7 +94,7 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [expandedSelection, setExpandedSelection] = useState<BuilderSelection | null>(null);
 
-  const previewLink = previewHref ?? "/dashboard/student/studio/formations/new/preview";
+  const previewLink = previewHref ?? "/dashboard/formateur/formations/new/preview";
 
   const dragSensors = useSensors(
     useSensor(PointerSensor, {

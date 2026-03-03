@@ -337,7 +337,7 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
         title: item.title ?? "Formation",
         image: item.cover_image ?? "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80",
         cta: "Voir",
-        href: `/dashboard/student/studio/formations/${item.id}/structure`,
+        href: `/dashboard/formateur/formations/${item.id}/structure`,
       }));
     };
 
@@ -358,7 +358,7 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
         title: item.title ?? "Test",
         image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=900&q=80",
         cta: "Voir",
-        href: `/dashboard/student/studio/tests/${item.id}/edit`,
+        href: `/dashboard/formateur/tests/${item.id}/edit`,
       }));
     };
 
@@ -369,7 +369,7 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
         title: item.title ?? "Ressource",
         image: item.cover_url || item.thumbnail_url || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=900&q=80",
         cta: "Voir",
-        href: `/dashboard/student/studio/ressources/${item.id}`,
+        href: `/dashboard/formateur/ressources/${item.id}`,
       }));
     };
 
@@ -380,7 +380,7 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
         title: item.title ?? "Parcours",
         image: item.hero_url || item.thumbnail_url || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80",
         cta: "Voir",
-        href: `/dashboard/student/studio/parcours/${item.id}/edit`,
+        href: `/dashboard/formateur/parcours/${item.id}/edit`,
       }));
     };
 

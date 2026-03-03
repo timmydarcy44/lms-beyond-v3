@@ -27,7 +27,7 @@ export default async function CareDashboardPage() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <Link
-            href={canManageCare ? "/dashboard/student/studio/beyond-care" : "/espace"}
+            href={canManageCare ? "/dashboard/formateur/beyond-care" : "/espace"}
             className="rounded-2xl border border-white/15 bg-white/5 p-5 transition hover:bg-white/10"
           >
             <p className="text-xs uppercase tracking-[0.22em] text-white/60">Care</p>

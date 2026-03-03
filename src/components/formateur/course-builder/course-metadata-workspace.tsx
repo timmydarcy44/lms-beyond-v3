@@ -42,7 +42,7 @@ export function CourseMetadataWorkspace() {
               asChild
               className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white"
             >
-              <Link href="/dashboard/student/studio/formations/new/structure">Passer à la construction</Link>
+              <Link href="/dashboard/formateur/formations/new/structure">Passer à la construction</Link>
             </Button>
           </div>
         </CardContent>

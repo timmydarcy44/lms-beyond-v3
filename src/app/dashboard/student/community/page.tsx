@@ -16,8 +16,8 @@ export default async function CommunityPage() {
     <DashboardShell
       title="Messagerie"
       breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/student/studio" },
-        { label: "Formateur", href: "/dashboard/student/studio" },
+        { label: "Dashboard", href: "/dashboard/formateur" },
+        { label: "Formateur", href: "/dashboard/formateur" },
         { label: "Messagerie" },
       ]}
       firstName={session?.fullName ?? null}

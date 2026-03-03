@@ -26,13 +26,13 @@ export type LearnerNavItem = {
 
 export const learnerNavItems: LearnerNavItem[] = [
   { label: "Accueil", href: "/dashboard/student", icon: "home" },
-  { label: "Studio", href: "/dashboard/student/studio", icon: "sparkles" },
+  { label: "Studio", href: "/dashboard/formateur", icon: "sparkles" },
   { label: "Formations", href: "/dashboard/student/learning/formations", icon: "film" },
   { label: "Parcours", href: "/dashboard/student/learning/parcours", icon: "layers" },
   { label: "Ressources", href: "/dashboard/ressources", icon: "library" },
   { label: "Drive", href: "/dashboard/student/tools/drive", icon: "drive" },
   { label: "Tests", href: "/dashboard/student/learning/tests", icon: "trophy" },
-  { label: "À faire", href: "/dashboard/student/studio/todo", icon: "checklist" },
+  { label: "À faire", href: "/dashboard/formateur/todo", icon: "checklist" },
   { label: "Messagerie", href: "/dashboard/student/community", icon: "message" },
   { label: "Achievements", href: "/dashboard/student/achievements", icon: "trophy" },
   {

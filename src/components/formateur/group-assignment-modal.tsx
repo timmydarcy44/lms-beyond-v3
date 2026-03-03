@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { assignContentToGroup } from "@/app/dashboard/student/studio/apprenants/actions";
+import { assignContentToGroup } from "@/app/dashboard/formateur/apprenants/actions";
 import { cn } from "@/lib/utils";
 import type { AssignableContent } from "@/lib/queries/formateur";
 import type { FormateurGroup } from "@/lib/queries/formateur";

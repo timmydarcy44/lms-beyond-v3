@@ -38,7 +38,7 @@ export async function resolvePortalProducts(session: SessionUser): Promise<Porta
         key: "care",
         label: "Beyond Care",
         description: "Suivi bien-etre et indicateurs",
-        href: "/dashboard/student/studio/beyond-care",
+        href: "/dashboard/formateur/beyond-care",
         isEnabled: false,
       },
       {

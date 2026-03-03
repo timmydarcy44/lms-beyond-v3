@@ -65,8 +65,8 @@ export default async function DashboardPage() {
     { label: "Mon profil Beyond", href: "/dashboard/apprenant" },
     { label: "Mes tests", href: "/dashboard/apprenant" },
     ...(hasLms ? [{ label: "Ma formation", href: "/dashboard/student/learning" }] : []),
-    ...(hasLms && (isAdmin || isMentor) ? [{ label: "Studio", href: "/dashboard/student/studio" }] : []),
-    ...(hasCare ? [{ label: "Mon suivi", href: "/dashboard/student/studio/beyond-care" }] : []),
+    ...(hasLms && (isAdmin || isMentor) ? [{ label: "Studio", href: "/dashboard/formateur" }] : []),
+    ...(hasCare ? [{ label: "Mon suivi", href: "/dashboard/formateur/beyond-care" }] : []),
   ];
 
   const cards = [
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
     {
       key: "care",
       title: "Beyond Care",
-      href: "/dashboard/student/studio/beyond-care",
+      href: "/dashboard/formateur/beyond-care",
       enabled: hasCare,
       description: "Suivi d accompagnement et indicateurs care.",
     },

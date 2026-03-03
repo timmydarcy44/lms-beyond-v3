@@ -287,7 +287,7 @@ export function DriveStorageTable({ documents, learners, groups }: DriveStorageT
                           asChild
                           className="rounded-full border border-cyan-400/25 bg-cyan-500/18 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white transition hover:border-cyan-300/40 hover:bg-cyan-500/28 focus-visible:ring-2 focus-visible:ring-cyan-300"
                         >
-                          <Link href={`/dashboard/student/studio/drive/${doc.id}`}>Valider</Link>
+                          <Link href={`/dashboard/formateur/drive/${doc.id}`}>Valider</Link>
                         </Button>
                         <button
                           type="button"
@@ -380,7 +380,7 @@ export function DriveStorageTable({ documents, learners, groups }: DriveStorageT
                     asChild
                     className="rounded-full border border-cyan-400/25 bg-cyan-500/18 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white transition hover:border-cyan-300/35 hover:bg-cyan-500/26 focus-visible:ring-2 focus-visible:ring-cyan-300"
                   >
-                    <Link href={`/dashboard/student/studio/drive/${doc.id}`}>Valider</Link>
+                    <Link href={`/dashboard/formateur/drive/${doc.id}`}>Valider</Link>
                   </Button>
                   <button
                     type="button"

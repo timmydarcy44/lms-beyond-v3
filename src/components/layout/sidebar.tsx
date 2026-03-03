@@ -46,7 +46,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: SidebarProps) => {
   const pathname = usePathname();
-  const isFormateurArea = pathname?.startsWith("/dashboard/student/studio");
+  const isFormateurArea = pathname?.startsWith("/dashboard/formateur");
   const isTutorArea = pathname?.startsWith("/dashboard/tuteur");
   const isCatalogueSurface = pathname?.startsWith("/catalog");
   const isBeyondCareArea = pathname?.includes("beyond-care");
@@ -92,45 +92,45 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
       {
         label: "Formations",
         icon: GraduationCap,
-        href: roleForNav === "formateur" ? "/dashboard/student/studio/formations" : "/dashboard/student/learning/formations",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/formations" : "/dashboard/student/learning/formations",
       },
       {
         label: "Parcours",
         icon: Layers,
-        href: roleForNav === "formateur" ? "/dashboard/student/studio/parcours" : "/dashboard/student/learning/parcours",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/parcours" : "/dashboard/student/learning/parcours",
       },
       ...(roleForNav === "formateur"
         ? [
             {
               label: "Mes apprenants",
               icon: Users,
-              href: "/dashboard/student/studio/apprenants",
+              href: "/dashboard/formateur/apprenants",
             },
           ]
         : []),
       {
         label: "Ressources",
         icon: BookOpen,
-        href: roleForNav === "formateur" ? "/dashboard/student/studio/ressources" : "/dashboard/ressources",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/ressources" : "/dashboard/ressources",
       },
       {
         label: "Drive",
         icon: HardDrive,
-        href: roleForNav === "formateur" ? "/dashboard/student/studio/drive" : "/dashboard/student/tools/drive",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/drive" : "/dashboard/student/tools/drive",
         showBadge: roleForNav === "formateur",
         badgeCount: roleForNav === "formateur" ? 1 : 0,
       },
       {
         label: "Tests",
         icon: PenTool,
-        href: roleForNav === "formateur" ? "/dashboard/student/studio/tests" : "/dashboard/student/learning/tests",
+        href: roleForNav === "formateur" ? "/dashboard/formateur/tests" : "/dashboard/student/learning/tests",
       },
       {
         label: "To-Do List",
         icon: CheckSquare,
         href:
           roleForNav === "formateur"
-            ? "/dashboard/student/studio/todo"
+            ? "/dashboard/formateur/todo"
             : roleForNav === "admin"
               ? "/dashboard/admin/todo"
               : "/dashboard/apprenant/todo",

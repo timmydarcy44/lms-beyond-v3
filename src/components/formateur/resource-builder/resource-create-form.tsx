@@ -88,7 +88,7 @@ export function ResourceCreateForm() {
       // Rediriger vers la liste des ressources après publication
       if (published) {
         setTimeout(() => {
-          router.push("/dashboard/student/studio/ressources");
+          router.push("/dashboard/formateur/ressources");
           router.refresh();
         }, 1500);
       }
@@ -143,7 +143,7 @@ export function ResourceCreateForm() {
                 variant="ghost"
                 className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/80 hover:border-white/40 hover:text-white"
               >
-                <Link href="/dashboard/student/studio/ressources">Retour à la bibliothèque</Link>
+                <Link href="/dashboard/formateur/ressources">Retour à la bibliothèque</Link>
               </Button>
             </div>
           </div>

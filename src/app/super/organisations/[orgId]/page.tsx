@@ -178,7 +178,7 @@ export default async function OrganizationDetailsPage({
                 {orgDetails.courses.map((course) => (
                   <Link
                     key={course.id}
-                    href={`/dashboard/student/studio/formations/${course.id}`}
+                    href={`/dashboard/formateur/formations/${course.id}`}
                     className="block rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 hover:shadow-sm transition"
                   >
                     <p className="font-medium text-gray-900">{course.title}</p>
@@ -210,7 +210,7 @@ export default async function OrganizationDetailsPage({
                 {orgDetails.paths.map((path) => (
                   <Link
                     key={path.id}
-                    href={`/dashboard/student/studio/parcours/${path.id}`}
+                    href={`/dashboard/formateur/parcours/${path.id}`}
                     className="block rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 hover:shadow-sm transition"
                   >
                     <p className="font-medium text-gray-900">{path.title}</p>
@@ -269,7 +269,7 @@ export default async function OrganizationDetailsPage({
                 {orgDetails.tests.map((test) => (
                   <Link
                     key={test.id}
-                    href={`/dashboard/student/studio/tests/${test.id}`}
+                    href={`/dashboard/formateur/tests/${test.id}`}
                     className="block rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 hover:shadow-sm transition"
                   >
                     <p className="font-medium text-gray-900">{test.title}</p>

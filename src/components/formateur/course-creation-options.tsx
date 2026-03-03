@@ -40,7 +40,7 @@ export function CourseCreationOptions() {
 
     if (selectedMethod === "zero") {
       // Workflow actuel : aller directement aux métadonnées
-      router.push(`/dashboard/student/studio/formations/new/metadata?title=${encodeURIComponent(title)}`);
+      router.push(`/dashboard/formateur/formations/new/metadata?title=${encodeURIComponent(title)}`);
       return;
     }
 
@@ -105,7 +105,7 @@ export function CourseCreationOptions() {
         structure: JSON.stringify(structure),
       });
 
-      router.push(`/dashboard/student/studio/formations/new/validate?${params.toString()}`);
+      router.push(`/dashboard/formateur/formations/new/validate?${params.toString()}`);
     } catch (error) {
       console.error("[course-creation] Error:", error);
       setShowErrorDialog(true);

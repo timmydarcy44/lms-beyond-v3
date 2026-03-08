@@ -101,7 +101,7 @@ export default function PartenaireDashboardPage() {
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-2xl font-black text-white">
+            <div className="text-lg font-black text-white lg:text-2xl">
               Bienvenue, {partenaireProfile.name}
             </div>
             <div className="mt-1 text-sm text-white/80">
@@ -114,8 +114,8 @@ export default function PartenaireDashboardPage() {
         </div>
       </section>
 
-      <div className="mt-6 flex gap-6">
-        <div className="flex-1">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+        <div>
           {posts.map((post) => (
             <div
               key={post.id}
@@ -167,7 +167,7 @@ export default function PartenaireDashboardPage() {
           ))}
         </div>
 
-        <div className="w-80 flex-shrink-0">
+        <div className="w-full lg:w-80 lg:flex-shrink-0">
           <div className="sticky top-6 space-y-4">
             <ClassementWidget />
             <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
@@ -177,7 +177,7 @@ export default function PartenaireDashboardPage() {
                   {partenaireProfile.pack}
                 </span>
               </div>
-              <div className="mt-3 text-2xl font-black text-white">
+              <div className="mt-3 text-lg font-black text-white lg:text-2xl">
                 {partenaireProfile.contractAmountHt.toLocaleString("fr-FR")}€ HT/an
               </div>
               <div className="mt-4 text-xs text-white/60">Saison 2025/2026</div>
@@ -193,7 +193,7 @@ export default function PartenaireDashboardPage() {
 
             <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
               <div className="text-sm text-white/60">Votre visibilité ce mois</div>
-              <div className="mt-2 text-2xl font-black text-blue-300">47 200 impressions</div>
+              <div className="mt-2 text-lg font-black text-blue-300 lg:text-2xl">47 200 impressions</div>
               <div className="mt-2 space-y-1 text-xs text-white/60">
                 <div>3 mentions réseaux sociaux</div>
                 <div>1 article dédié</div>

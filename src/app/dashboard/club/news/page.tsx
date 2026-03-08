@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ClubLayout } from "@/components/club/club-layout";
 import { useClubGuard } from "@/components/club/use-club-guard";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getMyClub, getClubNews } from "@/lib/supabase/club-queries";
 
 type NewsItem = {
-  id: number;
+  id: string | number;
   titre: string;
   date: string;
   statut: "Publié" | "Brouillon";
@@ -17,44 +20,11 @@ type NewsItem = {
   contenu?: string;
 };
 
-const initialNews: NewsItem[] = [
-  {
-    id: 1,
-    titre: "Victoire 3-0 contre FC Lisieux",
-    date: "2 Mars 2026",
-    statut: "Publié",
-    image: "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=800&q=80",
-    extrait: "Une belle victoire à domicile qui nous maintient dans le top 4...",
-  },
-  {
-    id: 2,
-    titre: "Soirée Partenaires — Save the Date",
-    date: "28 Fév 2026",
-    statut: "Publié",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80",
-    extrait: "Rendez-vous le 15 Avril pour notre soirée annuelle des partenaires...",
-  },
-  {
-    id: 3,
-    titre: "Nouveau partenaire : BNP Paribas",
-    date: "15 Jan 2026",
-    statut: "Publié",
-    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80",
-    extrait: "Nous sommes fiers d'annoncer notre partenariat avec BNP Paribas...",
-  },
-  {
-    id: 4,
-    titre: "Présentation saison 2026-2027",
-    date: "10 Jan 2026",
-    statut: "Brouillon",
-    image: null,
-    extrait: "En cours de rédaction...",
-  },
-];
-
 export default function ClubNewsPage() {
   const status = useClubGuard();
-  const [news, setNews] = useState<NewsItem[]>(initialNews);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingNews, setEditingNews] = useState<NewsItem | null>(null);
   const [ctaEnabled, setCtaEnabled] = useState(false);
@@ -108,39 +78,99 @@ export default function ClubNewsPage() {
     setShowDialog(true);
   };
 
+  useEffect(() => {
+    const load = async () => {
+      const clubData = await getMyClub();
+      if (!clubData) {
+        setLoading(false);
+        return;
+      }
+      setClubId(clubData.id);
+      const list = await getClubNews(clubData.id);
+      const mapped = list.map((item) => ({
+        id: item.id,
+        titre: item.titre,
+        date: item.published_at
+          ? new Date(item.published_at).toLocaleDateString("fr-FR")
+          : "—",
+        statut: item.statut === "published" ? "Publié" : "Brouillon",
+        image: item.image || null,
+        extrait: item.extrait || "",
+        contenu: item.contenu || "",
+      }));
+      setNews(mapped);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
   const handleSave = () => {
     const content = editorRef.current?.innerHTML || form.contenu;
-    if (editingNews) {
-      setNews((prev) =>
-        prev.map((item) =>
-          item.id === editingNews.id
-            ? {
-                ...item,
-                titre: form.titre,
-                image: form.image || null,
-                statut: form.statut,
-                extrait: content.replace(/<[^>]+>/g, "").slice(0, 120),
-                contenu: content,
-              }
-            : item
-        )
-      );
-    } else {
-      setNews((prev) => [
-        {
-          id: Date.now(),
-          titre: form.titre || "Nouvelle news",
-          date: "Aujourd'hui",
-          statut: form.statut,
-          image: form.image || null,
-          extrait: content.replace(/<[^>]+>/g, "").slice(0, 120),
-          contenu: content,
-        },
-        ...prev,
-      ]);
-    }
-    setShowDialog(false);
-    resetForm();
+    const payload = {
+      titre: form.titre || "Nouvelle news",
+      image: form.image || null,
+      statut: form.statut === "Publié" ? "published" : "draft",
+      extrait: content.replace(/<[^>]+>/g, "").slice(0, 120),
+      contenu: content,
+      published_at: form.statut === "Publié" ? new Date().toISOString() : null,
+    };
+    const run = async () => {
+      if (!clubId) return;
+      const supabase = createSupabaseBrowserClient();
+      if (editingNews) {
+        const { data } = await supabase
+          .from("club_news")
+          .update(payload)
+          .eq("id", editingNews.id)
+          .select()
+          .single();
+        if (data) {
+          setNews((prev) =>
+            prev.map((item) =>
+              item.id === editingNews.id
+                ? {
+                    id: data.id,
+                    titre: data.titre,
+                    date: data.published_at
+                      ? new Date(data.published_at).toLocaleDateString("fr-FR")
+                      : "—",
+                    statut: data.statut === "published" ? "Publié" : "Brouillon",
+                    image: data.image || null,
+                    extrait: data.extrait || "",
+                    contenu: data.contenu || "",
+                  }
+                : item
+            )
+          );
+        }
+      } else {
+        const { data } = await supabase
+          .from("club_news")
+          .insert({ ...payload, club_id: clubId })
+          .select()
+          .single();
+        if (data) {
+          setNews((prev) => [
+            {
+              id: data.id,
+              titre: data.titre,
+              date: data.published_at
+                ? new Date(data.published_at).toLocaleDateString("fr-FR")
+                : "—",
+              statut: data.statut === "published" ? "Publié" : "Brouillon",
+              image: data.image || null,
+              extrait: data.extrait || "",
+              contenu: data.contenu || "",
+            },
+            ...prev,
+          ]);
+        }
+      }
+      setShowDialog(false);
+      resetForm();
+      toast.success("News enregistrée ✓");
+    };
+    run();
   };
 
   const toolbarActions = useMemo(
@@ -164,7 +194,7 @@ export default function ClubNewsPage() {
   return (
     <ClubLayout activeItem="News Club">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-white">Actualités du club</h1>
+        <h1 className="text-lg font-semibold text-white lg:text-2xl">Actualités du club</h1>
         <button
           className="rounded-full px-5 py-2 text-sm font-semibold text-white"
           style={{ backgroundColor: "var(--club-primary)" }}
@@ -174,40 +204,49 @@ export default function ClubNewsPage() {
         </button>
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        {news.map((item) => (
-          <div key={item.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#111]">
-            {item.image ? (
-              <img src={item.image} alt={item.titre} className="h-40 w-full object-cover" />
-            ) : (
-              <div className="h-40 w-full bg-white/5" />
-            )}
-            <div className="p-4">
-              <div className="text-lg font-semibold text-white">{item.titre}</div>
-              <div className="mt-1 flex items-center gap-2 text-xs text-white/50">
-                <span>{item.date}</span>
-                <span className={cn("rounded-full px-2 py-0.5", statusStyles[item.statut])}>
-                  {item.statut}
-                </span>
-              </div>
-              <p className="mt-3 line-clamp-2 text-sm text-white/60">{item.extrait}</p>
-              <div className="mt-4 flex gap-2">
-                <button
-                  className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white"
-                  onClick={() => openDialog(item)}
-                >
-                  Modifier
-                </button>
-                <button
-                  className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white"
-                  onClick={() => setNews((prev) => prev.filter((newsItem) => newsItem.id !== item.id))}
-                >
-                  Supprimer
-                </button>
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          <div className="text-white/50">Chargement...</div>
+        ) : (
+          news.map((item) => (
+            <div key={item.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#111]">
+              {item.image ? (
+                <img src={item.image} alt={item.titre} className="h-40 w-full object-cover" />
+              ) : (
+                <div className="h-40 w-full bg-white/5" />
+              )}
+              <div className="p-4">
+                <div className="text-lg font-semibold text-white">{item.titre}</div>
+                <div className="mt-1 flex items-center gap-2 text-xs text-white/50">
+                  <span>{item.date}</span>
+                  <span className={cn("rounded-full px-2 py-0.5", statusStyles[item.statut])}>
+                    {item.statut}
+                  </span>
+                </div>
+                <p className="mt-3 line-clamp-2 text-sm text-white/60">{item.extrait}</p>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white"
+                    onClick={() => openDialog(item)}
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white"
+                    onClick={async () => {
+                      const supabase = createSupabaseBrowserClient();
+                      await supabase.from("club_news").delete().eq("id", item.id);
+                      setNews((prev) => prev.filter((newsItem) => newsItem.id !== item.id));
+                      toast.success("News supprimée ✓");
+                    }}
+                  >
+                    Supprimer
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>

@@ -9,6 +9,7 @@ import {
   BarChart2,
   GraduationCap,
   Building2,
+  Shield,
 } from "lucide-react";
 import type { ClubTheme } from "@/lib/club-theme";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 type ClubSidebarProps = {
   activeItem?: string;
   theme: ClubTheme;
+  onClose?: () => void;
 };
 
 const navItems = [
@@ -27,9 +29,15 @@ const navItems = [
   { label: "Aides & Formation", href: "/dashboard/club/aides", icon: GraduationCap },
   { label: "Événements", href: "/dashboard/club/evenements", icon: Calendar },
   { label: "ROI & Reporting", href: "/dashboard/club/roi", icon: BarChart2 },
+  {
+    label: "Rapport DNCG",
+    href: "/dashboard/club/dncg",
+    icon: Shield,
+    activeColor: "#C8102E",
+  },
 ];
 
-export function ClubSidebar({ activeItem, theme }: ClubSidebarProps) {
+export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {
   return (
     <aside className="fixed left-4 top-4 bottom-4 z-50 w-[220px] overflow-hidden rounded-2xl border border-[#C8102E]/30 bg-[#1B2A4A] backdrop-blur-2xl">
       <div className="flex h-full flex-col px-4 py-5 text-white">
@@ -53,6 +61,7 @@ export function ClubSidebar({ activeItem, theme }: ClubSidebarProps) {
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
                   isActive ? "font-semibold text-white" : "text-white/70 hover:text-white hover:bg-white/10"
@@ -60,7 +69,7 @@ export function ClubSidebar({ activeItem, theme }: ClubSidebarProps) {
                 style={
                   isActive
                     ? {
-                        backgroundColor: theme.couleur_primaire,
+                        backgroundColor: item.activeColor ?? theme.couleur_primaire,
                       }
                     : undefined
                 }
@@ -75,6 +84,7 @@ export function ClubSidebar({ activeItem, theme }: ClubSidebarProps) {
         <div className="mt-3 border-t border-white/10 pt-3">
           <a
             href="/dashboard/entreprise"
+            onClick={onClose}
             className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/50 transition-all hover:bg-white/10 hover:text-white"
           >
             <Building2 className="h-4 w-4 flex-shrink-0" />

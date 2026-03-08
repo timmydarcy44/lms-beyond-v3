@@ -60,20 +60,37 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `Tu es un expert en formation professionnelle.
-Analyse ce référentiel et extrais toutes les missions
-que l'alternant doit réaliser en entreprise.
-Retourne UNIQUEMENT un JSON valide sans markdown :
+          content: `Tu es un expert en ingénierie pédagogique et en 
+formation professionnelle par alternance.
+
+À partir du référentiel de formation ci-dessous,
+génère exactement 10 missions professionnelles 
+concrètes que l'entreprise devra confier à l'alternant
+tout au long de son contrat.
+
+Chaque mission doit :
+- Être réalisable en entreprise (pas en école)
+- Être progressive (du plus simple au plus complexe)
+- Avoir un titre clair et actionnable
+- Avoir une description détaillée de ce que l'alternant
+  doit faire concrètement
+- Avoir un exemple concret de livrable attendu
+- Avoir une durée estimée réaliste
+
+Retourne UNIQUEMENT ce JSON valide :
 {
-  "missions": [
+  'missions': [
     {
-      "titre": string,
-      "description": string,
-      "duree_estimee": string,
-      "niveau": "debutant" | "intermediaire" | "avance"
+      'titre': string,
+      'description': string,
+      'exemple': string,
+      'duree_estimee': string,
+      'niveau': 'debutant' | 'intermediaire' | 'avance'
     }
   ]
-}`,
+}
+
+Génère exactement 10 missions, ni plus ni moins.`,
         },
         {
           role: "user",

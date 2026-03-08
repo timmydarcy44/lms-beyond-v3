@@ -7,12 +7,12 @@ export default function ClubAidesPage() {
   return (
     <ClubLayout activeItem="Aides & Formation">
       <div className="space-y-10">
-        <section className="mb-8 grid grid-cols-3 gap-4">
+        <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-900/60 to-blue-800/40 p-6">
             <div className="text-xs uppercase tracking-wider text-blue-300">
               Plan de Développement des Compétences
             </div>
-            <div className="mt-3 text-4xl font-black text-white">jusqu'à 1 800€</div>
+            <div className="mt-3 text-2xl font-black text-white lg:text-4xl">jusqu'à 1 800€</div>
             <div className="text-sm text-white/60">par salarié / an</div>
             <div className="mt-4 h-2 rounded-full bg-white/10">
               <div className="h-2 w-[60%] rounded-full bg-blue-400" />
@@ -24,7 +24,7 @@ export default function ClubAidesPage() {
 
           <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-900/60 to-purple-800/40 p-6">
             <div className="text-xs uppercase tracking-wider text-purple-300">AFEST</div>
-            <div className="mt-3 text-4xl font-black text-white">jusqu'à 6 000€</div>
+            <div className="mt-3 text-2xl font-black text-white lg:text-4xl">jusqu'à 6 000€</div>
             <div className="text-sm text-white/60">par action de formation</div>
             <div className="mt-3 text-xs text-white/40">
               150h max • 15€/h • dont 2 250€ distanciel
@@ -39,7 +39,7 @@ export default function ClubAidesPage() {
             </div>
             <div className="mt-3 text-xl font-black text-white">Beyond Compétences</div>
             <div className="text-sm text-white/60">Compétences certifiées par Open Badge</div>
-            <div className="mt-3 text-3xl font-black text-[#C8102E]">Jusqu'à 100% financé</div>
+            <div className="mt-3 text-xl font-black text-[#C8102E] lg:text-3xl">Jusqu'à 100% financé</div>
             <div className="mt-3 text-xs text-white/70">
               <ul className="space-y-1">
                 <li>• Référentiels validés par des pros du sport</li>
@@ -52,11 +52,11 @@ export default function ClubAidesPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[#111] p-8">
+        <section className="rounded-2xl border border-white/10 bg-[#111] p-4 lg:p-8">
           <div className="inline-flex items-center rounded-full bg-emerald-500/20 px-3 py-1 text-xs text-emerald-300">
             ✓ Votre club cotise à l'AFDAS via vos charges patronales
           </div>
-          <div className="mt-4 text-3xl font-black text-white">Aides au développement</div>
+          <div className="mt-4 text-xl font-black text-white lg:text-3xl">Aides au développement</div>
           <div className="mt-2 max-w-2xl text-sm text-white/70">
             Financez la montée en compétences de vos collaborateurs grâce aux dispositifs de l'AFDAS, OPCO de la
             branche Sport
@@ -199,8 +199,8 @@ export default function ClubAidesPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl bg-gradient-to-r from-[#C8102E] to-[#8B0000] p-8">
-          <div className="text-2xl font-black text-white">Formez votre club avec Beyond</div>
+        <section className="rounded-2xl bg-gradient-to-r from-[#C8102E] to-[#8B0000] p-4 lg:p-8">
+          <div className="text-lg font-black text-white lg:text-2xl">Formez votre club avec Beyond</div>
           <div className="mt-2 max-w-2xl text-sm text-white/80">
             Parcours 100% en ligne, finançables AFDAS, conçus avec et pour les clubs sportifs professionnels et
             amateurs.
@@ -226,7 +226,7 @@ export default function ClubAidesPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[#111] p-8">
+        <section className="rounded-2xl border border-white/10 bg-[#111] p-4 lg:p-8">
           <div className="text-xl font-bold text-white">Par où commencer ?</div>
           <ol className="mt-4 space-y-3 text-sm text-white/70">
             <li>1️⃣ Créez votre compte AFDAS sur mya.afdas.com</li>

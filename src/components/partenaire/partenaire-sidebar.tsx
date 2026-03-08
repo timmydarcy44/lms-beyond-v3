@@ -25,6 +25,7 @@ type PartenaireSidebarProps = {
   club: ClubInfo;
   partner: PartnerInfo;
   activeItem?: string;
+  onClose?: () => void;
 };
 
 const navItems = [
@@ -36,7 +37,7 @@ const navItems = [
   { label: "Annuaire partenaires", href: "/dashboard/partenaire/annuaire", icon: Users2 },
 ];
 
-export function PartenaireSidebar({ club, partner, activeItem }: PartenaireSidebarProps) {
+export function PartenaireSidebar({ club, partner, activeItem, onClose }: PartenaireSidebarProps) {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[220px] border-r border-white/10 bg-[#0d1b2e]">
       <div className="flex h-full flex-col px-4 py-6 text-white">
@@ -64,6 +65,7 @@ export function PartenaireSidebar({ club, partner, activeItem }: PartenaireSideb
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all",
                   isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -83,7 +85,10 @@ export function PartenaireSidebar({ club, partner, activeItem }: PartenaireSideb
             </div>
             <div className="text-sm text-white">{partner.name}</div>
           </div>
-          <button className="mt-3 flex items-center gap-2 text-xs text-white/50 hover:text-white">
+          <button
+            onClick={onClose}
+            className="mt-3 flex items-center gap-2 text-xs text-white/50 hover:text-white"
+          >
             <LogOut className="h-4 w-4" />
             Se déconnecter
           </button>

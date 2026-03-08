@@ -1,22 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ClubLayout } from "@/components/club/club-layout";
 import { useClubGuard } from "@/components/club/use-club-guard";
-import { useSupabase } from "@/components/providers/supabase-provider";
 import { getClubTheme } from "@/lib/club-theme";
 import { cn } from "@/lib/utils";
-
-const theme = getClubTheme("su-dives-cabourg");
-
-const kpis = [
-  { label: "Partenaires actifs", value: "23", highlight: true },
-  { label: "Valeur annuelle", value: "87 500€" },
-  { label: "Taux renouvellement", value: "78%" },
-  { label: "Renouvellements ce mois", value: "3", badge: true },
-];
+import { getMyClub, getClubMatches, getClubNews, getClubPartners } from "@/lib/supabase/club-queries";
 
 const actions = [
   {
@@ -56,81 +47,142 @@ const activities = [
   { label: "Hôtel de la Plage a rejoint Beyond Network", time: "3j" },
 ];
 
-const matches = [
-  { date: "15/09", opponent: "FC Lisieux", home: "Domicile", score: "2-1", result: "win", attendance: 420 },
-  { date: "29/09", opponent: "US Hérouville", home: "Extérieur", score: "0-0", result: "draw", attendance: null },
-  { date: "13/10", opponent: "SO Caennais", home: "Domicile", score: "3-1", result: "win", attendance: 510 },
-  { date: "27/10", opponent: "FC Alençon", home: "Extérieur", score: "1-2", result: "loss", attendance: null },
-  { date: "10/11", opponent: "Bayeux FC", home: "Domicile", score: "2-0", result: "win", attendance: 380 },
-  { date: "24/11", opponent: "US Vire", home: "Extérieur", score: "1-1", result: "draw", attendance: null },
-  { date: "08/12", opponent: "FC Flers", home: "Domicile", score: "4-2", result: "win", attendance: 490 },
-  { date: "15/03", opponent: "FC Caen B", home: "Domicile", score: "À venir", result: "upcoming", attendance: null },
-];
-
-
 export default function ClubDashboardPage() {
   const status = useClubGuard();
-  const supabase = useSupabase();
+  const [club, setClub] = useState<any>(null);
+  const [partners, setPartners] = useState<any[]>([]);
+  const [news, setNews] = useState<any[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState("responsable");
+  const theme = useMemo(
+    () => getClubTheme(club?.slug ?? club?.code ?? club?.nom_slug ?? "su-dives-cabourg"),
+    [club?.slug, club?.code, club?.nom_slug]
+  );
   useEffect(() => {
-    const loadProfile = async () => {
-      if (!supabase) return;
-      const { data } = await supabase.auth.getUser();
-      const user = data?.user;
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, email")
-        .eq("id", user.id)
-        .maybeSingle();
-      const name =
-        profile?.full_name?.trim().split(/\s+/)[0] ||
-        profile?.email?.split("@")[0] ||
-        "responsable";
-      setFirstName(name);
-    };
-    loadProfile();
-  }, [supabase]);
+    async function load() {
+      const clubData = await getMyClub();
+      if (!clubData) {
+        setLoading(false);
+        return;
+      }
+      setClub(clubData);
+      setFirstName(clubData?.contact_prenom || clubData?.responsable_prenom || "responsable");
+
+      const [p, n, m] = await Promise.all([
+        getClubPartners(clubData.id),
+        getClubNews(clubData.id),
+        getClubMatches(clubData.id),
+      ]);
+      setPartners(p);
+      setNews(n);
+      setMatches(m);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  const totalValeur = partners.reduce((sum, partner) => sum + (partner.valeur || 0), 0);
+  const partenairesActifs = partners.length;
+  const dernierMatch = matches.find((match) => match.score_nous !== null && match.score_nous !== undefined);
+  const prochainsMatch = matches.find((match) => match.score_nous === null || match.score_nous === undefined);
+
+  const kpis = useMemo(
+    () => [
+      { label: "Partenaires actifs", value: String(partenairesActifs), highlight: true },
+      { label: "Valeur annuelle", value: `${totalValeur.toLocaleString("fr-FR")}€` },
+      { label: "Taux renouvellement", value: "78%" },
+      { label: "Renouvellements ce mois", value: "3", badge: true },
+    ],
+    [partenairesActifs, totalValeur]
+  );
+
+  const formattedMatches = useMemo(() => {
+    return matches.map((match) => {
+      const opponent =
+        match.opponent ||
+        match.adversaire ||
+        match.equipe_adverse ||
+        match.nom_adversaire ||
+        "Adversaire";
+      const isHome = Boolean(
+        match.is_home ?? match.domicile ?? match.home ?? match.stade === "Domicile"
+      );
+      const scoreNous = match.score_nous ?? match.score_home ?? match.scoreOur;
+      const scoreEux = match.score_eux ?? match.score_away ?? match.scoreOpp;
+      const score =
+        scoreNous !== null && scoreNous !== undefined && scoreEux !== null && scoreEux !== undefined
+          ? `${scoreNous}-${scoreEux}`
+          : "À venir";
+      const result =
+        scoreNous === null || scoreNous === undefined
+          ? "upcoming"
+          : scoreNous > scoreEux
+            ? "win"
+            : scoreNous < scoreEux
+              ? "loss"
+              : "draw";
+      return {
+        id: match.id ?? `${match.date}-${opponent}`,
+        date: match.date ? new Date(match.date).toLocaleDateString("fr-FR") : "—",
+        opponent,
+        home: isHome ? "Domicile" : "Extérieur",
+        score,
+        result,
+        attendance: match.affluence ?? match.attendance ?? null,
+      };
+    });
+  }, [matches]);
 
   if (status !== "allowed") {
     return null;
   }
 
+  if (loading) {
+    return (
+      <ClubLayout activeItem="Dashboard">
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-white/50">Chargement...</div>
+        </div>
+      </ClubLayout>
+    );
+  }
+
   return (
     <ClubLayout activeItem="Dashboard">
-      <div className="-mx-8 -my-8 min-h-screen bg-[#0d1b2e] px-8 py-8 text-white">
+      <div className="-mx-4 -my-4 min-h-screen bg-[#0d1b2e] px-4 py-4 text-white lg:-mx-8 lg:-my-8 lg:px-8 lg:py-8">
         <section className="relative overflow-hidden rounded-3xl">
-          <div className="h-[280px] bg-gradient-to-r from-[#1B2A4A] to-[#C8102E]" />
-          <div className="absolute inset-0 flex items-center justify-between p-10 text-white">
+          <div className="h-[250px] bg-gradient-to-r from-[#1B2A4A] to-[#C8102E] lg:h-[500px]" />
+          <div className="absolute inset-0 flex flex-col justify-between p-6 text-white lg:flex-row lg:items-center lg:p-10">
             <div>
               <span className="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest">
                 BEYOND NETWORK
               </span>
-              <div className="mt-3 text-sm text-white/60">{theme.nom}</div>
-              <h1 className="mt-2 text-4xl font-black">Bienvenue, {firstName}</h1>
+              <div className="mt-3 text-sm text-white/60">{club?.nom ?? theme.nom}</div>
+              <h1 className="mt-2 text-2xl font-black lg:text-4xl">Bienvenue, {firstName}</h1>
               <p className="mt-2 text-white/70">
                 Gérez vos partenaires et
                 <br />
                 développez votre réseau.
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-left lg:text-right">
               <div className="ml-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-lg font-black text-[#1B2A4A]">
                 {theme.logo_initiales}
           </div>
-              <div className="mt-3 text-sm text-white/60">{theme.division}</div>
+              <div className="mt-3 text-sm text-white/60">{club?.division ?? theme.division}</div>
           </div>
         </div>
       </section>
 
-        <section className="mt-6 grid gap-4 lg:grid-cols-4">
+        <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
               className="rounded-2xl border border-white/20 bg-[#1B2A4A] p-5 shadow-sm"
             >
               <div
-                className={`text-3xl font-black ${
+                className={`text-xl font-black lg:text-3xl ${
                   kpi.highlight ? "text-[#C8102E]" : "text-white"
                 }`}
               >
@@ -149,7 +201,7 @@ export default function ClubDashboardPage() {
         </section>
 
         <section className="mt-8">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             {actions.map((action) => (
               <Link
                 key={action.titre}
@@ -185,8 +237,8 @@ export default function ClubDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {matches.map((match) => (
-                  <tr key={`${match.date}-${match.opponent}`} className="border-t border-white/10">
+                {formattedMatches.map((match) => (
+                  <tr key={match.id} className="border-t border-white/10">
                     <td className="px-4 py-3">{match.date}</td>
                     <td className="px-4 py-3">{match.opponent}</td>
                     <td className="px-4 py-3">{match.home}</td>

@@ -87,7 +87,7 @@ export default function PartenaireAnnuairePage() {
       partner={{ name: partenaireProfile.name, initials: partenaireProfile.initials }}
     >
       <div className="mb-6">
-        <div className="text-2xl font-black text-white">Annuaire des partenaires</div>
+        <div className="text-lg font-black text-white lg:text-2xl">Annuaire des partenaires</div>
         <div className="text-sm text-white/60">
           Les entreprises partenaires de {partenaireClub.name} — Saison 2025/2026
         </div>
@@ -124,7 +124,7 @@ export default function PartenaireAnnuairePage() {
         </select>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {filteredPartners.map((partner) => (
           <button
             key={partner.nom}

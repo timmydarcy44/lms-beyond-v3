@@ -119,7 +119,7 @@ export default function PartenaireRoiPage() {
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-2xl font-black text-white">Mon ROI — Saison 2025/2026</div>
+          <div className="text-lg font-black text-white lg:text-2xl">Mon ROI — Saison 2025/2026</div>
           <div className="text-sm text-white/60">
             Brasserie du Port — Pack {partenaireProfile.pack}
           </div>
@@ -132,21 +132,21 @@ export default function PartenaireRoiPage() {
         </button>
       </div>
 
-      <section className="mb-8 mt-6 grid gap-4 lg:grid-cols-4">
+      <section className="mb-8 mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="rounded-2xl border border-white/10 bg-[#111827] p-5">
           <div className="text-sm text-white/60">Investissement total</div>
-          <div className="mt-2 text-3xl font-black text-white">5 000€ HT</div>
+          <div className="mt-2 text-xl font-black text-white lg:text-3xl">5 000€ HT</div>
           <div className="text-xs text-white/50">Pack Argent — annuel</div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#111827] p-5">
           <div className="text-sm text-white/60">Valeur visibilité générée</div>
-          <div className="mt-2 text-3xl font-black text-blue-300">16 240€</div>
+          <div className="mt-2 text-xl font-black text-blue-300 lg:text-3xl">16 240€</div>
           <div className="text-xs text-white/50">Estimation basée sur les données réelles</div>
           <div className="mt-2 text-xs text-green-400">▲ +224% vs investissement</div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#111827] p-5">
           <div className="text-sm text-white/60">ROI estimé</div>
-          <div className="mt-2 text-4xl font-black text-green-400">×3.2</div>
+          <div className="mt-2 text-2xl font-black text-green-400 lg:text-4xl">×3.2</div>
           <div className="text-xs text-white/50">Retour sur investissement</div>
           <div className="mt-2 inline-flex rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
             Au-dessus de la moyenne
@@ -154,7 +154,7 @@ export default function PartenaireRoiPage() {
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#111827] p-5">
           <div className="text-sm text-white/60">Matchs couverts</div>
-          <div className="mt-2 text-3xl font-black text-white">14</div>
+          <div className="mt-2 text-xl font-black text-white lg:text-3xl">14</div>
           <div className="text-xs text-white/50">sur 17 matchs joués</div>
           <div className="mt-3 h-2 rounded-full bg-white/10">
             <div className="h-2 w-[82%] rounded-full bg-[#C8102E]" />
@@ -217,11 +217,11 @@ export default function PartenaireRoiPage() {
 
       <section className="mt-8">
         <div className="text-lg font-semibold text-white">Répartition par canal</div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {canalTotals.map((canal) => (
             <div key={canal.label} className="rounded-2xl border border-white/10 bg-[#111827] p-5">
               <div className="text-sm text-white/60">{canal.label}</div>
-              <div className="mt-2 text-2xl font-black text-white">{canal.value.toLocaleString("fr-FR")}€</div>
+              <div className="mt-2 text-lg font-black text-white lg:text-2xl">{canal.value.toLocaleString("fr-FR")}€</div>
               <div className="mt-3 h-2 rounded-full bg-white/10">
                 <div className="h-2 rounded-full bg-[#C8102E]" style={{ width: `${canal.pct}%` }} />
               </div>
@@ -275,9 +275,9 @@ export default function PartenaireRoiPage() {
         </div>
       </section>
 
-      <section className="mt-8 rounded-2xl bg-gradient-to-r from-[#C8102E] to-[#8B0000] p-8 text-center">
+      <section className="mt-8 rounded-2xl bg-gradient-to-r from-[#C8102E] to-[#8B0000] p-4 text-center lg:p-8">
         <div className="text-sm text-white/70">Votre partenariat se termine dans 5 mois</div>
-        <div className="mt-2 text-2xl font-black text-white">Renouveler ou upgrader votre pack ?</div>
+        <div className="mt-2 text-lg font-black text-white lg:text-2xl">Renouveler ou upgrader votre pack ?</div>
         <div className="mt-2 text-sm text-white/80">
           Pack Or disponible — Ajoutez le logo maillot et doublez votre visibilité
         </div>

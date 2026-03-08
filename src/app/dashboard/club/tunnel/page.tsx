@@ -14,6 +14,7 @@ import { useClubGuard } from "@/components/club/use-club-guard";
 import { cn } from "@/lib/utils";
 import { CheckCircle, TrendingUp, Users } from "lucide-react";
 import jsPDF from "jspdf";
+import { getMyClub, getClubPartners, updatePartner } from "@/lib/supabase/club-queries";
 
 type Column = { id: string; label: string; couleur: string; cards: ProspectCard[] };
 type ProspectCard = {
@@ -38,128 +39,17 @@ type ProspectCard = {
 };
 
 const initialColumnsBase = [
-  { id: "prospect", label: "Prospects", couleur: "#6B7280" },
-  { id: "contact", label: "Premier contact", couleur: "#3B82F6" },
+  { id: "prospects", label: "Prospects", couleur: "#6B7280" },
+  { id: "premier_contact", label: "Premier contact", couleur: "#3B82F6" },
   { id: "presentation", label: "Présentation", couleur: "#EAB308" },
   { id: "negociation", label: "Négociation", couleur: "#F97316" },
   { id: "signature", label: "Signature", couleur: "#22C55E" },
   { id: "perdu", label: "Perdu", couleur: "#EF4444" },
 ];
 
-const initialCards: ProspectCard[] = [
-  {
-    id: "auto-garage-martin",
-    nom: "Auto Garage Martin",
-    secteur: "Automobile",
-    valeur: 2500,
-    contact: "Jean Martin",
-    contactEmail: "j.martin@garage-martin.fr",
-    contactTel: "06 89 01 23 45",
-    adresse: "7 route de Dozulé, 14160 Dives-sur-Mer",
-    lastAction: "Il y a 2j",
-    columnId: "prospect",
-  },
-  {
-    id: "brasserie-du-port",
-    nom: "Brasserie du Port",
-    secteur: "Restauration",
-    valeur: 1500,
-    contact: "Sophie Laurent",
-    contactEmail: "s.laurent@brasserieduport.fr",
-    contactTel: "06 90 12 34 56",
-    adresse: "3 quai de la Marine, 14160 Dives-sur-Mer",
-    lastAction: "Il y a 3j",
-    columnId: "prospect",
-  },
-  {
-    id: "imprimerie-cote-fleurie",
-    nom: "Imprimerie Côte Fleurie",
-    secteur: "Communication",
-    valeur: 2000,
-    contact: "Camille Morel",
-    contactEmail: "c.morel@imprimerie-cote.fr",
-    contactTel: "06 78 90 12 34",
-    adresse: "5 rue des Arts, 14160 Dives-sur-Mer",
-    lastAction: "Il y a 5j",
-    columnId: "prospect",
-  },
-  {
-    id: "normandie-energie",
-    nom: "Normandie Énergie",
-    secteur: "Énergie",
-    valeur: 4000,
-    contact: "Henri Blanc",
-    contactEmail: "h.blanc@normandie-energie.fr",
-    contactTel: "06 78 90 12 34",
-    adresse: "33 avenue de l'Industrie, 76600 Le Havre",
-    lastAction: "Il y a 1j",
-    columnId: "contact",
-  },
-  {
-    id: "spa-cabourg",
-    nom: "SPA Cabourg",
-    secteur: "Bien-être",
-    valeur: 3000,
-    contact: "Julie Martin",
-    contactEmail: "j.martin@spa-cabourg.fr",
-    contactTel: "06 12 34 56 78",
-    adresse: "10 avenue de la Mer, 14390 Cabourg",
-    lastAction: "Il y a 4j",
-    columnId: "contact",
-  },
-  {
-    id: "cabinet-dupont-rh",
-    nom: "Cabinet Dupont RH",
-    secteur: "RH",
-    valeur: 5000,
-    contact: "Marc Dupont",
-    contactEmail: "m.dupont@dupont-rh.fr",
-    contactTel: "06 67 89 01 23",
-    adresse: "15 rue Neuve, 14000 Caen",
-    lastAction: "Il y a 2j",
-    columnId: "presentation",
-  },
-  {
-    id: "electro-plus",
-    nom: "Électro Plus",
-    secteur: "Énergie",
-    valeur: 4500,
-    contact: "Laura Evrard",
-    contactEmail: "l.evrard@electro-plus.fr",
-    contactTel: "06 34 56 78 90",
-    adresse: "21 avenue du Port, 14000 Caen",
-    lastAction: "Il y a 6j",
-    columnId: "negociation",
-  },
-  {
-    id: "marine-services",
-    nom: "Marine Services",
-    secteur: "Transport",
-    valeur: 3200,
-    contact: "Alain Dubois",
-    contactEmail: "a.dubois@marine-services.fr",
-    contactTel: "06 56 78 90 12",
-    adresse: "45 route de Caen, 14160 Dives-sur-Mer",
-    lastAction: "Il y a 3j",
-    columnId: "negociation",
-  },
-  {
-    id: "resto-du-stade",
-    nom: "Resto du Stade",
-    secteur: "Restauration",
-    valeur: 2000,
-    contact: "Marie Petit",
-    contactEmail: "m.petit@resto-stade.fr",
-    contactTel: "06 45 78 90 12",
-    adresse: "2 rue du Stade, 14160 Dives-sur-Mer",
-    lastAction: "Il y a 2 sem",
-    columnId: "perdu",
-  },
-];
-
 const initialColumns: Column[] = initialColumnsBase.map((column) => ({
   ...column,
-  cards: initialCards.filter((card) => card.columnId === column.id),
+  cards: [],
 }));
 
 const baseSponsorshipSections = [
@@ -589,7 +479,7 @@ function TabsComponent({
               })}
             </div>
             <div className="my-4 h-px bg-white/10" />
-            <div className="text-3xl font-black text-[#C8102E]">
+            <div className="text-xl font-black text-[#C8102E] lg:text-3xl">
               {offerTotal.toLocaleString("fr-FR")}€ HT
             </div>
             <div className="text-sm text-white/60">
@@ -659,6 +549,7 @@ function TabsComponent({
 export default function ClubTunnelPage() {
   const status = useClubGuard();
   const [columns, setColumns] = useState<Column[]>(initialColumns);
+  const [clubId, setClubId] = useState<string | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [columnDraft, setColumnDraft] = useState("");
   const [showColumnDialog, setShowColumnDialog] = useState(false);
@@ -685,7 +576,7 @@ export default function ClubTunnelPage() {
     contactEmail: "",
     contactTel: "",
     notes: "",
-    columnId: "prospect",
+    columnId: "prospects",
   });
   const [partnershipTypes, setPartnershipTypes] = useState({
     sponsoring: false,
@@ -704,6 +595,48 @@ export default function ClubTunnelPage() {
 
   const columnsWithCards = columns;
 
+  useEffect(() => {
+    const load = async () => {
+      const clubData = await getMyClub();
+      if (!clubData) return;
+      setClubId(clubData.id);
+      const partners = await getClubPartners(clubData.id);
+      const grouped = {
+        prospects: partners.filter((partner) => partner.colonne_tunnel === "prospects"),
+        premier_contact: partners.filter((partner) => partner.colonne_tunnel === "premier_contact"),
+        presentation: partners.filter((partner) => partner.colonne_tunnel === "presentation"),
+        negociation: partners.filter((partner) => partner.colonne_tunnel === "negociation"),
+        signature: partners.filter((partner) => partner.colonne_tunnel === "signature"),
+        perdu: partners.filter((partner) => partner.colonne_tunnel === "perdu"),
+      };
+      setColumns((prev) =>
+        prev.map((col) => ({
+          ...col,
+          cards: (grouped[col.id] || []).map((partner) => ({
+            id: partner.id,
+            nom: partner.nom,
+            secteur: partner.secteur,
+            valeur: partner.valeur || 0,
+            contact: `${partner.contact_prenom || ""} ${partner.contact_nom || ""}`.trim() || "—",
+            contactEmail: partner.contact_email || partner.contactEmail,
+            contactTel: partner.contact_tel || partner.contactTel,
+            adresse: partner.adresse,
+            siret: partner.siret,
+            notes: partner.notes,
+            lastAction: partner.last_action || partner.updated_at || "—",
+            columnId: col.id,
+            createdAt: partner.created_at,
+            updatedAt: partner.updated_at,
+            offerName: partner.offer_name,
+            offerSelections: partner.offer_selections || {},
+            partnershipType: partner.partnership_type,
+            paymentMode: partner.payment_mode,
+          })),
+        }))
+      );
+    };
+    load();
+  }, []);
   
 
   useEffect(() => {
@@ -873,6 +806,7 @@ export default function ClubTunnelPage() {
       });
     });
     setSelectedProspect((prev) => (prev && prev.id === cardId ? { ...prev, columnId: newColumnId } : prev));
+    updatePartner(cardId, { colonne_tunnel: newColumnId });
   };
 
   const mapNafToSector = (code: string) => {
@@ -1261,7 +1195,7 @@ export default function ClubTunnelPage() {
   return (
     <ClubLayout activeItem="Tunnel de vente">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-white">Tunnel de vente</h1>
+        <h1 className="text-lg font-semibold text-white lg:text-2xl">Tunnel de vente</h1>
         <div className="flex flex-wrap gap-3">
           <button
             className="rounded-full px-5 py-2 text-sm font-semibold text-white"
@@ -1279,29 +1213,32 @@ export default function ClubTunnelPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-[#1B2A4A]/60 p-5 backdrop-blur">
           <div className="mb-1 text-xs text-white/60">Contacts total</div>
-          <div className="text-3xl font-black text-white">{totalContacts}</div>
+          <div className="text-xl font-black text-white lg:text-3xl">{totalContacts}</div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#1B2A4A]/60 p-5 backdrop-blur">
           <div className="mb-1 text-xs text-white/60">CA prévisionnel</div>
-          <div className="text-3xl font-black text-blue-300">
+          <div className="text-xl font-black text-blue-300 lg:text-3xl">
             {caPrevisionnel.toLocaleString("fr-FR")}€
           </div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#1B2A4A]/60 p-5 backdrop-blur">
           <div className="mb-1 text-xs text-white/60">CA réalisé</div>
-          <div className="text-3xl font-black text-[#C8102E]">
+          <div className="text-xl font-black text-[#C8102E] lg:text-3xl">
             {caRealise.toLocaleString("fr-FR")}€
           </div>
         </div>
       </div>
 
       <DndContext onDragEnd={handleDragEnd}>
-        <div className="mt-6 flex gap-4 overflow-x-auto pb-4">
+        <div className="mt-6 flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-4 lg:mx-0 lg:px-0">
           {columnsWithCards.map((column) => (
-            <div key={column.id} className="min-w-[260px] rounded-2xl border border-white/10 bg-[#111] p-4">
+            <div
+              key={column.id}
+              className="min-w-[280px] w-[280px] flex-shrink-0 snap-start rounded-2xl border border-white/10 bg-[#111] p-4 lg:w-auto lg:flex-1"
+            >
               <div className="mb-3 flex items-center justify-between">
                 {editingColumnId === column.id ? (
                   <input
@@ -1629,7 +1566,7 @@ export default function ClubTunnelPage() {
                   <div className="my-3 h-px bg-white/10" />
                   <div className="text-sm text-white/60">Total HT : {newOfferTotal.toLocaleString("fr-FR")}€</div>
                   <div className="text-sm text-white/60">TVA 20% : {newOfferTva.toLocaleString("fr-FR")}€</div>
-                  <div className="text-2xl font-black text-[#C8102E]">
+                  <div className="text-lg font-black text-[#C8102E] lg:text-2xl">
                     {newOfferTtc.toLocaleString("fr-FR")}€
                   </div>
                 </div>
@@ -1656,7 +1593,7 @@ export default function ClubTunnelPage() {
 
       {showDetailModal && selectedProspect && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1b2e] p-6">
+          <div className="max-h-[90vh] w-full max-w-[95vw] overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1b2e] p-4 lg:max-w-4xl lg:p-6">
             <div className="mb-6 flex items-start justify-between">
               <div className="flex items-center gap-4">
                 <div
@@ -1666,7 +1603,7 @@ export default function ClubTunnelPage() {
                   {getInitials(selectedProspect.nom)}
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-white">{selectedProspect.nom}</div>
+                  <div className="text-lg font-black text-white lg:text-2xl">{selectedProspect.nom}</div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     <span className="rounded-full bg-white/10 px-3 py-1 text-white/80">
                       {selectedProspect.secteur}
@@ -1679,7 +1616,7 @@ export default function ClubTunnelPage() {
               </div>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="text-2xl text-white/60 hover:text-white"
+                className="text-lg text-white/60 hover:text-white lg:text-2xl"
               >
                 ✕
               </button>

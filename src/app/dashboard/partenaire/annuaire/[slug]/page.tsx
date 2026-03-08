@@ -108,7 +108,7 @@ export default function PartenaireDetailPage() {
 
   if (!partenaire) {
     return (
-      <div className="min-h-screen bg-[#080d14] p-8 text-white">
+      <div className="min-h-screen bg-[#080d14] p-4 text-white lg:p-8">
         <Link href="/dashboard/partenaire/annuaire" className="text-sm text-white/60 hover:text-white">
           ← Annuaire partenaires
         </Link>
@@ -121,28 +121,28 @@ export default function PartenaireDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#080d14] text-white">
-      <section className="relative h-[300px] overflow-hidden" style={gradientStyle}>
+      <section className="relative h-[280px] overflow-hidden lg:h-[420px]" style={gradientStyle}>
         <div className="absolute inset-0">
           <div className="absolute -top-6 left-16 h-40 w-40 rounded-full bg-yellow-400/20 blur-3xl" />
           <div className="absolute top-20 right-20 h-48 w-48 rounded-full bg-yellow-500/20 blur-3xl" />
           <div className="absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
         </div>
-        <div className="relative mx-auto flex h-full max-w-6xl flex-col px-8 py-6">
+        <div className="relative mx-auto flex h-full max-w-6xl flex-col px-4 py-4 lg:px-8 lg:py-6">
           <Link href="/dashboard/partenaire/annuaire" className="text-sm text-white/60 hover:text-white">
             ← Annuaire partenaires
           </Link>
         </div>
-        <div className="absolute bottom-0 left-8 -translate-y-1/2">
+        <div className="static mt-4 px-4 lg:absolute lg:bottom-0 lg:left-8 lg:-translate-y-1/2 lg:px-0">
           <div className="flex min-w-[320px] items-center gap-4 rounded-2xl border border-white/20 bg-[#111827] p-5 shadow-2xl">
             {partenaire.logo ? (
               <img src={partenaire.logo} alt={partenaire.nom} className="h-16 w-16 rounded-xl object-cover" />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-yellow-500 text-2xl font-black text-white">
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-yellow-500 text-lg font-black text-white lg:text-2xl">
                 {partenaire.initiales}
               </div>
             )}
             <div>
-              <div className="text-xl font-black text-white">{partenaire.nom}</div>
+              <div className="text-lg font-black text-white lg:text-2xl">{partenaire.nom}</div>
               <div className="text-sm text-white/60">{partenaire.secteur}</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className="rounded-full bg-yellow-500/20 px-2 py-0.5 text-xs text-yellow-300">
@@ -157,7 +157,7 @@ export default function PartenaireDetailPage() {
         </div>
       </section>
 
-      <div className="mt-10 border-b border-white/10 bg-[#0d1520] px-8 py-4">
+      <div className="mt-10 border-b border-white/10 bg-[#0d1520] px-4 py-4 lg:px-8">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-white/60">
           <div className="flex flex-wrap items-center gap-2">
             <span>📍 Caen, Calvados</span>
@@ -185,7 +185,7 @@ export default function PartenaireDetailPage() {
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-6xl gap-2 px-8 py-4">
+      <div className="mx-auto flex max-w-6xl gap-2 px-4 py-4 lg:px-8">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -202,9 +202,9 @@ export default function PartenaireDetailPage() {
       </div>
 
       {activeTab === "about" && (
-        <div className="mx-auto grid max-w-6xl grid-cols-[1fr_300px] gap-8 px-8 py-8">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-4 lg:grid-cols-[1fr_300px] lg:px-8 lg:py-8">
           <div>
-            <div className="border-l-4 border-[#C8102E] pl-6 text-2xl font-light italic text-white/80">
+            <div className="border-l-4 border-[#C8102E] pl-6 text-lg font-light italic text-white/80 lg:text-2xl">
               “Être partenaire du SUDC, c'est s'ancrer dans le tissu local...”
               <div className="mt-2 text-sm text-white/50">— Henri Blanc, Directeur Commercial</div>
             </div>
@@ -218,7 +218,7 @@ export default function PartenaireDetailPage() {
               </p>
             </div>
 
-            <div className="mt-6 grid grid-cols-3 gap-4">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 { value: partenaire.creationAnnee, label: "Année de création" },
                 { value: "1 200+", label: "Clients accompagnés" },
@@ -228,19 +228,19 @@ export default function PartenaireDetailPage() {
                   key={stat.label}
                   className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-4"
                 >
-                  <div className="text-2xl font-black text-white">{stat.value}</div>
+                  <div className="text-lg font-black text-white lg:text-2xl">{stat.value}</div>
                   <div className="text-xs text-white/50">{stat.label}</div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
               {partenaire.services.map((service) => (
                 <div
                   key={service.titre}
                   className="rounded-xl border border-transparent bg-[#111827] p-4 transition-all hover:border-[#C8102E]/40"
                 >
-                  <div className="text-2xl">⚡</div>
+                  <div className="text-lg lg:text-2xl">⚡</div>
                   <div className="mt-2 font-bold text-white">{service.titre}</div>
                   <div className="mt-1 text-sm text-white/60">{service.description}</div>
                   <div className="mt-2 text-sm font-bold text-[#C8102E]">{service.prix}</div>
@@ -324,7 +324,7 @@ export default function PartenaireDetailPage() {
       )}
 
       {activeTab !== "about" && (
-        <div className="mx-auto max-w-6xl px-8 py-8 text-white/60">
+        <div className="mx-auto max-w-6xl px-4 py-4 text-white/60 lg:px-8 lg:py-8">
           Contenu à venir pour l'onglet {tabs.find((tab) => tab.id === activeTab)?.label}.
         </div>
       )}

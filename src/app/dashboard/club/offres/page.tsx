@@ -289,7 +289,7 @@ export default function ClubOffersPage() {
   return (
     <ClubLayout activeItem="Offres">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-white">Packs partenaires</h1>
+        <h1 className="text-lg font-semibold text-white lg:text-2xl">Packs partenaires</h1>
         <button
           className="rounded-full px-5 py-2 text-sm font-semibold text-white"
           style={{ backgroundColor: "var(--club-primary)" }}
@@ -299,13 +299,13 @@ export default function ClubOffersPage() {
         </button>
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {packs.map((pack, index) => (
           <div
             key={pack.nom}
             className={`rounded-2xl border ${pack.border} bg-gradient-to-br ${pack.gradient} p-6`}
           >
-            <div className="text-2xl font-black text-white">{pack.nom}</div>
+            <div className="text-lg font-black text-white lg:text-2xl">{pack.nom}</div>
             <div className="mt-1 text-xl" style={{ color: "var(--club-primary)" }}>
               {pack.prix}
             </div>
@@ -396,7 +396,7 @@ export default function ClubOffersPage() {
 
       <div className="mt-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="text-2xl font-semibold text-white">Catalogue des prestations</div>
+          <div className="text-lg font-semibold text-white lg:text-2xl">Catalogue des prestations</div>
           <div className="flex flex-wrap items-center gap-3">
             <button
               className="rounded-full bg-white/10 px-4 py-2 text-sm text-white/70"
@@ -628,7 +628,7 @@ export default function ClubOffersPage() {
                 )}
               </div>
               <div className="my-2 h-px bg-white/10" />
-              <div className="text-3xl font-black text-[#C8102E]">
+              <div className="text-xl font-black text-[#C8102E] lg:text-3xl">
                 {totalOffer.toLocaleString("fr-FR")}€
               </div>
               <div className="text-sm text-white/60">Total TTC : {totalOfferTtc.toLocaleString("fr-FR")}€</div>

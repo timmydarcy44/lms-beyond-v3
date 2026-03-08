@@ -1,5 +1,11 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { PartenaireSidebar } from "@/components/partenaire/partenaire-sidebar";
+import MobileHeader from "@/components/ui/mobile-header";
+import Drawer from "@/components/ui/drawer";
+import BottomNav from "@/components/ui/bottom-nav";
 
 type ClubInfo = {
   name: string;
@@ -20,10 +26,31 @@ type PartenaireLayoutProps = {
 };
 
 export function PartenaireLayout({ children, club, partner, activeItem }: PartenaireLayoutProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#0b1424] text-white">
-      <PartenaireSidebar club={club} partner={partner} activeItem={activeItem} />
-      <main className="ml-[220px] px-8 py-8">{children}</main>
+      <MobileHeader title="Brasserie du Port" initials="BP" onMenuOpen={() => setDrawerOpen(true)} />
+
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        <PartenaireSidebar
+          club={club}
+          partner={partner}
+          activeItem={activeItem}
+          onClose={() => setDrawerOpen(false)}
+        />
+      </Drawer>
+
+      <div className="flex">
+        <div className="sticky top-0 hidden h-screen w-[220px] flex-shrink-0 lg:block">
+          <PartenaireSidebar club={club} partner={partner} activeItem={activeItem} />
+        </div>
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 pt-14 pb-16 lg:pt-0 lg:pb-0 lg:px-8 lg:py-8">
+          {children}
+        </main>
+      </div>
+
+      <BottomNav variant="partenaire" activeColor="#C8102E" />
     </div>
   );
 }

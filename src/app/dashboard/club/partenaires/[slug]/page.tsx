@@ -31,7 +31,7 @@ export default function ClubPartnerDetailPage() {
   if (!partner) {
     return (
       <ClubLayout activeItem="Partenaires">
-        <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-white/70">
+        <div className="rounded-2xl border border-white/10 bg-[#111] p-4 text-white/70 lg:p-8">
           Partenaire introuvable.
         </div>
       </ClubLayout>
@@ -72,13 +72,13 @@ export default function ClubPartnerDetailPage() {
             <div className="rounded-2xl bg-[#1a1a1a] p-6">
               <div className="flex items-center gap-4">
                 <div
-                  className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white"
+                  className="flex h-20 w-20 items-center justify-center rounded-full text-lg font-semibold text-white lg:text-2xl"
                   style={{ backgroundColor: partner.logo_couleur }}
                 >
                   {partner.logo_initiales}
                 </div>
                 <div>
-                  <div className="text-3xl font-black text-white">{partner.nom}</div>
+                  <div className="text-xl font-black text-white lg:text-3xl">{partner.nom}</div>
                   <span
                     className="mt-2 inline-flex rounded-full px-3 py-1 text-xs"
                     style={{ backgroundColor: "color-mix(in srgb, var(--club-primary) 20%, transparent)", color: "var(--club-primary)" }}
@@ -131,7 +131,7 @@ export default function ClubPartnerDetailPage() {
           <div className="space-y-6">
           <div className="rounded-2xl bg-[#1a1a1a] p-6">
             <div className="text-sm text-white/60">Contrat</div>
-            <div className="mt-2 text-4xl font-black" style={{ color: "var(--club-primary)" }}>
+            <div className="mt-2 text-2xl font-black lg:text-4xl" style={{ color: "var(--club-primary)" }}>
               {partner.valeur.toLocaleString("fr-FR")}€
             </div>
             <div className="mt-3">

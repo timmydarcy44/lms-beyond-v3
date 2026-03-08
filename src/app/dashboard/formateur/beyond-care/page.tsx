@@ -13,7 +13,8 @@ export default async function FormateurBeyondCarePage() {
   }
 
   // Vérifier si l'utilisateur est admin dans au moins une organisation avec Beyond Care
-  const isAdmin = await isUserAdminWithFeature("beyond_care");
+  const isDemo = session?.role === "demo";
+  const isAdmin = isDemo ? true : await isUserAdminWithFeature("beyond_care");
   
   if (!isAdmin) {
     redirect("/dashboard/formateur");

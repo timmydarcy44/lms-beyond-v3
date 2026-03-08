@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import Link from "next/link";
 import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/course-builder-workspace";
 import { getCourseBuilderSnapshot } from "@/lib/queries/formateur";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
@@ -49,22 +49,23 @@ export default async function FormateurCourseStructurePage({ params }: PageProps
   // Si pas de snapshot, le composant utilisera l'état vide par défaut
 
   return (
-    <DashboardShell
-      title="Structure & modules"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/formateur" },
-        { label: "Formateur", href: "/dashboard/formateur" },
-        { label: "Formations", href: "/dashboard/formateur/formations" },
-        { label: "Configuration" },
-      ]}
-      initialCollapsed
-    >
-      <CourseBuilderWorkspace
-        initialData={snapshot || undefined}
-        previewHref={`/dashboard/formateur/formations/${courseId}/preview`}
-        courseId={courseId}
-      />
-    </DashboardShell>
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <div className="px-6 py-6">
+        <Link
+          href="/dashboard/formateur/formations"
+          className="text-sm text-white/60 hover:text-white"
+        >
+          ← Retour aux formations
+        </Link>
+      </div>
+      <div className="px-6 pb-10">
+        <CourseBuilderWorkspace
+          initialData={snapshot || undefined}
+          previewHref={`/dashboard/formateur/formations/${courseId}/preview`}
+          courseId={courseId}
+        />
+      </div>
+    </div>
   );
 }
 

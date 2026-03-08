@@ -15,6 +15,8 @@ export default async function SchoolApprenantsPage() {
     redirect("/login?next=/dashboard/ecole/apprenants");
   }
 
+  const isDemo = session.role === "demo";
+
   const { data: profileById } = await supabase
     .from("profiles")
     .select("id, role_type, school_id")
@@ -33,11 +35,11 @@ export default async function SchoolApprenantsPage() {
   const normalizedRole = String(currentProfile?.role_type ?? "").trim().toLowerCase();
   const isSchoolProfile = ["ecole", "school", "cfa", "admin_ecole", "admin_school"].includes(normalizedRole);
   const hasSchoolScope = Boolean(currentProfile?.school_id);
-  if (!currentProfile || (!isSchoolProfile && !hasSchoolScope)) {
+  if (!isDemo && (!currentProfile || (!isSchoolProfile && !hasSchoolScope))) {
     redirect("/dashboard/apprenant");
   }
 
-  const schoolId = currentProfile.school_id;
+  const schoolId = currentProfile?.school_id ?? null;
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] px-4 py-8 text-[#1D1D1F] md:px-8 md:py-10">

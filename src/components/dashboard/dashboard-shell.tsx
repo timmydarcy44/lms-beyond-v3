@@ -221,6 +221,7 @@ export const DashboardShell = ({
         style={{
           marginLeft: sidebarWidth,
           backgroundColor: isBeyondCareArea ? "#ffffff" : useDarkBackground ? "transparent" : undefined,
+          ["--sidebar-width" as string]: sidebarWidth,
         }}
       >
         {useSidebar ? (

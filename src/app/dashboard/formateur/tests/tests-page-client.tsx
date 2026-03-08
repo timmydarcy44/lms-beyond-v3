@@ -10,7 +10,6 @@ import { BookOpen, MessageSquare } from "lucide-react";
 import { TestCourseAssignmentModal } from "@/components/formateur/tests/test-course-assignment-modal";
 import { TestResultMessagesModal } from "@/components/formateur/tests/test-result-messages-modal";
 
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,14 +83,7 @@ export function TestsPageClient({ initialTests }: TestsPageClientProps) {
   };
 
   return (
-    <DashboardShell
-      title="Tests formateur"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/formateur" },
-        { label: "Formateur", href: "/dashboard/formateur" },
-        { label: "Tests" },
-      ]}
-    >
+    <div className="space-y-10">
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-white md:text-3xl">Mes évaluations</h1>
@@ -378,7 +370,7 @@ export function TestsPageClient({ initialTests }: TestsPageClientProps) {
           />
         </>
       )}
-    </DashboardShell>
+    </div>
   );
 }
 

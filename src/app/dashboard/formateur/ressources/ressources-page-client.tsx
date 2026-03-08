@@ -7,7 +7,6 @@ import { fr } from "date-fns/locale";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,14 +89,7 @@ export function RessourcesPageClient({ initialResources }: RessourcesPageClientP
   };
 
   return (
-    <DashboardShell
-      title="Ressources formateur"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/formateur" },
-        { label: "Formateur", href: "/dashboard/formateur" },
-        { label: "Ressources" },
-      ]}
-    >
+    <div className="space-y-10">
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-white md:text-3xl">Bibliothèque propriétaire</h1>
@@ -206,7 +198,7 @@ export function RessourcesPageClient({ initialResources }: RessourcesPageClientP
           </CardContent>
         </Card>
       ) : null}
-    </DashboardShell>
+    </div>
   );
 }
 

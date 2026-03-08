@@ -29,30 +29,45 @@ export default async function SchoolDashboardPage() {
     redirect("/login?next=/dashboard/ecole");
   }
 
-  const { data: profileById } = await supabase
+  const { data: fullProfile } = await supabase
     .from("profiles")
-    .select("id, role_type, school_id")
+    .select("id, role, role_type, school_id")
     .eq("id", session.id)
     .maybeSingle();
-  let currentProfile = profileById;
-  if (!currentProfile && session.email) {
-    const { data: profileByEmail } = await supabase
-      .from("profiles")
-      .select("id, role_type, school_id")
-      .eq("email", session.email)
-      .maybeSingle();
-    currentProfile = profileByEmail ?? null;
-  }
 
-  const normalizedRole = String(currentProfile?.role_type ?? "").trim().toLowerCase();
-  const isSchoolProfile = ["ecole", "school", "cfa", "admin_ecole", "admin_school"].includes(normalizedRole);
-  const hasSchoolScope = Boolean(currentProfile?.school_id);
-  if (!currentProfile || (!isSchoolProfile && !hasSchoolScope)) {
+  const role = String(fullProfile?.role ?? "").trim().toLowerCase();
+  const roleType = String(fullProfile?.role_type ?? "").trim().toLowerCase();
+  const isDemo = session.role === "demo";
+  const isSchoolProfile =
+    role === "ecole" ||
+    role === "admin" ||
+    role === "demo" ||
+    ["ecole", "school", "cfa", "admin_ecole", "admin_school"].includes(roleType);
+  const hasSchoolScope = Boolean(fullProfile?.school_id);
+
+  if (!isDemo && (!fullProfile || (!isSchoolProfile && !hasSchoolScope))) {
     redirect("/dashboard/apprenant");
   }
 
-  const schoolId = currentProfile.school_id;
+  const schoolId = fullProfile?.school_id ?? null;
   console.log("School ID détecté:", schoolId);
+
+  if (!schoolId) {
+    return (
+      <SchoolDashboard
+        apprenants={[]}
+        entreprises={[]}
+        effectifTotal={0}
+        alternancesSignees={0}
+        apprenantsEnRecherche={0}
+        offersCount={0}
+        latestOffers={[]}
+        latestConnected={[]}
+        recentActivities={[]}
+        fullName={session.fullName || session.email || "Utilisateur"}
+      />
+    );
+  }
 
   const { data: apprenantsRows, error: apprenantsError } = await supabase
     .from("school_students")

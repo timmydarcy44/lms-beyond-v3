@@ -51,6 +51,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ destination: "/dashboard" });
   }
 
+  if (effectiveRole === "demo") {
+    return NextResponse.json({ destination: "/dashboard" });
+  }
+
+  if (effectiveRole === "ecole") {
+    return NextResponse.json({ destination: "/dashboard/ecole" });
+  }
+
+  if (effectiveRole === "club") {
+    return NextResponse.json({ destination: "/dashboard/club" });
+  }
+
+  if (effectiveRole === "partenaire") {
+    return NextResponse.json({ destination: "/dashboard/partenaire" });
+  }
+
   if (effectiveRole === "tuteur") {
     return NextResponse.json({ destination: "/dashboard/tuteur" });
   }

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getOrganizationFullDetails, getOrganizationActivity } from "@/lib/queries/super-admin";
+import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,6 +21,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { OrganizationActions } from "@/components/super-admin/organization-actions";
+import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
+import { OrganizationMembersPanel } from "@/components/super-admin/organization-members-panel";
 import { QuickActionsPanel } from "@/components/super-admin/quick-actions-panel";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -33,9 +36,18 @@ export default async function OrganizationDetailsPage({
   
   console.log("[super-admin] Fetching organization details for orgId:", orgId);
   
-  const [orgDetails, activities] = await Promise.all([
+  const [orgDetails, activities, features] = await Promise.all([
     getOrganizationFullDetails(orgId),
     getOrganizationActivity(orgId),
+    (async () => {
+      const client = await getServiceRoleClientOrFallback();
+      if (!client) return [];
+      const { data } = await client
+        .from("organization_features")
+        .select("feature_key, is_enabled")
+        .eq("org_id", orgId);
+      return data ?? [];
+    })(),
   ]);
 
   console.log("[super-admin] Organization details result:", orgDetails ? "Found" : "Not found");
@@ -157,6 +169,19 @@ export default async function OrganizationDetailsPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Produits Beyond */}
+      <Card className="border-gray-200 bg-white shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Produits Beyond
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OrganizationFeaturesPanel orgId={orgId} initialFeatures={features} />
+        </CardContent>
+      </Card>
 
       {/* Contenus */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -326,26 +351,7 @@ export default async function OrganizationDetailsPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {instructors.slice(0, 10).map((instructor) => (
-                  <Link
-                    key={instructor.id}
-                    href={`/super/utilisateurs/${instructor.id}`}
-                    className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 hover:shadow-sm transition"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{instructor.fullName || instructor.email}</p>
-                      <p className="text-sm text-gray-600">{instructor.email}</p>
-                    </div>
-                    <span className="text-xs text-gray-400">→</span>
-                  </Link>
-                ))}
-                {instructors.length > 10 && (
-                  <p className="text-sm text-gray-600 text-center pt-2">
-                    +{instructors.length - 10} autres formateurs
-                  </p>
-                )}
-              </div>
+              <OrganizationMembersPanel orgId={orgId} title="Formateurs" members={instructors} />
             </CardContent>
           </Card>
         )}
@@ -360,26 +366,7 @@ export default async function OrganizationDetailsPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {learners.slice(0, 10).map((learner) => (
-                  <Link
-                    key={learner.id}
-                    href={`/super/utilisateurs/${learner.id}`}
-                    className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 hover:shadow-sm transition"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{learner.fullName || learner.email}</p>
-                      <p className="text-sm text-gray-600">{learner.email}</p>
-                    </div>
-                    <span className="text-xs text-gray-400">→</span>
-                  </Link>
-                ))}
-                {learners.length > 10 && (
-                  <p className="text-sm text-gray-600 text-center pt-2">
-                    +{learners.length - 10} autres apprenants
-                  </p>
-                )}
-              </div>
+              <OrganizationMembersPanel orgId={orgId} title="Apprenants" members={learners} />
             </CardContent>
           </Card>
         )}
@@ -394,21 +381,7 @@ export default async function OrganizationDetailsPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {tutors.map((tutor) => (
-                  <Link
-                    key={tutor.id}
-                    href={`/super/utilisateurs/${tutor.id}`}
-                    className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 hover:shadow-sm transition"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{tutor.fullName || tutor.email}</p>
-                      <p className="text-sm text-gray-600">{tutor.email}</p>
-                    </div>
-                    <span className="text-xs text-gray-400">→</span>
-                  </Link>
-                ))}
-              </div>
+              <OrganizationMembersPanel orgId={orgId} title="Tuteurs" members={tutors} maxVisible={10} />
             </CardContent>
           </Card>
         )}

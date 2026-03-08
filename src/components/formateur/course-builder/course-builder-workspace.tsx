@@ -27,6 +27,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
   const reset = useCourseBuilder((state) => state.reset);
   const hydrate = useCourseBuilder((state) => state.hydrateFromSnapshot);
   const getSnapshot = useCourseBuilder((state) => state.getSnapshot);
+  const snapshot = useCourseBuilder((state) => state.snapshot);
   const [isPending, startTransition] = useTransition();
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -149,14 +150,25 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
     }
   };
 
+  const sectionCount = snapshot.sections.length;
+  const chapterCount = snapshot.sections.reduce((sum, section) => sum + section.chapters.length, 0);
+  const subchapterCount = snapshot.sections.reduce(
+    (sum, section) =>
+      sum + section.chapters.reduce((inner, chapter) => inner + chapter.subchapters.length, 0),
+    0,
+  );
+  const totalDuration = String(snapshot.general.duration || "").trim();
+
   return (
-    <div className="formateur-theme space-y-8 pb-12">
-      <Card className="border border-slate-200 bg-slate-50/70 shadow-sm">
-        <CardContent className="flex flex-wrap items-center justify-between gap-6 px-6 py-6">
+    <div className="space-y-8 bg-[#0a0a0a] pb-12 text-white">
+      <Card className="border border-white/10 bg-[#0a0a0a] shadow-none">
+        <CardContent className="flex flex-wrap items-center justify-between gap-6 border-b border-white/10 px-6 py-6">
           <div className="max-w-xl space-y-2">
-            <p className="text-xs font-medium uppercase tracking-[0.32em] text-slate-500">Structure & contenus</p>
-            <h2 className="text-lg font-semibold text-slate-900">Organisez votre parcours avec clarté</h2>
-            <p className="text-sm leading-relaxed text-slate-600">
+            <p className="text-xs font-medium uppercase tracking-[0.32em] text-white/60">
+              Structure & contenus
+            </p>
+            <h2 className="text-lg font-semibold text-white">Organisez votre parcours avec clarté</h2>
+            <p className="text-sm leading-relaxed text-white/60">
               Composez des sections, chapitres et sous-chapitres cohérents. Chaque bloc reste synchronisé avec vos ressources tant que l&apos;onglet est ouvert.
             </p>
           </div>
@@ -169,7 +181,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
                   reset();
                 })
               }
-              className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              className="rounded-lg border border-white/10 bg-transparent px-3.5 py-2 text-sm font-medium text-red-400 hover:bg-white/5"
             >
               Réinitialiser
             </Button>
@@ -177,7 +189,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
               asChild
               variant="ghost"
               disabled={isSaving || isPublishing}
-              className="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              className="rounded-lg px-3.5 py-2 text-sm font-medium text-white/60 hover:bg-white/5 hover:text-white"
             >
               <Link
                 href={
@@ -185,7 +197,9 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
                     ? "/super/studio/modules/new/metadata"
                     : pathname?.includes("/super/studio/formations")
                     ? "/super/studio/formations/new/metadata"
-                    : "/dashboard/formateur/formations/new"
+                    : savedCourseId || courseId
+                    ? `/dashboard/formateur/formations/${savedCourseId || courseId}/metadata`
+                    : "/dashboard/formateur/formations"
                 }
               >
                 Retour aux informations
@@ -194,7 +208,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
             <Button
               onClick={() => handleSave("draft")}
               disabled={isSaving || isPublishing}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
+              className="rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-60"
             >
               {isSaving ? (
                 <>
@@ -208,7 +222,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
             <Button
               onClick={() => handleSave("published")}
               disabled={isSaving || isPublishing}
-              className="rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-indigo-600 disabled:opacity-60"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
             >
               {isPublishing ? (
                 <>
@@ -223,18 +237,67 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId }: C
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
-        {isMounted && isHydrated ? (
-          <>
-            <CourseStructureBuilder previewHref={previewHref} courseId={savedCourseId || courseId || undefined} />
-            <CourseResourcesManager />
-          </>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
-            <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-            <p className="mt-4 text-sm">Chargement de l&apos;éditeur...</p>
+      <div className="grid grid-cols-[1fr_380px] gap-6">
+        <div className="space-y-6">
+          {isMounted && isHydrated ? (
+            <>
+              <CourseStructureBuilder previewHref={previewHref} courseId={savedCourseId || courseId || undefined} />
+              <CourseResourcesManager courseId={savedCourseId || courseId || undefined} />
+            </>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-[#1a1a1a] p-8 text-center text-white/60">
+              <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+              <p className="mt-4 text-sm">Chargement de l&apos;éditeur...</p>
+            </div>
+          )}
+        </div>
+
+        <div className="sticky top-4 h-fit">
+          <div className="rounded-2xl border border-white/10 bg-[#111] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+              Aperçu apprenant
+            </p>
+            <div className="mt-4 space-y-3 text-sm text-white/80">
+              <div>
+                <p className="text-white">{snapshot.general.title || "Formation sans titre"}</p>
+                <p className="text-xs text-white/50">{snapshot.general.subtitle || "Sans sous-titre"}</p>
+              </div>
+              <div className="grid gap-2 text-xs text-white/60">
+                <div>Sections : {sectionCount}</div>
+                <div>Chapitres : {chapterCount}</div>
+                <div>Sous-chapitres : {subchapterCount}</div>
+                <div>Durée totale : {totalDuration || "—"}</div>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {snapshot.sections.length === 0 ? (
+                <p className="text-xs text-white/40">Aucune section pour le moment.</p>
+              ) : (
+                snapshot.sections.map((section) => (
+                  <details key={section.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <summary className="cursor-pointer text-xs font-semibold text-white/80">
+                      {section.title || "Section"}
+                    </summary>
+                    <div className="mt-2 space-y-1 text-xs text-white/60">
+                      {section.chapters.map((chapter) => (
+                        <div key={chapter.id}>
+                          <p className="text-white/70">{chapter.title || "Chapitre"}</p>
+                          {chapter.subchapters.length > 0 ? (
+                            <ul className="mt-1 space-y-1 pl-3 text-white/50">
+                              {chapter.subchapters.map((sub) => (
+                                <li key={sub.id}>{sub.title || "Sous-chapitre"}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ))
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -176,12 +176,12 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
   }, [selection, sections]);
 
   return (
-    <Card id="course-builder-modules" className="border border-slate-200 bg-white/95 text-black shadow-sm">
-      <CardHeader className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+    <Card id="course-builder-modules" className="border border-white/10 bg-[#0a0a0a] text-white shadow-none">
+      <CardHeader className="flex flex-col gap-6 border-b border-white/10 xl:flex-row xl:items-center xl:justify-between">
         <div className="space-y-4">
           <div>
-            <CardTitle className="text-xl font-semibold text-slate-900">Structure, chapitres & contenus</CardTitle>
-            <p className="text-sm leading-relaxed text-slate-600">
+            <CardTitle className="text-xl font-semibold text-white">Structure, chapitres & contenus</CardTitle>
+            <p className="text-sm leading-relaxed text-white/60">
               Construisez une progression claire : chaque section introduit un chapitre, chaque chapitre peut se décliner en sous-chapitres pour rythmer l’apprentissage.
             </p>
           </div>
@@ -190,7 +190,7 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
             <Button
               variant="outline"
               onClick={addSection}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-100 bg-indigo-50 px-3.5 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white hover:bg-white/20"
             >
               <Plus className="h-3.5 w-3.5" /> Nouvelle section
             </Button>
@@ -203,7 +203,7 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
                       addChapter(sections[0].id);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-100 bg-indigo-50 px-3.5 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white hover:bg-white/20"
                 >
                   <Plus className="h-3.5 w-3.5" /> Nouveau chapitre
                 </Button>
@@ -214,7 +214,7 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
                       addSubchapter(sections[0].id, sections[0].chapters[0].id);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-indigo-500/20 px-3.5 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/30"
                 >
                   <Plus className="h-3.5 w-3.5" /> Nouveau sous-chapitre
                 </Button>
@@ -226,13 +226,13 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
           <Button
             asChild
             variant="outline"
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20"
           >
             <Link href={previewLink}>Prévisualiser</Link>
           </Button>
           <Button
             onClick={addSection}
-            className="rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-indigo-600"
+            className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
           >
             <Plus className="mr-2 h-4 w-4" /> Ajouter une section
           </Button>
@@ -248,7 +248,7 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
                     <SectionCard key={section.id} section={section} selection={selection} />
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-500">
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-[#1a1a1a] px-6 py-10 text-center text-sm text-white/60">
                     Commencez par ajouter une section pour structurer votre formation.
                   </div>
                 )}
@@ -262,14 +262,14 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
         open={Boolean(expandedSelection) && isEditorOpen}
         onOpenChange={(open) => (open ? setIsEditorOpen(true) : handleCloseEditor())}
       >
-        <DialogContent className="w-full max-w-[1400px] sm:max-w-[92vw] md:max-w-[90vw] xl:max-w-[1400px] border border-slate-200 bg-white p-0 shadow-2xl">
-          <DialogHeader className="flex flex-row items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+        <DialogContent className="w-full max-w-[1400px] sm:max-w-[92vw] md:max-w-[90vw] xl:max-w-[1400px] border border-white/10 bg-[#0a0a0a] p-0 shadow-2xl">
+          <DialogHeader className="flex flex-row items-start justify-between gap-4 border-b border-white/10 px-6 py-4">
             <div>
-              <DialogTitle className="text-base font-semibold text-slate-900">
+              <DialogTitle className="text-base font-semibold text-white">
                 {modalContext.title}
               </DialogTitle>
               {modalContext.subtitle ? (
-                <DialogDescription className="text-sm text-slate-500">
+                <DialogDescription className="text-sm text-white/60">
                   {modalContext.subtitle}
                 </DialogDescription>
               ) : null}
@@ -278,7 +278,7 @@ export function CourseStructureBuilder({ previewHref, courseId }: { previewHref?
               type="button"
               variant="ghost"
               onClick={handleCloseEditor}
-              className="h-9 w-9 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100"
+              className="h-9 w-9 rounded-full border border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -324,42 +324,42 @@ function SectionCard({ section, selection }: { section: CourseBuilderSection; se
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-3xl border border-slate-200 bg-white/95 p-6 text-black shadow-sm transition hover:border-slate-300"
+      className="rounded-3xl border border-white/10 bg-[#1a1a1a] p-6 text-white shadow-none transition"
     >
       <div className="flex items-start gap-4">
         <button
           type="button"
           {...listeners}
           {...attributes}
-          className="mt-2 rounded-full border border-slate-200 bg-white p-2 text-slate-400 transition hover:text-slate-600"
+          className="mt-2 rounded-full border border-white/10 bg-white/5 p-2 text-white/60 transition hover:text-white"
           aria-label="Réordonner la section"
         >
           <GripVertical className="h-4 w-4" />
         </button>
         <div className="flex-1 space-y-4">
-          <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
-            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] uppercase tracking-[0.25em]">
+          <div className="flex items-center gap-3 text-xs font-medium text-white/60">
+            <span className="inline-flex items-center rounded-full bg-blue-500/20 px-2.5 py-1 text-[11px] uppercase tracking-[0.25em] text-blue-300">
               Section
             </span>
-            <span className="h-[1px] flex-1 rounded bg-slate-200" />
+            <span className="h-[1px] flex-1 rounded bg-white/10" />
           </div>
           <Input
             value={section.title}
             onChange={(event) => updateSection(section.id, { title: event.target.value })}
-            className="border-slate-200 bg-white text-base font-medium text-slate-900 placeholder:text-slate-400"
+            className="rounded-xl border border-white/10 bg-white/5 text-base font-medium text-white placeholder:text-white/30"
             placeholder="Titre de la section"
           />
           <Textarea
             value={section.description ?? ""}
             onChange={(event) => updateSection(section.id, { description: event.target.value })}
             placeholder="Décrivez la promesse ou la logique de cette section"
-            className="min-h-[90px] resize-none border-slate-200 bg-white text-sm leading-relaxed text-slate-600 placeholder:text-slate-400"
+            className="min-h-[90px] resize-none rounded-xl border border-white/10 bg-white/5 text-sm leading-relaxed text-white/70 placeholder:text-white/30"
           />
           <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               onClick={() => addChapter(section.id)}
-              className="rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-indigo-600"
+              className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
             >
               <Plus className="mr-2 h-4 w-4" /> Ajouter un chapitre
             </Button>
@@ -367,7 +367,7 @@ function SectionCard({ section, selection }: { section: CourseBuilderSection; se
               type="button"
               variant="outline"
               onClick={() => removeSection(section.id)}
-              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-white/5"
             >
               <Trash2 className="mr-2 h-4 w-4" /> Supprimer la section
             </Button>
@@ -387,7 +387,7 @@ function SectionCard({ section, selection }: { section: CourseBuilderSection; se
                 <ChapterCard key={chapter.id} sectionId={section.id} chapter={chapter} selection={selection} />
               ))
             ) : (
-              <p className="rounded-2xl border border-dashed border-slate-200 bg-transparent px-4 py-3 text-sm text-slate-500">
+              <p className="rounded-2xl border border-dashed border-white/10 bg-[#1a1a1a] px-4 py-3 text-sm text-white/60">
                 Ajoutez un chapitre pour démarrer la séquence de cette section.
               </p>
             )}
@@ -442,8 +442,8 @@ function ChapterCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "rounded-2xl border border-slate-200 border-l-4 border-l-slate-200 bg-transparent p-5 transition",
-        (isChapterSelected || isWithinSelection) && "border-slate-300 border-l-indigo-500 bg-white/80 shadow-sm",
+        "rounded-2xl border border-white/10 border-l-4 border-l-white/10 bg-[#1a1a1a] p-5 transition",
+        (isChapterSelected || isWithinSelection) && "border-white/20 border-l-purple-400 bg-[#1f1f1f]",
       )}
       onClick={() => selectChapter(sectionId, chapter.id)}
     >
@@ -452,28 +452,28 @@ function ChapterCard({
           type="button"
           {...listeners}
           {...attributes}
-          className="mt-1.5 rounded-full border border-slate-200 bg-white p-1.5 text-slate-400 transition hover:text-slate-600"
+          className="mt-1.5 rounded-full border border-white/10 bg-white/5 p-1.5 text-white/60 transition hover:text-white"
           aria-label="Réordonner le chapitre"
           onClick={(event) => event.stopPropagation()}
         >
           <GripVertical className="h-3.5 w-3.5" />
         </button>
         <div className="flex-1 space-y-4">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+            <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-2 py-1 text-purple-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-purple-300" />
               Chapitre
             </span>
           </div>
           <div
             className={cn(
-              "rounded-xl border border-slate-200 bg-white px-4 py-4 transition",
-              (isChapterSelected || isWithinSelection) && "border-indigo-400 shadow-sm",
+              "rounded-xl border border-white/10 bg-[#1a1a1a] px-4 py-4 transition",
+              (isChapterSelected || isWithinSelection) && "border-purple-400",
             )}
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex flex-1 items-start gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-700">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-semibold uppercase text-white/70">
                   C
                 </span>
                 <div className="flex-1 space-y-2">
@@ -486,18 +486,18 @@ function ChapterCard({
                     }}
                     onClick={(event) => event.stopPropagation()}
                     placeholder="Titre du chapitre"
-                    className="border-slate-200 bg-white text-sm font-medium text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500"
+                    className="rounded-xl border border-white/10 bg-white/5 text-sm font-medium text-white placeholder:text-white/30 focus-visible:ring-white/20"
                   />
-                  <p className="text-sm leading-relaxed text-slate-600">
+                  <p className="text-sm leading-relaxed text-white/60">
                     {chapter.summary || "Décrivez la valeur de ce chapitre."}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <span className="rounded-md border border-indigo-100 bg-indigo-50 px-3 py-1 font-medium text-indigo-700">
+              <div className="flex items-center gap-2 text-xs text-white/60">
+                <span className="rounded-md border border-white/10 bg-white/5 px-3 py-1 font-medium text-white/70">
                   {chapter.duration || "Durée ?"}
                 </span>
-                <span className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-600">
+                <span className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-3 py-1 font-medium text-white/60">
                   <typeMeta.icon className="h-3.5 w-3.5" />
                   {typeMeta.label}
                 </span>
@@ -512,7 +512,7 @@ function ChapterCard({
                 event.stopPropagation();
                 handleAddSubchapter();
               }}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+              className="rounded-full bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-300"
             >
               <Plus className="mr-2 h-4 w-4" /> Ajouter un sous-chapitre
             </Button>
@@ -523,7 +523,7 @@ function ChapterCard({
                 event.stopPropagation();
                 removeChapter(sectionId, chapter.id);
               }}
-              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-white/5"
             >
               <Trash2 className="mr-2 h-4 w-4" /> Retirer le chapitre
             </Button>
@@ -551,7 +551,7 @@ function ChapterCard({
                 />
               ))
             ) : (
-              <p className="rounded-2xl border border-dashed border-slate-200 bg-transparent px-4 py-3 text-xs text-slate-500">
+              <p className="rounded-2xl border border-dashed border-white/10 bg-[#1a1a1a] px-4 py-3 text-xs text-white/60">
                 Ajoutez un sous-chapitre pour détailler la progression (obligatoire si le chapitre comporte plusieurs temps forts).
               </p>
             )}
@@ -606,8 +606,8 @@ function SubchapterRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-start gap-3 rounded-2xl border border-indigo-100 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition",
-        isSelected && "border-indigo-500 bg-indigo-50 shadow-md",
+        "flex items-start gap-3 rounded-2xl border border-white/10 bg-[#222222] px-4 py-3 text-sm text-white shadow-none transition",
+        isSelected && "border-white/20 bg-[#262626]",
       )}
       onClick={(event) => {
         event.stopPropagation();
@@ -618,7 +618,7 @@ function SubchapterRow({
         type="button"
         {...listeners}
         {...attributes}
-        className="mt-1 rounded-full border border-slate-200 bg-white p-1 text-slate-400 transition hover:text-slate-600"
+        className="mt-1 rounded-full border border-white/10 bg-white/5 p-1 text-white/60 transition hover:text-white"
         aria-label="Réordonner le sous-chapitre"
         onClick={(event) => event.stopPropagation()}
       >
@@ -627,7 +627,7 @@ function SubchapterRow({
       <div className="flex flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-indigo-100 bg-indigo-50 text-[10px] font-semibold uppercase text-indigo-700">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[10px] font-semibold uppercase text-white/60">
               Sub
             </span>
             <Input
@@ -639,20 +639,20 @@ function SubchapterRow({
               }}
               onClick={(event) => event.stopPropagation()}
               placeholder="Titre du sous-chapitre"
-              className="border-slate-200 bg-white text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500"
+              className="rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white placeholder:text-white/30 focus-visible:ring-white/20"
             />
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-600">
-            <span className="rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1 font-medium text-indigo-700">
+          <div className="flex items-center gap-2 text-xs text-white/60">
+            <span className="rounded-md border border-white/10 bg-white/10 px-2.5 py-1 font-medium text-white/70">
               {subchapter.duration || ""}
             </span>
-            <span className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-600">
+            <span className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 font-medium text-white/60">
               <typeMeta.icon className="h-3 w-3" />
               {typeMeta.label}
             </span>
           </div>
         </div>
-        <p className="text-xs leading-relaxed text-slate-600">
+        <p className="text-xs leading-relaxed text-white/60">
           {subchapter.summary || "Définissez la promesse et les livrables."}
         </p>
       </div>
@@ -662,7 +662,7 @@ function SubchapterRow({
           event.stopPropagation();
           onRemove();
         }}
-        className="mt-1 rounded-full border border-red-200 p-1.5 text-red-500 transition hover:bg-red-50 hover:text-red-600"
+        className="mt-1 rounded-full border border-white/10 p-1.5 text-red-400 transition hover:text-red-300 hover:bg-white/5"
         aria-label="Supprimer le sous-chapitre"
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -702,7 +702,7 @@ function EditorPanel({
   }, [sections, selection]);
 
   let content: ReactNode = (
-    <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+    <div className="rounded-3xl border border-dashed border-white/10 bg-[#1a1a1a] p-6 text-center text-sm text-white/60">
       Sélectionnez un élément de la structure pour l'éditer.
     </div>
   );
@@ -835,14 +835,14 @@ function EditorPanel({
           value={nodes.chapter.title}
           onChange={(event) => updateChapter(selection.sectionId, selection.chapterId, { title: event.target.value })}
           placeholder="Titre du chapitre"
-          className="border-slate-200 bg-white text-sm text-black placeholder:text-slate-400"
+          className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
         />
         <div className="grid gap-3 md:grid-cols-[160px_1fr]">
           <Input
             value={nodes.chapter.duration}
             onChange={(event) => updateChapter(selection.sectionId, selection.chapterId, { duration: event.target.value })}
             placeholder="Durée / format"
-            className="border-slate-200 bg-white text-sm text-black placeholder:text-slate-400"
+            className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
           />
           <ContentTypeSelect
             value={nodes.chapter.type}
@@ -853,7 +853,7 @@ function EditorPanel({
           value={nodes.chapter.summary ?? ""}
           onChange={(event) => updateChapter(selection.sectionId, selection.chapterId, { summary: event.target.value })}
           placeholder="Résumé pédagogique, bénéfices et livrables du chapitre."
-          className="min-h-[120px] resize-none border-slate-200 bg-white text-sm text-black placeholder:text-slate-400"
+          className="min-h-[120px] resize-none rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
         />
         
         {/* Éditeur selon le type de contenu */}
@@ -887,7 +887,7 @@ function EditorPanel({
           <Button
             type="button"
             onClick={() => setShowSubchapterModal(true)}
-            className="inline-flex items-center gap-2 rounded-full border border-black bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-black hover:bg-black hover:text-white"
+            className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white hover:bg-white/20"
           >
             Créer le sous-chapitre avec Beyond AI
           </Button>
@@ -909,7 +909,7 @@ function EditorPanel({
             })
           }
           placeholder="Titre du sous-chapitre"
-          className="border-slate-200 bg-white text-sm text-black placeholder:text-slate-400"
+          className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
         />
         <div className="grid gap-3 md:grid-cols-[160px_1fr]">
           <Input
@@ -920,7 +920,7 @@ function EditorPanel({
               })
             }
             placeholder="Durée / format"
-            className="border-slate-200 bg-white text-sm text-black placeholder:text-slate-400"
+            className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
           />
           <ContentTypeSelect
             value={nodes.subchapter.type}
@@ -937,7 +937,7 @@ function EditorPanel({
             })
           }
           placeholder="Résumé synthétique, livrables, points clés."
-          className="min-h-[120px] resize-none border-slate-200 bg-white text-sm text-black placeholder:text-slate-400"
+          className="min-h-[120px] resize-none rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
         />
         
         {/* Éditeur selon le type de contenu */}
@@ -984,14 +984,14 @@ function EditorLayout({
   summaryPlaceholder: string;
 }) {
   return (
-    <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="space-y-4 rounded-3xl border border-white/10 bg-[#1a1a1a] p-6 shadow-none">
       <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.35em] text-slate-500">{title}</p>
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
-          <span className="h-2 w-2 rounded-full bg-black" />
-          <span className="text-[10px] uppercase tracking-[0.3em] text-slate-600">{badge}</span>
+        <p className="text-xs uppercase tracking-[0.35em] text-white/60">{title}</p>
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+          <span className="h-2 w-2 rounded-full bg-white/60" />
+          <span className="text-[10px] uppercase tracking-[0.3em] text-white/60">{badge}</span>
         </div>
-        <p className="text-xs text-slate-500">{summaryPlaceholder}</p>
+        <p className="text-xs text-white/60">{summaryPlaceholder}</p>
       </header>
       <div className="space-y-3">{children}</div>
     </div>
@@ -1002,7 +1002,7 @@ function ContentTypeSelect({ value, onChange }: { value: BuilderContentType; onC
   const Selected = CONTENT_TYPE_MAP[value]?.icon;
   return (
     <Select value={value} onValueChange={(val) => onChange(val as BuilderContentType)}>
-      <SelectTrigger className="border-slate-200 bg-white text-sm text-black">
+      <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-sm text-white">
         <SelectValue>
           <div className="flex items-center gap-2">
             {Selected ? <Selected className="h-4 w-4" /> : null}
@@ -1010,9 +1010,9 @@ function ContentTypeSelect({ value, onChange }: { value: BuilderContentType; onC
           </div>
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="border border-slate-200 bg-white text-black">
+      <SelectContent className="border border-white/10 bg-[#1a1a1a] text-white">
         {CONTENT_TYPE_OPTIONS.map((option) => (
-          <SelectItem key={option.value} value={option.value} className="text-black">
+          <SelectItem key={option.value} value={option.value} className="text-white">
             <span className="flex items-center gap-2">
               <option.icon className="h-4 w-4" />
               {option.label}

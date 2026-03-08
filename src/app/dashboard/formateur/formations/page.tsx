@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { FormateurSidebar } from "@/components/formateur/formateur-sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,15 +24,10 @@ export default async function FormateurFormationsPage() {
   const publishedCount = formateurCourses.filter((course) => course.status === "published").length;
   const draftCount = formateurCourses.filter((course) => course.status === "draft").length;
   return (
-    <DashboardShell
-      title="Formations formateur"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/formateur" },
-        { label: "Formateur", href: "/dashboard/formateur" },
-        { label: "Formations" },
-      ]}
-    >
-      <div className="space-y-20 pt-4">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <FormateurSidebar activeItem="Formations" />
+      <main className="ml-[236px] px-10 py-10">
+        <div className="space-y-20 pt-4">
         <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/85 via-slate-900/65 to-slate-950/85 px-6 py-12 md:px-12">
         <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full bg-cyan-400/12 blur-[150px]" aria-hidden="true" />
         <div className="pointer-events-none absolute right-[-14rem] bottom-0 h-96 w-96 rounded-full bg-blue-500/8 blur-[160px]" aria-hidden="true" />
@@ -107,8 +102,9 @@ export default async function FormateurFormationsPage() {
         ) : (
           <FormationsCardsClient courses={formateurCourses} statusConfig={statusConfig} />
         )}
-      </div>
-    </DashboardShell>
+        </div>
+      </main>
+    </div>
   );
 }
 

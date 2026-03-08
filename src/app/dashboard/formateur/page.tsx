@@ -1,255 +1,196 @@
-import { Clock } from "lucide-react";
+"use client";
 
-import { DashboardShellWrapper } from "@/components/dashboard/dashboard-shell-wrapper";
-import { TasksBanner } from "@/components/dashboard/tasks-banner";
-import { SectionSlider } from "@/components/dashboard/section-slider";
-import { QuickCreateSlider } from "@/components/admin/QuickCreateSlider";
-import { KPIGrid, type KpiCard } from "@/components/admin/KPIGrid";
-import { getFormateurDashboardData } from "@/lib/queries/formateur";
-import { getSession } from "@/lib/auth/session";
+import { FormateurSidebar } from "@/components/formateur/formateur-sidebar";
 
-const formatRelativeTime = (dateString: string | null | undefined): string => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  const diffMs = Date.now() - date.getTime();
-  const minutes = Math.round(diffMs / 60000);
-  if (minutes < 1) return "À l'instant";
-  if (minutes < 60) return `Il y a ${minutes} min`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `Il y a ${hours} h`;
-  const days = Math.round(hours / 24);
-  if (days < 7) return `Il y a ${days} j`;
-  return new Intl.DateTimeFormat("fr-FR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-};
+const formations = [
+  {
+    id: "1",
+    titre: "Management & Leadership",
+    apprenants: 34,
+    completion: 78,
+    statut: "En cours",
+    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "2",
+    titre: "Vente & Négociation",
+    apprenants: 28,
+    completion: 65,
+    statut: "En cours",
+    image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "3",
+    titre: "Communication Pro",
+    apprenants: 19,
+    completion: 82,
+    statut: "En cours",
+    image: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "4",
+    titre: "Excel & Data",
+    apprenants: 43,
+    completion: 91,
+    statut: "En cours",
+    image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=900&q=80",
+  },
+];
 
-export default async function FormateurDashboardPage() {
-  const data = await getFormateurDashboardData();
-  const session = await getSession();
+const carousels = [
+  {
+    title: "Parcours recommandés",
+    items: [
+      {
+        title: "Management Hybride",
+        subtitle: "4 étapes · 12 semaines",
+        image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        title: "Onboarding Vendeur",
+        subtitle: "Progression guidée",
+        image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        title: "Soft Skills Avancées",
+        subtitle: "Évaluation continue",
+        image: "https://images.unsplash.com/photo-1521790797524-b2497295b8a0?auto=format&fit=crop&w=900&q=80",
+      },
+    ],
+  },
+  {
+    title: "Ressources à partager",
+    items: [
+      {
+        title: "Plan de session",
+        subtitle: "Template premium",
+        image: "https://images.unsplash.com/photo-1512314889357-e157c22f938d?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        title: "Playbook recrutement",
+        subtitle: "Version 2026",
+        image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        title: "Checklist Qualité",
+        subtitle: "Audit & conformité",
+        image: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=900&q=80",
+      },
+    ],
+  },
+];
 
-  // Log pour debugging
-  console.log("[formateur/dashboard] Dashboard data:", {
-    activeCourses: data.activeCourses.length,
-    recommendedCourses: data.recommendedCourses.length,
-    featuredTests: data.featuredTests.length,
-    resources: data.resources.length,
-    paths: data.paths.length,
-    courses: data.activeCourses.map(c => ({ id: c.id, title: c.title, href: c.href })),
-  });
-
-  const kpis: KpiCard[] = [
-    {
-      label: "Apprenants inscrits",
-      value: data.kpis.totalLearners,
-      hint: "Inclut l’ensemble de vos cohortes",
-      trend: "up",
-    },
-    {
-      label: "Formations publiées",
-      value: data.kpis.publishedCourses,
-      hint: "Cours actuellement visibles",
-      trend: "up",
-    },
-    {
-      label: "Tests en production",
-      value: data.kpis.publishedTests,
-      hint: "Questionnaires activés",
-      trend: "up",
-    },
-    {
-      label: "Ressources publiées",
-      value: data.kpis.publishedResources,
-      hint: "Documents & masterclass disponibles",
-      trend: "up",
-    },
-  ];
-
-  const quickItems = [
-    {
-      key: "create-course",
-      title: "Créer une formation",
-      subtitle: "Montez un nouveau curriculum",
-      cta: "Lancer l&apos;éditeur",
-      image: "https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=900&q=80",
-      href: "/dashboard/formateur/formations/new",
-    },
-    {
-      key: "build-path",
-      title: "Développer un parcours",
-      subtitle: "Assemblez une progression immersive",
-      cta: "Structurer",
-      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80",
-      href: "/dashboard/formateur/parcours",
-    },
-    {
-      key: "create-test",
-      title: "Publier un test",
-      subtitle: "Évaluez la progression",
-      cta: "Créer",
-      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80",
-      href: "/dashboard/formateur/tests/new",
-    },
-    {
-      key: "share-resource",
-      title: "Partager une ressource",
-      subtitle: "Ajoutez un support complémentaire",
-      cta: "Déposer",
-      image: "https://images.unsplash.com/photo-1514970745-474ba6a2b1d8?auto=format&fit=crop&w=900&q=80",
-      href: "/dashboard/formateur/ressources",
-    },
-  ];
-
+export default function FormateurDashboardPage() {
   return (
-    <DashboardShellWrapper
-      title="Espace formateur"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Formateur" },
-      ]}
-      firstName={session?.fullName ?? null}
-      email={session?.email ?? null}
-    >
-      <TasksBanner roleFilter="instructor" todoHref="/dashboard/formateur/todo" />
-      
-      <section className="relative overflow-hidden rounded-4xl border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.35),_transparent_65%),radial-gradient(circle_at_bottom_right,_rgba(236,72,153,0.28),_transparent_60%),linear-gradient(140deg,#080810,#111123,#050508)] px-7 py-12 shadow-[0_45px_140px_-60px_rgba(56,189,248,0.45)] lg:px-12 lg:py-16">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08),_transparent_40%)] opacity-60" />
-        <div className="relative z-10 grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-white/85">
-              Espace formateur
-              <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-medium tracking-[0.4em] text-emerald-200">
-                Premium
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <FormateurSidebar activeItem="Accueil" />
+
+      <main className="min-h-screen ml-[236px]">
+        <section className="relative min-h-[70vh] overflow-hidden">
+          <img
+            src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=2000&q=80"
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/70 via-transparent to-transparent" />
+          <div className="relative z-10 flex h-full flex-col justify-end gap-6 pb-16 pl-8 pr-12">
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-white/80">
+              ESPACE FORMATEUR
+              <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-[0.3em] text-red-200">
+                PREMIUM
               </span>
             </div>
-            <h1 className="text-3xl font-semibold leading-tight text-white md:text-[38px]">
-              Orchestrer vos formations, suivez vos cohortes et boostez l&apos;engagement de vos apprenants.
+            <h1 className="text-5xl font-black tracking-tight text-white max-w-3xl leading-tight">
+              Pilotez vos formations,
+              <br />
+              suivez vos cohortes et boostez
+              <br />
+              l&apos;engagement de vos apprenants.
             </h1>
-            <p className="max-w-2xl text-base text-white/80">
-              Visualisez d&apos;un coup d&apos;œil vos indicateurs clés, planifiez vos prochaines sessions et partagez les ressources qui créent des expériences mémorables.
-            </p>
+            <p className="text-lg text-white/70">Une expérience immersive, pensée pour l&apos;action.</p>
             <div className="flex flex-wrap items-center gap-3">
-              <button className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#60a5fa] via-[#38bdf8] to-[#2dd4bf] px-6 py-2.5 text-sm font-semibold text-black shadow-[0_18px_60px_-35px_rgba(56,189,248,0.6)] transition hover:scale-105 hover:shadow-[0_25px_70px_-35px_rgba(45,212,191,0.45)]">
+              <button className="rounded-full bg-[#0A84FF] px-5 py-2.5 text-sm font-semibold text-white">
                 Inviter un apprenant
               </button>
-              <button className="inline-flex items-center gap-2 rounded-full border border-white/25 px-6 py-2.5 text-sm font-semibold text-white/85 transition hover:bg-white/10">
+              <button className="rounded-full bg-white/20 px-5 py-2.5 text-sm font-semibold text-white">
                 Exporter le reporting
               </button>
-              <button className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/70 transition hover:bg-white/10">
+              <button className="rounded-full border border-white/30 px-5 py-2.5 text-sm font-semibold text-white/80">
                 Planifier une session
               </button>
             </div>
-          </div>
-          <div className="space-y-4 rounded-3xl border border-white/10 bg-white/4 p-6 backdrop-blur-lg">
-            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-              Prochaines étapes
-            </span>
-            <div className="space-y-3 text-sm text-white/80">
-              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-                <div>
+            <div className="absolute right-12 top-1/2 w-72 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+                Prochaines étapes
+              </p>
+              <div className="mt-4 space-y-3 text-sm text-white/80">
+                <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
                   <p className="font-medium text-white">Finaliser votre prochaine cohorte</p>
                   <p className="text-xs text-white/60">3 sections à confirmer</p>
                 </div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-200">
-                  10 min
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-                <div>
+                <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
                   <p className="font-medium text-white">Partager la masterclass engageante</p>
                   <p className="text-xs text-white/60">Embed recommandée pour vos mentors</p>
                 </div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-200">
-                  5 min
-                </span>
               </div>
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/75">
-              📈 Focus : progression moyenne des cohortes +8% cette semaine
-            </span>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <KPIGrid kpis={kpis} />
-
-      <QuickCreateSlider items={quickItems} />
-
-      <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0f172a]/85 via-[#111827]/85 to-[#020617]/85 px-7 py-8 shadow-[0_32px_120px_-60px_rgba(59,130,246,0.45)] lg:px-10">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10">
-              <Clock className="h-4 w-4 text-white/80" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-white/70">
-                Timeline pédagogique
-              </p>
-              <h3 className="text-xl font-semibold text-white">Historique des actions</h3>
+        <section className="space-y-12 px-12 py-12">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white/90">Formations en cours</h2>
+              <button className="text-xs font-semibold text-white/60 hover:text-white">
+                Voir tout
+              </button>
             </div>
-          </div>
-          <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
-            {data.activityLogs.length}
-          </span>
-        </div>
-        <div className="space-y-4">
-          {data.activityLogs.length > 0 ? (
-            data.activityLogs.slice(0, 8).map((log) => {
-              const metadata = log.metadata as Record<string, unknown>;
-              const courseTitle =
-                typeof metadata?.course_title === "string" ? metadata.course_title : null;
-              const learnerName =
-                typeof metadata?.learner_name === "string" ? metadata.learner_name : null;
-
-              let description = log.summary;
-              if (!description) {
-                switch (log.actionType) {
-                  case "course_published":
-                    description = `Publication d’une formation${courseTitle ? ` : ${courseTitle}` : ""}`;
-                    break;
-                  case "test_published":
-                    description = `Mise en ligne d’un test${courseTitle ? ` : ${courseTitle}` : ""}`;
-                    break;
-                  case "resource_added":
-                    description = "Nouvelle ressource partagée";
-                    break;
-                  case "learner_login":
-                    description = `Connexion de ${learnerName ?? "un apprenant"}`;
-                    break;
-                  default:
-                    description = `Action ${log.actionType}`;
-                }
-              }
-
-              return (
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+              {formations.map((formation) => (
                 <div
-                  key={log.id}
-                  className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white/80"
+                  key={formation.id}
+                  className="min-w-[300px] h-[180px] overflow-hidden rounded-2xl bg-white/5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:scale-105"
                 >
-                  <span className="mt-1 h-2 w-2 rounded-full bg-sky-400" />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-white">{description}</p>
-                    {courseTitle ? (
-                      <p className="text-xs text-white/60">Formation : {courseTitle}</p>
-                    ) : null}
-                    <p className="mt-1 text-[11px] text-white/60">{formatRelativeTime(log.createdAt)}</p>
+                  <img src={formation.image} alt="" className="h-[120px] w-full object-cover" />
+                  <div className="p-3">
+                    <div className="text-sm font-semibold text-white">{formation.titre}</div>
+                    <div className="text-xs text-white/60 mt-1">
+                      {formation.apprenants} apprenants · {formation.completion}%
+                    </div>
                   </div>
                 </div>
-              );
-            })
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/60">
-              Les prochaines actions apparaîtront ici dès que vos équipes publient un contenu ou qu’un apprenant interagit avec la plateforme.
+              ))}
             </div>
-          )}
-        </div>
-      </section>
-
-    </DashboardShellWrapper>
+          </div>
+          {carousels.map((carousel) => (
+            <div key={carousel.title} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white/90">{carousel.title}</h2>
+                <button className="text-xs font-semibold text-white/60 hover:text-white">
+                  Voir tout
+                </button>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+                {carousel.items.map((item) => (
+                  <div
+                    key={item.title}
+                    className="relative min-w-[300px] h-[180px] overflow-hidden rounded-2xl bg-white/5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:scale-105"
+                  >
+                    <img src={item.image} alt="" className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="relative z-10 p-4">
+                      <p className="text-sm font-semibold text-white">{item.title}</p>
+                      <p className="text-xs text-white/60">{item.subtitle}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      </main>
+    </div>
   );
 }
 

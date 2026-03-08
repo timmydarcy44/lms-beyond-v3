@@ -1,4 +1,13 @@
-export type UserRole = "formateur" | "apprenant" | "admin" | "tuteur" | "entreprise" | "ecole";
+export type UserRole =
+  | "formateur"
+  | "apprenant"
+  | "admin"
+  | "tuteur"
+  | "entreprise"
+  | "ecole"
+  | "club"
+  | "partenaire"
+  | "demo";
 
 export interface Profile {
   id: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   Briefcase,
@@ -22,14 +22,16 @@ type SchoolLayoutProps = {
 
 export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isCompaniesOpen, setIsCompaniesOpen] = useState(true);
   const isTodo = pathname.startsWith("/dashboard/ecole/todo");
 
   const navItems = [
     { label: "Tableau de bord", href: "/dashboard/ecole", icon: LayoutDashboard },
-    { label: "Mes apprenants", href: "/dashboard/ecole/apprenants", icon: Users },
-    { label: "Mes classes", href: "/dashboard/ecole/classes", icon: GraduationCap },
+    { label: "Mes apprenants", href: "/dashboard/ecole?tab=apprenants", icon: Users },
+    { label: "Mes classes", href: "/dashboard/ecole?tab=classes", icon: GraduationCap },
     { label: "Offres", href: "/dashboard/ecole/offres", icon: Briefcase },
     { label: "Prospection", href: "/dashboard/ecole/prospection", icon: GitBranch },
     { label: "Ma todo", href: "/dashboard/ecole/todo", icon: CheckSquare },
@@ -70,8 +72,13 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
           </div>
           <nav className="mt-8 space-y-2 text-sm">
             {navItems.map((item) => {
-              const isActive =
-                item.href === "/dashboard/ecole" ? pathname === item.href : pathname.startsWith(item.href);
+              const isTabLink = item.href.startsWith("/dashboard/ecole?tab=");
+              const tabValue = isTabLink ? item.href.split("tab=")[1] : null;
+              const isActive = isTabLink
+                ? pathname === "/dashboard/ecole" && tabParam === tabValue
+                : item.href === "/dashboard/ecole"
+                  ? pathname === item.href && (!tabParam || tabParam === "overview")
+                  : pathname.startsWith(item.href);
               const Icon = item.icon;
               return (
                 <Link
@@ -204,8 +211,13 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E5E5EA] bg-white/95 px-6 py-2 md:hidden">
           <div className="flex items-center justify-around">
             {tabItems.map((item) => {
-              const isActive =
-                item.href === "/dashboard/ecole" ? pathname === item.href : pathname.startsWith(item.href);
+              const isTabLink = item.href.startsWith("/dashboard/ecole?tab=");
+              const tabValue = isTabLink ? item.href.split("tab=")[1] : null;
+              const isActive = isTabLink
+                ? pathname === "/dashboard/ecole" && tabParam === tabValue
+                : item.href === "/dashboard/ecole"
+                  ? pathname === item.href && (!tabParam || tabParam === "overview")
+                  : pathname.startsWith(item.href);
               const Icon = item.icon;
               return (
                 <Link

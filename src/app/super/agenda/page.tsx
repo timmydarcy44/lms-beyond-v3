@@ -35,11 +35,10 @@ export default async function SuperAdminAgendaPage() {
     redirect("/super");
   }
 
-  // Couleurs de branding Jessica Contentin
-  const bgColor = "#F8F5F0";
-  const textColor = "#2F2A25";
-  const primaryColor = "#C6A664";
-  const secondaryColor = "#E6D9C6";
+  // Couleurs (fond blanc, CTA bleu)
+  const bgColor = "#ffffff";
+  const textColor = "#111827";
+  const primaryColor = "#2563eb";
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: bgColor }}>

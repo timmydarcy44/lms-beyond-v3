@@ -61,6 +61,34 @@ export async function POST(request: NextRequest) {
       // Récupérer les métadonnées de la session
       const metadata = session.metadata;
       const customerEmail = session.customer_email || session.customer_details?.email;
+      const softSkillsCheckout = Boolean(
+        session.success_url?.includes("/dashboard/apprenant/soft-skills"),
+      );
+      const softSkillsUserId = metadata?.user_id;
+
+      if (softSkillsCheckout && softSkillsUserId) {
+        const supabase = getServiceRoleClient();
+        if (!supabase) {
+          console.error("[stripe/webhook] Supabase not configured for soft-skills update");
+          return NextResponse.json({ received: true });
+        }
+
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            has_paid_soft_skills: true,
+            soft_skills_paid_at: new Date().toISOString(),
+          })
+          .eq("id", softSkillsUserId);
+
+        if (updateError) {
+          console.error("[stripe/webhook] Error updating soft-skills payment status:", updateError);
+        } else {
+          console.log("[stripe/webhook] ✅ Soft-skills access granted for user:", softSkillsUserId);
+        }
+
+        return NextResponse.json({ received: true });
+      }
 
       if (!customerEmail) {
         console.error("[stripe/webhook] No customer email found");

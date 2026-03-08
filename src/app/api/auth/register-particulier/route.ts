@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       email,
       role: "PARTICULIER",
       objectif,
+      access_connect: true,
     };
 
     console.log("Données envoyées à Supabase:", payload);

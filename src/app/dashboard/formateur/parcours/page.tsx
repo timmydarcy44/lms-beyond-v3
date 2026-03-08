@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { FormateurSidebar } from "@/components/formateur/formateur-sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getFormateurPaths, getFormateurLearners, getFormateurGroups, getFormateurContentLibrary } from "@/lib/queries/formateur";
@@ -22,15 +22,10 @@ export default async function FormateurParcoursPage() {
   ]);
 
   return (
-    <DashboardShell
-      title="Parcours formateur"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/formateur" },
-        { label: "Formateur", href: "/dashboard/formateur" },
-        { label: "Parcours" },
-      ]}
-    >
-      <section className="flex flex-wrap items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <FormateurSidebar activeItem="Parcours" />
+      <main className="ml-[236px] px-10 py-10 space-y-10">
+        <section className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-white md:text-3xl">Mes parcours signatures</h1>
           <p className="max-w-2xl text-sm text-white/70">
@@ -58,7 +53,7 @@ export default async function FormateurParcoursPage() {
         }}
       />
 
-      {paths.length === 0 ? (
+        {paths.length === 0 ? (
         <Card className="border-white/10 bg-white/5 text-white">
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
             <p className="text-lg font-semibold">Pas encore de parcours</p>
@@ -74,7 +69,8 @@ export default async function FormateurParcoursPage() {
           </CardContent>
         </Card>
       ) : null}
-    </DashboardShell>
+      </main>
+    </div>
   );
 }
 

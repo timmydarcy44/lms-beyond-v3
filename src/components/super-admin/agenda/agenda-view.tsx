@@ -407,9 +407,19 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="calendar" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="calendar">Calendrier</TabsTrigger>
-          <TabsTrigger value="slots">Plages horaires</TabsTrigger>
+        <TabsList className="grid w-full max-w-md grid-cols-2 rounded-full border border-gray-200 bg-white p-1">
+          <TabsTrigger
+            value="calendar"
+            className="rounded-full text-sm text-gray-700 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          >
+            Calendrier
+          </TabsTrigger>
+          <TabsTrigger
+            value="slots"
+            className="rounded-full text-sm text-gray-700 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          >
+            Plages horaires
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-6">
@@ -417,6 +427,7 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
           <div className="flex items-center justify-between">
             <Button
               variant="outline"
+              className="border-gray-200 text-gray-700 hover:bg-gray-50"
               onClick={() => setSelectedDate(addDays(selectedDate, -7))}
             >
               Semaine précédente
@@ -427,6 +438,7 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
             </h2>
             <Button
               variant="outline"
+              className="border-gray-200 text-gray-700 hover:bg-gray-50"
               onClick={() => setSelectedDate(addDays(selectedDate, 7))}
             >
               Semaine suivante
@@ -445,7 +457,7 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
                 <Card
                   key={day.toISOString()}
                   className={cn(
-                    "min-h-[200px]",
+                    "min-h-[200px] border border-gray-200 bg-white text-gray-900",
                     isToday(day) && "border-blue-500 border-2"
                   )}
                 >
@@ -492,7 +504,10 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={() => setShowAppointmentDialog(true)}>
+            <Button
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setShowAppointmentDialog(true)}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Créer un rendez-vous
             </Button>
@@ -502,7 +517,10 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
         <TabsContent value="slots" className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">Plages horaires</h2>
-            <Button onClick={() => setShowSlotDialog(true)}>
+            <Button
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setShowSlotDialog(true)}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Créer une plage horaire
             </Button>
@@ -510,7 +528,7 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
 
           <div className="space-y-4">
             {slots.map((slot) => (
-              <Card key={slot.id}>
+              <Card key={slot.id} className="border border-gray-200 bg-white">
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-4">
                     <Clock className="h-5 w-5 text-gray-600" />
@@ -525,12 +543,13 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={slot.is_available ? "default" : "secondary"}>
+                    <Badge className={slot.is_available ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}>
                       {slot.is_available ? "Disponible" : "Fermé"}
                     </Badge>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="border-gray-200 text-gray-700 hover:bg-gray-50"
                       onClick={() => handleToggleSlotAvailability(slot.id, slot.is_available)}
                     >
                       {slot.is_available ? "Fermer" : "Ouvrir"}
@@ -596,10 +615,12 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSlotDialog(false)}>
+            <Button variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50" onClick={() => setShowSlotDialog(false)}>
               Annuler
             </Button>
-            <Button onClick={handleCreateSlot}>Créer</Button>
+            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleCreateSlot}>
+              Créer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -667,10 +688,12 @@ export function AgendaView({ superAdminId }: { superAdminId: string }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAppointmentDialog(false)}>
+            <Button variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50" onClick={() => setShowAppointmentDialog(false)}>
               Annuler
             </Button>
-            <Button onClick={handleCreateAppointment}>Créer</Button>
+            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleCreateAppointment}>
+              Créer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

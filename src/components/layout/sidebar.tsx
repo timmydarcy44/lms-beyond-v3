@@ -19,6 +19,8 @@ import {
   ListChecks,
   MessageCircle,
   CheckSquare,
+  UserCircle,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -49,6 +51,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
   const isFormateurArea = pathname?.startsWith("/dashboard/formateur");
   const isTutorArea = pathname?.startsWith("/dashboard/tuteur");
   const isCatalogueSurface = pathname?.startsWith("/catalog");
+  const isFormateurSurface = pathname?.startsWith("/dashboard/formateur");
   const isBeyondCareArea = pathname?.includes("beyond-care");
   const { resolvedTheme } = useTheme();
   const desiredTheme = forcedTheme ?? (resolvedTheme === "light" ? "light" : "dark");
@@ -74,13 +77,29 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
       return [];
     }
 
+    if (isFormateurArea) {
+      return [
+        { label: "Formations", icon: GraduationCap, href: "/dashboard/formateur/formations" },
+        { label: "Parcours", icon: Layers, href: "/dashboard/formateur/parcours" },
+        { label: "Ressources", icon: BookOpen, href: "/dashboard/formateur/ressources" },
+        { label: "Drive", icon: HardDrive, href: "/dashboard/formateur/drive" },
+        { label: "Tests", icon: PenTool, href: "/dashboard/formateur/tests" },
+        { label: "To-Do List", icon: CheckSquare, href: "/dashboard/formateur/todo" },
+        { label: "Messagerie", icon: MessageCircle, href: "/dashboard/student/community" },
+        { label: "No School", icon: Store, href: "/dashboard/formateur/no-school" },
+      ];
+    }
+
+    if (roleForNav === "demo") {
+      return [{ label: "← Retour au hub", icon: ArrowLeft, href: "/dashboard" }];
+    }
+
     if (roleForNav === "tuteur") {
       return [
         { label: "Tableau de bord", icon: Users, href: "/dashboard/tuteur" },
-        { label: "Mes missions", icon: ListChecks, href: "/dashboard/tuteur/missions" },
-        { label: "To-Do", icon: CheckSquare, href: "/dashboard/tuteur/todo" },
-        { label: "Formulaires", icon: ClipboardList, href: "/dashboard/tuteur/formulaires" },
+        { label: "Mes alternants", icon: Users, href: "/dashboard/tuteur" },
         { label: "Messagerie", icon: MessageCircle, href: "/dashboard/student/community" },
+        { label: "Mon compte", icon: UserCircle, href: "/dashboard/mon-compte" },
       ];
     }
 
@@ -179,7 +198,10 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
   const isLearnerAppleSurface =
     pathname ? learnerApplePrefixes.some((prefix) => pathname.startsWith(prefix)) : false;
 
-  const isLearnerApple = (isCatalogueSurface || isLearnerAppleSurface) && !isBeyondCareArea;
+  const isFormateurGlass = isFormateurArea;
+  const isLearnerApple =
+    ((isCatalogueSurface || isLearnerAppleSurface || isFormateurSurface) && !isBeyondCareArea) ||
+    isFormateurGlass;
 
   const renderSkeletonNav = (context: "mobile" | "desktop") => {
     const isMobileContext = context === "mobile";
@@ -362,17 +384,21 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
             <Link href={item.href} title={item.label} className="relative block" prefetch={false}>
               <div
                 className={cn(
-                  "group flex items-center gap-3 rounded-[26px] border px-4 py-3 text-sm font-medium transition-all duration-200",
-                  "border-white/80 bg-white/90 text-slate-600 shadow-[0_35px_110px_-60px_rgba(15,23,42,0.28)] hover:-translate-y-0.5 hover:shadow-[0_45px_120px_-60px_rgba(15,23,42,0.35)] hover:text-slate-900",
-                  isActive && "border-white bg-white text-slate-900 shadow-[0_45px_140px_-60px_rgba(15,23,42,0.45)]",
-                  collapsed && "justify-center px-0",
+                  "group flex items-center gap-3 rounded-[16px] px-3 py-2 text-sm font-medium transition-all duration-200",
+                  isFormateurGlass
+                    ? "bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+                    : "bg-white/80 text-slate-600 hover:bg-white hover:text-slate-900",
+                  isActive && (isFormateurGlass ? "bg-white/12 text-white" : "bg-white text-slate-900"),
+                  collapsed && "justify-center px-1",
                 )}
               >
                 <span
                   className={cn(
-                    "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[18px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 text-slate-500 transition-all duration-200",
-                    "shadow-[0_18px_45px_-34px_rgba(15,23,42,0.25)] group-hover:border-slate-300 group-hover:text-slate-700",
-                    isActive && "border-slate-300 text-slate-900 shadow-[0_25px_55px_-32px_rgba(15,23,42,0.28)]",
+                    "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[12px] transition-all duration-200",
+                    isFormateurGlass
+                      ? "bg-white/5 text-white/80 group-hover:bg-white/10 group-hover:text-white"
+                      : "bg-white/70 text-slate-500 group-hover:bg-white group-hover:text-slate-700",
+                    isActive && (isFormateurGlass ? "bg-white/12 text-white" : "bg-white text-slate-900"),
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -387,7 +413,7 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
                 >
                   <span className="text-sm">{item.label}</span>
                   {badgeValue > 0 ? (
-                    <span className="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full bg-slate-900/10 px-2 py-0.5 text-[11px] font-semibold text-slate-600 shadow-[0_8px_20px_-16px_rgba(15,23,42,0.35)]">
+                    <span className="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white/70">
                       {badgeValue > 99 ? "99+" : badgeValue}
                     </span>
                   ) : null}
@@ -417,23 +443,45 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -320, opacity: 0 }}
               transition={{ type: "spring", stiffness: 240, damping: 28 }}
-              className="fixed inset-y-0 left-0 z-40 w-72 rounded-e-[32px] border border-white/90 bg-[#f5f5f7]/95 text-slate-900 backdrop-blur-[40px] md:hidden shadow-[0_55px_140px_-60px_rgba(15,23,42,0.35)]"
+              className={cn(
+                "fixed inset-y-0 left-0 z-40 w-72 rounded-e-[32px] border backdrop-blur-[60px] md:hidden shadow-[0_55px_140px_-60px_rgba(15,23,42,0.35)]",
+                  isFormateurGlass
+                    ? "border-white/10 bg-black/20 text-white"
+                  : "border-white/90 bg-[#f5f5f7]/95 text-slate-900",
+              )}
             >
               <div className="flex h-full flex-col px-6 py-8">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white bg-white text-slate-900 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.25)]">
-                      <BeyondLogo size="sm" className="text-slate-900" />
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-2xl border shadow-[0_18px_45px_-30px_rgba(15,23,42,0.25)]",
+                        isFormateurGlass ? "border-white/20 bg-white/10 text-white" : "border-white bg-white text-slate-900",
+                      )}
+                    >
+                      <BeyondLogo size="sm" className={isFormateurGlass ? "text-white" : "text-slate-900"} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Espace apprenant</p>
-                      <p className="text-base font-semibold text-slate-900">Beyond</p>
+                      <p
+                        className={cn(
+                          "text-xs font-semibold uppercase tracking-[0.32em]",
+                          isFormateurGlass ? "text-white/60" : "text-slate-500",
+                        )}
+                      >
+                        {isFormateurGlass ? "Espace formateur" : "Espace apprenant"}
+                      </p>
+                      <p className={cn("text-base font-semibold", isFormateurGlass ? "text-white" : "text-slate-900")}>
+                        Beyond
+                      </p>
                     </div>
                   </div>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="text-slate-500 hover:bg-white hover:text-slate-900"
+                    className={cn(
+                      "hover:text-slate-900",
+                      isFormateurGlass ? "text-white/70 hover:bg-white/10 hover:text-white" : "text-slate-500 hover:bg-white",
+                    )}
                     onClick={onToggle}
                     aria-label="Fermer la navigation"
                   >
@@ -442,17 +490,29 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
                 </div>
 
                 <div className="mt-10 flex-1 space-y-4 overflow-y-auto pb-8">
-                  <nav className="space-y-3">{mobileNav}</nav>
+                  <nav className="space-y-2">{mobileNav}</nav>
                   {renderAppleApps("mobile")}
                 </div>
 
                 <div className="space-y-3 pt-4">
-                  <ThemeToggle className="w-full justify-center rounded-full border border-white bg-white/80 text-slate-700 hover:bg-white" />
+                  <ThemeToggle
+                    className={cn(
+                      "w-full justify-center rounded-full border",
+                      isFormateurGlass
+                        ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                        : "border-white bg-white/80 text-slate-700 hover:bg-white",
+                    )}
+                  />
                   <form action="/logout" method="POST">
                     <Button
                       type="submit"
                       variant="ghost"
-                      className="w-full rounded-full border border-slate-200 bg-white/90 text-slate-700 hover:bg-white"
+                      className={cn(
+                        "w-full rounded-full border",
+                        isFormateurGlass
+                          ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                          : "border-slate-200 bg-white/90 text-slate-700 hover:bg-white",
+                      )}
                     >
                       Déconnexion
                     </Button>
@@ -467,7 +527,10 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
           className={cn(
             "hidden md:fixed md:top-0 md:left-0 md:z-30 md:flex md:h-screen md:flex-col md:transition-all md:duration-300 md:ease-in-out",
             isOpen ? "md:w-72" : "md:w-24",
-            "rounded-e-[36px] border border-white/90 bg-[#f5f5f7]/95 text-slate-800 backdrop-blur-[50px] shadow-[0_70px_180px_-70px_rgba(15,23,42,0.25)]",
+            "rounded-e-[36px] border backdrop-blur-[70px] shadow-[0_70px_180px_-70px_rgba(15,23,42,0.25)]",
+            isFormateurGlass
+              ? "border-white/10 bg-black/20 text-white"
+              : "border-white/90 bg-[#f5f5f7]/95 text-slate-800",
           )}
         >
           <div className={cn("flex items-center px-6 pt-9 pb-7", isOpen ? "justify-between" : "justify-center")}>
@@ -477,18 +540,37 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
                 isOpen ? "opacity-100 translate-x-0" : "pointer-events-none opacity-0 -translate-x-4",
               )}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white bg-white text-slate-900 shadow-[0_20px_55px_-28px_rgba(15,23,42,0.25)]">
-                <BeyondLogo size="sm" className="text-slate-900" />
+              <div
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-2xl border shadow-[0_20px_55px_-28px_rgba(15,23,42,0.25)]",
+                  isFormateurGlass ? "border-white/15 bg-white/10 text-white" : "border-white bg-white text-slate-900",
+                )}
+              >
+                <BeyondLogo size="sm" className={isFormateurGlass ? "text-white" : "text-slate-900"} />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Espace apprenant</p>
-                <p className="text-base font-semibold text-slate-900">Beyond</p>
+                <p
+                  className={cn(
+                    "text-xs font-semibold uppercase tracking-[0.32em]",
+                    isFormateurGlass ? "text-white/60" : "text-slate-500",
+                  )}
+                >
+                  {isFormateurGlass ? "Espace formateur" : "Espace apprenant"}
+                </p>
+                <p className={cn("text-base font-semibold", isFormateurGlass ? "text-white" : "text-slate-900")}>
+                  Beyond
+                </p>
               </div>
             </div>
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full border border-white/90 text-slate-500 hover:bg-white hover:text-slate-900"
+              className={cn(
+                "rounded-full border",
+                isFormateurGlass
+                  ? "border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
+                  : "border-white/90 text-slate-500 hover:bg-white hover:text-slate-900",
+              )}
               onClick={onToggle}
               aria-label={isOpen ? "Réduire la navigation" : "Déployer la navigation"}
             >
@@ -497,17 +579,29 @@ export const Sidebar = ({ isOpen, onToggle, organizationLogo, forcedTheme }: Sid
           </div>
 
           <div className="flex-1 overflow-hidden px-4">
-            <nav className="space-y-3">{desktopNav}</nav>
+            <nav className="space-y-2">{desktopNav}</nav>
             {renderAppleApps("desktop")}
           </div>
 
           <div className="mt-auto space-y-3 px-6 pb-8 pt-6">
-            <ThemeToggle className="w-full justify-center rounded-full border border-white bg-white/80 text-slate-700 hover:bg-white" />
+            <ThemeToggle
+              className={cn(
+                "w-full justify-center rounded-full border",
+                isFormateurGlass
+                  ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                  : "border-white bg-white/80 text-slate-700 hover:bg-white",
+              )}
+            />
             <form action="/logout" method="POST">
               <Button
                 type="submit"
                 variant="ghost"
-                className="w-full rounded-full border border-slate-200 bg-white/90 text-slate-700 hover:bg-white"
+                className={cn(
+                  "w-full rounded-full border",
+                  isFormateurGlass
+                    ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                    : "border-slate-200 bg-white/90 text-slate-700 hover:bg-white",
+                )}
               >
                 Déconnexion
               </Button>

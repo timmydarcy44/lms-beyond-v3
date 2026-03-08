@@ -134,6 +134,7 @@ export default function ApprenantDashboardPage() {
     email?: string;
     user_metadata?: { first_name?: string | null; last_name?: string | null };
   } | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [cachedFirstName, setCachedFirstName] = useState("");
   const [profile, setProfile] = useState<{
     first_name?: string | null;
@@ -157,6 +158,7 @@ export default function ApprenantDashboardPage() {
     rythme_alternance?: string | null;
     date_fin_contrat?: string | null;
     access_connect?: boolean | null;
+    onboarding_completed?: boolean | null;
   } | null>(null);
   const [discScores, setDiscScores] = useState<DiscScores | null>(null);
   const [idmcAxes, setIdmcAxes] = useState<Record<AxisKey, number> | null>(null);
@@ -167,7 +169,6 @@ export default function ApprenantDashboardPage() {
   );
   const [softSkillsView, setSoftSkillsView] = useState<"list" | "radar" | "bubbles">("list");
   const [hasPaidSoftSkills, setHasPaidSoftSkills] = useState<boolean | null>(null);
-  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [experiencePreview, setExperiencePreview] = useState<Array<Record<string, unknown>>>([]);
   const [skillsMetadata, setSkillsMetadata] = useState<
@@ -314,6 +315,12 @@ export default function ApprenantDashboardPage() {
           email: userData.user.email ?? undefined,
           user_metadata: rawMeta as { first_name?: string | null; last_name?: string | null },
         });
+        const { data: profileRole } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", userData.user.id)
+          .maybeSingle();
+        setUserRole(profileRole?.role ?? null);
 
         try {
           let { data: profileData } = await supabase
@@ -367,7 +374,7 @@ export default function ApprenantDashboardPage() {
               profileData = updated ?? profileData;
             }
           }
-        setProfile(profileData ?? null);
+          setProfile(profileData ?? null);
           if (profileData) {
             setOnboardingForm({
               first_name: String(profileData.first_name ?? metaFirstName ?? "").trim(),
@@ -441,15 +448,10 @@ export default function ApprenantDashboardPage() {
           try {
             const { data: settingsData } = await supabase
               .from("user_profile_settings")
-              .select("has_paid_soft_skills, onboarding_completed")
+              .select("has_paid_soft_skills")
               .eq("user_id", userId)
               .maybeSingle();
             setHasPaidSoftSkills(Boolean(settingsData?.has_paid_soft_skills));
-            if (typeof (settingsData as Record<string, unknown> | null)?.onboarding_completed === "boolean") {
-              setOnboardingCompleted(
-                Boolean((settingsData as Record<string, unknown> | null)?.onboarding_completed)
-              );
-            }
           } catch {
             setHasPaidSoftSkills(false);
           }
@@ -956,12 +958,15 @@ export default function ApprenantDashboardPage() {
 
   const needsOnboarding = useMemo(() => {
     if (!user?.id || !profile) return false;
-    return onboardingCompleted !== true;
-  }, [profile, user?.id, onboardingCompleted]);
+    return profile?.onboarding_completed === false;
+  }, [profile, user?.id]);
 
   useEffect(() => {
-    if (!isLoading && needsOnboarding) {
+    if (isLoading) return;
+    if (needsOnboarding) {
       setShowOnboardingModal(true);
+    } else {
+      setShowOnboardingModal(false);
     }
   }, [isLoading, needsOnboarding]);
 
@@ -1034,6 +1039,7 @@ export default function ApprenantDashboardPage() {
         telephone: onboardingForm.telephone || null,
         birth_date: onboardingForm.birth_date || null,
         age: computeAgeFromBirthDate(onboardingForm.birth_date),
+        onboarding_completed: true,
       };
       if (profile?.type_profil === "emploi") {
         payload.poste_actuel = onboardingForm.poste_actuel || null;
@@ -1074,7 +1080,6 @@ export default function ApprenantDashboardPage() {
         setProfile(updated);
       }
       try {
-        setOnboardingCompleted(true);
         if (supabase && user?.id) {
           await supabase
             .from("user_profile_settings")
@@ -1155,7 +1160,7 @@ export default function ApprenantDashboardPage() {
     );
   }
 
-  if (profile?.access_connect === false) {
+  if (profile?.access_connect === false && userRole !== "demo") {
     return <PaywallConnect />;
   }
 

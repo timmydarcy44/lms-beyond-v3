@@ -83,6 +83,9 @@ export type OrganizationFullDetails = {
     fullName: string | null;
     role: string;
     phone: string | null;
+    access_lms?: boolean | null;
+    access_connect?: boolean | null;
+    access_care?: boolean | null;
   }>;
   courses: Array<{
     id: string;
@@ -615,7 +618,7 @@ export async function getOrganizationFullDetails(orgId: string): Promise<Organiz
     if (userIds.length > 0) {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, email, full_name, phone")
+        .select("id, email, full_name, phone, access_lms, access_connect, access_care")
         .in("id", userIds);
 
       if (!profilesError && profiles) {
@@ -628,6 +631,9 @@ export async function getOrganizationFullDetails(orgId: string): Promise<Organiz
           fullName: p.full_name || null,
           role: roleMap.get(p.id) || "learner",
           phone: p.phone || null,
+          access_lms: (p as any)?.access_lms ?? null,
+          access_connect: (p as any)?.access_connect ?? null,
+          access_care: (p as any)?.access_care ?? null,
         }));
       }
     }
@@ -828,6 +834,10 @@ export type UserFullDetails = {
   fullName: string | null;
   role: string;
   phone: string | null;
+  access_lms: boolean | null;
+  access_connect: boolean | null;
+  access_care: boolean | null;
+  access_pro: boolean | null;
   organizations: Array<{
     id: string;
     name: string;
@@ -999,7 +1009,7 @@ export async function getUserFullDetails(userId: string): Promise<UserFullDetail
     // Méthode normale (avec ou sans service role)
     let { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, role, phone")
+      .select("id, email, full_name, role, phone, access_lms, access_connect, access_care, access_pro")
       .eq("id", userId)
       .single();
     
@@ -1052,7 +1062,7 @@ export async function getUserFullDetails(userId: string): Promise<UserFullDetail
           // Réessayer de récupérer le profil
           const { data: newProfile, error: newError } = await supabase
             .from("profiles")
-            .select("id, email, full_name, role, phone")
+            .select("id, email, full_name, role, phone, access_lms, access_connect, access_care, access_pro")
             .eq("id", userId)
             .single();
           
@@ -1205,6 +1215,10 @@ export async function getUserFullDetails(userId: string): Promise<UserFullDetail
       fullName: profile.full_name || null,
       role: profile.role || "learner",
       phone: profile.phone || null,
+      access_lms: (profile as any)?.access_lms ?? null,
+      access_connect: (profile as any)?.access_connect ?? null,
+      access_care: (profile as any)?.access_care ?? null,
+      access_pro: (profile as any)?.access_pro ?? null,
       organizations,
       courses: (courses || []).map((c: any) => ({
         id: c.id,

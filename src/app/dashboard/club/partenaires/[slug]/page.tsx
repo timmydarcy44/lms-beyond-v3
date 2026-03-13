@@ -40,9 +40,10 @@ export default function ClubPartnerDetailPage() {
 
   return (
     <ClubLayout activeItem="Partenaires">
-      <Link href="/dashboard/club/partenaires" className="text-sm text-white/60 hover:text-white">
-        ← Retour
-      </Link>
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
+        <Link href="/dashboard/club/partenaires" className="text-sm text-white/60 hover:text-white">
+          ← Retour
+        </Link>
 
       <div className="mt-6">
         <div className="flex flex-wrap gap-2">
@@ -189,38 +190,39 @@ export default function ClubPartnerDetailPage() {
         </div>
       )}
 
-      {activeTab === "offres" && (
-        <div className="mt-6 rounded-2xl bg-[#1a1a1a] p-6">
-          <div className="text-xl font-bold text-white">Offres</div>
-          {partnerOffers.length === 0 ? (
-            <div className="mt-3 text-sm text-white/60">
-              Aucune offre sauvegardée pour ce partenaire.
-            </div>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {partnerOffers.map((offer) => (
-                <div key={offer.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/5 p-4">
-                  <div>
-                    <div className="text-white">{offer.name}</div>
-                    <div className="text-sm text-white/60">
-                      Total HT : {offer.totalHt.toLocaleString("fr-FR")}€ ·{" "}
-                      {new Date(offer.createdAt).toLocaleDateString("fr-FR")}
+        {activeTab === "offres" && (
+          <div className="mt-6 rounded-2xl bg-[#1a1a1a] p-6">
+            <div className="text-xl font-bold text-white">Offres</div>
+            {partnerOffers.length === 0 ? (
+              <div className="mt-3 text-sm text-white/60">
+                Aucune offre sauvegardée pour ce partenaire.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {partnerOffers.map((offer) => (
+                  <div key={offer.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/5 p-4">
+                    <div>
+                      <div className="text-white">{offer.name}</div>
+                      <div className="text-sm text-white/60">
+                        Total HT : {offer.totalHt.toLocaleString("fr-FR")}€ ·{" "}
+                        {new Date(offer.createdAt).toLocaleDateString("fr-FR")}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="rounded-full bg-white/10 px-4 py-2 text-xs text-white">
+                        Générer PDF
+                      </button>
+                      <button className="rounded-full bg-white/10 px-4 py-2 text-xs text-white">
+                        Envoyer par email
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="rounded-full bg-white/10 px-4 py-2 text-xs text-white">
-                      Générer PDF
-                    </button>
-                    <button className="rounded-full bg-white/10 px-4 py-2 text-xs text-white">
-                      Envoyer par email
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </ClubLayout>
   );
 }

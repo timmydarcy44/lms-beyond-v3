@@ -117,7 +117,7 @@ export function BeyondNoteList() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/beyond-note-app">
+          <Link href="/note-app">
             <FileText className="h-4 w-4 mr-2" />
             Voir l'application
           </Link>
@@ -200,4 +200,5 @@ export function BeyondNoteList() {
     </div>
   );
 }
+
 

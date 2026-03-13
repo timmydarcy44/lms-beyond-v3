@@ -3,7 +3,16 @@ export const SENTENCE_CASE_PROMPT_VERSION = "sentence-case-v1";
 
 const SENTENCE_CASE_RULE = "N'utilise surtout pas de 'Title Case'. Écris en casse phrase: seule la première lettre d'une phrase ou les noms propres sont en majuscule.";
 
-type RephraseStyle = "simplify" | "enrich" | "formal" | "casual" | "theoretical" | "examples" | "structured";
+type RephraseStyle =
+  | "simplify"
+  | "enrich"
+  | "formal"
+  | "casual"
+  | "theoretical"
+  | "examples"
+  | "structured"
+  | "scenario"
+  | "child";
 
 export function buildRephrasePrompt(text: string, style?: RephraseStyle): string {
   const styleInstructions: Record<RephraseStyle, string> = {
@@ -14,6 +23,8 @@ export function buildRephrasePrompt(text: string, style?: RephraseStyle): string
     theoretical: "Réécris le texte en insistant sur les définitions, les concepts clés et les fondements théoriques, avec un ton académique.",
     examples: "Réécris le texte en ajoutant des exemples concrets, des analogies parlantes et des cas d'usage pour illustrer chaque idée.",
     structured: "Réécris le texte de manière très structurée, en étapes ou en listes claires, pour faciliter la mémorisation progressive.",
+    scenario: "Réécris le texte sous forme de mise en situation concrète, avec un scénario simple pour rendre les idées plus vivantes.",
+    child: "Explique le texte comme si tu parlais à un enfant de 5 ans, avec des phrases très simples et un vocabulaire accessible.",
   };
 
   const instruction = style ? styleInstructions[style] : "Réécris ce texte pour améliorer sa clarté et sa compréhension.";

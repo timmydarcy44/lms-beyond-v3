@@ -102,7 +102,7 @@ export function BeyondNoteMarketingPage() {
                 size="lg"
                 className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg"
               >
-                <Link href="/beyond-note-app">
+                <Link href="/note-app">
                   Essayer gratuitement
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
@@ -224,7 +224,7 @@ export function BeyondNoteMarketingPage() {
               size="lg"
               className="bg-white text-violet-600 hover:bg-gray-100 px-8 py-6 text-lg"
             >
-              <Link href="/beyond-note-app">
+              <Link href="/note-app">
                 Accéder à l'application
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
@@ -235,6 +235,7 @@ export function BeyondNoteMarketingPage() {
     </div>
   );
 }
+
 
 
 

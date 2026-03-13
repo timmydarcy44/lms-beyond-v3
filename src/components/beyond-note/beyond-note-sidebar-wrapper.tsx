@@ -73,8 +73,9 @@ export function BeyondNoteSidebarWrapper({ isOpen, role, appearance = "default" 
     return null;
   }
 
-  const href = "/beyond-note-app";
+  const href = "/note-app";
 
   return <BeyondNoteSidebarItem href={href} isOpen={isOpen} appearance={appearance} />;
 }
+
 

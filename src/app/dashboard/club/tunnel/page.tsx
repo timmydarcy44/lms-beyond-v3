@@ -14,7 +14,7 @@ import { useClubGuard } from "@/components/club/use-club-guard";
 import { cn } from "@/lib/utils";
 import { CheckCircle, TrendingUp, Users } from "lucide-react";
 import jsPDF from "jspdf";
-import { getMyClub, getClubPartners, updatePartner } from "@/lib/supabase/club-queries";
+import { createPartner, getMyClubContext, getClubPartners, updatePartner } from "@/lib/supabase/club-queries";
 
 type Column = { id: string; label: string; couleur: string; cards: ProspectCard[] };
 type ProspectCard = {
@@ -45,6 +45,117 @@ const initialColumnsBase = [
   { id: "negociation", label: "Négociation", couleur: "#F97316" },
   { id: "signature", label: "Signature", couleur: "#22C55E" },
   { id: "perdu", label: "Perdu", couleur: "#EF4444" },
+];
+
+const demoCards: ProspectCard[] = [
+  {
+    id: "auto-garage-martin",
+    nom: "Auto Garage Martin",
+    secteur: "Automobile",
+    valeur: 2500,
+    contact: "Jean Martin",
+    contactEmail: "j.martin@garage-martin.fr",
+    contactTel: "06 89 01 23 45",
+    adresse: "7 route de Dozulé, 14160 Dives-sur-Mer",
+    lastAction: "Il y a 2j",
+    columnId: "prospects",
+  },
+  {
+    id: "brasserie-du-port",
+    nom: "Brasserie du Port",
+    secteur: "Restauration",
+    valeur: 1500,
+    contact: "Sophie Laurent",
+    contactEmail: "s.laurent@brasserieduport.fr",
+    contactTel: "06 90 12 34 56",
+    adresse: "3 quai de la Marine, 14160 Dives-sur-Mer",
+    lastAction: "Il y a 3j",
+    columnId: "prospects",
+  },
+  {
+    id: "imprimerie-cote-fleurie",
+    nom: "Imprimerie Côte Fleurie",
+    secteur: "Communication",
+    valeur: 2000,
+    contact: "Camille Morel",
+    contactEmail: "c.morel@imprimerie-cote.fr",
+    contactTel: "06 78 90 12 34",
+    adresse: "5 rue des Arts, 14160 Dives-sur-Mer",
+    lastAction: "Il y a 5j",
+    columnId: "prospects",
+  },
+  {
+    id: "normandie-energie",
+    nom: "Normandie Énergie",
+    secteur: "Énergie",
+    valeur: 4000,
+    contact: "Henri Blanc",
+    contactEmail: "h.blanc@normandie-energie.fr",
+    contactTel: "06 78 90 12 34",
+    adresse: "33 avenue de l'Industrie, 76600 Le Havre",
+    lastAction: "Il y a 1j",
+    columnId: "premier_contact",
+  },
+  {
+    id: "spa-cabourg",
+    nom: "SPA Cabourg",
+    secteur: "Bien-être",
+    valeur: 3000,
+    contact: "Julie Martin",
+    contactEmail: "j.martin@spa-cabourg.fr",
+    contactTel: "06 12 34 56 78",
+    adresse: "10 avenue de la Mer, 14390 Cabourg",
+    lastAction: "Il y a 4j",
+    columnId: "premier_contact",
+  },
+  {
+    id: "cabinet-dupont-rh",
+    nom: "Cabinet Dupont RH",
+    secteur: "RH",
+    valeur: 5000,
+    contact: "Marc Dupont",
+    contactEmail: "m.dupont@dupont-rh.fr",
+    contactTel: "06 67 89 01 23",
+    adresse: "15 rue Neuve, 14000 Caen",
+    lastAction: "Il y a 2j",
+    columnId: "presentation",
+  },
+  {
+    id: "electro-plus",
+    nom: "Électro Plus",
+    secteur: "Énergie",
+    valeur: 4500,
+    contact: "Laura Evrard",
+    contactEmail: "l.evrard@electro-plus.fr",
+    contactTel: "06 34 56 78 90",
+    adresse: "21 avenue du Port, 14000 Caen",
+    lastAction: "Il y a 6j",
+    columnId: "negociation",
+  },
+  {
+    id: "marine-services",
+    nom: "Marine Services",
+    secteur: "Transport",
+    valeur: 3200,
+    contact: "Alain Dubois",
+    contactEmail: "a.dubois@marine-services.fr",
+    contactTel: "06 56 78 90 12",
+    adresse: "45 route de Caen, 14160 Dives-sur-Mer",
+    lastAction: "Il y a 3j",
+    columnId: "negociation",
+  },
+  {
+    id: "resto-du-stade",
+    nom: "Resto du Stade",
+    secteur: "Restauration",
+    valeur: 2000,
+    contact: "Marie Petit",
+    contactEmail: "m.petit@resto-stade.fr",
+    contactTel: "06 45 78 90 12",
+    adresse: "2 rue du Stade, 14160 Dives-sur-Mer",
+    lastAction: "Il y a 2 sem",
+    columnId: "perdu",
+  },
 ];
 
 const initialColumns: Column[] = initialColumnsBase.map((column) => ({
@@ -400,7 +511,7 @@ function TabsComponent({
       )}
 
       {detailTab === "offre" && (
-        <div className="grid gap-4 pt-4 lg:grid-cols-[2fr_1fr]">
+        <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
           <div className="space-y-4">
             <div className="text-sm font-semibold text-white">Sélectionnez les prestations</div>
             {offerSections.map((section) => (
@@ -442,7 +553,7 @@ function TabsComponent({
               </details>
             ))}
           </div>
-          <div className="sticky top-6 h-fit rounded-xl bg-[#1B2A4A]/60 p-4">
+          <div className="sm:sticky sm:top-0 h-fit rounded-xl border-t sm:border-t-0 sm:border-l border-white/10 p-4 bg-[#0d1b2e] sm:bg-transparent">
             <div className="text-sm font-semibold text-white">Votre offre</div>
             <Input
               value={offerName}
@@ -555,6 +666,7 @@ export default function ClubTunnelPage() {
   const [showColumnDialog, setShowColumnDialog] = useState(false);
   const [newColumnLabel, setNewColumnLabel] = useState("");
   const [showProspectDialog, setShowProspectDialog] = useState(false);
+  const [showAddProspect, setShowAddProspect] = useState(false);
   const [prospectStep, setProspectStep] = useState<"coordonnees" | "offre">("coordonnees");
   const [newOfferSelections, setNewOfferSelections] = useState<Record<string, number>>({
     "dives-platform": 0,
@@ -592,13 +704,31 @@ export default function ClubTunnelPage() {
   >([]);
   const [currentUserName, setCurrentUserName] = useState("Responsable");
   const [currentUserEmail, setCurrentUserEmail] = useState("contact@club.fr");
+  const [newProspect, setNewProspect] = useState({
+    nom: "",
+    secteur: "",
+    contact: "",
+    email: "",
+    telephone: "",
+    colonne: "prospects",
+    valeur: "",
+  });
 
   const columnsWithCards = columns;
 
   useEffect(() => {
     const load = async () => {
-      const clubData = await getMyClub();
-      if (!clubData) return;
+      const { club: clubData, role } = await getMyClubContext();
+      const isDemo = role === "demo";
+      if (!clubData || isDemo) {
+        setColumns((prev) =>
+          prev.map((col) => ({
+            ...col,
+            cards: demoCards.filter((card) => card.columnId === col.id),
+          }))
+        );
+        return;
+      }
       setClubId(clubData.id);
       const partners = await getClubPartners(clubData.id);
       const grouped = {
@@ -637,6 +767,74 @@ export default function ClubTunnelPage() {
     };
     load();
   }, []);
+
+  const refreshPartners = async () => {
+    if (!clubId) return;
+    const partners = await getClubPartners(clubId);
+    const grouped = {
+      prospects: partners.filter((partner) => partner.colonne_tunnel === "prospects"),
+      premier_contact: partners.filter((partner) => partner.colonne_tunnel === "premier_contact"),
+      presentation: partners.filter((partner) => partner.colonne_tunnel === "presentation"),
+      negociation: partners.filter((partner) => partner.colonne_tunnel === "negociation"),
+      signature: partners.filter((partner) => partner.colonne_tunnel === "signature"),
+      perdu: partners.filter((partner) => partner.colonne_tunnel === "perdu"),
+    };
+    setColumns((prev) =>
+      prev.map((col) => ({
+        ...col,
+        cards: (grouped[col.id] || []).map((partner) => ({
+          id: partner.id,
+          nom: partner.nom,
+          secteur: partner.secteur,
+          valeur: partner.valeur || 0,
+          contact: `${partner.contact_prenom || ""} ${partner.contact_nom || ""}`.trim() || "—",
+          contactEmail: partner.contact_email || partner.contactEmail,
+          contactTel: partner.contact_tel || partner.contactTel,
+          adresse: partner.adresse,
+          siret: partner.siret,
+          notes: partner.notes,
+          lastAction: partner.last_action || partner.updated_at || "—",
+          columnId: col.id,
+          createdAt: partner.created_at,
+          updatedAt: partner.updated_at,
+          offerName: partner.offer_name,
+          offerSelections: partner.offer_selections || {},
+          partnershipType: partner.partnership_type,
+          paymentMode: partner.payment_mode,
+        })),
+      }))
+    );
+  };
+
+  const handleCreateProspect = async () => {
+    if (!newProspect.nom.trim()) return;
+    if (!clubId) {
+      setShowAddProspect(false);
+      return;
+    }
+    await createPartner(clubId, {
+      nom: newProspect.nom,
+      secteur: newProspect.secteur,
+      contact_prenom: newProspect.contact.split(" ")[0] || "",
+      contact_nom: newProspect.contact.split(" ").slice(1).join(" "),
+      contact_email: newProspect.email,
+      contact_tel: newProspect.telephone,
+      colonne_tunnel: newProspect.colonne,
+      valeur: Number(newProspect.valeur) || 0,
+      statut: "Prospect",
+    });
+    await refreshPartners();
+    setShowAddProspect(false);
+    setNewProspect({
+      nom: "",
+      secteur: "",
+      contact: "",
+      email: "",
+      telephone: "",
+      colonne: "prospects",
+      valeur: "",
+    });
+  };
   
 
   useEffect(() => {
@@ -1192,10 +1390,13 @@ export default function ClubTunnelPage() {
   const newOfferTva = newOfferTotal * 0.2;
   const newOfferTtc = newOfferTotal * 1.2;
 
+  const totalCards = columns.reduce((sum, col) => sum + (col.cards?.length || 0), 0);
+
   return (
-    <ClubLayout activeItem="Tunnel de vente">
+    <ClubLayout activeItem="Prospection">
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-lg font-semibold text-white lg:text-2xl">Tunnel de vente</h1>
+        <h1 className="text-lg font-semibold text-white lg:text-2xl">Prospection</h1>
         <div className="flex flex-wrap gap-3">
           <button
             className="rounded-full px-5 py-2 text-sm font-semibold text-white"
@@ -1213,85 +1414,86 @@ export default function ClubTunnelPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-[#1B2A4A]/60 p-5 backdrop-blur">
-          <div className="mb-1 text-xs text-white/60">Contacts total</div>
-          <div className="text-xl font-black text-white lg:text-3xl">{totalContacts}</div>
+      <div className="mb-6 grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-0.5 rounded-xl bg-[#111827] px-4 py-3">
+          <span className="text-xs uppercase tracking-wider text-white/40">Contacts total</span>
+          <span className="text-2xl font-bold text-white">{totalContacts}</span>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-[#1B2A4A]/60 p-5 backdrop-blur">
-          <div className="mb-1 text-xs text-white/60">CA prévisionnel</div>
-          <div className="text-xl font-black text-blue-300 lg:text-3xl">
+        <div className="flex flex-col gap-0.5 rounded-xl bg-[#111827] px-4 py-3">
+          <span className="text-xs uppercase tracking-wider text-white/40">CA prévisionnel</span>
+          <span className="text-2xl font-bold text-blue-300">
             {caPrevisionnel.toLocaleString("fr-FR")}€
-          </div>
+          </span>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-[#1B2A4A]/60 p-5 backdrop-blur">
-          <div className="mb-1 text-xs text-white/60">CA réalisé</div>
-          <div className="text-xl font-black text-[#C8102E] lg:text-3xl">
-            {caRealise.toLocaleString("fr-FR")}€
-          </div>
+        <div className="flex flex-col gap-0.5 rounded-xl bg-[#111827] px-4 py-3">
+          <span className="text-xs uppercase tracking-wider text-white/40">CA réalisé</span>
+          <span className="text-2xl font-bold text-[#C8102E]">{caRealise.toLocaleString("fr-FR")}€</span>
         </div>
       </div>
 
       <DndContext onDragEnd={handleDragEnd}>
-        <div className="mt-6 flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-4 lg:mx-0 lg:px-0">
-          {columnsWithCards.map((column) => (
-            <div
-              key={column.id}
-              className="min-w-[280px] w-[280px] flex-shrink-0 snap-start rounded-2xl border border-white/10 bg-[#111] p-4 lg:w-auto lg:flex-1"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                {editingColumnId === column.id ? (
-                  <input
-                    value={columnDraft}
-                    onChange={(event) => setColumnDraft(event.target.value)}
-                    onBlur={() => {
-                      setColumns((prev) =>
-                        prev.map((col) =>
-                          col.id === column.id ? { ...col, label: columnDraft || col.label } : col
-                        )
-                      );
-                      setEditingColumnId(null);
-                    }}
-                    className="w-full rounded-md bg-white/5 px-2 py-1 text-sm text-white"
-                  />
-                ) : (
-                  <button
-                    className="text-sm font-semibold"
-                    style={{ color: column.couleur }}
-                    onClick={() => {
-                      setEditingColumnId(column.id);
-                      setColumnDraft(column.label);
-                    }}
-                  >
-                    {column.label}
-                  </button>
-                )}
-                <span className="text-xs text-white/40">{column.cards.length}</span>
+        <div className="overflow-x-auto pb-8 -mx-4 px-4 lg:mx-0 lg:px-0">
+          <div className="flex min-w-max gap-4 lg:min-w-0">
+            {columnsWithCards.map((column) => (
+              <div
+                key={column.id}
+                className="flex w-[300px] flex-col rounded-xl bg-[#111827] p-3 lg:w-auto lg:flex-1"
+              >
+                <div className="mb-3">
+                  <div className="flex items-center justify-between">
+                    {editingColumnId === column.id ? (
+                      <input
+                        value={columnDraft}
+                        onChange={(event) => setColumnDraft(event.target.value)}
+                        onBlur={() => {
+                          setColumns((prev) =>
+                            prev.map((col) =>
+                              col.id === column.id ? { ...col, label: columnDraft || col.label } : col
+                            )
+                          );
+                          setEditingColumnId(null);
+                        }}
+                        className="w-full rounded-md bg-white/5 px-2 py-1 text-sm text-white"
+                      />
+                    ) : (
+                      <button
+                        className="text-sm font-semibold"
+                        style={{ color: column.couleur }}
+                        onClick={() => {
+                          setEditingColumnId(column.id);
+                          setColumnDraft(column.label);
+                        }}
+                      >
+                        {column.label}
+                      </button>
+                    )}
+                    <span className="text-xs text-white/40">{column.cards.length}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-white/40">
+                    {column.cards
+                      .reduce((sum, card) => sum + card.valeur, 0)
+                      .toLocaleString("fr-FR")}€
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <SortableContext items={column.cards.map((card) => card.id)}>
+                    <ColumnDropZone id={column.id}>
+                      {column.cards.map((card) => (
+                        <SortableCard
+                          key={card.id}
+                          card={card}
+                          columns={columns}
+                          onMove={moveCard}
+                          setSelectedProspect={setSelectedProspect}
+                          setShowDetailModal={setShowDetailModal}
+                        />
+                      ))}
+                    </ColumnDropZone>
+                  </SortableContext>
+                </div>
               </div>
-              <div className="mb-2 text-xs text-white/40">
-                {column.cards
-                  .reduce((sum, card) => sum + card.valeur, 0)
-                  .toLocaleString("fr-FR")}€
-              </div>
-              <SortableContext items={column.cards.map((card) => card.id)}>
-                <ColumnDropZone id={column.id}>
-                  {column.cards.map((card) => (
-                    <SortableCard
-                      key={card.id}
-                      card={card}
-                      columns={columns}
-                      onMove={moveCard}
-                      setSelectedProspect={setSelectedProspect}
-                      setShowDetailModal={setShowDetailModal}
-                    />
-                  ))}
-                </ColumnDropZone>
-              </SortableContext>
-              <button className="mt-3 w-full rounded-full bg-white/10 px-3 py-1.5 text-xs text-white/70">
-                + Ajouter
-              </button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </DndContext>
 
@@ -1324,7 +1526,13 @@ export default function ClubTunnelPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showProspectDialog} onOpenChange={setShowProspectDialog}>
+      <Dialog
+        open={showProspectDialog && prospectStep === "coordonnees"}
+        onOpenChange={(open) => {
+          setShowProspectDialog(open);
+          if (!open) setProspectStep("coordonnees");
+        }}
+      >
         <DialogContent className="bg-[#111] text-white">
           <DialogHeader>
             <DialogTitle>Nouveau prospect / Modifier</DialogTitle>
@@ -1479,101 +1687,82 @@ export default function ClubTunnelPage() {
             </>
           )}
 
-          {prospectStep === "offre" && (
-            <>
-              <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                <div className="space-y-4">
-                  {prospectOfferSections.map((section) => (
-                    <div key={section.title} className="rounded-xl border border-white/10 bg-white/5 p-4">
-                      <details open>
-                        <summary className="cursor-pointer text-sm font-semibold text-white">
-                          {section.title}
-                        </summary>
-                        <div className="mt-3 space-y-2 text-sm text-white/70">
-                          {section.items.map((item: { id: string; label: string; price: number; included?: boolean }) => {
-                            const isIncluded = Boolean(item.included);
-                            const checked = isIncluded || Object.prototype.hasOwnProperty.call(newOfferSelections, item.id);
-                            const price = item.price;
-                            return (
-                              <label key={item.id} className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    disabled={isIncluded}
-                                    onChange={(event) => {
-                                      const isChecked = event.target.checked;
-                                      setNewOfferSelections((prev) => {
-                                        if (!isChecked) {
-                                          const next = { ...prev };
-                                          delete next[item.id];
-                                          return next;
-                                        }
-                                        return { ...prev, [item.id]: price };
-                                      });
-                                    }}
-                                  />
-                                  <span>{item.label}</span>
-                                  {isIncluded && (
-                                    <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
-                                      INCLUS
-                                    </span>
-                                  )}
-                                </div>
-                                {!isIncluded && (
-                                  <span>{(price || 0).toLocaleString("fr-FR")}€</span>
-                                )}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </details>
-                    </div>
-                  ))}
-                </div>
-                <div className="sticky top-4 h-fit rounded-xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-sm font-semibold text-white">Offre pour {formValues.nom || "le prospect"}</div>
-                  <div className="mt-3 space-y-2 text-sm text-white/70">
-                    {newOfferItems.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <span>{item.label}</span>
-                        <div className="flex items-center gap-2">
-                          {item.included ? (
-                            <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
-                              INCLUS
-                            </span>
-                          ) : (
-                            <>
-                              <span>{item.price.toLocaleString("fr-FR")}€</span>
-                              <button
-                                className="text-white/50"
-                                onClick={() =>
-                                  setNewOfferSelections((prev) => {
-                                    const next = { ...prev };
-                                    delete next[item.id];
-                                    return next;
-                                  })
-                                }
-                              >
-                                ✕
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="my-3 h-px bg-white/10" />
-                  <div className="text-sm text-white/60">Total HT : {newOfferTotal.toLocaleString("fr-FR")}€</div>
-                  <div className="text-sm text-white/60">TVA 20% : {newOfferTva.toLocaleString("fr-FR")}€</div>
-                  <div className="text-lg font-black text-[#C8102E] lg:text-2xl">
-                    {newOfferTtc.toLocaleString("fr-FR")}€
-                  </div>
-                </div>
+        </DialogContent>
+      </Dialog>
+
+      {showProspectDialog && prospectStep === "offre" && (
+        <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111827] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="flex-shrink-0 flex items-center justify-between p-5 border-b border-white/10">
+              <div>
+                <div className="text-sm text-white/60">Catalogue des prestations</div>
+                <div className="text-lg font-semibold text-white">Sélectionnez les prestations</div>
               </div>
-              <DialogFooter>
+              <button
+                onClick={() => {
+                  setShowProspectDialog(false);
+                  setProspectStep("coordonnees");
+                }}
+                className="text-lg text-white/60 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {prospectOfferSections.map((section) => (
+                <div key={section.title} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <details open>
+                    <summary className="cursor-pointer text-sm font-semibold text-white">{section.title}</summary>
+                    <div className="mt-3 space-y-2 text-sm text-white/70">
+                      {section.items.map((item: { id: string; label: string; price: number; included?: boolean }) => {
+                        const isIncluded = Boolean(item.included);
+                        const checked = isIncluded || Object.prototype.hasOwnProperty.call(newOfferSelections, item.id);
+                        const price = item.price;
+                        return (
+                          <label key={item.id} className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={isIncluded}
+                                onChange={(event) => {
+                                  const isChecked = event.target.checked;
+                                  setNewOfferSelections((prev) => {
+                                    if (!isChecked) {
+                                      const next = { ...prev };
+                                      delete next[item.id];
+                                      return next;
+                                    }
+                                    return { ...prev, [item.id]: price };
+                                  });
+                                }}
+                              />
+                              <span>{item.label}</span>
+                              {isIncluded && (
+                                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
+                                  INCLUS
+                                </span>
+                              )}
+                            </div>
+                            {!isIncluded && <span>{(price || 0).toLocaleString("fr-FR")}€</span>}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </details>
+                </div>
+              ))}
+            </div>
+            <div className="flex-shrink-0 border-t border-white/10 p-5 flex items-center justify-between">
+              <div className="text-sm text-white/70">
+                Total HT : {newOfferTotal.toLocaleString("fr-FR")}€ · TVA 20% : {newOfferTva.toLocaleString("fr-FR")}€ ·{" "}
+                <span className="font-semibold text-[#C8102E]">
+                  {newOfferTtc.toLocaleString("fr-FR")}€ TTC
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
-                  className="rounded-full bg-white/10 px-4 py-2 text-sm"
+                  className="rounded-full bg-white/10 px-4 py-2 text-sm text-white"
                   onClick={() => setProspectStep("coordonnees")}
                 >
                   ← Retour
@@ -1585,15 +1774,87 @@ export default function ClubTunnelPage() {
                 >
                   Créer le prospect
                 </button>
-              </DialogFooter>
-            </>
-          )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={showAddProspect} onOpenChange={setShowAddProspect}>
+        <DialogContent className="max-w-lg bg-[#111] text-white">
+          <DialogHeader>
+            <DialogTitle>Ajouter un prospect</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Nom de l'entreprise *"
+              value={newProspect.nom}
+              onChange={(event) => setNewProspect((prev) => ({ ...prev, nom: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <Input
+              placeholder="Secteur"
+              value={newProspect.secteur}
+              onChange={(event) => setNewProspect((prev) => ({ ...prev, secteur: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <Input
+              placeholder="Nom du contact"
+              value={newProspect.contact}
+              onChange={(event) => setNewProspect((prev) => ({ ...prev, contact: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <Input
+              placeholder="Email"
+              value={newProspect.email}
+              onChange={(event) => setNewProspect((prev) => ({ ...prev, email: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <Input
+              placeholder="Téléphone"
+              value={newProspect.telephone}
+              onChange={(event) => setNewProspect((prev) => ({ ...prev, telephone: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <select
+              value={newProspect.colonne}
+              onChange={(event) => setNewProspect((prev) => ({ ...prev, colonne: event.target.value }))}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+            >
+              <option value="prospects">Prospects</option>
+              <option value="premier_contact">Premier contact</option>
+              <option value="presentation">Présentation</option>
+              <option value="negociation">Négociation</option>
+              <option value="signature">Signature</option>
+            </select>
+            <Input
+              placeholder="Valeur estimée (€)"
+              value={newProspect.valeur}
+              onChange={(event) => setNewProspect((prev) => ({ ...prev, valeur: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+          </div>
+          <DialogFooter>
+            <button
+              className="rounded-full bg-white/10 px-4 py-2 text-sm"
+              onClick={() => setShowAddProspect(false)}
+            >
+              Annuler
+            </button>
+            <button
+              className="rounded-full px-4 py-2 text-sm text-white"
+              style={{ backgroundColor: "var(--club-primary)" }}
+              onClick={handleCreateProspect}
+            >
+              Créer le prospect
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {showDetailModal && selectedProspect && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[90vh] w-full max-w-[95vw] overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1b2e] p-4 lg:max-w-4xl lg:p-6">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-[#111827] w-full sm:max-w-4xl h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden">
             <div className="mb-6 flex items-start justify-between">
               <div className="flex items-center gap-4">
                 <div
@@ -1648,6 +1909,7 @@ export default function ClubTunnelPage() {
           </div>
         </div>
       )}
+      </div>
     </ClubLayout>
   );
 }

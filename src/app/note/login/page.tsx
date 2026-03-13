@@ -117,7 +117,7 @@ function LoginForm() {
 
         toast.success("Connexion réussie !");
         
-        const next = searchParams.get("next") || "/beyond-note-app";
+        const next = searchParams.get("next") || "/note-app";
         router.push(next);
         router.refresh();
         return;
@@ -305,4 +305,5 @@ export default function BeyondNoteLoginPage() {
     </>
   );
 }
+
 

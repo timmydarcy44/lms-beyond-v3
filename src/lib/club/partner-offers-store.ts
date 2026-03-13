@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 export type PartnerOffer = {
   id: string;
@@ -33,5 +33,15 @@ export const getPartnerOffers = (partnerKey?: string | null) => {
 };
 
 export const usePartnerOffers = (partnerKey?: string | null) => {
-  return useSyncExternalStore(subscribe, () => getPartnerOffers(partnerKey));
+  const [offers, setOffers] = useState<PartnerOffer[]>(() => getPartnerOffers(partnerKey));
+
+  useEffect(() => {
+    setOffers(getPartnerOffers(partnerKey));
+    const unsubscribe = subscribe(() => {
+      setOffers(getPartnerOffers(partnerKey));
+    });
+    return unsubscribe;
+  }, [partnerKey]);
+
+  return offers;
 };

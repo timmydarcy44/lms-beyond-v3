@@ -9,6 +9,12 @@
   
   body {
     background: white !important;
+    color: black !important;
+  }
+
+  .print-content {
+    max-width: 100% !important;
+    padding: 20px !important;
   }
   
   .print-break {
@@ -321,7 +327,7 @@ body.light {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-x-hidden;
   }
 }
 

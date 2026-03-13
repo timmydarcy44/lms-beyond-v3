@@ -11,7 +11,7 @@ export default function ClubRoiPage() {
 
   return (
     <ClubLayout activeItem="ROI & Reporting">
-      <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-white/70">
+      <div className="rounded-2xl border border-white/10 bg-[#111] p-4 pt-6 text-white/70 lg:p-8 lg:pt-8">
         Section ROI & Reporting (à venir).
       </div>
     </ClubLayout>

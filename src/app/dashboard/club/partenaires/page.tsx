@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ClubLayout } from "@/components/club/club-layout";
 import { useClubGuard } from "@/components/club/use-club-guard";
 import { cn } from "@/lib/utils";
-import { getMyClub, getClubPartners } from "@/lib/supabase/club-queries";
+import { clubPartners } from "@/lib/mocks/club-partners";
+import { getMyClubContext, getClubPartners } from "@/lib/supabase/club-queries";
 
 const filters = ["Tous", "Signés", "Prospects", "En négociation", "À renouveler"];
 
@@ -36,8 +37,10 @@ export default function ClubPartnersPage() {
 
   useEffect(() => {
     const load = async () => {
-      const clubData = await getMyClub();
-      if (!clubData) {
+      const { club: clubData, role } = await getMyClubContext();
+      const isDemo = role === "demo";
+      if (!clubData || isDemo) {
+        setPartnersData(clubPartners);
         setLoading(false);
         return;
       }
@@ -54,12 +57,13 @@ export default function ClubPartnersPage() {
 
   return (
     <ClubLayout activeItem="Partenaires">
-      {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <div className="text-white/50">Chargement...</div>
-        </div>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
+        {loading ? (
+          <div className="flex h-48 items-center justify-center">
+            <div className="text-white/50">Chargement...</div>
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-lg font-semibold text-white lg:text-2xl">Partenaires</h1>
         <button
           className="rounded-full px-5 py-2 text-sm font-semibold text-white"
@@ -67,7 +71,7 @@ export default function ClubPartnersPage() {
         >
           + Ajouter un partenaire
         </button>
-      </div>
+        </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2">
@@ -113,14 +117,14 @@ export default function ClubPartnersPage() {
         </div>
       </div>
 
-      {!loading ? (
-        viewMode === "cards" ? (
-          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {partners.map((partner) => (
-              <div
-                key={partner.slug || partner.id}
-                className="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-lg backdrop-blur-md transition-all duration-200 hover:border-[#C8102E]/40 hover:bg-white/20"
-              >
+        {!loading ? (
+          viewMode === "cards" ? (
+            <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {partners.map((partner) => (
+                <div
+                  key={partner.slug || partner.id}
+                  className="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-lg backdrop-blur-md transition-all duration-200 hover:border-[#C8102E]/40 hover:bg-white/20"
+                >
                 <div className="flex items-center gap-3">
                   <div
                     className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
@@ -166,12 +170,12 @@ export default function ClubPartnersPage() {
                     Contacter
                   </a>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#111]">
-            <table className="w-full text-left text-sm text-white/70">
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#111]">
+              <table className="w-full text-left text-sm text-white/70">
               <thead className="border-b border-white/10 text-xs uppercase text-white/50">
                 <tr>
                   <th className="px-4 py-3">Logo</th>
@@ -225,10 +229,11 @@ export default function ClubPartnersPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        )
-      ) : null}
+              </table>
+            </div>
+          )
+        ) : null}
+      </div>
     </ClubLayout>
   );
 }

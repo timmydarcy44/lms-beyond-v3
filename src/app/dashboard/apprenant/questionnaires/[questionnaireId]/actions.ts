@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 
 export async function submitQuestionnaireResponses(
@@ -91,6 +92,10 @@ export async function submitQuestionnaireResponses(
     // Ne pas bloquer la redirection si le calcul de score échoue
   }
 
+  const session = await getSession();
+  if (session?.role === "demo") {
+    return;
+  }
   redirect("/dashboard/apprenant/sante-mentale");
 }
 

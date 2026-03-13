@@ -17,6 +17,30 @@ export async function getMyClub() {
   return data;
 }
 
+// Récupère le club + le rôle de l'utilisateur connecté
+export async function getMyClubContext() {
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return { club: null, role: null };
+  const { data: userResult } = await supabase.auth.getUser();
+  const user = userResult?.user;
+  if (!user) return { club: null, role: null };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, role_type")
+    .eq("id", user.id)
+    .maybeSingle();
+  const role = String(profile?.role_type ?? profile?.role ?? "").toLowerCase() || null;
+
+  const { data: club } = await supabase
+    .from("clubs")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  return { club, role };
+}
+
 // Récupère les partenaires du club
 export async function getClubPartners(clubId: string) {
   const supabase = createSupabaseBrowserClient();

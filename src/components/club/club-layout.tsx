@@ -19,10 +19,7 @@ export function ClubLayout({ children, activeItem, clubSlug }: ClubLayoutProps) 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div
-      className="min-h-screen bg-[#0d1b2e] text-white"
-      style={getThemeVars(theme)}
-    >
+    <div className="flex h-screen overflow-hidden bg-[#0d1b2e] text-white" style={getThemeVars(theme)}>
       <MobileHeader
         title="SU Dives Cabourg"
         logo="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Beyond%20Network/Logo_SU_Dives_Cabourg_-_2024.svg"
@@ -33,11 +30,11 @@ export function ClubLayout({ children, activeItem, clubSlug }: ClubLayoutProps) 
         <ClubSidebar activeItem={activeItem} theme={theme} onClose={() => setDrawerOpen(false)} />
       </Drawer>
 
-      <div className="flex">
-        <div className="sticky top-0 hidden h-screen w-[220px] flex-shrink-0 lg:block">
+      <div className="flex flex-1">
+        <div className="hidden h-screen w-[220px] flex-shrink-0 overflow-y-auto lg:flex">
           <ClubSidebar activeItem={activeItem} theme={theme} />
         </div>
-        <main className="min-w-0 flex-1 overflow-x-hidden px-4 pt-14 pb-16 lg:pt-0 lg:pb-0 lg:px-8 lg:py-8">
+        <main className="min-w-0 flex-1 h-screen overflow-y-auto px-4 pt-14 pb-16 lg:pt-0 lg:pb-0 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { MentalHealthQuestionnairePlayer } from "@/components/beyond-care/mental-health-questionnaire-player";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { getSession } from "@/lib/auth/session";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 type QuestionRecord = {
@@ -26,10 +27,12 @@ export default async function QuestionnairePlayerPage({
   const { questionnaireId } = await params;
 
   const isSuper = await isSuperAdmin();
+  const session = await getSession();
+  const isDemo = session?.role === "demo";
   const sessionClient = await getServerClient();
   
   // Pour les super admins, permettre l'accès même sans session client
-  if (!sessionClient && !isSuper) {
+  if (!sessionClient && !isSuper && !isDemo) {
     redirect("/dashboard");
   }
 
@@ -38,15 +41,27 @@ export default async function QuestionnairePlayerPage({
   } = sessionClient ? await sessionClient.auth.getUser() : { data: { user: null } };
 
   // Pour les super admins, permettre l'accès même sans user
-  if (!user?.id && !isSuper) {
+  if (!user?.id && !isSuper && !isDemo) {
     redirect("/dashboard");
   }
 
   // Utiliser le service role client pour les super admins, sinon le session client
-  const queryClient = isSuper ? (getServiceRoleClient() ?? sessionClient) : (sessionClient!);
+  const queryClient = isSuper ? (getServiceRoleClient() ?? sessionClient) : sessionClient;
 
-  if (!queryClient) {
+  if (!queryClient && !isDemo) {
     redirect("/dashboard");
+  }
+  if (!queryClient && isDemo) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f7] px-6 py-10 text-gray-900">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold">Mode Démo</h1>
+          <p className="mt-2 text-sm text-gray-500">
+            Une session active est requise pour afficher ce questionnaire.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const { data: questionnaire } = await queryClient

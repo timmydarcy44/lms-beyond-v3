@@ -74,23 +74,14 @@ export function BeyondNoteHeader({ user }: BeyondNoteHeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push("/dashboard")}
-                      className="text-sm"
-                    >
-                      Retour au LMS
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push("/pages/beyond-note")}
-                      className="text-sm"
-                    >
-                      Page marketing
-                    </Button>
-
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/pages/beyond-note")}
+            className="text-sm"
+          >
+            Page marketing
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">

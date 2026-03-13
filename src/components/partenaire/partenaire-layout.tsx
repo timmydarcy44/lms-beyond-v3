@@ -29,7 +29,7 @@ export function PartenaireLayout({ children, club, partner, activeItem }: Parten
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#0b1424] text-white">
+    <div className="flex h-screen overflow-hidden bg-[#0b1424] text-white">
       <MobileHeader title="Brasserie du Port" initials="BP" onMenuOpen={() => setDrawerOpen(true)} />
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
@@ -41,11 +41,11 @@ export function PartenaireLayout({ children, club, partner, activeItem }: Parten
         />
       </Drawer>
 
-      <div className="flex">
-        <div className="sticky top-0 hidden h-screen w-[220px] flex-shrink-0 lg:block">
+      <div className="flex flex-1">
+        <div className="hidden h-screen w-[220px] flex-shrink-0 overflow-y-auto lg:flex">
           <PartenaireSidebar club={club} partner={partner} activeItem={activeItem} />
         </div>
-        <main className="min-w-0 flex-1 overflow-x-hidden px-4 pt-14 pb-16 lg:pt-0 lg:pb-0 lg:px-8 lg:py-8">
+        <main className="min-w-0 flex-1 h-screen overflow-y-auto px-4 pt-14 pb-16 lg:pt-0 lg:pb-0 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>

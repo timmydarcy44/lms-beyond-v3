@@ -23,7 +23,7 @@ type ClubSidebarProps = {
 const navItems = [
   { label: "Dashboard", href: "/dashboard/club", icon: LayoutDashboard },
   { label: "Partenaires", href: "/dashboard/club/partenaires", icon: Users },
-  { label: "Tunnel de vente", href: "/dashboard/club/tunnel", icon: GitBranch },
+  { label: "Prospection", href: "/dashboard/club/tunnel", icon: GitBranch },
   { label: "News Club", href: "/dashboard/club/news", icon: Newspaper },
   { label: "Offres", href: "/dashboard/club/offres", icon: Gift },
   { label: "Aides & Formation", href: "/dashboard/club/aides", icon: GraduationCap },
@@ -88,7 +88,7 @@ export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {
             className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/50 transition-all hover:bg-white/10 hover:text-white"
           >
             <Building2 className="h-4 w-4 flex-shrink-0" />
-            <span className="text-xs">Beyond for Business</span>
+            <span className="text-xs">Former vos collaborateurs</span>
           </a>
         </div>
 

@@ -7,7 +7,10 @@ import { ClubLayout } from "@/components/club/club-layout";
 import { useClubGuard } from "@/components/club/use-club-guard";
 import { getClubTheme } from "@/lib/club-theme";
 import { cn } from "@/lib/utils";
-import { getMyClub, getClubMatches, getClubNews, getClubPartners } from "@/lib/supabase/club-queries";
+import { clubPartners } from "@/lib/mocks/club-partners";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { createPartner, getMyClubContext, getClubMatches, getClubNews, getClubPartners } from "@/lib/supabase/club-queries";
 
 const actions = [
   {
@@ -40,6 +43,23 @@ const actions = [
   },
 ];
 
+const demoMatches = [
+  { date: "2025-09-15", opponent: "FC Lisieux", home: "Domicile", score_nous: 2, score_eux: 1, affluence: 420 },
+  { date: "2025-09-29", opponent: "US Hérouville", home: "Extérieur", score_nous: 0, score_eux: 0, affluence: null },
+  { date: "2025-10-13", opponent: "SO Caennais", home: "Domicile", score_nous: 3, score_eux: 1, affluence: 510 },
+  { date: "2025-10-27", opponent: "FC Alençon", home: "Extérieur", score_nous: 1, score_eux: 2, affluence: null },
+  { date: "2025-11-10", opponent: "Bayeux FC", home: "Domicile", score_nous: 2, score_eux: 0, affluence: 380 },
+  { date: "2026-03-15", opponent: "FC Caen B", home: "Domicile", score_nous: null, score_eux: null, affluence: null },
+];
+
+const demoClub = {
+  id: "demo-club",
+  nom: "SU Dives Cabourg",
+  division: "National 3",
+  slug: "su-dives-cabourg",
+  contact_prenom: "Responsable",
+};
+
 const activities = [
   { label: "BNP Paribas a consulté le portail", time: "2h" },
   { label: "Sport 2000 — renouvellement dans 15 jours", time: "hier" },
@@ -55,14 +75,30 @@ export default function ClubDashboardPage() {
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState("responsable");
+  const [isDemo, setIsDemo] = useState(false);
+  const [showAddPartner, setShowAddPartner] = useState(false);
+  const [newPartner, setNewPartner] = useState({
+    nom: "",
+    secteur: "",
+    contact: "",
+    email: "",
+    telephone: "",
+    colonne_tunnel: "prospects",
+  });
   const theme = useMemo(
     () => getClubTheme(club?.slug ?? club?.code ?? club?.nom_slug ?? "su-dives-cabourg"),
     [club?.slug, club?.code, club?.nom_slug]
   );
   useEffect(() => {
     async function load() {
-      const clubData = await getMyClub();
-      if (!clubData) {
+      const { club: clubData, role } = await getMyClubContext();
+      const isDemo = role === "demo";
+      setIsDemo(isDemo);
+      if (!clubData || isDemo) {
+        setClub(demoClub);
+        setFirstName(demoClub.contact_prenom);
+        setPartners(clubPartners);
+        setMatches(demoMatches);
         setLoading(false);
         return;
       }
@@ -134,6 +170,47 @@ export default function ClubDashboardPage() {
     });
   }, [matches]);
 
+  const handleCreatePartner = async () => {
+    if (!newPartner.nom.trim()) return;
+    if (!club?.id || isDemo) {
+      setPartners((prev) => [
+        {
+          id: `demo-${Date.now()}`,
+          nom: newPartner.nom,
+          secteur: newPartner.secteur || "—",
+          valeur: 0,
+          statut: "Prospect",
+          contact_prenom: newPartner.contact.split(" ")[0] || "",
+          contact_nom: newPartner.contact.split(" ").slice(1).join(" "),
+          contact_email: newPartner.email,
+          contact_tel: newPartner.telephone,
+          colonne_tunnel: newPartner.colonne_tunnel,
+        },
+        ...prev,
+      ]);
+      setShowAddPartner(false);
+      setNewPartner({ nom: "", secteur: "", contact: "", email: "", telephone: "", colonne_tunnel: "prospects" });
+      toast.success("Partenaire créé ✓");
+      return;
+    }
+    await createPartner(club.id, {
+      nom: newPartner.nom,
+      secteur: newPartner.secteur,
+      contact_prenom: newPartner.contact.split(" ")[0] || "",
+      contact_nom: newPartner.contact.split(" ").slice(1).join(" "),
+      contact_email: newPartner.email,
+      contact_tel: newPartner.telephone,
+      colonne_tunnel: newPartner.colonne_tunnel,
+      statut: "Prospect",
+      valeur: 0,
+    });
+    const refreshed = await getClubPartners(club.id);
+    setPartners(refreshed);
+    setShowAddPartner(false);
+    setNewPartner({ nom: "", secteur: "", contact: "", email: "", telephone: "", colonne_tunnel: "prospects" });
+    toast.success("Partenaire créé ✓");
+  };
+
   if (status !== "allowed") {
     return null;
   }
@@ -150,7 +227,7 @@ export default function ClubDashboardPage() {
 
   return (
     <ClubLayout activeItem="Dashboard">
-      <div className="-mx-4 -my-4 min-h-screen bg-[#0d1b2e] px-4 py-4 text-white lg:-mx-8 lg:-my-8 lg:px-8 lg:py-8">
+      <div className="-mx-4 -my-4 min-h-screen bg-[#0d1b2e] px-4 pb-4 pt-6 text-white lg:-mx-8 lg:-my-8 lg:px-8 lg:pb-8 lg:pt-8">
         <section className="relative overflow-hidden rounded-3xl">
           <div className="h-[250px] bg-gradient-to-r from-[#1B2A4A] to-[#C8102E] lg:h-[500px]" />
           <div className="absolute inset-0 flex flex-col justify-between p-6 text-white lg:flex-row lg:items-center lg:p-10">
@@ -202,23 +279,38 @@ export default function ClubDashboardPage() {
 
         <section className="mt-8">
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            {actions.map((action) => (
-              <Link
-                key={action.titre}
-                href={action.href}
-                className="group relative h-[200px] overflow-hidden rounded-2xl transition-transform hover:scale-[1.02]"
-              >
-                <img src={action.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1B2A4A]/70 via-[#1B2A4A]/30 to-transparent" />
-                <div className="absolute bottom-4 left-4">
-                  <div className="text-sm text-white/70">{action.sous_titre}</div>
-                  <div className="text-lg font-bold text-white">{action.titre}</div>
-                </div>
-                <div className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg text-[#1B2A4A] shadow-lg">
-                  {action.cta_icon}
-                </div>
-              </Link>
-            ))}
+            {actions.map((action) => {
+              const isAddPartner = action.titre === "Créer un partenaire";
+              return (
+                <Link
+                  key={action.titre}
+                  href={action.href}
+                  className="group relative h-[200px] overflow-hidden rounded-2xl transition-transform hover:scale-[1.02]"
+                >
+                  <img src={action.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1B2A4A]/70 via-[#1B2A4A]/30 to-transparent" />
+                  <div className="absolute bottom-4 left-4">
+                    <div className="text-sm text-white/70">{action.sous_titre}</div>
+                    <div className="text-lg font-bold text-white">{action.titre}</div>
+                  </div>
+                  {isAddPartner ? (
+                    <button
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setShowAddPartner(true);
+                      }}
+                      className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg text-[#1B2A4A] shadow-lg"
+                    >
+                      {action.cta_icon}
+                    </button>
+                  ) : (
+                    <div className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg text-[#1B2A4A] shadow-lg">
+                      {action.cta_icon}
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </section>
 
@@ -334,6 +426,70 @@ export default function ClubDashboardPage() {
         </div>
       </section>
       </div>
+
+      <Dialog open={showAddPartner} onOpenChange={setShowAddPartner}>
+        <DialogContent className="max-w-lg bg-[#111] text-white">
+          <DialogHeader>
+            <DialogTitle>Ajouter un partenaire</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Nom de l'entreprise"
+              value={newPartner.nom}
+              onChange={(event) => setNewPartner((prev) => ({ ...prev, nom: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <Input
+              placeholder="Secteur"
+              value={newPartner.secteur}
+              onChange={(event) => setNewPartner((prev) => ({ ...prev, secteur: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <Input
+              placeholder="Nom du contact"
+              value={newPartner.contact}
+              onChange={(event) => setNewPartner((prev) => ({ ...prev, contact: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <Input
+              placeholder="Email"
+              value={newPartner.email}
+              onChange={(event) => setNewPartner((prev) => ({ ...prev, email: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <Input
+              placeholder="Téléphone"
+              value={newPartner.telephone}
+              onChange={(event) => setNewPartner((prev) => ({ ...prev, telephone: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
+            <select
+              value={newPartner.colonne_tunnel}
+              onChange={(event) => setNewPartner((prev) => ({ ...prev, colonne_tunnel: event.target.value }))}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+            >
+              <option value="prospects">Prospect</option>
+              <option value="premier_contact">Premier contact</option>
+              <option value="negociation">Négociation</option>
+            </select>
+          </div>
+          <DialogFooter>
+            <button
+              className="rounded-full bg-white/10 px-4 py-2 text-sm"
+              onClick={() => setShowAddPartner(false)}
+            >
+              Annuler
+            </button>
+            <button
+              className="rounded-full px-4 py-2 text-sm text-white"
+              style={{ backgroundColor: "var(--club-primary)" }}
+              onClick={handleCreatePartner}
+            >
+              Créer
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ClubLayout>
   );
 }

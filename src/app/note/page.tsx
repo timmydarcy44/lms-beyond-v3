@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { BeyondNotePage } from "@/components/beyond-note/beyond-note-page";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Beyond Note - Prise de notes intelligente | Beyond",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function NotePage() {
-  return <BeyondNotePage />;
+  redirect("/note/login?next=/note-app");
 }

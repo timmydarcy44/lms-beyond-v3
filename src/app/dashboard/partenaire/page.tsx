@@ -93,30 +93,31 @@ export default function PartenaireDashboardPage() {
       club={{ name: partenaireClub.name, initials: partenaireClub.initials, logoUrl: partenaireClub.logoUrl }}
       partner={{ name: partenaireProfile.name, initials: partenaireProfile.initials }}
     >
-      <section
-        className="rounded-2xl p-6"
-        style={{
-          background: `linear-gradient(135deg, ${partenaireClub.gradientFrom}, ${partenaireClub.gradientTo})`,
-        }}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-lg font-black text-white lg:text-2xl">
-              Bienvenue, {partenaireProfile.name}
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
+        <section
+          className="rounded-2xl p-6"
+          style={{
+            background: `linear-gradient(135deg, ${partenaireClub.gradientFrom}, ${partenaireClub.gradientTo})`,
+          }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-lg font-black text-white lg:text-2xl">
+                Bienvenue, {partenaireProfile.name}
+              </div>
+              <div className="mt-1 text-sm text-white/80">
+                Partenaire {partenaireProfile.pack} de {partenaireClub.name} — Saison 2025/2026
+              </div>
             </div>
-            <div className="mt-1 text-sm text-white/80">
-              Partenaire {partenaireProfile.pack} de {partenaireClub.name} — Saison 2025/2026
-            </div>
+            <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", packStyles[partenaireProfile.pack])}>
+              {partenaireProfile.pack}
+            </span>
           </div>
-          <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", packStyles[partenaireProfile.pack])}>
-            {partenaireProfile.pack}
-          </span>
-        </div>
-      </section>
+        </section>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-        <div>
-          {posts.map((post) => (
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+          <div>
+            {posts.map((post) => (
             <div
               key={post.id}
               className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-[#111827]"
@@ -167,46 +168,46 @@ export default function PartenaireDashboardPage() {
           ))}
         </div>
 
-        <div className="w-full lg:w-80 lg:flex-shrink-0">
-          <div className="sticky top-6 space-y-4">
-            <ClassementWidget />
-            <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-white/60">Votre partenariat</div>
-                <span className={cn("rounded-full px-2 py-0.5 text-xs", packStyles[partenaireProfile.pack])}>
-                  {partenaireProfile.pack}
-                </span>
+          <div className="w-full lg:w-80 lg:flex-shrink-0">
+            <div className="sticky top-6 space-y-4">
+              <ClassementWidget />
+              <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-white/60">Votre partenariat</div>
+                  <span className={cn("rounded-full px-2 py-0.5 text-xs", packStyles[partenaireProfile.pack])}>
+                    {partenaireProfile.pack}
+                  </span>
+                </div>
+                <div className="mt-3 text-lg font-black text-white lg:text-2xl">
+                  {partenaireProfile.contractAmountHt.toLocaleString("fr-FR")}€ HT/an
+                </div>
+                <div className="mt-4 text-xs text-white/60">Saison 2025/2026</div>
+                <div className="mt-2 h-1.5 rounded-full bg-white/10">
+                  <div className="h-1.5 w-[65%] rounded-full bg-[#C8102E]" />
+                </div>
+                <div className="mt-2 text-xs text-white/50">65% de la saison écoulée</div>
+                <div className="mt-4 rounded-xl bg-[#C8102E]/10 p-3 text-xs text-white/70">
+                  <div className="font-semibold text-white">Soirée partenaires</div>
+                  <div>28 mars — dans 21 jours</div>
+                </div>
               </div>
-              <div className="mt-3 text-lg font-black text-white lg:text-2xl">
-                {partenaireProfile.contractAmountHt.toLocaleString("fr-FR")}€ HT/an
-              </div>
-              <div className="mt-4 text-xs text-white/60">Saison 2025/2026</div>
-              <div className="mt-2 h-1.5 rounded-full bg-white/10">
-                <div className="h-1.5 w-[65%] rounded-full bg-[#C8102E]" />
-              </div>
-              <div className="mt-2 text-xs text-white/50">65% de la saison écoulée</div>
-              <div className="mt-4 rounded-xl bg-[#C8102E]/10 p-3 text-xs text-white/70">
-                <div className="font-semibold text-white">Soirée partenaires</div>
-                <div>28 mars — dans 21 jours</div>
-              </div>
-            </div>
 
-            <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
-              <div className="text-sm text-white/60">Votre visibilité ce mois</div>
-              <div className="mt-2 text-lg font-black text-blue-300 lg:text-2xl">47 200 impressions</div>
-              <div className="mt-2 space-y-1 text-xs text-white/60">
-                <div>3 mentions réseaux sociaux</div>
-                <div>1 article dédié</div>
-                <div className="text-green-400">ROI estimé ×3.2</div>
+              <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
+                <div className="text-sm text-white/60">Votre visibilité ce mois</div>
+                <div className="mt-2 text-lg font-black text-blue-300 lg:text-2xl">47 200 impressions</div>
+                <div className="mt-2 space-y-1 text-xs text-white/60">
+                  <div>3 mentions réseaux sociaux</div>
+                  <div>1 article dédié</div>
+                  <div className="text-green-400">ROI estimé ×3.2</div>
+                </div>
+                <Link href="/dashboard/partenaire/roi" className="mt-3 inline-block text-xs text-white/60 hover:text-white">
+                  Voir le rapport complet →
+                </Link>
               </div>
-              <Link href="/dashboard/partenaire/roi" className="mt-3 inline-block text-xs text-white/60 hover:text-white">
-                Voir le rapport complet →
-              </Link>
-            </div>
 
-            <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
-              <div className="text-sm font-semibold text-white">Réseau partenaires</div>
-              <div className="text-xs text-white/50">Les autres partenaires du club</div>
+              <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
+                <div className="text-sm font-semibold text-white">Réseau partenaires</div>
+                <div className="text-xs text-white/50">Les autres partenaires du club</div>
               <div className="mt-3 flex items-center gap-2">
                 {["NE", "CD", "AG"].map((initials) => (
                   <div
@@ -225,6 +226,7 @@ export default function PartenaireDashboardPage() {
                 Voir l'annuaire →
               </Link>
             </div>
+          </div>
           </div>
         </div>
       </div>

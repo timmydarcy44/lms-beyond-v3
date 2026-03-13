@@ -117,20 +117,21 @@ export default function PartenaireRoiPage() {
       club={{ name: partenaireClub.name, initials: partenaireClub.initials, logoUrl: partenaireClub.logoUrl }}
       partner={{ name: partenaireProfile.name, initials: partenaireProfile.initials }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-lg font-black text-white lg:text-2xl">Mon ROI — Saison 2025/2026</div>
-          <div className="text-sm text-white/60">
-            Brasserie du Port — Pack {partenaireProfile.pack}
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-lg font-black text-white lg:text-2xl">Mon ROI — Saison 2025/2026</div>
+            <div className="text-sm text-white/60">
+              Brasserie du Port — Pack {partenaireProfile.pack}
+            </div>
           </div>
+          <button
+            onClick={handleDownloadPdf}
+            className="rounded-full bg-white/10 px-4 py-2 text-sm text-white"
+          >
+            📄 Télécharger le rapport PDF
+          </button>
         </div>
-        <button
-          onClick={handleDownloadPdf}
-          className="rounded-full bg-white/10 px-4 py-2 text-sm text-white"
-        >
-          📄 Télécharger le rapport PDF
-        </button>
-      </div>
 
       <section className="mb-8 mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="rounded-2xl border border-white/10 bg-[#111827] p-5">
@@ -275,7 +276,7 @@ export default function PartenaireRoiPage() {
         </div>
       </section>
 
-      <section className="mt-8 rounded-2xl bg-gradient-to-r from-[#C8102E] to-[#8B0000] p-4 text-center lg:p-8">
+        <section className="mt-8 rounded-2xl bg-gradient-to-r from-[#C8102E] to-[#8B0000] p-4 text-center lg:p-8">
         <div className="text-sm text-white/70">Votre partenariat se termine dans 5 mois</div>
         <div className="mt-2 text-lg font-black text-white lg:text-2xl">Renouveler ou upgrader votre pack ?</div>
         <div className="mt-2 text-sm text-white/80">
@@ -289,7 +290,8 @@ export default function PartenaireRoiPage() {
             Passer au Pack Or — 10 000€ →
           </button>
         </div>
-      </section>
+        </section>
+      </div>
     </PartenaireLayout>
   );
 }

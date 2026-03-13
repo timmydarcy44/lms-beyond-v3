@@ -52,7 +52,7 @@ export async function resolvePortalProducts(session: SessionUser): Promise<Porta
         key: "note",
         label: "Beyond Note",
         description: "Prise de notes intelligente",
-        href: "/beyond-note-app",
+        href: "/note-app",
         isEnabled: false,
       },
     ];
@@ -144,10 +144,11 @@ export async function resolvePortalProducts(session: SessionUser): Promise<Porta
       key: "note",
       label: "Beyond Note",
       description: "Notes, syntheses et intelligence documentaire",
-      href: "/beyond-note-app",
+      href: "/note-app",
       isEnabled: hasNote,
     },
   ];
 
   return spaces;
 }
+

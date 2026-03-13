@@ -12,7 +12,8 @@ export default async function CareDashboardPage() {
     role === "formateur" ||
     role === "mentor" ||
     role === "teacher" ||
-    role === "instructor";
+    role === "instructor" ||
+    role === "demo";
 
   return (
     <div className="min-h-screen bg-[#060B1A] px-6 py-14 text-white">

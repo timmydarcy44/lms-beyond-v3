@@ -13,7 +13,7 @@ type NavItem = {
 const clubNav: NavItem[] = [
   { href: "/dashboard/club", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/club/partenaires", icon: Users, label: "Partenaires" },
-  { href: "/dashboard/club/tunnel", icon: TrendingUp, label: "Tunnel" },
+  { href: "/dashboard/club/tunnel", icon: TrendingUp, label: "Prospection" },
   { href: "/dashboard/club/news", icon: Newspaper, label: "News" },
   { href: "/dashboard/club/offres", icon: Gift, label: "Offres" },
 ];

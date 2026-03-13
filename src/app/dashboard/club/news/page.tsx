@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { getMyClub, getClubNews } from "@/lib/supabase/club-queries";
+import { getMyClubContext, getClubNews } from "@/lib/supabase/club-queries";
 
 type NewsItem = {
   id: string | number;
@@ -19,6 +19,41 @@ type NewsItem = {
   extrait: string;
   contenu?: string;
 };
+
+const demoNews: NewsItem[] = [
+  {
+    id: 1,
+    titre: "Victoire 3-0 contre FC Lisieux",
+    date: "2 Mars 2026",
+    statut: "Publié",
+    image: "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=800&q=80",
+    extrait: "Une belle victoire à domicile qui nous maintient dans le top 4...",
+  },
+  {
+    id: 2,
+    titre: "Soirée Partenaires — Save the Date",
+    date: "28 Fév 2026",
+    statut: "Publié",
+    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80",
+    extrait: "Rendez-vous le 15 Avril pour notre soirée annuelle des partenaires...",
+  },
+  {
+    id: 3,
+    titre: "Nouveau partenaire : BNP Paribas",
+    date: "15 Jan 2026",
+    statut: "Publié",
+    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80",
+    extrait: "Nous sommes fiers d'annoncer notre partenariat avec BNP Paribas...",
+  },
+  {
+    id: 4,
+    titre: "Présentation saison 2026-2027",
+    date: "10 Jan 2026",
+    statut: "Brouillon",
+    image: null,
+    extrait: "En cours de rédaction...",
+  },
+];
 
 export default function ClubNewsPage() {
   const status = useClubGuard();
@@ -80,8 +115,10 @@ export default function ClubNewsPage() {
 
   useEffect(() => {
     const load = async () => {
-      const clubData = await getMyClub();
-      if (!clubData) {
+      const { club: clubData, role } = await getMyClubContext();
+      const isDemo = role === "demo";
+      if (!clubData || isDemo) {
+        setNews(demoNews);
         setLoading(false);
         return;
       }
@@ -115,7 +152,41 @@ export default function ClubNewsPage() {
       published_at: form.statut === "Publié" ? new Date().toISOString() : null,
     };
     const run = async () => {
-      if (!clubId) return;
+      if (!clubId) {
+        if (editingNews) {
+          setNews((prev) =>
+            prev.map((item) =>
+              item.id === editingNews.id
+                ? {
+                    ...item,
+                    titre: payload.titre,
+                    image: payload.image,
+                    statut: payload.statut === "published" ? "Publié" : "Brouillon",
+                    extrait: payload.extrait,
+                    contenu: payload.contenu,
+                  }
+                : item
+            )
+          );
+        } else {
+          setNews((prev) => [
+            {
+              id: Date.now(),
+              titre: payload.titre,
+              date: "Aujourd'hui",
+              statut: payload.statut === "published" ? "Publié" : "Brouillon",
+              image: payload.image || null,
+              extrait: payload.extrait,
+              contenu: payload.contenu,
+            },
+            ...prev,
+          ]);
+        }
+        setShowDialog(false);
+        resetForm();
+        toast.success("News enregistrée ✓");
+        return;
+      }
       const supabase = createSupabaseBrowserClient();
       if (editingNews) {
         const { data } = await supabase
@@ -193,6 +264,7 @@ export default function ClubNewsPage() {
 
   return (
     <ClubLayout activeItem="News Club">
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-lg font-semibold text-white lg:text-2xl">Actualités du club</h1>
         <button
@@ -234,6 +306,11 @@ export default function ClubNewsPage() {
                   <button
                     className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white"
                     onClick={async () => {
+                      if (!clubId) {
+                        setNews((prev) => prev.filter((newsItem) => newsItem.id !== item.id));
+                        toast.success("News supprimée ✓");
+                        return;
+                      }
                       const supabase = createSupabaseBrowserClient();
                       await supabase.from("club_news").delete().eq("id", item.id);
                       setNews((prev) => prev.filter((newsItem) => newsItem.id !== item.id));
@@ -247,6 +324,7 @@ export default function ClubNewsPage() {
             </div>
           ))
         )}
+      </div>
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>

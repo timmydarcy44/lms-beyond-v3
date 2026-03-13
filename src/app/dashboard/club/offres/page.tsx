@@ -288,46 +288,51 @@ export default function ClubOffersPage() {
 
   return (
     <ClubLayout activeItem="Offres">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-lg font-semibold text-white lg:text-2xl">Packs partenaires</h1>
-        <button
-          className="rounded-full px-5 py-2 text-sm font-semibold text-white"
-          style={{ backgroundColor: "var(--club-primary)" }}
-          onClick={() => openDialog()}
-        >
-          + Créer un pack
-        </button>
-      </div>
-
-      <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {packs.map((pack, index) => (
-          <div
-            key={pack.nom}
-            className={`rounded-2xl border ${pack.border} bg-gradient-to-br ${pack.gradient} p-6`}
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-lg font-semibold text-white lg:text-2xl">Packs partenaires</h1>
+          <button
+            className="rounded-full px-5 py-2 text-sm font-semibold text-white"
+            style={{ backgroundColor: "var(--club-primary)" }}
+            onClick={() => openDialog()}
           >
-            <div className="text-lg font-black text-white lg:text-2xl">{pack.nom}</div>
-            <div className="mt-1 text-xl" style={{ color: "var(--club-primary)" }}>
-              {pack.prix}
+            + Créer un pack
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {packs.map((pack, index) => (
+            <div
+              key={pack.nom}
+              className={`rounded-2xl border ${pack.border} bg-gradient-to-br ${pack.gradient} p-6`}
+            >
+              <div className="text-lg font-black text-white lg:text-2xl">{pack.nom}</div>
+              <div className="mt-1 text-xl" style={{ color: "var(--club-primary)" }}>
+                {pack.prix}
+              </div>
+              <div className="my-4 h-px bg-white/10" />
+              <ul className="space-y-2 text-sm text-white/70">
+                {pack.avantages.map((item) => (
+                  <li key={item}>
+                    <span style={{ color: "var(--club-primary)" }}>✓</span> {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 text-sm text-white/50">{pack.nb_souscripteurs} partenaires</div>
+              <div className="mt-4 flex gap-2">
+                <button
+                  className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white"
+                  onClick={() => openDialog(index)}
+                >
+                  Modifier
+                </button>
+                <button className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white">
+                  Générer PDF
+                </button>
+              </div>
             </div>
-            <div className="my-4 h-px bg-white/10" />
-            <ul className="space-y-2 text-sm text-white/70">
-              {pack.avantages.map((item) => (
-                <li key={item}>
-                  <span style={{ color: "var(--club-primary)" }}>✓</span> {item}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 text-sm text-white/50">{pack.nb_souscripteurs} partenaires</div>
-            <div className="mt-4 flex gap-2">
-              <button className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white" onClick={() => openDialog(index)}>
-                Modifier
-              </button>
-              <button className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white">
-                Générer PDF
-              </button>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>

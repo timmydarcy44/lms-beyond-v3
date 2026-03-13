@@ -20,7 +20,8 @@ export default function PartenaireContratPage() {
       club={{ name: partenaireClub.name, initials: partenaireClub.initials, logoUrl: partenaireClub.logoUrl }}
       partner={{ name: partenaireProfile.name, initials: partenaireProfile.initials }}
     >
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-[2fr_1fr]">
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
           <div className="rounded-2xl border border-white/10 bg-[#1B2A4A]/60 p-6">
             <div className="text-lg font-semibold text-white">Détails du contrat</div>
@@ -92,6 +93,7 @@ export default function PartenaireContratPage() {
               Demander un avenant
             </a>
           </div>
+        </div>
         </div>
       </div>
     </PartenaireLayout>

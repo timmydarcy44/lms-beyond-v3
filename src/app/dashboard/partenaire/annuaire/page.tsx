@@ -86,83 +86,85 @@ export default function PartenaireAnnuairePage() {
       club={{ name: partenaireClub.name, initials: partenaireClub.initials, logoUrl: partenaireClub.logoUrl }}
       partner={{ name: partenaireProfile.name, initials: partenaireProfile.initials }}
     >
-      <div className="mb-6">
-        <div className="text-lg font-black text-white lg:text-2xl">Annuaire des partenaires</div>
-        <div className="text-sm text-white/60">
-          Les entreprises partenaires de {partenaireClub.name} — Saison 2025/2026
+      <div className="p-4 lg:p-8 pt-6 lg:pt-8">
+        <div className="mb-6">
+          <div className="text-lg font-black text-white lg:text-2xl">Annuaire des partenaires</div>
+          <div className="text-sm text-white/60">
+            Les entreprises partenaires de {partenaireClub.name} — Saison 2025/2026
+          </div>
         </div>
-      </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl bg-[#111827] p-4">
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Rechercher un partenaire..."
-          className="flex-1 rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white"
-        />
-        <select
-          value={sectorFilter}
-          onChange={(event) => setSectorFilter(event.target.value)}
-          className="rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white"
-        >
-          {sectorOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={packFilter}
-          onChange={(event) => setPackFilter(event.target.value)}
-          className="rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white"
-        >
-          <option value="">— Tous les packs —</option>
-          <option value="Bronze">Bronze</option>
-          <option value="Argent">Argent</option>
-          <option value="Or">Or</option>
-          <option value="Sur mesure">Sur mesure</option>
-        </select>
-      </div>
-
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredPartners.map((partner) => (
-          <button
-            key={partner.nom}
-            onClick={() => router.push(`/dashboard/partenaire/annuaire/${slugify(partner.nom)}?tab=contact`)}
-            className="group cursor-pointer rounded-2xl border border-white/10 bg-[#111827] p-5 text-left transition-all hover:border-[#C8102E]/50"
-            type="button"
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl bg-[#111827] p-4">
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Rechercher un partenaire..."
+            className="flex-1 rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white"
+          />
+          <select
+            value={sectorFilter}
+            onChange={(event) => setSectorFilter(event.target.value)}
+            className="rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white"
           >
-            <div className="flex items-start justify-between">
-              <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl text-sm text-white", partner.color)}>
-                {partner.nom
-                  .split(" ")
-                  .slice(0, 2)
-                  .map((word) => word[0])
-                  .join("")
-                  .toUpperCase()}
+            {sectorOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={packFilter}
+            onChange={(event) => setPackFilter(event.target.value)}
+            className="rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white"
+          >
+            <option value="">— Tous les packs —</option>
+            <option value="Bronze">Bronze</option>
+            <option value="Argent">Argent</option>
+            <option value="Or">Or</option>
+            <option value="Sur mesure">Sur mesure</option>
+          </select>
+        </div>
+
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredPartners.map((partner) => (
+            <button
+              key={partner.nom}
+              onClick={() => router.push(`/dashboard/partenaire/annuaire/${slugify(partner.nom)}?tab=contact`)}
+              className="group cursor-pointer rounded-2xl border border-white/10 bg-[#111827] p-5 text-left transition-all hover:border-[#C8102E]/50"
+              type="button"
+            >
+              <div className="flex items-start justify-between">
+                <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl text-sm text-white", partner.color)}>
+                  {partner.nom
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((word) => word[0])
+                    .join("")
+                    .toUpperCase()}
+                </div>
+                <span className={cn("rounded-full px-2 py-0.5 text-xs", packStyles[partner.pack])}>
+                  {partner.pack}
+                </span>
               </div>
-              <span className={cn("rounded-full px-2 py-0.5 text-xs", packStyles[partner.pack])}>
-                {partner.pack}
-              </span>
-            </div>
-            <div className="mt-3 text-base font-bold text-white">{partner.nom}</div>
-            <div className="text-sm text-white/50">{partner.secteur}</div>
-            <div className="my-3 border-t border-white/5" />
-            <div className="space-y-1 text-xs text-white/70">
-              <div>👤 {partner.contact}</div>
-              <div>📧 {partner.email}</div>
-              <div>📞 {partner.tel}</div>
-            </div>
-            <div className="mt-3">
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">{partner.secteur}</span>
-            </div>
-            <div className="mt-4">
+              <div className="mt-3 text-base font-bold text-white">{partner.nom}</div>
+              <div className="text-sm text-white/50">{partner.secteur}</div>
+              <div className="my-3 border-t border-white/5" />
+              <div className="space-y-1 text-xs text-white/70">
+                <div>👤 {partner.contact}</div>
+                <div>📧 {partner.email}</div>
+                <div>📞 {partner.tel}</div>
+              </div>
+              <div className="mt-3">
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">{partner.secteur}</span>
+              </div>
+              <div className="mt-4">
               <span className="block w-full rounded-full bg-[#C8102E]/20 px-4 py-1.5 text-center text-sm text-[#C8102E] transition-all group-hover:bg-[#C8102E] group-hover:text-white">
                 🤝 Proposer un deal
               </span>
-            </div>
-          </button>
-        ))}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </PartenaireLayout>
   );

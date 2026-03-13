@@ -108,7 +108,7 @@ export default function PartenaireDetailPage() {
 
   if (!partenaire) {
     return (
-      <div className="min-h-screen bg-[#080d14] p-4 text-white lg:p-8">
+      <div className="min-h-screen bg-[#080d14] p-4 pt-6 text-white lg:p-8 lg:pt-8">
         <Link href="/dashboard/partenaire/annuaire" className="text-sm text-white/60 hover:text-white">
           ← Annuaire partenaires
         </Link>
@@ -127,7 +127,7 @@ export default function PartenaireDetailPage() {
           <div className="absolute top-20 right-20 h-48 w-48 rounded-full bg-yellow-500/20 blur-3xl" />
           <div className="absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
         </div>
-        <div className="relative mx-auto flex h-full max-w-6xl flex-col px-4 py-4 lg:px-8 lg:py-6">
+        <div className="relative mx-auto flex h-full max-w-6xl flex-col px-4 pt-6 pb-4 lg:px-8 lg:pt-8 lg:pb-6">
           <Link href="/dashboard/partenaire/annuaire" className="text-sm text-white/60 hover:text-white">
             ← Annuaire partenaires
           </Link>

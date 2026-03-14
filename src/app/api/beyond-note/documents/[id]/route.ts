@@ -20,14 +20,14 @@ export async function PATCH(
     const userId = session.id;
     if (!userId) return NextResponse.json({ error: 'userId manquant' }, { status: 401 });
 
-    let body: { folder_id?: string | null; file_name?: string } = {};
+    let body: { folder_id?: string | null; file_name?: string; extracted_text?: string; pages?: unknown } = {};
     try {
       body = await request.json();
     } catch {
       return NextResponse.json({ error: 'Corps JSON invalide' }, { status: 400 });
     }
 
-    const { folder_id, file_name } = body;
+    const { folder_id, file_name, extracted_text, pages } = body;
 
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -39,6 +39,14 @@ export async function PATCH(
 
     if (typeof file_name === 'string' && file_name.trim().length > 0) {
       updates.file_name = file_name.trim();
+    }
+
+    if (typeof extracted_text === 'string') {
+      updates.extracted_text = extracted_text;
+    }
+
+    if (typeof pages !== 'undefined') {
+      updates.pages = pages;
     }
 
     const supabase = await getServerClient();
@@ -61,4 +69,21 @@ export async function PATCH(
     console.error('[documents PATCH] unexpected:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  const supabase = await getServerClient();
+  const { error } = await supabase
+    .from("beyond_note_documents")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", session.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
 }

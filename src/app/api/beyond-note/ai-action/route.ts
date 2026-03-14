@@ -94,6 +94,9 @@ ${text}`;
     case "reformulate": {
       const stylePrompts: Record<string, string> = {
         examples: "Reformule ce texte en ajoutant des exemples concrets et parlants pour illustrer chaque idée.",
+        metaphore: "Reformule ce texte en utilisant une métaphore puissante et mémorable pour illustrer le concept principal.",
+        enfant:
+          "Reformule ce texte comme si tu l'expliquais à un enfant de 8 ans : mots simples, phrases courtes, analogies du quotidien.",
         simple:
           "Reformule ce texte de manière plus simple : phrases courtes, vocabulaire accessible, va à l'essentiel.",
         situation: "Reformule ce texte sous forme de mise en situation concrète avec un scénario réaliste.",
@@ -291,22 +294,22 @@ traits clairs, adapté à un cours scolaire. Sans texte superflu.`,
     if (!prompt) {
       return NextResponse.json({ error: "Erreur lors de la génération du prompt" }, { status: 400 });
     }
+      
+      const openai = getOpenAIClient();
+      if (!openai) {
+        throw new Error("Aucun provider IA disponible");
+      }
 
-    const openai = getOpenAIClient();
-    if (!openai) {
-      throw new Error("Aucun provider IA disponible");
-    }
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      max_tokens: 4000,
-    });
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: 4000,
+      });
 
     const result = response.choices[0]?.message?.content || "Erreur lors de la génération";
 

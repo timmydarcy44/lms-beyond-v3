@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,13 +30,34 @@ import {
   Image as ImageIcon,
   Plus,
   MoreHorizontal,
-  Trash2,
   Check,
   Pencil,
   MessageCircle,
   Trophy,
+  Folder,
+  Search,
+  Upload,
+  PenLine,
+  FolderOpen,
+  User,
+  Home,
+  BookOpen,
+  FlaskConical,
+  Calculator,
+  Globe,
+  Music,
+  Palette,
+  Code,
+  Dumbbell,
+  Microscope,
+  Languages,
+  BarChart,
+  Landmark,
+  Leaf,
+  Star,
 } from "lucide-react";
 import { DictationModal } from "@/components/beyond-note/dictation-modal";
+import { NeoBubble } from "@/components/beyond-note/jarvis-bubble";
 import { ChatView } from "@/components/beyond-note/chat-view";
 
 interface Document {
@@ -68,6 +89,7 @@ interface QuizStats {
 
 export function BeyondNoteHomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [showUploadToast, setShowUploadToast] = useState(false);
@@ -77,18 +99,24 @@ export function BeyondNoteHomePage() {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderEmoji, setNewFolderEmoji] = useState("📁");
+  const [newFolderIconId, setNewFolderIconId] = useState("book");
+  const [newFolderColor, setNewFolderColor] = useState("linear-gradient(135deg, #be1354, #F97316)");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDictationModal, setShowDictationModal] = useState(false);
-  const [accountType, setAccountType] = useState("solo");
-  const [showSubjectModal, setShowSubjectModal] = useState(false);
-  const [pendingDocumentId, setPendingDocumentId] = useState<string | null>(null);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
+  const [pendingUploadSourceType, setPendingUploadSourceType] = useState<string | null>(null);
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
   const [editingDocumentName, setEditingDocumentName] = useState("");
   const [showFolderChat, setShowFolderChat] = useState(false);
   const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
   const [loadingQuizStats, setLoadingQuizStats] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeNav, setActiveNav] = useState<"home" | "folders" | "search" | "profile">("home");
+  const [showFoldersOnly, setShowFoldersOnly] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -126,20 +154,11 @@ export function BeyondNoteHomePage() {
   }, []);
 
   useEffect(() => {
-    const loadAccount = async () => {
-      try {
-        const response = await fetch("/api/beyond-note/account");
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data?.account_type) {
-          setAccountType(data.account_type);
-        }
-      } catch {
-        setAccountType("solo");
-      }
-    };
-    loadAccount();
-  }, []);
+    const folderParam = searchParams.get("folder");
+    if (folderParam) {
+      setActiveFolderId(folderParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadQuizStats = async () => {
@@ -178,13 +197,16 @@ export function BeyondNoteHomePage() {
     cameraInputRef.current?.click();
   };
 
-  const handleFileUpload = async (file: File, sourceType: string) => {
+  const handleFileUpload = async (file: File, sourceType: string, folderId?: string | null) => {
     console.log("handleFileUpload called", file.name);
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("source_type", sourceType);
+      if (folderId) {
+        formData.append("folder_id", folderId);
+      }
 
       const res = await fetch("/api/beyond-note/upload", {
         method: "POST",
@@ -197,8 +219,7 @@ export function BeyondNoteHomePage() {
       const data = await res.json();
       setShowUploadToast(true);
       setTimeout(() => setShowUploadToast(false), 2500);
-      setPendingDocumentId(data.document.id);
-      setShowSubjectModal(true);
+      router.push(`/beyond-note-app/${data.document.id}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur serveur";
       toast.error(message);
@@ -212,7 +233,36 @@ export function BeyondNoteHomePage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await handleFileUpload(file, "import");
+    if (folders.length > 0) {
+      setPendingUploadFile(file);
+      setPendingUploadSourceType("import");
+      setShowFolderModal(true);
+      return;
+    }
+    await handleFileUpload(file, "import", null);
+  };
+
+  const handleCreateNote = async () => {
+    console.log("[handleCreateNote] start");
+    try {
+      const res = await fetch("/api/beyond-note/upload-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: "",
+          title: `Note du ${new Date().toLocaleDateString("fr-FR")}`,
+          source_type: "note",
+        }),
+      });
+      console.log("[handleCreateNote] res status:", res.status);
+      const data = await res.json();
+      console.log("[handleCreateNote] data:", data);
+      if (data.document?.id) {
+        router.push(`/beyond-note-app/${data.document.id}`);
+      }
+    } catch (e) {
+      console.error("[handleCreateNote] error:", e);
+    }
   };
 
   const handleCreateFolder = async () => {
@@ -224,8 +274,8 @@ export function BeyondNoteHomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          emoji: newFolderEmoji || "📁",
-          color: "#6D28D9",
+          emoji: newFolderIconId || newFolderEmoji || "📁",
+          color: newFolderColor || "#6D28D9",
         }),
       });
       if (!res.ok) {
@@ -236,6 +286,8 @@ export function BeyondNoteHomePage() {
       setFolders((prev) => [...prev, data.folder]);
       setNewFolderName("");
       setNewFolderEmoji("📁");
+      setNewFolderIconId("book");
+      setNewFolderColor("linear-gradient(135deg, #be1354, #F97316)");
       setShowNewFolder(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur serveur";
@@ -259,6 +311,22 @@ export function BeyondNoteHomePage() {
       setDocuments((prev) =>
         prev.map((doc) => (doc.folder_id === folderId ? { ...doc, folder_id: null } : doc))
       );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur serveur";
+      toast.error(message);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string) => {
+    try {
+      const res = await fetch(`/api/beyond-note/documents/${documentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Erreur suppression");
+      }
+      setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur serveur";
       toast.error(message);
@@ -313,46 +381,89 @@ export function BeyondNoteHomePage() {
   };
 
   const getDocIcon = (fileType: string, sourceType?: string | null) => {
+    if (sourceType === "note") return <PenLine className="h-5 w-5 text-[#F97316]" />;
     if (sourceType === "dictation") return <Mic className="h-5 w-5 text-violet-400" />;
     if (fileType?.includes("pdf")) return <FileText className="h-5 w-5 text-red-400" />;
     if (fileType?.startsWith("image/")) return <ImageIcon className="h-5 w-5 text-blue-400" />;
-    return <FileText className="h-5 w-5 text-white/40" />;
+    return <FileText className="h-5 w-5 text-[#9CA3AF]" />;
   };
 
-  const subjectOptions =
-    accountType === "child" || accountType === "solo"
-      ? ["Mathématiques", "Français", "Histoire-Géo", "Sciences", "Anglais", "SVT", "Physique-Chimie", "Autre"]
-      : ["Management", "Négociation", "Marketing", "Finance", "Droit", "RH", "Commercial", "Autre"];
+  const iconOptions = [
+    { id: "book", label: "Book", color: "#be1354", icon: BookOpen },
+    { id: "flask", label: "Flask", color: "linear-gradient(135deg, #be1354, #F97316)", icon: FlaskConical },
+    { id: "calc", label: "Calculator", color: "#6D28D9", icon: Calculator },
+    { id: "globe", label: "Globe", color: "linear-gradient(135deg, #6D28D9, #be1354)", icon: Globe },
+    { id: "music", label: "Music", color: "#0EA5E9", icon: Music },
+    { id: "palette", label: "Palette", color: "#be1354", icon: Palette },
+    { id: "code", label: "Code", color: "linear-gradient(135deg, #be1354, #F97316)", icon: Code },
+    { id: "trophy", label: "Trophy", color: "#6D28D9", icon: Trophy },
+    { id: "dumbbell", label: "Dumbbell", color: "linear-gradient(135deg, #6D28D9, #be1354)", icon: Dumbbell },
+    { id: "microscope", label: "Microscope", color: "#0EA5E9", icon: Microscope },
+    { id: "languages", label: "Languages", color: "#be1354", icon: Languages },
+    { id: "barchart", label: "BarChart", color: "linear-gradient(135deg, #be1354, #F97316)", icon: BarChart },
+    { id: "landmark", label: "Landmark", color: "#6D28D9", icon: Landmark },
+    { id: "leaf", label: "Leaf", color: "linear-gradient(135deg, #6D28D9, #be1354)", icon: Leaf },
+    { id: "star", label: "Star", color: "#0EA5E9", icon: Star },
+  ];
+
+  const uniqueFolders = folders.reduce((acc, folder) => {
+    const key = (folder.name || "").trim().toLowerCase();
+    const existingIndex = acc.findIndex((item) => (item.name || "").trim().toLowerCase() === key);
+    if (existingIndex === -1) {
+      acc.push(folder);
+      return acc;
+    }
+    const existing = acc[existingIndex];
+    const existingHasIcon = iconOptions.some((item) => item.id === existing.emoji);
+    const newHasIcon = iconOptions.some((item) => item.id === folder.emoji);
+    if (newHasIcon && !existingHasIcon) {
+      acc[existingIndex] = folder;
+    }
+    return acc;
+  }, [] as Folder[]);
+
+  const renderFolderIcon = (folder: Folder) => {
+    const option = iconOptions.find((item) => item.id === folder.emoji);
+    if (!option) {
+      return <span className="text-base">{folder.emoji || "📁"}</span>;
+    }
+    const Icon = option.icon;
+    return (
+      <span
+        className="h-8 w-8 rounded-2xl flex items-center justify-center"
+        style={{ background: folder.color || option.color }}
+      >
+        <Icon className="h-4 w-4 text-white" />
+      </span>
+    );
+  };
 
   const activeFolder = folders.find((folder) => folder.id === activeFolderId) || null;
-  const filteredDocuments = activeFolderId
+  const filteredDocuments = (activeFolderId
     ? documents.filter((doc) => doc.folder_id === activeFolderId)
-    : documents;
+    : documents
+  ).filter((doc) => {
+    if (showFoldersOnly && !activeFolderId) return false;
+    if (!searchQuery.trim()) return true;
+    return doc.file_name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+  });
   const folderExtractedText = filteredDocuments
     .map((doc) => doc.extracted_text || "")
     .filter((text) => text.trim().length > 0)
     .join("\n\n---\n\n");
 
-  const handleSelectSubject = async (subject: string | null) => {
-    const documentId = pendingDocumentId;
-    setShowSubjectModal(false);
-    if (!documentId) return;
-    if (subject) {
-      try {
-        await fetch(`/api/beyond-note/documents/${documentId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subject }),
-        });
-      } catch {
-        toast.error("Impossible de sauvegarder la catégorie");
-      }
-    }
-    router.push(`/beyond-note-app/${documentId}`);
+  const handleSelectFolderForUpload = async (folderId: string | null) => {
+    setShowFolderModal(false);
+    if (!pendingUploadFile || !pendingUploadSourceType) return;
+    const file = pendingUploadFile;
+    const sourceType = pendingUploadSourceType;
+    setPendingUploadFile(null);
+    setPendingUploadSourceType(null);
+    await handleFileUpload(file, sourceType, folderId);
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] text-white overflow-x-hidden w-full max-w-[100vw]">
+    <div className="h-screen flex bg-[#be1354] md:bg-[#F8F9FC] text-white md:text-[#0F1117] overflow-hidden">
       {showUploadToast && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center">
           <div className="rounded-3xl bg-white text-black shadow-2xl px-8 py-6 flex items-center gap-4">
@@ -365,390 +476,555 @@ export function BeyondNoteHomePage() {
           </div>
         </div>
       )}
-      <div className="max-w-5xl mx-auto px-5 sm:px-8 py-10">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-semibold">Bibliothèque</h1>
-              <Button
-                onClick={() => setShowNewFolder((prev) => !prev)}
-                size="icon"
-                className="h-9 w-9 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20"
+
+      {/* Sidebar dossiers */}
+      <aside className="hidden md:flex w-64 bg-[#be1354] text-white flex-col">
+        <div className="px-6 py-6">
+          <img
+            src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
+            alt="Nevo"
+            className="h-14 object-contain"
+          />
+        </div>
+        <div className="px-6 text-sm uppercase tracking-[0.2em] text-white/70 mb-3">
+          Mes dossiers
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 space-y-2">
+          <button
+            type="button"
+            onClick={() => setActiveFolderId(null)}
+            className={`w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-all ${
+              !activeFolderId ? "bg-white/20" : "hover:bg-white/10"
+            }`}
+          >
+            <Folder className="h-4 w-4 text-white" />
+            <span className="text-sm">Bibliothèque</span>
+          </button>
+          {uniqueFolders.map((folder) => (
+            <div
+              key={folder.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setActiveFolderId(folder.id)}
+              className={`group w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-all ${
+                activeFolderId === folder.id ? "bg-white/20" : "hover:bg-white/10"
+              }`}
+            >
+              {renderFolderIcon(folder)}
+              <span className="text-sm flex-1">{folder.name}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteFolder(folder.id);
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-white/80 hover:text-white"
               >
-                <Plus className="h-4 w-4" />
-              </Button>
+                🗑️
+              </button>
             </div>
-            {activeFolder ? (
-              <div className="text-white/60 text-sm mt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveFolderId(null)}
-                  className="text-white/60 hover:text-white"
-                >
-                  Bibliothèque
-                </button>
-                <span>›</span>
-                <span className="text-white">{activeFolder.name}</span>
+          ))}
+        </div>
+        <div className="p-4">
+          <Button
+            onClick={() => setShowNewFolder((prev) => !prev)}
+            className="w-full bg-white/10 text-white border border-white/20 hover:bg-white/20"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nouveau dossier
+          </Button>
+        </div>
+      </aside>
+
+      {/* Zone centrale */}
+      <main className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 overflow-y-auto pb-24 md:pb-10">
+          <div className="bg-[#be1354] md:bg-transparent pb-8 rounded-b-3xl md:rounded-none">
+            <div className="bg-transparent md:bg-white border-b border-white/20 md:border-[#E8E9F0] px-6 py-5">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-semibold md:text-[#0F1117]">
+                    {activeFolder ? activeFolder.name : "Bibliothèque"}
+                  </h1>
+                  <p className="text-sm text-white/80 md:text-[#6B7280]">
+                    {activeFolder
+                      ? `${filteredDocuments.length} documents`
+                      : "Scannez un cours et transformez-le en formats adaptés."}
+                  </p>
+                </div>
+                <div className="relative w-full md:w-80">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+                  <input
+                    ref={searchInputRef}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Rechercher un document"
+                    className="w-full h-10 rounded-xl border border-white/30 bg-white/20 backdrop-blur-md px-9 text-sm text-white placeholder-white/60 outline-none md:border-[#E8E9F0] md:bg-white md:text-[#0F1117] md:placeholder-[#9CA3AF] md:backdrop-blur-none md:focus:border-[#be1354]"
+                  />
+                </div>
               </div>
-            ) : (
-              <p className="text-white/40 text-sm mt-2">
-                Scannez un cours et transformez-le en formats adaptés.
-              </p>
-            )}
+            </div>
+
+            <div className="px-6 pt-6 space-y-6">
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                capture="environment"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              <div className="bg-white/10 md:bg-gradient-to-br md:from-pink-50 md:to-violet-50 rounded-3xl p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={handleSelectCamera}
+                disabled={uploading}
+                className="text-left rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(190,19,84,0.16)] border-white/30 bg-white/20 backdrop-blur-md md:border-[#E8E9F0] md:bg-white md:backdrop-blur-none"
+                style={{
+                  boxShadow: "0 4px 24px rgba(190,19,84,0.08), 0 1px 4px rgba(0,0,0,0.04)",
+                }}
+              >
+                <div className="p-5">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                    style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
+                  >
+                    <Camera className="h-6 w-6 text-white" />
+                  </div>
+                  <p className="font-semibold text-white md:text-[#0F1117]">Prendre une photo</p>
+                  <p className="text-sm text-white/80 md:text-[#6B7280]">Scannez ou importez un cours</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={handleSelectFile}
+                disabled={uploading}
+                className="text-left rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(190,19,84,0.16)] border-white/30 bg-white/20 backdrop-blur-md md:border-[#E8E9F0] md:bg-white md:backdrop-blur-none"
+                style={{
+                  boxShadow: "0 4px 24px rgba(190,19,84,0.08), 0 1px 4px rgba(0,0,0,0.04)",
+                }}
+              >
+                <div className="p-5">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                    style={{ background: "linear-gradient(135deg, #6D28D9, #be1354)" }}
+                  >
+                    <Upload className="h-6 w-6 text-white" />
+                  </div>
+                  <p className="font-semibold text-white md:text-[#0F1117]">Importer un fichier</p>
+                  <p className="text-sm text-white/80 md:text-[#6B7280]">PDF, image, document</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDictationModal(true)}
+                className="text-left rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(190,19,84,0.16)] border-white/30 bg-white/20 backdrop-blur-md md:border-[#E8E9F0] md:bg-white md:backdrop-blur-none"
+                style={{
+                  boxShadow: "0 4px 24px rgba(190,19,84,0.08), 0 1px 4px rgba(0,0,0,0.04)",
+                }}
+              >
+                <div className="p-5">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                    style={{ background: "linear-gradient(135deg, #0EA5E9, #6D28D9)" }}
+                  >
+                    <Mic className="h-6 w-6 text-white" />
+                  </div>
+                  <p className="font-semibold text-white md:text-[#0F1117]">Dicter</p>
+                  <p className="text-sm text-white/80 md:text-[#6B7280]">Enregistrez votre voix</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateNote}
+                className="text-left rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(190,19,84,0.16)] border-white/30 bg-white/20 backdrop-blur-md md:border-[#E8E9F0] md:bg-white md:backdrop-blur-none"
+                style={{
+                  boxShadow: "0 4px 24px rgba(190,19,84,0.08), 0 1px 4px rgba(0,0,0,0.04)",
+                }}
+              >
+                <div className="p-5">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                    style={{ background: "linear-gradient(135deg, #F97316, #be1354)" }}
+                  >
+                    <PenLine className="h-6 w-6 text-white" />
+                  </div>
+                  <p className="font-semibold text-white md:text-[#0F1117]">Note</p>
+                  <p className="text-sm text-white/80 md:text-[#6B7280]">Prenez des notes pendant vos cours</p>
+                </div>
+              </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white text-[#0F1117] rounded-t-3xl md:rounded-none px-6 py-6 space-y-8">
             {activeFolder && (
-              <div className="mt-3">
+              <div>
                 <Button
                   onClick={() => setShowFolderChat(true)}
-                  className="bg-violet-600 hover:bg-violet-500 text-white h-10 px-4 rounded-xl"
+                  className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white h-10 px-4 rounded-xl"
                 >
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Poser une question sur ce dossier
                 </Button>
               </div>
             )}
-            {activeFolder && (
-              <div className="mt-6 space-y-4">
-                <div className="grid gap-4 sm:grid-cols-4">
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <p className="text-xs text-white/50">Fichiers</p>
-                    <p className="text-2xl font-semibold">{filteredDocuments.length}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <p className="text-xs text-white/50">Quiz réalisés</p>
-                    <p className="text-2xl font-semibold">{quizStats?.nb_quiz ?? 0}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <p className="text-xs text-white/50">Note moyenne</p>
-                    <p className="text-2xl font-semibold">
-                      {(quizStats?.average_score ?? 0).toFixed(1)}/20
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
-                    <div className="flex items-center justify-between text-xs text-amber-200">
-                      <span>Dernier quiz</span>
-                      <Trophy className="h-4 w-4 text-amber-300" />
-                    </div>
-                    <p className="text-2xl font-semibold text-amber-100 mt-1">
-                      {quizStats?.sessions?.[0]
-                        ? `${quizStats.sessions[0].score}/${quizStats.sessions[0].nb_questions || quizStats.sessions[0].max_score || 0}`
-                        : "—"}
-                    </p>
-                  </div>
+
+          {activeFolder && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div className="rounded-2xl border border-[#E8E9F0] bg-white shadow-sm p-4">
+                  <p className="text-xs text-[#9CA3AF]">Fichiers</p>
+                  <p className="text-2xl font-semibold">{filteredDocuments.length}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-sm text-white/60 mb-3">Évolution des notes</p>
-                  <div style={{ width: "100%", height: 200 }}>
-                    {loadingQuizStats ? (
-                      <div className="h-full flex items-center justify-center text-white/50 text-sm">
-                        Chargement...
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={quizStats?.evolution || []}>
-                          <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                          <XAxis dataKey="date" stroke="rgba(255,255,255,0.4)" fontSize={10} />
-                          <YAxis
-                            domain={[0, 20]}
-                            stroke="rgba(255,255,255,0.4)"
-                            fontSize={10}
-                          />
-                          <RechartsTooltip
-                            contentStyle={{
-                              background: "#111118",
-                              border: "1px solid rgba(255,255,255,0.1)",
-                              borderRadius: "12px",
-                              color: "white",
-                              fontSize: "12px",
-                            }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="score"
-                            stroke="#8B5CF6"
-                            strokeWidth={2}
-                            dot={{ r: 3, fill: "#8B5CF6" }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
+                <div className="rounded-2xl border border-[#E8E9F0] bg-white shadow-sm p-4">
+                  <p className="text-xs text-[#9CA3AF]">Quiz réalisés</p>
+                  <p className="text-2xl font-semibold">{quizStats?.nb_quiz ?? 0}</p>
+                </div>
+                <div className="rounded-2xl border border-[#E8E9F0] bg-white shadow-sm p-4">
+                  <p className="text-xs text-[#9CA3AF]">Note moyenne</p>
+                  <p className="text-2xl font-semibold">
+                    {(quizStats?.average_score ?? 0).toFixed(1)}/20
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+                  <div className="flex items-center justify-between text-xs text-amber-700">
+                    <span>Dernier quiz</span>
+                    <Trophy className="h-4 w-4 text-amber-600" />
                   </div>
+                  <p className="text-2xl font-semibold text-amber-700 mt-1">
+                    {quizStats?.sessions?.[0]
+                      ? `${quizStats.sessions[0].score}/${quizStats.sessions[0].nb_questions || quizStats.sessions[0].max_score || 0}`
+                      : "—"}
+                  </p>
                 </div>
               </div>
-            )}
-            {showNewFolder && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <input
-                  value={newFolderEmoji}
-                  onChange={(e) => setNewFolderEmoji(e.target.value)}
-                  className="w-12 h-10 text-center rounded-xl bg-white/5 border border-white/10 text-white"
-                  maxLength={2}
-                />
+              <div className="rounded-2xl border border-[#E8E9F0] bg-white shadow-sm p-4">
+                <p className="text-sm text-[#6B7280] mb-3">Évolution des notes</p>
+                <div style={{ width: "100%", height: 200 }}>
+                  {loadingQuizStats ? (
+                    <div className="h-full flex items-center justify-center text-[#9CA3AF] text-sm">
+                      Chargement...
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={quizStats?.evolution || []}>
+                        <CartesianGrid stroke="rgba(15,17,23,0.06)" vertical={false} />
+                        <XAxis dataKey="date" stroke="rgba(107,114,128,0.7)" fontSize={10} />
+                        <YAxis domain={[0, 20]} stroke="rgba(107,114,128,0.7)" fontSize={10} />
+                        <RechartsTooltip
+                          contentStyle={{
+                            background: "#ffffff",
+                            border: "1px solid #E8E9F0",
+                            borderRadius: "12px",
+                            color: "#0F1117",
+                            fontSize: "12px",
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="score"
+                          stroke="#6D28D9"
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: "#6D28D9" }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[260px]">
+              <Loader2 className="h-6 w-6 animate-spin text-[#6D28D9]" />
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-[#E8E9F0] bg-white shadow-sm p-6 text-[#0F1117]">
+              {error}
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="rounded-2xl border border-[#E8E9F0] bg-white shadow-sm p-8 text-center">
+              <FileText className="h-10 w-10 mx-auto mb-4 text-[#9CA3AF]" />
+              <p className="text-[#0F1117] font-medium mb-2">Aucun document</p>
+              <p className="text-[#9CA3AF] text-sm">
+                Commencez par capturer une photo de votre cours.
+              </p>
+            </div>
+          ) : filteredDocuments.length === 0 ? (
+            <div className="rounded-2xl border border-[#E8E9F0] bg-white shadow-sm p-8 text-center">
+              <p className="text-[#0F1117] font-medium mb-2">Aucun document dans ce dossier</p>
+              <p className="text-[#9CA3AF] text-sm">Ajoutez un cours puis déplacez-le ici.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filteredDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  onClick={() => {
+                    if (editingDocumentId === doc.id) return;
+                    router.push(`/beyond-note-app/${doc.id}`);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className="group text-left rounded-2xl border border-[#E8E9F0] bg-white shadow-sm p-5 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-[#6B7280] mb-2">
+                        {getDocIcon(doc.file_type, doc.source_type)}
+                        <span className="text-xs">
+                          {doc.source_type === "note"
+                            ? "Note"
+                            : doc.source_type === "dictation"
+                              ? "Dictée"
+                              : doc.file_type?.includes("pdf")
+                                ? "PDF"
+                                : "Image"}
+                        </span>
+                      </div>
+                      {editingDocumentId === doc.id ? (
+                        <input
+                          value={editingDocumentName}
+                          onChange={(e) => setEditingDocumentName(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.key === "Enter" && handleRenameDocument(doc.id)}
+                          onBlur={() => handleRenameDocument(doc.id)}
+                          className="w-full bg-white border border-[#E8E9F0] rounded-lg px-2 py-1 text-sm text-[#0F1117] outline-none focus:border-violet-500"
+                          autoFocus
+                        />
+                      ) : (
+                        <h3 className="text-base font-semibold text-[#0F1117] line-clamp-2">
+                          {doc.file_name}
+                        </h3>
+                      )}
+                      {doc.subject && (
+                        <p className="text-xs text-violet-600 mt-1">{doc.subject}</p>
+                      )}
+                      <p className="text-xs text-[#6B7280] mt-2">
+                        {doc.extracted_text ? "Texte extrait" : "Extraction en cours"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDocument(doc.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-[#9CA3AF] hover:text-[#be1354]"
+                      >
+                        🗑️
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingDocumentId(doc.id);
+                          setEditingDocumentName(doc.file_name);
+                        }}
+                        className="text-[#9CA3AF] hover:text-[#0F1117]"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[#9CA3AF] hover:text-[#0F1117]"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-white text-[#0F1117] border-[#E8E9F0]">
+                          <DropdownMenuLabel>Déplacer vers...</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {folders.length === 0 && (
+                            <DropdownMenuItem disabled>Aucun dossier</DropdownMenuItem>
+                          )}
+                          {folders.map((folder) => (
+                            <DropdownMenuItem
+                              key={folder.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveDocument(doc.id, folder.id);
+                              }}
+                            >
+                              <span className="mr-2">{folder.emoji || "📁"}</span>
+                              {folder.name}
+                            </DropdownMenuItem>
+                          ))}
+                          {doc.folder_id && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMoveDocument(doc.id, null);
+                                }}
+                              >
+                                Retirer du dossier
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <ArrowRight className="h-4 w-4 text-[#9CA3AF]" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      </main>
+
+      {/* Navigation mobile */}
+      <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <div className="bg-white/80 backdrop-blur-2xl rounded-full px-6 py-3 flex items-center gap-6 shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-white/60">
+          <button
+            type="button"
+            onClick={() => setActiveNav("home")}
+            className="flex flex-col items-center justify-center"
+          >
+            <Home className={`h-6 w-6 ${activeNav === "home" ? "text-[#be1354]" : "text-[#9CA3AF]"}`} />
+            <span className={`text-[10px] font-medium ${activeNav === "home" ? "text-[#be1354]" : "text-[#9CA3AF]"}`}>
+              Maison
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveNav("folders");
+              router.push("/beyond-note-app/folders");
+            }}
+            className="flex flex-col items-center justify-center"
+          >
+            <FolderOpen className={`h-6 w-6 ${activeNav === "folders" ? "text-[#be1354]" : "text-[#9CA3AF]"}`} />
+            <span className={`text-[10px] font-medium ${activeNav === "folders" ? "text-[#be1354]" : "text-[#9CA3AF]"}`}>
+              Dossiers
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveNav("search");
+              searchInputRef.current?.focus();
+            }}
+            className="flex flex-col items-center justify-center"
+          >
+            <Search className={`h-6 w-6 ${activeNav === "search" ? "text-[#be1354]" : "text-[#9CA3AF]"}`} />
+            <span className={`text-[10px] font-medium ${activeNav === "search" ? "text-[#be1354]" : "text-[#9CA3AF]"}`}>
+              Recherche
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveNav("profile")}
+            className="flex flex-col items-center justify-center"
+          >
+            <User className={`h-6 w-6 ${activeNav === "profile" ? "text-[#be1354]" : "text-[#9CA3AF]"}`} />
+            <span className={`text-[10px] font-medium ${activeNav === "profile" ? "text-[#be1354]" : "text-[#9CA3AF]"}`}>
+              Profil
+            </span>
+          </button>
+        </div>
+      </div>
+      {showNewFolder && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white border border-[#E8E9F0] p-6 text-[#0F1117]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Créer un dossier</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowNewFolder(false)}>
+                ✕
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-[#6B7280] mb-2">Nom du dossier</p>
                 <input
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
-                  placeholder="Nom du dossier"
-                  className="h-10 rounded-xl bg-white/5 border border-white/10 px-3 text-sm text-white outline-none focus:border-violet-500"
+                  placeholder="Ex: Révisions, Sciences..."
+                  className="w-full h-11 rounded-xl border border-[#E8E9F0] bg-white px-4 text-sm outline-none focus:border-[#be1354]"
                 />
-                <Button
-                  onClick={handleCreateFolder}
-                  size="icon"
-                  className="h-10 w-10 rounded-xl bg-violet-600 hover:bg-violet-500 text-white"
-                >
-                  <Check className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm text-[#6B7280] mb-3">Choisir une icône</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {iconOptions.map((item) => {
+                    const Icon = item.icon;
+                    const selected = newFolderIconId === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setNewFolderIconId(item.id);
+                          setNewFolderColor(item.color);
+                        }}
+                        className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all ${
+                          selected ? "ring-2 ring-[#be1354] scale-105" : "hover:scale-105"
+                        }`}
+                        style={{ background: item.color }}
+                      >
+                        <Icon className="h-4 w-4 text-white" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button variant="ghost" onClick={() => setShowNewFolder(false)}>
+                  Annuler
+                </Button>
+                <Button onClick={handleCreateFolder} className="bg-[#be1354] hover:bg-[#a80f4a] text-white">
+                  Créer le dossier
                 </Button>
               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*,application/pdf"
-              capture="environment"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,application/pdf"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <Button
-              onClick={handleSelectCamera}
-              disabled={uploading}
-              className="bg-white/10 text-white border border-white/20 h-11 px-4 rounded-xl sm:hidden"
-            >
-              <Camera className="h-4 w-4 mr-2" />
-              Photo
-            </Button>
-            <Button
-              onClick={handleSelectFile}
-              disabled={uploading}
-              className="bg-white/10 text-white border border-white/20 h-11 px-4 rounded-xl"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Importer un fichier
-            </Button>
-            <Button
-              onClick={() => setShowDictationModal(true)}
-              className="bg-white/10 text-white border border-white/20 h-11 px-5 rounded-xl"
-            >
-              <Mic className="h-4 w-4 mr-2" />
-              Dicter
-            </Button>
-            <Button
-              onClick={handleSelectFile}
-              disabled={uploading}
-              className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white h-11 px-5 rounded-xl"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Upload...
-                </>
-              ) : (
-                <>
-                  <Camera className="h-4 w-4 mr-2" />
-                  Ajouter un cours
-                </>
-              )}
-            </Button>
+            </div>
           </div>
         </div>
-
-        {folders.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-            {folders.map((folder) => {
-              const count = documents.filter((doc) => doc.folder_id === folder.id).length;
-              return (
-                <div
-                  key={folder.id}
-                  onClick={() => setActiveFolderId(folder.id)}
-                  className={`rounded-2xl bg-white/5 border border-white/10 p-4 text-left hover:bg-white/10 cursor-pointer transition-all ${
-                    activeFolderId === folder.id ? "ring-2 ring-violet-500/60" : ""
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-2xl">{folder.emoji || "📁"}</div>
-                      <p className="text-white font-medium mt-2">{folder.name}</p>
-                      <p className="text-white/40 text-xs mt-1">{count} cours</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteFolder(folder.id);
-                      }}
-                      className="text-white/50 hover:text-white"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex items-center justify-center min-h-[260px]">
-            <Loader2 className="h-6 w-6 animate-spin text-[#6D28D9]" />
-          </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/70">
-            {error}
-          </div>
-        ) : documents.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-            <FileText className="h-10 w-10 mx-auto mb-4 text-white/30" />
-            <p className="text-white/80 font-medium mb-2">Aucun document</p>
-            <p className="text-white/40 text-sm">
-              Commencez par capturer une photo de votre cours.
-            </p>
-          </div>
-        ) : filteredDocuments.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-            <p className="text-white/80 font-medium mb-2">Aucun document dans ce dossier</p>
-            <p className="text-white/40 text-sm">Ajoutez un cours puis déplacez-le ici.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filteredDocuments.map((doc) => (
-              <div
-                key={doc.id}
-                onClick={() => {
-                  if (editingDocumentId === doc.id) return;
-                  router.push(`/beyond-note-app/${doc.id}`);
-                }}
-                role="button"
-                tabIndex={0}
-                className="text-left rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition-all"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 text-white/40 mb-2">
-                      {getDocIcon(doc.file_type, doc.source_type)}
-                      <span className="text-xs">
-                        {doc.source_type === "dictation"
-                          ? "Dictée"
-                          : doc.file_type?.includes("pdf")
-                            ? "PDF"
-                            : "Image"}
-                      </span>
-                    </div>
-                    {editingDocumentId === doc.id ? (
-                      <input
-                        value={editingDocumentName}
-                        onChange={(e) => setEditingDocumentName(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.key === "Enter" && handleRenameDocument(doc.id)}
-                        onBlur={() => handleRenameDocument(doc.id)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-violet-500"
-                        autoFocus
-                      />
-                    ) : (
-                      <h3 className="text-base font-semibold text-white line-clamp-2">
-                        {doc.file_name}
-                      </h3>
-                    )}
-                    {doc.subject && (
-                      <p className="text-xs text-violet-300 mt-1">{doc.subject}</p>
-                    )}
-                    <p className="text-xs text-white/40 mt-2">
-                      {doc.extracted_text ? "Texte extrait" : "Extraction en cours"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingDocumentId(doc.id);
-                        setEditingDocumentName(doc.file_name);
-                      }}
-                      className="text-white/50 hover:text-white"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-white/50 hover:text-white"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#0A0A0F] text-white border-white/10">
-                        <DropdownMenuLabel>Déplacer vers...</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {folders.length === 0 && (
-                          <DropdownMenuItem disabled>Aucun dossier</DropdownMenuItem>
-                        )}
-                        {folders.map((folder) => (
-                          <DropdownMenuItem
-                            key={folder.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMoveDocument(doc.id, folder.id);
-                            }}
-                          >
-                            <span className="mr-2">{folder.emoji || "📁"}</span>
-                            {folder.name}
-                          </DropdownMenuItem>
-                        ))}
-                        {doc.folder_id && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMoveDocument(doc.id, null);
-                              }}
-                            >
-                              Retirer du dossier
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <ArrowRight className="h-4 w-4 text-white/40" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {showSubjectModal && (
-        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md rounded-3xl bg-[#0A0A0F] border border-white/10 p-6 text-white">
-            <h3 className="text-lg font-semibold mb-4">Choisir une catégorie</h3>
+      )}
+      {showFolderModal && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-3xl bg-[#F8F9FC] border border-[#E8E9F0] p-6 text-[#0F1117]">
+            <h3 className="text-lg font-semibold mb-4">Dans quel dossier ?</h3>
             <div className="grid grid-cols-2 gap-2 mb-5">
-              {subjectOptions.map((subject) => (
+              {uniqueFolders.map((folder) => (
                 <button
-                  key={subject}
-                  onClick={() => handleSelectSubject(subject)}
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white hover:bg-white/10"
+                  key={folder.id}
+                  onClick={() => handleSelectFolderForUpload(folder.id)}
+                  className="rounded-xl border border-[#E8E9F0] bg-white shadow-sm px-3 py-2 text-sm text-[#0F1117] hover:bg-white/10 flex items-center gap-2"
                 >
-                  {subject}
+                  {renderFolderIcon(folder)}
+                  <span className="truncate">{folder.name}</span>
                 </button>
               ))}
             </div>
             <Button
               variant="outline"
-              onClick={() => handleSelectSubject(null)}
-              className="w-full border-white/20 text-white hover:bg-white/5"
+              onClick={() => handleSelectFolderForUpload(null)}
+              className="w-full border-white/20 text-[#0F1117] hover:bg-white shadow-sm border border-[#E8E9F0]"
             >
-              Passer
+              Sans dossier
             </Button>
           </div>
         </div>
@@ -762,6 +1038,17 @@ export function BeyondNoteHomePage() {
           onClose={() => setShowFolderChat(false)}
         />
       )}
+      <NeoBubble
+        extractedText={folderExtractedText}
+        documentTitle="Bibliothèque"
+        documents={documents.map((d) => ({
+          id: d.id,
+          file_name: d.file_name,
+          extracted_text: d.extracted_text?.slice(0, 300) || "",
+        }))}
+        onOpenDocument={(id) => router.push(`/beyond-note-app/${id}`)}
+        context="library"
+      />
       <DictationModal
         isOpen={showDictationModal}
         onClose={() => setShowDictationModal(false)}

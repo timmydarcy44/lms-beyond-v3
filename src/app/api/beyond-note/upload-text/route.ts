@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { text, title } = body || {};
 
-    if (!text || typeof text !== "string") {
+    if (typeof text !== "string") {
       return NextResponse.json({ error: "Texte requis" }, { status: 400 });
     }
 

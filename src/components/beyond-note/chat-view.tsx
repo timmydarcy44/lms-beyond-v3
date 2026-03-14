@@ -68,7 +68,15 @@ export function ChatView({
   };
 
   const send = async () => {
+    console.log("[chat] extractedText length:", extractedText?.length);
     if (!input.trim()) return;
+    if (!extractedText || extractedText.trim().length === 0) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Erreur : aucun contenu du cours n'est disponible pour répondre." },
+      ]);
+      return;
+    }
     const userMsg = { role: "user" as const, content: input };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");

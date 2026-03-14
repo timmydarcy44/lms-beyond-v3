@@ -98,6 +98,12 @@
   animation: spin-slow 8s linear infinite;
 }
 
+[contenteditable]:empty:before {
+  content: attr(data-placeholder);
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
 @keyframes breathe {
   0%, 100% {
     transform: scale(1);
@@ -286,6 +292,19 @@ body.light {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --ming-bg: #ffffff;
+  --ming-bg-soft: #f8f9fc;
+  --ming-surface: #ffffff;
+  --ming-surface-hover: #f3f4f8;
+  --ming-border: #e8e9f0;
+  --ming-text: #0f1117;
+  --ming-text-secondary: #6b7280;
+  --ming-text-muted: #9ca3af;
+  --ming-accent: #be1354;
+  --ming-accent-violet: #6d28d9;
+  --ming-gradient: linear-gradient(135deg, #6d28d9, #be1354);
+  --ming-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --ming-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .dark {

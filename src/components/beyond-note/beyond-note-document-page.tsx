@@ -42,7 +42,9 @@ import { QuizView } from "@/components/beyond-note/quiz-view";
 import { ReformulateOptionsModal } from "@/components/beyond-note/reformulate-options-modal";
 import { ChatView } from "@/components/beyond-note/chat-view";
 import { DictationModal } from "@/components/beyond-note/dictation-modal";
+import { LoadingOverlay, SuccessOverlay } from "@/components/beyond-note/loading-overlay";
 import { NeoBubble } from "@/components/beyond-note/jarvis-bubble";
+import { OnboardingOverlay } from "@/components/beyond-note/onboarding-overlay";
 
 type AIAction = 
   | "revision-sheet"
@@ -154,6 +156,8 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const [showDictationModal, setShowDictationModal] = useState(false);
   const [pages, setPages] = useState<{ id: string; content: string; page_number: number }[]>([]);
   const [currentPageId, setCurrentPageId] = useState<string | null>(null);
+  const [isAddingPage, setIsAddingPage] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [selectionToolbar, setSelectionToolbar] = useState<{
     text: string;
     x: number;
@@ -164,6 +168,12 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const [selectionReformulateOpen, setSelectionReformulateOpen] = useState(false);
   const [chatExtractedText, setChatExtractedText] = useState<string | null>(null);
   const [allDocuments, setAllDocuments] = useState<{ id: string; file_name: string; extracted_text?: string | null }[]>([]);
+  const [onboardingStep, setOnboardingStep] = useState(() => {
+    if (typeof window !== "undefined") {
+      return parseInt(localStorage.getItem("nevo_onboarding_step") || "0");
+    }
+    return 0;
+  });
   const addPageCameraRef = useRef<HTMLInputElement>(null);
   const addPageFileRef = useRef<HTMLInputElement>(null);
   const selectionToolbarRef = useRef<HTMLDivElement | null>(null);
@@ -189,6 +199,18 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
     };
     loadAccount();
   }, []);
+
+  const handleSkipOnboarding = async () => {
+    setOnboardingStep(0);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("nevo_onboarding_step");
+    }
+    await fetch("/api/beyond-note/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ onboarding_completed: true }),
+    });
+  };
 
   useEffect(() => {
     fetch("/api/beyond-note/documents")
@@ -335,6 +357,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       console.log("[beyond-note] Transformation result received, length:", data.result?.length || 0);
       
       setResult(data.result);
+      setShowSuccess(true);
       if (action === "audio" && data.audio_base64 && data.audio_mime_type) {
         setAudioSource(`data:${data.audio_mime_type};base64,${data.audio_base64}`);
         setAudioVoice(data.audio_voice ?? null);
@@ -378,6 +401,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   };
 
   const handleAddPage = async (file: File) => {
+    setIsAddingPage(true);
     try {
       // 1. Upload du fichier pour extraire le texte
       const formData = new FormData();
@@ -424,9 +448,12 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
         body: JSON.stringify({ pages: updatedPages }),
       });
 
+      setShowSuccess(true);
       toast.success("Page ajoutée !");
     } catch (e) {
       toast.error("Erreur lors de l'ajout de la page");
+    } finally {
+      setIsAddingPage(false);
     }
   };
 
@@ -873,6 +900,13 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
 
         {/* Contenu principal : plein écran */}
         <div className="flex-1 relative overflow-hidden">
+          <LoadingOverlay
+            isVisible={!!loadingAction}
+            type="transformation"
+            action={loadingAction || undefined}
+          />
+          <LoadingOverlay isVisible={isAddingPage} type="upload" action="upload" />
+          <SuccessOverlay isVisible={showSuccess} onDismiss={() => setShowSuccess(false)} />
           {/* Zone de texte principale - plein écran */}
           <div className="absolute inset-0 overflow-y-auto">
             <div className="max-w-4xl mx-auto px-8 py-12">
@@ -889,16 +923,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                   }}
                 />
               )}
-              {loadingAction ? (
-                <div className="flex items-center justify-center h-full min-h-[60vh]">
-                  <div className="text-center">
-                    <Loader2 className="h-10 w-10 animate-spin text-[#6D28D9] mx-auto mb-4" />
-                    <p className="text-[#6B7280] text-lg" style={{ fontFamily: 'var(--font-geist-sans), system-ui, -apple-system, sans-serif' }}>
-                      Traitement en cours...
-                    </p>
-                  </div>
-                </div>
-              ) : result ? (
+              {result ? (
                 <div className="bg-white rounded-2xl shadow-sm border border-[#E8E9F0] p-8 sm:p-12">
                   {result && currentAction && (
                     <div className="flex items-center justify-between mb-4">
@@ -1472,6 +1497,36 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
           handleTransformation(action as AIAction, textToTransform)
         }
       />
+      {onboardingStep === 2 && (
+        <OnboardingOverlay
+          step={2}
+          onNext={() => {
+            setOnboardingStep(3);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("nevo_onboarding_step", "3");
+            }
+          }}
+          onSkip={handleSkipOnboarding}
+          onComplete={() => {}}
+          onTriggerTransformation={() => handleTransformation("revision-sheet", textToTransform)}
+        />
+      )}
+      {onboardingStep === 3 && (
+        <OnboardingOverlay
+          step={3}
+          onNext={() => {
+            setOnboardingStep(0);
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("nevo_onboarding_step");
+            }
+            router.push("/beyond-note-app?onboarding=4");
+          }}
+          onSkip={handleSkipOnboarding}
+          onComplete={() => {}}
+          onTriggerNeo={() => setShowChat(true)}
+        />
+      )}
+      <LoadingOverlay isVisible={isAddingPage} type="upload" />
       <DictationModal
         isOpen={showDictationModal}
         onClose={() => setShowDictationModal(false)}

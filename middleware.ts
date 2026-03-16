@@ -41,6 +41,10 @@ const JESSICA_ACCOUNT_PREFIXES = [
 
 const JESSICA_ROOT_PREFIXES = [...JESSICA_ALIAS_PREFIXES, ...JESSICA_ACCOUNT_PREFIXES];
 
+const NEVO_ONLY_PREFIXES = [
+  "/app-landing",
+];
+
 const startsWithAnyPrefix = (pathname: string, prefixes: string[]) =>
   prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
@@ -54,6 +58,9 @@ export function middleware(request: NextRequest) {
     hostWithoutPort === "www.jessicacontentin.fr" ||
     hostWithoutPort === "app.jessicacontentin.fr";
   const isBeyond = hostname.includes("beyondcenter.fr");
+  const isNevo =
+    hostWithoutPort === "nevo-app.fr" ||
+    hostWithoutPort === "www.nevo-app.fr";
   const tenant = getTenantFromHostname(hostname);
 
   if (isJessica && startsWithAnyPrefix(url.pathname, BEYOND_ONLY_PREFIXES)) {
@@ -80,6 +87,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  if (isNevo && url.pathname === "/") {
+    return NextResponse.redirect(new URL("/app-landing", request.url));
+  }
+
+  if (isNevo && startsWithAnyPrefix(url.pathname, BEYOND_ONLY_PREFIXES)) {
+    return NextResponse.redirect(new URL("/app-landing", request.url));
+  }
+
+  if (!isNevo && startsWithAnyPrefix(url.pathname, NEVO_ONLY_PREFIXES)) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   if (!isJessica && (url.pathname === "/lms" || url.pathname.startsWith("/lms/"))) {
     const legacySubPath = url.pathname === "/lms" ? "/apprenant" : url.pathname.replace(/^\/lms/, "");
     const redirectUrl = request.nextUrl.clone();
@@ -100,6 +119,8 @@ export function middleware(request: NextRequest) {
     requestHeaders.set("x-site-tenant", "jessica");
   } else if (isBeyond) {
     requestHeaders.set("x-site-tenant", "beyond");
+  } else if (isNevo) {
+    requestHeaders.set("x-site-tenant", "nevo");
   }
 
   const shouldRewriteJessicaPath =

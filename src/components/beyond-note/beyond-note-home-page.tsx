@@ -58,6 +58,7 @@ import {
 } from "lucide-react";
 import { DictationModal } from "@/components/beyond-note/dictation-modal";
 import { NeoBubble } from "@/components/beyond-note/jarvis-bubble";
+import { OnboardingOverlay } from "@/components/beyond-note/onboarding-overlay";
 import { ChatView } from "@/components/beyond-note/chat-view";
 
 interface Document {
@@ -116,6 +117,7 @@ export function BeyondNoteHomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeNav, setActiveNav] = useState<"home" | "folders" | "search" | "profile">("home");
   const [showFoldersOnly, setShowFoldersOnly] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadDocuments = async () => {
@@ -159,6 +161,45 @@ export function BeyondNoteHomePage() {
       setActiveFolderId(folderParam);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const onboardingParam = searchParams.get("onboarding");
+    if (onboardingParam === "4") {
+      setOnboardingStep(4);
+      return;
+    }
+    const loadAccount = async () => {
+      try {
+        const response = await fetch("/api/beyond-note/account");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!data?.account?.onboarding_completed) {
+          setOnboardingStep(1);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    loadAccount();
+  }, [searchParams]);
+
+  const handleSkipOnboarding = async () => {
+    setOnboardingStep(0);
+    await fetch("/api/beyond-note/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ onboarding_completed: true }),
+    });
+  };
+
+  const handleCompleteOnboarding = async () => {
+    setOnboardingStep(0);
+    await fetch("/api/beyond-note/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ onboarding_completed: true, onboarding_step: 4 }),
+    });
+  };
 
   useEffect(() => {
     const loadQuizStats = async () => {
@@ -1049,6 +1090,28 @@ export function BeyondNoteHomePage() {
         onOpenDocument={(id) => router.push(`/beyond-note-app/${id}`)}
         context="library"
       />
+      {onboardingStep === 1 && (
+        <OnboardingOverlay
+          step={1}
+          onNext={() => {
+            setOnboardingStep(0);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("nevo_onboarding_step", "2");
+            }
+          }}
+          onSkip={handleSkipOnboarding}
+          onComplete={handleCompleteOnboarding}
+          onTriggerUpload={() => cameraInputRef.current?.click()}
+        />
+      )}
+      {onboardingStep === 4 && (
+        <OnboardingOverlay
+          step={4}
+          onNext={() => {}}
+          onSkip={() => {}}
+          onComplete={handleCompleteOnboarding}
+        />
+      )}
       <DictationModal
         isOpen={showDictationModal}
         onClose={() => setShowDictationModal(false)}

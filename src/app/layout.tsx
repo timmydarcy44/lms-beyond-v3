@@ -12,7 +12,6 @@ import { PomodoroFloatingTimer } from "@/components/apprenant/pomodoro-floating-
 import { FloatingDashboardCTAWrapper } from "@/components/apprenant/floating-dashboard-cta-wrapper";
 import { PomodoroFocusManager } from "@/components/apprenant/pomodoro-focus-manager";
 import { PomodoroCompletionScreen } from "@/components/apprenant/pomodoro-completion-screen";
-import { ThemeFloatingToggleGuard } from "@/components/ui/theme-floating-toggle-guard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -128,7 +127,6 @@ export default async function RootLayout({
                     {!lockJessicaTheme ? <PomodoroFloatingTimer /> : null}
                   </FloatingDashboardCTAWrapper>
                   <PomodoroCompletionScreen />
-                  {!lockJessicaTheme ? <ThemeFloatingToggleGuard /> : null}
                 </PomodoroProvider>
                 <Toaster richColors position="top-center" />
               </ThemeProvider>

@@ -9,6 +9,9 @@ import {
   getEngagementEmailTemplate,
 } from "@/lib/email-templates";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 const webhookSecret = process.env.NEVO_STRIPE_WEBHOOK_SECRET || "";
 const secretKey = process.env.NEVO_STRIPE_SECRET_KEY || "";
 

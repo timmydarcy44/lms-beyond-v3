@@ -53,6 +53,10 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
   const hostWithoutPort = hostname.split(":")[0];
 
+  if (url.pathname === "/api/nevo/stripe/webhook") {
+    return NextResponse.next();
+  }
+
   const isJessica =
     hostWithoutPort === "jessicacontentin.fr" ||
     hostWithoutPort === "www.jessicacontentin.fr" ||

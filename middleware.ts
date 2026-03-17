@@ -59,24 +59,25 @@ export function middleware(request: NextRequest) {
 
   const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
   const siteHost = currentUrl ? new URL(currentUrl).hostname : "";
+  const isNevo = process.env.NEXT_PUBLIC_SITE_URL?.includes("nevo");
   const isJessica = siteHost ? siteHost.includes("jessica") : hostWithoutPort.includes("jessica");
   const isBeyond = siteHost ? siteHost.includes("beyond") : hostname.includes("beyond");
-  const isNevo = siteHost ? siteHost.includes("nevo") : hostWithoutPort.includes("nevo");
+  const redirectRoot = isNevo ? "/note-app" : "/";
   const tenant = getTenantFromHostname(hostname);
 
   if (isJessica && startsWithAnyPrefix(url.pathname, BEYOND_ONLY_PREFIXES)) {
-    return NextResponse.redirect(new URL("/note-app", request.url));
+    return NextResponse.redirect(new URL(redirectRoot, request.url));
   }
 
   if (isJessica && url.pathname === "/jessica-contentin") {
     const cleanUrl = request.nextUrl.clone();
-    cleanUrl.pathname = "/note-app";
+    cleanUrl.pathname = redirectRoot;
     return NextResponse.redirect(cleanUrl);
   }
 
   if (isJessica && url.pathname.startsWith("/jessica-contentin/")) {
     const cleanUrl = request.nextUrl.clone();
-    cleanUrl.pathname = url.pathname.replace("/jessica-contentin", "") || "/note-app";
+    cleanUrl.pathname = url.pathname.replace("/jessica-contentin", "") || redirectRoot;
     return NextResponse.redirect(cleanUrl);
   }
 
@@ -85,19 +86,19 @@ export function middleware(request: NextRequest) {
   }
 
   if (isBeyond && (url.pathname.startsWith("/jessica-contentin") || startsWithAnyPrefix(url.pathname, JESSICA_ALIAS_PREFIXES))) {
-    return NextResponse.redirect(new URL("/note-app", request.url));
+    return NextResponse.redirect(new URL(redirectRoot, request.url));
   }
 
   if (isNevo && url.pathname === "/") {
-    return NextResponse.redirect(new URL("/note-app", request.url));
+    return NextResponse.redirect(new URL(redirectRoot, request.url));
   }
 
   if (isNevo && startsWithAnyPrefix(url.pathname, BEYOND_ONLY_PREFIXES)) {
-    return NextResponse.redirect(new URL("/note-app", request.url));
+    return NextResponse.redirect(new URL(redirectRoot, request.url));
   }
 
   if (!isNevo && startsWithAnyPrefix(url.pathname, NEVO_ONLY_PREFIXES)) {
-    return NextResponse.redirect(new URL("/note-app", request.url));
+    return NextResponse.redirect(new URL(redirectRoot, request.url));
   }
 
   if (!isJessica && (url.pathname === "/lms" || url.pathname.startsWith("/lms/"))) {

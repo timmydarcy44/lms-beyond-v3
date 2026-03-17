@@ -91,7 +91,8 @@ export default function SetupAccountPage() {
         return;
       }
 
-      window.location.href = "/note-app";
+      const isNevo = process.env.NEXT_PUBLIC_SITE_URL?.includes("nevo");
+      router.push(isNevo ? "/note-app" : "/library");
     } catch {
       setError("Impossible de finaliser la configuration.");
     } finally {

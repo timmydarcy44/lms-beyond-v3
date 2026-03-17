@@ -127,8 +127,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      console.log("ENVOI TEST RESEND VERS:", email);
       const { data, error } = await resend.emails.send({
-        from: "Nevo <hello@nevo-app.fr>",
+        from: "Nevo <onboarding@resend.dev>",
         to: email,
         subject: accessTemplate.subject,
         html: accessTemplate.html,
@@ -138,6 +139,22 @@ export async function POST(request: NextRequest) {
       if (error) {
         console.error("Resend Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      const { error: sentLogError } = await supabase.from("scheduled_emails").insert([
+        {
+          email,
+          type: "access_sent",
+          send_at: new Date().toISOString(),
+          sent: true,
+          sent_at: new Date().toISOString(),
+          user_id: targetUserId,
+          metadata: { stripe_session_id: session.id },
+        },
+      ]);
+
+      if (sentLogError) {
+        console.error("[nevo/stripe/webhook] Error logging sent email:", sentLogError);
       }
     }
 
@@ -154,6 +171,7 @@ export async function POST(request: NextRequest) {
           send_at: h1.toISOString(),
           sent: false,
           user_id: targetUserId,
+          metadata: { stripe_session_id: session.id },
         },
         {
           email,
@@ -161,6 +179,7 @@ export async function POST(request: NextRequest) {
           send_at: d1.toISOString(),
           sent: false,
           user_id: targetUserId,
+          metadata: { stripe_session_id: session.id },
         },
         {
           email,
@@ -168,6 +187,7 @@ export async function POST(request: NextRequest) {
           send_at: d7.toISOString(),
           sent: false,
           user_id: targetUserId,
+          metadata: { stripe_session_id: session.id },
         },
       ]);
 

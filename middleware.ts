@@ -67,6 +67,12 @@ export function middleware(request: NextRequest) {
   );
   const tenant = getTenantFromHostname(hostname);
 
+  if (isNevo && url.pathname === "/") {
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = "/app-landing";
+    return NextResponse.rewrite(rewriteUrl);
+  }
+
   if (isJessica && startsWithAnyPrefix(url.pathname, BEYOND_ONLY_PREFIXES)) {
     return NextResponse.redirect(new URL("/", request.url));
   }

@@ -19,8 +19,9 @@ export async function POST(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser();
     console.log("[nevo/stripe/checkout] user:", user?.id || "none");
-    if (!user) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const resolvedEmail = email || user?.email || "";
+    if (!resolvedEmail) {
+      return NextResponse.json({ error: "Email requis" }, { status: 400 });
     }
 
     const stripe = getNevoStripeClient();
@@ -42,11 +43,11 @@ export async function POST(request: NextRequest) {
         success_url: `${origin}/app-landing/setup-account?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/app-landing/particuliers?canceled=1`,
         allow_promotion_codes: true,
-        customer_email: email || user.email || undefined,
+        customer_email: resolvedEmail,
         metadata: {
-          user_id: user.id,
+          user_id: user?.id || "",
           tenant: "nevo",
-          email: email || user.email || "",
+          email: resolvedEmail,
         },
       });
     } catch (stripeError: any) {

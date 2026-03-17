@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email found in session" }, { status: 400 });
     }
 
-    let confirmationLink: string | null = null;
+    let confirmationLink = `https://www.nevo-app.fr/app-landing/signup?email=${encodeURIComponent(email)}`;
     let targetUserId = userId || null;
 
     try {
@@ -57,6 +57,14 @@ export async function POST(request: NextRequest) {
       if (!supabase) {
         throw new Error("Supabase not configured");
       }
+
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
+      const linkType = existingProfile?.id ? "recovery" : "signup";
 
       if (!targetUserId) {
         const { data: profileByEmail } = await supabase
@@ -69,7 +77,7 @@ export async function POST(request: NextRequest) {
 
       if (!targetUserId) {
         const inviteResponse = await supabase.auth.admin.inviteUserByEmail(email, {
-          redirectTo: "https://nevo-app.fr/app-landing/login",
+          redirectTo: "https://www.nevo-app.fr/app-landing/reset-password",
           data: { source: "nevo_stripe" },
         });
 
@@ -82,17 +90,19 @@ export async function POST(request: NextRequest) {
       }
 
       const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-        type: "signup",
+        type: linkType,
         email,
         options: {
-          redirectTo: "https://nevo-app.fr/app-landing/login",
+          redirectTo: "https://www.nevo-app.fr/app-landing/reset-password",
         },
       });
 
       if (linkError) {
         console.error("[nevo/stripe/webhook] Error generating signup link:", linkError);
       } else {
-        confirmationLink = linkData?.properties?.action_link || null;
+        if (linkData?.properties?.action_link) {
+          confirmationLink = linkData.properties.action_link;
+        }
         if (linkData?.user?.id && !targetUserId) {
           targetUserId = linkData.user.id;
         }
@@ -120,39 +130,33 @@ export async function POST(request: NextRequest) {
       console.error("[nevo/stripe/webhook] Supabase flow failed:", supabaseError);
     }
 
-    if (!confirmationLink) {
-      confirmationLink = "https://nevo-app.fr/app-landing/login";
+    const accessTemplate = getAccessEmailTemplateWithLink(confirmationLink);
+    const resend = await getResendClient();
+    if (!resend) {
+      return NextResponse.json(
+        { error: "Resend not configured" },
+        { status: 500 },
+      );
     }
 
-    if (confirmationLink) {
-      const accessTemplate = getAccessEmailTemplateWithLink(confirmationLink);
-      const resend = await getResendClient();
-      if (!resend) {
-        return NextResponse.json(
-          { error: "Resend not configured" },
-          { status: 500 },
-        );
-      }
+    try {
+      const { data, error } = await resend.emails.send({
+        from: "Nevo <hello@nevo-app.fr>",
+        to: email,
+        subject: accessTemplate.subject,
+        html: accessTemplate.html,
+      });
 
-      try {
-        const { data, error } = await resend.emails.send({
-          from: "Nevo <hello@nevo-app.fr>",
-          to: email,
-          subject: accessTemplate.subject,
-          html: accessTemplate.html,
-        });
-
-        if (error) {
-          console.error("LOG RESEND ERROR:", error);
-          return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-      } catch (error) {
+      if (error) {
         console.error("LOG RESEND ERROR:", error);
-        return NextResponse.json(
-          { error: error instanceof Error ? error.message : "Resend error" },
-          { status: 500 },
-        );
+        return NextResponse.json({ error: error.message }, { status: 500 });
       }
+    } catch (error) {
+      console.error("LOG RESEND ERROR:", error);
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Resend error" },
+        { status: 500 },
+      );
     }
 
     try {

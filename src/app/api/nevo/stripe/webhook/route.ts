@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
-import { sendEmail } from "@/lib/email/resend-client";
+import { getResendClient } from "@/lib/email/resend-client";
 import {
   getAccessEmailTemplateWithLink,
   getWelcomeEmailTemplate,
@@ -17,6 +17,7 @@ const stripe = secretKey
   : null;
 
 export async function POST(request: NextRequest) {
+  console.log("--- START WEBHOOK DEBUG ---");
   if (!stripe) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   }
@@ -42,8 +43,11 @@ export async function POST(request: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
-    const customerEmail =
-      session.customer_email || session.customer_details?.email || session.metadata?.email;
+    const email = session.customer_details?.email || session.customer_email;
+    console.log("DEBUG: Email récupéré ->", email);
+    if (!email) {
+      return NextResponse.json({ error: "No email found in session" }, { status: 400 });
+    }
 
     const supabase = await getServiceRoleClientOrFallback();
     if (!supabase) {
@@ -52,17 +56,17 @@ export async function POST(request: NextRequest) {
 
     let targetUserId = userId || null;
 
-    if (!targetUserId && customerEmail) {
+    if (!targetUserId) {
       const { data: profileByEmail } = await supabase
         .from("profiles")
         .select("id")
-        .eq("email", customerEmail)
+        .eq("email", email)
         .maybeSingle();
       targetUserId = profileByEmail?.id || null;
     }
 
-    if (!targetUserId && customerEmail) {
-      const inviteResponse = await supabase.auth.admin.inviteUserByEmail(customerEmail, {
+    if (!targetUserId) {
+      const inviteResponse = await supabase.auth.admin.inviteUserByEmail(email, {
         redirectTo: "https://nevo-app.fr/app-landing/login",
         data: { source: "nevo_stripe" },
       });
@@ -76,22 +80,20 @@ export async function POST(request: NextRequest) {
     }
 
     let confirmationLink: string | null = null;
-    if (customerEmail) {
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-        type: "signup",
-        email: customerEmail,
-        options: {
-          redirectTo: "https://nevo-app.fr/app-landing/login",
-        },
-      });
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: "signup",
+      email,
+      options: {
+        redirectTo: "https://nevo-app.fr/app-landing/login",
+      },
+    });
 
-      if (linkError) {
-        console.error("[nevo/stripe/webhook] Error generating signup link:", linkError);
-      } else {
-        confirmationLink = linkData?.properties?.action_link || null;
-        if (linkData?.user?.id && !targetUserId) {
-          targetUserId = linkData.user.id;
-        }
+    if (linkError) {
+      console.error("[nevo/stripe/webhook] Error generating signup link:", linkError);
+    } else {
+      confirmationLink = linkData?.properties?.action_link || null;
+      if (linkData?.user?.id && !targetUserId) {
+        targetUserId = linkData.user.id;
       }
     }
 
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
       .from("profiles")
       .upsert({
         id: targetUserId,
-        email: customerEmail || undefined,
+        email,
         isPremium: true,
       })
       .eq("id", targetUserId);
@@ -115,20 +117,31 @@ export async function POST(request: NextRequest) {
       console.log("[nevo/stripe/webhook] Premium enabled for user:", targetUserId);
     }
 
-    if (customerEmail && confirmationLink) {
+    if (confirmationLink) {
       const accessTemplate = getAccessEmailTemplateWithLink(confirmationLink);
-      const accessResult = await sendEmail({
-        to: customerEmail,
+      const resend = await getResendClient();
+      if (!resend) {
+        return NextResponse.json(
+          { error: "Resend not configured" },
+          { status: 500 },
+        );
+      }
+
+      const { data, error } = await resend.emails.send({
+        from: "Nevo <hello@nevo-app.fr>",
+        to: email,
         subject: accessTemplate.subject,
         html: accessTemplate.html,
-        from: "Nevo <hello@nevo-app.fr>",
       });
-      if (!accessResult.success) {
-        console.error("[nevo/stripe/webhook] Error sending access email:", accessResult.error);
+
+      console.log("Resend Response Data:", data);
+      if (error) {
+        console.error("Resend Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
       }
     }
 
-    if (customerEmail) {
+    if (email) {
       const sendAt = new Date();
       const h1 = new Date(sendAt.getTime() + 60 * 60 * 1000);
       const d1 = new Date(sendAt.getTime() + 24 * 60 * 60 * 1000);
@@ -136,21 +149,21 @@ export async function POST(request: NextRequest) {
 
       const { error: scheduleError } = await supabase.from("scheduled_emails").insert([
         {
-          email: customerEmail,
+          email,
           type: "welcome_h1",
           send_at: h1.toISOString(),
           sent: false,
           user_id: targetUserId,
         },
         {
-          email: customerEmail,
+          email,
           type: "strategic_d1",
           send_at: d1.toISOString(),
           sent: false,
           user_id: targetUserId,
         },
         {
-          email: customerEmail,
+          email,
           type: "engagement_d7",
           send_at: d7.toISOString(),
           sent: false,

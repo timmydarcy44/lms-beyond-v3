@@ -54,72 +54,79 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email found in session" }, { status: 400 });
     }
 
-    const supabase = await getServiceRoleClientOrFallback();
-    if (!supabase) {
-      return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
-    }
-
+    let confirmationLink: string | null = null;
     let targetUserId = userId || null;
 
-    if (!targetUserId) {
-      const { data: profileByEmail } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", email)
-        .maybeSingle();
-      targetUserId = profileByEmail?.id || null;
-    }
+    try {
+      const supabase = await getServiceRoleClientOrFallback();
+      if (!supabase) {
+        throw new Error("Supabase not configured");
+      }
 
-    if (!targetUserId) {
-      const inviteResponse = await supabase.auth.admin.inviteUserByEmail(email, {
-        redirectTo: "https://nevo-app.fr/app-landing/login",
-        data: { source: "nevo_stripe" },
+      if (!targetUserId) {
+        const { data: profileByEmail } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        targetUserId = profileByEmail?.id || null;
+      }
+
+      if (!targetUserId) {
+        const inviteResponse = await supabase.auth.admin.inviteUserByEmail(email, {
+          redirectTo: "https://nevo-app.fr/app-landing/login",
+          data: { source: "nevo_stripe" },
+        });
+
+        if (inviteResponse.error) {
+          console.error("[nevo/stripe/webhook] Error inviting user (ignored):", inviteResponse.error);
+        } else if (inviteResponse.data?.user?.id) {
+          targetUserId = inviteResponse.data.user.id;
+          console.log("[nevo/stripe/webhook] User invited:", targetUserId);
+        }
+      }
+
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: "signup",
+        email,
+        options: {
+          redirectTo: "https://nevo-app.fr/app-landing/login",
+        },
       });
 
-      if (inviteResponse.error) {
-        console.error("[nevo/stripe/webhook] Error inviting user (ignored):", inviteResponse.error);
-      } else if (inviteResponse.data?.user?.id) {
-        targetUserId = inviteResponse.data.user.id;
-        console.log("[nevo/stripe/webhook] User invited:", targetUserId);
+      if (linkError) {
+        console.error("[nevo/stripe/webhook] Error generating signup link:", linkError);
+      } else {
+        confirmationLink = linkData?.properties?.action_link || null;
+        if (linkData?.user?.id && !targetUserId) {
+          targetUserId = linkData.user.id;
+        }
       }
-    }
 
-    let confirmationLink: string | null = null;
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: "signup",
-      email,
-      options: {
-        redirectTo: "https://nevo-app.fr/app-landing/login",
-      },
-    });
+      if (targetUserId) {
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: targetUserId,
+            email,
+            isPremium: true,
+          })
+          .eq("id", targetUserId);
 
-    if (linkError) {
-      console.error("[nevo/stripe/webhook] Error generating signup link:", linkError);
-    } else {
-      confirmationLink = linkData?.properties?.action_link || null;
-      if (linkData?.user?.id && !targetUserId) {
-        targetUserId = linkData.user.id;
+        if (updateError) {
+          console.error("[nevo/stripe/webhook] Error updating profile:", updateError);
+        } else {
+          console.log("[nevo/stripe/webhook] Premium enabled for user:", targetUserId);
+        }
+      } else {
+        console.warn("[nevo/stripe/webhook] No user found/created for session");
       }
+    } catch (supabaseError) {
+      console.error("[nevo/stripe/webhook] Supabase flow failed:", supabaseError);
     }
 
-    if (!targetUserId) {
-      console.warn("[nevo/stripe/webhook] No user found/created for session");
-      return NextResponse.json({ received: true });
-    }
-
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .upsert({
-        id: targetUserId,
-        email,
-        isPremium: true,
-      })
-      .eq("id", targetUserId);
-
-    if (updateError) {
-      console.error("[nevo/stripe/webhook] Error updating profile:", updateError);
-    } else {
-      console.log("[nevo/stripe/webhook] Premium enabled for user:", targetUserId);
+    if (!confirmationLink) {
+      confirmationLink = "https://nevo-app.fr/app-landing/login";
     }
 
     if (confirmationLink) {
@@ -145,6 +152,13 @@ export async function POST(request: NextRequest) {
         console.error("Resend Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+    }
+
+    try {
+      const supabase = await getServiceRoleClientOrFallback();
+      if (!supabase) {
+        throw new Error("Supabase not configured");
+      }
 
       const { error: sentLogError } = await supabase.from("scheduled_emails").insert([
         {
@@ -161,9 +175,7 @@ export async function POST(request: NextRequest) {
       if (sentLogError) {
         console.error("[nevo/stripe/webhook] Error logging sent email:", sentLogError);
       }
-    }
 
-    if (email) {
       const sendAt = new Date();
       const h1 = new Date(sendAt.getTime() + 60 * 60 * 1000);
       const d1 = new Date(sendAt.getTime() + 24 * 60 * 60 * 1000);
@@ -199,6 +211,8 @@ export async function POST(request: NextRequest) {
       if (scheduleError) {
         console.error("[nevo/stripe/webhook] Error scheduling emails:", scheduleError);
       }
+    } catch (supabaseError) {
+      console.error("[nevo/stripe/webhook] Supabase scheduling failed:", supabaseError);
     }
   }
 

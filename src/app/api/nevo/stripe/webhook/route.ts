@@ -42,9 +42,11 @@ export async function POST(request: NextRequest) {
     console.error("[nevo/stripe/webhook] Signature verification failed:", error);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
+  console.log("TYPE EVENT:", event.type);
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
+    console.log("MODE:", session.mode, "STATUS:", session.payment_status);
     const userId = session.metadata?.user_id;
     const email = session.customer_details?.email || session.customer_email;
     console.log("DEBUG: Email récupéré ->", email);
@@ -130,7 +132,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log("ENVOI TEST RESEND VERS:", email);
+      console.log("TENTATIVE ENVOI RESEND VERS:", email);
       const { data, error } = await resend.emails.send({
         from: "Nevo <onboarding@resend.dev>",
         to: email,

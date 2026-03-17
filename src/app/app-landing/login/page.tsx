@@ -25,7 +25,7 @@ export default function LandingLoginPage() {
         setError(signInError?.message || "Identifiants incorrects.");
         return;
       }
-      router.push("/beyond-note-app");
+      router.push("/beyond-note-app?view=library");
     } catch {
       setError("Impossible de se connecter.");
     } finally {
@@ -75,6 +75,12 @@ export default function LandingLoginPage() {
             className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
             required
           />
+        <a
+          href="/app-landing/forgot-password"
+          className="text-xs text-[#6B7280] hover:text-[#be1354] inline-flex"
+        >
+          Mot de passe oublié ?
+        </a>
           {error ? <p className="text-xs text-red-500">{error}</p> : null}
           <button
             type="submit"

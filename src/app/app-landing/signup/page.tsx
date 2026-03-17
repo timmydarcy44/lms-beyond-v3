@@ -97,7 +97,7 @@ export default function LandingSignupPage() {
           phone: form.phone,
         },
       });
-      router.push("/beyond-note-app");
+      router.push("/beyond-note-app?view=library");
     } catch {
       setError("Erreur lors de la création du compte.");
     } finally {

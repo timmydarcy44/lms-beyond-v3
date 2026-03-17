@@ -50,7 +50,7 @@ export default function LandingPage() {
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    router.push(`/app-landing/particuliers?email=${encodeURIComponent(email)}`);
+    router.push(`/app-landing/tarifs?email=${encodeURIComponent(email)}`);
   };
 
   return (

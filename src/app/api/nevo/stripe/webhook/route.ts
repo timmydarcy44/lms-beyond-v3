@@ -130,6 +130,7 @@ export async function POST(request: NextRequest) {
       console.error("[nevo/stripe/webhook] Supabase flow failed:", supabaseError);
     }
 
+    console.log("DESTINATAIRE:", email, "LIEN ENVOYÉ:", confirmationLink);
     const accessTemplate = getAccessEmailTemplateWithLink(confirmationLink);
     const resend = await getResendClient();
     if (!resend) {

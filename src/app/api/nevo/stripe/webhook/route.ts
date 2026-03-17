@@ -20,7 +20,6 @@ const stripe = secretKey
   : null;
 
 export async function POST(request: NextRequest) {
-  console.log("--- START WEBHOOK DEBUG ---");
   if (!stripe) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   }
@@ -42,14 +41,10 @@ export async function POST(request: NextRequest) {
     console.error("[nevo/stripe/webhook] Signature verification failed:", error);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
-  console.log("TYPE EVENT:", event.type);
-
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    console.log("MODE:", session.mode, "STATUS:", session.payment_status);
     const userId = session.metadata?.user_id;
     const email = session.customer_details?.email || session.customer_email;
-    console.log("DEBUG: Email récupéré ->", email);
     if (!email) {
       return NextResponse.json({ error: "No email found in session" }, { status: 400 });
     }
@@ -82,7 +77,7 @@ export async function POST(request: NextRequest) {
           console.error("[nevo/stripe/webhook] Error inviting user (ignored):", inviteResponse.error);
         } else if (inviteResponse.data?.user?.id) {
           targetUserId = inviteResponse.data.user.id;
-          console.log("[nevo/stripe/webhook] User invited:", targetUserId);
+        // invite ok
         }
       }
 
@@ -116,7 +111,7 @@ export async function POST(request: NextRequest) {
         if (updateError) {
           console.error("[nevo/stripe/webhook] Error updating profile:", updateError);
         } else {
-          console.log("[nevo/stripe/webhook] Premium enabled for user:", targetUserId);
+      // premium enabled
         }
       } else {
         console.warn("[nevo/stripe/webhook] No user found/created for session");
@@ -139,16 +134,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log("TENTATIVE ENVOI RESEND VERS:", email);
       try {
         const { data, error } = await resend.emails.send({
           from: "Nevo <hello@nevo-app.fr>",
-          to: "timmydarcy44@gmail.com",
+          to: email,
           subject: accessTemplate.subject,
           html: accessTemplate.html,
         });
 
-        console.log("Resend Response Data:", data);
         if (error) {
           console.error("LOG RESEND ERROR:", error);
           return NextResponse.json({ error: error.message }, { status: 500 });

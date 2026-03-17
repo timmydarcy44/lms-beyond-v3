@@ -40,6 +40,8 @@ const spaceGrotesk = Space_Grotesk({
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
   const hostname = (headersList.get("host") || "").split(":")[0];
+  const nevoIconUrl =
+    "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Copie%20de%20Jessica%20Contentin.png";
 
   if (hostname === "jessicacontentin.fr" || hostname === "www.jessicacontentin.fr") {
     const { generateSEOMetadata } = await import("@/lib/seo/jessica-contentin-seo");
@@ -75,6 +77,19 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   }
 
+  if (hostname === "nevo-app.fr" || hostname === "www.nevo-app.fr") {
+    return {
+      title: "nevo.",
+      description: "L'intelligence au service de l'apprentissage.",
+      metadataBase: new URL("https://nevo-app.fr"),
+      icons: {
+        icon: nevoIconUrl,
+        shortcut: nevoIconUrl,
+        apple: nevoIconUrl,
+      },
+    };
+  }
+
   return {
     title: "Beyond LMS",
     description: "Plateforme d'apprentissage Beyond",
@@ -91,9 +106,18 @@ export default async function RootLayout({
   const headersList = await headers();
   const tenantHeader = headersList.get("x-site-tenant");
   const host = (headersList.get("host") || "").split(":")[0];
+  const isNevo = host === "nevo-app.fr" || host === "www.nevo-app.fr";
+  const nevoIconUrl =
+    "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Copie%20de%20Jessica%20Contentin.png";
   const tenant =
     tenantHeader ||
-    (host.includes("jessicacontentin.fr") ? "jessica" : host.includes("beyondcenter.fr") ? "beyond" : "");
+    (host.includes("jessicacontentin.fr")
+      ? "jessica"
+      : host.includes("beyondcenter.fr")
+        ? "beyond"
+        : host.includes("nevo-app.fr")
+          ? "nevo"
+          : "");
   const tenantClass = tenant ? `tenant-${tenant}` : "";
   const lockJessicaTheme = tenant === "jessica";
 
@@ -101,17 +125,17 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
-        <meta name="application-name" content="Beyond Network" />
+        <meta name="application-name" content={isNevo ? "nevo." : "Beyond Network"} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Beyond" />
-        <meta name="theme-color" content="#C8102E" />
+        <meta name="apple-mobile-web-app-title" content={isNevo ? "nevo." : "Beyond"} />
+        <meta name="theme-color" content={isNevo ? "#be1354" : "#C8102E"} />
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
         />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="manifest" href={isNevo ? "/manifest-nevo.json" : "/manifest.json"} />
+        <link rel="apple-touch-icon" href={isNevo ? nevoIconUrl : "/icons/icon-192x192.png"} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${spaceGrotesk.variable} antialiased ${tenantClass}`}

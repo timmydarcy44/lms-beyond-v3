@@ -7,12 +7,15 @@ let stripeInstance: any = null;
 /**
  * Obtient une instance Stripe (uniquement pour les super admins)
  */
-export async function getStripeClient() {
-  // Vérifier si l'utilisateur est super admin
-  const isSuper = await isSuperAdmin();
-  if (!isSuper) {
-    console.warn("[stripe/client] Stripe n'est disponible que pour les super admins");
-    return null;
+export async function getStripeClient(options?: { requireSuperAdmin?: boolean }) {
+  const requireSuperAdmin = options?.requireSuperAdmin !== false;
+
+  if (requireSuperAdmin) {
+    const isSuper = await isSuperAdmin();
+    if (!isSuper) {
+      console.warn("[stripe/client] Stripe n'est disponible que pour les super admins");
+      return null;
+    }
   }
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -41,7 +44,7 @@ export async function getStripeClient() {
   // Créer l'instance Stripe si elle n'existe pas
   if (!stripeInstance) {
     stripeInstance = new Stripe(stripeSecretKey, {
-      apiVersion: "2024-11-20.acacia",
+      apiVersion: "2025-10-29.clover",
     });
   }
 

@@ -1,9 +1,78 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { loadStripe } from "@stripe/stripe-js";
 import { glassCardClass, glassPanelClass, glassFaqClass } from "@/app/app-landing/feature-styles";
 
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_NEVO_STRIPE_PUBLISHABLE_KEY || "");
+
+type BillingCycle = "monthly" | "annual";
+
 export default function ParticuliersPage() {
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [selectedPriceId, setSelectedPriceId] = useState("");
+  const [isLoading, setIsLoading] = useState<BillingCycle | null>(null);
+  const [emailFromUrl, setEmailFromUrl] = useState("");
+  const searchParams = useSearchParams();
+
+  const priceIds = useMemo(
+    () => ({
+      monthly: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || "",
+      annual: process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID || "",
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    const defaultPriceId = priceIds[billingCycle] || "";
+    setSelectedPriceId(defaultPriceId);
+  }, [billingCycle, priceIds]);
+
+  useEffect(() => {
+    const urlEmail = searchParams.get("email");
+    if (urlEmail) {
+      setEmailFromUrl(urlEmail);
+    }
+  }, [searchParams]);
+
+  const handleCheckout = async (cycle: BillingCycle) => {
+    const priceId = priceIds[cycle] || selectedPriceId;
+    if (!priceId) {
+      alert("Prix indisponible pour le moment.");
+      return;
+    }
+    if (!process.env.NEXT_PUBLIC_NEVO_STRIPE_PUBLISHABLE_KEY) {
+      alert("Stripe n'est pas configuré.");
+      return;
+    }
+    setIsLoading(cycle);
+    try {
+      const response = await fetch("/api/nevo/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId, email: emailFromUrl || undefined }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Erreur lors de la création de la session");
+      }
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error("Stripe n'est pas initialisé");
+      }
+      const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+      if (error) {
+        throw new Error(error.message);
+      }
+    } catch (error: any) {
+      alert(error?.message || "Erreur de paiement");
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
   return (
     <main
       className="min-h-screen text-white"
@@ -24,7 +93,11 @@ export default function ParticuliersPage() {
             vraiment : la compréhension et la création.
           </p>
           <Link
-            href="/app-landing/signup"
+            href={
+              emailFromUrl
+                ? `/app-landing/signup?email=${encodeURIComponent(emailFromUrl)}`
+                : "/app-landing/signup"
+            }
             className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-white text-[#be1354] font-semibold hover:scale-105 transition-transform"
           >
             Commencer mon essai gratuit
@@ -157,6 +230,82 @@ export default function ParticuliersPage() {
                 </Link>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className={`${glassPanelClass} p-8`}>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div>
+                <h2 className="text-3xl font-semibold text-white mb-2">Une offre unique</h2>
+                <p className="text-white/80">Choisissez le rythme qui vous convient.</p>
+              </div>
+              <div className="inline-flex items-center rounded-full bg-white/10 border border-white/20 p-1">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("monthly")}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                    billingCycle === "monthly" ? "bg-white text-[#be1354]" : "text-white/80"
+                  }`}
+                >
+                  Mensuel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("annual")}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                    billingCycle === "annual" ? "bg-white text-[#be1354]" : "text-white/80"
+                  }`}
+                >
+                  Annuel
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 grid md:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-6">
+                <p className="text-xs uppercase tracking-widest text-white/70">Mensuel</p>
+                <p className="text-3xl font-semibold text-white mt-2">14,90€ / mois</p>
+                <button
+                  type="button"
+                  onClick={() => handleCheckout("monthly")}
+                  disabled={isLoading === "monthly" || !priceIds.monthly}
+                  className="mt-4 w-full rounded-full bg-white text-[#be1354] font-semibold py-3"
+                >
+                  {isLoading === "monthly" ? "Redirection..." : "Choisir mensuel"}
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-6">
+                <p className="text-xs uppercase tracking-widest text-white/70">Annuel</p>
+                <p className="text-3xl font-semibold text-white mt-2">160,92€ / an</p>
+                <button
+                  type="button"
+                  onClick={() => handleCheckout("annual")}
+                  disabled={isLoading === "annual" || !priceIds.annual}
+                  className="mt-4 w-full rounded-full bg-white text-[#be1354] font-semibold py-3"
+                >
+                  {isLoading === "annual" ? "Redirection..." : "Choisir annuel"}
+                </button>
+              </div>
+            </div>
+
+            <ul className="mt-6 grid sm:grid-cols-2 gap-3 text-sm text-white/80">
+              {[
+                "Neo IA",
+                "Transformations illimitées",
+                "Quiz & Flashcards",
+                "Mode Focus & Pomodoro",
+                "Export PDF & partage",
+              ].map((feature) => (
+                <li key={feature} className="flex items-center gap-2">
+                  <span className="text-white">•</span>
+                  {feature}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

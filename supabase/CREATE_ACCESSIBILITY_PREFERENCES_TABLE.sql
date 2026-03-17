@@ -83,3 +83,10 @@ COMMENT ON COLUMN user_accessibility_preferences.contrast_level IS 'Niveau de co
 COMMENT ON COLUMN user_accessibility_preferences.highlight_confusing_letters IS 'Mettre en évidence les lettres confusantes (b, d, p, q, m, n, u)';
 COMMENT ON COLUMN user_accessibility_preferences.underline_complex_sounds IS 'Souligner les sons complexes';
 
+
+
+
+
+
+
+

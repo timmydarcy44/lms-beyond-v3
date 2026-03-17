@@ -1,0 +1,18 @@
+{
+  "name": "nevo.",
+  "short_name": "nevo.",
+  "description": "L'intelligence au service de l'apprentissage.",
+  "start_url": "/app-landing",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#be1354",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Copie%20de%20Jessica%20Contentin.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

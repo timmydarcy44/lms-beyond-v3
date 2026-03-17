@@ -23,3 +23,4 @@ export const createSupabaseBrowserClient = (): SupabaseClient | null => {
   });
 };
 
+export const createClient = createSupabaseBrowserClient;

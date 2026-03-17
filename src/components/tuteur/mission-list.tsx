@@ -28,6 +28,14 @@ const statusClasses: Record<string, string> = {
   invalid: "bg-red-50 text-red-600",
 };
 
+const normalizeStatus = (status: string) => {
+  const value = status?.toUpperCase() ?? "";
+  if (value === "VALIDEE" || value === "DONE") return "done";
+  if (value === "EN_COURS" || value === "IN_PROGRESS") return "in_progress";
+  if (value === "INVALIDEE" || value === "INVALID") return "invalid";
+  return "todo";
+};
+
 export function MissionList({ missions }: Props) {
   const [items, setItems] = useState<MissionItem[]>(missions);
   const [invalidMissionId, setInvalidMissionId] = useState<string | null>(null);
@@ -47,9 +55,7 @@ export function MissionList({ missions }: Props) {
       }
       setItems((prev) =>
         prev.map((item) =>
-          item.id === missionId
-            ? { ...item, status: statut === "INVALIDEE" ? "invalid" : statut === "VALIDEE" ? "done" : statut === "EN_COURS" ? "in_progress" : "todo" }
-            : item
+          item.id === missionId ? { ...item, status: normalizeStatus(statut) } : item
         )
       );
       toast.success("Mission mise à jour");
@@ -66,8 +72,9 @@ export function MissionList({ missions }: Props) {
   return (
     <div className="space-y-4">
       {items.map((mission) => {
-        const label = statusLabels[mission.status] ?? "En attente";
-        const tone = statusClasses[mission.status] ?? statusClasses.todo;
+        const normalized = normalizeStatus(mission.status);
+        const label = statusLabels[normalized] ?? "En attente";
+        const tone = statusClasses[normalized] ?? statusClasses.todo;
         return (
           <div key={mission.id} className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
             <div className="flex flex-wrap items-center justify-between gap-3">

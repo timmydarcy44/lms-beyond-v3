@@ -8,12 +8,13 @@
 
 -- Supprimer les anciennes sessions auth (plus de 30 jours)
 -- Ces sessions sont automatiquement nettoyées par Supabase, mais on peut accélérer
-DELETE FROM auth.sessions
-WHERE created_at < NOW() - INTERVAL '30 days'
-  AND id NOT IN (
+DELETE FROM auth.sessions s
+WHERE s.created_at < NOW() - INTERVAL '30 days'
+  AND NOT EXISTS (
     -- Garder les sessions actives (utilisées récemment)
-    SELECT id FROM auth.sessions 
-    WHERE updated_at > NOW() - INTERVAL '7 days'
+    SELECT 1 FROM auth.sessions s2
+    WHERE s2.id = s.id 
+      AND s2.updated_at > NOW() - INTERVAL '7 days'
   );
 
 -- Supprimer les anciens refresh tokens (plus de 30 jours)
@@ -32,30 +33,36 @@ WHERE is_active = false
 
 -- Supprimer les anciennes formations en brouillon (plus de 180 jours)
 -- Si une formation est restée en brouillon 6 mois, elle n'est probablement plus nécessaire
-DELETE FROM courses
-WHERE status = 'draft' 
-  AND created_at < NOW() - INTERVAL '180 days'
-  AND id NOT IN (
+DELETE FROM courses c
+WHERE c.status = 'draft' 
+  AND c.created_at < NOW() - INTERVAL '180 days'
+  AND NOT EXISTS (
     -- Garder les formations qui ont des catalog_items associés
-    SELECT DISTINCT content_id FROM catalog_items WHERE item_type = 'module'
+    SELECT 1 FROM catalog_items ci 
+    WHERE ci.content_id = c.id 
+      AND ci.item_type = 'module'
   );
 
 -- Supprimer les anciens tests en brouillon (plus de 180 jours)
-DELETE FROM tests
-WHERE status = 'draft' 
-  AND created_at < NOW() - INTERVAL '180 days'
-  AND id NOT IN (
+DELETE FROM tests t
+WHERE t.status = 'draft' 
+  AND t.created_at < NOW() - INTERVAL '180 days'
+  AND NOT EXISTS (
     -- Garder les tests qui ont des catalog_items associés
-    SELECT DISTINCT content_id FROM catalog_items WHERE item_type = 'test'
+    SELECT 1 FROM catalog_items ci 
+    WHERE ci.content_id = t.id 
+      AND ci.item_type = 'test'
   );
 
 -- Supprimer les anciennes ressources en brouillon (plus de 180 jours)
-DELETE FROM resources
-WHERE status = 'draft' 
-  AND created_at < NOW() - INTERVAL '180 days'
-  AND id NOT IN (
+DELETE FROM resources r
+WHERE r.status = 'draft' 
+  AND r.created_at < NOW() - INTERVAL '180 days'
+  AND NOT EXISTS (
     -- Garder les ressources qui ont des catalog_items associés
-    SELECT DISTINCT content_id FROM catalog_items WHERE item_type = 'resource'
+    SELECT 1 FROM catalog_items ci 
+    WHERE ci.content_id = r.id 
+      AND ci.item_type = 'resource'
   );
 
 -- ============================================
@@ -113,6 +120,7 @@ SELECT
     pg_size_pretty(pg_database_size(pg_database.datname)) AS size_after_cleanup
 FROM pg_database
 WHERE datname = current_database();
+
 
 
 

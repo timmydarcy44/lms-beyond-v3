@@ -12,7 +12,15 @@ const actionConfig: Record<string, { message: string; submessage: string }> = {
   quiz: { message: "Generation de votre quiz", submessage: "Neo formule vos questions..." },
 };
 
-export function LoadingOverlay({ isVisible, action }: { isVisible: boolean; action?: string }) {
+export function LoadingOverlay({
+  isVisible,
+  action,
+  type,
+}: {
+  isVisible: boolean;
+  action?: string;
+  type?: "upload" | "transformation";
+}) {
   const [dots, setDots] = useState("");
   const config = actionConfig[action || "upload"] || { message: "Traitement en cours", submessage: "Neo travaille pour vous..." };
 

@@ -623,6 +623,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const textToTransform = currentText.trim() || pages.map((p) => p.content).join("\n\n") || document?.extracted_text || "";
   const isPDF = document.file_type === "application/pdf";
   const isImage = document.file_type?.startsWith("image/");
+  const uploadOverlayVisible = isAddingPage || addingPage;
 
   return (
     <TooltipProvider>
@@ -751,7 +752,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                   <Button
                     variant="outline"
                     size="icon"
-                    className="flex md:hidden border border-white/20 text-white hover:bg-white/10"
+                    className="flex md:hidden border border-[#E8E9F0] text-[#be1354] bg-white/90 hover:bg-white"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
@@ -905,7 +906,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
             type="transformation"
             action={loadingAction || undefined}
           />
-          <LoadingOverlay isVisible={isAddingPage} type="upload" action="upload" />
+          <LoadingOverlay isVisible={uploadOverlayVisible} type="upload" action="upload" />
           <SuccessOverlay isVisible={showSuccess} onDismiss={() => setShowSuccess(false)} />
           {/* Zone de texte principale - plein écran */}
           <div className="absolute inset-0 overflow-y-auto">
@@ -1526,7 +1527,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
           onTriggerNeo={() => setShowChat(true)}
         />
       )}
-      <LoadingOverlay isVisible={isAddingPage} type="upload" />
+      <LoadingOverlay isVisible={uploadOverlayVisible} type="upload" />
       <DictationModal
         isOpen={showDictationModal}
         onClose={() => setShowDictationModal(false)}

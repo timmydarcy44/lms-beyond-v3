@@ -35,6 +35,18 @@ export function getAccessEmailTemplate() {
   };
 }
 
+export function getAccessEmailTemplateWithLink(confirmationUrl: string) {
+  return {
+    subject: "Votre accès Premium est actif",
+    html: buildAppleEmail({
+      title: "Votre compte est prêt.",
+      body: "Votre abonnement Premium est actif.",
+      ctaLabel: "Créer votre mot de passe",
+      ctaUrl: confirmationUrl,
+    }),
+  };
+}
+
 export function getWelcomeEmailTemplate() {
   return {
     subject: "Bienvenue dans l'aventure",

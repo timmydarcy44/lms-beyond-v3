@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/resend-client";
 import {
+  getAccessEmailTemplateWithLink,
   getWelcomeEmailTemplate,
   getStrategicEmailTemplate,
   getEngagementEmailTemplate,
@@ -67,10 +68,30 @@ export async function POST(request: NextRequest) {
       });
 
       if (inviteResponse.error) {
-        console.error("[nevo/stripe/webhook] Error inviting user:", inviteResponse.error);
+        console.error("[nevo/stripe/webhook] Error inviting user (ignored):", inviteResponse.error);
       } else if (inviteResponse.data?.user?.id) {
         targetUserId = inviteResponse.data.user.id;
         console.log("[nevo/stripe/webhook] User invited:", targetUserId);
+      }
+    }
+
+    let confirmationLink: string | null = null;
+    if (customerEmail) {
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: "signup",
+        email: customerEmail,
+        options: {
+          redirectTo: "https://nevo-app.fr/app-landing/login",
+        },
+      });
+
+      if (linkError) {
+        console.error("[nevo/stripe/webhook] Error generating signup link:", linkError);
+      } else {
+        confirmationLink = linkData?.properties?.action_link || null;
+        if (linkData?.user?.id && !targetUserId) {
+          targetUserId = linkData.user.id;
+        }
       }
     }
 
@@ -92,6 +113,19 @@ export async function POST(request: NextRequest) {
       console.error("[nevo/stripe/webhook] Error updating profile:", updateError);
     } else {
       console.log("[nevo/stripe/webhook] Premium enabled for user:", targetUserId);
+    }
+
+    if (customerEmail && confirmationLink) {
+      const accessTemplate = getAccessEmailTemplateWithLink(confirmationLink);
+      const accessResult = await sendEmail({
+        to: customerEmail,
+        subject: accessTemplate.subject,
+        html: accessTemplate.html,
+        from: "Nevo <hello@nevo-app.fr>",
+      });
+      if (!accessResult.success) {
+        console.error("[nevo/stripe/webhook] Error sending access email:", accessResult.error);
+      }
     }
 
     if (customerEmail) {

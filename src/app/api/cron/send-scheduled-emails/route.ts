@@ -5,9 +5,11 @@ import {
   getWelcomeEmailTemplate,
   getStrategicEmailTemplate,
   getEngagementEmailTemplate,
+  getSiteBranding,
 } from "@/lib/email-templates";
 
-const FROM = "Nevo <hello@nevo-app.fr>";
+const { siteName } = getSiteBranding();
+const FROM = process.env.RESEND_FROM_EMAIL || `${siteName} <hello@nevo-app.fr>`;
 
 const templateMap = {
   welcome_h1: getWelcomeEmailTemplate,

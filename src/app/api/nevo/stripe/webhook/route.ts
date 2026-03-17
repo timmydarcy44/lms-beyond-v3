@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { getResendClient } from "@/lib/email/resend-client";
-import {
-  getAccessEmailTemplateWithLink,
-  getWelcomeEmailTemplate,
-  getStrategicEmailTemplate,
-  getEngagementEmailTemplate,
-} from "@/lib/email-templates";
+import { getAccessEmailTemplateWithLink, getSiteBranding } from "@/lib/email-templates";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -49,8 +44,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email found in session" }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nevo-app.fr";
-    let confirmationLink = `${baseUrl}/app-landing/signup?email=${encodeURIComponent(email)}`;
+    const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+    const { baseUrl: fallbackBaseUrl, siteName } = getSiteBranding();
+    const baseUrl = currentUrl || fallbackBaseUrl;
+    let confirmationLink = `${baseUrl}/app-landing/setup-account?session_id=${session.id}`;
     let targetUserId = userId || null;
     let actionLink: string | null = null;
 
@@ -79,7 +76,7 @@ export async function POST(request: NextRequest) {
 
       if (!targetUserId) {
         const inviteResponse = await supabase.auth.admin.inviteUserByEmail(email, {
-          redirectTo: `${baseUrl}/app-landing/reset-password`,
+          redirectTo: `${baseUrl}/app-landing/setup-account?session_id=${session.id}`,
           data: { source: "nevo_stripe" },
         });
 
@@ -95,7 +92,7 @@ export async function POST(request: NextRequest) {
         type: linkType,
         email,
         options: {
-          redirectTo: `${baseUrl}/app-landing/reset-password`,
+          redirectTo: `${baseUrl}/app-landing/setup-account?session_id=${session.id}`,
         },
       });
 
@@ -133,9 +130,8 @@ export async function POST(request: NextRequest) {
       console.error("[nevo/stripe/webhook] Supabase flow failed:", supabaseError);
     }
 
-    console.log("DESTINATAIRE:", email, "LIEN ENVOYÉ:", confirmationLink);
     console.log("DESTINATAIRE:", email, "LIEN ENVOYÉ:", actionLink || confirmationLink);
-    const accessTemplate = getAccessEmailTemplateWithLink(confirmationLink);
+    const accessTemplate = getAccessEmailTemplateWithLink(confirmationLink, siteName);
     const resend = await getResendClient();
     if (!resend) {
       return NextResponse.json(
@@ -146,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const { data, error } = await resend.emails.send({
-        from: "Nevo <hello@nevo-app.fr>",
+        from: process.env.RESEND_FROM_EMAIL || `${siteName} <hello@nevo-app.fr>`,
         to: email,
         subject: accessTemplate.subject,
         html: accessTemplate.html,

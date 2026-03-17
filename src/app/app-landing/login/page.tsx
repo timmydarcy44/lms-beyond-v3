@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function LandingLoginPage() {
-  const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,15 +18,12 @@ export default function LandingLoginPage() {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          redirectTo: `${window.location.origin}/beyond-note-app?view=library`,
-        },
       });
       if (signInError || !data.session) {
         setError(signInError?.message || "Identifiants incorrects.");
         return;
       }
-      router.push("/beyond-note-app?view=library");
+      window.location.href = "/note-app";
     } catch {
       setError("Impossible de se connecter.");
     } finally {

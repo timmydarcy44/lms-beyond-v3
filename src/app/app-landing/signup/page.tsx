@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Plan = "nevo" | "nevo-care";
 
 export default function LandingSignupPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const [step, setStep] = useState(1);
@@ -97,7 +96,7 @@ export default function LandingSignupPage() {
           phone: form.phone,
         },
       });
-      router.push("/beyond-note-app?view=library");
+      window.location.href = "/note-app";
     } catch {
       setError("Erreur lors de la création du compte.");
     } finally {

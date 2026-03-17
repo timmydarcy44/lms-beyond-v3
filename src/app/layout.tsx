@@ -40,14 +40,20 @@ const spaceGrotesk = Space_Grotesk({
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
   const hostname = (headersList.get("host") || "").split(":")[0];
+  const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const siteHost = currentUrl ? new URL(currentUrl).hostname : hostname;
+  const isJessica = siteHost.includes("jessica");
+  const isNevo = siteHost.includes("nevo");
+  const isBeyond = siteHost.includes("beyond");
+  const isAppSubdomain = siteHost.startsWith("app.");
   const nevoIconUrl =
     "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Copie%20de%20Jessica%20Contentin.png";
 
-  if (hostname === "jessicacontentin.fr" || hostname === "www.jessicacontentin.fr") {
+  if (isJessica && !isAppSubdomain) {
     const { generateSEOMetadata } = await import("@/lib/seo/jessica-contentin-seo");
     return {
       ...generateSEOMetadata("home"),
-      metadataBase: new URL("https://jessicacontentin.fr"),
+      metadataBase: new URL(currentUrl || "https://jessicacontentin.fr"),
       icons: {
         icon: "/jessica-favicon.svg",
         shortcut: "/jessica-favicon.svg",
@@ -56,11 +62,11 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   }
 
-  if (hostname === "app.jessicacontentin.fr") {
+  if (isJessica && isAppSubdomain) {
     const { generateSEOMetadata } = await import("@/lib/seo/jessica-contentin-seo");
     return {
       ...generateSEOMetadata("ressources"),
-      metadataBase: new URL("https://app.jessicacontentin.fr"),
+      metadataBase: new URL(currentUrl || "https://jessicacontentin.fr"),
       icons: {
         icon: "/jessica-favicon.svg",
         shortcut: "/jessica-favicon.svg",
@@ -69,19 +75,19 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   }
 
-  if (hostname === "beyondcenter.fr" || hostname === "www.beyondcenter.fr") {
+  if (isBeyond) {
     return {
       title: "Beyond Center",
       description: "Plateforme d'apprentissage Beyond Center",
-      metadataBase: new URL("https://beyondcenter.fr"),
+      metadataBase: new URL(currentUrl || "https://beyondcenter.fr"),
     };
   }
 
-  if (hostname === "nevo-app.fr" || hostname === "www.nevo-app.fr") {
+  if (isNevo) {
     return {
       title: "nevo.",
       description: "L'intelligence au service de l'apprentissage.",
-      metadataBase: new URL("https://nevo-app.fr"),
+      metadataBase: new URL(currentUrl || "https://nevo-app.fr"),
       icons: {
         icon: nevoIconUrl,
         shortcut: nevoIconUrl,
@@ -106,16 +112,18 @@ export default async function RootLayout({
   const headersList = await headers();
   const tenantHeader = headersList.get("x-site-tenant");
   const host = (headersList.get("host") || "").split(":")[0];
-  const isNevo = host === "nevo-app.fr" || host === "www.nevo-app.fr";
+  const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const siteHost = currentUrl ? new URL(currentUrl).hostname : host;
+  const isNevo = siteHost.includes("nevo");
   const nevoIconUrl =
     "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Copie%20de%20Jessica%20Contentin.png";
   const tenant =
     tenantHeader ||
-    (host.includes("jessicacontentin.fr")
+    (siteHost.includes("jessica")
       ? "jessica"
-      : host.includes("beyondcenter.fr")
+      : siteHost.includes("beyond")
         ? "beyond"
-        : host.includes("nevo-app.fr")
+        : siteHost.includes("nevo")
           ? "nevo"
           : "");
   const tenantClass = tenant ? `tenant-${tenant}` : "";

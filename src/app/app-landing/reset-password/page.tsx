@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
-  const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -32,7 +30,7 @@ export default function ResetPasswordPage() {
         setError(updateError.message);
         return;
       }
-      router.push("/beyond-note-app?view=library");
+      window.location.href = "/note-app";
     } catch {
       setError("Impossible de mettre à jour le mot de passe.");
     } finally {

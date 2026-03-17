@@ -16,8 +16,9 @@ export default function ForgotPasswordPage() {
     setSuccess(null);
     setIsSubmitting(true);
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://www.nevo-app.fr/app-landing/reset-password",
+        redirectTo: `${baseUrl}/app-landing/reset-password`,
       });
       if (resetError) {
         setError(resetError.message);

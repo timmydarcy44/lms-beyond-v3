@@ -46,19 +46,28 @@ console.log(`RESEND_API_KEY charge: ${apiKey.slice(0, 3)}***`);
 const resend = new Resend(apiKey);
 
 async function main() {
+  const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const siteHost = currentUrl ? new URL(currentUrl).hostname : "nevo-app.fr";
+  const isNevo = siteHost.includes("nevo");
+  const siteName = isNevo ? "Nevo" : "Jessica Contentin";
+  const fromEmail = process.env.RESEND_FROM_EMAIL || `${siteName} <hello@${siteHost}>`;
+
   const { data, error } = await resend.emails.send({
-    from: "Nevo <hello@nevo-app.fr>",
+    from: fromEmail,
     to: "timmydarcy44@gmail.com",
-    subject: "Test Configuration Resend - OK",
+    subject: `Test Configuration Resend - ${siteName}`,
     html: `
       <div style="font-family: Arial, Helvetica, sans-serif; background:#f9fafb; padding:24px;">
         <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:16px; padding:24px; border:1px solid #e5e7eb;">
           <h1 style="color:#be1354; margin:0 0 12px;">Configuration DNS IONOS réussie ✅</h1>
           <p style="font-size:16px; color:#111827; margin:0 0 8px;">
-            Ce message confirme que votre domaine <strong>nevo-app.fr</strong> est correctement configuré avec Resend.
+            Ce message confirme que votre domaine <strong>${siteHost}</strong> est correctement configuré avec Resend.
           </p>
           <p style="font-size:14px; color:#6b7280; margin:0;">
             Vous pouvez maintenant envoyer vos emails transactionnels en toute sécurité.
+          </p>
+          <p style="font-size:14px; color:#6b7280; margin:16px 0 0;">
+            L'équipe ${siteName}
           </p>
         </div>
       </div>

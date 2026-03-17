@@ -23,21 +23,9 @@ export function buildAppleEmail({ title, body, ctaLabel, ctaUrl }: AppleEmailPar
   `;
 }
 
-export function getAccessEmailTemplate() {
-  return {
-    subject: "Votre accès Premium est actif",
-    html: buildAppleEmail({
-      title: "Votre compte est prêt.",
-      body: "Votre abonnement Premium est actif.",
-      ctaLabel: "Créer votre mot de passe",
-      ctaUrl: "https://nevo-app.fr/app-landing/login",
-    }),
-  };
-}
-
 export function getAccessEmailTemplateWithLink(confirmationUrl: string) {
   return {
-    subject: "Votre accès Premium est actif",
+    subject: "Bienvenue sur Nevo",
     html: buildAppleEmail({
       title: "Votre compte est prêt.",
       body: "Votre abonnement Premium est actif.",

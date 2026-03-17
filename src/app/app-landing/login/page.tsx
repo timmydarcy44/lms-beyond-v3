@@ -20,6 +20,9 @@ export default function LandingLoginPage() {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: {
+          redirectTo: `${window.location.origin}/beyond-note-app?view=library`,
+        },
       });
       if (signInError || !data.session) {
         setError(signInError?.message || "Identifiants incorrects.");

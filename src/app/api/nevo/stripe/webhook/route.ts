@@ -49,8 +49,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email found in session" }, { status: 400 });
     }
 
-    let confirmationLink = `https://www.nevo-app.fr/app-landing/signup?email=${encodeURIComponent(email)}`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nevo-app.fr";
+    let confirmationLink = `${baseUrl}/app-landing/signup?email=${encodeURIComponent(email)}`;
     let targetUserId = userId || null;
+    let actionLink: string | null = null;
 
     try {
       const supabase = await getServiceRoleClientOrFallback();
@@ -77,7 +79,7 @@ export async function POST(request: NextRequest) {
 
       if (!targetUserId) {
         const inviteResponse = await supabase.auth.admin.inviteUserByEmail(email, {
-          redirectTo: "https://www.nevo-app.fr/app-landing/reset-password",
+          redirectTo: `${baseUrl}/app-landing/reset-password`,
           data: { source: "nevo_stripe" },
         });
 
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
         type: linkType,
         email,
         options: {
-          redirectTo: "https://www.nevo-app.fr/app-landing/reset-password",
+          redirectTo: `${baseUrl}/app-landing/reset-password`,
         },
       });
 
@@ -101,7 +103,8 @@ export async function POST(request: NextRequest) {
         console.error("[nevo/stripe/webhook] Error generating signup link:", linkError);
       } else {
         if (linkData?.properties?.action_link) {
-          confirmationLink = linkData.properties.action_link;
+          actionLink = linkData.properties.action_link;
+          confirmationLink = actionLink;
         }
         if (linkData?.user?.id && !targetUserId) {
           targetUserId = linkData.user.id;
@@ -131,6 +134,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("DESTINATAIRE:", email, "LIEN ENVOYÉ:", confirmationLink);
+    console.log("DESTINATAIRE:", email, "LIEN ENVOYÉ:", actionLink || confirmationLink);
     const accessTemplate = getAccessEmailTemplateWithLink(confirmationLink);
     const resend = await getResendClient();
     if (!resend) {

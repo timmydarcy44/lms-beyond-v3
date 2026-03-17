@@ -140,17 +140,25 @@ export async function POST(request: NextRequest) {
       }
 
       console.log("TENTATIVE ENVOI RESEND VERS:", email);
-      const { data, error } = await resend.emails.send({
-        from: "Nevo <onboarding@resend.dev>",
-        to: email,
-        subject: accessTemplate.subject,
-        html: accessTemplate.html,
-      });
+      try {
+        const { data, error } = await resend.emails.send({
+          from: "Nevo <hello@nevo-app.fr>",
+          to: "timmydarcy44@gmail.com",
+          subject: accessTemplate.subject,
+          html: accessTemplate.html,
+        });
 
-      console.log("Resend Response Data:", data);
-      if (error) {
-        console.error("Resend Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.log("Resend Response Data:", data);
+        if (error) {
+          console.error("LOG RESEND ERROR:", error);
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+      } catch (error) {
+        console.error("LOG RESEND ERROR:", error);
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Resend error" },
+          { status: 500 },
+        );
       }
     }
 

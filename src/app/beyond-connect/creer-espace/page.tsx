@@ -46,8 +46,6 @@ export default function CreerEspacePage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [autonomy, setAutonomy] = useState("");
   const [acceptsAtypical, setAcceptsAtypical] = useState(false);
   const [showAiPreview, setShowAiPreview] = useState(false);
@@ -65,18 +63,15 @@ export default function CreerEspacePage() {
 
   const isOfferStepValid = offerMode !== null;
   const isSkillsStepValid = selectedSkills.length >= 4;
-  const isStep1Valid =
-    Boolean(
-      startDate &&
-        companyName &&
-        contactFirstName &&
-        contactLastName &&
-        email &&
-        phone &&
-        role &&
-        password &&
-        passwordConfirm
-    ) && password === passwordConfirm;
+  const isStep1Valid = Boolean(
+    startDate &&
+      companyName &&
+      contactFirstName &&
+      contactLastName &&
+      email &&
+      phone &&
+      role
+  );
 
   const stepTitle = useMemo(() => {
     if (step === 1) return "Coordonnées";
@@ -352,30 +347,6 @@ export default function CreerEspacePage() {
                     name="phone"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Mot de passe</label>
-                  <input
-                    className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm text-black placeholder:text-black/40"
-                    placeholder="Créer un mot de passe"
-                    type="password"
-                    name="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Confirmer le mot de passe</label>
-                  <input
-                    className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm text-black placeholder:text-black/40"
-                    placeholder="Confirmer le mot de passe"
-                    type="password"
-                    name="passwordConfirm"
-                    value={passwordConfirm}
-                    onChange={(event) => setPasswordConfirm(event.target.value)}
                     required
                   />
                 </div>

@@ -13,8 +13,6 @@ import { Loader2 } from "lucide-react";
 export default function BeyondCenterSignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -25,16 +23,6 @@ export default function BeyondCenterSignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (password !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error("Le mot de passe doit contenir au moins 6 caractères");
-      return;
-    }
 
     setIsLoading(true);
 
@@ -170,39 +158,6 @@ export default function BeyondCenterSignupPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" style={{ color: textColor }}>
-                Mot de passe
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                style={{ color: textColor }}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" style={{ color: textColor }}>
-                Confirmer le mot de passe
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                style={{ color: textColor }}
-                disabled={isLoading}
-              />
-            </div>
 
             <Button
               type="submit"

@@ -11,7 +11,6 @@ export default function RegisterPage() {
   const supabase = createSupabaseBrowserClient();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -365,17 +364,6 @@ export default function RegisterPage() {
                 </label>
               </>
             ) : null}
-            <label className="text-[12px] text-white/70">
-              Mot de passe
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
-                placeholder="••••••••"
-                required
-              />
-            </label>
             <label className="text-[12px] text-white/70">
               Code Invitation / École (optionnel)
               <input

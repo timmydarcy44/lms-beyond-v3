@@ -33,8 +33,6 @@ const signupSchema = z
   .object({
     fullName: z.string().min(2, { message: "Nom trop court" }),
     email: z.string().email({ message: "Email invalide" }),
-    password: z.string().min(6, { message: "Mot de passe trop court" }),
-    confirmPassword: z.string(),
     type_profil: z.enum(["emploi", "freelance", "reconversion", "alternance"]),
     poste_actuel: z.string().optional(),
     entreprise: z.string().optional(),
@@ -52,10 +50,6 @@ const signupSchema = z
     niveau_etude: z.string().optional(),
     rythme_alternance: z.string().optional(),
     date_fin_contrat: z.string().optional(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Les mots de passe ne correspondent pas",
-    path: ["confirmPassword"],
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -72,8 +66,6 @@ export default function SignupPage() {
     defaultValues: {
       fullName: "",
       email: "",
-      password: "",
-      confirmPassword: "",
       type_profil: "emploi",
       poste_actuel: "",
       entreprise: "",
@@ -554,42 +546,6 @@ export default function SignupPage() {
                 />
               </div>
             ) : null}
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mot de passe</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      autoComplete="new-password"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmer le mot de passe</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      autoComplete="new-password"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
               {isLoading ? (
                 <>

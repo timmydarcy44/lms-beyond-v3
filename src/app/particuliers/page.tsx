@@ -20,7 +20,6 @@ export default function ParticuliersPage() {
     last_name: "",
     email: "",
     role: "PARTICULIER",
-    password: "",
     objectif: "",
   });
   const [message, setMessage] = useState<string | null>(null);
@@ -95,9 +94,8 @@ export default function ParticuliersPage() {
       const safeFirstName = formState.first_name?.trim();
       const safeLastName = formState.last_name?.trim();
       const safeEmail = formState.email?.trim();
-      const safePassword = formState.password?.trim();
-      if (!safeFirstName || !safeLastName || !safeEmail || !safePassword) {
-        throw new Error("Prénom, nom, email et mot de passe sont requis.");
+      if (!safeFirstName || !safeLastName || !safeEmail) {
+        throw new Error("Prénom, nom et email sont requis.");
       }
 
       if (!supabase) {
@@ -317,15 +315,6 @@ export default function ParticuliersPage() {
                 value={formState.email}
                 onChange={handleChange}
                 placeholder="Email pro ou perso"
-                className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-              />
-              <input
-                type="password"
-                name="password"
-                required
-                value={formState.password}
-                onChange={handleChange}
-                placeholder="Mot de passe"
                 className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
               />
               <select
@@ -715,15 +704,6 @@ export default function ParticuliersPage() {
                 value={formState.email}
                 onChange={handleChange}
                 placeholder="Email *"
-                className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-              />
-              <input
-                type="password"
-                name="password"
-                required
-                value={formState.password}
-                onChange={handleChange}
-                placeholder="Mot de passe *"
                 className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
               />
               <select

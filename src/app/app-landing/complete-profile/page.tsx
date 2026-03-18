@@ -21,36 +21,28 @@ export default function CompleteProfilePage() {
         console.log("[complete-profile] syncSession start");
         const hash = window.location.hash.replace(/^#/, "");
         const searchParams = new URLSearchParams(window.location.search);
-        if (hash) {
-          const params = new URLSearchParams(hash);
-          const access_token = params.get("access_token");
-          const refresh_token = params.get("refresh_token");
+        const { data: initialSession } = await supabase.auth.getSession();
+        let session = initialSession?.session ?? null;
+
+        if (!session) {
+          const params = new URLSearchParams(hash || "");
+          const access_token =
+            params.get("access_token") || searchParams.get("access_token");
+          const refresh_token =
+            params.get("refresh_token") || searchParams.get("refresh_token");
           if (access_token && refresh_token) {
-            console.log("[complete-profile] setSession from hash");
-            await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
+            console.log("[complete-profile] setSession from URL tokens");
+            await supabase.auth.setSession({ access_token, refresh_token });
+            const { data: refreshed } = await supabase.auth.getSession();
+            session = refreshed.session ?? null;
             window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
           }
         }
-        if (!hash) {
-          const access_token = searchParams.get("access_token");
-          const refresh_token = searchParams.get("refresh_token");
-          if (access_token && refresh_token) {
-            console.log("[complete-profile] setSession from query");
-            await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-          }
-        }
 
-        const { data } = await supabase.auth.getSession();
         if (!isMounted) return;
-        console.log("[complete-profile] session exists:", !!data.session);
-        setHasSession(!!data.session);
-        if (data.session) {
+        console.log("[complete-profile] session exists:", !!session);
+        setHasSession(!!session);
+        if (session) {
           setError(null);
         }
       } catch (error) {
@@ -91,12 +83,6 @@ export default function CompleteProfilePage() {
     }
     if (password !== confirm) {
       setError("Les mots de passe ne correspondent pas.");
-      return;
-    }
-
-    if (!hasSession) {
-      console.error("[complete-profile] No session detected");
-      setError("Session non détectée. Merci d’ouvrir le lien depuis votre email.");
       return;
     }
 
@@ -154,8 +140,8 @@ export default function CompleteProfilePage() {
           {error ? <p className="text-xs text-red-500">{error}</p> : null}
           <button
             type="submit"
-            disabled={isSubmitting || isCheckingSession || !hasSession}
-            className="w-full rounded-full px-5 py-3 text-white font-semibold cursor-pointer disabled:cursor-not-allowed"
+            disabled={isSubmitting}
+            className="w-full rounded-full px-5 py-3 text-white font-semibold cursor-pointer pointer-events-auto"
             style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
           >
             {isCheckingSession

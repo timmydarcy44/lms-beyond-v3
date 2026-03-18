@@ -15,40 +15,38 @@ type AIAction =
   | "generate-image"
   | "flashcards"
   | "quiz"
-  | "quiz-neo"
-  | "quiz-analysis"
   | "grade-answer";
 
 const getSubjectContext = (subject: string): string => {
   const contexts: Record<string, string> = {
-    "Math√©matiques":
-      "Ce contenu est un cours de math√©matiques. Sois toujours pr√©cis, √©tape par √©tape. Utilise des exemples concrets du quotidien (argent, partage, distances, temps). Ne saute jamais d'√©tape dans les raisonnements.",
-    "Fran√ßais":
-      "Ce contenu est un cours de fran√ßais. Sois riche et nuanc√©. Explique le sens profond, la structure des id√©es. Utilise des exemples litt√©raires accessibles √† un jeune.",
-    "Histoire-G√©o":
-      "Ce contenu est un cours d'histoire-g√©ographie. Adopte un style narratif et immersif. Raconte comme une histoire avec des personnages, des lieux, des dates qui font sens. Cr√©e de l'immersion : 'Imagine-toi en...'",
+    "Math+Æmatiques":
+      "Ce contenu est un cours de math+Æmatiques. Sois toujours pr+Æcis, +Ætape par +Ætape. Utilise des exemples concrets du quotidien (argent, partage, distances, temps). Ne saute jamais d'+Ætape dans les raisonnements.",
+    "Fran+∫ais":
+      "Ce contenu est un cours de fran+∫ais. Sois riche et nuanc+Æ. Explique le sens profond, la structure des id+Æes. Utilise des exemples litt+Æraires accessibles +· un jeune.",
+    "Histoire-G+Æo":
+      "Ce contenu est un cours d'histoire-g+Æographie. Adopte un style narratif et immersif. Raconte comme une histoire avec des personnages, des lieux, des dates qui font sens. Cr+Æe de l'immersion : 'Imagine-toi en...'",
     "Sciences":
-      "Ce contenu est un cours de sciences. Utilise des analogies visuelles avec la nature ou le corps humain. Explique toujours la cha√Æne cause ‚Üí effet. Rends chaque m√©canisme visible mentalement.",
+      "Ce contenu est un cours de sciences. Utilise des analogies visuelles avec la nature ou le corps humain. Explique toujours la cha+´ne cause ‘Â∆ effet. Rends chaque m+Æcanisme visible mentalement.",
     "SVT":
-      "Ce contenu est un cours de SVT. M√™me approche que les sciences, avec focus sur le vivant. Utilise des comparaisons avec le corps de l'√©l√®ve ou des animaux familiers.",
+      "Ce contenu est un cours de SVT. M+¨me approche que les sciences, avec focus sur le vivant. Utilise des comparaisons avec le corps de l'+Æl+øve ou des animaux familiers.",
     "Physique-Chimie":
-      "Ce contenu est un cours de physique-chimie. Sois rigoureux sur les unit√©s et les formules. Illustre chaque concept avec un exemple du quotidien (cuisine, sport, voiture).",
+      "Ce contenu est un cours de physique-chimie. Sois rigoureux sur les unit+Æs et les formules. Illustre chaque concept avec un exemple du quotidien (cuisine, sport, voiture).",
     "Anglais":
-      "Ce contenu est un cours d'anglais. Int√®gre des comparaisons fran√ßais/anglais. Aide √† m√©moriser le vocabulaire par association d'id√©es. Reste accessible.",
+      "Ce contenu est un cours d'anglais. Int+øgre des comparaisons fran+∫ais/anglais. Aide +· m+Æmoriser le vocabulaire par association d'id+Æes. Reste accessible.",
     "Management":
-      "Ce contenu est un cours de management. Ancre chaque concept dans des situations professionnelles r√©elles et concr√®tes. Utilise des mini cas pratiques : 'Dans ton √©quipe de 5 personnes...'",
-    "N√©gociation":
-      "Ce contenu est un cours de n√©gociation. Transforme les concepts en dialogues et jeux de r√¥le. Montre toujours les deux c√¥t√©s : ce que dit le client, ce que tu r√©ponds. Rends √ßa actionnable.",
+      "Ce contenu est un cours de management. Ancre chaque concept dans des situations professionnelles r+Æelles et concr+øtes. Utilise des mini cas pratiques : 'Dans ton +Æquipe de 5 personnes...'",
+    "N+Ægociation":
+      "Ce contenu est un cours de n+Ægociation. Transforme les concepts en dialogues et jeux de r+¶le. Montre toujours les deux c+¶t+Æs : ce que dit le client, ce que tu r+Æponds. Rends +∫a actionnable.",
     "Marketing":
-      "Ce contenu est un cours de marketing. Illustre avec des marques et campagnes connues. Connecte chaque concept √† des exemples r√©cents et concrets que l'√©l√®ve a d√©j√† vus.",
+      "Ce contenu est un cours de marketing. Illustre avec des marques et campagnes connues. Connecte chaque concept +· des exemples r+Æcents et concrets que l'+Æl+øve a d+Æj+· vus.",
     "Finance":
-      "Ce contenu est un cours de finance. Sois pr√©cis sur les chiffres et les ratios. Illustre avec des exemples d'entreprises r√©elles. Explique l'impact concret de chaque d√©cision financi√®re.",
+      "Ce contenu est un cours de finance. Sois pr+Æcis sur les chiffres et les ratios. Illustre avec des exemples d'entreprises r+Æelles. Explique l'impact concret de chaque d+Æcision financi+øre.",
     "Droit":
-      "Ce contenu est un cours de droit. Sois pr√©cis sur les termes juridiques mais explique-les en langage simple. Illustre chaque r√®gle avec un cas concret de la vie quotidienne.",
+      "Ce contenu est un cours de droit. Sois pr+Æcis sur les termes juridiques mais explique-les en langage simple. Illustre chaque r+øgle avec un cas concret de la vie quotidienne.",
     "Commercial":
-      "Ce contenu est un cours commercial. Focus sur les techniques terrain et les situations client r√©elles. Donne des formulations concr√®tes, des scripts, des r√©flexes.",
+      "Ce contenu est un cours commercial. Focus sur les techniques terrain et les situations client r+Æelles. Donne des formulations concr+øtes, des scripts, des r+Æflexes.",
     "RH":
-      "Ce contenu est un cours de ressources humaines. Ancre dans des situations manag√©riales r√©elles. Illustre avec des cas de recrutement, conflits, motivation d'√©quipe.",
+      "Ce contenu est un cours de ressources humaines. Ancre dans des situations manag+Æriales r+Æelles. Illustre avec des cas de recrutement, conflits, motivation d'+Æquipe.",
   };
   return contexts[subject] || "";
 };
@@ -56,15 +54,15 @@ const getSubjectContext = (subject: string): string => {
 const getLevelContext = (level: string): string => {
   const contexts: Record<string, string> = {
     primaire:
-      "Langage tr√®s simple, phrases courtes, exemples avec des animaux ou objets du quotidien. Maximum 3 id√©es par explication.",
+      "Langage tr+øs simple, phrases courtes, exemples avec des animaux ou objets du quotidien. Maximum 3 id+Æes par explication.",
     college:
-      "Langage accessible, exemples du quotidien ado (sport, jeux vid√©o, r√©seaux sociaux). √âvite le jargon.",
+      "Langage accessible, exemples du quotidien ado (sport, jeux vid+Æo, r+Æseaux sociaux). +Îvite le jargon.",
     lycee:
-      "Langage interm√©diaire, exemples concrets, connecte avec l'actualit√© ou la culture pop.",
+      "Langage interm+Ædiaire, exemples concrets, connecte avec l'actualit+Æ ou la culture pop.",
     superieur:
-      "Langage pr√©cis, exemples professionnels, r√©f√©rences acad√©miques accept√©es.",
+      "Langage pr+Æcis, exemples professionnels, r+Æf+Ærences acad+Æmiques accept+Æes.",
     professionnel:
-      "Langage business, cas pratiques terrain, ROI et r√©sultats concrets.",
+      "Langage business, cas pratiques terrain, ROI et r+Æsultats concrets.",
   };
   return contexts[level] || "";
 };
@@ -80,63 +78,62 @@ const getPromptForAction = (
     question?: string;
     expected_answer?: string;
     student_answer?: string;
-    weakTopics?: string[];
   }
 ): string => {
   switch (action) {
     case "revision-sheet":
-      return `Cr√©e une fiche de r√©vision structur√©e et compl√®te √† partir du texte suivant. La fiche doit inclure :
-- Un r√©sum√© des points cl√©s
-- Les concepts importants avec leurs d√©finitions
+      return `Cr+Æe une fiche de r+Ævision structur+Æe et compl+øte +· partir du texte suivant. La fiche doit inclure :
+- Un r+Æsum+Æ des points cl+Æs
+- Les concepts importants avec leurs d+Æfinitions
 - Des exemples concrets si applicable
-- Des questions de r√©vision
+- Des questions de r+Ævision
 
-Texte √† traiter :
+Texte +· traiter :
 ${text}`;
 
     case "reformulate": {
       const stylePrompts: Record<string, string> = {
-        examples: "Reformule ce texte en ajoutant des exemples concrets et parlants pour illustrer chaque id√©e.",
-        metaphore: "Reformule ce texte en utilisant une m√©taphore puissante et m√©morable pour illustrer le concept principal.",
+        examples: "Reformule ce texte en ajoutant des exemples concrets et parlants pour illustrer chaque id+Æe.",
+        metaphore: "Reformule ce texte en utilisant une m+Ætaphore puissante et m+Æmorable pour illustrer le concept principal.",
         enfant:
-          "Reformule ce texte comme si tu l'expliquais √† un enfant de 8 ans : mots simples, phrases courtes, analogies du quotidien.",
+          "Reformule ce texte comme si tu l'expliquais +· un enfant de 8 ans : mots simples, phrases courtes, analogies du quotidien.",
         simple:
-          "Reformule ce texte de mani√®re plus simple : phrases courtes, vocabulaire accessible, va √† l'essentiel.",
-        situation: "Reformule ce texte sous forme de mise en situation concr√®te avec un sc√©nario r√©aliste.",
+          "Reformule ce texte de mani+øre plus simple : phrases courtes, vocabulaire accessible, va +· l'essentiel.",
+        situation: "Reformule ce texte sous forme de mise en situation concr+øte avec un sc+Ænario r+Æaliste.",
         "5ans":
-          "Reformule ce texte comme si tu l'expliquais √† un enfant de 5 ans : mots tr√®s simples, analogies du quotidien.",
+          "Reformule ce texte comme si tu l'expliquais +· un enfant de 5 ans : mots tr+øs simples, analogies du quotidien.",
       };
       const style = options?.style || "simple";
       const subjectContext = options?.subjectContext ?? "";
       const levelContext = options?.levelContext ?? "";
       return `${subjectContext}${levelContext}${
         stylePrompts[style] || stylePrompts.simple
-      }\n\nTexte √† reformuler :\n${text}`;
+      }\n\nTexte +· reformuler :\n${text}`;
     }
 
     case "translate":
-      return `Traduis le texte suivant en fran√ßais (si ce n'est pas d√©j√† le cas) ou en anglais. Assure-toi que la traduction soit pr√©cise et naturelle.
+      return `Traduis le texte suivant en fran+∫ais (si ce n'est pas d+Æj+· le cas) ou en anglais. Assure-toi que la traduction soit pr+Æcise et naturelle.
 
-Texte √† traduire :
+Texte +· traduire :
 ${text}`;
 
     case "diagram":
       return buildSchemaPrompt(text);
 
     case "cleanup":
-      return `Nettoie et structure le texte suivant. Corrige les erreurs, am√©liore la ponctuation, organise les paragraphes de mani√®re logique et assure une coh√©rence globale.
+      return `Nettoie et structure le texte suivant. Corrige les erreurs, am+Æliore la ponctuation, organise les paragraphes de mani+øre logique et assure une coh+Ærence globale.
 
-Texte √† nettoyer :
+Texte +· nettoyer :
 ${text}`;
 
     case "audio":
-      return `Pr√©pare ce texte pour une conversion en audio. Adapte-le pour qu'il soit fluide √† l'oral : simplifie les phrases complexes, ajoute des pauses naturelles, et assure une bonne compr√©hension √† l'√©coute.
+      return `Pr+Æpare ce texte pour une conversion en audio. Adapte-le pour qu'il soit fluide +· l'oral : simplifie les phrases complexes, ajoute des pauses naturelles, et assure une bonne compr+Æhension +· l'+Æcoute.
 
-Texte √† adapter :
+Texte +· adapter :
 ${text}`;
     case "flashcards":
-      return `G√©n√®re 8 flashcards depuis ce cours.
-R√©ponds UNIQUEMENT en JSON valide :
+      return `G+Æn+øre 8 flashcards depuis ce cours.
+R+Æponds UNIQUEMENT en JSON valide :
 [{"question": "...", "answer": "..."}]
 Sans markdown, sans commentaire, juste le JSON.
 
@@ -148,54 +145,19 @@ ${text}`;
       const count = options?.quiz?.count || defaultCount;
       const difficulty = options?.quiz?.difficulty || "Moyen";
       const quizTypePrompt: Record<string, string> = {
-        qcm: `G√©n√®re ${count} questions QCM avec 4 choix chacune, une seule bonne r√©ponse.
+        qcm: `G+Æn+øre ${count} questions QCM avec 4 choix chacune, une seule bonne r+Æponse.
 Format JSON : [{"question":"...","options":["A","B","C","D"],"correct_index":0}]`,
-        "vrai-faux": `G√©n√®re ${count} affirmations Vrai/Faux avec justification.
+        "vrai-faux": `G+Æn+øre ${count} affirmations Vrai/Faux avec justification.
 Format JSON : [{"statement":"...","answer":true,"justification":"..."}]`,
-        trou: `G√©n√®re ${count} phrases importantes du cours avec UN mot cl√© remplac√© par ___.
-Format JSON : { "sentences": [{ "text": "La ___ est...", "answer": "photosynth√®se", "hint": "processus v√©g√©tal" }] }`,
+        trou: `G+Æn+øre ${count} phrases importantes du cours avec UN mot cl+Æ remplac+Æ par ___.
+Format JSON : { "sentences": [{ "text": "La ___ est...", "answer": "photosynth+øse", "hint": "processus v+Æg+Ætal" }] }`,
       };
       return `${quizTypePrompt[quizType] || quizTypePrompt.qcm}
-Niveau de difficult√© : ${difficulty}.
-R√©ponds UNIQUEMENT en JSON valide, sans markdown ni commentaire.
+Niveau de difficult+Æ : ${difficulty}.
+R+Æponds UNIQUEMENT en JSON valide, sans markdown ni commentaire.
 
 Texte :
 ${text}`;
-    }
-
-    case "quiz-neo": {
-      const count = options?.quiz?.count || 8;
-      const difficulty = options?.quiz?.difficulty || "Moyen";
-      const weakTopics = options?.weakTopics?.length
-        ? `Priorise les sujets suivants car l'√©l√®ve a eu des erreurs: ${options.weakTopics.join(", ")}.`
-        : "R√©partis les questions sur les notions cl√©s du texte.";
-      return `Tu es N√©o, un coach d'apprentissage. G√©n√®re un quiz MIXTE de ${count} questions.
-Le quiz doit m√©langer : QCM, Vrai/Faux et R√©ponse libre.
-${weakTopics}
-
-R√©ponds UNIQUEMENT en JSON valide (tableau).
-Chaque √©l√©ment doit avoir :
-- "type": "qcm" | "vrai-faux" | "open"
-- "question": string
-- "topic": string (sujet principal de la question)
-- Pour "qcm" et "vrai-faux": "options": string[] et "correct_index": number
-- Pour "open": "expected_answer": string
-- Optionnel: "explanation": string
-
-Niveau : ${difficulty}.
-
-Texte :
-${text}`;
-    }
-
-    case "quiz-analysis": {
-      const weakTopics = options?.weakTopics?.length
-        ? options.weakTopics.join(", ")
-        : "aucun sujet sp√©cifique";
-      return `Tu es N√©o. Analyse rapide post-quiz.
-Voici les sujets √† renforcer: ${weakTopics}.
-Donne un avis bref et encourageant, et une micro-explication utile en 2-3 phrases.
-R√©ponds UNIQUEMENT en JSON : {"summary":"...","focus_topics":["..."]}`;
     }
 
     case "grade-answer": {
@@ -203,21 +165,21 @@ R√©ponds UNIQUEMENT en JSON : {"summary":"...","focus_topics":["..."]}`;
       const expectedAnswer = options?.expected_answer ?? "";
       const studentAnswer = options?.student_answer ?? "";
       return `Tu es un professeur bienveillant et encourageant. Voici une question : "${question}".
-La r√©ponse attendue : "${expectedAnswer}".
-La r√©ponse de l'√©l√®ve : "${studentAnswer}".
+La r+Æponse attendue : "${expectedAnswer}".
+La r+Æponse de l'+Æl+øve : "${studentAnswer}".
 
-√âvalue la r√©ponse selon ces crit√®res :
-- Compr√©hension totale (la r√©ponse est juste et compl√®te) ‚Üí score: 1
-- Compr√©hension partielle (la r√©ponse est partiellement juste) ‚Üí score: 0.5
-- Pas de compr√©hension (la r√©ponse est fausse ou hors sujet) ‚Üí score: 0
++Îvalue la r+Æponse selon ces crit+øres :
+- Compr+Æhension totale (la r+Æponse est juste et compl+øte) ‘Â∆ score: 1
+- Compr+Æhension partielle (la r+Æponse est partiellement juste) ‘Â∆ score: 0.5
+- Pas de compr+Æhension (la r+Æponse est fausse ou hors sujet) ‘Â∆ score: 0
 
-Ton feedback doit √™tre :
-- Encourageant et bienveillant, m√™me si la r√©ponse est fausse
+Ton feedback doit +¨tre :
+- Encourageant et bienveillant, m+¨me si la r+Æponse est fausse
 - Constructif : explique ce qui manque ou ce qui est bien
 - Court : 2-3 phrases maximum
-- En fran√ßais
+- En fran+∫ais
 
-R√©ponds UNIQUEMENT en JSON : { "score": 0 | 0.5 | 1, "feedback": "string" }`;
+R+Æponds UNIQUEMENT en JSON : { "score": 0 | 0.5 | 1, "feedback": "string" }`;
     }
 
     default:
@@ -229,7 +191,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ error: "Non authentifi√©" }, { status: 401 });
+      return NextResponse.json({ error: "Non authentifi+Æ" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -282,19 +244,19 @@ export async function POST(request: NextRequest) {
     if (action === "generate-image") {
       const openai = getOpenAIClient();
       if (!openai) {
-        throw new Error("OpenAI non configur√©");
+        throw new Error("OpenAI non configur+Æ");
       }
 
       const conceptPrompt = `${levelContext}${subjectContext}En une phrase courte, quel est le concept visuel principal de ce texte ?
-R√©ponds uniquement avec le concept, ex: \"une asym√©trie de courbe math√©matique\". Texte : ${text}`;
+R+Æponds uniquement avec le concept, ex: \"une asym+Ætrie de courbe math+Æmatique\". Texte : ${text}`;
 
       const concept = (await generateTextWithAnthropic(conceptPrompt)) || text.slice(0, 100);
 
       const imageRes = await openai.images.generate({
         model: "dall-e-3",
-        prompt: `Sch√©ma p√©dagogique √©pur√© illustrant : ${concept}.
-Style : illustration √©ducative minimaliste, fond blanc ou sombre,
-traits clairs, adapt√© √† un cours scolaire. Sans texte superflu.`,
+        prompt: `Sch+Æma p+Ædagogique +Æpur+Æ illustrant : ${concept}.
+Style : illustration +Æducative minimaliste, fond blanc ou sombre,
+traits clairs, adapt+Æ +· un cours scolaire. Sans texte superflu.`,
         size: "1024x1024",
         quality: "standard",
         n: 1,
@@ -328,10 +290,9 @@ traits clairs, adapt√© √† un cours scolaire. Sans texte superflu.`,
       question: options?.question,
       expected_answer: options?.expected_answer,
       student_answer: options?.student_answer,
-      weakTopics: options?.weakTopics,
     });
     if (!prompt) {
-      return NextResponse.json({ error: "Erreur lors de la g√©n√©ration du prompt" }, { status: 400 });
+      return NextResponse.json({ error: "Erreur lors de la g+Æn+Æration du prompt" }, { status: 400 });
     }
       
       const openai = getOpenAIClient();
@@ -350,7 +311,7 @@ traits clairs, adapt√© √† un cours scolaire. Sans texte superflu.`,
         max_tokens: 4000,
       });
 
-    const result = response.choices[0]?.message?.content || "Erreur lors de la g√©n√©ration";
+    const result = response.choices[0]?.message?.content || "Erreur lors de la g+Æn+Æration";
 
     return NextResponse.json({
       result,

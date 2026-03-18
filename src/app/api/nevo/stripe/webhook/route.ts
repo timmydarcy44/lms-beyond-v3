@@ -44,12 +44,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email found in session" }, { status: 400 });
     }
 
-    const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
-    const { baseUrl: fallbackBaseUrl, siteName } = getSiteBranding();
-    const baseUrl = currentUrl || fallbackBaseUrl;
-    const completeProfilePath = "/app-landing/complete-profile";
-    const callbackRedirect = `${baseUrl}/auth/callback?next=${encodeURIComponent(completeProfilePath)}`;
-    let confirmationLink = callbackRedirect;
+    const { siteName } = getSiteBranding();
+    const completeProfileUrl = "https://www.nevo-app.fr/app-landing/complete-profile";
+    const callbackRedirect = completeProfileUrl;
+    let confirmationLink = completeProfileUrl;
     let targetUserId = userId || null;
     let actionLink: string | null = null;
 

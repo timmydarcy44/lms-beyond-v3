@@ -66,6 +66,10 @@ export default function CompleteProfilePage() {
       }
 
       router.push("/note-app");
+      window.location.href = "/note-app";
+      setTimeout(() => {
+        window.location.reload();
+      }, 50);
     } catch (err) {
       console.error("[complete-profile] update error:", err);
       setError("Impossible de finaliser la configuration.");

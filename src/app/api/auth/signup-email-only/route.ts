@@ -49,11 +49,13 @@ export async function POST(request: NextRequest) {
                         'A1!'; // Ajouter des caractères spéciaux
     
     // Créer l'utilisateur avec un mot de passe temporaire
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
+    const redirectTo = `${siteUrl}/auth/callback?next=${encodeURIComponent(`/auth/set-password?tenant=${tenant.id}`)}`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password: tempPassword,
       options: {
-        emailRedirectTo: `${request.nextUrl.origin}/auth/set-password?tenant=${tenant.id}`,
+        redirectTo,
         data: {
           tenant_id: tenant.id,
           super_admin_email: tenant.superAdminEmail,

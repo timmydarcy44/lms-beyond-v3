@@ -104,10 +104,12 @@ export default function CreerEspacePage() {
       if (!supabase) {
         throw new Error("Supabase non configuré.");
       }
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const redirectTo = `${siteUrl}/auth/callback`;
       const { data: signupData, error: signupError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { role: "entreprise" } },
+        options: { redirectTo, data: { role: "entreprise" } },
       });
       if (signupError) {
         throw signupError;

@@ -121,9 +121,12 @@ function LoginForm() {
       return;
     }
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const redirectTo = `${siteUrl}/auth/callback`;
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
+      options: { redirectTo } as any,
     });
 
     if (signInError) {
@@ -164,6 +167,7 @@ function LoginForm() {
     }, 500);
 
     const next = searchParams.get("next") || "/jessica-contentin/ressources";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     router.push(next);
     router.refresh();
   };
@@ -181,7 +185,7 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
 

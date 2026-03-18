@@ -104,10 +104,13 @@ export default function ParticuliersPage() {
         throw new Error("Supabase n'est pas configuré.");
       }
 
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const redirectTo = `${siteUrl}/auth/callback`;
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: safeEmail,
         password: safePassword,
         options: {
+          redirectTo,
           data: {
             first_name: safeFirstName,
             last_name: safeLastName,

@@ -155,10 +155,13 @@ export default function SignupPage() {
       const trimmed = String(value ?? "").trim();
       return trimmed ? trimmed : null;
     };
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const redirectTo = `${siteUrl}/auth/callback`;
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
+        redirectTo,
         data: {
           first_name,
           last_name,

@@ -40,9 +40,8 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (values: ResetFormValues) => {
     setError(null);
 
-    // Utiliser NEXT_PUBLIC_APP_URL si disponible (production), sinon window.location.origin (développement)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-    const redirectUrl = `${baseUrl}/reset-password`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+    const redirectUrl = `${baseUrl}/auth/callback?next=${encodeURIComponent("/reset-password")}`;
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       values.email,

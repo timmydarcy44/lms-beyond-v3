@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Générer le lien de réinitialisation via Supabase
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.jessicacontentin.fr";
-    const redirectUrl = `${baseUrl}/jessica-contentin/reset-password`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
+    const redirectUrl = `${baseUrl}/auth/callback?next=${encodeURIComponent("/jessica-contentin/reset-password")}`;
     
     const { data, error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,

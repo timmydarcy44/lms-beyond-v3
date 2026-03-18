@@ -15,9 +15,12 @@ export default function LandingLoginPage() {
     setError(null);
     setIsSubmitting(true);
     try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const redirectTo = `${siteUrl}/auth/callback`;
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: { redirectTo } as any,
       });
       if (signInError || !data.session) {
         setError(signInError?.message || "Identifiants incorrects.");
@@ -34,10 +37,11 @@ export default function LandingLoginPage() {
   const handleGoogle = async () => {
     setError(null);
     try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${siteUrl}/auth/callback`,
         },
       });
     } catch {

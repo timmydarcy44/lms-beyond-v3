@@ -44,10 +44,13 @@ export default function BeyondCenterSignupPage() {
         toast.error("Erreur de connexion");
         return;
       }
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const redirectTo = `${siteUrl}/auth/callback`;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          redirectTo,
           data: {
             first_name: firstName,
             last_name: lastName,

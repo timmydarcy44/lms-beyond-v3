@@ -4,7 +4,8 @@ import { getServerClient } from "@/lib/supabase/server";
 export async function POST(request: NextRequest) {
   try {
     const { email, password, fullName } = await request.json();
-    const origin = request.nextUrl.origin;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
+    const redirectTo = `${siteUrl}/auth/callback`;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       options: {
-        emailRedirectTo: `${origin}/beyond-no-school/login?confirmed=1`,
+        redirectTo,
         data: {
           full_name: typeof fullName === "string" ? fullName : "",
           first_name,

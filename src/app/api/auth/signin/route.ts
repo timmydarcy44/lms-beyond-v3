@@ -30,9 +30,15 @@ export async function POST(request: NextRequest) {
     // Essayer la connexion avec un timeout plus long (30 secondes) car Supabase peut être lent
     let data, error;
     try {
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        request.headers.get("origin") ||
+        "http://localhost:3000";
+      const redirectTo = `${siteUrl}/auth/callback`;
       const signInPromise = supabase.auth.signInWithPassword({
         email,
         password,
+        options: { redirectTo } as any,
       });
       
       const timeoutPromise = new Promise<never>((_, reject) => {

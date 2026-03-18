@@ -143,9 +143,12 @@ export function ProfileSection({ userId }: { userId: string }) {
       }
 
       // Vérifier le mot de passe actuel
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const redirectTo = `${siteUrl}/auth/callback`;
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: passwordData.currentPassword,
+        options: { redirectTo } as any,
       });
 
       if (signInError) {

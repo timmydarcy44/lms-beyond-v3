@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -11,6 +11,57 @@ export default function CompleteProfilePage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const syncSession = async () => {
+      try {
+        const hash = window.location.hash.replace(/^#/, "");
+        if (hash) {
+          const params = new URLSearchParams(hash);
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+          }
+        }
+
+        const { data } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        setHasSession(!!data.session);
+        if (data.session) {
+          setError(null);
+        }
+      } catch {
+        if (!isMounted) return;
+        setHasSession(false);
+      } finally {
+        if (!isMounted) return;
+        setIsCheckingSession(false);
+      }
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      setHasSession(!!session);
+      if (session) {
+        setError(null);
+      }
+    });
+
+    syncSession();
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -25,14 +76,13 @@ export default function CompleteProfilePage() {
       return;
     }
 
+    if (!hasSession) {
+      setError("Session non détectée. Merci d’ouvrir le lien depuis votre email.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        setError("Merci d’ouvrir le lien depuis votre email pour finaliser votre compte.");
-        return;
-      }
-
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
         setError(updateError.message);
@@ -81,11 +131,15 @@ export default function CompleteProfilePage() {
           {error ? <p className="text-xs text-red-500">{error}</p> : null}
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isCheckingSession || !hasSession}
             className="w-full rounded-full px-5 py-3 text-white font-semibold"
             style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
           >
-            {isSubmitting ? "Activation..." : "Enregistrer mon mot de passe"}
+            {isCheckingSession
+              ? "Vérification..."
+              : isSubmitting
+                ? "Activation..."
+                : "Enregistrer mon mot de passe"}
           </button>
         </form>
       </div>

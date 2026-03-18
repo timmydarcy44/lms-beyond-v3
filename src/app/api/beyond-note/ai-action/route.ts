@@ -3,9 +3,9 @@ import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 import { generateJSON, generateSpeech, getOpenAIClient } from "@/lib/ai/openai-client";
 import { generateTextWithAnthropic } from "@/lib/ai/anthropic-client";
-import { buildAudioPrompt, buildRephrasePrompt, buildSchemaPrompt } from "@/lib/ai/prompts/text-transformation";
+import { buildAudioPrompt, buildSchemaPrompt } from "@/lib/ai/prompts/text-transformation";
 
-type AIAction = 
+type AIAction =
   | "revision-sheet"
   | "reformulate"
   | "translate"
@@ -17,54 +17,57 @@ type AIAction =
   | "quiz"
   | "grade-answer";
 
+const normalizeKey = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
 const getSubjectContext = (subject: string): string => {
+  const key = normalizeKey(subject);
   const contexts: Record<string, string> = {
-    "Math+Æmatiques":
-      "Ce contenu est un cours de math+Æmatiques. Sois toujours pr+Æcis, +Ætape par +Ætape. Utilise des exemples concrets du quotidien (argent, partage, distances, temps). Ne saute jamais d'+Ætape dans les raisonnements.",
-    "Fran+∫ais":
-      "Ce contenu est un cours de fran+∫ais. Sois riche et nuanc+Æ. Explique le sens profond, la structure des id+Æes. Utilise des exemples litt+Æraires accessibles +· un jeune.",
-    "Histoire-G+Æo":
-      "Ce contenu est un cours d'histoire-g+Æographie. Adopte un style narratif et immersif. Raconte comme une histoire avec des personnages, des lieux, des dates qui font sens. Cr+Æe de l'immersion : 'Imagine-toi en...'",
-    "Sciences":
-      "Ce contenu est un cours de sciences. Utilise des analogies visuelles avec la nature ou le corps humain. Explique toujours la cha+´ne cause ‘Â∆ effet. Rends chaque m+Æcanisme visible mentalement.",
-    "SVT":
-      "Ce contenu est un cours de SVT. M+¨me approche que les sciences, avec focus sur le vivant. Utilise des comparaisons avec le corps de l'+Æl+øve ou des animaux familiers.",
+    Mathematiques:
+      "Cours de mathematiques. Etapes claires, exemples concrets du quotidien.",
+    Francais:
+      "Cours de francais. Explications nuancees et structure des idees.",
+    "Histoire-Geo":
+      "Cours d histoire-geo. Style narratif, dates et lieux clairs.",
+    Sciences:
+      "Cours de sciences. Cause -> effet et analogies visuelles.",
+    SVT:
+      "Cours de SVT. Focus vivant, analogies simples.",
     "Physique-Chimie":
-      "Ce contenu est un cours de physique-chimie. Sois rigoureux sur les unit+Æs et les formules. Illustre chaque concept avec un exemple du quotidien (cuisine, sport, voiture).",
-    "Anglais":
-      "Ce contenu est un cours d'anglais. Int+øgre des comparaisons fran+∫ais/anglais. Aide +· m+Æmoriser le vocabulaire par association d'id+Æes. Reste accessible.",
-    "Management":
-      "Ce contenu est un cours de management. Ancre chaque concept dans des situations professionnelles r+Æelles et concr+øtes. Utilise des mini cas pratiques : 'Dans ton +Æquipe de 5 personnes...'",
-    "N+Ægociation":
-      "Ce contenu est un cours de n+Ægociation. Transforme les concepts en dialogues et jeux de r+¶le. Montre toujours les deux c+¶t+Æs : ce que dit le client, ce que tu r+Æponds. Rends +∫a actionnable.",
-    "Marketing":
-      "Ce contenu est un cours de marketing. Illustre avec des marques et campagnes connues. Connecte chaque concept +· des exemples r+Æcents et concrets que l'+Æl+øve a d+Æj+· vus.",
-    "Finance":
-      "Ce contenu est un cours de finance. Sois pr+Æcis sur les chiffres et les ratios. Illustre avec des exemples d'entreprises r+Æelles. Explique l'impact concret de chaque d+Æcision financi+øre.",
-    "Droit":
-      "Ce contenu est un cours de droit. Sois pr+Æcis sur les termes juridiques mais explique-les en langage simple. Illustre chaque r+øgle avec un cas concret de la vie quotidienne.",
-    "Commercial":
-      "Ce contenu est un cours commercial. Focus sur les techniques terrain et les situations client r+Æelles. Donne des formulations concr+øtes, des scripts, des r+Æflexes.",
-    "RH":
-      "Ce contenu est un cours de ressources humaines. Ancre dans des situations manag+Æriales r+Æelles. Illustre avec des cas de recrutement, conflits, motivation d'+Æquipe.",
+      "Cours de physique-chimie. Rigueur sur unites, exemples du quotidien.",
+    Anglais:
+      "Cours d anglais. Comparaisons FR/EN, vocabulaire memorisable.",
+    Management:
+      "Cours de management. Cas pratiques concrets.",
+    Negotiation:
+      "Cours de negociation. Dialogues et situations client.",
+    Marketing:
+      "Cours de marketing. Exemples de marques et campagnes.",
+    Finance:
+      "Cours de finance. Chiffres, ratios, impacts concrets.",
+    Droit:
+      "Cours de droit. Termes precis, cas pratiques.",
+    Commercial:
+      "Cours commercial. Scripts terrain et situations client.",
+    RH:
+      "Cours RH. Cas de recrutement, conflits, motivation d equipe.",
   };
-  return contexts[subject] || "";
+  return contexts[key] || "";
 };
 
 const getLevelContext = (level: string): string => {
+  const key = normalizeKey(level).toLowerCase();
   const contexts: Record<string, string> = {
-    primaire:
-      "Langage tr+øs simple, phrases courtes, exemples avec des animaux ou objets du quotidien. Maximum 3 id+Æes par explication.",
-    college:
-      "Langage accessible, exemples du quotidien ado (sport, jeux vid+Æo, r+Æseaux sociaux). +Îvite le jargon.",
-    lycee:
-      "Langage interm+Ædiaire, exemples concrets, connecte avec l'actualit+Æ ou la culture pop.",
-    superieur:
-      "Langage pr+Æcis, exemples professionnels, r+Æf+Ærences acad+Æmiques accept+Æes.",
-    professionnel:
-      "Langage business, cas pratiques terrain, ROI et r+Æsultats concrets.",
+    primaire: "Langage tres simple, phrases courtes, exemples concrets.",
+    college: "Langage accessible, exemples du quotidien ado.",
+    lycee: "Langage intermediaire, exemples concrets.",
+    superieur: "Langage precis, exemples professionnels.",
+    professionnel: "Langage business, cas terrain, ROI.",
   };
-  return contexts[level] || "";
+  return contexts[key] || "";
 };
 
 const getPromptForAction = (
@@ -78,66 +81,58 @@ const getPromptForAction = (
     question?: string;
     expected_answer?: string;
     student_answer?: string;
-  }
+  },
 ): string => {
   switch (action) {
     case "revision-sheet":
-      return `Cr+Æe une fiche de r+Ævision structur+Æe et compl+øte +· partir du texte suivant. La fiche doit inclure :
-- Un r+Æsum+Æ des points cl+Æs
-- Les concepts importants avec leurs d+Æfinitions
-- Des exemples concrets si applicable
-- Des questions de r+Ævision
+      return `Cree une fiche de revision structuree a partir du texte suivant.
+- Resume des points cles
+- Concepts importants avec definition
+- Exemples concrets
+- Questions de revision
 
-Texte +· traiter :
+Texte:
 ${text}`;
-
     case "reformulate": {
       const stylePrompts: Record<string, string> = {
-        examples: "Reformule ce texte en ajoutant des exemples concrets et parlants pour illustrer chaque id+Æe.",
-        metaphore: "Reformule ce texte en utilisant une m+Ætaphore puissante et m+Æmorable pour illustrer le concept principal.",
-        enfant:
-          "Reformule ce texte comme si tu l'expliquais +· un enfant de 8 ans : mots simples, phrases courtes, analogies du quotidien.",
-        simple:
-          "Reformule ce texte de mani+øre plus simple : phrases courtes, vocabulaire accessible, va +· l'essentiel.",
-        situation: "Reformule ce texte sous forme de mise en situation concr+øte avec un sc+Ænario r+Æaliste.",
-        "5ans":
-          "Reformule ce texte comme si tu l'expliquais +· un enfant de 5 ans : mots tr+øs simples, analogies du quotidien.",
+        examples: "Reformule avec des exemples concrets.",
+        metaphore: "Reformule avec une metaphore claire.",
+        enfant: "Explique comme a un enfant de 8 ans.",
+        simple: "Reformule simplement, phrases courtes.",
+        situation: "Reformule sous forme de situation.",
       };
       const style = options?.style || "simple";
       const subjectContext = options?.subjectContext ?? "";
       const levelContext = options?.levelContext ?? "";
-      return `${subjectContext}${levelContext}${
-        stylePrompts[style] || stylePrompts.simple
-      }\n\nTexte +· reformuler :\n${text}`;
-    }
+      return `${subjectContext}${levelContext}${stylePrompts[style] || stylePrompts.simple}
 
-    case "translate":
-      return `Traduis le texte suivant en fran+∫ais (si ce n'est pas d+Æj+· le cas) ou en anglais. Assure-toi que la traduction soit pr+Æcise et naturelle.
-
-Texte +· traduire :
+Texte:
 ${text}`;
+    }
+    case "translate":
+      return `Traduis le texte en francais ou en anglais. Traduction naturelle.
 
+Texte:
+${text}`;
     case "diagram":
       return buildSchemaPrompt(text);
-
     case "cleanup":
-      return `Nettoie et structure le texte suivant. Corrige les erreurs, am+Æliore la ponctuation, organise les paragraphes de mani+øre logique et assure une coh+Ærence globale.
+      return `Nettoie et structure le texte: corrige, ponctue, organise.
 
-Texte +· nettoyer :
+Texte:
 ${text}`;
-
     case "audio":
-      return `Pr+Æpare ce texte pour une conversion en audio. Adapte-le pour qu'il soit fluide +· l'oral : simplifie les phrases complexes, ajoute des pauses naturelles, et assure une bonne compr+Æhension +· l'+Æcoute.
+      return `Prepare le texte pour une lecture audio fluide.
 
-Texte +· adapter :
+Texte:
 ${text}`;
     case "flashcards":
-      return `G+Æn+øre 8 flashcards depuis ce cours.
-R+Æponds UNIQUEMENT en JSON valide :
-[{"question": "...", "answer": "..."}]
-Sans markdown, sans commentaire, juste le JSON.
+      return `Genere 8 flashcards depuis ce cours.
+Reponds UNIQUEMENT en JSON valide:
+[{"question":"...","answer":"..."}]
+Sans markdown.
 
-Texte :
+Texte:
 ${text}`;
     case "quiz": {
       const quizType = options?.quiz?.type || "qcm";
@@ -145,43 +140,38 @@ ${text}`;
       const count = options?.quiz?.count || defaultCount;
       const difficulty = options?.quiz?.difficulty || "Moyen";
       const quizTypePrompt: Record<string, string> = {
-        qcm: `G+Æn+øre ${count} questions QCM avec 4 choix chacune, une seule bonne r+Æponse.
-Format JSON : [{"question":"...","options":["A","B","C","D"],"correct_index":0}]`,
-        "vrai-faux": `G+Æn+øre ${count} affirmations Vrai/Faux avec justification.
-Format JSON : [{"statement":"...","answer":true,"justification":"..."}]`,
-        trou: `G+Æn+øre ${count} phrases importantes du cours avec UN mot cl+Æ remplac+Æ par ___.
-Format JSON : { "sentences": [{ "text": "La ___ est...", "answer": "photosynth+øse", "hint": "processus v+Æg+Ætal" }] }`,
+        qcm: `Genere ${count} QCM avec 4 choix, une bonne reponse.
+Format JSON: [{"question":"...","options":["A","B","C","D"],"correct_index":0}]`,
+        "vrai-faux": `Genere ${count} affirmations Vrai/Faux avec justification.
+Format JSON: [{"statement":"...","answer":true,"justification":"..."}]`,
+        trou: `Genere ${count} phrases avec un mot cle remplace par ___.
+Format JSON: {"sentences":[{"text":"La ___ est...","answer":"mot","hint":"indice"}]}`,
+        open: `Genere ${count} questions reponse libre.
+Format JSON: [{"question":"...","expected_answer":"..."}]`,
       };
       return `${quizTypePrompt[quizType] || quizTypePrompt.qcm}
-Niveau de difficult+Æ : ${difficulty}.
-R+Æponds UNIQUEMENT en JSON valide, sans markdown ni commentaire.
+Niveau: ${difficulty}.
+Reponds UNIQUEMENT en JSON valide.
 
-Texte :
+Texte:
 ${text}`;
     }
-
     case "grade-answer": {
       const question = options?.question ?? "";
       const expectedAnswer = options?.expected_answer ?? "";
       const studentAnswer = options?.student_answer ?? "";
-      return `Tu es un professeur bienveillant et encourageant. Voici une question : "${question}".
-La r+Æponse attendue : "${expectedAnswer}".
-La r+Æponse de l'+Æl+øve : "${studentAnswer}".
+      return `Tu es un professeur bienveillant. Question: "${question}".
+Reponse attendue: "${expectedAnswer}".
+Reponse eleve: "${studentAnswer}".
 
-+Îvalue la r+Æponse selon ces crit+øres :
-- Compr+Æhension totale (la r+Æponse est juste et compl+øte) ‘Â∆ score: 1
-- Compr+Æhension partielle (la r+Æponse est partiellement juste) ‘Â∆ score: 0.5
-- Pas de compr+Æhension (la r+Æponse est fausse ou hors sujet) ‘Â∆ score: 0
+Attribue un score:
+- 1: comprehension totale
+- 0.5: comprehension partielle
+- 0: hors sujet
 
-Ton feedback doit +¨tre :
-- Encourageant et bienveillant, m+¨me si la r+Æponse est fausse
-- Constructif : explique ce qui manque ou ce qui est bien
-- Court : 2-3 phrases maximum
-- En fran+∫ais
-
-R+Æponds UNIQUEMENT en JSON : { "score": 0 | 0.5 | 1, "feedback": "string" }`;
+Donne un feedback court (2-3 phrases) en francais.
+Reponds UNIQUEMENT en JSON: {"score":0|0.5|1,"feedback":"..."} `;
     }
-
     default:
       return text;
   }
@@ -191,7 +181,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ error: "Non authentifi+Æ" }, { status: 401 });
+      return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -216,10 +206,7 @@ export async function POST(request: NextRequest) {
     const subjectContext = subject ? `${getSubjectContext(subject)}\n\n` : "";
 
     if (!action || !text) {
-      return NextResponse.json(
-        { error: "Action et texte requis" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Action et texte requis" }, { status: 400 });
     }
 
     if (action === "audio") {
@@ -244,19 +231,15 @@ export async function POST(request: NextRequest) {
     if (action === "generate-image") {
       const openai = getOpenAIClient();
       if (!openai) {
-        throw new Error("OpenAI non configur+Æ");
+        throw new Error("OpenAI non configure");
       }
 
-      const conceptPrompt = `${levelContext}${subjectContext}En une phrase courte, quel est le concept visuel principal de ce texte ?
-R+Æponds uniquement avec le concept, ex: \"une asym+Ætrie de courbe math+Æmatique\". Texte : ${text}`;
-
+      const conceptPrompt = `${levelContext}${subjectContext}En une phrase courte, quel est le concept visuel principal de ce texte ? Reponds uniquement avec le concept. Texte: ${text}`;
       const concept = (await generateTextWithAnthropic(conceptPrompt)) || text.slice(0, 100);
 
       const imageRes = await openai.images.generate({
         model: "dall-e-3",
-        prompt: `Sch+Æma p+Ædagogique +Æpur+Æ illustrant : ${concept}.
-Style : illustration +Æducative minimaliste, fond blanc ou sombre,
-traits clairs, adapt+Æ +· un cours scolaire. Sans texte superflu.`,
+        prompt: `Schema educatif minimaliste: ${concept}. Fond clair, style propre.`,
         size: "1024x1024",
         quality: "standard",
         n: 1,
@@ -273,7 +256,7 @@ traits clairs, adapt+Æ +· un cours scolaire. Sans texte superflu.`,
     if (action === "diagram") {
       const json = await generateJSON(levelContext + subjectContext + buildSchemaPrompt(text));
       if (!json) {
-        return NextResponse.json({ error: "Erreur lors du traitement IA" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur IA" }, { status: 500 });
       }
       return NextResponse.json({
         result: JSON.stringify(json),
@@ -292,26 +275,26 @@ traits clairs, adapt+Æ +· un cours scolaire. Sans texte superflu.`,
       student_answer: options?.student_answer,
     });
     if (!prompt) {
-      return NextResponse.json({ error: "Erreur lors de la g+Æn+Æration du prompt" }, { status: 400 });
+      return NextResponse.json({ error: "Prompt invalide" }, { status: 400 });
     }
-      
-      const openai = getOpenAIClient();
-      if (!openai) {
-        throw new Error("Aucun provider IA disponible");
-      }
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        max_tokens: 4000,
-      });
+    const openai = getOpenAIClient();
+    if (!openai) {
+      throw new Error("Aucun provider IA disponible");
+    }
 
-    const result = response.choices[0]?.message?.content || "Erreur lors de la g+Æn+Æration";
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      max_tokens: 4000,
+    });
+
+    const result = response.choices[0]?.message?.content || "Erreur lors de la generation";
 
     return NextResponse.json({
       result,
@@ -319,14 +302,7 @@ traits clairs, adapt+Æ +· un cours scolaire. Sans texte superflu.`,
       documentId,
     });
   } catch (error) {
-    console.error("[beyond-note/ai-action] Error:", error);
-    return NextResponse.json(
-      { error: "Erreur lors du traitement IA" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
-
-
-

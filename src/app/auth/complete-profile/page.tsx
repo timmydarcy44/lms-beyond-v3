@@ -14,6 +14,7 @@ export default function CompleteProfilePage() {
 
   useEffect(() => {
     const syncSession = async () => {
+      console.log("Hash brut détecté :", window.location.hash);
       const hash = window.location.hash.replace(/^#/, "");
       if (!hash) return;
       const params = new URLSearchParams(hash);
@@ -44,6 +45,7 @@ export default function CompleteProfilePage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session) {
+        console.log("Hash brut détecté :", window.location.hash);
         const hash = window.location.hash.replace(/^#/, "");
         const params = new URLSearchParams(hash);
         const access_token = params.get("access_token");

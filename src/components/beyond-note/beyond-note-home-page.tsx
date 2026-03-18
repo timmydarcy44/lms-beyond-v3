@@ -55,11 +55,13 @@ import {
   Landmark,
   Leaf,
   Star,
+  LogOut,
 } from "lucide-react";
 import { DictationModal } from "@/components/beyond-note/dictation-modal";
 import { NeoBubble } from "@/components/beyond-note/jarvis-bubble";
 import { OnboardingOverlay } from "@/components/beyond-note/onboarding-overlay";
 import { ChatView } from "@/components/beyond-note/chat-view";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface Document {
   id: string;
@@ -118,6 +120,20 @@ export function BeyondNoteHomePage() {
   const [activeNav, setActiveNav] = useState<"home" | "folders" | "search" | "profile">("home");
   const [showFoldersOnly, setShowFoldersOnly] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await supabase.auth.signOut();
+      window.location.href = "https://www.nevo-app.fr/app-landing/login";
+    } catch {
+      toast.error("Erreur lors de la déconnexion");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadDocuments = async () => {
@@ -526,6 +542,25 @@ export function BeyondNoteHomePage() {
             alt="Nevo"
             className="h-14 object-contain"
           />
+        </div>
+        <div className="px-4 space-y-2 mb-4">
+          <button
+            type="button"
+            onClick={() => router.push("/note-app/profile")}
+            className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-all hover:bg-white/10"
+          >
+            <User className="h-4 w-4 text-white" />
+            <span className="text-sm">Mon Profil</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-all hover:bg-white/10 text-white/90"
+          >
+            <LogOut className="h-4 w-4 text-white" />
+            <span className="text-sm">{isLoggingOut ? "Déconnexion..." : "Déconnexion"}</span>
+          </button>
         </div>
         <div className="px-6 text-sm uppercase tracking-[0.2em] text-white/70 mb-3">
           Mes dossiers
@@ -977,7 +1012,10 @@ export function BeyondNoteHomePage() {
           </button>
           <button
             type="button"
-            onClick={() => setActiveNav("profile")}
+            onClick={() => {
+              setActiveNav("profile");
+              router.push("/note-app/profile");
+            }}
             className="flex flex-col items-center justify-center"
           >
             <User className={`h-6 w-6 ${activeNav === "profile" ? "text-[#be1354]" : "text-[#9CA3AF]"}`} />

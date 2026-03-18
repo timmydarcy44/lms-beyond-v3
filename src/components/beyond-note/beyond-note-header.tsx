@@ -38,7 +38,7 @@ export function BeyondNoteHeader({ user }: BeyondNoteHeaderProps) {
       }
 
       await supabase.auth.signOut();
-      router.push("/login");
+      window.location.href = "https://www.nevo-app.fr/app-landing/login";
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("Erreur lors de la déconnexion");

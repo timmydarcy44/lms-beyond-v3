@@ -167,7 +167,6 @@ function LoginForm() {
     }, 500);
 
     const next = searchParams.get("next") || "/jessica-contentin/ressources";
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     router.push(next);
     router.refresh();
   };

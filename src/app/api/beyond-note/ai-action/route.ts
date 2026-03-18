@@ -15,6 +15,8 @@ type AIAction =
   | "generate-image"
   | "flashcards"
   | "quiz"
+  | "quiz-neo"
+  | "quiz-analysis"
   | "grade-answer";
 
 const getSubjectContext = (subject: string): string => {
@@ -78,6 +80,7 @@ const getPromptForAction = (
     question?: string;
     expected_answer?: string;
     student_answer?: string;
+    weakTopics?: string[];
   }
 ): string => {
   switch (action) {
@@ -158,6 +161,41 @@ Réponds UNIQUEMENT en JSON valide, sans markdown ni commentaire.
 
 Texte :
 ${text}`;
+    }
+
+    case "quiz-neo": {
+      const count = options?.quiz?.count || 8;
+      const difficulty = options?.quiz?.difficulty || "Moyen";
+      const weakTopics = options?.weakTopics?.length
+        ? `Priorise les sujets suivants car l'élève a eu des erreurs: ${options.weakTopics.join(", ")}.`
+        : "Répartis les questions sur les notions clés du texte.";
+      return `Tu es Néo, un coach d'apprentissage. Génère un quiz MIXTE de ${count} questions.
+Le quiz doit mélanger : QCM, Vrai/Faux et Réponse libre.
+${weakTopics}
+
+Réponds UNIQUEMENT en JSON valide (tableau).
+Chaque élément doit avoir :
+- "type": "qcm" | "vrai-faux" | "open"
+- "question": string
+- "topic": string (sujet principal de la question)
+- Pour "qcm" et "vrai-faux": "options": string[] et "correct_index": number
+- Pour "open": "expected_answer": string
+- Optionnel: "explanation": string
+
+Niveau : ${difficulty}.
+
+Texte :
+${text}`;
+    }
+
+    case "quiz-analysis": {
+      const weakTopics = options?.weakTopics?.length
+        ? options.weakTopics.join(", ")
+        : "aucun sujet spécifique";
+      return `Tu es Néo. Analyse rapide post-quiz.
+Voici les sujets à renforcer: ${weakTopics}.
+Donne un avis bref et encourageant, et une micro-explication utile en 2-3 phrases.
+Réponds UNIQUEMENT en JSON : {"summary":"...","focus_topics":["..."]}`;
     }
 
     case "grade-answer": {
@@ -290,6 +328,7 @@ traits clairs, adapté à un cours scolaire. Sans texte superflu.`,
       question: options?.question,
       expected_answer: options?.expected_answer,
       student_answer: options?.student_answer,
+      weakTopics: options?.weakTopics,
     });
     if (!prompt) {
       return NextResponse.json({ error: "Erreur lors de la génération du prompt" }, { status: 400 });

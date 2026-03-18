@@ -18,12 +18,15 @@ export default function CompleteProfilePage() {
     let isMounted = true;
     const syncSession = async () => {
       try {
+        console.log("[complete-profile] syncSession start");
         const hash = window.location.hash.replace(/^#/, "");
+        const searchParams = new URLSearchParams(window.location.search);
         if (hash) {
           const params = new URLSearchParams(hash);
           const access_token = params.get("access_token");
           const refresh_token = params.get("refresh_token");
           if (access_token && refresh_token) {
+            console.log("[complete-profile] setSession from hash");
             await supabase.auth.setSession({
               access_token,
               refresh_token,
@@ -31,14 +34,27 @@ export default function CompleteProfilePage() {
             window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
           }
         }
+        if (!hash) {
+          const access_token = searchParams.get("access_token");
+          const refresh_token = searchParams.get("refresh_token");
+          if (access_token && refresh_token) {
+            console.log("[complete-profile] setSession from query");
+            await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+          }
+        }
 
         const { data } = await supabase.auth.getSession();
         if (!isMounted) return;
+        console.log("[complete-profile] session exists:", !!data.session);
         setHasSession(!!data.session);
         if (data.session) {
           setError(null);
         }
-      } catch {
+      } catch (error) {
+        console.error("[complete-profile] syncSession error:", error);
         if (!isMounted) return;
         setHasSession(false);
       } finally {
@@ -49,6 +65,7 @@ export default function CompleteProfilePage() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
+      console.log("[complete-profile] auth state change:", _event);
       setHasSession(!!session);
       if (session) {
         setError(null);
@@ -65,6 +82,7 @@ export default function CompleteProfilePage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    console.log("[complete-profile] Bouton cliqué");
     setError(null);
 
     if (password.length < 8) {
@@ -77,21 +95,26 @@ export default function CompleteProfilePage() {
     }
 
     if (!hasSession) {
+      console.error("[complete-profile] No session detected");
       setError("Session non détectée. Merci d’ouvrir le lien depuis votre email.");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      console.log("[complete-profile] Calling updateUser");
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
+        console.error("[complete-profile] updateUser error:", updateError);
         setError(updateError.message);
         return;
       }
 
       const isNevo = process.env.NEXT_PUBLIC_SITE_URL?.includes("nevo");
+      console.log("[complete-profile] redirecting:", isNevo ? "/note-app" : "/library");
       router.push(isNevo ? "/note-app" : "/library");
-    } catch {
+    } catch (error) {
+      console.error("[complete-profile] update flow error:", error);
       setError("Impossible de finaliser la configuration.");
     } finally {
       setIsSubmitting(false);
@@ -132,7 +155,7 @@ export default function CompleteProfilePage() {
           <button
             type="submit"
             disabled={isSubmitting || isCheckingSession || !hasSession}
-            className="w-full rounded-full px-5 py-3 text-white font-semibold"
+            className="w-full rounded-full px-5 py-3 text-white font-semibold cursor-pointer disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
           >
             {isCheckingSession

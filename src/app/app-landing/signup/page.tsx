@@ -20,7 +20,7 @@ export default function LandingSignupPage() {
     email: "",
     phone: "",
   });
-  const [plan, setPlan] = useState<Plan>("nevo-care");
+  const [plan, setPlan] = useState<Plan>("nevo");
 
   const updateForm = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -45,6 +45,10 @@ export default function LandingSignupPage() {
     setIsSubmitting(true);
     setError(null);
     try {
+      if (plan === "nevo-care") {
+        setError("L'offre Nevo.Care sera disponible très bientôt.");
+        return;
+      }
       if (!hasSession) {
         setError("Merci de confirmer votre email avant de continuer.");
         return;
@@ -197,14 +201,14 @@ export default function LandingSignupPage() {
             </button>
             <button
               type="button"
-              onClick={() => setPlan("nevo-care")}
-              className={`rounded-3xl border p-6 text-left transition-all ${
-                plan === "nevo-care" ? "border-[#be1354] bg-[#fff5f7]" : "border-[#E8E9F0] bg-white"
-              }`}
+              disabled
+              onClick={() => null}
+              className="rounded-3xl border p-6 text-left transition-all border-[#E8E9F0] bg-white opacity-60 cursor-not-allowed"
             >
               <p className="text-xs uppercase tracking-widest text-[#be1354]">Nevo. + Care</p>
               <p className="text-2xl font-semibold mt-2">19,90€/mois</p>
               <p className="text-sm text-[#6B7280] mt-3">Suivi bien-être et tableau émotionnel.</p>
+              <p className="text-xs text-[#9CA3AF] mt-4 font-semibold">Bientôt disponible</p>
             </button>
           </div>
         )}

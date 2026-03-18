@@ -100,7 +100,7 @@ export default function ParticuliersPage() {
             }
             className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-white text-[#be1354] font-semibold hover:scale-105 transition-transform"
           >
-            Commencer mon essai gratuit
+            Démarrer mes 7 jours d'essai gratuit
           </Link>
 
           <div className="mt-12 max-w-4xl mx-auto">
@@ -274,7 +274,7 @@ export default function ParticuliersPage() {
                   disabled={isLoading === "monthly" || !priceIds.monthly}
                   className="mt-4 w-full rounded-full bg-white text-[#be1354] font-semibold py-3"
                 >
-                  {isLoading === "monthly" ? "Redirection..." : "Choisir mensuel"}
+                  {isLoading === "monthly" ? "Redirection..." : "Démarrer mes 7 jours d'essai gratuit"}
                 </button>
               </div>
 
@@ -287,7 +287,7 @@ export default function ParticuliersPage() {
                   disabled={isLoading === "annual" || !priceIds.annual}
                   className="mt-4 w-full rounded-full bg-white text-[#be1354] font-semibold py-3"
                 >
-                  {isLoading === "annual" ? "Redirection..." : "Choisir annuel"}
+                  {isLoading === "annual" ? "Redirection..." : "Démarrer mes 7 jours d'essai gratuit"}
                 </button>
               </div>
             </div>

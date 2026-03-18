@@ -118,7 +118,7 @@ export default function TarifsPage() {
                     className="mt-4 inline-flex items-center justify-center w-full rounded-full px-5 py-2.5 text-white font-semibold disabled:opacity-60"
                     style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
                   >
-                    {isLoading === "monthly" ? "Redirection..." : "Choisir mensuel"}
+                    {isLoading === "monthly" ? "Redirection..." : "Démarrer mes 7 jours d'essai gratuit"}
                   </button>
                 </div>
 
@@ -134,7 +134,7 @@ export default function TarifsPage() {
                     className="mt-4 inline-flex items-center justify-center w-full rounded-full px-5 py-2.5 text-white font-semibold disabled:opacity-60"
                     style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
                   >
-                    {isLoading === "annual" ? "Redirection..." : "Choisir annuel"}
+                    {isLoading === "annual" ? "Redirection..." : "Démarrer mes 7 jours d'essai gratuit"}
                   </button>
                 </div>
               </div>

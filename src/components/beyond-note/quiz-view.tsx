@@ -12,6 +12,16 @@ interface QuizQuestion {
   explanation?: string;
 }
 
+interface MixedQuestion {
+  type: "qcm" | "vrai-faux" | "open";
+  question: string;
+  options?: string[];
+  correct_index?: number;
+  expected_answer?: string;
+  explanation?: string;
+  topic?: string;
+}
+
 interface GapSentence {
   text: string;
   answer: string;
@@ -32,6 +42,16 @@ interface QuizViewProps {
 
 export function QuizView({ documentId, accountType, folderId = null, onClose }: QuizViewProps) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [quizMode, setQuizMode] = useState<"standard" | "neo">("standard");
+  const [mixedQuestions, setMixedQuestions] = useState<MixedQuestion[]>([]);
+  const [mixedIndex, setMixedIndex] = useState(0);
+  const [mixedScore, setMixedScore] = useState(0);
+  const [mixedMaxScore, setMixedMaxScore] = useState(0);
+  const [mixedSelected, setMixedSelected] = useState<number | null>(null);
+  const [mixedFeedback, setMixedFeedback] = useState<string | null>(null);
+  const [neoWeakTopics, setNeoWeakTopics] = useState<string[]>([]);
+  const [neoFeedback, setNeoFeedback] = useState<string | null>(null);
+  const [neoSummaryLoading, setNeoSummaryLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -54,30 +74,47 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
   const [sessionSaved, setSessionSaved] = useState(false);
 
   const current = questions[index];
+  const currentMixed = mixedQuestions[mixedIndex] || null;
   const total =
-    quizType === "trou"
-      ? gapSentences.length
-      : quizType === "open"
-        ? openQuestions.length
-        : questions.length;
+    quizMode === "neo"
+      ? mixedQuestions.length
+      : quizType === "trou"
+        ? gapSentences.length
+        : quizType === "open"
+          ? openQuestions.length
+          : questions.length;
   const isComplete =
     total > 0 &&
-    (quizType === "trou"
-      ? gapIndex >= total
-      : quizType === "open"
-        ? openIndex >= total
-        : index >= total);
+    (quizMode === "neo"
+      ? mixedIndex >= total
+      : quizType === "trou"
+        ? gapIndex >= total
+        : quizType === "open"
+          ? openIndex >= total
+          : index >= total);
 
   useEffect(() => {
     setSelected(null);
   }, [index]);
 
   useEffect(() => {
+    setMixedSelected(null);
+    setMixedFeedback(null);
+  }, [mixedIndex]);
+
+  useEffect(() => {
     if (!isComplete || sessionSaved || total === 0) return;
     const saveSession = async () => {
       const finalScore =
-        quizType === "trou" ? gapScore : quizType === "open" ? openScore : score;
-      const maxScore = quizType === "open" ? total * 20 : total;
+        quizMode === "neo"
+          ? mixedScore
+          : quizType === "trou"
+            ? gapScore
+            : quizType === "open"
+              ? openScore
+              : score;
+      const maxScore =
+        quizMode === "neo" ? mixedMaxScore || total : quizType === "open" ? total * 20 : total;
       try {
         await fetch("/api/beyond-note/quiz-sessions", {
           method: "POST",
@@ -88,7 +125,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
             score: finalScore,
             max_score: maxScore,
             nb_questions: total,
-            quiz_type: quizType,
+            quiz_type: quizMode === "neo" ? "neo" : quizType,
           }),
         });
         setSessionSaved(true);
@@ -97,7 +134,52 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
       }
     };
     saveSession();
-  }, [documentId, gapScore, isComplete, openScore, quizType, score, sessionSaved, total]);
+  }, [
+    documentId,
+    gapScore,
+    isComplete,
+    mixedMaxScore,
+    mixedScore,
+    openScore,
+    quizMode,
+    quizType,
+    score,
+    sessionSaved,
+    total,
+  ]);
+
+  useEffect(() => {
+    if (quizMode !== "neo" || !isComplete || neoSummaryLoading || neoFeedback) return;
+    const summarize = async () => {
+      setNeoSummaryLoading(true);
+      try {
+        const aiRes = await fetch("/api/beyond-note/ai-action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            documentId,
+            action: "quiz-analysis",
+            text: "Synthèse post-quiz",
+            options: {
+              weakTopics: neoWeakTopics,
+            },
+          }),
+        });
+        if (!aiRes.ok) throw new Error("Erreur lors de l'analyse");
+        const aiData = await aiRes.json();
+        const parsed = JSON.parse(aiData.result);
+        const summary =
+          typeof parsed?.summary === "string" ? parsed.summary : "Continue tes efforts, tu progresses.";
+        setNeoFeedback(summary);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Analyse indisponible";
+        setNeoFeedback(message);
+      } finally {
+        setNeoSummaryLoading(false);
+      }
+    };
+    summarize();
+  }, [documentId, isComplete, neoFeedback, neoSummaryLoading, neoWeakTopics, quizMode]);
 
   const normalizeAnswer = (value: string) =>
     value
@@ -134,6 +216,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
       const aiData = await aiRes.json();
       const parsed = JSON.parse(aiData.result);
 
+      setQuizMode("standard");
       if (quizType === "trou") {
         const sentences: GapSentence[] = Array.isArray(parsed?.sentences)
           ? parsed.sentences
@@ -224,6 +307,86 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
     }
   };
 
+  const recordHistory = async (payload: {
+    topic?: string | null;
+    is_correct: boolean;
+    question_type: string;
+  }) => {
+    try {
+      await fetch("/api/beyond-note/quiz-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          document_id: documentId,
+          folder_id: folderId,
+          topic: payload.topic || null,
+          is_correct: payload.is_correct,
+          question_type: payload.question_type,
+        }),
+      });
+    } catch {
+      // non bloquant
+    }
+  };
+
+  const generateNeoQuiz = async () => {
+    setLoading(true);
+    setNeoFeedback(null);
+    try {
+      const docRes = await fetch("/api/beyond-note/documents");
+      if (!docRes.ok) throw new Error("Impossible de récupérer le document");
+      const docData = await docRes.json();
+      const doc = docData.documents?.find((d: { id: string; extracted_text: string | null }) => d.id === documentId);
+      if (!doc?.extracted_text) {
+        toast.error("Aucun texte disponible");
+        return;
+      }
+
+      const historyRes = await fetch("/api/beyond-note/quiz-history");
+      const historyData = historyRes.ok ? await historyRes.json() : { weakTopics: [] };
+
+      const aiRes = await fetch("/api/beyond-note/ai-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentId,
+          action: "quiz-neo",
+          text: doc.extracted_text,
+          options: {
+            quiz: { count: questionCount, difficulty, type: "neo" },
+            weakTopics: historyData?.weakTopics || [],
+          },
+        }),
+      });
+      if (!aiRes.ok) throw new Error("Erreur lors de la génération");
+      const aiData = await aiRes.json();
+      const parsed = JSON.parse(aiData.result);
+      const mixed = Array.isArray(parsed) ? parsed : [];
+      if (!mixed.length) throw new Error("Réponse IA invalide");
+
+      setQuizMode("neo");
+      setMixedQuestions(mixed);
+      setMixedIndex(0);
+      setMixedScore(0);
+      const maxScore = mixed.length;
+      setMixedMaxScore(maxScore || mixed.length);
+      setSessionSaved(false);
+      setQuestions([]);
+      setGapSentences([]);
+      setOpenQuestions([]);
+      setIndex(0);
+      setGapIndex(0);
+      setOpenIndex(0);
+      if (answerRef.current) answerRef.current.value = "";
+      toast.success("Quiz généré");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur serveur";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSelect = (choice: number) => {
     if (selected !== null || !current) return;
     setSelected(choice);
@@ -251,21 +414,38 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
     setOpenIndex(0);
     setOpenScore(0);
     setOpenFeedback(null);
+    setQuizMode("standard");
+    setMixedQuestions([]);
+    setMixedIndex(0);
+    setMixedScore(0);
+    setMixedMaxScore(0);
+    setMixedSelected(null);
+    setMixedFeedback(null);
+    setNeoWeakTopics([]);
+    setNeoFeedback(null);
     if (answerRef.current) answerRef.current.value = "";
     setSessionSaved(false);
   };
 
   const scoreMessage =
-    (quizType === "trou"
-      ? gapScore
-      : quizType === "open"
-        ? openScore / 20
-        : score) >= Math.max(1, Math.ceil(total * 0.7))
+    (quizMode === "neo"
+      ? mixedScore / Math.max(1, mixedMaxScore)
+      : quizType === "trou"
+        ? gapScore
+        : quizType === "open"
+          ? openScore / 20
+          : score) >= Math.max(1, Math.ceil(total * 0.7))
       ? "Bien joué ! Encore un peu de révision 💪"
       : "Continue, tu progresses ! 📚";
 
   const currentStep =
-    quizType === "trou" ? gapIndex + 1 : quizType === "open" ? openIndex + 1 : index + 1;
+    quizMode === "neo"
+      ? mixedIndex + 1
+      : quizType === "trou"
+        ? gapIndex + 1
+        : quizType === "open"
+          ? openIndex + 1
+          : index + 1;
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0A0A0F] text-white">
@@ -281,34 +461,51 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
 
       <div className="flex flex-col items-center justify-center px-6 py-10 min-h-[70vh]">
         {total === 0 ? (
-          <div className="text-center max-w-md">
-            <p className="text-white/70 mb-6">Aucun quiz disponible.</p>
+          <div className="text-center max-w-md space-y-4">
+            <p className="text-white/70">Aucun quiz disponible.</p>
             {accountType !== "child" && (
-              <Button
-                onClick={() => {
-                  setConfigStep(1);
-                  setShowOptions(true);
-                }}
-                disabled={loading}
-                className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Génération...
-                  </>
-                ) : (
-                  "Configurer le quiz"
-                )}
-              </Button>
+              <div className="flex flex-col items-center gap-3">
+                <Button
+                  onClick={generateNeoQuiz}
+                  disabled={loading}
+                  className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white w-full"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    "Néo, teste-moi"
+                  )}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuizMode("standard");
+                    setConfigStep(1);
+                    setShowOptions(true);
+                  }}
+                  className="text-sm text-white/70 hover:text-white"
+                >
+                  Personnaliser
+                </button>
+              </div>
             )}
           </div>
         ) : isComplete ? (
           <div className="text-center max-w-md">
             {(() => {
               const finalScore =
-                quizType === "trou" ? gapScore : quizType === "open" ? openScore : score;
-              const maxScore = quizType === "open" ? total * 20 : total;
+                quizMode === "neo"
+                  ? mixedScore
+                  : quizType === "trou"
+                    ? gapScore
+                    : quizType === "open"
+                      ? openScore
+                      : score;
+              const maxScore =
+                quizMode === "neo" ? mixedMaxScore || total : quizType === "open" ? total * 20 : total;
               const percent = maxScore > 0 ? (finalScore / maxScore) * 100 : 0;
               const color =
                 percent > 60 ? "text-emerald-400" : percent > 40 ? "text-orange-400" : "text-rose-400";
@@ -321,11 +518,19 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                 </>
               );
             })()}
+            {quizMode === "neo" && (
+              <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
+                <p className="text-sm text-white/50 mb-2">L'avis de Néo</p>
+                <p className="text-sm text-white/90">
+                  {neoSummaryLoading ? "Analyse en cours..." : neoFeedback || "Analyse en cours..."}
+                </p>
+              </div>
+            )}
             <div className="flex items-center justify-center gap-3">
               <Button
                 onClick={() => {
                   resetQuiz();
-                  generateQuiz();
+                  quizMode === "neo" ? generateNeoQuiz() : generateQuiz();
                 }}
                 className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
               >
@@ -335,6 +540,159 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                 Revenir au cours
               </Button>
             </div>
+          </div>
+        ) : quizMode === "neo" ? (
+          <div className="w-full max-w-2xl">
+            {(() => {
+              if (!currentMixed) return null;
+              if (currentMixed.type === "open") {
+                return (
+                  <div className="space-y-6">
+                    <p className="text-xl text-center">{currentMixed.question}</p>
+                    <textarea
+                      ref={answerRef}
+                      rows={5}
+                      placeholder="Écris ta réponse ici..."
+                      className="w-full rounded-2xl bg-white/5 border border-white/10 p-4 text-sm text-white outline-none focus:border-violet-500"
+                    />
+                    {mixedFeedback ? (
+                      <div className="text-center space-y-3">
+                        <p className="text-white/70 text-sm">{mixedFeedback}</p>
+                        <Button
+                          onClick={() => {
+                            if (answerRef.current) answerRef.current.value = "";
+                            setMixedFeedback(null);
+                            setMixedIndex((prev) => prev + 1);
+                          }}
+                          className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                        >
+                          Question suivante
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Button
+                          onClick={async () => {
+                            const studentAnswer = answerRef.current?.value ?? "";
+                            if (!studentAnswer.trim()) {
+                              setMixedFeedback("Merci d'écrire une réponse.");
+                              return;
+                            }
+                            try {
+                              const aiRes = await fetch("/api/beyond-note/ai-action", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  documentId,
+                                  action: "grade-answer",
+                                  text: currentMixed.question,
+                                  options: {
+                                    question: currentMixed.question,
+                                    expected_answer: currentMixed.expected_answer,
+                                    student_answer: studentAnswer,
+                                  },
+                                }),
+                              });
+                              if (!aiRes.ok) throw new Error("Erreur lors de la correction");
+                              const aiData = await aiRes.json();
+                              let parsed = aiData.result;
+                              if (typeof parsed === "string") {
+                                parsed = JSON.parse(parsed);
+                              }
+                              const gradeScore =
+                                typeof parsed?.score === "number" ? parsed.score : 0;
+                              const feedback =
+                                typeof parsed?.feedback === "string" ? parsed.feedback : "";
+                              setMixedScore((prev) => prev + gradeScore);
+                              setMixedFeedback(feedback || "Merci, réponse enregistrée.");
+                              const isCorrect = gradeScore >= 0.5;
+                              if (!isCorrect && currentMixed.topic) {
+                                setNeoWeakTopics((prev) =>
+                                  prev.includes(currentMixed.topic!) ? prev : [...prev, currentMixed.topic!]
+                                );
+                              }
+                              await recordHistory({
+                                topic: currentMixed.topic,
+                                is_correct: isCorrect,
+                                question_type: currentMixed.type,
+                              });
+                            } catch (err) {
+                              const message = err instanceof Error ? err.message : "Erreur serveur";
+                              toast.error(message);
+                            }
+                          }}
+                          className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                        >
+                          Valider
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              const options = currentMixed.options || ["Vrai", "Faux"];
+              return (
+                <div className="w-full max-w-2xl">
+                  <p className="text-xl text-center mb-8">{currentMixed.question}</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {options.map((option, idx) => {
+                      const isCorrect =
+                        mixedSelected !== null && idx === currentMixed.correct_index;
+                      const isWrong =
+                        mixedSelected !== null &&
+                        idx === mixedSelected &&
+                        idx !== currentMixed.correct_index;
+                      return (
+                        <Button
+                          key={idx}
+                          onClick={() => {
+                            if (mixedSelected !== null) return;
+                            setMixedSelected(idx);
+                            const correct = idx === currentMixed.correct_index;
+                            if (correct) setMixedScore((prev) => prev + 1);
+                            if (!correct && currentMixed.topic) {
+                              setNeoWeakTopics((prev) =>
+                                prev.includes(currentMixed.topic!) ? prev : [...prev, currentMixed.topic!]
+                              );
+                            }
+                            recordHistory({
+                              topic: currentMixed.topic,
+                              is_correct: correct,
+                              question_type: currentMixed.type,
+                            });
+                          }}
+                          className={`w-full justify-start border border-white/10 bg-white/5 hover:bg-white/10 text-white ${
+                            isCorrect ? "bg-emerald-500 hover:bg-emerald-600" : ""
+                          } ${isWrong ? "bg-rose-500 hover:bg-rose-600" : ""}`}
+                        >
+                          {option}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  {mixedSelected !== null && (
+                    <div className="mt-6 text-center">
+                      <p className={`mb-4 ${mixedSelected === currentMixed.correct_index ? "text-emerald-400" : "text-rose-400"}`}>
+                        {mixedSelected === currentMixed.correct_index ? "Bonne réponse !" : "Mauvaise réponse"}
+                      </p>
+                      {currentMixed.explanation && (
+                        <p className="text-white/60 text-sm mb-4">{currentMixed.explanation}</p>
+                      )}
+                      <Button
+                        onClick={() => {
+                          setMixedSelected(null);
+                          setMixedIndex((prev) => prev + 1);
+                        }}
+                        className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                      >
+                        Question suivante
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         ) : quizType === "trou" ? (
           <div className="w-full max-w-2xl">

@@ -5,7 +5,10 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password, fullName } = await request.json();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
-    const redirectTo = `${siteUrl}/auth/callback`;
+    const isNevo = siteUrl.includes("nevo");
+    const redirectTo = isNevo
+      ? "https://www.nevo-app.fr/app-landing/complete-profile"
+      : `${siteUrl}/auth/callback`;
 
     if (!email || !password) {
       return NextResponse.json(

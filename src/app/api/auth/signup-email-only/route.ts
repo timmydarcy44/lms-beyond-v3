@@ -50,7 +50,10 @@ export async function POST(request: NextRequest) {
     
     // Créer l'utilisateur avec un mot de passe temporaire
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
-    const redirectTo = `${siteUrl}/auth/callback?next=${encodeURIComponent(`/auth/set-password?tenant=${tenant.id}`)}`;
+    const isNevo = siteUrl.includes("nevo");
+    const redirectTo = isNevo
+      ? "https://www.nevo-app.fr/app-landing/complete-profile"
+      : `${siteUrl}/auth/callback?next=${encodeURIComponent(`/auth/set-password?tenant=${tenant.id}`)}`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password: tempPassword,

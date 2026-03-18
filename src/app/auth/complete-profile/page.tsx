@@ -10,6 +10,7 @@ export default function CompleteProfilePage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [hashError, setHashError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -18,6 +19,17 @@ export default function CompleteProfilePage() {
       const hash = window.location.hash.replace(/^#/, "");
       if (!hash) return;
       const params = new URLSearchParams(hash);
+      const authError = params.get("error");
+      const authErrorDescription = params.get("error_description");
+      if (authError || authErrorDescription) {
+        const details = [
+          authError ? `error=${decodeURIComponent(authError)}` : null,
+          authErrorDescription ? `description=${decodeURIComponent(authErrorDescription)}` : null,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+        setHashError(details || "Erreur d'authentification.");
+      }
       const access_token = params.get("access_token");
       const refresh_token = params.get("refresh_token");
       if (access_token && refresh_token) {
@@ -110,6 +122,7 @@ export default function CompleteProfilePage() {
             className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
             required
           />
+          {hashError ? <p className="text-xs text-red-500">{hashError}</p> : null}
           {error ? <p className="text-xs text-red-500">{error}</p> : null}
           <button
             type="submit"

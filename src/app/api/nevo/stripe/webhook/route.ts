@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
     const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
     const { baseUrl: fallbackBaseUrl, siteName } = getSiteBranding();
     const baseUrl = currentUrl || fallbackBaseUrl;
-    let confirmationLink = `${baseUrl}/app-landing/setup-account?session_id=${session.id}`;
+    const completeProfilePath = "/app-landing/complete-profile";
+    const callbackRedirect = `${baseUrl}/auth/callback?next=${encodeURIComponent(completeProfilePath)}`;
+    let confirmationLink = callbackRedirect;
     let targetUserId = userId || null;
     let actionLink: string | null = null;
 
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
 
       if (!targetUserId) {
         const inviteResponse = await supabase.auth.admin.inviteUserByEmail(email, {
-          redirectTo: `${baseUrl}/app-landing/setup-account?session_id=${session.id}`,
+          redirectTo: callbackRedirect,
           data: { source: "nevo_stripe" },
         });
 
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
         type: linkType,
         email,
         options: {
-          redirectTo: `${baseUrl}/app-landing/setup-account?session_id=${session.id}`,
+          redirectTo: callbackRedirect,
         },
       });
 

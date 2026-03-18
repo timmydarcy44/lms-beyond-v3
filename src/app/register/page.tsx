@@ -54,23 +54,13 @@ export default function RegisterPage() {
       return trimmed ? trimmed : null;
     };
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const isNevo = siteUrl.includes("nevo");
-    const emailRedirectTo = isNevo
-      ? "https://www.nevo-app.fr/app-landing/complete-profile"
-      : null;
-    const redirectTo = `${siteUrl}/auth/callback`;
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    const emailRedirectTo = "https://www.nevo-app.fr/note-app";
+    const { data, error: signUpError } = await supabase.auth.signInWithOtp({
       email,
-      password,
       options: {
-        ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
+        emailRedirectTo,
         data: {
-          full_name: fullName,
-          first_name,
-          last_name,
-          invite_code: inviteCode || null,
-          role_type: "particulier",
+          origin: "nevo",
         },
       },
     });
@@ -145,7 +135,7 @@ export default function RegisterPage() {
       }
     }
 
-    router.push("/dashboard/apprenant/test-comportemental-intro");
+    router.push("/app-landing/check-email");
   };
 
   return (

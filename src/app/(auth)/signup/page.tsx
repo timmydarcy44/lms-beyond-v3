@@ -155,83 +155,67 @@ export default function SignupPage() {
       const trimmed = String(value ?? "").trim();
       return trimmed ? trimmed : null;
     };
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const isNevo = siteUrl.includes("nevo");
-    const emailRedirectTo = isNevo
-      ? "https://www.nevo-app.fr/app-landing/complete-profile"
-      : null;
-    const redirectTo = `${siteUrl}/auth/callback`;
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    const emailRedirectTo = "https://www.nevo-app.fr/note-app";
+    const { data, error: otpError } = await supabase.auth.signInWithOtp({
       email: values.email,
-      password: values.password,
       options: {
-        ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
+        emailRedirectTo,
         data: {
-          first_name,
-          last_name,
-          role: "apprenant",
+          origin: "nevo",
         },
       },
     });
-    if (signUpError) {
-      setError(signUpError.message);
-      toast.error(signUpError.message);
-      if (signUpError.message.toLowerCase().includes("already registered")) {
-        router.push("/login");
-      }
-      return;
-    }
-
-    if (!data.user) {
-      const message = "Une erreur est survenue lors de la création du compte";
-      setError(message);
-      toast.error(message);
+    if (otpError) {
+      setError(otpError.message);
+      toast.error(otpError.message);
       return;
     }
 
     try {
-      const profilePayload = {
-        id: data.user.id,
-        email: values.email,
-        full_name: values.fullName,
-        first_name,
-        last_name,
-        role_type: "apprenant",
-        school_id: schoolId,
-        type_profil: values.type_profil,
-        poste_actuel: values.type_profil === "emploi" ? emptyToNull(values.poste_actuel) : null,
-        entreprise: values.type_profil === "emploi" ? emptyToNull(values.entreprise) : null,
-        type_contrat: values.type_profil === "emploi" ? emptyToNull(values.type_contrat) : null,
-        tjm: values.type_profil === "freelance" ? emptyToNull(values.tjm) : null,
-        expertise: values.type_profil === "freelance" ? emptyToNull(values.expertise) : null,
-        stack_technique: values.type_profil === "freelance" ? emptyToNull(values.stack_technique) : null,
-        disponibilite: values.type_profil === "freelance" ? emptyToNull(values.disponibilite) : null,
-        langues: values.type_profil === "freelance" ? emptyToNull(values.langues) : null,
-        ancien_metier: values.type_profil === "reconversion" ? emptyToNull(values.ancien_metier) : null,
-        metier_vise: values.type_profil === "reconversion" ? emptyToNull(values.metier_vise) : null,
-        organisme_formation:
-          values.type_profil === "reconversion" ? emptyToNull(values.organisme_formation) : null,
-        echeance: values.type_profil === "reconversion" ? emptyToNull(values.echeance) : null,
-        ecole: values.type_profil === "alternance" ? emptyToNull(values.ecole) : null,
-        niveau_etude: values.type_profil === "alternance" ? emptyToNull(values.niveau_etude) : null,
-        rythme_alternance:
-          values.type_profil === "alternance" ? emptyToNull(values.rythme_alternance) : null,
-        date_fin_contrat:
-          values.type_profil === "alternance" ? emptyToNull(values.date_fin_contrat) : null,
-      };
+      if (data.user?.id) {
+        const profilePayload = {
+          id: data.user.id,
+          email: values.email,
+          full_name: values.fullName,
+          first_name,
+          last_name,
+          role_type: "apprenant",
+          school_id: schoolId,
+          type_profil: values.type_profil,
+          poste_actuel: values.type_profil === "emploi" ? emptyToNull(values.poste_actuel) : null,
+          entreprise: values.type_profil === "emploi" ? emptyToNull(values.entreprise) : null,
+          type_contrat: values.type_profil === "emploi" ? emptyToNull(values.type_contrat) : null,
+          tjm: values.type_profil === "freelance" ? emptyToNull(values.tjm) : null,
+          expertise: values.type_profil === "freelance" ? emptyToNull(values.expertise) : null,
+          stack_technique: values.type_profil === "freelance" ? emptyToNull(values.stack_technique) : null,
+          disponibilite: values.type_profil === "freelance" ? emptyToNull(values.disponibilite) : null,
+          langues: values.type_profil === "freelance" ? emptyToNull(values.langues) : null,
+          ancien_metier: values.type_profil === "reconversion" ? emptyToNull(values.ancien_metier) : null,
+          metier_vise: values.type_profil === "reconversion" ? emptyToNull(values.metier_vise) : null,
+          organisme_formation:
+            values.type_profil === "reconversion" ? emptyToNull(values.organisme_formation) : null,
+          echeance: values.type_profil === "reconversion" ? emptyToNull(values.echeance) : null,
+          ecole: values.type_profil === "alternance" ? emptyToNull(values.ecole) : null,
+          niveau_etude: values.type_profil === "alternance" ? emptyToNull(values.niveau_etude) : null,
+          rythme_alternance:
+            values.type_profil === "alternance" ? emptyToNull(values.rythme_alternance) : null,
+          date_fin_contrat:
+            values.type_profil === "alternance" ? emptyToNull(values.date_fin_contrat) : null,
+        };
 
-      const { error: profileError } = await supabase.from("profiles").upsert(profilePayload, {
-        onConflict: "id",
-      });
-      if (profileError) {
-        toast.error(profileError.message);
+        const { error: profileError } = await supabase.from("profiles").upsert(profilePayload, {
+          onConflict: "id",
+        });
+        if (profileError) {
+          toast.error(profileError.message);
+        }
       }
     } catch (profileInsertError) {
       toast.error("Impossible de créer le profil utilisateur.");
     }
 
-    toast.success("Compte créé. Vérifiez votre email pour confirmer votre compte.");
-    window.location.href = "/dashboard/apprenant/test-comportemental-intro";
+    toast.success("Lien envoyé ! Vérifiez votre email pour accéder à Nevo.");
+    window.location.href = "/app-landing/check-email";
   };
 
   const isLoading = form.formState.isSubmitting;

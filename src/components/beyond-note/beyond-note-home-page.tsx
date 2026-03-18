@@ -127,7 +127,7 @@ export function BeyondNoteHomePage() {
     try {
       const supabase = createSupabaseBrowserClient();
       await supabase.auth.signOut();
-      window.location.href = "https://www.nevo-app.fr/app-landing/login";
+      window.location.href = "/app-landing/login";
     } catch {
       toast.error("Erreur lors de la déconnexion");
     } finally {
@@ -642,6 +642,24 @@ export function BeyondNoteHomePage() {
             </div>
 
             <div className="px-6 pt-6 space-y-6">
+              <div className="rounded-3xl border border-white/20 bg-white/10 md:bg-white md:border-[#E8E9F0] p-4 md:p-5">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white md:text-[#0F1117]">
+                      Sécurisez votre compte
+                    </p>
+                    <p className="text-xs text-white/80 md:text-[#6B7280]">
+                      Définissez un mot de passe pour pouvoir vous reconnecter facilement.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => router.push("/note-app/profile")}
+                    className="bg-white text-[#be1354] hover:bg-white/90 md:bg-[#be1354] md:text-white md:hover:bg-[#a40f47]"
+                  >
+                    Définir mon mot de passe
+                  </Button>
+                </div>
+              </div>
               <input
                 ref={cameraInputRef}
                 type="file"

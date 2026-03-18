@@ -43,27 +43,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Générer un mot de passe temporaire sécurisé
-    const tempPassword = Math.random().toString(36).slice(-12) + 
-                        Math.random().toString(36).slice(-12) + 
-                        'A1!'; // Ajouter des caractères spéciaux
-    
-    // Créer l'utilisateur avec un mot de passe temporaire
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
-    const isNevo = siteUrl.includes("nevo");
-    const emailRedirectTo = isNevo
-      ? "https://www.nevo-app.fr/app-landing/complete-profile"
-      : null;
-    const redirectTo = `${siteUrl}/auth/callback?next=${encodeURIComponent(`/auth/set-password?tenant=${tenant.id}`)}`;
-    const { data, error } = await supabase.auth.signUp({
+    const emailRedirectTo = "https://www.nevo-app.fr/note-app";
+    const { data, error } = await supabase.auth.signInWithOtp({
       email,
-      password: tempPassword,
       options: {
-        ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
+        emailRedirectTo,
         data: {
-          tenant_id: tenant.id,
-          super_admin_email: tenant.superAdminEmail,
-          requires_password_setup: true,
+          origin: "nevo",
         },
       },
     });
@@ -76,37 +62,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!data.user) {
-      return NextResponse.json(
-        { error: 'Une erreur est survenue lors de la création du compte' },
-        { status: 500 }
-      );
-    }
+    if (data.user) {
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        email,
+        role: 'learner',
+        org_id: null,
+        full_name: email.split('@')[0],
+      });
 
-    // Créer le profil avec le rôle "learner" B2C
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      email,
-      role: 'learner',
-      org_id: null, // B2C
-      full_name: email.split('@')[0], // Nom par défaut depuis l'email
-    });
-
-    if (profileError) {
-      console.error('[signup-email-only] Profile error:', profileError);
-      // Ne pas échouer si le profil existe déjà
-      if (profileError.code !== '23505') { // Duplicate key
-        return NextResponse.json(
-          { error: 'Erreur lors de la création du profil' },
-          { status: 500 }
-        );
+      if (profileError) {
+        console.error('[signup-email-only] Profile error:', profileError);
+        if (profileError.code !== '23505') {
+          return NextResponse.json(
+            { error: 'Erreur lors de la création du profil' },
+            { status: 500 }
+          );
+        }
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Un email de confirmation a été envoyé. Vérifiez votre boîte mail pour définir votre mot de passe.',
-      userId: data.user.id,
+      message: 'Lien envoyé ! Vérifiez votre boîte mail pour accéder à Nevo.',
+      userId: data.user?.id || null,
     });
   } catch (error) {
     console.error('[signup-email-only] Unexpected error:', error);

@@ -45,9 +45,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { siteName } = getSiteBranding();
-    const completeProfileUrl = "https://www.nevo-app.fr/app-landing/complete-profile";
-    const callbackRedirect = completeProfileUrl;
-    let confirmationLink = completeProfileUrl;
+    const magicLinkUrl = "https://www.nevo-app.fr/note-app";
+    const callbackRedirect = magicLinkUrl;
+    let confirmationLink = magicLinkUrl;
     let targetUserId = userId || null;
     let actionLink: string | null = null;
 

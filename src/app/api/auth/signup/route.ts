@@ -3,17 +3,12 @@ import { getServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, fullName } = await request.json();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
-    const isNevo = siteUrl.includes("nevo");
-    const emailRedirectTo = isNevo
-      ? "https://www.nevo-app.fr/app-landing/complete-profile"
-      : null;
-    const redirectTo = `${siteUrl}/auth/callback`;
+    const { email, fullName } = await request.json();
+    const emailRedirectTo = "https://www.nevo-app.fr/note-app";
 
-    if (!email || !password) {
+    if (!email) {
       return NextResponse.json(
-        { user: null, session: null, error: "Email et mot de passe requis" },
+        { user: null, session: null, error: "Email requis" },
         { status: 400 },
       );
     }
@@ -32,31 +27,28 @@ export async function POST(request: NextRequest) {
     const first_name = nameParts.shift() || "";
     const last_name = nameParts.join(" ") || "";
 
-    const signUpResult = await supabase.auth.signUp({
+    const otpResult = await supabase.auth.signInWithOtp({
       email,
-      password,
       options: {
-        ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
+        emailRedirectTo,
         data: {
-          full_name: typeof fullName === "string" ? fullName : "",
-          first_name,
-          last_name,
+          origin: "nevo",
         },
       },
     });
 
-    if (signUpResult.error) {
-      console.error("[api/auth/signup] Auth error:", signUpResult.error);
+    if (otpResult.error) {
+      console.error("[api/auth/signup] Auth error:", otpResult.error);
       return NextResponse.json(
-        { user: null, session: null, error: signUpResult.error.message },
+        { user: null, session: null, error: otpResult.error.message },
         { status: 400 },
       );
     }
 
-    if (signUpResult.data?.session && signUpResult.data.user) {
+    if (otpResult.data?.user) {
       await supabase.from("profiles").upsert(
         {
-          id: signUpResult.data.user.id,
+          id: otpResult.data.user.id,
           email,
           full_name: typeof fullName === "string" ? fullName : "",
           first_name,
@@ -64,31 +56,14 @@ export async function POST(request: NextRequest) {
         },
         { onConflict: "id" }
       );
-      return NextResponse.json({
-        user: signUpResult.data.user,
-        session: signUpResult.data.session,
-        error: null,
-      });
     }
 
-    if (signUpResult.data?.user && !signUpResult.data.session) {
-      await supabase.from("profiles").upsert(
-        {
-          id: signUpResult.data.user.id,
-          email,
-          full_name: typeof fullName === "string" ? fullName : "",
-          first_name,
-          last_name,
-        },
-        { onConflict: "id" }
-      );
-      return NextResponse.json({
-        user: signUpResult.data.user,
-        session: null,
-        error: null,
-        needsEmailConfirmation: true,
-      });
-    }
+    return NextResponse.json({
+      user: otpResult.data?.user || null,
+      session: null,
+      error: null,
+      needsEmailConfirmation: true,
+    });
   } catch (error) {
     console.error("[api/auth/signup] Unexpected error:", error);
     return NextResponse.json(

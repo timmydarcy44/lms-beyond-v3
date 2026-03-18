@@ -104,22 +104,13 @@ export default function ParticuliersPage() {
         throw new Error("Supabase n'est pas configuré.");
       }
 
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      const isNevo = siteUrl.includes("nevo");
-      const emailRedirectTo = isNevo
-        ? "https://www.nevo-app.fr/app-landing/complete-profile"
-        : null;
-      const redirectTo = `${siteUrl}/auth/callback`;
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      const emailRedirectTo = "https://www.nevo-app.fr/note-app";
+      const { data: authData, error: signUpError } = await supabase.auth.signInWithOtp({
         email: safeEmail,
-        password: safePassword,
         options: {
-          ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
+          emailRedirectTo,
           data: {
-            first_name: safeFirstName,
-            last_name: safeLastName,
-            role: "apprenant",
-            type_profil: formState.objectif || null,
+            origin: "nevo",
           },
         },
       });
@@ -134,7 +125,8 @@ export default function ParticuliersPage() {
       }
 
       if (!authData?.user?.id) {
-        throw new Error("Impossible de créer le compte.");
+        setMessage("Lien envoyé ! Vérifie ta boîte mail pour accéder à Nevo.");
+        return;
       }
 
       try {

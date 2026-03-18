@@ -44,21 +44,13 @@ export default function BeyondCenterSignupPage() {
         toast.error("Erreur de connexion");
         return;
       }
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      const isNevo = siteUrl.includes("nevo");
-      const emailRedirectTo = isNevo
-        ? "https://www.nevo-app.fr/app-landing/complete-profile"
-        : null;
-      const redirectTo = `${siteUrl}/auth/callback`;
-      const { data, error } = await supabase.auth.signUp({
+      const emailRedirectTo = "https://www.nevo-app.fr/note-app";
+      const { data, error } = await supabase.auth.signInWithOtp({
         email,
-        password,
         options: {
-          ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
+          emailRedirectTo,
           data: {
-            first_name: firstName,
-            last_name: lastName,
-            full_name: `${firstName} ${lastName}`.trim(),
+            origin: "nevo",
           },
         },
       });
@@ -66,12 +58,11 @@ export default function BeyondCenterSignupPage() {
       if (error) throw error;
 
       const firstNameDisplay = firstName || email.split("@")[0];
-      toast.success(`${firstNameDisplay}, je viens de vous envoyer un mail pour valider votre inscription`);
+      toast.success(`${firstNameDisplay}, lien envoyé ! Vérifiez votre boîte mail.`);
 
-      // Rediriger vers la page de ressources après inscription
+      // Rediriger vers la page de confirmation d'email
       setTimeout(() => {
-        router.push("/beyond-center-app");
-        router.refresh();
+        router.push("/app-landing/check-email");
       }, 2000);
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de l'inscription");

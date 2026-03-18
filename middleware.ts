@@ -61,6 +61,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const hasAuthToken =
+    url.searchParams.has("access_token") ||
+    url.searchParams.has("refresh_token") ||
+    url.searchParams.has("code");
+
+  if (url.pathname.startsWith("/note-app") && hasAuthToken) {
+    return NextResponse.next();
+  }
+
   if (url.pathname.includes("complete-profile")) {
     return NextResponse.next();
   }

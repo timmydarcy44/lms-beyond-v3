@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const nextParam = url.searchParams.get("next");
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || url.origin;
   const isNevo = siteUrl.includes("nevo");
-  const fallbackPath = isNevo ? "/app-landing/complete-profile" : "/library";
+  const fallbackPath = isNevo ? "/note-app" : "/library";
 
   if (code) {
     const supabase = await getServerClient();

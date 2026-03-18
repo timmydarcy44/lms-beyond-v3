@@ -105,11 +105,18 @@ export default function CreerEspacePage() {
         throw new Error("Supabase non configuré.");
       }
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const isNevo = siteUrl.includes("nevo");
+      const emailRedirectTo = isNevo
+        ? "https://www.nevo-app.fr/app-landing/complete-profile"
+        : null;
       const redirectTo = `${siteUrl}/auth/callback`;
       const { data: signupData, error: signupError } = await supabase.auth.signUp({
         email,
         password,
-        options: { redirectTo, data: { role: "entreprise" } },
+        options: {
+          ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
+          data: { role: "entreprise" },
+        },
       });
       if (signupError) {
         throw signupError;

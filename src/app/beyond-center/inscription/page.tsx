@@ -45,12 +45,16 @@ export default function BeyondCenterSignupPage() {
         return;
       }
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const isNevo = siteUrl.includes("nevo");
+      const emailRedirectTo = isNevo
+        ? "https://www.nevo-app.fr/app-landing/complete-profile"
+        : null;
       const redirectTo = `${siteUrl}/auth/callback`;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          redirectTo,
+          ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
           data: {
             first_name: firstName,
             last_name: lastName,

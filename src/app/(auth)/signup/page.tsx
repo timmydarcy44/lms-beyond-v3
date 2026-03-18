@@ -157,14 +157,15 @@ export default function SignupPage() {
     };
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     const isNevo = siteUrl.includes("nevo");
-    const redirectTo = isNevo
+    const emailRedirectTo = isNevo
       ? "https://www.nevo-app.fr/app-landing/complete-profile"
-      : `${siteUrl}/auth/callback`;
+      : null;
+    const redirectTo = `${siteUrl}/auth/callback`;
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
-        redirectTo,
+        ...(emailRedirectTo ? { emailRedirectTo } : { redirectTo }),
         data: {
           first_name,
           last_name,

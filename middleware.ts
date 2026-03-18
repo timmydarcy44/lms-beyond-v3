@@ -61,6 +61,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (url.pathname.includes("complete-profile")) {
+    return NextResponse.next();
+  }
+
   const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
   const siteHost = currentUrl ? new URL(currentUrl).hostname : "";
   const isNevo = process.env.NEXT_PUBLIC_SITE_URL?.includes("nevo");

@@ -97,7 +97,10 @@ export function TimelineTube({ data }: { data?: TimelineSchema | null }) {
         </div>
 
         <div className="relative">
-          <div className="absolute left-[36px] top-0 h-full w-2 rounded-full bg-gradient-to-b from-white/30 via-white/20 to-transparent" aria-hidden="true" />
+          <div
+            className="absolute left-1/2 -translate-x-1/2 top-0 h-full w-2 rounded-full bg-gradient-to-b from-white/30 via-white/20 to-transparent md:left-[36px] md:translate-x-0"
+            aria-hidden="true"
+          />
 
           <div className="space-y-10">
             {steps.map((step, index) => {
@@ -106,7 +109,7 @@ export function TimelineTube({ data }: { data?: TimelineSchema | null }) {
               const stepNumber = index + 1;
 
               return (
-                <div key={step.id ?? `timeline-step-${index}`} className="relative flex gap-6">
+                <div key={step.id ?? `timeline-step-${index}`} className="relative flex flex-col md:flex-row gap-6">
                   <div className="flex flex-col items-center">
                     <div
                       className="relative flex h-16 w-16 items-center justify-center rounded-full border-[6px] bg-slate-950 text-xl font-bold text-slate-900 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.45)]"

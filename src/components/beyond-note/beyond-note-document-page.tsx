@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
+import type { ComponentPropsWithoutRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
   FileText, 
@@ -32,6 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
 import { TimelineTube } from "@/components/apprenant/timeline-tube";
@@ -1538,25 +1540,46 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
 }
 
 function renderMarkdown(text: string) {
-  const lines = text.split('\n');
-  return lines.map((line, i) => {
-    const bold = (s: string) => s.replace(/\*\*(.*?)\*\*/g, (_: string, m: string) => '<strong>' + m + '</strong>');
-    if (line.startsWith('# ')) return <h1 key={i} className="text-[#0F1117] text-xl font-bold mt-6 mb-3 border-b-2 border-[#be1354] pb-2">{line.slice(2)}</h1>;
-    if (line.startsWith('## ')) return <h2 key={i} className="text-[#0F1117] text-lg font-bold mt-5 mb-2">{line.slice(3)}</h2>;
-    if (line.startsWith('### ')) return <h3 key={i} className="text-[#374151] text-base font-semibold mt-4 mb-2">{line.slice(4)}</h3>;
-    if (line.startsWith('---')) return <hr key={i} className="border-[#E8E9F0] my-4" />;
-    if (/d[eé]finition/i.test(line) || /^def\s*:/i.test(line)) {
-      return <div key={i} className="border-l-4 border-[#be1354] bg-red-50 rounded-r-xl px-4 py-3 my-3" dangerouslySetInnerHTML={{__html: bold(line)}} />;
-    }
-    if (/exemple/i.test(line) || /^ex\s*:/i.test(line)) {
-      return <div key={i} className="border-l-4 border-emerald-500 bg-emerald-50 rounded-r-xl px-4 py-3 my-3 text-emerald-800" dangerouslySetInnerHTML={{__html: bold(line)}} />;
-    }
-    if (line.startsWith('- ') || line.startsWith('\u2022 ')) {
-      return <li key={i} className="text-[#374151] ml-4 mb-2 flex gap-2"><span className="text-[#be1354] mt-1 flex-shrink-0">•</span><span dangerouslySetInnerHTML={{__html: bold(line.slice(2))}} /></li>;
-    }
-    if (line.trim() === '') return <div key={i} className="h-2" />;
-    return <p key={i} className="text-[#374151] mb-2 leading-relaxed" dangerouslySetInnerHTML={{__html: bold(line)}} />;
-  });
+  if (!text) return null;
+  return (
+    <ReactMarkdown
+      components={{
+        h1: (props: ComponentPropsWithoutRef<"h1">) => (
+          <h1 className="text-[#0F1117] text-xl font-bold mt-6 mb-3 border-b-2 border-[#be1354] pb-2" {...props} />
+        ),
+        h2: (props: ComponentPropsWithoutRef<"h2">) => (
+          <h2 className="text-[#0F1117] text-lg font-bold mt-5 mb-2" {...props} />
+        ),
+        h3: (props: ComponentPropsWithoutRef<"h3">) => (
+          <h3 className="text-[#374151] text-base font-semibold mt-4 mb-2" {...props} />
+        ),
+        h4: (props: ComponentPropsWithoutRef<"h4">) => (
+          <h4 className="text-[#374151] text-sm font-semibold mt-3 mb-2" {...props} />
+        ),
+        p: (props: ComponentPropsWithoutRef<"p">) => (
+          <p className="text-[#374151] mb-2 leading-relaxed" {...props} />
+        ),
+        hr: (props: ComponentPropsWithoutRef<"hr">) => (
+          <hr className="border-[#E8E9F0] my-4" {...props} />
+        ),
+        ul: (props: ComponentPropsWithoutRef<"ul">) => (
+          <ul className="ml-5 list-disc space-y-2" {...props} />
+        ),
+        ol: (props: ComponentPropsWithoutRef<"ol">) => (
+          <ol className="ml-5 list-decimal space-y-2" {...props} />
+        ),
+        li: (props: ComponentPropsWithoutRef<"li">) => (
+          <li className="text-[#374151]" {...props} />
+        ),
+        strong: (props: ComponentPropsWithoutRef<"strong">) => (
+          <strong className="font-semibold text-[#0F1117]" {...props} />
+        ),
+        em: (props: ComponentPropsWithoutRef<"em">) => <em className="italic" {...props} />,
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
 }
 function PyramidSchema({ data }: { data: { title?: string; subtitle?: string; steps?: Array<{ title?: string; description?: string }> } }) {
   const steps = Array.isArray(data?.steps) ? data.steps : [];

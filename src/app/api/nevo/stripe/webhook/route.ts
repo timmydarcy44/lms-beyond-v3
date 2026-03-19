@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -42,19 +42,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email found in session" }, { status: 400 });
     }
 
+    console.log("[nevo/stripe/webhook] checkout.session.completed received", {
+      sessionId: session.id,
+      email,
+      hasCustomerDetails: Boolean(session.customer_details?.email),
+    });
+
     const magicLinkUrl = "https://www.nevo-app.fr/note-app";
     let targetUserId = userId || null;
 
     try {
-      const supabase = await getServiceRoleClientOrFallback();
+      console.log("[nevo/stripe/webhook] env check:", {
+        hasSupabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+        hasServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE),
+      });
+
+      const supabase = getServiceRoleClient();
       if (!supabase) {
-        throw new Error("Supabase not configured");
+        throw new Error("Supabase service role not configured");
       }
 
       if (!supabase.auth?.signInWithOtp) {
         throw new Error("Supabase client missing auth.signInWithOtp (service role required)");
       }
 
+      console.log("[nevo/stripe/webhook] signInWithOtp before", { email, magicLinkUrl });
       const { data: otpData, error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -73,7 +85,7 @@ export async function POST(request: NextRequest) {
         throw otpError;
       }
 
-      console.log("[nevo/stripe/webhook] signInWithOtp ok:", {
+      console.log("[nevo/stripe/webhook] signInWithOtp after:", {
         hasUser: Boolean(otpData?.user),
         userId: otpData?.user?.id,
       });

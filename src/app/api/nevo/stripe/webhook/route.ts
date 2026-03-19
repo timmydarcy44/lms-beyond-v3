@@ -51,12 +51,30 @@ export async function POST(request: NextRequest) {
         throw new Error("Supabase not configured");
       }
 
-      await supabase.auth.signInWithOtp({
+      if (!supabase.auth?.signInWithOtp) {
+        throw new Error("Supabase client missing auth.signInWithOtp (service role required)");
+      }
+
+      const { data: otpData, error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: magicLinkUrl,
           data: { origin: "nevo", source: "nevo_stripe" },
         },
+      });
+
+      if (otpError) {
+        console.error("[nevo/stripe/webhook] signInWithOtp error:", {
+          message: otpError.message,
+          name: (otpError as any)?.name,
+          status: (otpError as any)?.status,
+        });
+        throw otpError;
+      }
+
+      console.log("[nevo/stripe/webhook] signInWithOtp ok:", {
+        hasUser: Boolean(otpData?.user),
+        userId: otpData?.user?.id,
       });
 
       if (!targetUserId) {

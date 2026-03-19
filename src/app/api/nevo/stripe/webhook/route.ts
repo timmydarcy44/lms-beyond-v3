@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
         email,
         options: {
           emailRedirectTo: magicLinkUrl,
+          shouldCreateUser: true,
           data: { origin: "nevo", source: "nevo_stripe" },
         },
       });

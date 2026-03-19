@@ -167,6 +167,24 @@ export function BeyondNoteHomePage() {
   };
 
   useEffect(() => {
+    const syncSessionFromHash = async () => {
+      if (!window.location.hash) return;
+      const hash = window.location.hash.replace(/^#/, "");
+      if (!hash) return;
+      const params = new URLSearchParams(hash);
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+      if (access_token && refresh_token) {
+        const supabase = createSupabaseBrowserClient();
+        if (!supabase) return;
+        await supabase.auth.setSession({ access_token, refresh_token });
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      }
+    };
+    syncSessionFromHash();
+  }, []);
+
+  useEffect(() => {
     loadDocuments();
     loadFolders();
   }, []);

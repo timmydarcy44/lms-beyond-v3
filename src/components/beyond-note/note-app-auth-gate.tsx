@@ -14,25 +14,40 @@ export function NoteAppAuthGate({ children }: NoteAppAuthGateProps) {
   const nextPath = useMemo(() => pathname || "/note-app", [pathname]);
 
   useEffect(() => {
+    const extractTokens = () => {
+      const candidates: string[] = [];
+      if (window.location.hash) {
+        candidates.push(window.location.hash.replace(/^#/, ""));
+      }
+      const hrefHash = window.location.href.split("#")[1];
+      if (hrefHash) {
+        candidates.push(hrefHash);
+      }
+      if (window.location.search) {
+        candidates.push(window.location.search.replace(/^\?/, ""));
+      }
+      for (const candidate of candidates) {
+        if (!candidate) continue;
+        const params = new URLSearchParams(candidate);
+        const access_token = params.get("access_token");
+        const refresh_token = params.get("refresh_token");
+        if (access_token && refresh_token) {
+          return { access_token, refresh_token };
+        }
+      }
+      return null;
+    };
+
     const syncSessionFromHash = async () => {
       const supabase = createSupabaseBrowserClient();
       if (!supabase) {
         return false;
       }
-      if (!window.location.hash) {
-        return false;
-      }
-      const hash = window.location.hash.replace(/^#/, "");
-      if (!hash) return false;
-      const params = new URLSearchParams(hash);
-      const access_token = params.get("access_token");
-      const refresh_token = params.get("refresh_token");
-      if (access_token && refresh_token) {
-        await supabase.auth.setSession({ access_token, refresh_token });
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-        return true;
-      }
-      return false;
+      const tokens = extractTokens();
+      if (!tokens) return false;
+      await supabase.auth.setSession(tokens);
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      return true;
     };
 
     const ensureSession = async () => {

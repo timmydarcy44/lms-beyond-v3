@@ -17,6 +17,27 @@ const nextConfig = {
     ],
   },
   turbopack: {},
+  async redirects() {
+    return [
+      {
+        source: '/app-landing/:path*',
+        destination: '/:path*',
+        permanent: false,
+      },
+    ]
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/',
+        destination: '/app-landing',
+      },
+      {
+        source: '/:path((?!api|note-app|_next|app-landing|favicon.ico|robots.txt|sitemap.xml).*)',
+        destination: '/app-landing/:path',
+      },
+    ]
+  },
 }
 
 module.exports = withPWA(nextConfig)

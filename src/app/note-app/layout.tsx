@@ -1,3 +1,4 @@
+// PRODUCTION GUARD: Do not refactor auth/session gating without explicit approval.
 import { Metadata } from "next";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
 import { NoteAppAuthGate } from "@/components/beyond-note/note-app-auth-gate";

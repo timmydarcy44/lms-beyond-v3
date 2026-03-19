@@ -1,3 +1,5 @@
+// PRODUCTION GUARD: Do not refactor this webhook without explicit approval.
+// It triggers Magic Link email delivery via service-role OTP for paid users.
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceRoleClient } from "@/lib/supabase/server";

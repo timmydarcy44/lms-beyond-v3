@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+# Critical Auth/Stripe Guardrails
+
+NE JAMAIS MODIFIER la logique de `signInWithOtp`, le webhook Stripe dans
+`src/app/api/nevo/stripe/webhook/route.ts`, ou la capture de session dans
+`src/app/note-app/layout.tsx` et `src/components/beyond-note/note-app-auth-gate.tsx`
+sans confirmation explicite.

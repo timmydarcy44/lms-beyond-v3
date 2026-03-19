@@ -219,7 +219,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
 
           <div className="md:hidden flex items-center gap-2">
             <Link
-              href="/app-landing/login"
+              href="/login"
               className={`px-2.5 py-1 text-xs font-semibold transition-colors ${
                 hasGradientHero && !scrolled
                   ? "text-white hover:text-white/80"
@@ -326,7 +326,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
 
           <div className="hidden md:flex items-center gap-3">
             <Link
-              href="/app-landing/login"
+              href="/login"
               className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                 hasGradientHero && !scrolled
                   ? "border-white/40 text-white hover:bg-white/10"
@@ -367,7 +367,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
             <div className="px-6 py-5 space-y-6 text-sm font-medium">
               <div className="flex flex-col gap-3">
                 <Link
-                  href="/app-landing/login"
+                  href="/login"
                   onClick={() => setMobileOpen(false)}
                   className={`px-4 py-2 rounded-full text-center font-medium border transition-all ${
                     hasGradientHero && !scrolled

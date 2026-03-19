@@ -296,7 +296,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
           setTransformationsHistory(transData.transformations || []);
         } else {
           toast.error("Document non trouvé");
-          router.push("/beyond-note-app");
+          router.push("/note-app");
         }
       }
     } catch (error) {
@@ -533,7 +533,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       setAddingPage(false);
       setShowAddPage(false);
       setAddPageText("");
-      router.replace(`/beyond-note-app/${document.id}`);
+      router.replace(`/note-app/${document.id}`);
     }
   };
 
@@ -637,7 +637,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                onClick={() => router.push("/beyond-note-app")}
+                onClick={() => router.push("/note-app")}
                 className="flex items-center gap-2 text-white hover:text-white/90"
                 size="sm"
               >
@@ -1492,7 +1492,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
           file_name: d.file_name,
           extracted_text: d.extracted_text?.slice(0, 300) || "",
         }))}
-        onOpenDocument={(id) => router.push(`/beyond-note-app/${id}`)}
+        onOpenDocument={(id) => router.push(`/note-app/${id}`)}
         context="document"
         onAction={(action: "quiz" | "revision-sheet" | "reformulate" | "diagram" | "translate" | "flashcards" | "audio") =>
           handleTransformation(action as AIAction, textToTransform)
@@ -1520,7 +1520,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
             if (typeof window !== "undefined") {
               localStorage.removeItem("nevo_onboarding_step");
             }
-            router.push("/beyond-note-app?onboarding=4");
+            router.push("/note-app?onboarding=4");
           }}
           onSkip={handleSkipOnboarding}
           onComplete={() => {}}

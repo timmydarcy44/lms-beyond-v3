@@ -58,6 +58,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { DictationModal } from "@/components/beyond-note/dictation-modal";
+import { LoadingOverlay } from "@/components/beyond-note/loading-overlay";
 import { NeoBubble } from "@/components/beyond-note/jarvis-bubble";
 import { OnboardingOverlay } from "@/components/beyond-note/onboarding-overlay";
 import { ChatView } from "@/components/beyond-note/chat-view";
@@ -294,7 +295,7 @@ export function BeyondNoteHomePage() {
       const data = await res.json();
       setShowUploadToast(true);
       setTimeout(() => setShowUploadToast(false), 2500);
-      router.push(`/beyond-note-app/${data.document.id}`);
+      router.push(`/note-app/${data.document.id}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur serveur";
       toast.error(message);
@@ -333,7 +334,7 @@ export function BeyondNoteHomePage() {
       const data = await res.json();
       console.log("[handleCreateNote] data:", data);
       if (data.document?.id) {
-        router.push(`/beyond-note-app/${data.document.id}`);
+        router.push(`/note-app/${data.document.id}`);
       }
     } catch (e) {
       console.error("[handleCreateNote] error:", e);
@@ -539,6 +540,7 @@ export function BeyondNoteHomePage() {
 
   return (
     <div className="h-screen flex bg-[#be1354] md:bg-[#F8F9FC] text-white md:text-[#0F1117] overflow-hidden">
+      <LoadingOverlay isVisible={uploading} type="upload" action="upload" />
       {showUploadToast && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center">
           <div className="rounded-3xl bg-white text-black shadow-2xl px-8 py-6 flex items-center gap-4">
@@ -886,7 +888,7 @@ export function BeyondNoteHomePage() {
                   key={doc.id}
                   onClick={() => {
                     if (editingDocumentId === doc.id) return;
-                    router.push(`/beyond-note-app/${doc.id}`);
+                    router.push(`/note-app/${doc.id}`);
                   }}
                   role="button"
                   tabIndex={0}
@@ -1024,7 +1026,7 @@ export function BeyondNoteHomePage() {
             type="button"
             onClick={() => {
               setActiveNav("folders");
-              router.push("/beyond-note-app/folders");
+              router.push("/note-app/folders");
             }}
             className="flex flex-col items-center justify-center"
           >
@@ -1161,7 +1163,7 @@ export function BeyondNoteHomePage() {
           file_name: d.file_name,
           extracted_text: d.extracted_text?.slice(0, 300) || "",
         }))}
-        onOpenDocument={(id) => router.push(`/beyond-note-app/${id}`)}
+        onOpenDocument={(id) => router.push(`/note-app/${id}`)}
         context="library"
       />
       {onboardingStep === 1 && (
@@ -1191,7 +1193,7 @@ export function BeyondNoteHomePage() {
         onClose={() => setShowDictationModal(false)}
         onComplete={(documentId) => {
           if (documentId) {
-            router.push(`/beyond-note-app/${documentId}`);
+            router.push(`/note-app/${documentId}`);
           }
         }}
       />

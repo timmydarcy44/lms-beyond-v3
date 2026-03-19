@@ -128,7 +128,7 @@ export function DictationModal({ isOpen, onClose, onComplete }: DictationModalPr
       }
       const documentId = data.document?.id;
       if (documentId) {
-        router.push(`/beyond-note-app/${documentId}`);
+        router.push(`/note-app/${documentId}`);
         onComplete?.(documentId);
       }
     } catch {

@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import LandingLoginPage from "@/app/app-landing/login/page";
 
 export default function LoginPage() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+  const isNevo = useMemo(() => siteUrl.includes("nevo"), [siteUrl]);
+
+  if (isNevo) {
+    return <LandingLoginPage />;
+  }
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();

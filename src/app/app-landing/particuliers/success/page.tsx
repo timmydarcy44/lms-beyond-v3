@@ -21,7 +21,7 @@ export default function ParticuliersSuccessPage() {
             Retour à Nevo
           </Link>
           <Link
-            href="/app-landing/login"
+            href="/login"
             className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-white/40 text-white font-semibold"
           >
             Se connecter

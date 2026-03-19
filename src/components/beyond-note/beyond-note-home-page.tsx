@@ -372,6 +372,8 @@ export function BeyondNoteHomePage() {
   };
 
   const handleDeleteFolder = async (folderId: string) => {
+    const confirmed = window.confirm("Supprimer ce dossier ? Cette action est définitive.");
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/beyond-note/folders?id=${folderId}`, {
         method: "DELETE",
@@ -394,6 +396,8 @@ export function BeyondNoteHomePage() {
   };
 
   const handleDeleteDocument = async (documentId: string) => {
+    const confirmed = window.confirm("Supprimer ce document ? Cette action est définitive.");
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/beyond-note/documents/${documentId}`, {
         method: "DELETE",
@@ -936,6 +940,7 @@ export function BeyondNoteHomePage() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           handleDeleteDocument(doc.id);
                         }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-[#9CA3AF] hover:text-[#be1354]"

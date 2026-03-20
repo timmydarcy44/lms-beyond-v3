@@ -154,13 +154,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (
-    !extractedText &&
-    (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-      fileExt.toLowerCase() === "docx")
-  ) {
+  const isDocx =
+    file.type?.includes("wordprocessingml.document") || fileExt.toLowerCase() === "docx";
+  if (!extractedText && isDocx) {
     try {
-      const { default: mammoth } = await import("mammoth");
+      const mammothModule = await import("mammoth");
+      const mammoth = (mammothModule as { default?: typeof import("mammoth") }).default || mammothModule;
       const result = await mammoth.extractRawText({ buffer });
       extractedText = result?.value?.trim() || "";
     } catch (e) {
@@ -168,18 +167,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (!extractedText && (isPdf || fileExt.toLowerCase() === "docx")) {
+  if (!extractedText && (isPdf || isDocx)) {
     console.error("[upload] extraction failed", {
       name: originalName,
       type: file.type,
       ext: fileExt,
     });
-    if (fileExt.toLowerCase() === "docx") {
-      return NextResponse.json(
-        { error: "Extraction impossible pour ce fichier.", code: "EXTRACTION_FAILED" },
-        { status: 422 },
-      );
-    }
+    const errorMessage = isPdf
+      ? "Extraction PDF vide ou non lisible."
+      : "Extraction impossible pour ce fichier.";
+    return NextResponse.json(
+      { error: errorMessage, code: "EXTRACTION_FAILED" },
+      { status: 422 },
+    );
   }
 
   const { data: doc, error: dbError } = await supabase

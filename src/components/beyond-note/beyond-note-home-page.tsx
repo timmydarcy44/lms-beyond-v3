@@ -122,6 +122,17 @@ export function BeyondNoteHomePage() {
   const [showFoldersOnly, setShowFoldersOnly] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  const foldersSectionRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToFolders = () => {
+    setShowFoldersOnly(true);
+    setActiveNav("folders");
+    if (foldersSectionRef.current) {
+      foldersSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -188,6 +199,35 @@ export function BeyondNoteHomePage() {
   useEffect(() => {
     loadDocuments();
     loadFolders();
+  }, []);
+
+  useEffect(() => {
+    const loadPasswordStatus = async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) return;
+      const { data } = await supabase.auth.getUser();
+      const meta = data?.user?.user_metadata ?? {};
+      setHasPassword(Boolean((meta as { has_password?: boolean }).has_password));
+    };
+    loadPasswordStatus();
+  }, []);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) return;
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        window.location.href = "https://nevo-app.fr/reset-password";
+        return;
+      }
+      if (event === "USER_UPDATED" && session?.user) {
+        const meta = session.user.user_metadata ?? {};
+        setHasPassword(Boolean((meta as { has_password?: boolean }).has_password));
+      }
+    });
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -652,36 +692,140 @@ export function BeyondNoteHomePage() {
                       : "Scannez un cours et transformez-le en formats adaptés."}
                   </p>
                 </div>
-                <div className="relative w-full md:w-80">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
-                  <input
-                    ref={searchInputRef}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Rechercher un document"
-                    className="w-full h-10 rounded-xl border border-white/30 bg-white/20 backdrop-blur-md px-9 text-sm text-white placeholder-white/60 outline-none md:border-[#E8E9F0] md:bg-white md:text-[#0F1117] md:placeholder-[#9CA3AF] md:backdrop-blur-none md:focus:border-[#be1354]"
-                  />
+                <div className="flex items-center gap-3">
+                  <div className="relative w-full md:w-80">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+                    <input
+                      ref={searchInputRef}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Rechercher un document"
+                      className="w-full h-10 rounded-xl border border-white/30 bg-white/20 backdrop-blur-md px-9 text-sm text-white placeholder-white/60 outline-none md:border-[#E8E9F0] md:bg-white md:text-[#0F1117] md:placeholder-[#9CA3AF] md:backdrop-blur-none md:focus:border-[#be1354]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen((open) => !open)}
+                    className="md:hidden h-10 w-10 rounded-full border border-white/30 text-white flex items-center justify-center"
+                  >
+                    ☰
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 pt-6 space-y-6">
-              <div className="rounded-3xl border border-white/20 bg-white/10 md:bg-white md:border-[#E8E9F0] p-4 md:p-5">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-white md:text-[#0F1117]">
-                      Sécurisez votre compte
-                    </p>
-                    <p className="text-xs text-white/80 md:text-[#6B7280]">
-                      Définissez un mot de passe pour pouvoir vous reconnecter facilement.
-                    </p>
+            {mobileMenuOpen && (
+              <div className="md:hidden px-6 pt-4">
+                <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/70">Menu</p>
+                    <button
+                      type="button"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-white/70"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <Button
-                    onClick={() => router.push("/note-app/profile")}
-                    className="bg-white text-[#be1354] hover:bg-white/90 md:bg-[#be1354] md:text-white md:hover:bg-[#a40f47]"
+                  <div className="grid gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        scrollToFolders();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full rounded-xl border border-white/20 px-4 py-2 text-left text-sm"
+                    >
+                      Dossiers
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push("/note-app/profile");
+                      }}
+                      className="w-full rounded-xl border border-white/20 px-4 py-2 text-left text-sm"
+                    >
+                      Profil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full rounded-xl border border-white/20 px-4 py-2 text-left text-sm text-white/90"
+                    >
+                      {isLoggingOut ? "Déconnexion..." : "Déconnexion"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="px-6 pt-6 space-y-6">
+              {hasPassword === false ? (
+                <div className="rounded-3xl border border-white/20 bg-white/10 md:bg-white md:border-[#E8E9F0] p-4 md:p-5">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white md:text-[#0F1117]">
+                        Sécurisez votre compte
+                      </p>
+                      <p className="text-xs text-white/80 md:text-[#6B7280]">
+                        Définissez un mot de passe pour pouvoir vous reconnecter facilement.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => router.push("/note-app/profile")}
+                      className="bg-white text-[#be1354] hover:bg-white/90 md:bg-[#be1354] md:text-white md:hover:bg-[#a40f47]"
+                    >
+                      Définir mon mot de passe
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div ref={foldersSectionRef} className="md:hidden rounded-3xl border border-white/20 bg-white/10 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-white">Dossiers</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowFoldersOnly(false)}
+                    className="text-xs text-white/70"
                   >
-                    Définir mon mot de passe
-                  </Button>
+                    Tout voir
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveFolderId(null);
+                      setShowFoldersOnly(false);
+                      setActiveNav("home");
+                    }}
+                    className={`px-3 py-2 rounded-full text-xs ${
+                      !activeFolderId ? "bg-white text-[#be1354]" : "bg-white/10 text-white"
+                    }`}
+                  >
+                    Bibliothèque
+                  </button>
+                  {uniqueFolders.map((folder) => (
+                    <button
+                      key={folder.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveFolderId(folder.id);
+                        setShowFoldersOnly(false);
+                        setActiveNav("home");
+                      }}
+                      className={`px-3 py-2 rounded-full text-xs ${
+                        activeFolderId === folder.id ? "bg-white text-[#be1354]" : "bg-white/10 text-white"
+                      }`}
+                    >
+                      {folder.name}
+                    </button>
+                  ))}
                 </div>
               </div>
               <input
@@ -934,7 +1078,7 @@ export function BeyondNoteHomePage() {
                         {doc.extracted_text ? "Texte extrait" : "Extraction en cours"}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-end gap-5 pl-4 min-w-[112px] shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -943,7 +1087,7 @@ export function BeyondNoteHomePage() {
                           e.preventDefault();
                           handleDeleteDocument(doc.id);
                         }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-[#9CA3AF] hover:text-[#be1354]"
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-[#9CA3AF] hover:text-[#be1354] pointer-events-auto shrink-0 h-10 w-10"
                       >
                         🗑️
                       </Button>
@@ -1030,8 +1174,7 @@ export function BeyondNoteHomePage() {
           <button
             type="button"
             onClick={() => {
-              setActiveNav("folders");
-              router.push("/note-app/folders");
+              scrollToFolders();
             }}
             className="flex flex-col items-center justify-center"
           >

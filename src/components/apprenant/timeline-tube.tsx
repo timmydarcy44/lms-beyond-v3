@@ -96,9 +96,9 @@ export function TimelineTube({ data }: { data?: TimelineSchema | null }) {
           ) : null}
         </div>
 
-        <div className="relative">
+        <div className="relative timeline-tube">
           <div
-            className="absolute left-1/2 -translate-x-1/2 top-0 h-full w-2 rounded-full bg-gradient-to-b from-white/30 via-white/20 to-transparent md:left-[36px] md:translate-x-0"
+            className="absolute left-1/2 -translate-x-1/2 top-0 h-full w-2 rounded-full bg-gradient-to-b from-white/30 via-white/20 to-transparent md:left-[36px] md:translate-x-0 timeline-tube-line"
             aria-hidden="true"
           />
 
@@ -109,7 +109,10 @@ export function TimelineTube({ data }: { data?: TimelineSchema | null }) {
               const stepNumber = index + 1;
 
               return (
-                <div key={step.id ?? `timeline-step-${index}`} className="relative flex flex-col md:flex-row gap-6">
+                <div
+                  key={step.id ?? `timeline-step-${index}`}
+                  className="relative flex flex-col md:flex-row !flex-col md:!flex-row items-center md:items-start gap-6 timeline-tube-step"
+                >
                   <div className="flex flex-col items-center">
                     <div
                       className="relative flex h-16 w-16 items-center justify-center rounded-full border-[6px] bg-slate-950 text-xl font-bold text-slate-900 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.45)]"
@@ -127,8 +130,8 @@ export function TimelineTube({ data }: { data?: TimelineSchema | null }) {
                     ) : null}
                   </div>
 
-                  <div className="flex-1">
-                    <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left text-white/90">
+                  <div className="flex-1 w-full md:w-auto">
+                    <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 text-center md:text-left text-white/90 timeline-tube-card">
                       <div className="mb-1 flex flex-wrap items-center gap-3 text-xs font-medium uppercase tracking-wide text-white/60">
                         <span>Étape {stepNumber}</span>
                         {step.duration ? (

@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import mammoth from "mammoth";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -28,6 +29,12 @@ export async function POST(request: NextRequest) {
     .replace(/_{2,}/g, "_")
     .toLowerCase();
   const fileExt = sanitizedName.split(".").pop() || "jpg";
+  if (fileExt.toLowerCase() === "pages") {
+    return NextResponse.json(
+      { error: "Format .pages non supporte, exportez en PDF" },
+      { status: 400 },
+    );
+  }
   const timestamp = Date.now();
   const filePath = `${userId}/${timestamp}.${fileExt}`;
   console.log("[upload] sanitized path:", filePath);
@@ -128,6 +135,34 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+  }
+
+  const isPdf = file.type === "application/pdf" || fileExt.toLowerCase() === "pdf";
+  if (!extractedText && isPdf) {
+    try {
+      const { default: pdfParse } = await import("pdf-parse");
+      const data = await pdfParse(buffer);
+      extractedText = data?.text?.trim() || "";
+    } catch (e) {
+      console.error("[upload] pdf-parse error:", e);
+    }
+  }
+
+  if (
+    !extractedText &&
+    (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      fileExt.toLowerCase() === "docx")
+  ) {
+    try {
+      const result = await mammoth.extractRawText({ buffer });
+      extractedText = result?.value?.trim() || "";
+    } catch (e) {
+      console.error("[upload] mammoth error:", e);
+    }
+  }
+
+  if (!extractedText && (isPdf || fileExt.toLowerCase() === "docx")) {
+    return NextResponse.json({ error: "Extraction impossible pour ce fichier." }, { status: 422 });
   }
 
   const { data: doc, error: dbError } = await supabase

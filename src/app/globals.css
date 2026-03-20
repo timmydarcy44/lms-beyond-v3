@@ -79,6 +79,9 @@
   .timeline-tube-card {
     width: 100% !important;
     text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    align-self: center !important;
   }
 }
 

@@ -474,10 +474,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                             });
                             if (!aiRes.ok) throw new Error("Erreur lors de la correction");
                             const aiData = await aiRes.json();
-                            let parsed = aiData.result;
-                            if (typeof parsed === "string") {
-                              parsed = JSON.parse(parsed);
-                            }
+                            let parsed = safeJsonParse(aiData.result);
                             const gradeScore =
                               typeof parsed?.score === "number" ? parsed.score : 0;
                             const feedback =

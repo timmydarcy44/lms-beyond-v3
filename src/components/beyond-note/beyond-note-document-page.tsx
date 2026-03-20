@@ -151,7 +151,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const [titleDraft, setTitleDraft] = useState("");
   const [audioSource, setAudioSource] = useState<string | null>(null);
   const [audioVoice, setAudioVoice] = useState<string | null>(null);
-  const [schemaLayout, setSchemaLayout] = useState<"tube" | "pyramid" | "timeline">("tube");
+  const [schemaLayout, setSchemaLayout] = useState<"tube" | "pyramid" | "timeline" | "map" | "causality">("tube");
   const [showAddPage, setShowAddPage] = useState(false);
   const [addingPage, setAddingPage] = useState(false);
   const [addPageText, setAddPageText] = useState("");
@@ -970,6 +970,8 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                           { id: "tube", label: "Tubes" },
                           { id: "pyramid", label: "Pyramide" },
                           { id: "timeline", label: "Timeline horizontale" },
+                          { id: "map", label: "Map" },
+                          { id: "causality", label: "Causalité" },
                         ].map((option) => (
                           <Button
                             key={option.id}
@@ -989,6 +991,8 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                       {schemaLayout === "tube" && <TimelineTube data={diagramData} />}
                       {schemaLayout === "pyramid" && <PyramidSchema data={diagramData} />}
                       {schemaLayout === "timeline" && <HorizontalTimeline data={diagramData} />}
+                      {schemaLayout === "map" && <SchemaMapPlaceholder />}
+                      {schemaLayout === "causality" && <SchemaCausalityPlaceholder />}
                     </div>
                   ) : (
                     <div
@@ -1541,6 +1545,20 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
 
 function renderMarkdown(text: string) {
   if (!text) return null;
+  const toPlainText = (node: React.ReactNode): string => {
+    if (typeof node === "string") return node;
+    if (Array.isArray(node)) return node.map(toPlainText).join("");
+    if (node && typeof node === "object" && "props" in node) {
+      return toPlainText((node as { props?: { children?: React.ReactNode } }).props?.children ?? "");
+    }
+    return "";
+  };
+
+  const isDefinition = (value: string) =>
+    /^\s*(d[ée]finition|definition|def\s*:)/i.test(value.trim());
+  const isExample = (value: string) =>
+    /^\s*(exemple|example|ex\s*:)/i.test(value.trim());
+
   return (
     <ReactMarkdown
       components={{
@@ -1556,9 +1574,24 @@ function renderMarkdown(text: string) {
         h4: (props: ComponentPropsWithoutRef<"h4">) => (
           <h4 className="text-[#374151] text-sm font-semibold mt-3 mb-2" {...props} />
         ),
-        p: (props: ComponentPropsWithoutRef<"p">) => (
-          <p className="text-[#374151] mb-2 leading-relaxed" {...props} />
-        ),
+        p: (props: ComponentPropsWithoutRef<"p">) => {
+          const content = toPlainText(props.children);
+          if (isDefinition(content)) {
+            return (
+              <div className="border-l-4 border-[#be1354] bg-red-50 rounded-r-xl px-4 py-3 my-3">
+                <p className="text-[#374151] leading-relaxed" {...props} />
+              </div>
+            );
+          }
+          if (isExample(content)) {
+            return (
+              <div className="border-l-4 border-emerald-500 bg-emerald-50 rounded-r-xl px-4 py-3 my-3 text-emerald-800">
+                <p className="leading-relaxed" {...props} />
+              </div>
+            );
+          }
+          return <p className="text-[#374151] mb-2 leading-relaxed" {...props} />;
+        },
         hr: (props: ComponentPropsWithoutRef<"hr">) => (
           <hr className="border-[#E8E9F0] my-4" {...props} />
         ),
@@ -1579,6 +1612,50 @@ function renderMarkdown(text: string) {
     >
       {text}
     </ReactMarkdown>
+  );
+}
+
+function SchemaMapPlaceholder() {
+  return (
+    <div className="rounded-3xl border border-[#E8E9F0] bg-[#F8F9FC] p-6 text-[#0F1117]">
+      <p className="text-xs uppercase tracking-[0.3em] text-[#9CA3AF] mb-2">Map</p>
+      <h3 className="text-lg font-semibold mb-3">Vue en carte (bientôt)</h3>
+      <p className="text-sm text-[#6B7280] mb-4">
+        Cette visualisation arrive bientôt. En attendant, utilisez les autres schémas disponibles.
+      </p>
+      <div className="grid gap-3 md:grid-cols-2">
+        {["Idée centrale", "Branche 1", "Branche 2", "Branche 3"].map((label) => (
+          <div
+            key={label}
+            className="rounded-2xl border border-[#E8E9F0] bg-white px-4 py-3 text-sm text-[#374151]"
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SchemaCausalityPlaceholder() {
+  return (
+    <div className="rounded-3xl border border-[#E8E9F0] bg-[#F8F9FC] p-6 text-[#0F1117]">
+      <p className="text-xs uppercase tracking-[0.3em] text-[#9CA3AF] mb-2">Causalité</p>
+      <h3 className="text-lg font-semibold mb-3">Chaîne cause → effet (bientôt)</h3>
+      <p className="text-sm text-[#6B7280] mb-4">
+        Un format dédié aux relations cause/effet sera disponible prochainement.
+      </p>
+      <div className="flex flex-col gap-3">
+        {["Cause principale", "Facteur secondaire", "Conséquence"].map((label, index) => (
+          <div key={label} className="flex items-center gap-3">
+            <span className="h-2 w-2 rounded-full bg-[#be1354]" />
+            <div className="flex-1 rounded-2xl border border-[#E8E9F0] bg-white px-4 py-3 text-sm text-[#374151]">
+              {index + 1}. {label}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 function PyramidSchema({ data }: { data: { title?: string; subtitle?: string; steps?: Array<{ title?: string; description?: string }> } }) {

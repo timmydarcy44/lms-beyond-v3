@@ -151,7 +151,8 @@ Format JSON: [{"question":"...","expected_answer":"..."}]`,
       };
       return `${quizTypePrompt[quizType] || quizTypePrompt.qcm}
 Niveau: ${difficulty}.
-Reponds UNIQUEMENT en JSON valide.
+Reponds UNIQUEMENT par un objet JSON pur, sans aucun texte avant ou apres.
+Sans markdown.
 
 Texte:
 ${text}`;

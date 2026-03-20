@@ -1,7 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
-import mammoth from "mammoth";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -45,9 +44,10 @@ export async function POST(request: NextRequest) {
   const filePath = `${userId}/${timestamp}.${fileExt}`;
   console.log("[upload] sanitized path:", filePath);
 
+  const contentType = file.type || (fileExt.toLowerCase() === "pdf" ? "application/pdf" : undefined);
   const { error: uploadError } = await supabase.storage
     .from("beyond-note")
-    .upload(filePath, buffer, { contentType: file.type, upsert: false });
+    .upload(filePath, buffer, { contentType, upsert: false });
 
   if (uploadError) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const isPdf = file.type === "application/pdf" || fileExt.toLowerCase() === "pdf";
+  const isPdf = file.type?.includes("pdf") || fileExt.toLowerCase() === "pdf";
   if (!extractedText && isPdf) {
     try {
       const { default: pdfParse } = await import("pdf-parse");
@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
       fileExt.toLowerCase() === "docx")
   ) {
     try {
+      const { default: mammoth } = await import("mammoth");
       const result = await mammoth.extractRawText({ buffer });
       extractedText = result?.value?.trim() || "";
     } catch (e) {
@@ -168,18 +169,17 @@ export async function POST(request: NextRequest) {
   }
 
   if (!extractedText && (isPdf || fileExt.toLowerCase() === "docx")) {
-    const errorMessage = isPdf
-      ? "Extraction PDF vide ou non lisible."
-      : "Extraction impossible pour ce fichier.";
     console.error("[upload] extraction failed", {
       name: originalName,
       type: file.type,
       ext: fileExt,
     });
-    return NextResponse.json(
-      { error: errorMessage, code: "EXTRACTION_FAILED" },
-      { status: 422 },
-    );
+    if (fileExt.toLowerCase() === "docx") {
+      return NextResponse.json(
+        { error: "Extraction impossible pour ce fichier.", code: "EXTRACTION_FAILED" },
+        { status: 422 },
+      );
+    }
   }
 
   const { data: doc, error: dbError } = await supabase

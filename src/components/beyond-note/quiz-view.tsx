@@ -23,6 +23,25 @@ interface OpenQuestion {
   expected_answer: string;
 }
 
+const extractJsonPayload = (value: string) => {
+  const objectStart = value.indexOf("{");
+  const arrayStart = value.indexOf("[");
+  const hasObject = objectStart !== -1;
+  const hasArray = arrayStart !== -1;
+  if (!hasObject && !hasArray) return value.trim();
+  const start = hasObject && hasArray ? Math.min(objectStart, arrayStart) : hasObject ? objectStart : arrayStart;
+  const isArray = start === arrayStart;
+  const end = isArray ? value.lastIndexOf("]") : value.lastIndexOf("}");
+  if (end === -1 || end <= start) return value.trim();
+  return value.slice(start, end + 1);
+};
+
+const safeJsonParse = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const cleaned = extractJsonPayload(value);
+  return JSON.parse(cleaned);
+};
+
 interface QuizViewProps {
   documentId: string;
   accountType: string;
@@ -110,7 +129,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
     setLoading(true);
     try {
       const docRes = await fetch("/api/nevo/documents");
-      if (!docRes.ok) throw new Error("Impossible de r+�cup+�rer le document");
+      if (!docRes.ok) throw new Error("Impossible de récupérer le document");
       const docData = await docRes.json();
       const doc = docData.documents?.find((d: { id: string; extracted_text: string | null }) => d.id === documentId);
       if (!doc?.extracted_text) {
@@ -130,9 +149,9 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
           },
         }),
       });
-      if (!aiRes.ok) throw new Error("Erreur lors de la g+�n+�ration");
+      if (!aiRes.ok) throw new Error("Erreur lors de la génération");
       const aiData = await aiRes.json();
-      const parsed = JSON.parse(aiData.result);
+      const parsed = safeJsonParse(aiData.result);
 
       if (quizType === "trou") {
         const sentences: GapSentence[] = Array.isArray(parsed?.sentences)
@@ -140,7 +159,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
           : Array.isArray(parsed)
             ? parsed
             : [];
-        if (!sentences.length) throw new Error("R+�ponse IA invalide");
+        if (!sentences.length) throw new Error("Réponse IA invalide");
         setGapSentences(sentences);
         setGapIndex(0);
         setGapInput("");
@@ -155,7 +174,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
         setOpenFeedback(null);
       } else if (quizType === "vrai-faux") {
         const items = Array.isArray(parsed) ? parsed : [];
-        if (!items.length) throw new Error("R+�ponse IA invalide");
+        if (!items.length) throw new Error("Réponse IA invalide");
         const mapped = items.map((item: any) => ({
           question: item.statement || item.question || "",
           options: ["Vrai", "Faux"],
@@ -183,7 +202,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
           : Array.isArray(parsed)
             ? parsed
             : [];
-        if (!items.length) throw new Error("R+�ponse IA invalide");
+        if (!items.length) throw new Error("Réponse IA invalide");
         setOpenQuestions(items);
         setOpenIndex(0);
         if (answerRef.current) answerRef.current.value = "";
@@ -198,7 +217,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
         setGapFeedback(null);
       } else {
         const questionsParsed: QuizQuestion[] = Array.isArray(parsed) ? parsed : [];
-        if (!questionsParsed.length) throw new Error("R+�ponse IA invalide");
+        if (!questionsParsed.length) throw new Error("Réponse IA invalide");
         setQuestions(questionsParsed);
         setIndex(0);
         setScore(0);
@@ -215,7 +234,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
         setOpenScore(0);
         setOpenFeedback(null);
       }
-      toast.success("Quiz g+�n+�r+�");
+      toast.success("Quiz généré");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur serveur";
       toast.error(message);
@@ -261,8 +280,8 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
       : quizType === "open"
         ? openScore / 20
         : score) >= Math.max(1, Math.ceil(total * 0.7))
-      ? "Bien jou+� ! Encore un peu de r+�vision ��Ƭ"
-      : "Continue, tu progresses ! ����";
+      ? "Bien joué ! Encore un peu de révision 💪"
+      : "Continue, tu progresses ! 💡";
 
   const currentStep =
     quizType === "trou" ? gapIndex + 1 : quizType === "open" ? openIndex + 1 : index + 1;
@@ -295,7 +314,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    G+�n+�ration...
+                    Génération...
                   </>
                 ) : (
                   "Configurer le quiz"
@@ -360,7 +379,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                   {gapFeedback ? (
                     <div className="text-center space-y-3">
                       <p className={gapFeedback.correct ? "text-emerald-400" : "text-rose-400"}>
-                        {gapFeedback.correct ? "Bonne r+�ponse !" : `Mauvaise r+�ponse : ${gapFeedback.answer}`}
+                        {gapFeedback.correct ? "Bonne réponse !" : `Mauvaise réponse : ${gapFeedback.answer}`}
                       </p>
                       <Button
                         onClick={() => {
@@ -408,7 +427,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                   <textarea
                     ref={answerRef}
                     rows={5}
-                    placeholder="+�cris ta r+�ponse ici..."
+                    placeholder="Écris ta réponse ici..."
                     className="w-full rounded-2xl bg-white/5 border border-white/10 p-4 text-sm text-white outline-none focus:border-violet-500"
                   />
                   {openFeedback ? (
@@ -435,7 +454,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                         onClick={async () => {
                           const studentAnswer = answerRef.current?.value ?? "";
                           if (!studentAnswer.trim()) {
-                            setOpenFeedback({ score: 0, feedback: "Merci d'+�crire une r+�ponse." });
+                            setOpenFeedback({ score: 0, feedback: "Merci d'écrire une réponse." });
                             return;
                           }
                           try {
@@ -504,7 +523,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
             {selected !== null && (
               <div className="mt-6 text-center">
                 <p className={`mb-4 ${selected === current?.correct_index ? "text-emerald-400" : "text-rose-400"}`}>
-                  {selected === current?.correct_index ? "Bonne r+�ponse !" : "Mauvaise r+�ponse"}
+                  {selected === current?.correct_index ? "Bonne réponse !" : "Mauvaise réponse"}
                 </p>
                 {current?.explanation && (
                   <p className="text-white/60 text-sm mb-4">{current.explanation}</p>
@@ -552,8 +571,8 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                 {[
                   { id: "qcm", label: "QCM", icon: ListChecks },
                   { id: "vrai-faux", label: "Vrai / Faux", icon: ToggleLeft },
-                  { id: "trou", label: "Textes +� trou", icon: PenLine },
-                  { id: "open", label: "R+�ponse libre", icon: Pencil },
+                  { id: "trou", label: "Textes à trou", icon: PenLine },
+                  { id: "open", label: "Réponse libre", icon: Pencil },
                 ].map((type) => (
                   <button
                     key={type.id}

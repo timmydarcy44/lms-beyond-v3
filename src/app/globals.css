@@ -67,6 +67,21 @@
   animation: float linear infinite;
 }
 
+@media (max-width: 767px) {
+  .timeline-tube-step {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+  .timeline-tube-line {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+  .timeline-tube-card {
+    width: 100% !important;
+    text-align: center !important;
+  }
+}
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);

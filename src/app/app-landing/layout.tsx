@@ -336,7 +336,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
               Se connecter
             </Link>
             <Link
-              href="/app-landing/signup"
+              href="/tarifs"
               className="px-5 py-2.5 rounded-full text-white font-semibold shadow-2xl hover:scale-105 transition-transform"
               style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
             >
@@ -378,12 +378,12 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
                   Se connecter
                 </Link>
                 <Link
-                  href="/app-landing/signup"
+                  href="/tarifs"
                   onClick={() => setMobileOpen(false)}
                   className="px-5 py-2.5 rounded-full text-center text-white font-semibold shadow-2xl hover:scale-[1.02] transition-transform"
                   style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
                 >
-                  Créer un compte
+                  Essayer gratuitement
                 </Link>
                 <button
                   type="button"

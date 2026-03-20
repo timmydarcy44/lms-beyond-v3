@@ -103,6 +103,20 @@ Contraintes :
 Réponds uniquement avec le JSON, sans texte additionnel.`;
 }
 
+export function buildRevisionSheetPrompt(text: string): string {
+  return `Crée une fiche de révision structurée à partir du texte suivant.
+- Résumé des points clés
+- Concepts importants avec définition
+- Exemples concrets
+- Questions de révision
+
+Important : entoure chaque définition par [DEF]...[/DEF] et chaque exemple par [EX]...[/EX].
+Ne mets pas de markdown autour de ces tags.
+
+Texte :
+${text}`;
+}
+
 export function buildTranslatePrompt(text: string, targetLanguage: string): string {
   return `Traduis le texte suivant en ${targetLanguage} :
 

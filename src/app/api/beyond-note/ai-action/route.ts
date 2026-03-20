@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 import { generateJSON, generateSpeech, getOpenAIClient } from "@/lib/ai/openai-client";
 import { generateTextWithAnthropic } from "@/lib/ai/anthropic-client";
-import { buildAudioPrompt, buildSchemaPrompt } from "@/lib/ai/prompts/text-transformation";
+import { buildAudioPrompt, buildRevisionSheetPrompt, buildSchemaPrompt } from "@/lib/ai/prompts/text-transformation";
 
 type AIAction =
   | "revision-sheet"
@@ -85,14 +85,7 @@ const getPromptForAction = (
 ): string => {
   switch (action) {
     case "revision-sheet":
-      return `Cree une fiche de revision structuree a partir du texte suivant.
-- Resume des points cles
-- Concepts importants avec definition
-- Exemples concrets
-- Questions de revision
-
-Texte:
-${text}`;
+      return buildRevisionSheetPrompt(text);
     case "reformulate": {
       const stylePrompts: Record<string, string> = {
         examples: "Reformule avec des exemples concrets.",

@@ -991,8 +991,8 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                       {schemaLayout === "tube" && <TimelineTube data={diagramData} />}
                       {schemaLayout === "pyramid" && <PyramidSchema data={diagramData} />}
                       {schemaLayout === "timeline" && <HorizontalTimeline data={diagramData} />}
-                      {schemaLayout === "map" && <SchemaMapPlaceholder />}
-                      {schemaLayout === "causality" && <SchemaCausalityPlaceholder />}
+                      {schemaLayout === "map" && <SchemaMapView data={diagramData} />}
+                      {schemaLayout === "causality" && <SchemaCausalityView data={diagramData} />}
                     </div>
                   ) : (
                     <div
@@ -1545,113 +1545,191 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
 
 function renderMarkdown(text: string) {
   if (!text) return null;
-  const toPlainText = (node: React.ReactNode): string => {
-    if (typeof node === "string") return node;
-    if (Array.isArray(node)) return node.map(toPlainText).join("");
-    if (node && typeof node === "object" && "props" in node) {
-      return toPlainText((node as { props?: { children?: React.ReactNode } }).props?.children ?? "");
+
+  const parseTaggedBlocks = (input: string) => {
+    const blocks: Array<{ type: "text" | "def" | "ex"; content: string }> = [];
+    const regex = /\[(DEF|EX)\]([\s\S]*?)\[\/\1\]/gi;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(input))) {
+      if (match.index > lastIndex) {
+        const plain = input.slice(lastIndex, match.index).trim();
+        if (plain) blocks.push({ type: "text", content: plain });
+      }
+      const type = match[1].toLowerCase() === "def" ? "def" : "ex";
+      const content = match[2].trim();
+      if (content) blocks.push({ type, content });
+      lastIndex = regex.lastIndex;
     }
-    return "";
+
+    if (lastIndex < input.length) {
+      const tail = input.slice(lastIndex).trim();
+      if (tail) blocks.push({ type: "text", content: tail });
+    }
+
+    return blocks;
   };
 
-  const isDefinition = (value: string) =>
-    /^\s*(d[ée]finition|definition|def\s*:)/i.test(value.trim());
-  const isExample = (value: string) =>
-    /^\s*(exemple|example|ex\s*:)/i.test(value.trim());
+  const baseComponents = {
+    h1: (props: ComponentPropsWithoutRef<"h1">) => (
+      <h1 className="text-[#0F1117] text-xl font-bold mt-6 mb-3 border-b-2 border-[#be1354] pb-2" {...props} />
+    ),
+    h2: (props: ComponentPropsWithoutRef<"h2">) => (
+      <h2 className="text-[#0F1117] text-lg font-bold mt-5 mb-2" {...props} />
+    ),
+    h3: (props: ComponentPropsWithoutRef<"h3">) => (
+      <h3 className="text-[#374151] text-base font-semibold mt-4 mb-2" {...props} />
+    ),
+    h4: (props: ComponentPropsWithoutRef<"h4">) => (
+      <h4 className="text-[#374151] text-sm font-semibold mt-3 mb-2" {...props} />
+    ),
+    p: (props: ComponentPropsWithoutRef<"p">) => (
+      <p className="text-[#374151] mb-2 leading-relaxed" {...props} />
+    ),
+    hr: (props: ComponentPropsWithoutRef<"hr">) => (
+      <hr className="border-[#E8E9F0] my-4" {...props} />
+    ),
+    ul: (props: ComponentPropsWithoutRef<"ul">) => (
+      <ul className="ml-5 list-disc space-y-2" {...props} />
+    ),
+    ol: (props: ComponentPropsWithoutRef<"ol">) => (
+      <ol className="ml-5 list-decimal space-y-2" {...props} />
+    ),
+    li: (props: ComponentPropsWithoutRef<"li">) => <li className="text-[#374151]" {...props} />,
+    strong: (props: ComponentPropsWithoutRef<"strong">) => (
+      <strong className="font-semibold text-[#0F1117]" {...props} />
+    ),
+    em: (props: ComponentPropsWithoutRef<"em">) => <em className="italic" {...props} />,
+  };
+
+  const blocks = parseTaggedBlocks(text);
+  const hasTaggedBlocks = blocks.some((block) => block.type !== "text");
+
+  if (!hasTaggedBlocks) {
+    return <ReactMarkdown components={baseComponents}>{text}</ReactMarkdown>;
+  }
 
   return (
-    <ReactMarkdown
-      components={{
-        h1: (props: ComponentPropsWithoutRef<"h1">) => (
-          <h1 className="text-[#0F1117] text-xl font-bold mt-6 mb-3 border-b-2 border-[#be1354] pb-2" {...props} />
-        ),
-        h2: (props: ComponentPropsWithoutRef<"h2">) => (
-          <h2 className="text-[#0F1117] text-lg font-bold mt-5 mb-2" {...props} />
-        ),
-        h3: (props: ComponentPropsWithoutRef<"h3">) => (
-          <h3 className="text-[#374151] text-base font-semibold mt-4 mb-2" {...props} />
-        ),
-        h4: (props: ComponentPropsWithoutRef<"h4">) => (
-          <h4 className="text-[#374151] text-sm font-semibold mt-3 mb-2" {...props} />
-        ),
-        p: (props: ComponentPropsWithoutRef<"p">) => {
-          const content = toPlainText(props.children);
-          if (isDefinition(content)) {
-            return (
-              <div className="border-l-4 border-[#be1354] bg-red-50 rounded-r-xl px-4 py-3 my-3">
-                <p className="text-[#374151] leading-relaxed" {...props} />
-              </div>
-            );
-          }
-          if (isExample(content)) {
-            return (
-              <div className="border-l-4 border-emerald-500 bg-emerald-50 rounded-r-xl px-4 py-3 my-3 text-emerald-800">
-                <p className="leading-relaxed" {...props} />
-              </div>
-            );
-          }
-          return <p className="text-[#374151] mb-2 leading-relaxed" {...props} />;
-        },
-        hr: (props: ComponentPropsWithoutRef<"hr">) => (
-          <hr className="border-[#E8E9F0] my-4" {...props} />
-        ),
-        ul: (props: ComponentPropsWithoutRef<"ul">) => (
-          <ul className="ml-5 list-disc space-y-2" {...props} />
-        ),
-        ol: (props: ComponentPropsWithoutRef<"ol">) => (
-          <ol className="ml-5 list-decimal space-y-2" {...props} />
-        ),
-        li: (props: ComponentPropsWithoutRef<"li">) => (
-          <li className="text-[#374151]" {...props} />
-        ),
-        strong: (props: ComponentPropsWithoutRef<"strong">) => (
-          <strong className="font-semibold text-[#0F1117]" {...props} />
-        ),
-        em: (props: ComponentPropsWithoutRef<"em">) => <em className="italic" {...props} />,
-      }}
-    >
-      {text}
-    </ReactMarkdown>
-  );
-}
+    <div className="space-y-3">
+      {blocks.map((block, index) => {
+        if (block.type === "text") {
+          return (
+            <ReactMarkdown key={`block-${index}`} components={baseComponents}>
+              {block.content}
+            </ReactMarkdown>
+          );
+        }
 
-function SchemaMapPlaceholder() {
-  return (
-    <div className="rounded-3xl border border-[#E8E9F0] bg-[#F8F9FC] p-6 text-[#0F1117]">
-      <p className="text-xs uppercase tracking-[0.3em] text-[#9CA3AF] mb-2">Map</p>
-      <h3 className="text-lg font-semibold mb-3">Vue en carte (bientôt)</h3>
-      <p className="text-sm text-[#6B7280] mb-4">
-        Cette visualisation arrive bientôt. En attendant, utilisez les autres schémas disponibles.
-      </p>
-      <div className="grid gap-3 md:grid-cols-2">
-        {["Idée centrale", "Branche 1", "Branche 2", "Branche 3"].map((label) => (
-          <div
-            key={label}
-            className="rounded-2xl border border-[#E8E9F0] bg-white px-4 py-3 text-sm text-[#374151]"
-          >
-            {label}
+        const wrapperClass =
+          block.type === "def"
+            ? "border-l-4 border-[#be1354] bg-red-50 rounded-r-xl px-4 py-3"
+            : "border-l-4 border-emerald-500 bg-emerald-50 rounded-r-xl px-4 py-3 text-emerald-800";
+
+        return (
+          <div key={`block-${index}`} className={wrapperClass}>
+            <ReactMarkdown components={baseComponents}>{block.content}</ReactMarkdown>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
 
-function SchemaCausalityPlaceholder() {
+function SchemaMapView({ data }: { data?: { title?: string; subtitle?: string; steps?: Array<{ title?: string; description?: string }> } }) {
+  const steps = Array.isArray(data?.steps) ? data?.steps : [];
+  const positions = [
+    { row: 1, col: 2 },
+    { row: 2, col: 1 },
+    { row: 2, col: 3 },
+    { row: 3, col: 2 },
+    { row: 1, col: 1 },
+    { row: 1, col: 3 },
+    { row: 3, col: 1 },
+    { row: 3, col: 3 },
+  ];
+
+  if (!steps.length) {
+    return (
+      <div className="rounded-3xl border border-[#E8E9F0] bg-[#F8F9FC] p-6 text-[#6B7280] text-sm">
+        Aucun contenu disponible pour ce schéma.
+      </div>
+    );
+  }
+
+  const mainTitle = data?.title || "Thème central";
+  const primaryNodes = steps.slice(0, positions.length);
+  const extraNodes = steps.slice(positions.length);
+
   return (
-    <div className="rounded-3xl border border-[#E8E9F0] bg-[#F8F9FC] p-6 text-[#0F1117]">
-      <p className="text-xs uppercase tracking-[0.3em] text-[#9CA3AF] mb-2">Causalité</p>
-      <h3 className="text-lg font-semibold mb-3">Chaîne cause → effet (bientôt)</h3>
-      <p className="text-sm text-[#6B7280] mb-4">
-        Un format dédié aux relations cause/effet sera disponible prochainement.
-      </p>
-      <div className="flex flex-col gap-3">
-        {["Cause principale", "Facteur secondaire", "Conséquence"].map((label, index) => (
-          <div key={label} className="flex items-center gap-3">
-            <span className="h-2 w-2 rounded-full bg-[#be1354]" />
-            <div className="flex-1 rounded-2xl border border-[#E8E9F0] bg-white px-4 py-3 text-sm text-[#374151]">
-              {index + 1}. {label}
+    <div className="rounded-3xl border border-[#E8E9F0] bg-white p-6">
+      <div className="mb-6 text-center">
+        <p className="text-xs uppercase tracking-[0.3em] text-[#9CA3AF] mb-2">Map</p>
+        <h3 className="text-lg font-semibold text-[#0F1117]">{mainTitle}</h3>
+        {data?.subtitle ? <p className="text-sm text-[#6B7280] mt-2">{data.subtitle}</p> : null}
+      </div>
+      <div className="relative grid grid-cols-3 gap-4 place-items-center">
+        <div className="col-start-2 row-start-2 rounded-2xl border border-[#be1354]/30 bg-[#FFF5F7] px-4 py-3 text-center text-sm font-semibold text-[#be1354]">
+          {mainTitle}
+        </div>
+        {primaryNodes.map((step, index) => (
+          <div
+            key={`${step.title || "node"}-${index}`}
+            style={{ gridRow: positions[index].row, gridColumn: positions[index].col }}
+            className="rounded-2xl border border-[#E8E9F0] bg-[#F8F9FC] px-4 py-3 text-center text-sm text-[#374151]"
+          >
+            <p className="font-semibold">{step.title || `Idée ${index + 1}`}</p>
+            {step.description ? <p className="text-xs text-[#6B7280] mt-1">{step.description}</p> : null}
+          </div>
+        ))}
+      </div>
+      {extraNodes.length > 0 ? (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {extraNodes.map((step, index) => (
+            <div
+              key={`${step.title || "extra"}-${index}`}
+              className="rounded-2xl border border-[#E8E9F0] bg-[#F8F9FC] px-4 py-2 text-xs text-[#374151]"
+            >
+              {step.title || `Idée ${index + 1 + primaryNodes.length}`}
             </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SchemaCausalityView({ data }: { data?: { title?: string; subtitle?: string; steps?: Array<{ title?: string; description?: string }> } }) {
+  const steps = Array.isArray(data?.steps) ? data?.steps : [];
+
+  if (!steps.length) {
+    return (
+      <div className="rounded-3xl border border-[#E8E9F0] bg-[#F8F9FC] p-6 text-[#6B7280] text-sm">
+        Aucun contenu disponible pour ce schéma.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-3xl border border-[#E8E9F0] bg-white p-6">
+      <div className="mb-6 text-center">
+        <p className="text-xs uppercase tracking-[0.3em] text-[#9CA3AF] mb-2">Causalité</p>
+        <h3 className="text-lg font-semibold text-[#0F1117]">{data?.title || "Chaîne cause → effet"}</h3>
+        {data?.subtitle ? <p className="text-sm text-[#6B7280] mt-2">{data.subtitle}</p> : null}
+      </div>
+      <div className="flex flex-col md:flex-row md:items-stretch md:justify-center gap-3 md:gap-4">
+        {steps.map((step, index) => (
+          <div key={`${step.title || "cause"}-${index}`} className="flex items-center gap-3 md:gap-4">
+            <div className="rounded-2xl border border-[#E8E9F0] bg-[#F8F9FC] px-4 py-3 text-sm text-[#374151] min-w-[180px] text-center">
+              <p className="font-semibold">{step.title || `Étape ${index + 1}`}</p>
+              {step.description ? <p className="text-xs text-[#6B7280] mt-1">{step.description}</p> : null}
+            </div>
+            {index < steps.length - 1 ? (
+              <>
+                <span className="hidden md:inline text-[#9CA3AF] text-xl">→</span>
+                <span className="md:hidden text-[#9CA3AF] text-xl">↓</span>
+              </>
+            ) : null}
           </div>
         ))}
       </div>

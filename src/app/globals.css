@@ -83,6 +83,9 @@
     margin-right: auto !important;
     align-self: center !important;
   }
+  .timeline-tube-step > div:first-child {
+    align-items: center !important;
+  }
 }
 
 @keyframes shimmer {

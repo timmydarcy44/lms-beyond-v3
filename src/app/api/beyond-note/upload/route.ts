@@ -18,6 +18,12 @@ export async function POST(request: NextRequest) {
   if (!file) return NextResponse.json({ error: "Aucun fichier" }, { status: 400 });
 
   const sourceType = (formData.get("source_type") as string) || "import";
+  console.log("[upload] file received:", {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    sourceType,
+  });
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
@@ -162,7 +168,15 @@ export async function POST(request: NextRequest) {
   }
 
   if (!extractedText && (isPdf || fileExt.toLowerCase() === "docx")) {
-    return NextResponse.json({ error: "Extraction impossible pour ce fichier." }, { status: 422 });
+    console.error("[upload] extraction failed", {
+      name: originalName,
+      type: file.type,
+      ext: fileExt,
+    });
+    return NextResponse.json(
+      { error: "Extraction impossible pour ce fichier.", code: "EXTRACTION_FAILED" },
+      { status: 422 },
+    );
   }
 
   const { data: doc, error: dbError } = await supabase

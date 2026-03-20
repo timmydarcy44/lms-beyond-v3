@@ -152,6 +152,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const [audioSource, setAudioSource] = useState<string | null>(null);
   const [audioVoice, setAudioVoice] = useState<string | null>(null);
   const [schemaLayout, setSchemaLayout] = useState<"tube" | "pyramid" | "timeline" | "map" | "causality">("tube");
+  const [showSchemaModal, setShowSchemaModal] = useState(false);
   const [showAddPage, setShowAddPage] = useState(false);
   const [addingPage, setAddingPage] = useState(false);
   const [addPageText, setAddPageText] = useState("");
@@ -965,28 +966,40 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                     </div>
                   ) : currentAction === "diagram" && diagramData ? (
                     <div className="space-y-6">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {[
-                          { id: "tube", label: "Tubes" },
-                          { id: "pyramid", label: "Pyramide" },
-                          { id: "timeline", label: "Timeline horizontale" },
-                          { id: "map", label: "Map" },
-                          { id: "causality", label: "Causalité" },
-                        ].map((option) => (
-                          <Button
-                            key={option.id}
-                            variant={schemaLayout === option.id ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setSchemaLayout(option.id as typeof schemaLayout)}
-                            className={
-                              schemaLayout === option.id
-                                ? "bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
-                                : "border border-[#E8E9F0] text-[#0F1117] hover:bg-[#F3F4F8]"
-                            }
-                          >
-                            {option.label}
-                          </Button>
-                        ))}
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {[
+                            { id: "tube", label: "Tubes" },
+                            { id: "pyramid", label: "Pyramide" },
+                            { id: "timeline", label: "Timeline horizontale" },
+                            { id: "map", label: "Map" },
+                            { id: "causality", label: "Causalité" },
+                          ].map((option) => (
+                            <Button
+                              key={option.id}
+                              variant={schemaLayout === option.id ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setSchemaLayout(option.id as typeof schemaLayout)}
+                              className={
+                                schemaLayout === option.id
+                                  ? "bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                                  : "border border-[#E8E9F0] text-[#0F1117] hover:bg-[#F3F4F8]"
+                              }
+                            >
+                              {option.label}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowSchemaModal(true)}
+                          className="border border-[#E8E9F0] text-[#0F1117] hover:bg-[#F3F4F8] flex items-center gap-2"
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                          Pleine page
+                        </Button>
                       </div>
                       {schemaLayout === "tube" && <TimelineTube data={diagramData} />}
                       {schemaLayout === "pyramid" && <PyramidSchema data={diagramData} />}
@@ -1539,6 +1552,28 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
         onClose={() => setShowDictationModal(false)}
         onComplete={handleDictationComplete}
       />
+      {showSchemaModal && diagramData && (
+        <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm">
+          <div className="absolute inset-0 p-4 md:p-8">
+            <div className="relative h-full w-full rounded-3xl bg-white shadow-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowSchemaModal(false)}
+                className="absolute right-4 top-4 h-9 w-9 rounded-full bg-[#F3F4F8] text-[#6B7280] flex items-center justify-center"
+              >
+                ✕
+              </button>
+              <div className="h-full w-full overflow-auto p-6 md:p-10">
+                {schemaLayout === "tube" && <TimelineTube data={diagramData} />}
+                {schemaLayout === "pyramid" && <PyramidSchema data={diagramData} />}
+                {schemaLayout === "timeline" && <HorizontalTimeline data={diagramData} />}
+                {schemaLayout === "map" && <SchemaMapView data={diagramData} />}
+                {schemaLayout === "causality" && <SchemaCausalityView data={diagramData} />}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </TooltipProvider>
   );
 }
@@ -1717,21 +1752,23 @@ function SchemaCausalityView({ data }: { data?: { title?: string; subtitle?: str
         <h3 className="text-lg font-semibold text-[#0F1117]">{data?.title || "Chaîne cause → effet"}</h3>
         {data?.subtitle ? <p className="text-sm text-[#6B7280] mt-2">{data.subtitle}</p> : null}
       </div>
-      <div className="flex flex-col md:flex-row md:items-stretch md:justify-center gap-3 md:gap-4">
-        {steps.map((step, index) => (
-          <div key={`${step.title || "cause"}-${index}`} className="flex items-center gap-3 md:gap-4">
-            <div className="rounded-2xl border border-[#E8E9F0] bg-[#F8F9FC] px-4 py-3 text-sm text-[#374151] min-w-[180px] text-center">
-              <p className="font-semibold">{step.title || `Étape ${index + 1}`}</p>
-              {step.description ? <p className="text-xs text-[#6B7280] mt-1">{step.description}</p> : null}
+      <div className="overflow-x-auto">
+        <div className="flex flex-col md:flex-row md:items-stretch md:justify-center gap-3 md:gap-4 min-w-[640px] md:min-w-0">
+          {steps.map((step, index) => (
+            <div key={`${step.title || "cause"}-${index}`} className="flex items-center gap-3 md:gap-4">
+              <div className="rounded-2xl border border-[#E8E9F0] bg-[#F8F9FC] px-4 py-3 text-sm text-[#374151] min-w-[180px] text-center">
+                <p className="font-semibold">{step.title || `Étape ${index + 1}`}</p>
+                {step.description ? <p className="text-xs text-[#6B7280] mt-1">{step.description}</p> : null}
+              </div>
+              {index < steps.length - 1 ? (
+                <>
+                  <span className="hidden md:inline text-[#9CA3AF] text-xl">→</span>
+                  <span className="md:hidden text-[#9CA3AF] text-xl">↓</span>
+                </>
+              ) : null}
             </div>
-            {index < steps.length - 1 ? (
-              <>
-                <span className="hidden md:inline text-[#9CA3AF] text-xl">→</span>
-                <span className="md:hidden text-[#9CA3AF] text-xl">↓</span>
-              </>
-            ) : null}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

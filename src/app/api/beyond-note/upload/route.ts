@@ -168,13 +168,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (!extractedText && (isPdf || fileExt.toLowerCase() === "docx")) {
+    const errorMessage = isPdf
+      ? "Extraction PDF vide ou non lisible."
+      : "Extraction impossible pour ce fichier.";
     console.error("[upload] extraction failed", {
       name: originalName,
       type: file.type,
       ext: fileExt,
     });
     return NextResponse.json(
-      { error: "Extraction impossible pour ce fichier.", code: "EXTRACTION_FAILED" },
+      { error: errorMessage, code: "EXTRACTION_FAILED" },
       { status: 422 },
     );
   }

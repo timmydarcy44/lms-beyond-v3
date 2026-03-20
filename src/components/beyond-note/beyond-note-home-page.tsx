@@ -831,7 +831,7 @@ export function BeyondNoteHomePage() {
               <input
                 ref={cameraInputRef}
                 type="file"
-                accept="image/*,application/pdf"
+                accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
                 capture="environment"
                 className="hidden"
                 onChange={handleFileChange}
@@ -839,7 +839,7 @@ export function BeyondNoteHomePage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,application/pdf"
+                accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
                 className="hidden"
                 onChange={handleFileChange}
               />

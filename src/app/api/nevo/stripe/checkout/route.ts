@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         line_items: [{ price: priceId, quantity: 1 }],
         subscription_data: { trial_period_days: 7 },
         success_url: `${origin}/app-landing/check-email`,
-        cancel_url: `${origin}/app-landing/particuliers?canceled=1`,
+        cancel_url: "https://www.nevo-app.fr/tarifs",
         allow_promotion_codes: true,
         customer_email: resolvedEmail,
         metadata: {

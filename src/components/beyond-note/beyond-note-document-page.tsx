@@ -27,6 +27,7 @@ import {
   Mic,
   PenLine,
   Plus,
+  Maximize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1302,7 +1303,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
             <input
               ref={addPageCameraRef}
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
               capture="environment"
               className="hidden"
               onChange={(e) => {
@@ -1313,7 +1314,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
             <input
               ref={addPageFileRef}
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];

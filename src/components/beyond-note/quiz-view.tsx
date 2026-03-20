@@ -23,6 +23,15 @@ interface OpenQuestion {
   expected_answer: string;
 }
 
+type QuizHistoryItem = {
+  id?: string;
+  score?: number | null;
+  max_score?: number | null;
+  nb_questions?: number | null;
+  quiz_type?: string | null;
+  created_at?: string | null;
+};
+
 const extractJsonPayload = (value: string) => {
   const objectStart = value.indexOf("{");
   const arrayStart = value.indexOf("[");
@@ -69,8 +78,12 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
   const [openIndex, setOpenIndex] = useState(0);
   const [openScore, setOpenScore] = useState(0);
   const [openFeedback, setOpenFeedback] = useState<{ score: number; feedback: string } | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
   const answerRef = useRef<HTMLTextAreaElement>(null);
   const [sessionSaved, setSessionSaved] = useState(false);
+  const [quizHistory, setQuizHistory] = useState<QuizHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const current = questions[index];
   const total =
@@ -89,7 +102,26 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
 
   useEffect(() => {
     setSelected(null);
+    setFeedbackMessage(null);
+    setFeedbackLoading(false);
   }, [index]);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        setHistoryLoading(true);
+        const res = await fetch(`/api/nevo/quiz-sessions?document_id=${documentId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setQuizHistory(Array.isArray(data?.sessions) ? data.sessions : []);
+      } catch {
+        setQuizHistory([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+    loadHistory();
+  }, [documentId]);
 
   useEffect(() => {
     if (!isComplete || sessionSaved || total === 0) return;
@@ -243,12 +275,53 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
     }
   };
 
-  const handleSelect = (choice: number) => {
+  const encouragements = [
+    "Excellent réflexe. Continue comme ça !",
+    "Solide réponse, tu progresses vite.",
+    "Yes ! Tu maîtrises de mieux en mieux.",
+    "Parfait, garde ce rythme.",
+  ];
+
+  const requestExplanation = async (question: string, expected: string, actual: string) => {
+    try {
+      setFeedbackLoading(true);
+      const aiRes = await fetch("/api/nevo/ai-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentId,
+          action: "grade-answer",
+          text: question,
+          options: {
+            question,
+            expected_answer: expected,
+            student_answer: actual,
+          },
+        }),
+      });
+      if (!aiRes.ok) throw new Error("Erreur lors de la génération");
+      const aiData = await aiRes.json();
+      const parsed = safeJsonParse(aiData.result);
+      const feedback = typeof parsed?.feedback === "string" ? parsed.feedback : "";
+      setFeedbackMessage(feedback || "Retente en pensant au concept clé du cours.");
+    } catch {
+      setFeedbackMessage("Retente en pensant au concept clé du cours.");
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const handleSelect = async (choice: number) => {
     if (selected !== null || !current) return;
     setSelected(choice);
     if (choice === current.correct_index) {
       setScore((prev) => prev + 1);
+      setFeedbackMessage(encouragements[Math.floor(Math.random() * encouragements.length)]);
+      return;
     }
+    const expected = current.options?.[current.correct_index] || "Réponse attendue";
+    const actual = current.options?.[choice] || "Réponse donnée";
+    await requestExplanation(current.question, expected, actual);
   };
 
   const handleNext = () => {
@@ -286,22 +359,70 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
   const currentStep =
     quizType === "trou" ? gapIndex + 1 : quizType === "open" ? openIndex + 1 : index + 1;
 
+  const isQuestionMode = total > 0 && !isComplete;
+  const progressPercent = total > 0 ? (Math.min(currentStep, total) / total) * 100 : 0;
+
   return (
-    <div className="fixed inset-0 z-50 bg-[#0A0A0F] text-white">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <div className="text-lg font-semibold">Quiz</div>
-        <div className="flex items-center gap-4 text-sm text-white/50">
+    <div
+      className={`fixed inset-0 z-50 ${
+        isQuestionMode
+          ? "bg-white text-[#0F1117]"
+          : "bg-gradient-to-br from-[#be1354] via-[#F97316] to-[#be1354] text-white"
+      }`}
+    >
+      <div
+        className={`flex items-center justify-between px-6 py-4 ${
+          isQuestionMode ? "border-b border-[#E8E9F0]" : "border-b border-white/10"
+        }`}
+      >
+        <div className={`text-lg font-semibold ${isQuestionMode ? "text-[#0F1117]" : "text-white"}`}>Quiz</div>
+        <div className={`flex items-center gap-4 text-sm ${isQuestionMode ? "text-[#6B7280]" : "text-white/70"}`}>
           <span>{total === 0 ? "0" : Math.min(currentStep, total)}/{total || 5}</span>
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-white/70 hover:text-white">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className={isQuestionMode ? "text-[#6B7280] hover:text-[#0F1117]" : "text-white/70 hover:text-white"}
+          >
             <X className="h-5 w-5" />
           </Button>
         </div>
       </div>
+      {isQuestionMode && (
+        <div className="h-1 w-full bg-[#E8E9F0]">
+          <div className="h-full bg-[#be1354]" style={{ width: `${progressPercent}%` }} />
+        </div>
+      )}
 
       <div className="flex flex-col items-center justify-center px-6 py-10 min-h-[70vh]">
         {total === 0 ? (
-          <div className="text-center max-w-md">
-            <p className="text-white/70 mb-6">Aucun quiz disponible.</p>
+          <div className="text-center max-w-3xl w-full">
+            <p className="text-white/90 text-2xl font-semibold mb-6">Prêt pour un quiz premium ?</p>
+            {historyLoading ? (
+              <p className="text-white/70 mb-6">Chargement des quiz...</p>
+            ) : quizHistory.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {quizHistory.slice(-4).map((session, idx) => {
+                  const maxScore = Number(session.max_score || 0);
+                  const scoreValue = Number(session.score || 0);
+                  const normalized = maxScore > 0 ? Math.round((scoreValue / maxScore) * 20) : 0;
+                  return (
+                    <div
+                      key={`${session.id || idx}`}
+                      className="rounded-3xl border border-white/20 bg-white/10 p-5 text-left"
+                    >
+                      <p className="text-xs uppercase tracking-[0.3em] text-white/70 mb-2">Quiz terminé</p>
+                      <p className="text-lg font-semibold text-white mb-1">{normalized}/20</p>
+                      <p className="text-sm text-white/70">
+                        {session.quiz_type ? `Type : ${session.quiz_type}` : "Type : QCM"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-white/80 mb-6">Aucun quiz disponible pour l'instant.</p>
+            )}
             {accountType !== "child" && (
               <Button
                 onClick={() => {
@@ -309,7 +430,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                   setShowOptions(true);
                 }}
                 disabled={loading}
-                className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                className="bg-white text-[#be1354] hover:bg-white/90"
               >
                 {loading ? (
                   <>
@@ -317,7 +438,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                     Génération...
                   </>
                 ) : (
-                  "Configurer le quiz"
+                  "Créer un Quiz"
                 )}
               </Button>
             )}
@@ -356,30 +477,30 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
             </div>
           </div>
         ) : quizType === "trou" ? (
-          <div className="w-full max-w-2xl">
+          <div className="w-full max-w-3xl">
             {(() => {
               const currentSentence = gapSentences[gapIndex];
               if (!currentSentence) return null;
               const parts = currentSentence.text.split("___");
               return (
                 <div className="space-y-6">
-                  <p className="text-xl text-center">
+                  <p className="text-3xl md:text-4xl font-extrabold text-center text-[#0F1117]">
                     {parts[0]}
                     <input
                       value={gapInput}
                       onChange={(e) => setGapInput(e.target.value)}
                       disabled={!!gapFeedback}
-                      className="mx-2 inline-block min-w-[140px] bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-base outline-none focus:border-violet-500"
+                      className="mx-2 inline-block min-w-[160px] bg-white border border-[#E8E9F0] rounded-lg px-3 py-2 text-[#0F1117] text-base outline-none focus:border-[#be1354]"
                     />
                     {parts.slice(1).join("___")}
                   </p>
                   {currentSentence.hint && (
-                    <p className="text-sm text-white/50 text-center">Indice : {currentSentence.hint}</p>
+                    <p className="text-sm text-[#6B7280] text-center">Indice : {currentSentence.hint}</p>
                   )}
                   {gapFeedback ? (
                     <div className="text-center space-y-3">
-                      <p className={gapFeedback.correct ? "text-emerald-400" : "text-rose-400"}>
-                        {gapFeedback.correct ? "Bonne réponse !" : `Mauvaise réponse : ${gapFeedback.answer}`}
+                      <p className={gapFeedback.correct ? "text-emerald-600" : "text-rose-600"}>
+                        {gapFeedback.correct ? "Excellent ! Continue." : `À retenir : ${gapFeedback.answer}`}
                       </p>
                       <Button
                         onClick={() => {
@@ -391,7 +512,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                             setGapIndex((prev) => prev + 1);
                           }
                         }}
-                        className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                        className="bg-[#be1354] hover:bg-[#a80f4a] text-white"
                       >
                         Question suivante
                       </Button>
@@ -406,7 +527,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                           if (correct) setGapScore((prev) => prev + 1);
                           setGapFeedback({ correct, answer: currentSentence.answer });
                         }}
-                        className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                        className="bg-[#be1354] hover:bg-[#a80f4a] text-white"
                       >
                         Valider
                       </Button>
@@ -417,22 +538,24 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
             })()}
           </div>
         ) : quizType === "open" ? (
-          <div className="w-full max-w-2xl">
+          <div className="w-full max-w-3xl">
             {(() => {
               const currentQuestion = openQuestions[openIndex];
               if (!currentQuestion) return null;
               return (
                 <div className="space-y-6">
-                  <p className="text-xl text-center">{currentQuestion.question}</p>
+                  <p className="text-3xl md:text-4xl font-extrabold text-center text-[#0F1117]">
+                    {currentQuestion.question}
+                  </p>
                   <textarea
                     ref={answerRef}
                     rows={5}
                     placeholder="Écris ta réponse ici..."
-                    className="w-full rounded-2xl bg-white/5 border border-white/10 p-4 text-sm text-white outline-none focus:border-violet-500"
+                    className="w-full rounded-2xl bg-white border border-[#E8E9F0] p-4 text-sm text-[#0F1117] outline-none focus:border-[#be1354]"
                   />
                   {openFeedback ? (
                     <div className="text-center space-y-3">
-                      <p className="text-white/70 text-sm">{openFeedback.feedback}</p>
+                      <p className="text-[#6B7280] text-sm">{openFeedback.feedback}</p>
                       <Button
                         onClick={() => {
                           if (answerRef.current) answerRef.current.value = "";
@@ -443,7 +566,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                             setOpenIndex((prev) => prev + 1);
                           }
                         }}
-                        className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                        className="bg-[#be1354] hover:bg-[#a80f4a] text-white"
                       >
                         Question suivante
                       </Button>
@@ -487,7 +610,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                             toast.error(message);
                           }
                         }}
-                        className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white"
+                        className="bg-[#be1354] hover:bg-[#a80f4a] text-white"
                       >
                         Valider
                       </Button>
@@ -499,7 +622,9 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
           </div>
         ) : (
           <div className="w-full max-w-2xl">
-            <p className="text-xl text-center mb-8">{current?.question}</p>
+            <p className="text-4xl md:text-6xl font-black tracking-tight text-center mb-10 text-[#0F1117]">
+              {current?.question}
+            </p>
             <div className="grid grid-cols-1 gap-3">
               {current?.options?.map((option, idx) => {
                 const isCorrect = selected !== null && idx === current.correct_index;
@@ -508,24 +633,32 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                   <Button
                     key={idx}
                     onClick={() => handleSelect(idx)}
-                    className={`w-full justify-start border border-white/10 bg-white/5 hover:bg-white/10 text-white ${
-                      isCorrect ? "bg-emerald-500 hover:bg-emerald-600" : ""
-                    } ${isWrong ? "bg-rose-500 hover:bg-rose-600" : ""}`}
+                    className={`w-full justify-start rounded-3xl border border-[#E8E9F0] bg-white text-[#0F1117] hover:bg-[#F8F9FC] py-5 ${
+                      isCorrect ? "border-emerald-500 text-emerald-600" : ""
+                    } ${isWrong ? "border-rose-500 text-rose-600" : ""}`}
                   >
-                    {option}
+                    <span className="text-xl md:text-2xl font-bold">{option}</span>
                   </Button>
                 );
               })}
             </div>
             {selected !== null && (
               <div className="mt-6 text-center">
-                <p className={`mb-4 ${selected === current?.correct_index ? "text-emerald-400" : "text-rose-400"}`}>
-                  {selected === current?.correct_index ? "Bonne réponse !" : "Mauvaise réponse"}
+                <p
+                  className={`mb-4 text-lg font-semibold ${
+                    selected === current?.correct_index ? "text-emerald-600" : "text-rose-600"
+                  }`}
+                >
+                  {selected === current?.correct_index
+                    ? feedbackMessage || "Excellent !"
+                    : feedbackLoading
+                      ? "Analyse en cours..."
+                      : feedbackMessage || "Réponse incorrecte."}
                 </p>
-                {current?.explanation && (
-                  <p className="text-white/60 text-sm mb-4">{current.explanation}</p>
-                )}
-                <Button onClick={handleNext} className="bg-[#6D28D9] hover:bg-[#5B21B6] text-white">
+                {current?.explanation && selected === current?.correct_index ? (
+                  <p className="text-[#6B7280] text-sm mb-4">{current.explanation}</p>
+                ) : null}
+                <Button onClick={handleNext} className="bg-[#be1354] hover:bg-[#a80f4a] text-white">
                   Question suivante
                 </Button>
               </div>
@@ -535,8 +668,8 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
       </div>
 
       {showOptions && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111118] p-6 text-white">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-gradient-to-br from-[#be1354] via-[#F97316] to-[#be1354]">
+          <div className="w-full max-w-lg rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl p-6 text-white">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 {configStep > 1 && (
@@ -564,7 +697,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
               ))}
             </div>
             {configStep === 1 && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {[
                   { id: "qcm", label: "QCM", icon: ListChecks },
                   { id: "vrai-faux", label: "Vrai / Faux", icon: ToggleLeft },
@@ -578,16 +711,16 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                       setQuizType(type.id as typeof quizType);
                       setConfigStep(2);
                     }}
-                    className="rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all p-4 flex flex-col items-center justify-between h-32"
+                    className="rounded-2xl border border-white/20 bg-white/10 hover:bg-white/20 transition-all p-5 flex flex-col items-center justify-between h-36"
                   >
-                    <type.icon className="h-8 w-8 text-violet-400" />
-                    <span className="text-sm text-white/90">{type.label}</span>
+                    <type.icon className="h-9 w-9 text-white" />
+                    <span className="text-base font-semibold text-white">{type.label}</span>
                   </button>
                 ))}
               </div>
             )}
             {configStep === 2 && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {[5, 10, 15, 20].map((count) => (
                   <button
                     key={count}
@@ -596,15 +729,15 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                       setQuestionCount(count);
                       setConfigStep(3);
                     }}
-                    className="rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all p-4 flex flex-col items-center justify-center h-32"
+                    className="rounded-2xl border border-white/20 bg-white/10 hover:bg-white/20 transition-all p-5 flex flex-col items-center justify-center h-36"
                   >
-                    <span className="text-4xl font-bold text-violet-400">{count}</span>
+                    <span className="text-4xl font-bold text-white">{count}</span>
                   </button>
                 ))}
               </div>
             )}
             {configStep === 3 && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {[
                   { level: "Facile", color: "text-emerald-400", count: 1 },
                   { level: "Moyen", color: "text-blue-400", count: 2 },
@@ -619,14 +752,14 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                       setShowOptions(false);
                       generateQuiz();
                     }}
-                    className="rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all p-4 flex flex-col items-center justify-between h-32"
+                    className="rounded-2xl border border-white/20 bg-white/10 hover:bg-white/20 transition-all p-5 flex flex-col items-center justify-between h-36"
                   >
                     <div className="flex items-center gap-1">
                       {Array.from({ length: item.count }).map((_, idx) => (
                         <Zap key={idx} className={`h-5 w-5 ${item.color}`} />
                       ))}
                     </div>
-                    <span className={`text-sm font-medium ${item.color}`}>{item.level}</span>
+                    <span className={`text-base font-semibold ${item.color}`}>{item.level}</span>
                   </button>
                 ))}
               </div>

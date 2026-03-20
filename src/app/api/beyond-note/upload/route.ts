@@ -34,17 +34,12 @@ export async function POST(request: NextRequest) {
     .replace(/_{2,}/g, "_")
     .toLowerCase();
   const fileExt = sanitizedName.split(".").pop() || "jpg";
-  if (fileExt.toLowerCase() === "pages") {
-    return NextResponse.json(
-      { error: "Format .pages non supporte, exportez en PDF" },
-      { status: 400 },
-    );
-  }
   const timestamp = Date.now();
   const filePath = `${userId}/${timestamp}.${fileExt}`;
   console.log("[upload] sanitized path:", filePath);
 
-  const contentType = file.type || (fileExt.toLowerCase() === "pdf" ? "application/pdf" : undefined);
+  const fileExtLower = fileExt.toLowerCase();
+  const contentType = file.type || (fileExtLower === "pdf" ? "application/pdf" : undefined);
   const { error: uploadError } = await supabase.storage
     .from("beyond-note")
     .upload(filePath, buffer, { contentType, upsert: false });
@@ -57,7 +52,10 @@ export async function POST(request: NextRequest) {
 
   let extractedText = "";
 
-  if (file.type.startsWith("image/")) {
+  const isImage =
+    file.type?.startsWith("image/") ||
+    ["jpg", "jpeg", "png", "webp", "gif"].includes(fileExtLower);
+  if (isImage) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (apiKey) {
       try {
@@ -143,29 +141,59 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const isPdf = file.type?.includes("pdf") || fileExt.toLowerCase() === "pdf";
+  const isPdf = file.type?.includes("pdf") || fileExtLower === "pdf";
   if (!extractedText && isPdf) {
-    try {
-      const { default: pdfParse } = await import("pdf-parse");
-      const data = await pdfParse(buffer);
-      extractedText = data?.text?.trim() || "";
-    } catch (e) {
-      console.error("[upload] pdf-parse error:", e);
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey) {
+      try {
+        const { pdfToImages } = await import("pdf-img-convert");
+        const images = (await pdfToImages(buffer, { scale: 2 })) as Buffer[];
+        const pages = images.slice(0, 3);
+        const extractedPages: string[] = [];
+
+        for (const page of pages) {
+          const base64 = Buffer.from(page).toString("base64");
+          const dataUrl = `data:image/png;base64,${base64}`;
+          const res = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${openaiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text:
+                        "Extrait tout le texte visible dans cette page PDF. " +
+                        "Garde la structure, et ne renvoie que le texte extrait.",
+                    },
+                    { type: "image_url", image_url: { url: dataUrl } },
+                  ],
+                },
+              ],
+              max_tokens: 4096,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            extractedPages.push(data?.choices?.[0]?.message?.content || "");
+          }
+        }
+
+        extractedText = extractedPages.join("\n\n").trim();
+      } catch (e) {
+        console.error("[upload] pdf vision error:", e);
+      }
     }
   }
 
   const isDocx =
-    file.type?.includes("wordprocessingml.document") || fileExt.toLowerCase() === "docx";
-  if (!extractedText && isDocx) {
-    try {
-      const mammothModule = await import("mammoth");
-      const mammoth = (mammothModule as { default?: typeof import("mammoth") }).default || mammothModule;
-      const result = await mammoth.extractRawText({ buffer });
-      extractedText = result?.value?.trim() || "";
-    } catch (e) {
-      console.error("[upload] mammoth error:", e);
-    }
-  }
+    file.type?.includes("wordprocessingml.document") || fileExtLower === "docx";
 
   if (!extractedText && (isPdf || isDocx)) {
     console.error("[upload] extraction failed", {

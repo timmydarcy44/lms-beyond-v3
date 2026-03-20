@@ -2,6 +2,8 @@
 import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
@@ -143,99 +145,48 @@ export async function POST(request: NextRequest) {
 
   const isPdf = file.type?.includes("pdf") || fileExtLower === "pdf";
   if (!extractedText && isPdf) {
-    const openaiKey = process.env.OPENAI_API_KEY;
-    if (openaiKey) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (apiKey) {
       try {
-        const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        const loadingTask = pdfjsLib.getDocument({ data: buffer, disableWorker: true });
-        const pdf = await loadingTask.promise;
-        const pageCount = Math.min(pdf.numPages || 0, 3);
-        const extractedPages: string[] = [];
-
-        const escapeXml = (value: string) =>
-          value
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&apos;");
-
-        const wrapText = (value: string, maxLength = 90) => {
-          const words = value.split(/\s+/);
-          const lines: string[] = [];
-          let current = "";
-          for (const word of words) {
-            if ((current + " " + word).trim().length > maxLength) {
-              if (current) lines.push(current.trim());
-              current = word;
-            } else {
-              current += ` ${word}`;
-            }
-          }
-          if (current.trim()) lines.push(current.trim());
-          return lines;
-        };
-
-        for (let pageIndex = 1; pageIndex <= pageCount; pageIndex += 1) {
-          const page = await pdf.getPage(pageIndex);
-          const textContent = await page.getTextContent();
-          const rawText = (textContent.items || [])
-            .map((item: any) => (item?.str ? String(item.str) : ""))
-            .join(" ")
-            .trim();
-
-          const lines = wrapText(rawText || "Page sans texte détectable.");
-          const lineHeight = 24;
-          const height = Math.max(200, 60 + lines.length * lineHeight);
-          const svg = [
-            `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="${height}">`,
-            `<rect width="100%" height="100%" fill="white"/>`,
-            ...lines.map((line, idx) => {
-              const y = 40 + idx * lineHeight;
-              return `<text x="40" y="${y}" font-family="Arial, sans-serif" font-size="18" fill="#0F1117">${escapeXml(
-                line,
-              )}</text>`;
-            }),
-            `</svg>`,
-          ].join("");
-
-          const svgBuffer = Buffer.from(svg, "utf-8");
-          const dataUrl = `data:image/svg+xml;base64,${svgBuffer.toString("base64")}`;
-
-          const res = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${openaiKey}`,
-            },
-            body: JSON.stringify({
-              model: "gpt-4o-mini",
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text:
-                        "Extrait tout le texte visible dans cette page PDF. " +
-                        "Garde la structure, et ne renvoie que le texte extrait.",
+        const base64 = buffer.toString("base64");
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-3-5-sonnet-20241022",
+            max_tokens: 4096,
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text:
+                      "Extrait tout le texte visible dans ce PDF. " +
+                      "Garde la structure et ne renvoie que le texte extrait.",
+                  },
+                  {
+                    type: "document",
+                    source: {
+                      type: "base64",
+                      media_type: "application/pdf",
+                      data: base64,
                     },
-                    { type: "image_url", image_url: { url: dataUrl } },
-                  ],
-                },
-              ],
-              max_tokens: 4096,
-            }),
-          });
-          const data = await res.json();
-          if (res.ok) {
-            extractedPages.push(data?.choices?.[0]?.message?.content || "");
-          }
-        }
+                  },
+                ],
+              },
+            ],
+          }),
+        });
 
-        extractedText = extractedPages.join("\n\n").trim();
+        const data = await res.json();
+        extractedText = data?.content?.[0]?.text || "";
       } catch (e) {
-        console.error("[upload] pdf vision error:", e);
+        console.error("[upload] claude pdf error:", e);
       }
     }
   }

@@ -374,6 +374,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
         className={`flex items-center justify-between px-6 py-4 ${
           isQuestionMode ? "border-b border-[#E8E9F0]" : "border-b border-white/10"
         }`}
+        style={{ fontFamily: "SF Pro Display, SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui" }}
       >
         <div className={`text-lg font-semibold ${isQuestionMode ? "text-[#0F1117]" : "text-white"}`}>Quiz</div>
         <div className={`flex items-center gap-4 text-sm ${isQuestionMode ? "text-[#6B7280]" : "text-white/70"}`}>
@@ -621,8 +622,11 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
             })()}
           </div>
         ) : (
-          <div className="w-full max-w-2xl">
-            <p className="text-4xl md:text-6xl font-black tracking-tight text-center mb-10 text-[#0F1117]">
+          <div
+            className="w-full max-w-2xl max-h-[70vh] overflow-y-auto pb-10"
+            style={{ fontFamily: "SF Pro Display, SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui" }}
+          >
+            <p className="text-3xl md:text-4xl font-black tracking-tight text-center mb-8 text-[#0F1117]">
               {current?.question}
             </p>
             <div className="grid grid-cols-1 gap-3">
@@ -637,7 +641,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
                       isCorrect ? "border-emerald-500 text-emerald-600" : ""
                     } ${isWrong ? "border-rose-500 text-rose-600" : ""}`}
                   >
-                    <span className="text-xl md:text-2xl font-bold">{option}</span>
+                    <span className="text-lg md:text-xl font-bold">{option}</span>
                   </Button>
                 );
               })}

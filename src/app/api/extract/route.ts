@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
   for (const modelName of models) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-    console.log("[GEMINI] Testing model: " + modelName);
+    console.log("[GEMINI] Tentative modèle: " + modelName);
 
     const response = await fetch(url, {
       method: "POST",
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (response.ok) {
-      console.log("[GEMINI] SUCCESS with: " + modelName);
+      console.log("[GEMINI] VICTOIRE avec " + modelName);
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
       return NextResponse.json({ text });
     }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         " Error: " +
         errorMessage,
     );
-    lastError = errorMessage;
+    lastError = `Status: ${response.status} Error: ${errorMessage}`;
   }
 
   return NextResponse.json({ error: lastError }, { status: 500 });

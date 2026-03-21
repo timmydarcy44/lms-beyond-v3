@@ -145,10 +145,13 @@ export async function POST(request: NextRequest) {
 
   const isPdf = file.type?.includes("pdf") || fileExtLower === "pdf";
   if (!extractedText && isPdf) {
+    let claudePdfAttempted = false;
+    let claudePdfOk = false;
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (apiKey) {
       try {
         const base64 = buffer.toString("base64");
+        claudePdfAttempted = true;
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
@@ -164,18 +167,18 @@ export async function POST(request: NextRequest) {
                 role: "user",
                 content: [
                   {
-                    type: "text",
-                    text:
-                      "Extrait tout le texte visible dans ce PDF. " +
-                      "Garde la structure et ne renvoie que le texte extrait.",
-                  },
-                  {
                     type: "document",
                     source: {
                       type: "base64",
                       media_type: "application/pdf",
                       data: base64,
                     },
+                  },
+                  {
+                    type: "text",
+                    text:
+                      "Extrait tout le texte visible dans ce PDF. " +
+                      "Garde la structure et ne renvoie que le texte extrait.",
                   },
                 ],
               },
@@ -184,10 +187,31 @@ export async function POST(request: NextRequest) {
         });
 
         const data = await res.json();
+        console.log("[Claude Debug]", JSON.stringify(data));
+        if (!res.ok) {
+          const apiMessage = data?.error?.message || "Erreur inconnue";
+          return NextResponse.json(
+            { error: `Error from Anthropic: ${apiMessage}`, code: "ANTHROPIC_ERROR" },
+            { status: res.status || 502 },
+          );
+        }
+        claudePdfOk = true;
         extractedText = data?.content?.[0]?.text || "";
       } catch (e) {
         console.error("[upload] claude pdf error:", e);
       }
+    }
+    if (claudePdfAttempted && claudePdfOk && !extractedText) {
+      return NextResponse.json(
+        { error: "PDF non lisible.", code: "EXTRACTION_FAILED" },
+        { status: 422 },
+      );
+    }
+    if (!claudePdfAttempted) {
+      return NextResponse.json(
+        { error: "Error from Anthropic: Missing API key", code: "ANTHROPIC_ERROR" },
+        { status: 500 },
+      );
     }
   }
 
@@ -201,7 +225,7 @@ export async function POST(request: NextRequest) {
       ext: fileExt,
     });
     const errorMessage = isPdf
-      ? "Extraction PDF vide ou non lisible."
+      ? "Error from Anthropic: Request failed"
       : "Extraction impossible pour ce fichier.";
     return NextResponse.json(
       { error: errorMessage, code: "EXTRACTION_FAILED" },

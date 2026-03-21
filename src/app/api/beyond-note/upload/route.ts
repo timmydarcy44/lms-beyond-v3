@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       try {
         const base64 = buffer.toString("base64");
         console.log("[Anthropic Request] Sending request with model: claude-3-5-sonnet-latest");
+        console.log("[DEPLOYMENT_CHECK] Model is now LATEST");
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {

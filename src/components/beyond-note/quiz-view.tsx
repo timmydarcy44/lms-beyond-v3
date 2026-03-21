@@ -626,7 +626,7 @@ export function QuizView({ documentId, accountType, folderId = null, onClose }: 
             className="w-full max-w-2xl max-h-[70vh] overflow-y-auto pb-10"
             style={{ fontFamily: "SF Pro Display, SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui" }}
           >
-            <p className="text-xl font-black tracking-tight leading-snug text-center mb-8 text-[#0F1117]">
+            <p className="text-xl font-black tracking-tight leading-tight text-center mb-8 text-[#0F1117]">
               {current?.question}
             </p>
             <div className="grid grid-cols-1 gap-3">

@@ -1,124 +1,49 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getServerClient } from "@/lib/supabase/server";
-import { getSession } from "@/lib/auth/session";
-
-export const maxDuration = 60;
-
-const extractWithGemini = async (prompt: string, mimeType: string, base64: string) => {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  const candidates = ["gemini-1.5-flash", "models/gemini-1.5-flash"];
-  console.log("[Gemini Debug] Payload ready");
-
-  let lastError: unknown;
-  for (const modelName of candidates) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent([
-        { text: prompt },
-        { inlineData: { data: base64, mimeType } },
-      ]);
-      return result.response.text() || "";
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError ?? new Error("Gemini error");
-};
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
-
-  const userId = session.id;
-  if (!userId) return NextResponse.json({ error: "Session invalide" }, { status: 401 });
-  console.log("[DEBUG] API Route hit by userId:", userId);
-
-  const supabase = await getServerClient();
-  if (!supabase) return NextResponse.json({ error: "Supabase non configure" }, { status: 500 });
-
   const formData = await request.formData();
-  const file = formData.get("file") as File;
-  if (!file) return NextResponse.json({ error: "Aucun fichier" }, { status: 400 });
-
-  const sourceType = (formData.get("source_type") as string) || "import";
-  console.log("[upload] file received:", {
-    name: file.name,
-    type: file.type,
-    size: file.size,
-    sourceType,
-  });
+  const file = formData.get("file") as File | null;
+  if (!file) {
+    return NextResponse.json({ error: "Aucun fichier" }, { status: 400 });
+  }
 
   const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const originalName = file.name || "photo.jpg";
-  const sanitizedName = originalName
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .replace(/_{2,}/g, "_")
-    .toLowerCase();
-  const fileExt = sanitizedName.split(".").pop() || "jpg";
-  const fileExtLower = fileExt.toLowerCase();
-  const timestamp = Date.now();
-  const filePath = `${userId}/${timestamp}.${fileExt}`;
-  console.log("[upload] sanitized path:", filePath);
+  const base64Data = Buffer.from(arrayBuffer).toString("base64");
 
-  const contentType = file.type || (fileExtLower === "pdf" ? "application/pdf" : undefined);
-  const { error: uploadError } = await supabase.storage
-    .from("beyond-note")
-    .upload(filePath, buffer, { contentType, upsert: false });
-
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "GEMINI_API_KEY manquante" }, { status: 500 });
   }
 
-  const { data: urlData } = supabase.storage.from("beyond-note").getPublicUrl(filePath);
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: "Extrait le texte de ce PDF." },
+              { inlineData: { mimeType: "application/pdf", data: base64Data } },
+            ],
+          },
+        ],
+      }),
+    },
+  );
 
-  let extractedText = "";
-  const isPdf = file.type?.includes("pdf") || fileExtLower === "pdf";
+  console.log("[GEMINI] Payload sent to V1 Stable");
 
-  try {
-    const base64 = buffer.toString("base64");
-    const mimeType = isPdf
-      ? "application/pdf"
-      : file.type || "application/octet-stream";
-    const prompt = isPdf
-      ? "Extrait tout le texte visible, garde la structure, et ne renvoie que le texte extrait."
-      : "Extrait tout le texte visible dans cette image, garde la structure, et ne renvoie que le texte extrait.";
-    extractedText = await extractWithGemini(prompt, mimeType, base64);
-    if (extractedText) {
-      console.log("[Gemini Debug] Extraction succeeded");
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Erreur Gemini";
-    return NextResponse.json({ error: message }, { status: 500 });
+  if (!response.ok) {
+    const errorBody = await response.text();
+    return NextResponse.json({ error: errorBody || "Erreur Gemini" }, { status: 500 });
   }
 
-  if (!extractedText) {
-    return NextResponse.json(
-      { error: "Extraction impossible pour ce fichier.", code: "EXTRACTION_FAILED" },
-      { status: 422 },
-    );
-  }
+  const data = (await response.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
 
-  const { data: doc, error: dbError } = await supabase
-    .from("beyond_note_documents")
-    .insert({
-      user_id: userId,
-      file_name: originalName,
-      file_url: urlData.publicUrl,
-      file_type: file.type,
-      file_size: file.size,
-      extracted_text: extractedText || null,
-      extraction_status: extractedText ? "done" : "pending",
-      source_type: sourceType,
-    })
-    .select()
-    .single();
-
-  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
-
-  return NextResponse.json({ success: true, document: doc });
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  return NextResponse.json({ text });
 }

@@ -15,12 +15,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY manquante" }, { status: 500 });
   }
 
-  const models = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-1.5-flash"];
-  let lastError = "";
+  const models = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-pro"];
+  let lastError = "Erreur Gemini";
 
-  for (const model of models) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    console.log("Full URL called:", url.replace(apiKey, "HIDDEN"));
+  for (const modelName of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    console.log("[GEMINI] Testing model: " + modelName);
 
     const response = await fetch(url, {
       method: "POST",
@@ -37,21 +37,30 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    console.log("[GEMINI] Payload sent to V1 Stable");
-
-    if (!response.ok) {
-      lastError = await response.text();
-      continue;
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
     }
 
-    const data = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
+    if (response.ok) {
+      console.log("[GEMINI] SUCCESS with: " + modelName);
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      return NextResponse.json({ text });
+    }
 
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    console.log("[GEMINI] Model success:", model);
-    return NextResponse.json({ text });
+    const errorMessage = data?.error?.message || "Erreur Gemini";
+    console.error(
+      "[GEMINI] FAILED " +
+        modelName +
+        " Status: " +
+        response.status +
+        " Error: " +
+        errorMessage,
+    );
+    lastError = errorMessage;
   }
 
-  return NextResponse.json({ error: lastError || "Erreur Gemini" }, { status: 500 });
+  return NextResponse.json({ error: lastError }, { status: 500 });
 }

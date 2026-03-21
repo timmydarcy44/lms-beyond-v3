@@ -410,7 +410,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       // 1. Upload du fichier pour extraire le texte
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await fetch("/api/extract", {
+      const uploadRes = await fetch("/api/beyond-note/upload", {
         method: "POST",
         body: formData,
       });

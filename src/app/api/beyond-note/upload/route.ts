@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (apiKey) {
       try {
         const base64 = buffer.toString("base64");
-        console.log("[Anthropic Request] Sending request with model: claude-3-haiku-20240307");
+        console.log("[Anthropic Request] Sending request with model: claude-3-5-sonnet-latest");
         console.log("[DEPLOYMENT_CHECK] Model is now LATEST");
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: "claude-3-haiku-20240307",
+            model: "claude-3-5-sonnet-20241022",
             max_tokens: 1024,
             messages: [
               {
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: "claude-3-haiku-20240307",
+            model: "claude-3-5-sonnet-20241022",
             max_tokens: 4096,
             messages: [
               {

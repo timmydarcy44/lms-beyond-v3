@@ -188,6 +188,7 @@ export async function POST(request: NextRequest) {
 
         const data = await res.json();
         console.log("[Claude Debug]", JSON.stringify(data));
+        console.log("[Anthropic Debug] Status:", res.status, "Error:", JSON.stringify(data?.error));
         if (!res.ok) {
           const apiMessage = data?.error?.message || "Erreur inconnue";
           return NextResponse.json(

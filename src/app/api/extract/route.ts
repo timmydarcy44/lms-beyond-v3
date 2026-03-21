@@ -7,13 +7,24 @@ export const maxDuration = 60;
 
 const extractWithGemini = async (prompt: string, mimeType: string, base64: string) => {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const candidates = ["gemini-1.5-flash", "models/gemini-1.5-flash"];
   console.log("[Gemini Debug] Payload ready");
-  const result = await model.generateContent([
-    { text: prompt },
-    { inlineData: { data: base64, mimeType } },
-  ]);
-  return result.response.text() || "";
+
+  let lastError: unknown;
+  for (const modelName of candidates) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent([
+        { text: prompt },
+        { inlineData: { data: base64, mimeType } },
+      ]);
+      return result.response.text() || "";
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new Error("Gemini error");
 };
 
 export async function POST(request: NextRequest) {
@@ -77,6 +88,9 @@ export async function POST(request: NextRequest) {
       ? "Extrait tout le texte visible, garde la structure, et ne renvoie que le texte extrait."
       : "Extrait tout le texte visible dans cette image, garde la structure, et ne renvoie que le texte extrait.";
     extractedText = await extractWithGemini(prompt, mimeType, base64);
+    if (extractedText) {
+      console.log("[Gemini Debug] Extraction succeeded");
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur Gemini";
     return NextResponse.json({ error: message }, { status: 500 });

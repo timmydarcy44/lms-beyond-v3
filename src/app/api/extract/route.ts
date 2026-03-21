@@ -15,9 +15,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY manquante" }, { status: 500 });
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
+  const models = ["gemini-1.5-pro", "gemini-1.0-pro"];
+  let lastError = "";
+
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    console.log("Full URL called:", url.replace(apiKey, "HIDDEN"));
+
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -30,20 +35,22 @@ export async function POST(request: NextRequest) {
           },
         ],
       }),
-    },
-  );
+    });
 
-  console.log("[GEMINI] Payload sent to V1 Stable");
+    console.log("[GEMINI] Payload sent to V1 Stable");
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    return NextResponse.json({ error: errorBody || "Erreur Gemini" }, { status: 500 });
+    if (!response.ok) {
+      lastError = await response.text();
+      continue;
+    }
+
+    const data = (await response.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    return NextResponse.json({ text });
   }
 
-  const data = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  return NextResponse.json({ text });
+  return NextResponse.json({ error: lastError || "Erreur Gemini" }, { status: 500 });
 }

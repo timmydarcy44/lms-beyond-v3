@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
 
   const extractFromDocument = async () => {
     console.log("[ANTHROPIC] Tentative avec Sonnet");
+    console.log("[ANTHROPIC] Envoi du PDF natif...");
     const response = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
       max_tokens: 4000,
@@ -92,44 +93,15 @@ export async function POST(request: NextRequest) {
     return response;
   };
 
-  const extractFromText = async (text: string) => {
-    console.log("[ANTHROPIC] Tentative fallback texte");
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 4000,
-      messages: [
-        {
-          role: "user",
-          content: [{ type: "text", text: `${PROMPT}\n\nContenu:\n${text}` }],
-        },
-      ],
-    });
-    console.log("[ANTHROPIC] Response:", response);
-    return response;
-  };
-
   let extractedText = "";
+  let extractionStatus: "done" | "pending" = "done";
   try {
     const response = await extractFromDocument();
     extractedText = getTextFromResponse(response);
   } catch (error) {
     console.error("[ANTHROPIC ERROR]:", error);
-    try {
-      const { default: pdfParse } = await import("pdf-parse");
-      const parsed = await pdfParse(buffer);
-      const response = await extractFromText(parsed?.text || "");
-      extractedText = getTextFromResponse(response);
-    } catch (fallbackError) {
-      console.error("[ANTHROPIC ERROR]:", fallbackError);
-      return NextResponse.json({ error: "Erreur Anthropic" }, { status: 500 });
-    }
-  }
-
-  if (!extractedText) {
-    return NextResponse.json(
-      { error: "Extraction impossible pour ce fichier.", code: "EXTRACTION_FAILED" },
-      { status: 422 },
-    );
+    extractedText = "Extraction en cours...";
+    extractionStatus = "pending";
   }
 
   const { data: doc, error: dbError } = await supabase
@@ -140,8 +112,8 @@ export async function POST(request: NextRequest) {
       file_url: urlData.publicUrl,
       file_type: file.type,
       file_size: file.size,
-      extracted_text: extractedText,
-      extraction_status: "done",
+      extracted_text: extractedText || "Extraction en cours...",
+      extraction_status: extractionStatus,
       source_type: sourceType,
       ...(folderId ? { folder_id: folderId } : {}),
     })

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ export default function BeyondNoteDocumentRoute() {
   const [loading, setLoading] = useState(true);
   const [document, setDocument] = useState<Document | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -41,6 +42,12 @@ export default function BeyondNoteDocumentRoute() {
           return;
         }
         setDocument(doc);
+        if (doc.extracted_text === "Extraction en cours...") {
+          if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+          refreshTimeoutRef.current = setTimeout(() => {
+            loadDocument();
+          }, 5000);
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Erreur serveur";
         setError(message);
@@ -50,6 +57,9 @@ export default function BeyondNoteDocumentRoute() {
       }
     };
     loadDocument();
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    };
   }, [documentId]);
 
   if (!documentId) {

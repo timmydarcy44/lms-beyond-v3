@@ -6,12 +6,9 @@ import { getSession } from "@/lib/auth/session";
 export const maxDuration = 60;
 
 const extractWithGemini = async (prompt: string, mimeType: string, base64: string) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY manquante");
-  }
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  console.log("[Gemini Debug] Payload ready");
   const result = await model.generateContent([
     { text: prompt },
     { inlineData: { data: base64, mimeType } },

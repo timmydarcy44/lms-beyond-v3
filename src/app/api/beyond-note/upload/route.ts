@@ -5,8 +5,7 @@ import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 60;
 
-const PROMPT =
-  "Extrait tout le texte de ce document PDF. Conserve la structure des tableaux en utilisant le format Markdown.";
+const PROMPT = "Extrait uniquement le texte brut du PDF, sans ajout ni reformulation.";
 
 const getTextFromResponse = (response: Anthropic.Messages.Message) => {
   const textBlock = response.content?.find((item) => item.type === "text") as
@@ -17,6 +16,7 @@ const getTextFromResponse = (response: Anthropic.Messages.Message) => {
 };
 
 export async function POST(request: NextRequest) {
+  console.log("Clé Anthropic présente:", !!process.env.ANTHROPIC_API_KEY);
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
@@ -93,17 +93,6 @@ export async function POST(request: NextRequest) {
     return response;
   };
 
-  let extractedText = "";
-  let extractionStatus: "done" | "pending" = "done";
-  try {
-    const response = await extractFromDocument();
-    extractedText = getTextFromResponse(response);
-  } catch (error) {
-    console.error("[ANTHROPIC ERROR]:", error);
-    extractedText = "Extraction en cours...";
-    extractionStatus = "pending";
-  }
-
   const { data: doc, error: dbError } = await supabase
     .from("beyond_note_documents")
     .insert({
@@ -112,8 +101,8 @@ export async function POST(request: NextRequest) {
       file_url: urlData.publicUrl,
       file_type: file.type,
       file_size: file.size,
-      extracted_text: extractedText || "Extraction en cours...",
-      extraction_status: extractionStatus,
+      extracted_text: "Extraction en cours...",
+      extraction_status: "pending",
       source_type: sourceType,
       ...(folderId ? { folder_id: folderId } : {}),
     })
@@ -122,5 +111,35 @@ export async function POST(request: NextRequest) {
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
-  return NextResponse.json({ success: true, document: doc });
+  try {
+    const response = await extractFromDocument();
+    const extractedText = getTextFromResponse(response);
+    const { data: updatedDoc, error: updateError } = await supabase
+      .from("beyond_note_documents")
+      .update({
+        extracted_text: extractedText || "",
+        extraction_status: extractedText ? "done" : "pending",
+      })
+      .eq("id", doc.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("[ANTHROPIC ERROR]:", updateError);
+      return NextResponse.json({ success: true, document: doc });
+    }
+
+    return NextResponse.json({ success: true, document: updatedDoc });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur Anthropic";
+    console.error("[ANTHROPIC ERROR]:", error);
+    await supabase
+      .from("beyond_note_documents")
+      .update({
+        extracted_text: `ERREUR CLAUDE: ${message}`,
+        extraction_status: "error",
+      })
+      .eq("id", doc.id);
+    return NextResponse.json({ success: true, document: doc });
+  }
 }

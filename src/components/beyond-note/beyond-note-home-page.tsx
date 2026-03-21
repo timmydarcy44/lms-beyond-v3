@@ -324,7 +324,7 @@ export function BeyondNoteHomePage() {
         formData.append("folder_id", folderId);
       }
 
-      const res = await fetch("/api/beyond-note/upload", {
+      const res = await fetch("/api/extract", {
         method: "POST",
         body: formData,
       });

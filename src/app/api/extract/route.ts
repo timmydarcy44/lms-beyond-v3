@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY manquante" }, { status: 500 });
   }
 
-  const models = ["gemini-1.5-pro", "gemini-1.0-pro"];
+  const models = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-1.5-flash"];
   let lastError = "";
 
   for (const model of models) {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
           {
             parts: [
               { text: "Extrait le texte de ce PDF." },
-              { inlineData: { mimeType: "application/pdf", data: base64Data } },
+              { inline_data: { mime_type: "application/pdf", data: base64Data } },
             ],
           },
         ],
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     };
 
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("[GEMINI] Model success:", model);
     return NextResponse.json({ text });
   }
 

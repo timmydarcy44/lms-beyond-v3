@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
 
   const userId = session.id;
   if (!userId) return NextResponse.json({ error: "Session invalide" }, { status: 401 });
+  console.log("[DEBUG] API Route hit by userId:", userId);
 
   const supabase = await getServerClient();
   if (!supabase) return NextResponse.json({ error: "Supabase non configure" }, { status: 500 });
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     if (apiKey) {
       try {
         const base64 = buffer.toString("base64");
-        console.log("[Anthropic Request] Sending request with model: claude-3-5-sonnet-latest");
+        console.log("[Anthropic Request] Sending request with model: claude-3-5-sonnet-20241022");
         console.log("[DEPLOYMENT_CHECK] Model is now LATEST");
         console.log("[DEBUG API] Request body sent to Anthropic");
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: "claude-3-5-sonnet-latest",
+            model: "claude-3-5-sonnet-20241022",
             max_tokens: 1024,
             messages: [
               {

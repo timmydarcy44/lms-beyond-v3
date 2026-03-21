@@ -10,57 +10,67 @@ export async function POST(request: NextRequest) {
   const arrayBuffer = await file.arrayBuffer();
   const base64Data = Buffer.from(arrayBuffer).toString("base64");
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY manquante" }, { status: 500 });
+    return NextResponse.json({ error: "ANTHROPIC_API_KEY manquante" }, { status: 500 });
   }
 
-  const models = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-pro"];
-  let lastError = "Erreur Gemini";
+  console.log("[ANTHROPIC] Tentative avec Sonnet");
 
-  for (const modelName of models) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-    console.log("[GEMINI] Tentative modèle: " + modelName);
-
-    const response = await fetch(url, {
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
       body: JSON.stringify({
-        contents: [
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 4000,
+        messages: [
           {
-            parts: [
-              { text: "Extrait le texte de ce PDF." },
-              { inline_data: { mime_type: "application/pdf", data: base64Data } },
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: base64Data,
+                },
+              },
+              {
+                type: "text",
+                text:
+                  "Extrait tout le texte de ce document PDF. Conserve la structure des tableaux en utilisant le format Markdown.",
+              },
             ],
           },
         ],
       }),
     });
 
-    let data: any = null;
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
+    const data = (await response.json()) as {
+      content?: Array<{ type?: string; text?: string }>;
+      error?: { message?: string };
+    };
+
+    if (!response.ok) {
+      console.error("[ANTHROPIC] Error:", data?.error?.message || "Erreur Anthropic");
+      return NextResponse.json(
+        { error: data?.error?.message || "Erreur Anthropic" },
+        { status: 500 },
+      );
     }
 
-    if (response.ok) {
-      console.log("[GEMINI] VICTOIRE avec " + modelName);
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      return NextResponse.json({ text });
-    }
-
-    const errorMessage = data?.error?.message || "Erreur Gemini";
-    console.error(
-      "[GEMINI] FAILED " +
-        modelName +
-        " Status: " +
-        response.status +
-        " Error: " +
-        errorMessage,
-    );
-    lastError = `Status: ${response.status} Error: ${errorMessage}`;
+    const text =
+      data?.content?.find((item) => item.type === "text")?.text ||
+      data?.content?.[0]?.text ||
+      "";
+    return NextResponse.json({ text });
+  } catch (error) {
+    console.error("[ANTHROPIC] Error:", error);
+    return NextResponse.json({ error: "Erreur Anthropic" }, { status: 500 });
   }
-
-  return NextResponse.json({ error: lastError }, { status: 500 });
 }

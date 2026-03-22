@@ -1,24 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 60;
 
-const PROMPT = "Extrait uniquement le texte principal en Markdown, sans intro ni conclusion.";
-
 export async function POST(request: NextRequest) {
-  console.log(
-    "Clé Google Generative AI présente:",
-    !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-  );
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const supabase = await getServerClient();
   if (!supabase) return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
 
-  console.log("[CRITICAL] Route Upload recréée - Tentative Gemini");
+  console.log("[CRITICAL] Route Upload recréée - Extraction locale");
 
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
@@ -29,16 +22,6 @@ export async function POST(request: NextRequest) {
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const base64Data = buffer.toString("base64");
-
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "GOOGLE_GENERATIVE_AI_API_KEY manquante" },
-      { status: 500 },
-    );
-  }
-
   const originalName = file.name || "document.pdf";
   const sanitizedName = originalName
     .normalize("NFD")
@@ -62,11 +45,21 @@ export async function POST(request: NextRequest) {
 
   const { data: urlData } = supabase.storage.from("beyond-note").getPublicUrl(filePath);
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    generationConfig: { maxOutputTokens: 2000 },
-  });
+  let extractedText = "";
+  let extractionStatus: "done" | "error" = "done";
+  try {
+    const { default: pdfParse } = await import("pdf-parse");
+    const parsed = await pdfParse(buffer);
+    extractedText = typeof parsed?.text === "string" ? parsed.text : "";
+    if (!extractedText) {
+      extractedText = "Erreur lecture locale";
+      extractionStatus = "error";
+    }
+  } catch (error) {
+    console.error("[LOCAL EXTRACT ERROR]:", error);
+    extractedText = "Erreur lecture locale";
+    extractionStatus = "error";
+  }
 
   const { data: doc, error: dbError } = await supabase
     .from("beyond_note_documents")
@@ -76,8 +69,8 @@ export async function POST(request: NextRequest) {
       file_url: urlData.publicUrl,
       file_type: file.type,
       file_size: file.size,
-      extracted_text: "Extraction en cours...",
-      extraction_status: "pending",
+      extracted_text: extractedText,
+      extraction_status: extractionStatus,
       source_type: sourceType,
       ...(folderId ? { folder_id: folderId } : {}),
     })
@@ -86,39 +79,5 @@ export async function POST(request: NextRequest) {
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
-  try {
-    console.log("DÉBUT extraction Gemini");
-    const result = await model.generateContent([
-      { text: PROMPT },
-      { inlineData: { data: base64Data, mimeType: "application/pdf" } },
-    ]);
-    console.log("FIN extraction Gemini");
-    const extractedText = result.response.text() || "";
-    const { data: updatedDoc, error: updateError } = await supabase
-      .from("beyond_note_documents")
-      .update({
-        extracted_text: extractedText || "",
-        extraction_status: extractedText ? "done" : "pending",
-      })
-      .eq("id", doc.id)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error("[GEMINI ERROR]:", updateError);
-      return NextResponse.json({ success: true, document: doc });
-    }
-
-    return NextResponse.json({ success: true, document: updatedDoc });
-  } catch (error) {
-    console.error("[GEMINI ERROR]:", error);
-    await supabase
-      .from("beyond_note_documents")
-      .update({
-        extracted_text: "Analyse en cours, rafraîchissez dans quelques instants.",
-        extraction_status: "pending",
-      })
-      .eq("id", doc.id);
-    return NextResponse.json({ success: true, document: doc });
-  }
+  return NextResponse.json({ success: true, document: doc });
 }

@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 60;
 const PROMPT =
-  "Extrait le texte du document, genere un titre et un resume court. Reponds uniquement en JSON: {\"title\":\"...\",\"summary\":\"...\",\"text\":\"...\"}.";
+  "Retourne uniquement un JSON avec title, summary et full_text. Pas de texte autour.";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -18,9 +18,6 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "Aucun fichier" }, { status: 400 });
-
-  const sourceType = (formData.get("source_type") as string) || "import";
-  const folderId = (formData.get("folder_id") as string) || null;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const base64Data = buffer.toString("base64");
@@ -44,6 +41,7 @@ export async function POST(request: NextRequest) {
   if (uploadError) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
   }
+  console.log("UPLOAD_OK");
 
   const { data: signedData, error: signedError } = await supabase.storage
     .from("PDF_documents")
@@ -93,18 +91,11 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const message = data?.error?.message || "Erreur Gemini";
-      await supabase
-        .from("beyond_note_documents")
-        .update({
-          extracted_text: "",
-          extraction_status: "error",
-        })
-        .eq("id", doc.id);
       return NextResponse.json({ error: message }, { status: 500 });
     }
 
     const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    let parsed: { title?: string; summary?: string; text?: string } = {};
+    let parsed: { title?: string; summary?: string; full_text?: string } = {};
     try {
       const match = rawText.match(/\{[\s\S]*\}/);
       parsed = match ? JSON.parse(match[0]) : JSON.parse(rawText);
@@ -112,28 +103,25 @@ export async function POST(request: NextRequest) {
       parsed = {};
     }
 
-    const extractedText = parsed.text || rawText;
+    const extractedText = parsed.full_text || rawText;
     const title = parsed.title || originalName;
     const summary = parsed.summary || "";
+    console.log("GEMINI_OK");
 
     const { data: doc, error: dbError } = await supabase
-      .from("documents")
+      .from("beyond_note_documents")
       .insert({
-        user_id: session.id,
-        file_name: originalName,
-        file_url: fileUrl,
-        file_type: file.type,
-        file_size: file.size,
-        extracted_text: extractedText,
         title,
         summary,
-        source_type: sourceType,
-        ...(folderId ? { folder_id: folderId } : {}),
+        content: extractedText,
+        user_id: session.id,
+        file_url: fileUrl,
       })
       .select()
       .single();
 
     if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+    console.log("DB_OK");
 
     return NextResponse.json({ success: true, document: doc });
   } catch (error) {

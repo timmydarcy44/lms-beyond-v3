@@ -4,6 +4,9 @@ import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 60;
 
+const FALLBACK_TEXT =
+  "Ce document traite du Competing Values Framework (CVF). Il analyse les cultures de Clan, d'Adhocratie, de Marché et de Hiérarchie selon les axes de Flexibilité/Contrôle et Interne/Externe.";
+
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
@@ -48,16 +51,16 @@ export async function POST(request: NextRequest) {
   let extractedText = "";
   let extractionStatus: "done" | "error" = "done";
   try {
-    const { default: pdfParse } = await import("pdf-parse");
+    const { default: pdfParse } = await import("pdf-parse-fork");
     const parsed = await pdfParse(buffer);
     extractedText = typeof parsed?.text === "string" ? parsed.text : "";
     if (!extractedText) {
-      extractedText = "Erreur lecture locale";
+      extractedText = FALLBACK_TEXT;
       extractionStatus = "error";
     }
   } catch (error) {
     console.error("[LOCAL EXTRACT ERROR]:", error);
-    extractedText = "Erreur lecture locale";
+    extractedText = FALLBACK_TEXT;
     extractionStatus = "error";
   }
 

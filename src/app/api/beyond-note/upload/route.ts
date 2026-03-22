@@ -4,9 +4,6 @@ import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 60;
-
-const FALLBACK_TEXT =
-  "Ce document traite du Competing Values Framework (CVF). Il analyse les cultures de Clan, d'Adhocratie, de Marché et de Hiérarchie selon les axes de Flexibilité/Contrôle et Interne/Externe.";
 const PROMPT =
   "Extrait tout le texte de ce document PDF en gardant la structure Markdown et les tableaux.";
 
@@ -17,7 +14,7 @@ export async function POST(request: NextRequest) {
   const supabase = await getServerClient();
   if (!supabase) return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
 
-  console.log("[CRITICAL] Route Upload recréée - Extraction locale");
+  console.log("[CRITICAL] Route Upload recréée - Extraction Gemini");
 
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
@@ -78,7 +75,10 @@ export async function POST(request: NextRequest) {
       throw new Error("GOOGLE_GENERATIVE_AI_API_KEY manquante");
     }
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel(
+      { model: "gemini-1.5-flash" },
+      { apiVersion: "v1" },
+    );
 
     const result = await model.generateContent([
       { text: PROMPT },
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("beyond_note_documents")
       .update({
-        extracted_text: text || FALLBACK_TEXT,
+        extracted_text: text || "",
         extraction_status: text ? "done" : "error",
       })
       .eq("id", doc.id);
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("beyond_note_documents")
       .update({
-        extracted_text: FALLBACK_TEXT,
+        extracted_text: "",
         extraction_status: "error",
       })
       .eq("id", doc.id);

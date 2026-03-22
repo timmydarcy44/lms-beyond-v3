@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
   const contentType = file.type || (fileExtLower === "pdf" ? "application/pdf" : undefined);
   const { error: uploadError } = await supabase.storage
-    .from("documents")
+    .from("PDF_documents")
     .upload(filePath, buffer, { contentType, upsert: false });
 
   if (uploadError) {
@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: signedData, error: signedError } = await supabase.storage
-    .from("documents")
+    .from("PDF_documents")
     .createSignedUrl(filePath, 60 * 60);
-  const { data: publicData } = supabase.storage.from("documents").getPublicUrl(filePath);
+  const { data: publicData } = supabase.storage.from("PDF_documents").getPublicUrl(filePath);
   const fileUrl = signedData?.signedUrl || publicData.publicUrl;
   if (signedError) {
     console.warn("[upload] signed url error:", signedError.message);

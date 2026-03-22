@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 60;
 
-const PROMPT = "Extrait uniquement le texte brut du PDF, sans ajout ni reformulation.";
-
-const getTextFromResponse = (response: Anthropic.Messages.Message) => {
-  const textBlock = response.content?.find((item) => item.type === "text") as
-    | { text?: string }
-    | undefined;
-  const firstBlock = response.content?.[0] as { text?: string } | undefined;
-  return textBlock?.text || firstBlock?.text || "";
-};
+const PROMPT =
+  "Extrait tout le texte de ce document PDF en gardant la structure Markdown et les tableaux.";
 
 export async function POST(request: NextRequest) {
-  console.log("Clé Anthropic présente:", !!process.env.ANTHROPIC_API_KEY);
+  console.log(
+    "Clé Google Generative AI présente:",
+    !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  );
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
@@ -36,9 +32,12 @@ export async function POST(request: NextRequest) {
   const buffer = Buffer.from(arrayBuffer);
   const base64Data = buffer.toString("base64");
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY manquante" }, { status: 500 });
+    return NextResponse.json(
+      { error: "GOOGLE_GENERATIVE_AI_API_KEY manquante" },
+      { status: 500 },
+    );
   }
 
   const originalName = file.name || "document.pdf";
@@ -64,34 +63,8 @@ export async function POST(request: NextRequest) {
 
   const { data: urlData } = supabase.storage.from("beyond-note").getPublicUrl(filePath);
 
-  const anthropic = new Anthropic({ apiKey });
-
-  const extractFromDocument = async () => {
-    console.log("[ANTHROPIC] Tentative avec Sonnet");
-    console.log("[ANTHROPIC] Envoi du PDF natif...");
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-latest",
-      max_tokens: 4000,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: base64Data,
-              },
-            },
-            { type: "text", text: PROMPT },
-          ],
-        },
-      ],
-    });
-    console.log("[ANTHROPIC] Response:", response);
-    return response;
-  };
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const { data: doc, error: dbError } = await supabase
     .from("beyond_note_documents")
@@ -112,8 +85,11 @@ export async function POST(request: NextRequest) {
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   try {
-    const response = await extractFromDocument();
-    const extractedText = getTextFromResponse(response);
+    const result = await model.generateContent([
+      { text: PROMPT },
+      { inlineData: { data: base64Data, mimeType: "application/pdf" } },
+    ]);
+    const extractedText = result.response.text() || "";
     const { data: updatedDoc, error: updateError } = await supabase
       .from("beyond_note_documents")
       .update({
@@ -125,19 +101,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (updateError) {
-      console.error("[ANTHROPIC ERROR]:", updateError);
+      console.error("[GEMINI ERROR]:", updateError);
       return NextResponse.json({ success: true, document: doc });
     }
 
     return NextResponse.json({ success: true, document: updatedDoc });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Erreur Anthropic";
-    console.error("[ANTHROPIC ERROR]:", error);
+    console.error("[GEMINI ERROR]:", error);
     await supabase
       .from("beyond_note_documents")
       .update({
-        extracted_text: `ERREUR CLAUDE: ${message}`,
-        extraction_status: "error",
+        extracted_text: "Analyse en cours, rafraîchissez dans quelques instants.",
+        extraction_status: "pending",
       })
       .eq("id", doc.id);
     return NextResponse.json({ success: true, document: doc });

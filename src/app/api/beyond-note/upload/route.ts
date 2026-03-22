@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   const supabase = await getServerClient();
   if (!supabase) return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
 
-  console.log("[CRITICAL] Route Upload recréée - Tentative Anthropic");
+  console.log("[CRITICAL] Route Upload recréée - Tentative Gemini");
 
   const formData = await request.formData();
   const file = formData.get("file") as File | null;

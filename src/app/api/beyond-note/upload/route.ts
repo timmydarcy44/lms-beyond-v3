@@ -5,8 +5,7 @@ import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 60;
 
-const PROMPT =
-  "Extrait tout le texte de ce document PDF en gardant la structure Markdown et les tableaux.";
+const PROMPT = "Extrait uniquement le texte principal en Markdown, sans intro ni conclusion.";
 
 export async function POST(request: NextRequest) {
   console.log(
@@ -64,7 +63,10 @@ export async function POST(request: NextRequest) {
   const { data: urlData } = supabase.storage.from("beyond-note").getPublicUrl(filePath);
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    generationConfig: { maxOutputTokens: 2000 },
+  });
 
   const { data: doc, error: dbError } = await supabase
     .from("beyond_note_documents")
@@ -85,10 +87,12 @@ export async function POST(request: NextRequest) {
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   try {
+    console.log("DÉBUT extraction Gemini");
     const result = await model.generateContent([
       { text: PROMPT },
       { inlineData: { data: base64Data, mimeType: "application/pdf" } },
     ]);
+    console.log("FIN extraction Gemini");
     const extractedText = result.response.text() || "";
     const { data: updatedDoc, error: updateError } = await supabase
       .from("beyond_note_documents")

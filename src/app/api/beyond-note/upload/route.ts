@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
   const sourceType = (formData.get("source_type") as string) || "import";
   const folderId = (formData.get("folder_id") as string) || null;
 
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const base64Data = Buffer.from(await file.arrayBuffer()).toString("base64");
+  const buffer = Buffer.from(base64Data, "base64");
   const originalName = file.name || "document.pdf";
   const sanitizedName = originalName
     .normalize("NFD")
@@ -81,11 +81,11 @@ export async function POST(request: NextRequest) {
     );
 
     const result = await model.generateContent([
-      { text: PROMPT },
+      "Extraits tout le texte de ce document PDF de manière structurée.",
       {
-        fileData: {
-          fileUri: urlData.publicUrl,
-          mimeType: file.type || "application/pdf",
+        inlineData: {
+          data: base64Data,
+          mimeType: "application/pdf",
         },
       },
     ]);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 
@@ -6,6 +7,8 @@ export const maxDuration = 60;
 
 const FALLBACK_TEXT =
   "Ce document traite du Competing Values Framework (CVF). Il analyse les cultures de Clan, d'Adhocratie, de Marché et de Hiérarchie selon les axes de Flexibilité/Contrôle et Interne/Externe.";
+const PROMPT =
+  "Extrait tout le texte de ce document PDF en gardant la structure Markdown et les tableaux.";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -48,21 +51,8 @@ export async function POST(request: NextRequest) {
 
   const { data: urlData } = supabase.storage.from("beyond-note").getPublicUrl(filePath);
 
-  let extractedText = "";
-  let extractionStatus: "done" | "error" = "done";
-  try {
-    const { default: pdfParse } = await import("pdf-parse-fork");
-    const parsed = await pdfParse(buffer);
-    extractedText = typeof parsed?.text === "string" ? parsed.text : "";
-    if (!extractedText) {
-      extractedText = FALLBACK_TEXT;
-      extractionStatus = "error";
-    }
-  } catch (error) {
-    console.error("[LOCAL EXTRACT ERROR]:", error);
-    extractedText = FALLBACK_TEXT;
-    extractionStatus = "error";
-  }
+  let extractedText = "Extraction en cours...";
+  let extractionStatus: "done" | "error" | "pending" = "pending";
 
   const { data: doc, error: dbError } = await supabase
     .from("beyond_note_documents")
@@ -81,6 +71,42 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+
+  try {
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GOOGLE_GENERATIVE_AI_API_KEY manquante");
+    }
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const result = await model.generateContent([
+      { text: PROMPT },
+      {
+        fileData: {
+          fileUri: urlData.publicUrl,
+          mimeType: file.type || "application/pdf",
+        },
+      },
+    ]);
+    const text = result.response.text() || "";
+    await supabase
+      .from("beyond_note_documents")
+      .update({
+        extracted_text: text || FALLBACK_TEXT,
+        extraction_status: text ? "done" : "error",
+      })
+      .eq("id", doc.id);
+  } catch (error) {
+    console.error("[GEMINI ERROR]:", error);
+    await supabase
+      .from("beyond_note_documents")
+      .update({
+        extracted_text: FALLBACK_TEXT,
+        extraction_status: "error",
+      })
+      .eq("id", doc.id);
+  }
 
   return NextResponse.json({ success: true, document: doc });
 }

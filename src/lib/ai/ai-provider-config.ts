@@ -24,38 +24,17 @@ export type AIFeature =
  * "both" = OpenAI priorité, Anthropic fallback
  */
 export const AI_PROVIDER_CONFIG: Record<AIFeature, AIProvider> = {
-  // Questions miroirs : OpenAI priorité, Anthropic fallback
-  "mirror-question": "both",
-  
-  // Analyse résultats tests : Anthropic uniquement
-  "analyze-test-results": "anthropic",
-  
-  // Génération chapitres : OpenAI uniquement
+  "mirror-question": "openai",
+  "analyze-test-results": "openai",
   "generate-chapter": "openai",
-  
-  // Génération flashcards : Anthropic uniquement
-  "generate-flashcards": "anthropic",
-  
-  // Transformation texte : Anthropic uniquement
-  "transform-text": "anthropic",
-  
-  // Feedback tests : Anthropic uniquement
-  "generate-test-feedback": "anthropic",
-  
-  // Assistant leçons : OpenAI uniquement
+  "generate-flashcards": "openai",
+  "transform-text": "openai",
+  "generate-test-feedback": "openai",
   "lesson-assistant": "openai",
-  
-  // Atelier IA questions : OpenAI uniquement
   "question-workshop": "openai",
-  
-  // Structure formation : Anthropic uniquement
-  "generate-course-structure": "anthropic",
-  
-  // Création chapitres : Anthropic uniquement
-  "create-chapter": "anthropic",
-  
-  // Création sous-chapitres : Anthropic uniquement
-  "create-subchapter": "anthropic",
+  "generate-course-structure": "openai",
+  "create-chapter": "openai",
+  "create-subchapter": "openai",
 };
 
 /**

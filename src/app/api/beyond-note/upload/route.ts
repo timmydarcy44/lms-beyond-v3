@@ -3,8 +3,6 @@ import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 60;
-const PROMPT =
-  "Retourne uniquement un JSON avec title, summary et full_text. Pas de texte autour.";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -20,7 +18,6 @@ export async function POST(request: NextRequest) {
   if (!file) return NextResponse.json({ error: "Aucun fichier" }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const base64Data = buffer.toString("base64");
   const originalName = file.name || "document.pdf";
   const sanitizedName = originalName
     .normalize("NFD")
@@ -52,79 +49,20 @@ export async function POST(request: NextRequest) {
     console.warn("[upload] signed url error:", signedError.message);
   }
 
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "GOOGLE_GENERATIVE_AI_API_KEY manquante" },
-      { status: 500 },
-    );
-  }
+  const { data: doc, error: dbError } = await supabase
+    .from("beyond_note_documents")
+    .insert({
+      title: originalName,
+      summary: "Analyse désactivée pour maintenance",
+      content: "Texte non extrait",
+      status: "success",
+      user_id: session.id,
+      file_url: fileUrl,
+    })
+    .select()
+    .single();
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: PROMPT },
-                {
-                  inlineData: {
-                    data: base64Data,
-                    mimeType: "application/pdf",
-                  },
-                },
-              ],
-            },
-          ],
-        }),
-      },
-    );
-
-    const data = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      error?: { message?: string };
-    };
-
-    if (!response.ok) {
-      const message = data?.error?.message || "Erreur Gemini";
-      return NextResponse.json({ error: message }, { status: 500 });
-    }
-
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    let parsed: { title?: string; summary?: string; full_text?: string } = {};
-    try {
-      const match = rawText.match(/\{[\s\S]*\}/);
-      parsed = match ? JSON.parse(match[0]) : JSON.parse(rawText);
-    } catch {
-      parsed = {};
-    }
-
-    const extractedText = parsed.full_text || rawText;
-    const title = parsed.title || originalName;
-    console.log("GEMINI_OK");
-
-    const { data: doc, error: dbError } = await supabase
-      .from("beyond_note_documents")
-      .insert({
-        title,
-        summary: parsed.summary || "",
-        content: extractedText,
-        user_id: session.id,
-        file_url: fileUrl,
-      })
-      .select()
-      .single();
-
-    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
-    console.log("DB_OK");
-    return NextResponse.json({ success: true, document: doc });
-  } catch (error) {
-    console.error("[GEMINI ERROR]:", error);
-    const message = error instanceof Error ? error.message : "Erreur Gemini";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+  console.log("DB_OK");
+  return NextResponse.json({ success: true, document: doc });
 }

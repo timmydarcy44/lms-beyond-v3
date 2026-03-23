@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
       try {
         const resendResult = await sendEmail({
           to: email,
+          from: "Nevo <hello@nevo-app.fr>",
           subject: "Nevo - Confirmation",
           html: `<p>Votre paiement Stripe a bien été reçu. Si vous ne recevez pas le Magic Link, contactez le support.</p>`,
         });

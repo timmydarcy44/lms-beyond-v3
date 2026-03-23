@@ -89,7 +89,7 @@ export function TransformationModal({
     setCurrentAction(action);
 
     try {
-      const response = await fetch("/api/beyond-note/ai-action", {
+      const response = await fetch("/api/nevo/ai-action", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -109,7 +109,7 @@ export function TransformationModal({
       setResult(data.result);
 
       // Stocker le résultat
-      const storeResponse = await fetch("/api/beyond-note/store-result", {
+      const storeResponse = await fetch("/api/nevo/store-result", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

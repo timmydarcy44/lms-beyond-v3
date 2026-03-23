@@ -113,7 +113,7 @@ export function DictationModal({ isOpen, onClose, onComplete }: DictationModalPr
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/beyond-note/upload-text", {
+      const res = await fetch("/api/nevo/upload-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

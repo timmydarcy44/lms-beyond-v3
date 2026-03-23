@@ -152,7 +152,7 @@ export function BeyondNoteHomePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/beyond-note/documents");
+      const res = await fetch("/api/nevo/documents");
       if (!res.ok) {
         throw new Error("Erreur lors du chargement");
       }
@@ -169,7 +169,7 @@ export function BeyondNoteHomePage() {
 
   const loadFolders = async () => {
     try {
-      const res = await fetch("/api/beyond-note/folders");
+      const res = await fetch("/api/nevo/folders");
       if (!res.ok) return;
       const data = await res.json();
       setFolders(data.folders || []);
@@ -245,7 +245,7 @@ export function BeyondNoteHomePage() {
     }
     const loadAccount = async () => {
       try {
-        const response = await fetch("/api/beyond-note/account");
+        const response = await fetch("/api/nevo/account");
         if (!response.ok) return;
         const data = await response.json();
         if (!data?.account?.onboarding_completed) {
@@ -260,7 +260,7 @@ export function BeyondNoteHomePage() {
 
   const handleSkipOnboarding = async () => {
     setOnboardingStep(0);
-    await fetch("/api/beyond-note/account", {
+    await fetch("/api/nevo/account", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ onboarding_completed: true }),
@@ -269,7 +269,7 @@ export function BeyondNoteHomePage() {
 
   const handleCompleteOnboarding = async () => {
     setOnboardingStep(0);
-    await fetch("/api/beyond-note/account", {
+    await fetch("/api/nevo/account", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ onboarding_completed: true, onboarding_step: 4 }),
@@ -284,7 +284,7 @@ export function BeyondNoteHomePage() {
       }
       setLoadingQuizStats(true);
       try {
-        const res = await fetch(`/api/beyond-note/quiz-sessions?folder_id=${activeFolderId}`);
+        const res = await fetch(`/api/nevo/quiz-sessions?folder_id=${activeFolderId}`);
         if (!res.ok) throw new Error("Erreur lors du chargement des stats");
         const data = await res.json();
         setQuizStats(
@@ -324,7 +324,7 @@ export function BeyondNoteHomePage() {
         formData.append("folder_id", folderId);
       }
 
-      const res = await fetch("/api/beyond-note/upload", {
+      const res = await fetch("/api/nevo/upload", {
         method: "POST",
         body: formData,
       });
@@ -361,7 +361,7 @@ export function BeyondNoteHomePage() {
   const handleCreateNote = async () => {
     console.log("[handleCreateNote] start");
     try {
-      const res = await fetch("/api/beyond-note/upload-text", {
+      const res = await fetch("/api/nevo/upload-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -385,7 +385,7 @@ export function BeyondNoteHomePage() {
     const name = newFolderName.trim();
     if (!name) return;
     try {
-      const res = await fetch("/api/beyond-note/folders", {
+      const res = await fetch("/api/nevo/folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -415,7 +415,7 @@ export function BeyondNoteHomePage() {
     const confirmed = window.confirm("Supprimer ce dossier ? Cette action est définitive.");
     if (!confirmed) return;
     try {
-      const res = await fetch(`/api/beyond-note/folders?id=${folderId}`, {
+      const res = await fetch(`/api/nevo/folders?id=${folderId}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -439,7 +439,7 @@ export function BeyondNoteHomePage() {
     const confirmed = window.confirm("Supprimer ce document ? Cette action est définitive.");
     if (!confirmed) return;
     try {
-      const res = await fetch(`/api/beyond-note/documents/${documentId}`, {
+      const res = await fetch(`/api/nevo/documents/${documentId}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -455,7 +455,7 @@ export function BeyondNoteHomePage() {
 
   const handleMoveDocument = async (documentId: string, folderId: string | null) => {
     try {
-      const res = await fetch(`/api/beyond-note/documents/${documentId}`, {
+      const res = await fetch(`/api/nevo/documents/${documentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folder_id: folderId }),
@@ -480,7 +480,7 @@ export function BeyondNoteHomePage() {
       return;
     }
     try {
-      const res = await fetch(`/api/beyond-note/documents/${documentId}`, {
+      const res = await fetch(`/api/nevo/documents/${documentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_name: newName }),

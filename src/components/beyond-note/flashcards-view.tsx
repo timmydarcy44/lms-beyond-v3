@@ -29,7 +29,7 @@ export function FlashcardsView({ documentId, accountType, onClose }: FlashcardsV
     const loadFlashcards = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/beyond-note/flashcards?document_id=${documentId}`);
+        const res = await fetch(`/api/nevo/flashcards?document_id=${documentId}`);
         if (!res.ok) throw new Error("Erreur lors du chargement des flashcards");
         const data = await res.json();
         setFlashcards(data.flashcards || []);
@@ -47,7 +47,7 @@ export function FlashcardsView({ documentId, accountType, onClose }: FlashcardsV
   const generateFlashcards = async () => {
     setGenerating(true);
     try {
-      const docRes = await fetch("/api/beyond-note/documents");
+      const docRes = await fetch("/api/nevo/documents");
       if (!docRes.ok) throw new Error("Impossible de récupérer le document");
       const docData = await docRes.json();
       const doc = docData.documents?.find((d: { id: string; extracted_text: string | null }) => d.id === documentId);
@@ -56,7 +56,7 @@ export function FlashcardsView({ documentId, accountType, onClose }: FlashcardsV
         return;
       }
 
-      const aiRes = await fetch("/api/beyond-note/ai-action", {
+      const aiRes = await fetch("/api/nevo/ai-action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId, action: "flashcards", text: doc.extracted_text }),
@@ -71,7 +71,7 @@ export function FlashcardsView({ documentId, accountType, onClose }: FlashcardsV
         throw new Error("Réponse IA invalide");
       }
 
-      const saveRes = await fetch("/api/beyond-note/flashcards", {
+      const saveRes = await fetch("/api/nevo/flashcards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ document_id: documentId, flashcards: parsed }),
@@ -91,7 +91,7 @@ export function FlashcardsView({ documentId, accountType, onClose }: FlashcardsV
 
   const handleReview = async (cardId: string, decision: "known" | "review") => {
     try {
-      await fetch("/api/beyond-note/flashcards", {
+      await fetch("/api/nevo/flashcards", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: cardId, decision }),

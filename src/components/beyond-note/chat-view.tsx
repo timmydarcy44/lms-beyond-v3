@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export function ChatView({
     setInput("");
     setLoading(true);
     try {
-      const res = await fetch("/api/beyond-note/chat", {
+      const res = await fetch("/api/nevo/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

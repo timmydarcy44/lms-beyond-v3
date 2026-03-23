@@ -194,7 +194,7 @@ export function NeoBubble({
           )
           .join("\n");
 
-        const res = await fetch("/api/beyond-note/chat", {
+        const res = await fetch("/api/nevo/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -245,7 +245,7 @@ export function NeoBubble({
 
     setLoading(true);
     try {
-      const res = await fetch("/api/beyond-note/chat", {
+      const res = await fetch("/api/nevo/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

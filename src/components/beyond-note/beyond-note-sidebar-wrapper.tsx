@@ -32,7 +32,7 @@ export function BeyondNoteSidebarWrapper({ isOpen, role, appearance = "default" 
     try {
       // Vérifier si l'organisation a accès à Beyond Note via API
       // Utiliser un timestamp pour éviter le cache
-      const response = await fetch(`/api/beyond-note/check-access?t=${Date.now()}`, {
+      const response = await fetch(`/api/nevo/check-access?t=${Date.now()}`, {
         cache: "no-store",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",

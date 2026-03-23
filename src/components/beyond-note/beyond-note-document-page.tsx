@@ -213,7 +213,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   useEffect(() => {
     const loadAccount = async () => {
       try {
-        const response = await fetch("/api/beyond-note/account");
+        const response = await fetch("/api/nevo/account");
         if (!response.ok) return;
         const data = await response.json();
         if (data?.account_type) {
@@ -231,7 +231,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
     if (typeof window !== "undefined") {
       localStorage.removeItem("nevo_onboarding_step");
     }
-    await fetch("/api/beyond-note/account", {
+    await fetch("/api/nevo/account", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ onboarding_completed: true }),
@@ -239,7 +239,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   };
 
   useEffect(() => {
-    fetch("/api/beyond-note/documents")
+    fetch("/api/nevo/documents")
       .then((r) => r.json())
       .then((data) => setAllDocuments(data.documents || []));
   }, []);
@@ -305,7 +305,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const loadDocument = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/beyond-note/documents`);
+      const response = await fetch(`/api/nevo/documents`);
       if (response.ok) {
         const data = await response.json();
         const doc = data.documents?.find((d: Document) => d.id === documentId);
@@ -317,7 +317,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
             const firstPage = { id: crypto.randomUUID(), content: doc.extracted_text, page_number: 1 };
             setPages([firstPage]);
           }
-          const transRes = await fetch(`/api/beyond-note/transformations?document_id=${documentId}`);
+          const transRes = await fetch(`/api/nevo/transformations?document_id=${documentId}`);
           const transData = await transRes.json();
           setTransformationsHistory(transData.transformations || []);
         } else {
@@ -361,7 +361,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
     try {
       console.log("[beyond-note] Starting transformation:", action, "Text length:", textToTransform.length);
       
-      const response = await fetch("/api/beyond-note/ai-action", {
+      const response = await fetch("/api/nevo/ai-action", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -391,7 +391,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       toast.success("Transformation terminée avec succès !");
 
       // Stocker le résultat
-      await fetch("/api/beyond-note/store-result", {
+      await fetch("/api/nevo/store-result", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -403,7 +403,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
         }),
       });
 
-      const saveRes = await fetch("/api/beyond-note/transformations", {
+      const saveRes = await fetch("/api/nevo/transformations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -432,7 +432,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       // 1. Upload du fichier pour extraire le texte
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await fetch("/api/beyond-note/upload", {
+      const uploadRes = await fetch("/api/nevo/upload", {
         method: "POST",
         body: formData,
       });
@@ -446,7 +446,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       let newText = uploadData.document?.extracted_text || "";
       if (!newText) {
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        const docRes = await fetch(`/api/beyond-note/documents?id=${newDocId}`);
+        const docRes = await fetch(`/api/nevo/documents?id=${newDocId}`);
         const docData = await docRes.json();
         newText = docData.document?.extracted_text || "";
       }
@@ -457,7 +457,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       }
 
       // 3. Supprimer le document temporaire créé par l'upload
-      await fetch(`/api/beyond-note/documents/${newDocId}`, { method: "DELETE" });
+      await fetch(`/api/nevo/documents/${newDocId}`, { method: "DELETE" });
 
       // 4. Ajouter comme nouvelle page du document actuel
       const newPage = {
@@ -468,7 +468,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       const updatedPages = [...pages, newPage];
       setPages(updatedPages);
 
-      await fetch(`/api/beyond-note/documents/${documentId}`, {
+      await fetch(`/api/nevo/documents/${documentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pages: updatedPages }),
@@ -493,7 +493,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
     const updatedPages = [...pages, newPage];
     setPages(updatedPages);
 
-    await fetch(`/api/beyond-note/documents/${documentId}`, {
+    await fetch(`/api/nevo/documents/${documentId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pages: updatedPages }),
@@ -534,12 +534,12 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
     if (!newDocumentId || !document) return;
     setAddingPage(true);
     try {
-      const res = await fetch("/api/beyond-note/documents");
+      const res = await fetch("/api/nevo/documents");
       const data = await res.json();
       const newDoc = data?.documents?.find((doc: Document) => doc.id === newDocumentId);
       const newText = newDoc?.extracted_text || "";
       if (newText.trim()) {
-        const patchRes = await fetch(`/api/beyond-note/documents/${document.id}`, {
+        const patchRes = await fetch(`/api/nevo/documents/${document.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -552,7 +552,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
           toast.success("Page ajoutée !");
         }
       }
-      await fetch(`/api/beyond-note/documents/${newDocumentId}`, { method: "DELETE" });
+      await fetch(`/api/nevo/documents/${newDocumentId}`, { method: "DELETE" });
     } catch {
       toast.error("Impossible d'ajouter la dictée");
     } finally {
@@ -579,7 +579,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       return;
     }
     try {
-      const res = await fetch(`/api/beyond-note/documents/${document.id}`, {
+      const res = await fetch(`/api/nevo/documents/${document.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_name: trimmed }),
@@ -608,7 +608,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/beyond-note/update-document", {
+      const response = await fetch("/api/nevo/update-document", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

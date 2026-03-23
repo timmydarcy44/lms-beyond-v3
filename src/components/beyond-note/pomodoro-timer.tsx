@@ -56,7 +56,7 @@ export function PomodoroTimer({ onComplete, onClose, documentId }: PomodoroTimer
       setStatus("break");
       setSecondsLeft(BREAK_MINUTES * 60);
       onComplete();
-      void fetch("/api/beyond-note/pomodoro-sessions", {
+      void fetch("/api/nevo/pomodoro-sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

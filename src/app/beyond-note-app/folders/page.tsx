@@ -20,7 +20,7 @@ export default function BeyondNoteFoldersPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/api/beyond-note/folders");
+        const res = await fetch("/api/nevo/folders");
         if (!res.ok) return;
         const data = await res.json();
         setFolders(data.folders || []);

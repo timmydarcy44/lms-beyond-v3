@@ -96,7 +96,7 @@ export function AIActionsPanel({ documentId, extractedText }: AIActionsPanelProp
     setCurrentAction(action);
 
     try {
-      const response = await fetch("/api/beyond-note/ai-action", {
+      const response = await fetch("/api/nevo/ai-action", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

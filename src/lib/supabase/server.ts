@@ -4,9 +4,6 @@ import { cookies } from "next/headers";
 
 import { env } from "@/lib/env";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
 const createServerSupabaseClient = async (url: string, anonKey: string) => {
   const cookieStore = await cookies();
   return createServerClient(url, anonKey, {
@@ -33,7 +30,7 @@ const createServerSupabaseClient = async (url: string, anonKey: string) => {
 };
 
 export const getServerClient = async () => {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  if (!env.supabaseUrl || !env.supabaseAnonKey) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
         "[supabase] NEXT_PUBLIC_SUPABASE_URL/_ANON_KEY manquants: getServerClient() retourne null",
@@ -42,7 +39,7 @@ export const getServerClient = async () => {
     return null;
   }
 
-  return createServerSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return createServerSupabaseClient(env.supabaseUrl, env.supabaseAnonKey);
 };
 
 export const createSupabaseServerClient = async () => {
@@ -56,8 +53,7 @@ export const createSupabaseServerClient = async () => {
 };
 
 export const getServiceRoleClient = () => {
-  const serviceKey = env.supabaseServiceKey || process.env.SUPABASE_SERVICE_ROLE_KEY;
-
+  const serviceKey = env.supabaseServiceKey;
   if (!env.supabaseUrl || !serviceKey) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/resend-client";
-import { getAccessEmailTemplateWithLink } from "@/lib/email-templates";
+import { getNevoMagicLinkEmail } from "@/lib/email-templates";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (profileUpsertOk) {
-      const { subject, html } = getAccessEmailTemplateWithLink(magicLinkUrl, "Nevo");
+      const { subject, html } = getNevoMagicLinkEmail(magicLinkUrl);
       try {
         const resendResult = await sendEmail({
           to: email,

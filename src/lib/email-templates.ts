@@ -50,6 +50,30 @@ export function getAccessEmailTemplateWithLink(confirmationUrl: string, siteName
   };
 }
 
+export function getNevoMagicLinkEmail(confirmationUrl: string) {
+  return {
+    subject: "Accédez à votre bibliothèque Nevo",
+    html: `
+      <div style="background:#f8f9fc; padding:32px 16px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; color:#0f1117;">
+        <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px; box-shadow:0 6px 24px rgba(15,17,23,0.08); text-align:center;">
+          <img src="${LOGO_URL}" alt="Nevo" width="120" style="display:block; margin:0 auto 24px; height:auto;" />
+          <h1 style="font-size:22px; font-weight:600; margin:0 0 12px;">Bienvenue sur Nevo</h1>
+          <p style="font-size:16px; line-height:1.6; margin:0 0 24px; color:#4b5563;">
+            Votre abonnement est actif. Vous pouvez accéder immédiatement à votre bibliothèque.
+          </p>
+          <a href="${confirmationUrl}" style="display:inline-block; padding:12px 22px; background:#ff4d00; color:#ffffff; text-decoration:none; border-radius:999px; font-size:15px; font-weight:600;">
+            Accéder à ma bibliothèque
+          </a>
+          <p style="font-size:12px; color:#9ca3af; margin:24px 0 0;">
+            Si le bouton ne fonctionne pas, copiez ce lien :<br/>
+            <span style="word-break:break-all;">${confirmationUrl}</span>
+          </p>
+        </div>
+      </div>
+    `,
+  };
+}
+
 export function getWelcomeEmailTemplate() {
   const { baseUrl, siteName } = getSiteBranding();
   return {

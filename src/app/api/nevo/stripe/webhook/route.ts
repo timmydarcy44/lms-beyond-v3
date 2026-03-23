@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     console.log("DESTINATAIRE:", email, "MAGIC LINK ENVOYÉ");
 
     try {
-      const supabase = await getServiceRoleClientOrFallback();
+      const supabase = getServiceRoleClient();
       if (!supabase) {
         throw new Error("Supabase not configured");
       }

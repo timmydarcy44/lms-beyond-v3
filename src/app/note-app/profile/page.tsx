@@ -11,6 +11,7 @@ export default function NoteAppProfilePage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [educationLevel, setEducationLevel] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +29,12 @@ export default function NoteAppProfilePage() {
       setEmail(userData.user.email || "");
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, last_name")
+        .select("first_name, last_name, education_level")
         .eq("id", userData.user.id)
         .maybeSingle();
       setFirstName(profile?.first_name || "");
       setLastName(profile?.last_name || "");
+      setEducationLevel(profile?.education_level || "");
     };
     loadProfile();
   }, [supabase]);
@@ -46,12 +48,18 @@ export default function NoteAppProfilePage() {
       setError("Merci de renseigner prénom et nom.");
       return;
     }
-    if (password || confirm) {
-      if (password.length < 8) {
+    const nextPassword = password.trim();
+    const nextConfirm = confirm.trim();
+    if (nextPassword || nextConfirm) {
+      if (!nextPassword || !nextConfirm) {
+        setError("Merci de renseigner le mot de passe et sa confirmation.");
+        return;
+      }
+      if (nextPassword.length < 8) {
         setError("Le mot de passe doit contenir au moins 8 caractères.");
         return;
       }
-      if (password !== confirm) {
+      if (nextPassword !== nextConfirm) {
         setError("Les mots de passe ne correspondent pas.");
         return;
       }
@@ -67,7 +75,11 @@ export default function NoteAppProfilePage() {
 
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ first_name: firstName.trim(), last_name: lastName.trim() })
+        .update({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          education_level: educationLevel || null,
+        })
         .eq("id", userData.user.id);
 
       if (profileError) {
@@ -75,8 +87,8 @@ export default function NoteAppProfilePage() {
         return;
       }
 
-      if (password) {
-        const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (nextPassword) {
+        const { error: updateError } = await supabase.auth.updateUser({ password: nextPassword });
         if (updateError) {
           setError(updateError.message);
           return;
@@ -152,7 +164,7 @@ export default function NoteAppProfilePage() {
               Gérez vos informations personnelles et votre mot de passe.
             </p>
 
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSave} className="space-y-4" autoComplete="off">
               <div className="grid md:grid-cols-2 gap-4">
                 <input
                   type="text"
@@ -177,20 +189,46 @@ export default function NoteAppProfilePage() {
                 disabled
                 className="w-full rounded-2xl border border-[#E8E9F0] bg-[#F3F4F8] px-4 py-3 text-sm text-[#6B7280]"
               />
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
+                  Niveau d'étude
+                </label>
+                <select
+                  value={educationLevel}
+                  onChange={(e) => setEducationLevel(e.target.value)}
+                  className="w-full rounded-2xl border border-[#E8E9F0] bg-white px-4 py-3 text-sm outline-none focus:border-[#be1354]"
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="primaire">🧒 Primaire</option>
+                  <option value="college">🎒 Collège</option>
+                  <option value="lycee">📚 Lycée</option>
+                  <option value="etudiant">🎓 Étudiant (LMD)</option>
+                  <option value="doctorat">🔬 Doctorat / Recherche</option>
+                  <option value="professionnel">💼 Professionnel</option>
+                </select>
+                <p className="text-xs text-[#6B7280]">
+                  Nevo et Neo s&apos;adaptent à votre niveau pour vous proposer un contenu et un coaching sur mesure.
+                </p>
+              </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Nouveau mot de passe"
+                placeholder="Laisser vide pour ne pas modifier"
+                autoComplete="new-password"
                 className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
               />
               <input
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Confirmation du mot de passe"
+                placeholder="Laisser vide pour ne pas modifier"
+                autoComplete="new-password"
                 className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
               />
+              <p className="text-xs text-[#6B7280]">
+                Laissez vide pour conserver votre mot de passe actuel.
+              </p>
               {error ? <p className="text-xs text-red-500">{error}</p> : null}
               {success ? <p className="text-xs text-green-600">{success}</p> : null}
               <button

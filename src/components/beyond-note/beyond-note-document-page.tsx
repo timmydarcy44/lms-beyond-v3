@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import type { ComponentPropsWithoutRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
@@ -48,6 +48,8 @@ import { DictationModal } from "@/components/beyond-note/dictation-modal";
 import { LoadingOverlay, SuccessOverlay } from "@/components/beyond-note/loading-overlay";
 import { NeoBubble } from "@/components/beyond-note/jarvis-bubble";
 import { OnboardingOverlay } from "@/components/beyond-note/onboarding-overlay";
+import { AudioButton } from "@/components/beyond-note/audio-button";
+import { TryButton } from "@/components/beyond-note/try-button";
 
 type AIAction = 
   | "revision-sheet"
@@ -183,6 +185,26 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const selectionToolbarRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const { isDyslexiaMode } = useDyslexiaMode();
+  const isLanguageContent = (input: string) => {
+    const normalized = input.toLowerCase();
+    if (normalized.includes("mot original") || normalized.includes("traduction")) return true;
+    if (normalized.includes("vocabulaire") || normalized.includes("grammaire")) return true;
+    if (normalized.includes("|")) return true;
+    if (/^[a-z].+\s[-–—]\s.+/im.test(normalized)) return true;
+    const englishWordHits = normalized.match(/\b(the|and|is|are|to|from|with|without|because)\b/g);
+    return (englishWordHits?.length || 0) >= 3;
+  };
+
+  const languageMode = useMemo(() => {
+    const textSources = [
+      currentText,
+      document?.extracted_text,
+      ...(pages?.map((page) => page.content) || []),
+    ]
+      .filter(Boolean)
+      .join("\n");
+    return isLanguageContent(textSources);
+  }, [currentText, document?.extracted_text, pages]);
 
   useEffect(() => {
     loadDocument();
@@ -1014,6 +1036,12 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                       onMouseUp={handleTextSelection}
                       onTouchEnd={handleTextSelection}
                     >
+                      {languageMode ? (
+                        <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                          ✨ Mode Langues détecté : Survolez les éléments pour écouter la prononciation ou vous entraîner
+                          au micro.
+                        </div>
+                      ) : null}
                       {pages.map((page, index) => {
                         const actionToUse: AIAction = currentAction ?? "revision-sheet";
                         return (
@@ -1056,6 +1084,12 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                     onMouseUp={handleTextSelection}
                     onTouchEnd={handleTextSelection}
                   >
+                    {languageMode ? (
+                      <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                        ✨ Mode Langues détecté : Survolez les éléments pour écouter la prononciation ou vous entraîner
+                        au micro.
+                      </div>
+                    ) : null}
                     {pages.map((page, index) => {
                       const actionToUse: AIAction = currentAction ?? "revision-sheet";
                       return (
@@ -1632,11 +1666,121 @@ function renderMarkdown(text: string) {
     ol: (props: ComponentPropsWithoutRef<"ol">) => (
       <ol className="ml-5 list-decimal space-y-2" {...props} />
     ),
-    li: (props: ComponentPropsWithoutRef<"li">) => <li className="text-[#374151]" {...props} />,
+    li: (props: ComponentPropsWithoutRef<"li">) => (
+      <li className="text-[#374151]">{renderListItemWithControls(props.children)}</li>
+    ),
     strong: (props: ComponentPropsWithoutRef<"strong">) => (
       <strong className="font-semibold text-[#0F1117]" {...props} />
     ),
     em: (props: ComponentPropsWithoutRef<"em">) => <em className="italic" {...props} />,
+  };
+
+  const extractTextFromNodes = (nodes: React.ReactNode): string => {
+    return React.Children.toArray(nodes)
+      .map((child) => {
+        if (typeof child === "string") return child;
+        if (React.isValidElement(child)) {
+          return extractTextFromNodes(child.props.children);
+        }
+        return "";
+      })
+      .join("");
+  };
+
+  const renderListItemWithControls = (children: React.ReactNode) => {
+    const text = extractTextFromNodes(children);
+    const target = extractEnglishTarget(text);
+    const canTry = target && isSentenceCandidate(target);
+
+    return (
+      <div className="group flex items-start gap-2">
+        <span className="flex-1">{children}</span>
+          {target ? <AudioButton text={target} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" /> : null}
+          {canTry ? <TryButton targetText={target} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" /> : null}
+      </div>
+    );
+  };
+
+  const sanitizeInlineText = (input: string) =>
+    input
+      .replace(/^[-*+]\s+/, "")
+      .replace(/^\d+\.\s+/, "")
+      .replace(/[`*_~]/g, "")
+      .trim();
+
+  const extractEnglishTarget = (rawText: string) => {
+    const text = sanitizeInlineText(rawText);
+    if (!text) return "";
+
+    if (text.includes("|")) {
+      const [left] = text.split("|");
+      return sanitizeInlineText(left);
+    }
+
+    if (text.includes(" - ")) {
+      const [left] = text.split(" - ");
+      return sanitizeInlineText(left);
+    }
+
+    const quoteMatch = text.match(/"([^"]+)"/);
+    if (quoteMatch?.[1]) return quoteMatch[1].trim();
+
+    const singleQuoteMatch = text.match(/'([^']+)'/);
+    if (singleQuoteMatch?.[1]) return singleQuoteMatch[1].trim();
+
+    return text;
+  };
+
+  const isSentenceCandidate = (text: string) => {
+    const words = text.split(/\s+/).filter(Boolean);
+    return words.length >= 3;
+  };
+
+  const buildMarkdownComponents = (mode: "default" | "def" | "ex") => {
+    const withAudio = mode !== "default";
+    const withTry = mode === "ex";
+
+    const renderWithControls = (children: React.ReactNode, text: string, baseClass: string) => {
+      const target = withAudio ? extractEnglishTarget(text) : "";
+      const canTry = withTry && target && isSentenceCandidate(target);
+
+      return (
+        <div className="group flex items-start gap-2">
+          <p className={baseClass}>{children}</p>
+          {target ? (
+            <AudioButton text={target} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
+          ) : null}
+          {canTry ? (
+            <TryButton
+              targetText={target}
+              className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+            />
+          ) : null}
+        </div>
+      );
+    };
+
+    return {
+      ...baseComponents,
+      p: (props: ComponentPropsWithoutRef<"p">) => {
+        const text = extractTextFromNodes(props.children);
+        if (!withAudio) {
+          return <p className="text-[#374151] mb-2 leading-relaxed" {...props} />;
+        }
+        return renderWithControls(props.children, text, "text-[#374151] mb-2 leading-relaxed flex-1");
+      },
+      li: (props: ComponentPropsWithoutRef<"li">) => {
+        const text = extractTextFromNodes(props.children);
+        if (!withAudio) {
+          return <li className="text-[#374151]" {...props} />;
+        }
+        return (
+          <li className="text-[#374151]">
+            {renderWithControls(props.children, text, "text-[#374151] flex-1")}
+          </li>
+        );
+      },
+    };
   };
 
   const blocks = parseTaggedBlocks(text);
@@ -1662,9 +1806,11 @@ function renderMarkdown(text: string) {
             ? "border-l-4 border-[#be1354] bg-red-50 rounded-r-xl px-4 py-3"
             : "border-l-4 border-emerald-500 bg-emerald-50 rounded-r-xl px-4 py-3 text-emerald-800";
 
+        const mode = block.type === "ex" ? "ex" : "def";
+
         return (
           <div key={`block-${index}`} className={wrapperClass}>
-            <ReactMarkdown components={baseComponents}>{block.content}</ReactMarkdown>
+            <ReactMarkdown components={buildMarkdownComponents(mode)}>{block.content}</ReactMarkdown>
           </div>
         );
       })}

@@ -1,8 +1,7 @@
-// PRODUCTION GUARD: Do not refactor this webhook without explicit approval.
-// It triggers Magic Link email delivery via service-role OTP for paid users.
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email/resend-client";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -44,6 +43,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No email found in session" }, { status: 400 });
     }
 
+    console.log("RECU STRIPE");
+    console.log("DATA:", session.customer_details?.email || session.customer_email);
+    try {
+      const resendResult = await sendEmail({
+        to: email,
+        subject: "Nevo - Confirmation",
+        html: `<p>Votre paiement Stripe a bien été reçu. Si vous ne recevez pas le Magic Link, contactez le support.</p>`,
+      });
+      if (!resendResult.success) {
+        console.error("CRASH RESEND:", resendResult.error);
+      }
+    } catch (error) {
+      console.error("CRASH RESEND:", error);
+    }
+
     console.log("[nevo/stripe/webhook] checkout.session.completed received", {
       sessionId: session.id,
       email,
@@ -52,6 +66,9 @@ export async function POST(request: NextRequest) {
 
     const magicLinkUrl = "https://www.nevo-app.fr/note-app";
     let targetUserId = userId || null;
+    if (!targetUserId) {
+      console.warn("[nevo/stripe/webhook] Missing user_id metadata; continuing without it");
+    }
 
     try {
       console.log("[nevo/stripe/webhook] env check:", {

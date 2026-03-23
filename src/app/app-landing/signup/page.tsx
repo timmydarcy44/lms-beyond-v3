@@ -19,12 +19,28 @@ export default function LandingSignupPage() {
     lastName: "",
     email: "",
     phone: "",
+    educationLevel: "",
   });
   const [plan, setPlan] = useState<Plan>("nevo");
 
   const updateForm = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+
+  const educationLevels = [
+    { value: "cp", label: "CP" },
+    { value: "ce1", label: "CE1" },
+    { value: "ce2", label: "CE2" },
+    { value: "cm1", label: "CM1" },
+    { value: "cm2", label: "CM2" },
+    { value: "college", label: "Collège" },
+    { value: "lycee", label: "Lycée" },
+    { value: "bac+1", label: "Bac+1" },
+    { value: "bac+2", label: "Bac+2" },
+    { value: "bac+3", label: "Bac+3" },
+    { value: "bac+5", label: "Bac+5" },
+    { value: "doctorat", label: "Doctorat" },
+  ];
 
   const handleNext = () => {
     setError(null);
@@ -58,8 +74,16 @@ export default function LandingSignupPage() {
           first_name: form.firstName,
           last_name: form.lastName,
           phone: form.phone,
+          education_level: form.educationLevel || null,
         },
       });
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.id && form.educationLevel) {
+        await supabase
+          .from("profiles")
+          .update({ education_level: form.educationLevel })
+          .eq("id", userData.user.id);
+      }
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,8 +122,16 @@ export default function LandingSignupPage() {
           first_name: form.firstName,
           last_name: form.lastName,
           phone: form.phone,
+          education_level: form.educationLevel || null,
         },
       });
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.id && form.educationLevel) {
+        await supabase
+          .from("profiles")
+          .update({ education_level: form.educationLevel })
+          .eq("id", userData.user.id);
+      }
       window.location.href = "/note-app";
     } catch {
       setError("Erreur lors de la création du compte.");
@@ -183,6 +215,21 @@ export default function LandingSignupPage() {
               placeholder="Téléphone"
               className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
             />
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">Niveau d'études</label>
+              <select
+                value={form.educationLevel}
+                onChange={(e) => updateForm("educationLevel", e.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#E8E9F0] bg-white px-4 py-3 text-sm outline-none focus:border-[#be1354]"
+              >
+                <option value="">Sélectionner</option>
+                {educationLevels.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    {level.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 

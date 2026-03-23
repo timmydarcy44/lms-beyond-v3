@@ -149,35 +149,39 @@ export async function POST(request: NextRequest) {
       const d1 = new Date(sendAt.getTime() + 24 * 60 * 60 * 1000);
       const d7 = new Date(sendAt.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-      const { error: scheduleError } = await supabase.from("scheduled_emails").insert([
-        {
-          email,
-          type: "welcome_h1",
-          send_at: h1.toISOString(),
-          sent: false,
-          user_id: targetUserId,
-          metadata: { stripe_session_id: session.id },
-        },
-        {
-          email,
-          type: "strategic_d1",
-          send_at: d1.toISOString(),
-          sent: false,
-          user_id: targetUserId,
-          metadata: { stripe_session_id: session.id },
-        },
-        {
-          email,
-          type: "engagement_d7",
-          send_at: d7.toISOString(),
-          sent: false,
-          user_id: targetUserId,
-          metadata: { stripe_session_id: session.id },
-        },
-      ]);
+      try {
+        const { error: scheduleError } = await supabase.from("scheduled_emails").insert([
+          {
+            email,
+            type: "welcome_h1",
+            send_at: h1.toISOString(),
+            sent: false,
+            user_id: targetUserId,
+            metadata: { stripe_session_id: session.id },
+          },
+          {
+            email,
+            type: "strategic_d1",
+            send_at: d1.toISOString(),
+            sent: false,
+            user_id: targetUserId,
+            metadata: { stripe_session_id: session.id },
+          },
+          {
+            email,
+            type: "engagement_d7",
+            send_at: d7.toISOString(),
+            sent: false,
+            user_id: targetUserId,
+            metadata: { stripe_session_id: session.id },
+          },
+        ]);
 
-      if (scheduleError) {
-        console.error("[nevo/stripe/webhook] Error scheduling emails:", scheduleError);
+        if (scheduleError) {
+          console.error("[nevo/stripe/webhook] Error scheduling emails:", scheduleError);
+        }
+      } catch (scheduleError) {
+        console.error("[nevo/stripe/webhook] Scheduled emails insert failed:", scheduleError);
       }
     } catch (supabaseError) {
       console.error("[nevo/stripe/webhook] Supabase scheduling failed:", supabaseError);

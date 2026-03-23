@@ -64,82 +64,65 @@ export async function POST(request: NextRequest) {
       hasCustomerDetails: Boolean(session.customer_details?.email),
     });
 
-    const magicLinkUrl = "https://www.nevo-app.fr/note-app";
     let targetUserId = userId || null;
     if (!targetUserId) {
       console.warn("[nevo/stripe/webhook] Missing user_id metadata; continuing without it");
     }
 
-    try {
-      console.log("[nevo/stripe/webhook] env check:", {
-        hasSupabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-        hasServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE),
-      });
+    console.log("[nevo/stripe/webhook] env check:", {
+      hasSupabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+      hasServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE),
+    });
 
-      const supabase = getServiceRoleClient();
-      if (!supabase) {
-        throw new Error("Supabase service role not configured");
-      }
-
-      if (!supabase.auth?.signInWithOtp) {
-        throw new Error("Supabase client missing auth.signInWithOtp (service role required)");
-      }
-
-      console.log("[nevo/stripe/webhook] signInWithOtp before", { email, magicLinkUrl });
-      const { data: otpData, error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: magicLinkUrl,
-          shouldCreateUser: true,
-          data: { origin: "nevo", source: "nevo_stripe" },
-        },
-      });
-
-      if (otpError) {
-        console.error("[nevo/stripe/webhook] signInWithOtp error:", {
-          message: otpError.message,
-          name: (otpError as any)?.name,
-          status: (otpError as any)?.status,
-        });
-        throw otpError;
-      }
-
-      console.log("[nevo/stripe/webhook] signInWithOtp after:", {
-        hasUser: Boolean(otpData?.user),
-        userId: otpData?.user?.id,
-      });
-
-      if (!targetUserId) {
-        const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
-        targetUserId = existingUser?.user?.id || null;
-      }
-
-      if (targetUserId) {
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .upsert({
-            id: targetUserId,
+    const supabase = getServiceRoleClient();
+    if (!supabase) {
+      console.error("[nevo/stripe/webhook] Supabase service role not configured");
+    } else {
+      // 1) Create user (admin) first
+      try {
+        if (!targetUserId) {
+          const { data: createdUser, error: createError } = await supabase.auth.admin.createUser({
             email,
-            isPremium: true,
-          })
-          .eq("id", targetUserId);
-
-        if (updateError) {
-          console.error("[nevo/stripe/webhook] Error updating profile:", updateError);
-        } else {
-      // premium enabled
+            email_confirm: true,
+            user_metadata: { origin: "nevo", source: "nevo_stripe" },
+          });
+          if (createError) {
+            console.error("[nevo/stripe/webhook] createUser error:", createError);
+          } else {
+            targetUserId = createdUser?.user?.id || null;
+          }
         }
-      } else {
-        console.warn("[nevo/stripe/webhook] No user found/created for session");
+
+        if (!targetUserId) {
+          const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
+          targetUserId = existingUser?.user?.id || null;
+        }
+
+        if (targetUserId) {
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .upsert({
+              id: targetUserId,
+              email,
+              isPremium: true,
+            })
+            .eq("id", targetUserId);
+
+          if (updateError) {
+            console.error("[nevo/stripe/webhook] Error updating profile:", updateError);
+          }
+        } else {
+          console.warn("[nevo/stripe/webhook] No user found/created for session");
+        }
+      } catch (supabaseError) {
+        console.error("[nevo/stripe/webhook] Supabase create user failed:", supabaseError);
       }
-    } catch (supabaseError) {
-      console.error("[nevo/stripe/webhook] Supabase flow failed:", supabaseError);
     }
 
-    console.log("DESTINATAIRE:", email, "MAGIC LINK ENVOYÉ");
+    console.log("DESTINATAIRE:", email, "RESEND ENVOYÉ");
 
+    // 3) Scheduled emails logging last - must never block
     try {
-      const supabase = getServiceRoleClient();
       if (!supabase) {
         throw new Error("Supabase not configured");
       }
@@ -149,42 +132,38 @@ export async function POST(request: NextRequest) {
       const d1 = new Date(sendAt.getTime() + 24 * 60 * 60 * 1000);
       const d7 = new Date(sendAt.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-      try {
-        const { error: scheduleError } = await supabase.from("scheduled_emails").insert([
-          {
-            email,
-            type: "welcome_h1",
-            send_at: h1.toISOString(),
-            sent: false,
-            user_id: targetUserId,
-            metadata: { stripe_session_id: session.id },
-          },
-          {
-            email,
-            type: "strategic_d1",
-            send_at: d1.toISOString(),
-            sent: false,
-            user_id: targetUserId,
-            metadata: { stripe_session_id: session.id },
-          },
-          {
-            email,
-            type: "engagement_d7",
-            send_at: d7.toISOString(),
-            sent: false,
-            user_id: targetUserId,
-            metadata: { stripe_session_id: session.id },
-          },
-        ]);
+      const { error: scheduleError } = await supabase.from("scheduled_emails").insert([
+        {
+          email,
+          type: "welcome_h1",
+          send_at: h1.toISOString(),
+          sent: false,
+          user_id: targetUserId,
+          metadata: { stripe_session_id: session.id },
+        },
+        {
+          email,
+          type: "strategic_d1",
+          send_at: d1.toISOString(),
+          sent: false,
+          user_id: targetUserId,
+          metadata: { stripe_session_id: session.id },
+        },
+        {
+          email,
+          type: "engagement_d7",
+          send_at: d7.toISOString(),
+          sent: false,
+          user_id: targetUserId,
+          metadata: { stripe_session_id: session.id },
+        },
+      ]);
 
-        if (scheduleError) {
-          console.error("[nevo/stripe/webhook] Error scheduling emails:", scheduleError);
-        }
-      } catch (scheduleError) {
-        console.error("[nevo/stripe/webhook] Scheduled emails insert failed:", scheduleError);
+      if (scheduleError) {
+        console.error("[nevo/stripe/webhook] Error scheduling emails:", scheduleError);
       }
-    } catch (supabaseError) {
-      console.error("[nevo/stripe/webhook] Supabase scheduling failed:", supabaseError);
+    } catch (scheduleError) {
+      console.error("[nevo/stripe/webhook] Scheduled emails insert failed:", scheduleError);
     }
   }
 

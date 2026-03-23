@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       hasCustomerDetails: Boolean(session.customer_details?.email),
     });
 
-    const magicLinkUrl = "https://www.nevo-app.fr/note-app";
+    let magicLinkUrl = "https://www.nevo-app.fr/note-app";
     let targetUserId = userId || null;
     if (!targetUserId) {
       console.warn("[nevo/stripe/webhook] Missing user_id metadata; continuing without it");
@@ -95,6 +95,20 @@ export async function POST(request: NextRequest) {
           } catch (listError) {
             console.error("[nevo/stripe/webhook] listUsers error:", listError);
           }
+        }
+
+        const customerEmail = email;
+        const { data, error } = await supabase.auth.admin.generateLink({
+          type: "magiclink",
+          email: customerEmail,
+          options: {
+            redirectTo: "https://www.nevo-app.fr/auth/callback?next=/note-app",
+          },
+        });
+        if (error) {
+          console.error("[nevo/stripe/webhook] generateLink error:", error);
+        } else if (data?.properties?.action_link) {
+          magicLinkUrl = data.properties.action_link;
         }
 
         if (targetUserId) {

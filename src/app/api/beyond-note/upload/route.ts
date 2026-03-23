@@ -105,14 +105,13 @@ export async function POST(request: NextRequest) {
 
     const extractedText = parsed.full_text || rawText;
     const title = parsed.title || originalName;
-    const summary = parsed.summary || "";
     console.log("GEMINI_OK");
 
     const { data: doc, error: dbError } = await supabase
       .from("beyond_note_documents")
       .insert({
         title,
-        summary,
+        summary: parsed.summary || "",
         content: extractedText,
         user_id: session.id,
         file_url: fileUrl,
@@ -122,7 +121,6 @@ export async function POST(request: NextRequest) {
 
     if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
     console.log("DB_OK");
-
     return NextResponse.json({ success: true, document: doc });
   } catch (error) {
     console.error("[GEMINI ERROR]:", error);

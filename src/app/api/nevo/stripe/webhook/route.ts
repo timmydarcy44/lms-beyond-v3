@@ -94,8 +94,16 @@ export async function POST(request: NextRequest) {
         }
 
         if (!targetUserId) {
-          const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
-          targetUserId = existingUser?.user?.id || null;
+          try {
+            const { data, error: listError } = await supabase.auth.admin.listUsers({
+              filters: { email },
+            });
+            if (!listError && data?.users?.length) {
+              targetUserId = data.users[0]?.id || null;
+            }
+          } catch (listError) {
+            console.error("[nevo/stripe/webhook] listUsers error:", listError);
+          }
         }
 
         if (targetUserId) {

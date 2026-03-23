@@ -5,7 +5,20 @@ import { getOpenAIClient } from "@/lib/ai/openai-client";
 
 export const maxDuration = 60;
 
-const PROMPT = "Extrait uniquement le texte brut du PDF, sans ajout ni reformulation.";
+const PROMPT = `Analyse d'abord le type de document (Maths, Langue, Histoire, etc.).
+
+Si c'est un cours de Langue (paires de vocabulaire) :
+- Ne fais pas de resume generaliste.
+- Cree une liste structuree : Mot Original | Traduction.
+- Ajoute "Exemples d'utilisation" pour les mots complexes.
+- Genere des questions de revision basees sur la traduction.
+
+Si c'est un cours de Mathematiques/Physique :
+- Extrais et mets en valeur les Formules et Theoremes.
+- Propose un Exercice d'application type (solution en fin de fiche).
+
+Sinon :
+- Fais une fiche claire avec points cles, definitions et exemples.`;
 
 export async function POST(request: NextRequest) {
   console.log("Clé OpenAI présente:", !!process.env.OPENAI_API_KEY);

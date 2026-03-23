@@ -45,18 +45,6 @@ export async function POST(request: NextRequest) {
 
     console.log("RECU STRIPE");
     console.log("DATA:", session.customer_details?.email || session.customer_email);
-    try {
-      const resendResult = await sendEmail({
-        to: email,
-        subject: "Nevo - Confirmation",
-        html: `<p>Votre paiement Stripe a bien été reçu. Si vous ne recevez pas le Magic Link, contactez le support.</p>`,
-      });
-      if (!resendResult.success) {
-        console.error("CRASH RESEND:", resendResult.error);
-      }
-    } catch (error) {
-      console.error("CRASH RESEND:", error);
-    }
 
     console.log("[nevo/stripe/webhook] checkout.session.completed received", {
       sessionId: session.id,
@@ -75,6 +63,7 @@ export async function POST(request: NextRequest) {
     });
 
     const supabase = getServiceRoleClient();
+    let profileUpsertOk = false;
     if (!supabase) {
       console.error("[nevo/stripe/webhook] Supabase service role not configured");
     } else {
@@ -97,7 +86,7 @@ export async function POST(request: NextRequest) {
           try {
             const { data, error: listError } = await supabase.auth.admin.listUsers({
               filters: { email },
-            });
+            } as any);
             if (!listError && data?.users?.length) {
               targetUserId = data.users[0]?.id || null;
             }
@@ -109,15 +98,20 @@ export async function POST(request: NextRequest) {
         if (targetUserId) {
           const { error: updateError } = await supabase
             .from("profiles")
-            .upsert({
-              id: targetUserId,
-              email,
-              isPremium: true,
-            })
-            .eq("id", targetUserId);
+            .upsert(
+              {
+                id: targetUserId,
+                email,
+                isPremium: true,
+                plan: "pro",
+              },
+              { onConflict: "id" },
+            );
 
           if (updateError) {
             console.error("[nevo/stripe/webhook] Error updating profile:", updateError);
+          } else {
+            profileUpsertOk = true;
           }
         } else {
           console.warn("[nevo/stripe/webhook] No user found/created for session");
@@ -125,6 +119,23 @@ export async function POST(request: NextRequest) {
       } catch (supabaseError) {
         console.error("[nevo/stripe/webhook] Supabase create user failed:", supabaseError);
       }
+    }
+
+    if (profileUpsertOk) {
+      try {
+        const resendResult = await sendEmail({
+          to: email,
+          subject: "Nevo - Confirmation",
+          html: `<p>Votre paiement Stripe a bien été reçu. Si vous ne recevez pas le Magic Link, contactez le support.</p>`,
+        });
+        if (!resendResult.success) {
+          console.error("CRASH RESEND:", resendResult.error);
+        }
+      } catch (error) {
+        console.error("CRASH RESEND:", error);
+      }
+    } else {
+      console.error("[nevo/stripe/webhook] Resend skipped: profile upsert failed");
     }
 
     console.log("DESTINATAIRE:", email, "RESEND ENVOYÉ");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/resend-client";
+import { getAccessEmailTemplateWithLink } from "@/lib/email-templates";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
       hasCustomerDetails: Boolean(session.customer_details?.email),
     });
 
+    const magicLinkUrl = "https://www.nevo-app.fr/note-app";
     let targetUserId = userId || null;
     if (!targetUserId) {
       console.warn("[nevo/stripe/webhook] Missing user_id metadata; continuing without it");
@@ -122,12 +124,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (profileUpsertOk) {
+      const { subject, html } = getAccessEmailTemplateWithLink(magicLinkUrl, "Nevo");
       try {
         const resendResult = await sendEmail({
           to: email,
           from: "Nevo <hello@nevo-app.fr>",
-          subject: "Nevo - Confirmation",
-          html: `<p>Votre paiement Stripe a bien été reçu. Si vous ne recevez pas le Magic Link, contactez le support.</p>`,
+          subject,
+          html,
         });
         if (!resendResult.success) {
           console.error("CRASH RESEND:", resendResult.error);

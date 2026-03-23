@@ -37,9 +37,9 @@ export async function POST(request: NextRequest) {
     
     // IMPORTANT: Vérifier si un course avec le même titre existe déjà (pour éviter les doublons)
     // Si courseId n'est pas fourni, chercher un course existant avec le même titre et le même créateur
-    let existingCourseId = courseId;
+    let courseIdToUse = courseId;
     
-    if (!existingCourseId) {
+    if (!courseIdToUse) {
       console.log("[api/courses] Aucun courseId fourni, recherche d'un course existant avec le même titre...");
       const { data: existingCourseByTitle, error: searchError } = await supabase
         .from("courses")
@@ -56,23 +56,23 @@ export async function POST(request: NextRequest) {
           title: existingCourseByTitle.title,
           creator_id: existingCourseByTitle.creator_id,
         });
-        existingCourseId = existingCourseByTitle.id;
+        courseIdToUse = existingCourseByTitle.id;
       } else {
         console.log("[api/courses] Aucun course existant trouvé, création d'un nouveau course");
       }
     }
     
     // Validation importante : si courseId est fourni (ou trouvé), vérifier qu'il existe
-    if (existingCourseId) {
+    if (courseIdToUse) {
       const { data: existingCourse, error: checkError } = await supabase
         .from("courses")
         .select("id, title, creator_id, owner_id")
-        .eq("id", existingCourseId)
+        .eq("id", courseIdToUse)
         .maybeSingle();
       
       if (checkError || !existingCourse) {
         console.error("[api/courses] CourseId fourni mais course introuvable:", {
-          courseId: existingCourseId,
+          courseId: courseIdToUse,
           error: checkError,
         });
         return NextResponse.json({ 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       // Vérifier que l'utilisateur est le créateur/propriétaire
       if (existingCourse.creator_id !== user.id && existingCourse.owner_id !== user.id) {
         console.error("[api/courses] Utilisateur non autorisé à modifier ce course:", {
-          courseId: existingCourseId,
+          courseId: courseIdToUse,
           courseCreatorId: existingCourse.creator_id,
           userId: user.id,
         });
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       .replace(/^-+|-+$/g, "");
 
     // Générer le slug final
-    const finalSlug = existingCourseId ? undefined : `${slug || 'course'}-${Date.now()}`;
+    const finalSlug = courseIdToUse ? undefined : `${slug || 'course'}-${Date.now()}`;
     
     // Vérifier d'abord si la colonne owner_id existe dans la table
     // (certaines structures utilisent owner_id au lieu de creator_id)
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Ne pas modifier creator_id lors d'une mise à jour (pour éviter les problèmes de propriété)
-    if (!existingCourseId) {
+    if (!courseIdToUse) {
       // Création : définir creator_id et owner_id
       courseData.creator_id = user.id;
       courseData.owner_id = user.id;
@@ -147,13 +147,13 @@ export async function POST(request: NextRequest) {
     }
 
     let result;
-    if (existingCourseId) {
+    if (courseIdToUse) {
       // Mise à jour d'une formation existante
       // (La vérification a déjà été faite plus haut)
       const { data: existingCourse, error: checkError } = await supabase
         .from("courses")
         .select("creator_id, owner_id, id")
-        .eq("id", existingCourseId)
+        .eq("id", resolvedCourseId)
         .single();
 
       if (checkError) {
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       }
 
       console.log("[api/courses] Mise à jour du course:", JSON.stringify({
-        courseId: existingCourseId,
+        courseId: courseIdToUse,
         existingCourseId: existingCourse?.id,
         courseData: Object.keys(courseData),
         title: courseData.title,
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase
         .from("courses")
         .update(courseData)
-        .eq("id", existingCourseId)
+        .eq("id", courseIdToUse)
         .select()
         .single();
 

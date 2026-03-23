@@ -1,29 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { getServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { getOpenAIClient } from "@/lib/ai/openai-client";
 
 export const maxDuration = 60;
 
 const PROMPT = "Extrait uniquement le texte brut du PDF, sans ajout ni reformulation.";
 
-const getTextFromResponse = (response: Anthropic.Messages.Message) => {
-  const textBlock = response.content?.find((item) => item.type === "text") as
-    | { text?: string }
-    | undefined;
-  const firstBlock = response.content?.[0] as { text?: string } | undefined;
-  return textBlock?.text || firstBlock?.text || "";
-};
-
 export async function POST(request: NextRequest) {
-  console.log("Clé Anthropic présente:", !!process.env.ANTHROPIC_API_KEY);
+  console.log("Clé OpenAI présente:", !!process.env.OPENAI_API_KEY);
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const supabase = await getServerClient();
   if (!supabase) return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
 
-  console.log("[CRITICAL] Route Upload recréée - Tentative Anthropic");
+  console.log("[CRITICAL] Route Upload - Analyse OpenAI");
 
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
@@ -36,9 +28,9 @@ export async function POST(request: NextRequest) {
   const buffer = Buffer.from(arrayBuffer);
   const base64Data = buffer.toString("base64");
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY manquante" }, { status: 500 });
+  const openai = getOpenAIClient();
+  if (!openai) {
+    return NextResponse.json({ error: "OPENAI_API_KEY manquante" }, { status: 500 });
   }
 
   const originalName = file.name || "document.pdf";
@@ -64,33 +56,22 @@ export async function POST(request: NextRequest) {
 
   const { data: urlData } = supabase.storage.from("beyond-note").getPublicUrl(filePath);
 
-  const anthropic = new Anthropic({ apiKey });
-
   const extractFromDocument = async () => {
-    console.log("[ANTHROPIC] Tentative avec Sonnet");
-    console.log("[ANTHROPIC] Envoi du PDF natif...");
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-latest",
-      max_tokens: 4000,
+    const dataUrl = `data:${file.type || "application/pdf"};base64,${base64Data}`;
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
           content: [
-            {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: base64Data,
-              },
-            },
             { type: "text", text: PROMPT },
+            { type: "image_url", image_url: { url: dataUrl } },
           ],
         },
       ],
+      max_tokens: 4000,
     });
-    console.log("[ANTHROPIC] Response:", response);
-    return response;
+    return response.choices[0]?.message?.content || "";
   };
 
   const { data: doc, error: dbError } = await supabase
@@ -112,8 +93,7 @@ export async function POST(request: NextRequest) {
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   try {
-    const response = await extractFromDocument();
-    const extractedText = getTextFromResponse(response);
+    const extractedText = await extractFromDocument();
     const { data: updatedDoc, error: updateError } = await supabase
       .from("beyond_note_documents")
       .update({
@@ -125,18 +105,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (updateError) {
-      console.error("[ANTHROPIC ERROR]:", updateError);
+      console.error("[OPENAI ERROR]:", updateError);
       return NextResponse.json({ success: true, document: doc });
     }
 
     return NextResponse.json({ success: true, document: updatedDoc });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Erreur Anthropic";
-    console.error("[ANTHROPIC ERROR]:", error);
+    const message = error instanceof Error ? error.message : "Erreur OpenAI";
+    console.error("[OPENAI ERROR]:", error);
     await supabase
       .from("beyond_note_documents")
       .update({
-        extracted_text: `ERREUR CLAUDE: ${message}`,
+        extracted_text: `ERREUR OPENAI: ${message}`,
         extraction_status: "error",
       })
       .eq("id", doc.id);

@@ -34,21 +34,6 @@ export default function LandingLoginPage() {
     }
   };
 
-  const handleGoogle = async () => {
-    setError(null);
-    try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${siteUrl}/auth/callback`,
-        },
-      });
-    } catch {
-      setError("Connexion Google indisponible.");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-white flex flex-col items-center px-6 py-12">
       <img
@@ -66,7 +51,7 @@ export default function LandingLoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
+            className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#ff4d00]"
             required
           />
           <input
@@ -74,7 +59,7 @@ export default function LandingLoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mot de passe"
-            className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
+            className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#ff4d00]"
             required
           />
         <a
@@ -88,25 +73,11 @@ export default function LandingLoginPage() {
             type="submit"
             disabled={isSubmitting}
             className="w-full rounded-full px-5 py-3 text-white font-semibold"
-            style={{ background: "linear-gradient(135deg, #be1354, #F97316)" }}
+            style={{ background: "linear-gradient(135deg, #ff4d00, #ff0000)" }}
           >
             {isSubmitting ? "Connexion..." : "Se connecter"}
           </button>
         </form>
-
-        <div className="flex items-center gap-3 my-6">
-          <div className="h-px flex-1 bg-[#E8E9F0]" />
-          <span className="text-xs text-[#9CA3AF]">ou</span>
-          <div className="h-px flex-1 bg-[#E8E9F0]" />
-        </div>
-
-        <button
-          type="button"
-          onClick={handleGoogle}
-          className="w-full rounded-full border border-[#E8E9F0] px-5 py-3 text-sm font-semibold text-[#0F1117] hover:bg-[#F8F9FC]"
-        >
-          Continuer avec Google
-        </button>
 
         <p className="text-xs text-[#6B7280] mt-6 text-center">
           Pas encore de compte ?{" "}

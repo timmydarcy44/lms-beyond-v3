@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, User, BookOpen } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function NoteAppProfilePage() {
   const router = useRouter();
@@ -84,6 +85,7 @@ export default function NoteAppProfilePage() {
 
       if (profileError) {
         setError(profileError.message);
+        toast.error(profileError.message);
         return;
       }
 
@@ -91,6 +93,7 @@ export default function NoteAppProfilePage() {
         const { error: updateError } = await supabase.auth.updateUser({ password: nextPassword });
         if (updateError) {
           setError(updateError.message);
+          toast.error(updateError.message);
           return;
         }
       }
@@ -98,8 +101,10 @@ export default function NoteAppProfilePage() {
       setPassword("");
       setConfirm("");
       setSuccess("Profil mis à jour.");
+      toast.success("Profil mis à jour.");
     } catch {
       setError("Impossible d'enregistrer les modifications.");
+      toast.error("Impossible d'enregistrer les modifications.");
     } finally {
       setIsSaving(false);
     }
@@ -163,6 +168,14 @@ export default function NoteAppProfilePage() {
             <p className="text-sm text-[#6B7280] mb-6">
               Gérez vos informations personnelles et votre mot de passe.
             </p>
+            {isSaving ? (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-6 py-5 shadow-xl">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#E8E9F0] border-t-[#ff4d00]" />
+                  <p className="text-sm text-[#6B7280]">Enregistrement...</p>
+                </div>
+              </div>
+            ) : null}
 
             <form onSubmit={handleSave} className="space-y-4" autoComplete="off">
               <div className="grid md:grid-cols-2 gap-4">

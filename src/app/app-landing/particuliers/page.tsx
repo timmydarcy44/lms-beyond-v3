@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { glassCardClass, glassPanelClass, glassFaqClass } from "@/app/app-landing/feature-styles";
@@ -10,7 +10,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_NEVO_STRIPE_PUBLISHABLE
 
 type BillingCycle = "monthly" | "annual";
 
-export default function ParticuliersPage() {
+function ParticuliersContent() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [selectedPriceId, setSelectedPriceId] = useState("");
   const [isLoading, setIsLoading] = useState<BillingCycle | null>(null);
@@ -371,5 +371,13 @@ export default function ParticuliersPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function ParticuliersPage() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <ParticuliersContent />
+    </Suspense>
   );
 }

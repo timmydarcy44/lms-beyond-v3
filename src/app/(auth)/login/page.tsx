@@ -1,169 +1,98 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import LandingLoginPage from "@/app/app-landing/login/page";
 
 export default function LoginPage() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
-  const isNevo = useMemo(() => siteUrl.includes("nevo"), [siteUrl]);
-
-  if (isNevo) {
-    return <LandingLoginPage />;
-  }
-
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
-
-    if (!supabase) {
-      setError("Supabase n'est pas configuré.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const redirectTo = `${siteUrl}/auth/callback`;
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-      options: { redirectTo } as any,
-    });
-
-    if (signInError || !data.session) {
-      setError(signInError?.message || "Identifiants incorrects.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const { data: profileById } = await supabase
-      .from("profiles")
-      .select("disc_status, disc_scores, first_name, last_name, full_name, type_profil, role_type, role, school_id, school_subscription")
-      .eq("id", data.user.id)
-      .maybeSingle();
-    let profile = profileById;
-
-    const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
-    const emailPrefix = String(data.user.email ?? "").split("@")[0] ?? "";
-    const metaFirst =
-      String(meta.first_name ?? "").trim() ||
-      String(meta.full_name ?? "").trim().split(" ").filter(Boolean)[0] ||
-      (emailPrefix ? emailPrefix.split(/[.\-_]/)[0] : "");
-    const firstName =
-      String(profile?.first_name ?? "").trim() ||
-      metaFirst ||
-      "Bonjour";
     try {
-      localStorage.setItem("beyond_firstname", firstName);
-    } catch {
-      // ignore
-    }
-    if (!profile) {
-      try {
-        await fetch("/api/bootstrap-profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: data.user.id,
-            email: data.user.email,
-            fullName: String(meta.full_name ?? "").trim(),
-            firstName: String(meta.first_name ?? "").trim(),
-            lastName: String(meta.last_name ?? "").trim(),
-            roleType: String(meta.role_type ?? "particulier"),
-            typeProfil: String(meta.type_profil ?? ""),
-          }),
-        });
-      } catch {
-        // ignore bootstrap errors
+      if (!supabase) {
+        setError("Supabase n'est pas configuré.");
+        return;
       }
-    }
-    const source = String(searchParams.get("from") ?? "").trim().toLowerCase();
-    try {
-      const response = await fetch("/api/auth/resolve-destination", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source }),
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const redirectTo = `${siteUrl}/auth/callback`;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+        options: { redirectTo } as any,
       });
-      const payload = (await response.json().catch(() => ({}))) as { destination?: string };
-      const destination = String(payload.destination ?? "").trim() || "/dashboard/apprenant";
-      router.push(destination);
-      return;
+      if (signInError) {
+        setError(signInError.message || "Identifiants incorrects.");
+        return;
+      }
+      window.location.href = "/note-app";
     } catch {
-      // fallback in case resolve API is unreachable
-      router.push("/dashboard/apprenant");
-      return;
+      setError("Impossible de se connecter.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0B0B] px-6 py-16 text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-8">
-        <div className="flex items-center justify-between">
-          <div className="text-[14px] font-semibold tracking-[0.3em] text-white">NEVO</div>
-          <Link href="/register" className="text-[12px] text-white/60 hover:text-white">
-            Créer un compte
-          </Link>
-        </div>
+    <div className="min-h-screen bg-[#030617] text-white">
+      <header className="absolute left-8 right-8 top-6 flex items-center justify-between text-sm">
+        <span className="font-bold tracking-tight">Nevo</span>
+        <a href="/register" className="text-white hover:opacity-80">
+          Créer un compte
+        </a>
+      </header>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="rounded-3xl border border-white/10 bg-white/[0.03] p-6"
-        >
-          <h1 className="text-2xl font-semibold">Se connecter</h1>
-          <p className="mt-2 text-[13px] text-white/60">
-            Accédez à votre profil certifié.
-          </p>
+      <main className="flex min-h-screen w-full items-center justify-center px-6">
+        <div className="w-full max-w-md text-center">
+          <h1 className="text-4xl font-extrabold">Se connecter</h1>
+          <p className="mt-3 text-sm text-[#94A3B8]">Votre prise de notes intelligente.</p>
 
-          <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
-            <label className="text-[12px] text-white/70">
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
-                placeholder="vous@email.com"
-                required
-              />
-            </label>
-            <label className="text-[12px] text-white/70">
-              Mot de passe
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#FF6B00]"
-                placeholder="••••••••"
-                required
-              />
-            </label>
-
-            {error ? <p className="text-[12px] text-red-400">{error}</p> : null}
-
+          <form onSubmit={handleLogin} className="mt-10 space-y-4">
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Adresse email"
+              className="w-full rounded-xl border border-white/10 bg-[#1F2937] px-4 py-3 text-sm text-white outline-none placeholder:text-white/50 focus:border-[#f97316]"
+              required
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Mot de passe"
+              className="w-full rounded-xl border border-white/10 bg-[#1F2937] px-4 py-3 text-sm text-white outline-none placeholder:text-white/50 focus:border-[#f97316]"
+              required
+            />
+            {error ? <p className="text-xs text-red-400">{error}</p> : null}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mt-2 rounded-full bg-gradient-to-br from-[#be1354] to-[#F97316] px-4 py-3 text-[13px] font-semibold text-white shadow-[0_0_25px_rgba(249,115,22,0.35)] transition hover:shadow-[0_0_40px_rgba(190,19,84,0.45)]"
+              className="w-full rounded-xl bg-gradient-to-r from-[#f97316] to-[#ef4444] px-5 py-3 text-sm font-semibold text-white hover:brightness-110"
             >
-              {isSubmitting ? "Connexion..." : "Se connecter"}
+              {isSubmitting ? "Connexion..." : "Continuer"}
             </button>
           </form>
-        </motion.div>
-      </div>
+
+          <div className="mt-4 text-center">
+            <a href="/login?view=forgot_password" className="text-sm text-[#94A3B8] hover:text-white">
+              Mot de passe oublié ?
+            </a>
+          </div>
+        </div>
+      </main>
+
+      <footer className="absolute bottom-6 left-8 flex items-center gap-6 text-xs text-[#94A3B8]">
+        <span>Français</span>
+        <a href="/privacy" className="hover:text-white">
+          Politique de confidentialité
+        </a>
+      </footer>
     </div>
   );
 }

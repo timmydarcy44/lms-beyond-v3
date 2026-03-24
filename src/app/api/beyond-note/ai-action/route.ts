@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
-import { generateJSON, generateSpeech, getOpenAIClient } from "@/lib/ai/openai-client";
-import { generateTextWithAnthropic } from "@/lib/ai/anthropic-client";
+import { generateJSON, generateSpeech, getOpenAIClient, generateText } from "@/lib/ai/openai-client";
 import { buildAudioPrompt, buildRevisionSheetPrompt, buildSchemaPrompt } from "@/lib/ai/prompts/text-transformation";
 
 type AIAction =
@@ -12,7 +11,6 @@ type AIAction =
   | "diagram"
   | "cleanup"
   | "audio"
-  | "table-only"
   | "generate-image"
   | "flashcards"
   | "quiz"
@@ -117,16 +115,6 @@ Texte:
 ${text}`;
     case "audio":
       return `Prepare le texte pour une lecture audio fluide.
-
-Texte:
-${text}`;
-    case "table-only":
-      return `Réorganise TOUTES les données informatives de ce texte dans un ou plusieurs tableaux Markdown structurés.
-Ne garde que l'essentiel sous forme de colonnes et de lignes.
-Utilise toujours la syntaxe Markdown standard:
-| En-tête 1 | En-tête 2 |
-|---|---|
-| Donnée 1 | Donnée 2 |
 
 Texte:
 ${text}`;
@@ -240,7 +228,9 @@ export async function POST(request: NextRequest) {
       }
 
       const conceptPrompt = `${levelContext}${subjectContext}En une phrase courte, quel est le concept visuel principal de ce texte ? Reponds uniquement avec le concept. Texte: ${text}`;
-      const concept = (await generateTextWithAnthropic(conceptPrompt)) || text.slice(0, 100);
+      const concept =
+        (await generateText(conceptPrompt, { model: "gpt-4o", maxTokens: 200 })) ||
+        text.slice(0, 100);
 
       const imageRes = await openai.images.generate({
         model: "dall-e-3",

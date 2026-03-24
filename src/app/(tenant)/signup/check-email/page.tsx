@@ -1,48 +1,33 @@
-import { getTenantFromHeaders } from '@/lib/tenant/detection-server';
-import { Mail } from 'lucide-react';
-import Link from 'next/link';
+import { getTenantFromHeaders } from "@/lib/tenant/detection-server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function CheckEmailPage() {
-  const tenant = await getTenantFromHeaders();
+  await getTenantFromHeaders();
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ 
-      backgroundColor: '#000000',
-      color: '#ffffff',
-    }}>
-      <div className="max-w-md w-full text-center">
-        <div className="mb-8 flex justify-center">
-          <div className="rounded-full p-4" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-            <Mail className="h-12 w-12" />
-          </div>
-        </div>
-        
-        <h1 className="text-3xl font-bold mb-4">
-          Vérifiez votre email
-        </h1>
-        
-        <p className="text-lg mb-8" style={{ color: '#b3b3b3' }}>
-          Nous avons envoyé un lien de confirmation à votre adresse email.
-          Cliquez sur le lien dans l'email pour définir votre mot de passe et activer votre compte.
-        </p>
-        
-        <div className="space-y-4">
-          <p className="text-sm" style={{ color: '#b3b3b3' }}>
-            Vous n'avez pas reçu l'email ? Vérifiez votre dossier spam ou{' '}
-            <Link href="/signup" className="underline hover:no-underline">
-              réessayez
-            </Link>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="flex flex-col items-center gap-6">
+        <img
+          src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
+          alt="Nevo"
+          className="h-14"
+        />
+        <div className="max-w-xl">
+          <h1 className="text-3xl font-semibold text-[#0F1117]">
+            Bonjour, je suis{" "}
+            <span className="bg-gradient-to-r from-[#f97316] to-[#ef4444] bg-clip-text text-transparent">
+              Néo
+            </span>{" "}
+            !
+          </h1>
+          <p className="mt-4 text-sm text-[#4B5563]">
+            Ravi de vous rencontrer. Pour finaliser votre inscription, un lien vient de vous être envoyé sur
+            votre boîte mail. Cliquez dessus et on se retrouve juste après !
           </p>
-          
-          <Link 
-            href="/login"
-            className="inline-block text-sm underline hover:no-underline"
-            style={{ color: '#b3b3b3' }}
-          >
-            Déjà un compte ? Connectez-vous
-          </Link>
+          <p className="mt-3 text-sm text-[#9CA3AF]">
+            Surtout, n'oubliez pas de jeter un œil dans vos spams si vous ne voyez rien.
+          </p>
         </div>
       </div>
     </div>

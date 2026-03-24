@@ -5,17 +5,33 @@ import { getOpenAIClient } from "@/lib/ai/openai-client";
 
 export const maxDuration = 60;
 
-const PROMPT = `Analyse d'abord le type de document (Maths, Langue, Histoire, etc.).
+const PROMPT = `Détermine si le document est un cours de Langue Étrangère ou une autre matière.
+Réponds d'abord par une ligne: "TYPE: LANGUE" ou "TYPE: AUTRE".
 
 Si c'est un cours de Langue (paires de vocabulaire) :
 - Ne fais pas de resume generaliste.
 - Cree une liste structuree : Mot Original | Traduction.
 - Ajoute "Exemples d'utilisation" pour les mots complexes.
 - Genere des questions de revision basees sur la traduction.
+- Lorsque tu crées un exemple dans un bloc [EX], si cet exemple contient un tableau, tu dois IMPERATIVEMENT forcer le rendu Markdown du tableau (pas de texte brut).
+- Pour tout tableau, utilise strictement la structure suivante :
+  | En-tête 1 | En-tête 2 |
+  |---|---|
+  | Donnée 1 | Donnée 2 |
+
+Tu as un rôle de Designer Pédagogique. Ta mission est de maximiser la clarté visuelle.
+Détection Proactive : Dès que tu identifies des données qui se prêtent à une comparaison, une chronologie, une liste de caractéristiques techniques ou des données chiffrées (plus de 3 éléments liés), ne fais pas de paragraphe : crée un TABLEAU Markdown.
+Cas d'usage obligatoires pour les Tableaux :
+- Comparaison de concepts (ex: Avantages vs Inconvénients).
+- Données scientifiques ou historiques (ex: Date | Événement | Impact).
+- Listes de vocabulaire ou de définitions denses.
+Suggestion Intelligente : Si une partie du texte est trop complexe en format liste, transforme-la en tableau de synthèse à la fin de la section.
+Rappel de Rigueur : Utilise toujours la syntaxe Markdown standard | En-tête | avec la ligne de séparation |---| pour garantir que le rendu visuel soit parfait.
 
 Si c'est un cours de Mathematiques/Physique :
-- Extrais et mets en valeur les Formules et Theoremes.
-- Propose un Exercice d'application type (solution en fin de fiche).
+- Pour les mathématiques, tu dois extraire TOUTES les formules sans les simplifier.
+- Utilise la notation LaTeX entre symboles $ pour chaque variable ou équation.
+- Structure la fiche par : Définitions, Théorèmes, Formules Clés, et Exercices d'application avec solutions détaillées.
 
 Sinon :
 - Fais une fiche claire avec points cles, definitions et exemples.`;
@@ -104,6 +120,23 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+
+  try {
+    const { error: logError } = await supabase.from("activity_logs").insert({
+      user_id: session.id,
+      action_type: "upload",
+      transformation_type: "document",
+      document_id: doc.id,
+      result_preview: originalName,
+      result_url: urlData.publicUrl,
+      metadata: { source_type: sourceType },
+    });
+    if (logError && logError.code !== "42P01") {
+      console.error("[activity_logs] insert error:", logError);
+    }
+  } catch (logError) {
+    console.error("[activity_logs] insert failed:", logError);
+  }
 
   try {
     const extractedText = await extractFromDocument();

@@ -45,6 +45,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    try {
+      const { error: logError } = await supabase.from("activity_logs").insert({
+        user_id: session.id,
+        action_type: "upload",
+        transformation_type: "dictation",
+        document_id: document?.id,
+        result_preview: fileName,
+        metadata: { source_type: "dictation" },
+      });
+      if (logError && logError.code !== "42P01") {
+        console.error("[activity_logs] insert error:", logError);
+      }
+    } catch (logError) {
+      console.error("[activity_logs] insert failed:", logError);
+    }
+
     return NextResponse.json({ success: true, document });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur serveur";

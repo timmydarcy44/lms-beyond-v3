@@ -33,7 +33,7 @@ const nextConfig = {
         destination: '/app-landing',
       },
       {
-        source: '/:path((?!api|note-app|_next|app-landing|favicon.ico|robots.txt|sitemap.xml).*)',
+        source: '/:path((?!api|note-app|_next|app-landing|login|favicon.ico|robots.txt|sitemap.xml).*)',
         destination: '/app-landing/:path',
       },
     ]

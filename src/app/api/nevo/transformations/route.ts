@@ -44,5 +44,23 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  try {
+    const preview = typeof result === "string" ? result.slice(0, 200) : "";
+    const { error: logError } = await supabase.from("activity_logs").insert({
+      user_id: session.id,
+      action_type: "transformation",
+      transformation_type: action,
+      document_id,
+      result_preview: preview,
+      metadata: { page_id },
+    });
+    if (logError && logError.code !== "42P01") {
+      console.error("[activity_logs] insert error:", logError);
+    }
+  } catch (logError) {
+    console.error("[activity_logs] insert failed:", logError);
+  }
+
   return NextResponse.json({ transformation: data });
 }

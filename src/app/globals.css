@@ -676,6 +676,26 @@ body.light {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Force le rendu visuel des tableaux Markdown */
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1rem;
+  border: 1px solid #e5e7eb; /* Gris clair */
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #e5e7eb; /* Gris clair */
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: #f9fafb; /* Fond gris très clair pour les titres */
+  font-weight: 600;
+}
+
 /* Souligner les sons complexes (ch, ph, th, ou, au, eau, etc.) - Approche CSS pure */
 /* Utiliser un effet de soulignement global pour améliorer la reconnaissance des sons */
 .dyslexia-underline-sounds.dyslexia-mode p,

@@ -10,6 +10,7 @@ import {
   Image as ImageIcon, 
   FileCheck, 
   Volume2,
+  Table,
   Loader2,
   ArrowLeft,
   Copy,
@@ -35,6 +36,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
 import { TimelineTube } from "@/components/apprenant/timeline-tube";
@@ -59,7 +64,8 @@ type AIAction =
   | "translate"
   | "diagram"
   | "cleanup"
-  | "audio";
+  | "audio"
+  | "table-only";
 
 interface Document {
   id: string;
@@ -127,6 +133,14 @@ const transformations: Array<{
     color: "from-rose-500 to-pink-500",
     iconColor: "text-rose-600",
   },
+  {
+    id: "table-only",
+    label: "Convertir en tableau",
+    description: "Réorganise le contenu sous forme de tableaux",
+    icon: <Table className="h-5 w-5" />,
+    color: "from-amber-500 to-orange-500",
+    iconColor: "text-amber-600",
+  },
 ];
 
 interface BeyondNoteDocumentPageProps {
@@ -187,6 +201,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const { isDyslexiaMode } = useDyslexiaMode();
   const isLanguageContent = (input: string) => {
     const normalized = input.toLowerCase();
+    if (normalized.includes("type: langue")) return true;
     if (normalized.includes("mot original") || normalized.includes("traduction")) return true;
     if (normalized.includes("vocabulaire") || normalized.includes("grammaire")) return true;
     if (normalized.includes("|")) return true;
@@ -267,10 +282,14 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   const actionItems = [
     { id: "revision-sheet", label: "Fiche", icon: FileText, onClick: () => handleTransformation("revision-sheet"), active: currentAction === "revision-sheet", requiresText: true },
     { id: "reformulate", label: "Reformuler", icon: Sparkles, onClick: () => setShowReformulateOptions(true), active: currentAction === "reformulate", requiresText: true },
-    { id: "translate", label: "Traduire", icon: Languages, onClick: () => handleTransformation("translate"), active: currentAction === "translate", requiresText: true },
+    ...(languageMode
+      ? [
+          { id: "translate", label: "Traduire", icon: Languages, onClick: () => handleTransformation("translate"), active: currentAction === "translate", requiresText: true },
+          { id: "audio", label: "Audio", icon: Volume2, onClick: () => handleTransformation("audio"), active: currentAction === "audio", requiresText: true },
+        ]
+      : []),
     { id: "diagram", label: "Schéma", icon: ImageIcon, onClick: () => handleTransformation("diagram"), active: currentAction === "diagram", requiresText: true },
     { id: "cleanup", label: "Propre", icon: FileCheck, onClick: () => handleTransformation("cleanup"), active: currentAction === "cleanup", requiresText: true },
-    { id: "audio", label: "Audio", icon: Volume2, onClick: () => handleTransformation("audio"), active: currentAction === "audio", requiresText: true },
     ...(accountType !== "child"
       ? [
           { id: "flashcards", label: "Flashcards", icon: BookOpen, onClick: () => setShowFlashcards(true), active: false, requiresText: true },
@@ -424,6 +443,78 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
     } finally {
       setLoadingAction(null);
     }
+  };
+
+  const getExportTarget = () => {
+    if (typeof window === "undefined") return null;
+    return window.document.querySelector(".markdown-content") as HTMLElement | null;
+  };
+
+  const exportAsImage = async () => {
+    try {
+      const target = getExportTarget();
+      if (!target) {
+        toast.error("Aucun contenu à exporter");
+        return;
+      }
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(target, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+      });
+      const imageUrl = canvas.toDataURL("image/png");
+      const link = window.document.createElement("a");
+      link.href = imageUrl;
+      link.download = `${currentAction || "document"}-${document?.file_name || "export"}.png`;
+      link.click();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de l'export en image");
+    }
+  };
+
+  const exportAsPDF = async () => {
+    try {
+      const target = getExportTarget();
+      if (!target) {
+        toast.error("Aucun contenu à exporter");
+        return;
+      }
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+      const canvas = await html2canvas(target, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let position = 0;
+      let heightLeft = imgHeight;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`${currentAction || "document"}-${document?.file_name || "export"}.pdf`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de l'export en PDF");
+    }
+  };
+
+  const handleConvertToTable = (textOverride?: string) => {
+    handleTransformation("table-only", textOverride);
   };
 
   const handleAddPage = async (file: File) => {
@@ -755,23 +846,29 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                 <Printer className="h-4 w-4" />
                 <span className="hidden sm:inline ml-2">Imprimer</span>
               </Button>
-              {result && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const blob = new Blob([currentText || result], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const link = (document as any).createElement('a');
-                    link.href = url;
-                    link.download = `${currentAction || 'document'}-${document.file_name}.txt`;
-                    link.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="hidden md:flex border border-white/20 text-white hover:bg-white/10"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
+              {(result || document.extracted_text) && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="hidden md:flex border border-white/20 text-white hover:bg-white/10"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span className="hidden sm:inline ml-2">Exporter</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white text-[#0F1117] border-[#E8E9F0]">
+                    <DropdownMenuItem onClick={exportAsPDF}>
+                      <FileText className="h-4 w-4 mr-2 text-[#be1354]" />
+                      Exporter en PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportAsImage}>
+                      <ImageIcon className="h-4 w-4 mr-2 text-[#be1354]" />
+                      Exporter en image
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -804,6 +901,18 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                     >
                       <Copy className="h-4 w-4 mr-2 text-[#be1354]" />
                       Copier
+                    </DropdownMenuItem>
+                  )}
+                  {(result || document.extracted_text) && (
+                    <DropdownMenuItem onClick={exportAsPDF}>
+                      <FileText className="h-4 w-4 mr-2 text-[#be1354]" />
+                      Exporter en PDF
+                    </DropdownMenuItem>
+                  )}
+                  {(result || document.extracted_text) && (
+                    <DropdownMenuItem onClick={exportAsImage}>
+                      <ImageIcon className="h-4 w-4 mr-2 text-[#be1354]" />
+                      Exporter en image
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={() => window.print()}>
@@ -1054,22 +1163,36 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                               </div>
                             )}
                             <div className="flex justify-end mb-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setCurrentPageId(page.id);
-                                  handleTransformation(actionToUse, page.content);
-                                }}
-                                disabled={loadingAction !== null}
-                                className="text-xs text-[#6B7280] hover:text-[#be1354] transition-colors"
-                              >
-                                Transformer cette page
-                              </button>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCurrentPageId(page.id);
+                                    handleTransformation(actionToUse, page.content);
+                                  }}
+                                  disabled={loadingAction !== null}
+                                  className="text-xs text-[#6B7280] hover:text-[#be1354] transition-colors"
+                                >
+                                  Transformer cette page
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCurrentPageId(page.id);
+                                    handleConvertToTable(page.content);
+                                  }}
+                                  disabled={loadingAction !== null}
+                                  className="inline-flex items-center gap-1 text-xs text-[#6B7280] hover:text-[#be1354] transition-colors"
+                                >
+                                  <Table className="h-3.5 w-3.5" />
+                                  Convertir en tableau
+                                </button>
+                              </div>
                             </div>
-                            <div className="text-[#374151] leading-relaxed">
+                            <div className="text-[#374151] leading-relaxed markdown-content">
                               {result && currentAction && currentPageId === page.id
-                                ? renderMarkdown(result)
-                                : renderMarkdown(page.content)}
+                                ? renderMarkdown(result, languageMode)
+                                : renderMarkdown(page.content, languageMode)}
                             </div>
                           </div>
                         );
@@ -1114,10 +1237,10 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
                               Transformer cette page
                             </button>
                           </div>
-                          <div className="text-[#374151] leading-relaxed">
+                          <div className="text-[#374151] leading-relaxed markdown-content">
                             {result && currentAction && currentPageId === page.id
-                              ? renderMarkdown(result)
-                              : renderMarkdown(page.content)}
+                              ? renderMarkdown(result, languageMode)
+                              : renderMarkdown(page.content, languageMode)}
                           </div>
                         </div>
                       );
@@ -1613,7 +1736,7 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
   );
 }
 
-function renderMarkdown(text: string) {
+export function renderMarkdown(text: string, languageMode: boolean = false) {
   if (!text) return null;
 
   const parseTaggedBlocks = (input: string) => {
@@ -1737,8 +1860,8 @@ function renderMarkdown(text: string) {
   };
 
   const buildMarkdownComponents = (mode: "default" | "def" | "ex") => {
-    const withAudio = mode !== "default";
-    const withTry = mode === "ex";
+    const withAudio = languageMode && mode !== "default";
+    const withTry = languageMode && mode === "ex";
 
     const renderWithControls = (children: React.ReactNode, text: string, baseClass: string) => {
       const target = withAudio ? extractEnglishTarget(text) : "";
@@ -1787,7 +1910,15 @@ function renderMarkdown(text: string) {
   const hasTaggedBlocks = blocks.some((block) => block.type !== "text");
 
   if (!hasTaggedBlocks) {
-    return <ReactMarkdown components={baseComponents}>{text}</ReactMarkdown>;
+    return (
+      <ReactMarkdown
+        components={baseComponents}
+        remarkPlugins={[remarkMath, remarkGfm]}
+        rehypePlugins={[rehypeKatex]}
+      >
+        {text}
+      </ReactMarkdown>
+    );
   }
 
   return (
@@ -1795,7 +1926,12 @@ function renderMarkdown(text: string) {
       {blocks.map((block, index) => {
         if (block.type === "text") {
           return (
-            <ReactMarkdown key={`block-${index}`} components={baseComponents}>
+            <ReactMarkdown
+              key={`block-${index}`}
+              components={baseComponents}
+              remarkPlugins={[remarkMath, remarkGfm]}
+              rehypePlugins={[rehypeKatex]}
+            >
               {block.content}
             </ReactMarkdown>
           );
@@ -1810,7 +1946,13 @@ function renderMarkdown(text: string) {
 
         return (
           <div key={`block-${index}`} className={wrapperClass}>
-            <ReactMarkdown components={buildMarkdownComponents(mode)}>{block.content}</ReactMarkdown>
+            <ReactMarkdown
+              components={buildMarkdownComponents(mode)}
+              remarkPlugins={[remarkMath, remarkGfm]}
+              rehypePlugins={[rehypeKatex]}
+            >
+              {block.content}
+            </ReactMarkdown>
           </div>
         );
       })}

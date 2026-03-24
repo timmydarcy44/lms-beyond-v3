@@ -1,169 +1,19 @@
-import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { Geist, Geist_Mono, Playfair_Display, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import { QueryProvider } from "@/components/providers/query-provider";
-import { SupabaseProvider } from "@/components/providers/supabase-provider";
-import { ThemeProvider } from "@/components/providers/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { SessionProvider } from "@/components/providers/session-provider";
+import PageViewTracker from "@/components/analytics/page-view-tracker";
 import { PomodoroProvider } from "@/components/apprenant/pomodoro-provider";
-import { PomodoroFloatingTimer } from "@/components/apprenant/pomodoro-floating-timer";
-import { FloatingDashboardCTAWrapper } from "@/components/apprenant/floating-dashboard-cta-wrapper";
-import { PomodoroFocusManager } from "@/components/apprenant/pomodoro-focus-manager";
-import { PomodoroCompletionScreen } from "@/components/apprenant/pomodoro-completion-screen";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-playfair",
-  display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
-  display: "swap",
-});
-
-export async function generateMetadata(): Promise<Metadata> {
-  const headersList = await headers();
-  const hostname = (headersList.get("host") || "").split(":")[0];
-  const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
-  const siteHost = currentUrl ? new URL(currentUrl).hostname : hostname;
-  const isJessica = siteHost.includes("jessica");
-  const isNevo = siteHost.includes("nevo");
-  const isBeyond = siteHost.includes("beyond");
-  const isAppSubdomain = siteHost.startsWith("app.");
-  const nevoIconUrl =
-    "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Copie%20de%20Jessica%20Contentin.png";
-
-  if (isJessica && !isAppSubdomain) {
-    const { generateSEOMetadata } = await import("@/lib/seo/jessica-contentin-seo");
-    return {
-      ...generateSEOMetadata("home"),
-      metadataBase: new URL(currentUrl || "https://jessicacontentin.fr"),
-      icons: {
-        icon: "/jessica-favicon.svg",
-        shortcut: "/jessica-favicon.svg",
-        apple: "/jessica-favicon.svg",
-      },
-    };
-  }
-
-  if (isJessica && isAppSubdomain) {
-    const { generateSEOMetadata } = await import("@/lib/seo/jessica-contentin-seo");
-    return {
-      ...generateSEOMetadata("ressources"),
-      metadataBase: new URL(currentUrl || "https://jessicacontentin.fr"),
-      icons: {
-        icon: "/jessica-favicon.svg",
-        shortcut: "/jessica-favicon.svg",
-        apple: "/jessica-favicon.svg",
-      },
-    };
-  }
-
-  if (isBeyond) {
-    return {
-      title: "Beyond Center",
-      description: "Plateforme d'apprentissage Beyond Center",
-      metadataBase: new URL(currentUrl || "https://beyondcenter.fr"),
-    };
-  }
-
-  if (isNevo) {
-    return {
-      title: "nevo.",
-      description: "L'intelligence au service de l'apprentissage.",
-      metadataBase: new URL(currentUrl || "https://nevo-app.fr"),
-      icons: {
-        icon: nevoIconUrl,
-        shortcut: nevoIconUrl,
-        apple: nevoIconUrl,
-      },
-    };
-  }
-
-  return {
-    title: "Beyond LMS",
-    description: "Plateforme d'apprentissage Beyond",
-    // Le favicon est géré automatiquement par Next.js via src/app/favicon.ico
-    // Si le loader tourne encore, videz le cache du navigateur (Ctrl+Shift+Delete)
-  };
-}
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headersList = await headers();
-  const tenantHeader = headersList.get("x-site-tenant");
-  const host = (headersList.get("host") || "").split(":")[0];
-  const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
-  const siteHost = currentUrl ? new URL(currentUrl).hostname : host;
-  const isNevo = siteHost.includes("nevo");
-  const nevoIconUrl =
-    "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Copie%20de%20Jessica%20Contentin.png";
-  const tenant =
-    tenantHeader ||
-    (siteHost.includes("jessica")
-      ? "jessica"
-      : siteHost.includes("beyond")
-        ? "beyond"
-        : siteHost.includes("nevo")
-          ? "nevo"
-          : "");
-  const tenantClass = tenant ? `tenant-${tenant}` : "";
-  const lockJessicaTheme = tenant === "jessica";
-
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="application-name" content={isNevo ? "nevo." : "Beyond Network"} />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content={isNevo ? "nevo." : "Beyond"} />
-        <meta name="theme-color" content={isNevo ? "#be1354" : "#C8102E"} />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-        />
-        <link rel="manifest" href={isNevo ? "/manifest-nevo.json" : "/manifest.json"} />
-        <link rel="apple-touch-icon" href={isNevo ? nevoIconUrl : "/icons/icon-192x192.png"} />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${spaceGrotesk.variable} antialiased ${tenantClass}`}
-      >
-        <SupabaseProvider>
-          <SessionProvider>
-            <QueryProvider>
-              <ThemeProvider forcedTheme={lockJessicaTheme ? "light" : undefined}>
-                <PomodoroProvider>
-                  <PomodoroFocusManager />
-                  <FloatingDashboardCTAWrapper>
-                    {children}
-                    {!lockJessicaTheme ? <PomodoroFloatingTimer /> : null}
-                  </FloatingDashboardCTAWrapper>
-                  <PomodoroCompletionScreen />
-                </PomodoroProvider>
-                <Toaster richColors position="top-center" />
-              </ThemeProvider>
-            </QueryProvider>
-          </SessionProvider>
-        </SupabaseProvider>
+    <html lang="en">
+      <body>
+        <PomodoroProvider>
+          <PageViewTracker />
+          {children}
+        </PomodoroProvider>
       </body>
     </html>
   );

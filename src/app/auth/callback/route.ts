@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const nextParam = url.searchParams.get("next");
+  const type = url.searchParams.get("type");
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || url.origin;
   const isNevo = siteUrl.includes("nevo");
   const fallbackPath = isNevo ? "/note-app" : "/library";
@@ -15,6 +16,9 @@ export async function GET(request: NextRequest) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         return NextResponse.redirect(new URL("/app-landing/login?error=auth", url.origin));
+      }
+      if (type === "recovery") {
+        return NextResponse.redirect(new URL("/login?view=update_password", url.origin));
       }
     }
   }

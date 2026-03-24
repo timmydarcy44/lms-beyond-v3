@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Globe, Mail, MapPin, Phone, Linkedin } from "lucide-react";
@@ -78,7 +78,7 @@ const getAvatarColor = (name: string) => {
   return avatarColors[index];
 };
 
-export default function PartenaireDetailPage() {
+function PartenaireDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params.slug as string;
@@ -329,5 +329,13 @@ export default function PartenaireDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PartenaireDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <PartenaireDetailContent />
+    </Suspense>
   );
 }

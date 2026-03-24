@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 
@@ -28,7 +28,7 @@ const faqs = [
   { q: "Puis-je utiliser Nevo sur mobile ?", a: "Oui, Nevo est optimisé pour mobile." },
 ];
 
-export default function TarifsPage() {
+function TarifsContent() {
   const [isLoading, setIsLoading] = useState<"monthly" | "annual" | null>(null);
   const searchParams = useSearchParams();
   const emailFromUrl = searchParams.get("email") || "";
@@ -175,5 +175,13 @@ export default function TarifsPage() {
         </a>
       </section>
     </div>
+  );
+}
+
+export default function TarifsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TarifsContent />
+    </Suspense>
   );
 }

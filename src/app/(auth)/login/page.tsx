@@ -111,7 +111,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#0B0B0B] px-6 py-16 text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-8">
         <div className="flex items-center justify-between">
-          <div className="text-[14px] font-semibold tracking-[0.3em] text-white">BEYOND</div>
+          <div className="text-[14px] font-semibold tracking-[0.3em] text-white">NEVO</div>
           <Link href="/register" className="text-[12px] text-white/60 hover:text-white">
             Créer un compte
           </Link>
@@ -157,7 +157,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mt-2 rounded-full bg-[#FF6B00] px-4 py-3 text-[13px] font-semibold text-[#111827] shadow-[0_0_25px_rgba(255,107,0,0.35)] transition hover:shadow-[0_0_40px_rgba(255,107,0,0.6)]"
+              className="mt-2 rounded-full bg-gradient-to-br from-[#be1354] to-[#F97316] px-4 py-3 text-[13px] font-semibold text-white shadow-[0_0_25px_rgba(249,115,22,0.35)] transition hover:shadow-[0_0_40px_rgba(190,19,84,0.45)]"
             >
               {isSubmitting ? "Connexion..." : "Se connecter"}
             </button>

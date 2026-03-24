@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export default function ForgotPasswordPage() {
+export default function ResetPasswordPage() {
   const supabase = createSupabaseBrowserClient();
-  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -14,49 +14,48 @@ export default function ForgotPasswordPage() {
     event.preventDefault();
     setError(null);
     setSuccess(null);
-    setIsSubmitting(true);
-    if (!supabase) {
-      setError("Supabase n'est pas configuré.");
-      setIsSubmitting(false);
+    if (!password.trim()) {
+      setError("Veuillez saisir un nouveau mot de passe.");
       return;
     }
+    setIsSubmitting(true);
     try {
-      const redirectTo = "https://www.nevo-app.fr/reset-password";
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      });
-      if (resetError) {
-        setError(resetError.message);
+      if (!supabase) {
+        setError("Supabase n'est pas configuré.");
         return;
       }
-      setSuccess("Email envoyé. Vérifiez votre boîte de réception.");
+      const { error: updateError } = await supabase.auth.updateUser({ password: password.trim() });
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+      setSuccess("Mot de passe mis à jour. Vous pouvez vous reconnecter.");
+      setPassword("");
     } catch {
-      setError("Impossible d'envoyer l'email.");
+      setError("Impossible de mettre à jour le mot de passe.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center px-6 py-12">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 text-center">
       <img
         src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
         alt="Nevo"
-        className="h-10 mb-10"
+        className="h-10 mb-6"
       />
       <div className="w-full max-w-md rounded-3xl border border-[#E8E9F0] bg-white shadow-sm p-8">
-        <h1 className="text-2xl font-semibold text-[#0F1117] mb-2">Mot de passe oublié</h1>
-        <p className="text-sm text-[#6B7280] mb-6">
-          Entrez votre email pour recevoir un lien de réinitialisation.
-        </p>
+        <h1 className="text-2xl font-semibold text-[#0F1117] mb-2">Nouveau mot de passe</h1>
+        <p className="text-sm text-[#6B7280] mb-6">Choisissez un mot de passe sécurisé.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Votre email"
-            className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Nouveau mot de passe"
+            className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#f97316]"
             required
           />
           {error ? <p className="text-xs text-red-500">{error}</p> : null}
@@ -66,7 +65,7 @@ export default function ForgotPasswordPage() {
             disabled={isSubmitting}
             className="w-full rounded-full bg-gradient-to-r from-[#f97316] to-[#ef4444] px-5 py-3 text-white font-semibold"
           >
-            {isSubmitting ? "Envoi..." : "Envoyer le lien"}
+            {isSubmitting ? "Mise à jour..." : "Confirmer"}
           </button>
         </form>
       </div>

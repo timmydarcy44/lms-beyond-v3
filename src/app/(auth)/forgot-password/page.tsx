@@ -38,11 +38,11 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center px-6 py-12">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 text-center">
       <img
         src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
         alt="Nevo"
-        className="h-10 mb-10"
+        className="h-10 mb-6"
       />
       <div className="w-full max-w-md rounded-3xl border border-[#E8E9F0] bg-white shadow-sm p-8">
         <h1 className="text-2xl font-semibold text-[#0F1117] mb-2">Mot de passe oublié</h1>
@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Votre email"
-            className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#be1354]"
+            className="w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#f97316]"
             required
           />
           {error ? <p className="text-xs text-red-500">{error}</p> : null}

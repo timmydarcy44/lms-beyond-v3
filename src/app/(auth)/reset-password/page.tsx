@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
+  const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDone, setIsDone] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -34,9 +37,10 @@ export default function ResetPasswordPage() {
         setError(updateError.message);
         return;
       }
-      setSuccess("Mot de passe mis à jour. Vous pouvez vous reconnecter.");
+      setSuccess("Votre mot de passe a été modifié avec succès !");
       setPassword("");
       setConfirmPassword("");
+      setIsDone(true);
     } catch {
       setError("Impossible de mettre à jour le mot de passe.");
     } finally {
@@ -50,47 +54,63 @@ export default function ResetPasswordPage() {
         Nevo
       </div>
       <div className="w-full max-w-md rounded-3xl border border-[#E8E9F0] bg-white shadow-sm p-8">
-        <h1 className="text-2xl font-semibold text-[#0F1117] mb-2">Nouveau mot de passe</h1>
-        <p className="text-sm text-[#6B7280] mb-6">Choisissez un mot de passe sécurisé.</p>
+        <h1 className="text-2xl font-semibold text-[#0F1117] mb-2">
+          {isDone ? "Mot de passe mis à jour" : "Nouveau mot de passe"}
+        </h1>
+        <p className="text-sm text-[#6B7280] mb-6">
+          {isDone ? "Vous pouvez revenir à la connexion." : "Choisissez un mot de passe sécurisé."}
+        </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-left">
-          <label className="block text-xs font-medium text-[#111827]">
-            Nouveau mot de passe
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nouveau mot de passe"
-              className="mt-2 w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#f97316]"
-              required
-            />
-          </label>
-          <label className="block text-xs font-medium text-[#111827]">
-            Confirmer le nouveau mot de passe
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirmer le nouveau mot de passe"
-              className="mt-2 w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#f97316]"
-              required
-            />
-          </label>
-          {error ? <p className="text-xs text-red-500">{error}</p> : null}
-          {success ? <p className="text-xs text-green-600">{success}</p> : null}
-          <button
-            type="submit"
-            disabled={
-              isSubmitting ||
-              !password.trim() ||
-              !confirmPassword.trim() ||
-              password.trim() !== confirmPassword.trim()
-            }
-            className="w-full rounded-full bg-gradient-to-r from-[#f97316] to-[#ef4444] px-5 py-3 text-white font-semibold"
-          >
-            {isSubmitting ? "Mise à jour..." : "Confirmer"}
-          </button>
-        </form>
+        {isDone ? (
+          <div className="space-y-4">
+            <p className="text-sm text-green-600">{success}</p>
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="w-full rounded-full border border-[#f97316] bg-white px-5 py-3 text-sm font-semibold text-[#f97316] hover:bg-[#fff7f0]"
+            >
+              Retourner à la connexion
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 text-left">
+            <label className="block text-xs font-medium text-[#111827]">
+              Nouveau mot de passe
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Nouveau mot de passe"
+                className="mt-2 w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#f97316]"
+                required
+              />
+            </label>
+            <label className="block text-xs font-medium text-[#111827]">
+              Confirmer le nouveau mot de passe
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirmer le nouveau mot de passe"
+                className="mt-2 w-full rounded-2xl border border-[#E8E9F0] px-4 py-3 text-sm outline-none focus:border-[#f97316]"
+                required
+              />
+            </label>
+            {error ? <p className="text-xs text-red-500">{error}</p> : null}
+            <button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                !password.trim() ||
+                !confirmPassword.trim() ||
+                password.trim() !== confirmPassword.trim()
+              }
+              className="w-full rounded-full bg-gradient-to-r from-[#f97316] to-[#ef4444] px-5 py-3 text-white font-semibold"
+            >
+              {isSubmitting ? "Mise à jour..." : "Confirmer"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

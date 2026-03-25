@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import {
   Brain,
   CalendarCheck,
@@ -58,23 +58,24 @@ export default function BeyondCarePilotagePage() {
   const [showRecommendations, setShowRecommendations] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] px-4 py-8 text-[#1D1D1F] md:px-8 md:py-10">
-      <div className="mx-auto w-full max-w-[1400px] space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#E5E5EA] bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F5F5F7]">
-              <ShieldCheck className="h-6 w-6 text-[#D65151]" />
+    <Suspense fallback={null}>
+      <div className="min-h-screen bg-[#F5F5F7] px-4 py-8 text-[#1D1D1F] md:px-8 md:py-10">
+        <div className="mx-auto w-full max-w-[1400px] space-y-6">
+          <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#E5E5EA] bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F5F5F7]">
+                <ShieldCheck className="h-6 w-6 text-[#D65151]" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[#86868B]">Beyond Care</p>
+                <h1 className="text-2xl font-semibold">{profileData.fullName}</h1>
+                <p className="text-sm text-[#86868B]">{profileData.cursus}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-[#86868B]">Beyond Care</p>
-              <h1 className="text-2xl font-semibold">{profileData.fullName}</h1>
-              <p className="text-sm text-[#86868B]">{profileData.cursus}</p>
+            <div className="text-sm text-[#86868B]">
+              Référente : <span className="font-semibold text-[#1D1D1F]">{profileData.referent}</span>
             </div>
-          </div>
-          <div className="text-sm text-[#86868B]">
-            Référente : <span className="font-semibold text-[#1D1D1F]">{profileData.referent}</span>
-          </div>
-        </header>
+          </header>
 
         <section className="rounded-2xl border border-[#E5E5EA] bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold">
@@ -196,8 +197,9 @@ export default function BeyondCarePilotagePage() {
             </ul>
           </section>
         ) : null}
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 }
 

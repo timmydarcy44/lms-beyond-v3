@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
@@ -42,14 +43,16 @@ export default async function SchoolApprenantsPage() {
   const schoolId = currentProfile?.school_id ?? null;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] px-4 py-8 text-[#1D1D1F] md:px-8 md:py-10">
-      <div className="mx-auto w-full max-w-[1400px] space-y-6">
-        <SchoolApprenantsPageClient
-          studentsRows={mockUsers}
-          offers={mockOffers}
-          schoolId={schoolId}
-        />
+    <Suspense fallback={<div className="p-4">Chargement des données...</div>}>
+      <div className="min-h-screen bg-[#F5F5F7] px-4 py-8 text-[#1D1D1F] md:px-8 md:py-10">
+        <div className="mx-auto w-full max-w-[1400px] space-y-6">
+          <SchoolApprenantsPageClient
+            studentsRows={mockUsers}
+            offers={mockOffers}
+            schoolId={schoolId}
+          />
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 }

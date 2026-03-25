@@ -2131,7 +2131,7 @@ export default function ApprenantDashboardPage() {
                   </div>
                 ) : null}
                 {softSkillsView === "radar" ? (
-                  <div className="relative mt-6 h-[320px]">
+                  <div className="relative mt-6 h-[320px] min-h-[320px]">
                     <div className={softSkillsLockedView ? "pointer-events-none blur-sm" : ""}>
                       <ResponsiveContainer width="100%" height="100%">
                         <RadarChart

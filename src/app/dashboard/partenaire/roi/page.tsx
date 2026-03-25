@@ -202,7 +202,7 @@ export default function PartenaireRoiPage() {
 
       <section className="mt-8">
         <div className="text-lg font-semibold text-white">Évolution de votre visibilité</div>
-        <div className="mt-4 h-[260px] rounded-2xl border border-white/10 bg-[#111827] p-4">
+        <div className="mt-4 h-[260px] min-h-[260px] rounded-2xl border border-white/10 bg-[#111827] p-4">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyData}>
               <XAxis dataKey="month" stroke="#94a3b8" />

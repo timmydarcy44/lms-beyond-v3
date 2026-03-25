@@ -471,7 +471,7 @@ export default function ClubAidesPage() {
               </button>
             </div>
             <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
-              <div className="h-[260px] rounded-xl bg-white/5 p-4">
+              <div className="h-[260px] min-h-[260px] rounded-xl bg-white/5 p-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#1f2a44" />

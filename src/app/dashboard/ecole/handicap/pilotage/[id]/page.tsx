@@ -281,7 +281,7 @@ export default function HandicapPilotagePage({ params }: PageProps) {
               <BarChart3 className="h-4 w-4 text-[#D65151]" />
             </div>
             {radarData.length ? (
-              <div className="mt-4 h-[400px]">
+              <div className="mt-4 h-[400px] min-h-[400px]">
                 <ResponsiveContainer width="100%" height={400}>
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#E2E8F0" />

@@ -18,6 +18,8 @@ import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tool
 import { mockUsers } from "@/lib/mocks/appData";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   params: { id: string };
 };

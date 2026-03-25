@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import {
   Brain,
@@ -21,6 +20,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+export const dynamic = "force-dynamic";
 
 const profileData = {
   fullName: "Jade Letellier",
@@ -199,3 +200,4 @@ export default function BeyondCarePilotagePage() {
     </div>
   );
 }
+

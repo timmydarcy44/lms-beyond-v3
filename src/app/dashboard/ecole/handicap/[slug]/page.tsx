@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip } from "recharts";
 
+export const dynamic = "force-dynamic";
+
 type BeyondAssessment = {
   disc_profile: string;
   mai_scores: {

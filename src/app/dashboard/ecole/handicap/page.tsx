@@ -1,8 +1,9 @@
 "use client";
-
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { mockUsers, type MockUser } from "@/lib/mocks/appData";
+
+export const dynamic = "force-dynamic";
 
 const slugify = (value: string) =>
   value
@@ -280,3 +281,4 @@ export default function HandicapPage() {
     </div>
   );
 }
+

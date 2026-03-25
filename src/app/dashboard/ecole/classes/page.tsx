@@ -3,6 +3,9 @@ import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 import { SchoolClassesPageClient } from "@/components/beyond-connect/school-classes-page-client";
 import { SchoolClassCreateModal } from "@/components/beyond-connect/school-class-create-modal";
+
+export const dynamic = 'force-dynamic';
+
 export const revalidate = 0;
 
 export default async function SchoolClassesPage() {
@@ -66,3 +69,4 @@ export default async function SchoolClassesPage() {
     </div>
   );
 }
+

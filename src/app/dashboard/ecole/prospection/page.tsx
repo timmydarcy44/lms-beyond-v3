@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,6 +8,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Briefcase, CheckCircle2, FileText, Mail, MapPin, Phone, User } from "lucide-react";
 import { toast } from "sonner";
 import { mockProspects } from "@/lib/mocks/appData";
+
+export const dynamic = "force-dynamic";
 
 type CompanyCard = {
   id: string;
@@ -1780,4 +1781,5 @@ export default function SchoolProspectionPage() {
     </div>
   );
 }
+
 

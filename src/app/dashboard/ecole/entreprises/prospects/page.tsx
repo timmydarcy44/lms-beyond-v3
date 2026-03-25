@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 
+export const dynamic = 'force-dynamic';
+
+
 export default async function SchoolProspectsPage() {
   const getOpcoStyle = (opcoName: string) => {
     const normalized = (opcoName || "").toLowerCase();
@@ -119,3 +122,4 @@ export default async function SchoolProspectsPage() {
     </div>
   );
 }
+

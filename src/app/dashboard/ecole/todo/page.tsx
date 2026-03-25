@@ -1,6 +1,7 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
+
+export const dynamic = "force-dynamic";
 
 type ApiTodoTask = {
   id: string;
@@ -160,3 +161,4 @@ export default function SchoolTodoPage() {
     </div>
   );
 }
+

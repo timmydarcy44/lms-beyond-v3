@@ -3,6 +3,9 @@ import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 import { SchoolDashboard } from "@/components/beyond-connect/school-dashboard";
 
+export const dynamic = 'force-dynamic';
+
+
 const getTopSkills = () => [];
 
 type ProfileRow = {
@@ -171,3 +174,4 @@ export default async function SchoolDashboardPage() {
     </div>
   );
 }
+

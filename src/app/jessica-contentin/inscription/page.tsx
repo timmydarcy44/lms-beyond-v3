@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -22,6 +21,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { env } from "@/lib/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+export const dynamic = "force-dynamic";
 
 // Fonction pour construire l'URL Supabase Storage
 function getSupabaseStorageUrl(bucket: string, path: string): string {
@@ -574,4 +575,5 @@ function JessicaContentinSignupPageContent() {
     </>
   );
 }
+
 

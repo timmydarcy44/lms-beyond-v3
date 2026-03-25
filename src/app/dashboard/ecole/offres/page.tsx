@@ -1,6 +1,7 @@
 "use client";
-
 import { computeDiscMatch, mockOffers, mockUsers } from "@/lib/mocks/appData";
+
+export const dynamic = "force-dynamic";
 
 export default function SchoolOffersPage() {
   return (
@@ -82,3 +83,4 @@ export default function SchoolOffersPage() {
     </div>
   );
 }
+

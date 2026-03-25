@@ -3,6 +3,9 @@ import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 import { SchoolEntreprisesPageClient } from "@/components/beyond-connect/school-entreprises-page-client";
 
+export const dynamic = 'force-dynamic';
+
+
 export default async function SchoolEntreprisesPage() {
   const session = await getSession();
   if (!session) {
@@ -60,3 +63,4 @@ export default async function SchoolEntreprisesPage() {
     </div>
   );
 }
+

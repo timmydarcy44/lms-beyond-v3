@@ -1,8 +1,9 @@
 "use client";
-
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
+
+export const dynamic = "force-dynamic";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_NEVO_STRIPE_PUBLISHABLE_KEY || "");
 
@@ -185,3 +186,4 @@ export default function TarifsPage() {
     </Suspense>
   );
 }
+

@@ -1,10 +1,11 @@
 "use client";
-
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { glassCardClass, glassPanelClass, glassFaqClass } from "@/app/app-landing/feature-styles";
+
+export const dynamic = "force-dynamic";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_NEVO_STRIPE_PUBLISHABLE_KEY || "");
 
@@ -381,3 +382,4 @@ export default function ParticuliersPage() {
     </Suspense>
   );
 }
+

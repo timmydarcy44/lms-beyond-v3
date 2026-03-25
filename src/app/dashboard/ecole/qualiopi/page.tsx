@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 export default function QualiopiPage() {
   const criteres = [
     { title: "Critere 1 : Conditions d'information", indicators: ["Indicateur 1 : Info Public"] },
@@ -109,3 +111,4 @@ export default function QualiopiPage() {
     </div>
   );
 }
+

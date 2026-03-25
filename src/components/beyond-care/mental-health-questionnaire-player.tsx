@@ -2130,7 +2130,7 @@ export function MentalHealthQuestionnairePlayer({ questionnaire, assessments, is
               </CardHeader>
               <CardContent className="h-80">
                 {sortedDimensions.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={350}>
                     <RadarChart
                       data={sortedDimensions.map(([dimension, score]) => ({
                         dimension: DIMENSION_LABELS[dimension] ?? dimension,

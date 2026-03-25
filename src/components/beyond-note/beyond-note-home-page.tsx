@@ -979,7 +979,7 @@ export function BeyondNoteHomePage() {
                       Chargement...
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={350}>
                       <LineChart data={quizStats?.evolution || []}>
                         <CartesianGrid stroke="rgba(15,17,23,0.06)" vertical={false} />
                         <XAxis dataKey="date" stroke="rgba(107,114,128,0.7)" fontSize={10} />

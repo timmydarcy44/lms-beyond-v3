@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import {
   Briefcase,
   Building2,
@@ -204,7 +204,7 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
             isTodo ? "" : isCollapsed ? "md:ml-20" : "md:ml-64"
           } pb-24 md:pb-0`}
         >
-          {children}
+          <Suspense fallback={null}>{children}</Suspense>
         </main>
       </div>
       {!isTodo ? (

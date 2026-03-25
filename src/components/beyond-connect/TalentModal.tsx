@@ -153,7 +153,7 @@ export function TalentModal({ open, onClose, talent }: TalentModalProps) {
           </div>
           <div className="space-y-6">
             <div className="h-64 w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={350}>
                 <RadarChart data={radarData}>
                   <PolarGrid stroke="rgba(15,23,42,0.12)" />
                   <PolarAngleAxis dataKey="skill" tick={{ fill: "#0F172A", fontSize: 10 }} />

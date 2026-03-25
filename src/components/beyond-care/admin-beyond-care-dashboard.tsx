@@ -424,7 +424,7 @@ export function AdminBeyondCareDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={350}>
                     <RadarChart data={dimensionRadarData} cx="50%" cy="50%" outerRadius="70%">
                       <PolarGrid stroke={borderColor} />
                       <PolarAngleAxis dataKey="dimension" tick={{ fill: brandColor, fontSize: 12 }} />

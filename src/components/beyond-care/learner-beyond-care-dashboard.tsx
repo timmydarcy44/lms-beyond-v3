@@ -197,7 +197,7 @@ export function LearnerBeyondCareDashboard() {
             subtitle="Votre profil de référence"
           />
           <div className="mt-6 h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={350}>
               <RadarChart data={DASHBOARD_DATA.baseline} outerRadius="70%">
                 <PolarGrid stroke="rgba(255,255,255,0.12)" />
                 <PolarAngleAxis dataKey="label" tick={{ fill: "#9CA3AF", fontSize: 12 }} />
@@ -216,7 +216,7 @@ export function LearnerBeyondCareDashboard() {
         <GlassCard className="p-6">
           <SectionHeader title="Baromètre Hebdo" subtitle="Stress & charge cognitive" />
           <div className="mt-6 h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={350}>
               <LineChart data={DASHBOARD_DATA.weekly}>
                 <XAxis dataKey="weekLabel" tick={{ fill: "#9CA3AF", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#9CA3AF", fontSize: 12 }} />

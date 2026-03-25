@@ -613,7 +613,7 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
       >
         <p className="text-xs uppercase tracking-[0.2em] text-black/50">Spider Chart</p>
         <div className="mt-4 h-60">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={350}>
             <RadarChart data={radarData}>
               <PolarGrid stroke="rgba(15,23,42,0.12)" />
               <PolarAngleAxis dataKey="skill" tick={{ fill: "#0F172A", fontSize: 10 }} />

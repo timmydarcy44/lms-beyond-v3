@@ -180,7 +180,7 @@ export function HomeLanding() {
             </Link>
           </div>
           <div className="h-[260px] w-full sm:h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={350}>
               <RadarChart data={radarData}>
                 <PolarGrid stroke="rgba(255,255,255,0.15)" />
                 <PolarAngleAxis dataKey="trait" tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }} />

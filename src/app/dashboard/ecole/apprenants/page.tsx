@@ -5,6 +5,8 @@ import { getServerClient } from "@/lib/supabase/server";
 import { SchoolApprenantsPageClient } from "@/components/beyond-connect/school-apprenants-page-client";
 import { mockOffers, mockUsers } from "@/lib/mocks/appData";
 
+export const dynamic = "force-dynamic";
+
 async function ApprenantsContent() {
   const session = await getSession();
   if (!session) {

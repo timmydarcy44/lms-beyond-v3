@@ -461,6 +461,25 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       const canvas = await html2canvas(target, {
         backgroundColor: "#ffffff",
         scale: 2,
+        useCORS: true,
+        logging: false,
+        onclone: (clonedDoc) => {
+          // On force toutes les couleurs lab/oklch en HEX/RGB simple pour la capture
+          const elements = clonedDoc.querySelectorAll("*");
+          elements.forEach((el) => {
+            if (el instanceof HTMLElement) {
+              const style = window.getComputedStyle(el);
+              // Si la couleur contient "lab" ou "oklch", on la remplace par une valeur sûre
+              if (style.color.includes("lab") || style.color.includes("oklch")) el.style.color = "#1f2937";
+              if (style.backgroundColor.includes("lab") || style.backgroundColor.includes("oklch")) {
+                el.style.backgroundColor = "#ffffff";
+              }
+              if (style.borderColor.includes("lab") || style.borderColor.includes("oklch")) {
+                el.style.borderColor = "#e5e7eb";
+              }
+            }
+          });
+        },
       });
       const imageUrl = canvas.toDataURL("image/png");
       const link = window.document.createElement("a");
@@ -485,6 +504,25 @@ export function BeyondNoteDocumentPage({ documentId }: BeyondNoteDocumentPagePro
       const canvas = await html2canvas(target, {
         backgroundColor: "#ffffff",
         scale: 2,
+        useCORS: true,
+        logging: false,
+        onclone: (clonedDoc) => {
+          // On force toutes les couleurs lab/oklch en HEX/RGB simple pour la capture
+          const elements = clonedDoc.querySelectorAll("*");
+          elements.forEach((el) => {
+            if (el instanceof HTMLElement) {
+              const style = window.getComputedStyle(el);
+              // Si la couleur contient "lab" ou "oklch", on la remplace par une valeur sûre
+              if (style.color.includes("lab") || style.color.includes("oklch")) el.style.color = "#1f2937";
+              if (style.backgroundColor.includes("lab") || style.backgroundColor.includes("oklch")) {
+                el.style.backgroundColor = "#ffffff";
+              }
+              if (style.borderColor.includes("lab") || style.borderColor.includes("oklch")) {
+                el.style.borderColor = "#e5e7eb";
+              }
+            }
+          });
+        },
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });

@@ -72,7 +72,7 @@ export async function submitQuestionnaireResponses(
     }));
 
     const scoreResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/mental-health/calculate-score`,
+      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/api/mental-health/calculate-score`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

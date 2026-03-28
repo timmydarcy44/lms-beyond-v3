@@ -356,7 +356,9 @@ export default function OfferDetailPage() {
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="font-semibold text-black">
-                                {`${application.profiles?.[0]?.first_name || "Candidat"} ${application.profiles?.[0]?.last_name || ""}`}
+                                {`${application.profiles?.[0]?.first_name || "Candidat"} ${
+                                  application.profiles?.[0]?.last_name || ""
+                                }`}
                               </p>
                               <p className="text-xs text-black/50">
                                 {formatDate(application.created_at)}
@@ -605,8 +607,7 @@ function getCandidateViewData(candidate: ApplicationItem | null) {
     initials,
     score,
     skills: skills.length ? skills : ["Rigueur", "Communication", "Esprit d'équipe"],
-    summary:
-      "Profil en cours d'analyse. Le parcours detaille sera affiche lorsqu'il sera complete.",
+    summary: "Profil en cours d'analyse. Le parcours detaille sera affiche lorsqu'il sera complete.",
   };
 }
 
@@ -640,13 +641,3 @@ function formatCompensation(offer: OfferDetail, compact?: boolean) {
   }
   return `${base} / an`;
 }
-
-
-
-
-
-
-
-
-
-

@@ -25,6 +25,9 @@ if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
   }
 }
 
+/** Origine locale par défaut (voir scripts `dev` / `start` sur le port 3001). */
+export const defaultLocalOrigin = "http://localhost:3001";
+
 export const env = {
   supabaseUrl,
   supabaseAnonKey,

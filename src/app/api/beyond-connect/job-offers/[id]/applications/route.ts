@@ -221,7 +221,7 @@ export async function POST(
       .eq("id", user.id)
       .single();
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
     const applicationLink = `${baseUrl}/beyond-connect-app/applications`;
     const candidateProfileLink = `${baseUrl}/beyond-connect-app/profile`;
 

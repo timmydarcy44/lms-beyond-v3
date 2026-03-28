@@ -48,10 +48,17 @@ const NEVO_ONLY_PREFIXES = [
 const startsWithAnyPrefix = (pathname: string, prefixes: string[]) =>
   prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
+/** Site marketing Beyond Center — ne doit pas être traité comme l’ancien domaine « Beyond » (/landing). */
+function isBeyondCenterHostname(host: string): boolean {
+  const h = host.split(":")[0]?.toLowerCase() ?? "";
+  return h === "beyondcenter.fr" || h === "www.beyondcenter.fr";
+}
+
 export function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get("host") || "";
   const hostWithoutPort = hostname.split(":")[0];
+  const beyondCenterHost = isBeyondCenterHostname(hostWithoutPort);
 
   if (
     url.pathname === "/api/nevo/stripe/webhook" ||
@@ -78,7 +85,9 @@ export function middleware(request: NextRequest) {
   const siteHost = currentUrl ? new URL(currentUrl).hostname : "";
   const isNevo = process.env.NEXT_PUBLIC_SITE_URL?.includes("nevo");
   const isJessica = siteHost ? siteHost.includes("jessica") : hostWithoutPort.includes("jessica");
-  const isBeyond = siteHost ? siteHost.includes("beyond") : hostname.includes("beyond");
+  const isBeyond =
+    !beyondCenterHost &&
+    (siteHost ? siteHost.includes("beyond") : hostWithoutPort.toLowerCase().includes("beyond"));
   const isAuthenticated = Boolean(
     request.cookies.get("sb-access-token")?.value || request.cookies.get("sb-refresh-token")?.value,
   );
@@ -136,6 +145,8 @@ export function middleware(request: NextRequest) {
 
   if (isJessica) {
     requestHeaders.set("x-site-tenant", "jessica");
+  } else if (beyondCenterHost) {
+    requestHeaders.set("x-site-tenant", "beyond-center");
   } else if (isBeyond) {
     requestHeaders.set("x-site-tenant", "beyond");
   } else if (isNevo) {

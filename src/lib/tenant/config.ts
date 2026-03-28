@@ -186,7 +186,7 @@ export const TENANTS: Record<string, TenantConfig> = {
  * Détecte le tenant basé sur le hostname
  */
 export function getTenantFromHostname(hostname: string): TenantConfig | null {
-  // Enlever le port si présent (localhost:3000 -> localhost:3000)
+  // Enlever le port si présent (ex. localhost:3001 -> localhost)
   const host = hostname.split(':')[0];
   const fullHost = hostname;
   

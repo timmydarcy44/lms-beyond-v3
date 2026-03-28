@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/emails/brevo";
 import { getBeyondConnectPasswordResetEmail } from "@/lib/emails/templates/beyond-connect-password-reset";
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const resetLink = resetData.properties.action_link;
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
     
     // Remplacer l'URL de redirection par défaut par notre page
     const customResetLink = resetLink.replace(

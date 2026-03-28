@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { generateTextWithAnthropic } from "@/lib/ai/anthropic-client";
-import { getOpenAIClient } from "@/lib/ai/openai-client";
+import { generateText, getOpenAIClient } from "@/lib/ai/openai-client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,38 +64,14 @@ La présentation doit être engageante et donner envie aux candidats de rejoindr
       return NextResponse.json({ error: "Type invalide" }, { status: 400 });
     }
 
-    // Utiliser Anthropic en priorité, OpenAI en fallback
-    let result: string | null;
-
-    try {
-      result = await generateTextWithAnthropic(prompt, undefined, {
-        maxTokens: 2000,
-      });
-
-      if (!result) {
-        throw new Error("Aucun résultat de Anthropic");
-      }
-    } catch (anthropicError) {
-      console.warn("[beyond-connect/generate-description] Anthropic failed, trying OpenAI:", anthropicError);
-
-      const openai = getOpenAIClient();
-      if (!openai) {
-        throw new Error("Aucun provider IA disponible");
-      }
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        max_tokens: 2000,
-      });
-
-      result = response.choices[0]?.message?.content || "Erreur lors de la génération";
+    const openai = getOpenAIClient();
+    if (!openai) {
+      throw new Error("OPENAI_API_KEY manquante");
     }
+
+    const result =
+      (await generateText(prompt, { model: "gpt-4o", maxTokens: 2000 })) ||
+      "Erreur lors de la génération";
 
     return NextResponse.json({
       result,

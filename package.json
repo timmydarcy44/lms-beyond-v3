@@ -4,9 +4,9 @@
   "private": true,
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev": "cross-env PORT=3000 NEXT_DISABLE_TURBOPACK=1 next dev -p 3000",
+    "dev": "cross-env PORT=3001 NEXT_DISABLE_TURBOPACK=1 next dev -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "cross-env PORT=3001 next start -p 3001",
     "lint": "next lint",
     "test": "vitest run",
     "prisma": "prisma",

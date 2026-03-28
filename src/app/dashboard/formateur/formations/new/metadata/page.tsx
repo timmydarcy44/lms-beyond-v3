@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 import { CourseMetadataWorkspace } from "@/components/formateur/course-builder/course-metadata-workspace";

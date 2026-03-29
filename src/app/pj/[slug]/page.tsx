@@ -1,1 +1,5 @@
-export { default } from "@/app/p/[slug]/page";
+"use client";
+
+import PublicProfilePage from "@/app/p/[slug]/page";
+
+export default PublicProfilePage;

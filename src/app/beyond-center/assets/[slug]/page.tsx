@@ -8,7 +8,7 @@ import { BarChart3, Bolt, Brain, Cpu, Megaphone, Trophy } from "lucide-react";
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
   whileInView: { opacity: 1, y: 0 },
-  transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as const },
+  transition: { duration: 0.8, ease: "easeOut" },
   viewport: { once: true, margin: "-140px" },
 };
 
@@ -331,7 +331,3 @@ export default function AssetPage({ params }: PageProps) {
     </main>
   );
 }
-
-
-
-

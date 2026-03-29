@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateJSONWithAnthropic } from "@/lib/ai/anthropic-client";
+import { generateJSON } from "@/lib/ai/openai-client";
 import { getServerClient } from "@/lib/supabase/server";
 import { loadPrompt } from "@/lib/ai/prompt-loader";
 import { logAIInteraction } from "@/lib/ai/ai-interaction-logger";
 
 /**
- * Route pour générer la structure complète d'une formation avec Anthropic
+ * Route pour générer la structure complète d'une formation avec OpenAI
  */
 export async function POST(request: NextRequest) {
   try {
@@ -92,26 +92,26 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Utiliser Anthropic pour la génération de structure
+    // Utiliser OpenAI pour la génération de structure
     const systemPrompt = `Tu es un expert en ingénierie pédagogique. Génère des structures de formation complètes, logiques et progressives.
 Schéma JSON attendu : ${JSON.stringify(schema.parameters)}`;
 
-    // Vérifier que la clé API Anthropic est configurée
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicApiKey) {
-      console.error("[api/generate-course-structure] ANTHROPIC_API_KEY not configured");
+    // Vérifier que la clé API OpenAI est configurée
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      console.error("[api/generate-course-structure] OPENAI_API_KEY not configured");
       return NextResponse.json(
         {
-          error: "Clé API Anthropic non configurée. Veuillez ajouter ANTHROPIC_API_KEY dans votre fichier .env.local",
+          error: "Clé API OpenAI non configurée. Veuillez ajouter OPENAI_API_KEY dans votre fichier .env.local",
         },
         { status: 500 }
       );
     }
 
-    console.log("[api/generate-course-structure] Calling Anthropic with prompt length:", fullPrompt.length);
-    const result = await generateJSONWithAnthropic(fullPrompt, systemPrompt);
+    console.log("[api/generate-course-structure] Calling OpenAI with prompt length:", fullPrompt.length);
+    const result = await generateJSON(fullPrompt, schema, systemPrompt);
 
-    console.log("[api/generate-course-structure] Anthropic response:", {
+    console.log("[api/generate-course-structure] OpenAI response:", {
       hasResult: !!result,
       hasSections: !!result?.sections,
       sectionsCount: result?.sections?.length,
@@ -119,7 +119,7 @@ Schéma JSON attendu : ${JSON.stringify(schema.parameters)}`;
     });
 
     if (!result) {
-      console.error("[api/generate-course-structure] No result from Anthropic");
+      console.error("[api/generate-course-structure] No result from OpenAI");
       return NextResponse.json(
         {
           error: "L'IA n'a pas pu générer de structure. Vérifiez que votre clé API Anthropic est valide et que le service est accessible.",

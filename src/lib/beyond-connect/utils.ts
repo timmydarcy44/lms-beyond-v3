@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Utilitaires pour Beyond Connect
  */
 
@@ -13,7 +13,7 @@ export function getBeyondConnectBaseUrl(): string {
   }
   
   // En développement, utiliser localhost avec le port approprié
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
   
   // Si on est sur localhost, s'assurer que c'est bien pour Beyond Connect
   if (baseUrl.includes("localhost")) {

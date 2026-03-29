@@ -23,9 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Vérifier si OpenAI ou Anthropic est configuré
     const openaiKey = process.env.OPENAI_API_KEY;
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
-
-    if (!openaiKey && !anthropicKey) {
+    if (!openaiKey) {
       // Fallback : génération basique
       return NextResponse.json({
         mirror_question: generateBasicMirror(question),
@@ -34,10 +32,6 @@ export async function POST(request: NextRequest) {
         explanation: "Génération basique (IA non configurée)",
       });
     }
-
-    // Utiliser OpenAI si disponible, sinon Anthropic
-    const aiProvider = openaiKey ? "openai" : "anthropic";
-    const apiKey = openaiKey || anthropicKey;
 
     // Construire le prompt
     const systemPrompt = `Tu es un expert en psychologie et en création de tests de soft skills. 
@@ -65,60 +59,29 @@ Génère une question miroir pertinente.`;
 
     let mirrorResponse: any;
 
-    if (aiProvider === "openai") {
-      const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.7,
-          response_format: { type: "json_object" },
-        }),
-      });
+    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openaiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        response_format: { type: "json_object" },
+      }),
+    });
 
-      if (!openaiResponse.ok) {
-        throw new Error("Erreur OpenAI");
-      }
-
-      const data = await openaiResponse.json();
-      mirrorResponse = JSON.parse(data.choices[0].message.content);
-    } else {
-      // Anthropic
-      const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey!,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [
-            {
-              role: "user",
-              content: userPrompt,
-            },
-          ],
-        }),
-      });
-
-      if (!anthropicResponse.ok) {
-        throw new Error("Erreur Anthropic");
-      }
-
-      const data = await anthropicResponse.json();
-      const content = data.content[0].text;
-      mirrorResponse = JSON.parse(content);
+    if (!openaiResponse.ok) {
+      throw new Error("Erreur OpenAI");
     }
+
+    const data = await openaiResponse.json();
+    mirrorResponse = JSON.parse(data.choices[0].message.content);
 
     // Inverser les options si c'est un Likert
     let mirrorOptions: Array<{ value: string; points?: number }> | undefined;

@@ -25,7 +25,7 @@ export async function GET(
   }
 
   const jsonld = buildIssuerProfile({
-    id: `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/public/issuers/${issuer.id}`,
+    id: `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001"}/api/public/issuers/${issuer.id}`,
     name: issuer.name,
     url: issuer.url,
     email: issuer.email,

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { getNevoStripeClient } from "@/lib/stripe/nevo-client";
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const origin =
       request.headers.get("origin") ||
       process.env.NEXT_PUBLIC_SITE_URL ||
-      "http://localhost:3000";
+      "http://localhost:3001";
 
     let session;
     try {

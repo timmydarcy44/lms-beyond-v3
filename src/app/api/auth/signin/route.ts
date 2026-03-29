@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       const siteUrl =
         process.env.NEXT_PUBLIC_SITE_URL ||
         request.headers.get("origin") ||
-        "http://localhost:3000";
+        "http://localhost:3001";
       const redirectTo = `${siteUrl}/auth/callback`;
       const signInPromise = supabase.auth.signInWithPassword({
         email,

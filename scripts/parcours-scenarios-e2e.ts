@@ -1,4 +1,4 @@
-/**
+﻿/**
  * scripts/parcours-scenarios-e2e.ts
  *
  * NO-TEST / NO-RESOURCE mode
@@ -6,7 +6,7 @@
  * Usage:
  *   pnpm tsx scripts/parcours-scenarios-e2e.ts \
  *     <PARCOURS_ID> <LEARNER_ID> <COURSE_ID> \
- *     --baseUrl=http://localhost:3000
+ *     --baseUrl=http://localhost:3001
  *
  * Env required:
  *   SUPABASE_URL
@@ -25,7 +25,7 @@ type Args = {
 function parseArgs(argv: string[]): Args {
   const positional = argv.filter((a) => !a.startsWith("--"));
   const baseUrlArg = argv.find((a) => a.startsWith("--baseUrl="));
-  const baseUrl = baseUrlArg?.split("=", 2)[1] ?? "http://localhost:3000";
+  const baseUrl = baseUrlArg?.split("=", 2)[1] ?? "http://localhost:3001";
 
   if (positional.length < 3) {
     throw new Error(

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { generateTextWithAnthropic, generateJSONWithAnthropic } from "@/lib/ai/anthropic-client";
+import { generateText, generateJSON } from "@/lib/ai/openai-client";
 import type { AIAction } from "@/lib/ai/utils";
 import { isValidAIAction } from "@/lib/ai/utils";
 import { getServerClient } from "@/lib/supabase/server";
@@ -9,19 +9,19 @@ import { logAIInteraction } from "@/lib/ai/ai-interaction-logger";
 import { logAIUsageEvent } from "@/lib/ai/usage-logger";
 
 const TABLE_NOT_FOUND_CODE = "42P01";
-const DEFAULT_ANTHROPIC_COST_EUR = parseFloat(process.env.AI_COST_ANTHROPIC_DEFAULT_EUR ?? "0.0025");
-const ANTHROPIC_ACTION_COSTS: Partial<Record<AIAction, number>> = {
-  rephrase: parseFloat(process.env.AI_COST_ANTHROPIC_REPHRASE_EUR ?? "0.0020"),
-  mindmap: parseFloat(process.env.AI_COST_ANTHROPIC_MINDMAP_EUR ?? "0.0025"),
-  schema: parseFloat(process.env.AI_COST_ANTHROPIC_SCHEMA_EUR ?? "0.0025"),
-  translate: parseFloat(process.env.AI_COST_ANTHROPIC_TRANSLATE_EUR ?? "0.0020"),
-  audio: parseFloat(process.env.AI_COST_ANTHROPIC_AUDIO_EUR ?? "0.0025"),
-  insights: parseFloat(process.env.AI_COST_ANTHROPIC_INSIGHTS_EUR ?? "0.0028"),
+const DEFAULT_OPENAI_COST_EUR = parseFloat(process.env.AI_COST_OPENAI_DEFAULT_EUR ?? "0.0025");
+const OPENAI_ACTION_COSTS: Partial<Record<AIAction, number>> = {
+  rephrase: parseFloat(process.env.AI_COST_OPENAI_REPHRASE_EUR ?? "0.0020"),
+  mindmap: parseFloat(process.env.AI_COST_OPENAI_MINDMAP_EUR ?? "0.0025"),
+  schema: parseFloat(process.env.AI_COST_OPENAI_SCHEMA_EUR ?? "0.0025"),
+  translate: parseFloat(process.env.AI_COST_OPENAI_TRANSLATE_EUR ?? "0.0020"),
+  audio: parseFloat(process.env.AI_COST_OPENAI_AUDIO_EUR ?? "0.0025"),
+  insights: parseFloat(process.env.AI_COST_OPENAI_INSIGHTS_EUR ?? "0.0028"),
 };
 
-function getAnthropicActionCost(action: AIAction): number {
-  const cost = ANTHROPIC_ACTION_COSTS[action];
-  return Number((cost ?? DEFAULT_ANTHROPIC_COST_EUR).toFixed(6));
+function getOpenAIActionCost(action: AIAction): number {
+  const cost = OPENAI_ACTION_COSTS[action];
+  return Number((cost ?? DEFAULT_OPENAI_COST_EUR).toFixed(6));
 }
 
 function isTableMissing(error?: { code?: string | null }): boolean {
@@ -66,21 +66,21 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case "rephrase": {
         fullPrompt = await loadPrompt(featureId, { text, style: options?.style });
-        result = await generateTextWithAnthropic(fullPrompt);
+        result = await generateText(fullPrompt, { model: "gpt-4o", maxTokens: 2000 });
         format = "text";
         break;
       }
 
       case "mindmap": {
         fullPrompt = await loadPrompt(featureId, { text });
-        result = await generateJSONWithAnthropic(fullPrompt);
+        result = await generateJSON(fullPrompt);
         format = "json";
         break;
       }
 
       case "schema": {
         fullPrompt = await loadPrompt(featureId, { text });
-        result = await generateJSONWithAnthropic(fullPrompt);
+        result = await generateJSON(fullPrompt);
         format = "json";
         break;
       }
@@ -88,21 +88,21 @@ export async function POST(request: NextRequest) {
       case "translate": {
         const targetLanguage = options?.targetLanguage || "anglais";
         fullPrompt = await loadPrompt(featureId, { text, targetLanguage });
-        result = await generateTextWithAnthropic(fullPrompt);
+        result = await generateText(fullPrompt, { model: "gpt-4o", maxTokens: 2000 });
         format = "text";
         break;
       }
 
       case "audio": {
         fullPrompt = await loadPrompt(featureId, { text });
-        result = await generateJSONWithAnthropic(fullPrompt);
+        result = await generateJSON(fullPrompt);
         format = "json";
         break;
       }
 
       case "insights": {
         fullPrompt = await loadPrompt(featureId, { text });
-        result = await generateJSONWithAnthropic(fullPrompt);
+        result = await generateJSON(fullPrompt);
         format = "json";
         break;
       }
@@ -142,9 +142,9 @@ export async function POST(request: NextRequest) {
       userId: authData.user.id,
       route: "transform-text",
       action,
-      provider: "anthropic",
-      model: "claude-3-5-sonnet-20241022",
-      costEur: getAnthropicActionCost(action),
+      provider: "openai",
+      model: "gpt-4o",
+      costEur: getOpenAIActionCost(action),
       metadata: {
         options,
         format,
@@ -180,8 +180,8 @@ export async function POST(request: NextRequest) {
             userId: authData.user.id,
             route: "transform-text",
             action,
-            provider: "anthropic",
-            model: "claude-3-5-sonnet-20241022",
+            provider: "openai",
+            model: "gpt-4o",
             costEur: 0,
             metadata: {
               error: error instanceof Error ? error.message : String(error),

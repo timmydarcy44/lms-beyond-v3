@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Script pour lier automatiquement le PDF au guide du sommeil
  * Usage: node scripts/link-sleep-guide-pdf.mjs
  */
 
-const API_URL = process.env.API_URL || "http://localhost:3000";
+const API_URL = process.env.API_URL || "http://localhost:3001";
 
 async function linkSleepGuidePdf() {
   try {

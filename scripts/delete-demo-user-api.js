@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Script pour supprimer l'utilisateur demo95958@gmail.com via l'API
  * Usage: node scripts/delete-demo-user-api.js
  */
 
 const email = 'demo95958@gmail.com';
-const apiUrl = 'http://localhost:3000/api/beyond-connect/admin/delete-user';
+const apiUrl = 'http://localhost:3001/api/beyond-connect/admin/delete-user';
 
 async function deleteUser() {
   try {

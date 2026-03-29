@@ -2,6 +2,25 @@
 
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
+/** Emails reconnus comme super admins LMS (accès /super, RPC, etc.), en plus de la table super_admins. */
+const BUILTIN_SUPER_ADMIN_EMAILS = new Set(["timmydarcy44@gmail.com"]);
+
+function parseSuperAdminEmailsFromEnv(): string[] {
+  const raw = process.env.SUPER_ADMIN_EMAILS;
+  if (!raw?.trim()) return [];
+  return raw
+    .split(/[,;\s]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isEmailAllowlistedSuperAdmin(email: string | null | undefined): boolean {
+  const norm = email?.trim().toLowerCase();
+  if (!norm) return false;
+  if (BUILTIN_SUPER_ADMIN_EMAILS.has(norm)) return true;
+  return parseSuperAdminEmailsFromEnv().includes(norm);
+}
+
 /**
  * Vérifie si l'utilisateur actuellement authentifié est un super admin
  */
@@ -21,6 +40,13 @@ export async function isSuperAdmin(): Promise<boolean> {
         console.log("[super-admin] No authenticated user:", authError);
       }
       return false;
+    }
+
+    if (isEmailAllowlistedSuperAdmin(authData.user.email)) {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[super-admin] User IS a super admin (email allowlist)");
+      }
+      return true;
     }
 
     if (process.env.NODE_ENV !== "production") {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 
@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
     // Créer un nouveau lien d'autorisation
     const accountLink = await stripe.accountLinks.create({
       account: account.stripe_account_id,
-      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/stripe/connect/refresh`,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/stripe/connect/callback?account_id=${account.stripe_account_id}`,
+      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/api/stripe/connect/refresh`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/api/stripe/connect/callback?account_id=${account.stripe_account_id}`,
       type: "account_onboarding",
     });
 

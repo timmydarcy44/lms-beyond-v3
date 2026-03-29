@@ -1,11 +1,11 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # scripts/run-parcours-scenarios-e2e.sh
 #
 # Usage:
 #   SUPABASE_URL="..." SUPABASE_SERVICE_ROLE_KEY="..." \
 #   ./scripts/run-parcours-scenarios-e2e.sh \
 #     <PARCOURS_ID> <LEARNER_ID> <COURSE_ID> <TEST_ID> <RESOURCE_ID> \
-#     --baseUrl=http://localhost:3000
+#     --baseUrl=http://localhost:3001
 #
 # What it does:
 #  1) Starts `pnpm dev` in background (logs to /tmp/pnpm-dev.log, pid to /tmp/pnpm-dev.pid)
@@ -89,7 +89,7 @@ wait_for_url() {
 }
 
 # ---------- parse args ----------
-BASE_URL="http://localhost:3000"
+BASE_URL="http://localhost:3001"
 POSITIONAL=()
 
 for arg in "$@"; do

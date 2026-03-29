@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateTextWithAnthropic } from "@/lib/ai/anthropic-client";
+import { generateText } from "@/lib/ai/openai-client";
 import { getServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // Construire le prompt pour Anthropic
+    // Construire le prompt pour OpenAI
     const systemPrompt = `Tu es un expert en pédagogie et en évaluation. Tu génères des messages de feedback personnalisés, encourageants et constructifs pour les apprenants après un test.`;
 
     const userPrompt = `Génère un message de feedback personnalisé pour un test intitulé "${testTitle}".
@@ -36,8 +36,11 @@ Le message doit être :
 - En français
 - Entre 50 et 150 mots`;
 
-    // Générer le feedback avec Anthropic
-    const message = await generateTextWithAnthropic(userPrompt, systemPrompt);
+    // Générer le feedback avec OpenAI
+    const message = await generateText(userPrompt, {
+      model: "gpt-4o",
+      maxTokens: 1000,
+    });
 
     if (!message) {
       // Fallback si l'IA ne répond pas

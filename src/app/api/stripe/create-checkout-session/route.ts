@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer la session de paiement Stripe
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001";
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [

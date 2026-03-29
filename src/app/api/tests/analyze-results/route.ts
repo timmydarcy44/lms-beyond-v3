@@ -85,43 +85,12 @@ Fournissez une analyse détaillée et personnalisée qui :
 
 Format de réponse : HTML avec des paragraphes bien structurés, des listes à puces pour les recommandations, et des sections clairement définies.`;
 
-    // Utiliser Anthropic en priorité pour l'analyse des résultats
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    // Utiliser OpenAI pour l'analyse des résultats
     const openaiApiKey = process.env.OPENAI_API_KEY;
 
     let analysis = "";
     
-    if (anthropicApiKey) {
-      // Utiliser Anthropic Claude (priorité)
-      const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": anthropicApiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 2000,
-          system: "Tu es un expert en développement personnel et compétences professionnelles. Tu fournis des analyses détaillées et bienveillantes des résultats de tests de soft skills.",
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-        }),
-      });
-
-      if (!claudeResponse.ok) {
-        const error = await claudeResponse.json();
-        throw new Error(`Anthropic API error: ${error.error?.message || "Unknown error"}`);
-      }
-
-      const claudeData = await claudeResponse.json();
-      analysis = claudeData.content[0]?.text || "";
-    } else if (openaiApiKey) {
-      // Fallback sur OpenAI si Anthropic n'est pas disponible
+    if (openaiApiKey) {
       const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -129,7 +98,7 @@ Format de réponse : HTML avec des paragraphes bien structurés, des listes à p
           "Authorization": `Bearer ${openaiApiKey}`,
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gpt-4o",
           messages: [
             {
               role: "system",
@@ -154,7 +123,7 @@ Format de réponse : HTML avec des paragraphes bien structurés, des listes à p
       analysis = openaiData.choices[0]?.message?.content || "";
     } else {
       return NextResponse.json(
-        { error: "Aucune clé API OpenAI ou Anthropic configurée" },
+        { error: "Aucune clé API OpenAI configurée" },
         { status: 500 }
       );
     }

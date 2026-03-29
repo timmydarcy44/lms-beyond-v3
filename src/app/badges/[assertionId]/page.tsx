@@ -19,7 +19,7 @@ export default async function BadgeViewerPage({
 
   const hostedUrl =
     assertion.hostedUrl ??
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/public/assertions/${assertion.id}`;
+    `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001"}/api/public/assertions/${assertion.id}`;
 
   const imageUrl = assertion.bakedImageUrl ?? assertion.badgeClass.imageTemplateUrl;
   const requestHeaders = await headers();

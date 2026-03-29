@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendEmail } from "@/lib/email/resend-client";
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       }
 
       let sentCount = 0;
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
 
       for (const learner of learners) {
         const learnerProfile = learner.profiles as any;

@@ -54,6 +54,18 @@ function isBeyondCenterHostname(host: string): boolean {
   return h === "beyondcenter.fr" || h === "www.beyondcenter.fr";
 }
 
+/** True si le Host de la requête correspond au domaine de NEXT_PUBLIC_SITE_URL (évite d’appliquer Nevo / Jessica à tous les domaines du même projet Vercel). */
+function requestMatchesConfiguredSiteHost(requestHost: string, siteUrl: string): boolean {
+  if (!siteUrl) return false;
+  try {
+    const configured = new URL(siteUrl).hostname.toLowerCase();
+    const req = requestHost.split(":")[0]?.toLowerCase() ?? "";
+    return configured !== "" && req === configured;
+  } catch {
+    return false;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get("host") || "";
@@ -82,8 +94,18 @@ export function middleware(request: NextRequest) {
   }
 
   const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
-  const siteHost = currentUrl ? new URL(currentUrl).hostname : "";
-  const isNevo = process.env.NEXT_PUBLIC_SITE_URL?.includes("nevo");
+  let siteHost = "";
+  try {
+    if (currentUrl) siteHost = new URL(currentUrl).hostname;
+  } catch {
+    siteHost = "";
+  }
+  const isNevoEnv = currentUrl.includes("nevo");
+  /** Règles Nevo (home /app-landing, etc.) uniquement sur le domaine configuré — pas sur beyondcenter.fr ni autres domaines du même déploiement. */
+  const isNevo =
+    isNevoEnv &&
+    !beyondCenterHost &&
+    requestMatchesConfiguredSiteHost(hostWithoutPort, currentUrl);
   const isJessica = siteHost ? siteHost.includes("jessica") : hostWithoutPort.includes("jessica");
   const isBeyond =
     !beyondCenterHost &&

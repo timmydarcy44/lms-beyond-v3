@@ -65,8 +65,8 @@ describe("POST /api/admin/open-badges/assessments/[assessmentId]/decision", () =
     });
     mockIssueBadge.mockResolvedValue({
       assertionId: "assertion-1",
-      hostedUrl: "http://localhost:3000/api/public/assertions/assertion-1",
-      bakedImageUrl: "http://localhost:3000/badges/assertion-1.png",
+      hostedUrl: "http://localhost:3001/api/public/assertions/assertion-1",
+      bakedImageUrl: "http://localhost:3001/badges/assertion-1.png",
     });
 
     const request = new NextRequest("http://localhost", {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 
@@ -47,7 +47,7 @@ export async function POST(_request: NextRequest) {
       apiVersion: "2025-10-29.clover",
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001";
     console.log(
       "[stripe] Clé utilisée:",
       process.env.STRIPE_SECRET_KEY?.substring(0, 20) + "..."

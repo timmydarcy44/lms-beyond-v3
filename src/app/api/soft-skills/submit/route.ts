@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       taken_at: new Date().toISOString(),
     };
 
-    let data = null as typeof payload | null;
+    let data: { id?: string | null } & typeof payload | null = null;
     const upsertResult = await supabase
       .from("soft_skills_resultats")
       .upsert(payload, { onConflict: "learner_id" })
@@ -113,4 +113,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Erreur inattendue" }, { status: 500 });
   }
 }
-

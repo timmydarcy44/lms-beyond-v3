@@ -1,4 +1,4 @@
-# Script de test pour vérifier qu'un utilisateur a bien accès à une ressource après un achat
+﻿# Script de test pour vérifier qu'un utilisateur a bien accès à une ressource après un achat
 # Usage: .\scripts\test-access-after-purchase.ps1 -Email "user@example.com" -CatalogItemId "xxx-xxx-xxx"
 
 param(
@@ -8,7 +8,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$CatalogItemId,
     
-    [string]$BaseUrl = "http://localhost:3000"
+    [string]$BaseUrl = "http://localhost:3001"
 )
 
 Write-Host "========================================" -ForegroundColor Cyan

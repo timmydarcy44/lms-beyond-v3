@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { AUTH_ROUTES } from "@/lib/auth/routes";
 
@@ -11,7 +11,7 @@ export async function POST() {
   }
 
   // Utiliser redirect() de Next.js au lieu de NextResponse.redirect pour éviter les problèmes d'URL
-  const response = NextResponse.redirect(new URL(AUTH_ROUTES.login, process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"));
+  const response = NextResponse.redirect(new URL(AUTH_ROUTES.login, process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001"));
   // Supprimer les cookies de session
   response.cookies.delete("sb-access-token");
   response.cookies.delete("sb-refresh-token");

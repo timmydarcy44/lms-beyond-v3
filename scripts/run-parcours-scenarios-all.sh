@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # scripts/run-parcours-scenarios-all.sh
 #
 # NO-TEST / NO-RESOURCE mode
@@ -12,11 +12,11 @@
 #
 #   ./scripts/run-parcours-scenarios-all.sh \
 #     <PARCOURS_ID> <USER_ID> \
-#     --baseUrl=http://localhost:3000 \
+#     --baseUrl=http://localhost:3001 \
 #     --timeout=90
 #
 # Optional flags:
-#   --baseUrl=...      (default: http://localhost:3000)
+#   --baseUrl=...      (default: http://localhost:3001)
 #   --timeout=SECONDS  (default: 90)
 #   --skipMigrations   (skip supabase db push / migration up)
 #   --noInstall        (skip pnpm install even if node_modules missing)
@@ -90,7 +90,7 @@ wait_for_url() {
   fi
 }
 
-BASE_URL="http://localhost:3000"
+BASE_URL="http://localhost:3001"
 TIMEOUT_S=90
 SKIP_MIGRATIONS="0"
 NO_INSTALL="0"
@@ -225,11 +225,11 @@ log "✅ ALL DONE"
 #   chmod +x scripts/run-parcours-scenarios-all.sh
 #   ./scripts/run-parcours-scenarios-all.sh \
 #     <PARCOURS_ID> <LEARNER_ID> <COURSE_ID> \
-#     --baseUrl=http://localhost:3000 \
+#     --baseUrl=http://localhost:3001 \
 #     --timeout=90
 #
 # Optional flags:
-#   --baseUrl=...      (default: http://localhost:3000)
+#   --baseUrl=...      (default: http://localhost:3001)
 #   --timeout=SECONDS  (default: 90)
 #   --skipMigrations   (skip supabase db push / migration up)
 
@@ -302,7 +302,7 @@ wait_for_url() {
   fi
 }
 
-BASE_URL="http://localhost:3000"
+BASE_URL="http://localhost:3001"
 TIMEOUT_S=90
 SKIP_MIGRATIONS="0"
 POSITIONAL=()
@@ -420,14 +420,14 @@ log "✅ ALL DONE"
 #   chmod +x scripts/run-parcours-scenarios-all.sh
 #   ./scripts/run-parcours-scenarios-all.sh \
 #     <PARCOURS_ID> <LEARNER_ID> <COURSE_ID> <TEST_ID> <RESOURCE_ID> \
-#     --baseUrl=http://localhost:3000 \
+#     --baseUrl=http://localhost:3001 \
 #     --timeout=90
 #
 # Notes:
 # - Requires scripts/parcours-scenarios-e2e.ts to exist.
 # - Logs dev server to /tmp/pnpm-dev.log, pid to /tmp/pnpm-dev.pid
 # - Optional flags:
-#     --baseUrl=...      (default: http://localhost:3000)
+#     --baseUrl=...      (default: http://localhost:3001)
 #     --timeout=SECONDS  (default: 90)
 #     --skipMigrations   (skip supabase db push / migration up)
 
@@ -502,7 +502,7 @@ wait_for_url() {
 }
 
 # ---------- parse args ----------
-BASE_URL="http://localhost:3000"
+BASE_URL="http://localhost:3001"
 TIMEOUT_S=90
 SKIP_MIGRATIONS="0"
 POSITIONAL=()

@@ -40,7 +40,7 @@ if ($Hard -and (Test-Path ".next")) {
   Remove-Item ".next" -Recurse -Force
 }
 
-Write-Host "Dev server restarted on http://localhost:3000"
+Write-Host "Dev server restarted on http://localhost:3001"
 $env:PORT = "3000"
 pnpm dev
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Script pour récupérer l'ID du questionnaire Soft Skills de Tim Darcy
  * et générer le lien direct vers le test
  */
@@ -60,7 +60,7 @@ async function getQuestionnaireLink() {
     console.log('');
 
     // Générer le lien
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
     const link = `${baseUrl}/dashboard/apprenant/questionnaires/${questionnaire.id}`;
 
     console.log('🔗 Lien du test Soft Skills:');

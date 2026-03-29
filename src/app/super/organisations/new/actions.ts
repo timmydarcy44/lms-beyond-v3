@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { getServerClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
@@ -141,7 +141,7 @@ export async function createOrganizationWithAdminAction(input: CreateOrganizatio
               organization_id: organization.id,
               organization_name: input.name,
             },
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/reset-password?token={token}`,
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/reset-password?token={token}`,
           }
         );
 

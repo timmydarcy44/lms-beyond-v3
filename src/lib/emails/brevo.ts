@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Configuration et utilitaires pour l'envoi d'emails via BREVO (ex-Sendinblue)
  */
 
@@ -58,7 +58,7 @@ export async function sendEmail(
     const isBeyondConnect = options.tags?.some(tag => tag.includes("beyond-connect"));
     const defaultSenderName = isBeyondConnect ? "Beyond Connect" : "Jessica CONTENTIN";
     
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
     
     const payload: any = {
       sender: options.from || {

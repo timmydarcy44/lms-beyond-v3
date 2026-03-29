@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/components/providers/supabase-provider";
 
 export default function LoginPage() {
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useSupabase();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -15,22 +16,15 @@ export default function LoginPage() {
     setError(null);
     setIsSubmitting(true);
     try {
-      if (!supabase) {
-        setError("Supabase n'est pas configuré.");
-        return;
-      }
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      const redirectTo = `${siteUrl}/auth/callback`;
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
-        options: { redirectTo } as any,
       });
       if (signInError) {
         setError(signInError.message || "Identifiants incorrects.");
         return;
       }
-      window.location.href = "/note-app";
+      window.location.href = "/dashboard";
     } catch {
       setError("Impossible de se connecter.");
     } finally {
@@ -41,16 +35,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#030617] text-white">
       <header className="absolute left-8 right-8 top-6 flex items-center justify-between text-sm">
-        <span className="font-bold tracking-tight">Nevo</span>
-        <a href="/register" className="text-white hover:opacity-80">
+        <span className="font-bold tracking-tight">Beyond LMS</span>
+        <Link href="/register" className="text-white hover:opacity-80">
           Créer un compte
-        </a>
+        </Link>
       </header>
 
       <main className="flex min-h-screen w-full items-center justify-center px-6">
         <div className="w-full max-w-md text-center">
           <h1 className="text-4xl font-extrabold">Se connecter</h1>
-          <p className="mt-3 text-sm text-[#94A3B8]">Votre prise de notes intelligente.</p>
+          <p className="mt-3 text-sm text-[#94A3B8]">Votre plateforme d&apos;apprentissage</p>
 
           <form onSubmit={handleLogin} className="mt-10 space-y-4">
             <input
@@ -80,9 +74,9 @@ export default function LoginPage() {
           </form>
 
         <div className="mt-4 text-center">
-          <a href="/forgot-password" className="text-sm text-[#94A3B8] hover:text-white">
+          <Link href="/forgot-password" className="text-sm text-[#94A3B8] hover:text-white">
             Mot de passe oublié ?
-          </a>
+          </Link>
         </div>
         </div>
       </main>

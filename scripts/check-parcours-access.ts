@@ -1,8 +1,8 @@
-/**
+﻿/**
  * scripts/check-parcours-access.ts
  *
  * Usage:
- *   pnpm tsx scripts/check-parcours-access.ts <PARCOURS_ID> <USER_ID> [--baseUrl=http://localhost:3000] [--probePathsColumns]
+ *   pnpm tsx scripts/check-parcours-access.ts <PARCOURS_ID> <USER_ID> [--baseUrl=http://localhost:3001] [--probePathsColumns]
  *
  * Env required:
  *   SUPABASE_URL
@@ -368,7 +368,7 @@ async function main() {
 
   console.log("\nHow to run:");
   console.log(
-    "  pnpm tsx scripts/check-parcours-access.ts <PARCOURS_ID> <USER_ID> --baseUrl=http://localhost:3000",
+    "  pnpm tsx scripts/check-parcours-access.ts <PARCOURS_ID> <USER_ID> --baseUrl=http://localhost:3001",
   );
   console.log(
     "  pnpm tsx scripts/check-parcours-access.ts <PARCOURS_ID> <USER_ID> --probePathsColumns",

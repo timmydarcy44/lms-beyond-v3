@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
               organization_id: organization.id,
               organization_name: name,
             },
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/reset-password?token={token}`,
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"}/reset-password?token={token}`,
           }
         );
 

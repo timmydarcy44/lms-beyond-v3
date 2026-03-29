@@ -21,8 +21,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Supabase indisponible." }, { status: 500 });
     }
 
-    const supabaseClient = supabase;
-    const { data: updated, error } = await supabaseClient
+    const { data: updated, error } = await supabase
       .from("profiles")
       .update({
         disc_profile: body?.disc_profile || null,

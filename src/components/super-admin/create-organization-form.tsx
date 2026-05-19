@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 type MemberInput = {
   email: string;
@@ -20,23 +19,7 @@ export function CreateOrganizationForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [description, setDescription] = useState("");
-  const [members, setMembers] = useState<MemberInput[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const handleAddMember = () => {
-    setMembers([...members, { email: "", role: "learner", fullName: "" }]);
-  };
-
-  const handleRemoveMember = (index: number) => {
-    setMembers(members.filter((_, i) => i !== index));
-  };
-
-  const handleMemberChange = (index: number, field: keyof MemberInput, value: string) => {
-    const updated = [...members];
-    updated[index] = { ...updated[index], [field]: value };
-    setMembers(updated);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,24 +27,35 @@ export function CreateOrganizationForm() {
     setFieldErrors({});
 
     try {
-      const res = await fetch("/api/super-admin/organizations/create", {
+      const data = {
+        name: typeof name === "string" ? name : "",
+        slug: slug || undefined,
+      };
+      console.log("PAYLOAD ENVOYÉ:", JSON.stringify(data));
+
+      const res = await fetch("/api/super-admin/organisations/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name,
-          slug: slug || undefined,
-          description: description || undefined,
-          members: members.filter((m) => m.email && m.fullName),
-        }),
+        body: JSON.stringify(data),
       });
 
-      const json = await res.json().catch(() => null);
+      const json = await res.json();
 
       if (res.ok && json?.ok) {
         toast.success("Organisation créée avec succès !");
-        router.push(`/super/organisations/${json.organization?.id}`);
+        const newId = json.organization?.id; // Extraction précise depuis { organization: { id: '...' } }
+
+        if (newId) {
+          router.refresh();
+          router.push("/super/organisations/" + newId + "/manage");
+        } else {
+          console.error("ID non trouvé dans la réponse API", json);
+          toast.error("Création OK mais redirection impossible", {
+            description: "ID de l'organisation introuvable dans la réponse API.",
+          });
+        }
       } else {
         if (json?.fieldErrors) {
           setFieldErrors(json.fieldErrors);
@@ -113,105 +107,10 @@ export function CreateOrganizationForm() {
           </p>
         </div>
 
-        <div>
-          <Label htmlFor="description" className="text-gray-900">
-            Description (optionnel)
-          </Label>
-          <Textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description de l'organisation..."
-            rows={3}
-            className="mt-2 border-gray-300 bg-white text-gray-900 focus:border-gray-900"
-          />
-        </div>
+        {/* Champs retirés: description/logo/couleurs non présents en base selon l'audit SQL */}
       </div>
 
-      {/* Membres */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label className="text-gray-900">Membres de l'organisation</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAddMember}
-            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Ajouter un membre
-          </Button>
-        </div>
-
-        {members.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
-            <p className="text-sm text-gray-600">
-              Aucun membre ajouté. Cliquez sur "Ajouter un membre" pour commencer.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {members.map((member, index) => (
-              <div
-                key={index}
-                className="rounded-lg border border-gray-200 bg-white p-4 space-y-3"
-              >
-                <div className="flex items-start justify-between">
-                  <h4 className="text-sm font-medium text-gray-900">Membre {index + 1}</h4>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveMember(index)}
-                    className="h-6 w-6 p-0 text-gray-500 hover:text-gray-900"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div>
-                    <Label className="text-gray-700 text-xs">Email *</Label>
-                    <Input
-                      value={member.email}
-                      onChange={(e) => handleMemberChange(index, "email", e.target.value)}
-                      placeholder="email@exemple.com"
-                      type="email"
-                      required
-                      className="mt-1 border-gray-300 bg-white text-gray-900 text-sm focus:border-gray-900"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-gray-700 text-xs">Nom complet *</Label>
-                    <Input
-                      value={member.fullName}
-                      onChange={(e) => handleMemberChange(index, "fullName", e.target.value)}
-                      placeholder="Jean Dupont"
-                      required
-                      className="mt-1 border-gray-300 bg-white text-gray-900 text-sm focus:border-gray-900"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-gray-700 text-xs">Rôle *</Label>
-                    <select
-                      value={member.role}
-                      onChange={(e) => handleMemberChange(index, "role", e.target.value as MemberInput["role"])}
-                      className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                    >
-                      <option value="instructor">Formateur</option>
-                      <option value="learner">Apprenant</option>
-                      <option value="tutor">Tuteur</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Membres retirés: non gérés par le schéma minimal audité */}
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">

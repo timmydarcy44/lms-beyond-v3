@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ManifestoModal } from "@/components/beyond-connect/manifesto-modal";
+import { LazyBandwidthVideo } from "@/components/media/lazy-bandwidth-video";
 
 export const metadata: Metadata = {
   title: "Beyond Connect - Elite Matching Platform",
@@ -180,13 +181,15 @@ export default function ConnectPage() {
             </span>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/5">
-            <video
-              className="h-full w-full object-cover"
+            <LazyBandwidthVideo
+              src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/video_header%20(2).mp4"
+              eager
+              className="absolute inset-0 h-full w-full object-cover"
+              wrapperClassName="relative aspect-video w-full"
               autoPlay
               loop
               muted
               playsInline
-              src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/video_header%20(2).mp4"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#050A18] via-transparent to-transparent" />
           </div>

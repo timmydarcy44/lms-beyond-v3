@@ -151,6 +151,7 @@ export const ResizableImage = Image.extend({
 
   inline: false,
   group: "block",
+  allowGapCursor: true,
   draggable: true,
 
   addAttributes() {

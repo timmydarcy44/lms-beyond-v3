@@ -548,14 +548,17 @@ export async function getOrganizationLogo(orgId: string): Promise<string | null>
       }
     }
 
-    // Sinon chercher dans la table organizations
+    // Sinon : table organizations (logo_url prioritaire)
     const { data: org } = await supabase
       .from("organizations")
-      .select("logo")
+      .select("logo_url, logo")
       .eq("id", orgId)
       .single();
 
-    return org?.logo || null;
+    const row = org as { logo_url?: string | null; logo?: string | null } | null;
+    const url = String(row?.logo_url ?? "").trim();
+    const legacy = String(row?.logo ?? "").trim();
+    return url || legacy || null;
   } catch (error) {
     console.error("[super-admin] Error fetching organization logo:", error);
     return null;
@@ -1759,7 +1762,7 @@ export async function getSuperAdminPathBuilderLibrary(): Promise<FormateurConten
 
     let resourcesResult = await supabase
       .from("resources")
-      .select("id, title, cover_url, thumbnail_url, published, resource_type, kind, status, updated_at, created_at")
+      .select("id, title, cover_url, published, resource_type, kind, status, updated_at, created_at")
       .order("updated_at", { ascending: false })
       .limit(120);
 
@@ -1767,7 +1770,7 @@ export async function getSuperAdminPathBuilderLibrary(): Promise<FormateurConten
       console.warn("[super-admin/path-builder] resources table missing resource_type/updated_at, falling back", resourcesResult.error);
       const retryResourcesResult = await supabase
         .from("resources")
-        .select("id, title, cover_url, thumbnail_url, published, type, kind, status, created_at")
+        .select("id, title, cover_url, published, type, kind, status, created_at")
         .order("created_at", { ascending: false })
         .limit(120);
 

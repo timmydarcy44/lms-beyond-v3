@@ -1,6 +1,21 @@
 import type { NextConfig } from "next";
 
+// next-pwa (CommonJS) — en dev, service worker désactivé pour éviter le cache agressif
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const withPWA = require("next-pwa")({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
+
 const nextConfig: NextConfig = {
+  output: "standalone",
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  turbopack: {},
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "canvas"],
   images: {
     remotePatterns: [
       {
@@ -28,15 +43,18 @@ const nextConfig: NextConfig = {
         hostname: "www.istockphoto.com",
       },
     ],
-    // Autoriser les images base64 (data:)
     dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
+    contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    // Qualités d'image supportées
     qualities: [75, 80, 85],
   },
   async redirects() {
     return [
+      {
+        source: "/app-landing/:path*",
+        destination: "/:path*",
+        permanent: false,
+      },
       {
         source: "/badges/:badgeClassId/criteria",
         destination: "/badgeclasses/:badgeClassId/criteria",
@@ -44,6 +62,19 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/",
+        destination: "/app-landing",
+      },
+      {
+        source:
+          "/:path((?!api|super|formations|catalog|catalogue|note-app|_next|app-landing|login|dashboard|g|favicon.ico|robots.txt|sitemap.xml|programmes|specialites|jessica-contentin|consultations|a-propos|orientation|postuler|edge-lab|parcours|entreprises|edge-online|online|ressources|blog|inscription|mon-compte|panier|confirmer|forgot-password|reset-password|register|prix|pricing|tarif|for-education|unauthorized|soft-skills).*)",
+        destination: "/app-landing/:path",
+      },
+    ];
+  },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

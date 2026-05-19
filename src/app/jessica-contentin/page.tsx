@@ -1,259 +1,159 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import { PillarsSlider } from "@/components/jessica-contentin/pillars-slider";
 import { VideoHero } from "@/components/jessica-contentin/video-hero";
-import { ResourcesSection } from "@/components/jessica-contentin/resources-section";
+import { JessicaHomePresentation } from "@/components/jessica-contentin/jessica-home-presentation";
+import { JessicaParcoursProgramCards, type ParcoursProgramCard } from "@/components/jessica-contentin/jessica-parcours-program-cards";
+import { PROGRAMMES, programmePresentationHref } from "@/lib/jessica-contentin/programmes-catalog";
 import { GoogleReviewsSlider } from "@/components/jessica-contentin/google-reviews-slider";
-import { FeaturesSlider } from "@/components/jessica-contentin/features-slider";
-import { ContactForm } from "@/components/jessica-contentin/contact-form";
-import { InternalLinks } from "@/components/jessica-contentin/internal-links";
+import { ObjectivesAccordion, type ObjectiveItem } from "@/components/jessica-contentin/objectives-accordion";
+import { JessicaHomeAccompagnementSection } from "@/components/jessica-contentin/jessica-home-accompagnement-section";
 import { motion } from "framer-motion";
-import { env } from "@/lib/env";
 import Script from "next/script";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
-const HERO_IMAGE_PATH = "Copie de Copie de Copie de Copie de Sans titre.png";
 
-// Fonction pour construire l'URL Supabase Storage
-function getSupabaseStorageUrl(bucket: string, path: string): string {
-  const supabaseUrl = 
-    env.supabaseUrl || 
-    (typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) ||
-    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
-  
-  if (!supabaseUrl) {
-    return "";
+const VIDEO_SOUS_PARCOURS =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Design%20sans%20titre.mp4";
+
+const KEYWORD_OBJECTIVES: ObjectiveItem[] = [
+  {
+    id: "apprendre",
+    title: "Apprendre",
+    imageUrl: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "comprendre",
+    title: "Comprendre",
+    imageUrl:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/levee%20de%20soleil.mp4",
+  },
+  {
+    id: "reguler",
+    title: "Se réguler",
+    imageUrl: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    id: "structurer",
+    title: "Se structurer",
+    imageUrl: "https://images.unsplash.com/photo-1504151932400-72d4384f04b3?w=1600&q=80",
+  },
+  {
+    id: "developper",
+    title: "Se développer",
+    imageUrl: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1600&q=80",
+  },
+  {
+    id: "epanouir",
+    title: "S'épanouir",
+    imageUrl: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1600&q=80",
+  },
+];
+
+const PARCOURS_CARDS: ParcoursProgramCard[] = PROGRAMMES.map((p) => {
+  const base: ParcoursProgramCard = {
+    headline: p.headline,
+    tag: p.tag,
+    href: programmePresentationHref(p.slug),
+  };
+  if (p.promoVideoUrl) {
+    return {
+      ...base,
+      videoUrl: p.promoVideoUrl,
+      ...(p.promoPosterUrl ? { posterUrl: p.promoPosterUrl } : {}),
+    };
   }
-  
-  const encodedBucket = encodeURIComponent(bucket);
-  const pathParts = path.split('/');
-  const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
-  
-  return `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
-}
-
-// Photo de Jessica - depuis Supabase Storage
-const JESSICA_PHOTO_PATH = "Jessica contentin re.jpg";
-const BUCKET_NAME = "Jessica CONTENTIN";
+  return { ...base, imageUrl: p.heroImageUrl };
+});
 
 export default function JessicaContentinHomePage() {
-  const photoUrl = getSupabaseStorageUrl(BUCKET_NAME, JESSICA_PHOTO_PATH) || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80";
-  const heroImageUrl =
-    getSupabaseStorageUrl(BUCKET_NAME, HERO_IMAGE_PATH) ||
-    "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80";
-
   return (
-    <div className="min-h-screen bg-[#F8F5F0]">
-      <section className="relative mx-4 mb-4 h-[calc(100vh-4rem)] min-h-[560px] overflow-hidden rounded-2xl bg-[#D9D9DB]">
-        <img
-          src={heroImageUrl}
-          alt="Jessica Contentin"
-          className="absolute inset-0 h-full w-full object-cover"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            if (!target.src.includes("unsplash")) {
-              target.src =
-                "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80";
-            }
-          }}
-        />
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="relative z-10 flex h-full items-center px-6 lg:px-16">
-          <div className="max-w-3xl">
-            <h1
-              className="text-5xl font-bold leading-tight text-white lg:text-7xl"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              }}
-            >
-              Ensemble, revelons votre potentiel
-            </h1>
-            <Button
-              asChild
-              size="lg"
-              className="mt-8 rounded-full bg-[#C6A664] px-8 py-6 text-lg text-white hover:bg-[#B88A44]"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              }}
-            >
-              <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                Prendre rendez-vous
-              </a>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Pillars Slider */}
-      <PillarsSlider />
-
-      {/* Vidéo Hero - Entre le slider et les avis */}
+    <div className="min-h-screen bg-white">
       <VideoHero />
 
-      {/* Section Ressources - Sous la vidéo */}
-      <ResourcesSection />
+      <JessicaParcoursProgramCards
+        cards={PARCOURS_CARDS}
+        featuredVideoUrl={VIDEO_SOUS_PARCOURS}
+        featuredVideoTitle="Un accompagnement personnalisé pour comprendre, ajuster et progresser."
+        belowProgramCards={
+          <ObjectivesAccordion
+            embedded
+            title="Objectifs des programmes"
+            subtitle="Sélectionnez un axe pour voir le visuel associé."
+            objectives={KEYWORD_OBJECTIVES}
+          />
+        }
+      />
 
-      {/* Avis Google - Slider moderne avec cartes */}
-      <GoogleReviewsSlider />
+      <JessicaHomeAccompagnementSection />
 
-      {/* Présentation Section avec photo */}
+      <JessicaHomePresentation />
+
       <motion.section
-        initial={{ opacity: 0, y: 50 }}
+        initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="py-20 bg-[#F8F5F0] mx-4 mb-4 rounded-2xl"
+        transition={{ duration: 0.6, delay: 0.05 }}
+        className="mx-auto max-w-6xl px-4 py-12 md:px-8 md:py-16"
       >
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
-            {/* Texte à gauche */}
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="space-y-8"
-            >
-              <div>
-                <h1
-                  className="text-4xl font-bold text-[#2F2A25] mb-4"
-                  style={{
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                  }}
-                >
-                  Jessica Contentin : Psychopédagogie et Neuroéducation à Caen
-                </h1>
-              </div>
-
-              <div
-                className="prose prose-lg max-w-none text-[#2F2A25] leading-relaxed space-y-4"
-                style={{
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                }}
-              >
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                >
-                  Diplômée d'un <strong>Master en Ingénierie des Politiques Sanitaires et Sociales (IAE de Caen)</strong> et d'un <strong>Master MEEF</strong>, je suis également <strong>professeure certifiée en Santé, titulaire d'un concours national de l'Éducation nationale</strong>.
-                </motion.p>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
-                >
-                  Ce parcours universitaire et professionnel m'a permis de développer une compréhension fine et concrète des enjeux éducatifs, émotionnels et sociaux rencontrés par les jeunes et leurs familles.
-                </motion.p>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
-                >
-                  J'ai également acquis une solide expérience au sein d'institutions spécialisées, notamment :
-                </motion.p>
-                <motion.ul
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.6 }}
-                  className="list-disc list-inside space-y-2 text-[#2F2A25] ml-4"
-                >
-                  <li><strong>2 ans au CRA de Basse-Normandie</strong>, en tant que stagiaire cadre socio-éducatif (accompagnement des familles, compréhension des diagnostics TND, travail pluridisciplinaire)</li>
-                  <li>Une expérience à la <strong>MDPH du Calvados</strong>, au cœur de l'orientation des jeunes et du suivi des dossiers</li>
-                </motion.ul>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.7 }}
-                  className="mt-4"
-                >
-                  À cela s'ajoute une <strong>certification en psychopédagogie et neuroéducation</strong>, renforçant mon expertise dans l'accompagnement cognitif et émotionnel.
-                </motion.p>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.8 }}
-                >
-                  Passionnée par la <strong>psychologie de l'éducation</strong>, j'adopte une approche globale intégrant les dimensions cognitive, émotionnelle et comportementale de chaque enfant ou adolescent. Je suis formée à l'accompagnement des <Link href="/jessica-contentin/specialites/tnd" className="text-[#C6A664] hover:underline font-semibold">TND (troubles DYS, TDAH, TSA, HPI, TOP)</Link>, ainsi qu'aux problématiques telles que le <Link href="/jessica-contentin/specialites/harcelement" className="text-[#C6A664] hover:underline font-semibold">harcèlement scolaire</Link>, la <strong>phobie scolaire</strong>, les difficultés émotionnelles et la perte de confiance.
-                </motion.p>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.9 }}
-                >
-                  La <strong>gestion des émotions</strong> constitue le fil conducteur de mon travail, car elle est essentielle à la réussite scolaire et au bien-être. Mon objectif est de révéler les forces de chaque jeune, renforcer leur <Link href="/jessica-contentin/specialites/confiance-en-soi" className="text-[#C6A664] hover:underline font-semibold">confiance</Link>, apaiser les tensions et favoriser leur inclusion tout en accompagnant les familles avec douceur.
-                </motion.p>
-              </div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.6 }}
-                className="pt-8"
-              >
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-8 py-6 text-lg transition-transform hover:scale-105"
-                  style={{
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                  }}
-                >
-                  <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                    Prendre rendez-vous
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </a>
-                </Button>
-              </motion.div>
-            </motion.div>
-
-            {/* Photo à droite */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="relative"
-            >
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                <img
-                  src={photoUrl}
-                  alt="Jessica CONTENTIN - Psychopédagogue certifiée en neuroéducation"
-                  className="w-full h-auto object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (!target.src.includes('unsplash')) {
-                      target.src = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80";
-                    }
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-              </div>
-            </motion.div>
-          </div>
+        <div className="mx-auto max-w-6xl space-y-6">
+          <h2 className="text-2xl font-semibold text-[#2F2A25] md:text-3xl">Témoignages & avis</h2>
+          <GoogleReviewsSlider />
         </div>
       </motion.section>
 
-      {/* Slider Features style Tony Robbins */}
-      <FeaturesSlider />
+      {/* Méthode */}
+      <motion.section
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6, delay: 0.07 }}
+        className="mx-auto max-w-5xl px-4 py-16 md:px-8 md:py-20"
+      >
+        <div className="mx-auto max-w-5xl space-y-6">
+          <h2 className="text-3xl font-semibold text-[#2F2A25] md:text-4xl">Une approche basée sur la neuroéducation</h2>
+          <ul className="grid gap-3 text-base leading-relaxed text-[#2F2A25]/85 md:grid-cols-2 md:text-lg">
+            {[
+              "Compréhension du fonctionnement cognitif",
+              "Identification des besoins réels",
+              "Outils concrets et personnalisés",
+              "Accompagnement progressif",
+            ].map((line) => (
+              <li key={line} className="flex gap-2 py-2">
+                <span className="font-semibold text-[#C6A664]">→</span>
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </motion.section>
 
-      {/* Formulaire de contact */}
-      <ContactForm />
-
-      {/* Maillage interne SEO */}
-      <InternalLinks currentPage="home" />
+      {/* Crédibilité */}
+      <motion.section
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6, delay: 0.08 }}
+        className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-20"
+      >
+        <div className="mx-auto max-w-6xl space-y-6">
+          <h2 className="text-3xl font-semibold text-[#2F2A25] md:text-4xl">Une expertise reconnue</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              "+ de 100 jeunes accompagnés",
+              "10 ans d’expérience en éducation",
+              "Spécialisée troubles du neurodéveloppement",
+              "Enseignante certifiée",
+            ].map((it) => (
+              <div key={it} className="p-4 text-center text-sm font-semibold text-[#2F2A25] md:text-base">
+                {it}
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-sm text-[#2F2A25]/70">
+            Découvrez aussi les retours détaillés dans la section témoignages ci-dessus.
+          </p>
+        </div>
+      </motion.section>
 
       {/* Structured Data Schema.org */}
       <Script
@@ -264,7 +164,7 @@ export default function JessicaContentinHomePage() {
             "@context": "https://schema.org",
             "@type": "ProfessionalService",
             "name": "Jessica CONTENTIN - Psychopédagogue",
-            "description": "Psychopédagogue certifiée en neuroéducation. Accompagnement personnalisé pour troubles DYS, TDA-H, harcèlement scolaire, phobie scolaire.",
+            "description": "Professeure en santé et psychopédagogue. Accompagnement structuré et individualisé pour comprendre le fonctionnement cognitif et émotionnel, réguler les émotions et structurer les apprentissages.",
             "url": "https://jessicacontentin.fr",
             "address": {
               "@type": "PostalAddress",

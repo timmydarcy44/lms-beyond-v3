@@ -13,14 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import { ImageUploadModal } from "./image-upload-modal";
 import { VideoUploadModal } from "./video-upload-modal";
-import { OpenBadgeModal } from "./open-badge-modal";
+import { BadgeCreatorOverlay } from "@/components/studio/badge-creator-overlay";
 import { BadgeCheck, Image as ImageIcon, Video as VideoIcon, Plus, ExternalLink } from "lucide-react";
 import { calculateCourseDuration } from "@/lib/utils/course-duration";
 import { useSupabase } from "@/components/providers/supabase-provider";
 
 export function CourseMetadataFormSuperAdmin() {
   const searchParams = useSearchParams();
+  const courseId = searchParams.get("courseId") ?? searchParams.get("id");
   const snapshot = useCourseBuilder((state) => state.snapshot);
+  const hydrateFromSnapshot = useCourseBuilder((state) => state.hydrateFromSnapshot);
   const general = snapshot.general;
   const updateGeneral = useCourseBuilder((state) => state.updateGeneral);
   const objectives = useCourseBuilder((state) => state.snapshot.objectives);
@@ -103,7 +105,7 @@ export function CourseMetadataFormSuperAdmin() {
   useEffect(() => {
     if (assignmentType === "organization" && organizations.length === 0 && !loadingOrgs) {
       setLoadingOrgs(true);
-      fetch("/api/super-admin/organizations")
+      fetch("/api/super-admin/organisations")
         .then((res) => res.json())
         .then((data) => {
           if (data.organizations) {
@@ -577,14 +579,36 @@ export function CourseMetadataFormSuperAdmin() {
         </CardContent>
       </Card>
 
-      <OpenBadgeModal
+      <BadgeCreatorOverlay
         open={isBadgeModalOpen}
         onOpenChange={setIsBadgeModalOpen}
+        courseId={courseId}
+        courseObjectives={objectives}
+        onObjectivesChange={(next) => hydrateFromSnapshot({ ...snapshot, objectives: next })}
+        initialCasePrompt={general.badge_case_prompt ?? ""}
+        initialAudioNegotiationScenario={general.badge_audio_negotiation_scenario ?? ""}
+        initialFileUploadInstructions={general.badge_file_upload_instructions ?? ""}
+        initialVideoPresentationUrl={general.badge_video_presentation_url ?? ""}
+        initialAiQaTopic={general.badge_ai_qa_topic ?? ""}
         onSave={(badge) => {
-          updateGeneral({ 
+          updateGeneral({
             badgeLabel: badge.name,
             badgeDescription: badge.description,
             badgeImage: badge.imageUrl || general.badgeImage || "",
+            badge_modalities_obtention: badge.modalitiesObtention,
+            badge_competencies_text: badge.competenciesText,
+            badge_criteria_html: badge.criteriaHtml,
+            badge_modalities_keys: badge.modalitiesKeys,
+            badge_oral_ia_evaluation_prompt: badge.oralIaEvaluationPrompt || undefined,
+            badge_technical_json_endpoint: badge.technicalJsonEndpoint || undefined,
+            badge_evaluation_type: badge.evaluationType,
+            badge_quiz_test_id: badge.quizTestId || undefined,
+            badge_case_prompt: badge.casePrompt || undefined,
+            badge_audio_presentation_scenario: badge.audioPresentationScenario || undefined,
+            badge_audio_negotiation_scenario: badge.audioNegotiationScenario || undefined,
+            badge_file_upload_instructions: badge.fileUploadInstructions || undefined,
+            badge_video_presentation_url: badge.videoPresentationUrl || undefined,
+            badge_ai_qa_topic: badge.aiQaTopic,
           });
         }}
         initialName={general.badgeLabel || ""}

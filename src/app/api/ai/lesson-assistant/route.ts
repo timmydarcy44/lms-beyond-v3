@@ -8,6 +8,7 @@ import {
   buildMindMapPrompt,
   buildRephrasePrompt,
   buildSchemaPrompt,
+  buildSynthesisSheetPrompt,
   buildTranslatePrompt,
   SCHEMA_PROMPT_VERSION,
   SENTENCE_CASE_PROMPT_VERSION,
@@ -106,8 +107,16 @@ function normalizeOptions(action: string, options?: TransformationOptions): Tran
       normalized.promptVersion = SENTENCE_CASE_PROMPT_VERSION;
       break;
     }
+    case "synthesis": {
+      normalized.promptVersion = SENTENCE_CASE_PROMPT_VERSION;
+      break;
+    }
     default:
       break;
+  }
+
+  if (typeof safeOptions["chapterLocalId"] === "string" && String(safeOptions["chapterLocalId"]).trim()) {
+    normalized.chapterLocalId = String(safeOptions["chapterLocalId"]).trim();
   }
 
   return sortObject(normalized);
@@ -133,6 +142,7 @@ export async function POST(request: NextRequest) {
       context?: {
         courseId?: string | null;
         lessonId?: string | null;
+        chapterLocalId?: string | null;
       };
     };
 
@@ -154,7 +164,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const normalizedOptions = normalizeOptions(action, options);
+    const normalizedOptions = normalizeOptions(action, {
+      ...options,
+      ...(context?.chapterLocalId
+        ? { chapterLocalId: String(context.chapterLocalId).trim() }
+        : {}),
+    });
     const inputHash = buildInputHash(text, action, normalizedOptions);
 
     let result: any;
@@ -184,9 +199,10 @@ export async function POST(request: NextRequest) {
       if (error) {
         if (isTableMissing(error)) {
           cacheAvailable = false;
-        } else if (error.code !== "PGRST116") {
-          console.error("[ai] Error fetching cached transformation", error);
-          return NextResponse.json({ error: "Erreur lors de la récupération du cache" }, { status: 500 });
+        } else {
+          // RLS, colonne manquante, schéma cache, etc. : ne pas bloquer la transformation.
+          console.warn("[ai] Cache lecture ignorée (génération sans cache)", error.code, error.message);
+          cacheAvailable = false;
         }
       } else if (data) {
         cachedTransformation = data;
@@ -277,6 +293,12 @@ export async function POST(request: NextRequest) {
         format = "json";
         break;
       }
+      case "synthesis": {
+        const prompt = buildSynthesisSheetPrompt(text);
+        result = await generateText(prompt, { maxTokens: 4500 });
+        format = "text";
+        break;
+      }
       default:
         return NextResponse.json({ error: "Action non supportée" }, { status: 400 });
     }
@@ -306,10 +328,7 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (insertError) {
-          if (!isTableMissing(insertError)) {
-            console.error("[ai] Error caching transformation", insertError);
-            return NextResponse.json({ error: "Impossible d'enregistrer la transformation" }, { status: 500 });
-          }
+          console.warn("[ai] Écriture cache transformation ignorée", insertError.code, insertError.message);
           cacheAvailable = false;
         } else {
           transformationId = inserted?.id ?? null;
@@ -324,22 +343,31 @@ export async function POST(request: NextRequest) {
     if (transformationId) {
       const courseId = isUuid(context?.courseId) ? context?.courseId ?? null : null;
       const lessonId = isUuid(context?.lessonId) ? context?.lessonId ?? null : null;
+      const chapterLocalRaw = String(context?.chapterLocalId ?? "").trim();
+      const chapterLocalId =
+        chapterLocalRaw ||
+        (context?.lessonId != null && !isUuid(context.lessonId)
+          ? String(context.lessonId).trim()
+          : "") ||
+        null;
       const excerpt = text.length > 2000 ? `${text.slice(0, 2000)}…` : text;
 
-      const { error: historyError } = await supabase
-        .from(USER_HISTORY_TABLE)
-        .upsert(
-          {
-            user_id: authData.user.id,
-            transformation_id: transformationId,
-            course_id: courseId,
-            lesson_id: lessonId,
-            selection_excerpt: excerpt,
-            action,
-            options: normalizedOptions,
-          },
-          { onConflict: "user_id,lesson_id,transformation_id" },
-        );
+      const historyPayload: Record<string, unknown> = {
+        user_id: authData.user.id,
+        transformation_id: transformationId,
+        course_id: courseId,
+        lesson_id: lessonId,
+        selection_excerpt: excerpt,
+        action,
+        options: normalizedOptions,
+      };
+      if (chapterLocalId) {
+        historyPayload.chapter_local_id = chapterLocalId;
+      }
+
+      const { error: historyError } = await supabase.from(USER_HISTORY_TABLE).upsert(historyPayload, {
+        onConflict: "user_id,transformation_id,lesson_id,chapter_local_id",
+      });
 
       if (historyError && !isTableMissing(historyError)) {
         console.error("[ai] Error saving transformation history", historyError);
@@ -411,6 +439,7 @@ export async function GET(request: NextRequest) {
 
     const rawLessonId = request.nextUrl.searchParams.get("lessonId");
     const rawCourseId = request.nextUrl.searchParams.get("courseId");
+    const chapterLocalIdParam = request.nextUrl.searchParams.get("chapterLocalId")?.trim() || null;
     const lessonId = isUuid(rawLessonId) ? rawLessonId : null;
     const courseId = isUuid(rawCourseId) ? rawCourseId : null;
     const limitParam = request.nextUrl.searchParams.get("limit");
@@ -425,6 +454,7 @@ export async function GET(request: NextRequest) {
         lesson_id,
         course_id,
         selection_excerpt,
+        chapter_local_id,
         action,
         options,
         transformation:${TRANSFORMATION_TABLE}(
@@ -445,8 +475,9 @@ export async function GET(request: NextRequest) {
 
     if (lessonId) {
       query = query.eq("lesson_id", lessonId);
-    }
-    if (courseId) {
+    } else if (chapterLocalIdParam) {
+      query = query.eq("chapter_local_id", chapterLocalIdParam);
+    } else if (courseId) {
       query = query.eq("course_id", courseId);
     }
 

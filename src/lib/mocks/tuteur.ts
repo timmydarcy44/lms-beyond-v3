@@ -12,6 +12,7 @@ export const mockAlternants = [
     date_fin: "31/08/2026",
     missions_total: 8,
     missions_validees: 5,
+    missions_a_valider: 2,
     statut: "en_cours",
   },
   {
@@ -27,6 +28,7 @@ export const mockAlternants = [
     date_fin: "31/08/2025",
     missions_total: 10,
     missions_validees: 3,
+    missions_a_valider: 3,
     statut: "en_retard",
   },
   {
@@ -42,6 +44,7 @@ export const mockAlternants = [
     date_fin: "31/08/2026",
     missions_total: 6,
     missions_validees: 6,
+    missions_a_valider: 0,
     statut: "a_jour",
   },
 ];

@@ -1,22 +1,14 @@
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { PathBuilderWorkspace } from "@/components/formateur/path-builder/path-builder-workspace";
-import { getFormateurContentLibrary } from "@/lib/queries/formateur";
+import { FormateurPathBuilderWorkspace } from "@/components/formateur/path-builder/formateur-path-builder-workspace";
+import { getFormateurContentLibrary, getFormateurOrganizations } from "@/lib/queries/formateur";
 
 export default async function FormateurNewParcoursPage() {
-  const library = await getFormateurContentLibrary();
+  const [library, organizations] = await Promise.all([
+    getFormateurContentLibrary(),
+    getFormateurOrganizations(),
+  ]);
 
   return (
-    <DashboardShell
-      title="Créer un parcours"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/formateur" },
-        { label: "Formateur", href: "/dashboard/formateur" },
-        { label: "Parcours", href: "/dashboard/formateur/parcours" },
-        { label: "Nouveau" },
-      ]}
-    >
-      <PathBuilderWorkspace library={library} />
-    </DashboardShell>
+    <FormateurPathBuilderWorkspace library={library} organizations={organizations} />
   );
 }
 

@@ -1,18 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
+import type { CourseBuilderSnapshot } from "@/types/course-builder";
 
 import { CourseMetadataForm } from "./course-metadata-form";
 import { CourseLearnerPreview } from "./course-learner-preview";
 
-export function CourseMetadataWorkspace() {
+export function CourseMetadataWorkspace({ courseId, initialData }: { courseId?: string; initialData?: CourseBuilderSnapshot }) {
   const reset = useCourseBuilder((state) => state.reset);
+  const hydrate = useCourseBuilder((state) => state.hydrateFromSnapshot);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!initialData) return;
+    reset();
+    hydrate(initialData);
+  }, [hydrate, initialData, reset]);
 
   return (
     <div className="space-y-8 pb-12">
@@ -42,7 +50,9 @@ export function CourseMetadataWorkspace() {
               asChild
               className="rounded-full bg-gradient-to-r from-[#00C6FF] to-[#0072FF] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white"
             >
-              <Link href="/dashboard/formateur/formations/new/structure">Passer à la construction</Link>
+              <Link href={courseId ? `/dashboard/formateur/formations/${courseId}` : "/dashboard/formateur/formations/new"}>
+                Passer à la construction
+              </Link>
             </Button>
           </div>
         </CardContent>

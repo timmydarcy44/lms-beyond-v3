@@ -118,7 +118,18 @@ export default function ForEducation() {
         >
           ← Tous les produits
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <a
+            href="/prix"
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.55)",
+              textDecoration: "none",
+            }}
+          >
+            Prix
+          </a>
           <span
             style={{
               fontSize: 11,
@@ -231,6 +242,18 @@ export default function ForEducation() {
               }}
             >
               Voir les fonctionnalités ↓
+            </a>
+            <a
+              href="/prix"
+              style={{
+                color: "rgba(255,255,255,0.35)",
+                fontSize: 14,
+                alignSelf: "center",
+                textDecoration: "underline",
+                textUnderlineOffset: 4,
+              }}
+            >
+              Prix ↓
             </a>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

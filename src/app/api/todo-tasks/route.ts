@@ -18,11 +18,19 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const roleFilter = searchParams.get("role_filter");
+
     let query = supabase
       .from("todo_tasks")
-      .select("id, title, description, status, priority, school_id")
+      .select(
+        "id, title, description, status, priority, school_id, due_date, task_type, role_filter, tags, subtasks, kanban_position, created_at, updated_at",
+      )
       .eq("school_id", authData.user.id)
       .order("created_at", { ascending: false });
+
+    if (roleFilter) {
+      query = query.or(`role_filter.eq.${roleFilter},role_filter.is.null`);
+    }
 
     if (status) {
       // Gérer plusieurs statuts séparés par des virgules
@@ -68,8 +76,11 @@ export async function POST(request: NextRequest) {
       title: body.title,
       description: body.description || null,
       status: body.status || "todo",
-      priority: body.priority || "Moyenne",
+      priority: body.priority || "normal",
       school_id: authData.user.id,
+      task_type: body.task_type ?? "student_followup",
+      due_date: body.due_date || null,
+      role_filter: body.role_filter ?? null,
     };
 
     const { data, error } = await supabase

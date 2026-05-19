@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 
 import { cloneCourseBuilderSnapshot } from "@/data/course-builder-fallback";
-import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { CourseBuilderSnapshot } from "@/types/course-builder";
 
@@ -307,7 +307,7 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
     // Récupérer les ressources du formateur
     const resourcesQuery = await supabase
       .from("resources")
-      .select("id, title, cover_url, thumbnail_url, published")
+      .select("id, title, cover_url, published")
       .or(`created_by.eq.${userId},owner_id.eq.${userId}`)
       .eq("published", true)
       .order("updated_at", { ascending: false })
@@ -320,8 +320,8 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
     // Récupérer les parcours du formateur
     const pathsQuery = await supabase
       .from("paths")
-      .select("id, title, hero_url, thumbnail_url, status")
-      .or(`creator_id.eq.${userId},owner_id.eq.${userId}`)
+      .select("id, title, hero_url, status")
+      .eq("creator_id", userId)
       .eq("status", "published")
       .order("updated_at", { ascending: false })
       .limit(6);
@@ -536,7 +536,7 @@ export const getFormateurDashboardData = async (): Promise<FormateurDashboardDat
         publishedResources: publishedResourcesCountForMetrics,
       },
       activeCourses: mapCoursesToHighlights(activeCoursesQuery.data || []),
-      recommendedCourses: mapCoursesToHighlights((activeCoursesQuery.data || [])?.slice(0, 3)),
+      recommendedCourses: mapCoursesToHighlights(activeCoursesQuery.data || []),
       upcomingSessions: mapSessionsToHighlights(sessionsQuery.data),
       featuredTests: mapTestsToHighlights(testsQuery.data),
       resources: mapResourcesToHighlights(resourcesQuery.data),
@@ -572,7 +572,7 @@ export const getCourseBuilderSnapshot = async (courseId: string): Promise<Course
 
   try {
     const superAdmin = await isSuperAdmin();
-    const adminClient = superAdmin ? await getServiceRoleClientOrFallback() : null;
+    const adminClient = superAdmin ? getServiceRoleClient() : null;
     const client = adminClient ?? supabase;
 
     const { data, error } = await client
@@ -610,8 +610,11 @@ export type FormateurCourseListItem = {
   completion: number;
   updatedAt: string;
   category: string;
+  level?: string | null;
   image: string;
   nextStep?: string;
+  /** `path` = ligne issue de `public.paths` (formation / parcours multi-tenant) ; défaut = module `courses`. */
+  source?: "course" | "path";
 };
 
 export const getFormateurCourses = async (): Promise<FormateurCourseListItem[]> => {
@@ -629,32 +632,92 @@ export const getFormateurCourses = async (): Promise<FormateurCourseListItem[]> 
     const userId = authData?.user?.id ?? null;
     if (!userId) return [];
 
-    // Récupérer les formations du formateur
-    // Chercher dans creator_id OU owner_id
-    const { data: coursesData, error: coursesError } = await supabase
-      .from("courses")
-      .select("id, title, status, cover_image, updated_at, created_at, builder_snapshot")
-      .or(`creator_id.eq.${userId},owner_id.eq.${userId}`)
-      .order("updated_at", { ascending: false })
-      .limit(100);
+    const serviceOnly = getServiceRoleClient();
+    const superAdmin = await isSuperAdmin();
+    const fullCatalog = Boolean(serviceOnly && superAdmin);
+    const db = fullCatalog ? serviceOnly! : supabase;
 
-    if (coursesError) throw coursesError;
-    if (!coursesData || coursesData.length === 0) return [];
+    let coursesData: CourseRow[] = [];
+
+    if (fullCatalog) {
+      // Super admin (+ allowlist email) avec service role : toutes les formations, toutes galaxies / orgs.
+      const { data, error } = await db
+        .from("courses")
+        .select("id, title, status, cover_image, updated_at, created_at, builder_snapshot, level")
+        .order("updated_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      coursesData = (data ?? []) as CourseRow[];
+    } else {
+      const ownedRes = await supabase
+        .from("courses")
+        .select("id, title, status, cover_image, updated_at, created_at, builder_snapshot, level")
+        .or(`creator_id.eq.${userId},owner_id.eq.${userId}`)
+        .order("updated_at", { ascending: false })
+        .limit(100);
+
+      if (ownedRes.error) throw ownedRes.error;
+
+      const { data: memRows, error: memErr } = await supabase
+        .from("org_memberships")
+        .select("org_id")
+        .eq("user_id", userId)
+        .in("role", ["admin", "instructor", "tutor"]);
+
+      if (memErr) {
+        console.warn("[formateur] org_memberships fetch failed", memErr);
+      }
+
+      const orgIds = [...new Set((memRows ?? []).map((m: { org_id?: string | null }) => m.org_id).filter(Boolean) as string[])];
+
+      let orgCourses: CourseRow[] = [];
+      if (orgIds.length > 0) {
+        const orgRes = await supabase
+          .from("courses")
+          .select("id, title, status, cover_image, updated_at, created_at, builder_snapshot, level")
+          .in("org_id", orgIds)
+          .order("updated_at", { ascending: false })
+          .limit(200);
+        if (orgRes.error) {
+          console.warn("[formateur] courses by org_id failed", orgRes.error);
+        } else {
+          orgCourses = (orgRes.data ?? []) as CourseRow[];
+        }
+      }
+
+      const byId = new Map<string, CourseRow>();
+      for (const row of [...(ownedRes.data ?? []), ...orgCourses]) {
+        const id = row?.id != null ? String(row.id) : "";
+        if (id) byId.set(id, row as CourseRow);
+      }
+      coursesData = Array.from(byId.values()).sort((a, b) => {
+        const ta = String(a.updated_at ?? a.created_at ?? "");
+        const tb = String(b.updated_at ?? b.created_at ?? "");
+        return tb.localeCompare(ta);
+      });
+    }
+
+    if (!coursesData.length) return [];
 
     // Compter les apprenants pour chaque formation
     const courseIds = coursesData.map((c) => c.id);
-    const { data: enrollmentsData } = await supabase
+    const { data: enrollmentsData, error: enrollmentsError } = await db
       .from("enrollments")
       .select("course_id, user_id")
-      .in("course_id", courseIds)
-      .eq("role", "student");
+      .in("course_id", courseIds);
+
+    if (enrollmentsError) {
+      console.warn("[formateur] enrollments fetch failed", enrollmentsError);
+    }
 
     // Grouper les enrollments par course_id
     const learnersByCourse = new Map<string, number>();
     if (enrollmentsData) {
       enrollmentsData.forEach((e) => {
-        const count = learnersByCourse.get(e.course_id) ?? 0;
-        learnersByCourse.set(e.course_id, count + 1);
+        const courseKey = String(e.course_id ?? "");
+        if (!courseKey) return;
+        const count = learnersByCourse.get(courseKey) ?? 0;
+        learnersByCourse.set(courseKey, count + 1);
       });
     }
 
@@ -662,10 +725,28 @@ export const getFormateurCourses = async (): Promise<FormateurCourseListItem[]> 
     return coursesData.map((course) => {
       // Extraire la catégorie depuis builder_snapshot ou utiliser une valeur par défaut
       let category = "Formation";
+      let level: string | null =
+        typeof (course as any)?.level === "string" ? String((course as any).level).trim() : null;
       let completion = 0;
+      let imageFromSnapshot: string | null = null;
       if (course.builder_snapshot && typeof course.builder_snapshot === "object") {
         const snapshot = course.builder_snapshot as any;
         category = snapshot.general?.category || "Formation";
+        if (!level) {
+          const snapLevel = typeof snapshot.general?.level === "string" ? String(snapshot.general.level).trim() : "";
+          level = snapLevel || null;
+        }
+        imageFromSnapshot =
+          (typeof snapshot.general?.cover_image === "string" && snapshot.general.cover_image.trim()
+            ? snapshot.general.cover_image.trim()
+            : null) ??
+          (typeof snapshot.general?.heroImage === "string" && snapshot.general.heroImage.trim()
+            ? snapshot.general.heroImage.trim()
+            : null) ??
+          (typeof snapshot.general?.thumbnail === "string" && snapshot.general.thumbnail.trim()
+            ? snapshot.general.thumbnail.trim()
+            : null) ??
+          null;
         // Calculer le pourcentage de complétion basé sur les sections/chapitres
         const sections = snapshot.sections || [];
         const totalChapters = sections.reduce((acc: number, s: any) => acc + (s.chapters?.length || 0), 0);
@@ -683,8 +764,13 @@ export const getFormateurCourses = async (): Promise<FormateurCourseListItem[]> 
         completion,
         updatedAt: course.updated_at || course.created_at || new Date().toISOString(),
         category,
-        image: course.cover_image || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
+        level,
+        image:
+          imageFromSnapshot ||
+          course.cover_image ||
+          "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
         nextStep: status === "draft" ? "Finaliser la formation" : status === "published" ? undefined : "Publier la formation",
+        source: "course",
       };
     });
   } catch (error) {
@@ -692,6 +778,15 @@ export const getFormateurCourses = async (): Promise<FormateurCourseListItem[]> 
     return [];
   }
 };
+
+/** Formations affichées côté formateur : parcours (`paths`) + modules (`courses`), tri date décroissante. */
+export async function getMergedFormateurFormationList(): Promise<FormateurCourseListItem[]> {
+  const [pathOverviews, courseItems] = await Promise.all([getFormateurPaths(), getFormateurCourses()]);
+  const pathItems = pathOverviews.map(mapFormateurPathOverviewToCourseListItem);
+  const merged = [...pathItems, ...courseItems.map((c) => ({ ...c, source: c.source ?? ("course" as const) }))];
+  merged.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  return merged;
+}
 
 export type FormateurTestListItem = {
   id: string;
@@ -907,6 +1002,109 @@ export type FormateurGroup = {
   members_count: number;
 };
 
+export type FormateurOrganization = {
+  id: string;
+  name: string;
+  slug: string | null;
+};
+
+export const getFormateurOrganizations = async (): Promise<FormateurOrganization[]> => {
+  const supabase = await getServerClient();
+  if (!supabase) return [];
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData?.user?.id) return [];
+
+    const userId = authData.user.id;
+    const superAdmin = await isSuperAdmin();
+    // Ne PAS utiliser getServiceRoleClientOrFallback() pour un catalogue « tout tenant » : le fallback est le client session (RLS).
+    const serviceOnly = getServiceRoleClient();
+
+    const mapOrgRows = (rows: any[] | null): FormateurOrganization[] =>
+      (rows ?? []).map((o) => ({
+        id: String(o.id),
+        name: String(o.name ?? "Organisation"),
+        slug: o.slug != null && String(o.slug).length ? String(o.slug) : null,
+      }));
+
+    /** Catalogue complet via RPC Postgres (SECURITY DEFINER) si pas de clé service ou requête service en échec. */
+    const tryOrganizationsCatalogueRpc = async (): Promise<FormateurOrganization[] | null> => {
+      if (!superAdmin) return null;
+      const { data, error } = await supabase.rpc("list_organizations_catalogue_for_lms_admin");
+      if (error) {
+        console.warn("[formateur] list_organizations_catalogue_for_lms_admin RPC:", error.message, error.code);
+        return null;
+      }
+      if (!Array.isArray(data) || data.length === 0) return null;
+      return mapOrgRows(data as any[]);
+    };
+
+    // 1) Super-admin + clé service : lecture directe (idéal).
+    if (superAdmin && serviceOnly) {
+      const { data: orgs, error: oErr } = await serviceOnly
+        .from("organizations")
+        .select("id, name, slug")
+        .order("name", { ascending: true })
+        .limit(500);
+
+      if (!oErr && orgs?.length) {
+        return mapOrgRows(orgs as any[]);
+      }
+      if (oErr && process.env.NODE_ENV !== "production") {
+        console.warn("[formateur] organizations service query failed, trying RPC", oErr.message);
+      }
+    }
+
+    // 2) Super-admin sans service, ou service en erreur : RPC (migration 20260503220000).
+    const fromRpc = await tryOrganizationsCatalogueRpc();
+    if (fromRpc?.length) {
+      return fromRpc;
+    }
+
+    const staffRoles = new Set(
+      ["admin", "instructor", "formateur", "trainer", "tutor", "staff", "owner", "super_admin"].map((r) =>
+        r.toLowerCase(),
+      ),
+    );
+
+    const { data: memberships, error: mErr } = await supabase
+      .from("org_memberships")
+      .select("org_id, role")
+      .eq("user_id", userId);
+
+    if (mErr || !memberships?.length) return [];
+
+    const normalized = (memberships as any[]).map((m) => ({
+      org_id: String(m?.org_id ?? "").trim(),
+      role: String(m?.role ?? "").toLowerCase().trim(),
+    }));
+
+    let orgIds: string[];
+    if (superAdmin && !serviceOnly) {
+      // Super-admin sans SERVICE_ROLE en env : au minimum toutes les orgs où le compte a une ligne membership (tout rôle).
+      orgIds = Array.from(new Set(normalized.map((m) => m.org_id).filter(Boolean)));
+    } else {
+      const staffIds = normalized.filter((m) => m.org_id && staffRoles.has(m.role)).map((m) => m.org_id);
+      orgIds = Array.from(new Set(staffIds.length ? staffIds : normalized.map((m) => m.org_id).filter(Boolean)));
+    }
+
+    if (orgIds.length === 0) return [];
+
+    const { data: orgs, error: oErr } = await supabase
+      .from("organizations")
+      .select("id, name, slug")
+      .in("id", orgIds)
+      .order("name", { ascending: true });
+
+    if (oErr || !orgs) return [];
+    return mapOrgRows(orgs as any[]);
+  } catch (e) {
+    console.warn("[formateur] Error fetching organizations", e);
+    return [];
+  }
+};
+
 export type CourseEnrollment = {
   user_id: string;
   full_name: string | null;
@@ -932,17 +1130,18 @@ export const getFormateurLearners = async (): Promise<FormateurLearner[]> => {
     const superAdmin = await isSuperAdmin();
 
     if (superAdmin) {
-      const adminClient = await getServiceRoleClientOrFallback();
+      const adminClient = getServiceRoleClient();
 
       if (!adminClient) {
-        console.warn("[formateur] Super admin sans client service role disponible");
+        console.warn("[formateur] Super admin sans SUPABASE_SERVICE_ROLE_KEY — impossible de lister tous les apprenants");
         return [];
       }
 
       const { data, error } = await adminClient
         .from("profiles")
         .select("id, full_name, email")
-        .eq("role", "learner")
+        // Certaines bases utilisent "student" côté rôles.
+        .in("role", ["learner", "student"])
         .order("full_name", { ascending: true })
         .limit(500);
 
@@ -1010,7 +1209,8 @@ export const getFormateurLearners = async (): Promise<FormateurLearner[]> => {
         .from("org_memberships")
         .select("org_id, role")
         .eq("user_id", instructorUserId)
-        .eq("role", "instructor");
+        // Compat: certaines bases utilisent "formateur".
+        .in("role", ["instructor", "formateur"]);
       
       if (instructorResult.error || !instructorResult.data || instructorResult.data.length === 0) {
         console.error("[formateur] Direct query also failed:", instructorResult.error);
@@ -1029,7 +1229,8 @@ export const getFormateurLearners = async (): Promise<FormateurLearner[]> => {
         .from("org_memberships")
         .select("user_id")
         .in("org_id", orgIds)
-        .eq("role", "learner");
+        // Compat: certaines bases utilisent "student".
+        .in("role", ["learner", "student"]);
       
       if (learnerResult.error || !learnerResult.data || learnerResult.data.length === 0) {
         console.error("[formateur] Could not fetch learners:", learnerResult.error);
@@ -1132,7 +1333,7 @@ export const getFormateurGroups = async (): Promise<FormateurGroup[]> => {
     const superAdmin = await isSuperAdmin();
 
     if (superAdmin) {
-      const adminClient = await getServiceRoleClientOrFallback();
+      const adminClient = getServiceRoleClient();
       const { data: groups, error } = adminClient
         ? await adminClient
             .from("groups")
@@ -1154,15 +1355,15 @@ export const getFormateurGroups = async (): Promise<FormateurGroup[]> => {
       .from("org_memberships")
       .select("org_id")
       .eq("user_id", authData.user.id)
-      .eq("role", "instructor")
-      .single();
+      .eq("role", "instructor");
 
-    if (!memberships?.org_id) return [];
+    const orgIds = (memberships ?? []).map((m: any) => m.org_id).filter(Boolean);
+    if (orgIds.length === 0) return [];
 
     const { data: groups, error } = await supabase
       .from("groups")
       .select("id, name, group_members(count)")
-      .eq("org_id", memberships.org_id);
+      .in("org_id", orgIds);
 
     if (error || !groups) return [];
 
@@ -1219,11 +1420,31 @@ export type FormateurPathOverview = {
 
 const defaultCover = "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80";
 
+/** Mappe un parcours `paths` vers le format carte « formations » (liste partagée avec les modules `courses`). */
+export function mapFormateurPathOverviewToCourseListItem(p: FormateurPathOverview): FormateurCourseListItem {
+  const st = String(p.status ?? "").toLowerCase();
+  const status: FormateurCourseListItem["status"] =
+    st === "published" ? "published" : st === "scheduled" ? "scheduled" : "draft";
+  const image = String(p.heroUrl || p.thumbnailUrl || "").trim() || defaultCover;
+  return {
+    id: p.id,
+    title: p.title?.trim() ? p.title : "Parcours sans titre",
+    status,
+    learners: 0,
+    completion: 0,
+    updatedAt: p.updatedAt,
+    category: "Parcours",
+    level: null,
+    image,
+    nextStep: status === "published" ? undefined : "Finaliser le parcours",
+    source: "path",
+  };
+}
+
 export const getFormateurPaths = async (): Promise<FormateurPathOverview[]> => {
   const supabase = await getServerClient();
 
   if (!supabase) {
-    console.warn("[formateur] Supabase client unavailable, returning empty paths");
     return [];
   }
 
@@ -1235,135 +1456,125 @@ export const getFormateurPaths = async (): Promise<FormateurPathOverview[]> => {
     if (authError) throw authError;
 
     const userId = authData?.user?.id ?? null;
-    const adminClient = superAdmin ? await getServiceRoleClientOrFallback() : null;
-    const client = adminClient ?? supabase;
+    if (!userId) return [];
+    // Super-admin : lire `paths` avec la vraie clé service uniquement (pas le fallback session, sinon RLS partielle).
+    const serviceOnly = getServiceRoleClient();
+    const client = superAdmin && serviceOnly ? serviceOnly : supabase;
 
-    if (!client) {
-      console.warn("[formateur] Aucun client Supabase disponible");
-      return [];
-    }
+    // Scope org: parcours d'une galaxie où le formateur est staff (sauf super-admin).
+    let orgIds: string[] | null = null;
+    if (!superAdmin) {
+      try {
+        const runMemberships = async (userField: "user_id" | "profile_id") => {
+          return await supabase.from("org_memberships").select("org_id, role").eq(userField, userId);
+        };
 
-    // Récupérer d'abord les paths sans les jointures pour éviter les problèmes RLS
-    // Utiliser creator_id ou owner_id selon ce qui existe dans la table
-    // Note: Ne pas utiliser updated_at dans le SELECT pour éviter les erreurs si la colonne n'existe pas
-    let query = client
-      .from("paths")
-      .select("id, title, description, status, thumbnail_url, hero_url, builder_snapshot, created_at, creator_id, owner_id")
-      .order("created_at", { ascending: false })
-      .limit(24);
-
-    // Filtrer par creator_id ou owner_id selon ce qui existe
-    if (userId) {
-      // Essayer d'abord owner_id, puis creator_id
-      query = query.or(`owner_id.eq.${userId},creator_id.eq.${userId}`);
-    }
-
-    const { data: pathsData, error: pathsError } = await query;
-    
-    if (pathsError) {
-      console.error("[formateur] Error fetching paths:", pathsError);
-      throw pathsError;
-    }
-
-    if (!pathsData || pathsData.length === 0) {
-      return [];
-    }
-
-    // Récupérer séparément les contenus associés aux paths pour éviter les problèmes RLS avec les jointures
-    const pathIds = pathsData.map((p) => p.id);
-    
-    const [pathCoursesData, pathTestsData, pathResourcesData] = await Promise.all([
-      client
-        .from("path_courses")
-        .select("path_id, course_id, order, courses(id, title, cover_image, status)")
-        .in("path_id", pathIds),
-      client
-        .from("path_tests")
-        .select("path_id, test_id, order, tests(id, title, description, status)")
-        .in("path_id", pathIds),
-      client
-        .from("path_resources")
-        .select("path_id, resource_id, order, resources(id, title, kind, cover_url, published)")
-        .in("path_id", pathIds),
-    ]);
-
-    // Grouper les contenus par path_id
-    const coursesByPath = new Map<string, any[]>();
-    const testsByPath = new Map<string, any[]>();
-    const resourcesByPath = new Map<string, any[]>();
-
-    if (pathCoursesData.data) {
-      pathCoursesData.data.forEach((item: any) => {
-        if (!coursesByPath.has(item.path_id)) {
-          coursesByPath.set(item.path_id, []);
+        let memberships: any[] | null = null;
+        let mErr: any | null = null;
+        {
+          const res = await runMemberships("user_id");
+          memberships = (res as any).data ?? null;
+          mErr = (res as any).error ?? null;
         }
-        coursesByPath.get(item.path_id)!.push(item);
-      });
+        if ((mErr?.code === "PGRST204" || mErr?.code === "42703") && memberships == null) {
+          const res = await runMemberships("profile_id");
+          memberships = (res as any).data ?? null;
+          mErr = (res as any).error ?? null;
+        }
+        if (!mErr && memberships?.length) {
+          const staffRoles = new Set(["admin", "instructor", "formateur", "trainer", "super_admin", "staff", "owner"]);
+          const normalized = (memberships as any[]).map((m) => ({
+            org_id: String(m?.org_id ?? "").trim(),
+            role: String(m?.role ?? "").toLowerCase().trim(),
+          }));
+          const staffIds = normalized
+            .filter((m) => m.org_id && staffRoles.has(m.role))
+            .map((m) => m.org_id);
+          // Fallback: si on a des memberships mais aucun rôle ne match (libellés custom),
+          // on prend quand même les org_id pour éviter un dashboard vide.
+          const ids = staffIds.length ? staffIds : normalized.map((m) => m.org_id).filter(Boolean);
+          orgIds = Array.from(new Set(ids));
+        } else {
+          orgIds = [];
+        }
+      } catch {
+        // échec de résolution memberships => ne pas filtrer par org (fail-open) pour éviter un dashboard vide
+        orgIds = null;
+      }
     }
 
-    if (pathTestsData.data) {
-      pathTestsData.data.forEach((item: any) => {
-        if (!testsByPath.has(item.path_id)) {
-          testsByPath.set(item.path_id, []);
-        }
-        testsByPath.get(item.path_id)!.push(item);
-      });
+    const runPathsQuery = async (select: string) => {
+      const cap = superAdmin ? 500 : 48;
+      let q = client.from("paths").select(select).order("created_at", { ascending: false }).limit(cap);
+      if (Array.isArray(orgIds)) {
+        if (orgIds.length === 0) return { data: [], error: null } as any;
+        q = q.in("org_id", orgIds);
+      }
+      return await q;
+    };
+
+    // Schéma DB variable: dans ton environnement, `paths` n'a pas `slug` ni `published`.
+    // On utilise des selects tolérants aux colonnes manquantes.
+    const candidates = [
+      "id, org_id, title, description, cover_image, status, created_at, updated_at, path_snapshot",
+      "id, org_id, title, description, cover_image, status, created_at, path_snapshot",
+      "id, org_id, title, cover_image, status, created_at, path_snapshot",
+      "id, org_id, title, status, created_at, path_snapshot",
+      "id, org_id, title, created_at, path_snapshot",
+    ];
+
+    let pathsData: any[] | null = null;
+    let pathsError: any | null = null;
+    for (const sel of candidates) {
+      const res = await runPathsQuery(sel);
+      pathsData = (res as any).data ?? null;
+      pathsError = (res as any).error ?? null;
+      if (!pathsError) break;
+      if (pathsError?.code !== "42703" && pathsError?.code !== "PGRST204") break;
     }
 
-    if (pathResourcesData.data) {
-      pathResourcesData.data.forEach((item: any) => {
-        if (!resourcesByPath.has(item.path_id)) {
-          resourcesByPath.set(item.path_id, []);
-        }
-        resourcesByPath.get(item.path_id)!.push(item);
-      });
-    }
+    if (pathsError) return [];
+    if (!pathsData || pathsData.length === 0) return [];
 
     const mapRow = (row: any): FormateurPathOverview => {
-      // Utiliser les données groupées au lieu des jointures
-      const mapCourses = coursesByPath.get(row.id) ?? [];
-      const mapTests = testsByPath.get(row.id) ?? [];
-      const mapResources = resourcesByPath.get(row.id) ?? [];
+      const snapshot = row.path_snapshot && typeof row.path_snapshot === "object" ? row.path_snapshot : null;
+      const snapshotTitle = snapshot?.title ?? "Parcours";
+      const snapshotDescription = snapshot?.presentation ?? snapshot?.objective ?? snapshot?.description ?? row.description ?? null;
+      const cover = String(snapshot?.cover_image ?? row.cover_image ?? "").trim();
+      const hero = cover || defaultCover;
+      const status = String(row.status ?? snapshot?.status ?? "draft");
+      const steps = Array.isArray(snapshot?.steps) ? snapshot.steps : [];
+      const courseIds = steps
+        .filter((s: any) => s?.content_kind === "course" && s?.content_id)
+        .map((s: any) => String(s.content_id));
+      const testIds = steps
+        .filter((s: any) => s?.content_kind === "test" && s?.content_id)
+        .map((s: any) => String(s.content_id));
+      const resourceIds = steps
+        .filter((s: any) => s?.content_kind === "resource" && s?.content_id)
+        .map((s: any) => String(s.content_id));
 
       return {
         id: String(row.id ?? randomUUID()),
-        title: row.title ?? "Parcours",
-        description: row.description ?? "Assemblez vos formations, tests et ressources pour concevoir un parcours signature.",
-        status: row.status ?? "draft",
-        heroUrl: row.hero_url ?? defaultCover,
-        thumbnailUrl: row.thumbnail_url ?? defaultCover,
-              updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
-        courses: mapCourses
-          .map((item: any) => ({
-            id: String(item.courses?.id ?? randomUUID()),
-            title: item.courses?.title ?? "Formation",
-            coverImage: item.courses?.cover_image ?? defaultCover,
-            status: item.courses?.status ?? "draft",
-            order: item.order ?? 0,
-          }))
-          .sort((a: any, b: any) => a.order - b.order),
-        tests: mapTests
-          .map((item: any) => ({
-            id: String(item.tests?.id ?? randomUUID()),
-            title: item.tests?.title ?? "Test",
-            status: item.tests?.status ?? "draft",
-            order: item.order ?? 0,
-          }))
-          .sort((a: any, b: any) => a.order - b.order),
-        resources: mapResources
-          .map((item: any) => ({
-            id: String(item.resources?.id ?? randomUUID()),
-            title: item.resources?.title ?? "Ressource",
-            type: item.resources?.kind ?? "guide", // kind dans la DB
-            order: item.order ?? 0,
-          }))
-          .sort((a: any, b: any) => a.order - b.order),
+        title: String(snapshotTitle),
+        description:
+          typeof snapshotDescription === "string" && snapshotDescription.trim().length > 0
+            ? snapshotDescription
+            : "Assemblez vos contenus pour concevoir un parcours signature.",
+        status,
+        heroUrl: hero,
+        thumbnailUrl: hero,
+        updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
+        // Ces arrays servent au comptage/preview dans l'UI formateur (on remplit depuis snapshot.steps).
+        courses: courseIds.map((id, idx) => ({ id, title: "", coverImage: "", status: "", order: idx })),
+        tests: testIds.map((id, idx) => ({ id, title: "", status: "", order: idx })),
+        resources: resourceIds.map((id, idx) => ({ id, title: "", type: "", order: idx })),
       };
     };
 
     return pathsData.map(mapRow);
   } catch (error) {
-    console.warn("[formateur] Supabase query failed, returning empty paths", error);
+    console.error("[formateur] getFormateurPaths failed:", error);
     return [];
   }
 };
@@ -1426,40 +1637,13 @@ export const getFormateurAssignableContent = async (): Promise<AssignableContent
       };
     }
 
-    // 1. Récupérer les organisations où l'utilisateur est instructor
-    const { data: instructorMemberships } = await supabase
-      .from("org_memberships")
-      .select("org_id")
-      .eq("user_id", userId)
-      .eq("role", "instructor");
-
-    const orgIds = instructorMemberships?.map((m) => m.org_id) ?? [];
-
-    // 2. Récupérer tous les contenus : ceux créés par l'utilisateur OU ceux de ses organisations
-    // Récupérer d'abord les parcours séparément car il faut combiner plusieurs critères
-    // Récupérer les parcours par owner_id ou creator_id
-    const { data: pathsByOwner } = await supabase
+    // Nouveau modèle: les parcours appartiennent au créateur (creator_id).
+    const { data: creatorPaths } = await supabase
       .from("paths")
       .select("id")
-      .or(`owner_id.eq.${userId},creator_id.eq.${userId}`);
-    
-    // Récupérer les parcours par org_id si l'utilisateur a des organisations
-    let pathsByOrg: string[] = [];
-    if (orgIds.length > 0) {
-      const { data: pathsInOrg } = await supabase
-        .from("paths")
-        .select("id")
-        .in("org_id", orgIds);
-      pathsByOrg = pathsInOrg?.map((p) => p.id) ?? [];
-    }
-    
-    // Combiner tous les IDs de parcours
-    const allPathIds = [
-      ...(pathsByOwner?.map((p) => p.id) ?? []),
-      ...pathsByOrg,
-    ];
-    
-    const uniquePathIds = [...new Set(allPathIds)];
+      .eq("creator_id", userId);
+
+    const uniquePathIds = [...new Set((creatorPaths ?? []).map((p: any) => p.id).filter(Boolean))];
     
     // Maintenant récupérer tous les contenus en parallèle
     const [coursesResult, formationsResult, pathsResult, testsResult, resourcesResult] = await Promise.all([
@@ -1468,28 +1652,13 @@ export const getFormateurAssignableContent = async (): Promise<AssignableContent
         const query = supabase
             .from("courses")
           .select("id, title, status")
-          .or(`creator_id.eq.${userId},owner_id.eq.${userId}`)
+          .eq("creator_id", userId)
           .order("title", { ascending: true })
           .limit(200);
         
         const result = await query;
         
-        if (result.error) {
-          console.error("[formateur] Error fetching courses for assignment:", {
-            error: result.error,
-            code: result.error.code,
-            message: result.error.message,
-            details: result.error.details,
-            hint: result.error.hint,
-            userId,
-          });
-        } else {
-          console.log("[formateur] Fetched courses for assignment:", {
-            count: result.data?.length ?? 0,
-            courses: result.data?.map(c => ({ id: c.id, title: c.title, status: c.status })),
-          });
-        }
-        
+        // Pas de logs verbeux ici: cette requête peut être appelée souvent.
         return result;
       })(),
       // Formations créées par l'utilisateur dans ses organisations
@@ -1611,7 +1780,8 @@ export const getFormateurContentLibrary = async (): Promise<FormateurContentLibr
     }
 
     const superAdmin = await isSuperAdmin();
-    const client = (superAdmin ? await getServiceRoleClientOrFallback() : null) ?? supabase;
+    const serviceOnly = getServiceRoleClient();
+    const client = (superAdmin && serviceOnly ? serviceOnly : null) ?? supabase;
 
     if (!client) {
       console.warn("[formateur] Impossible d'obtenir un client Supabase pour le contenu formateur");
@@ -1738,7 +1908,7 @@ export const getFormateurContentLibrary = async (): Promise<FormateurContentLibr
           // Essayer de récupérer plus de colonnes si elles existent
           const extendedResult = await db
             .from("resources")
-            .select("id, title, description, cover_url, thumbnail_url, created_by, owner_id, org_id, published, kind, type, resource_type, updated_at, created_at")
+            .select("id, title, description, cover_url, created_by, owner_id, org_id, published, kind, type, resource_type, updated_at, created_at")
             .in("id", uniqueResourceIds);
           
           // Si pas d'erreur, utiliser le résultat étendu, sinon garder le basique

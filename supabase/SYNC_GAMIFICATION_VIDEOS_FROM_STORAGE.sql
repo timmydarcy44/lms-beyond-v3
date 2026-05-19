@@ -14,7 +14,7 @@ BEGIN
 END $$;
 
 -- 2. Récupérer votre Project URL depuis Supabase Dashboard > Settings > API
--- Remplacez YOUR_SUPABASE_PROJECT_ID par votre ID de projet (ex: fqqqejpakbccwvrlolpc)
+-- Remplacez YOUR_SUPABASE_PROJECT_ID par votre ID de projet (ex: zmcefidiiqqppowymoxt)
 
 -- 3. Insérer manuellement la vidéo qui est dans le bucket
 -- IMPORTANT: Remplacez YOUR_SUPABASE_PROJECT_ID par votre vrai ID de projet

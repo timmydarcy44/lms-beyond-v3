@@ -13,7 +13,7 @@ type ImmersiveShellProps = {
 
 export function ImmersiveShell({
   children,
-  backgroundUrl = "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Beyond%20FC/Bureau%20Beyond%20FC.png",
+  backgroundUrl = "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Beyond%20FC/Bureau%20Beyond%20FC.png",
   overlayClassName,
   className,
 }: ImmersiveShellProps) {

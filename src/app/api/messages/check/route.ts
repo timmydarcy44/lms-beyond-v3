@@ -15,7 +15,18 @@ export async function GET(request: NextRequest) {
     }
 
     const lastCheckTime = request.headers.get("x-last-check-time");
-    const messages = await getLearnerMessages();
+    let messages: any[] = [];
+    try {
+      messages = await getLearnerMessages();
+    } catch (e: any) {
+      // Tables absentes (PGRST205) : ne pas polluer les logs, renvoyer un état vide.
+      const code = e?.code ? String(e.code) : "";
+      const msg = String(e?.message ?? "");
+      if (code === "PGRST205" || /schema cache|could not find the table/i.test(msg)) {
+        return NextResponse.json({ hasNewMessages: false, unreadCount: 0, latestMessage: null }, { status: 200 });
+      }
+      throw e;
+    }
 
     console.log("[messages/check] Total messages:", messages.length);
     console.log("[messages/check] Messages sample:", messages.slice(0, 2).map(m => ({

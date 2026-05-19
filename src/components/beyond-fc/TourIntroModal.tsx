@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useEffect, useRef } from "react";
 
@@ -50,7 +50,7 @@ export function TourIntroModal({
           </DialogDescription>
         </DialogHeader>
 
-        {videoSrc ? (
+        {open && videoSrc ? (
           <div className="relative aspect-video w-full bg-black">
             <video
               ref={videoRef}
@@ -58,9 +58,9 @@ export function TourIntroModal({
               controls
               autoPlay
               playsInline
-              preload="metadata"
+              preload="none"
+              src={videoSrc}
             >
-              <source src={videoSrc} />
               Votre navigateur ne supporte pas la lecture vidéo.
             </video>
           </div>

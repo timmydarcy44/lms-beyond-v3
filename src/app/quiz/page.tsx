@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { env } from "@/lib/env";
+import { LmsQuizByTestId } from "@/components/quiz/lms-quiz-player";
 
 // Fonction pour construire l'URL Supabase Storage
 function getSupabaseStorageUrl(bucket: string, path: string): string {
@@ -79,7 +81,7 @@ const EXPERIENCE_LEVELS = [
   },
 ];
 
-export default function QuizPage() {
+function JessicaQuizMarketingWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFocusAreas, setSelectedFocusAreas] = useState<string[]>([]);
   const [selectedAgeRange, setSelectedAgeRange] = useState<string>("");
@@ -460,3 +462,23 @@ export default function QuizPage() {
   );
 }
 
+function QuizEntry() {
+  const searchParams = useSearchParams();
+  const testId = searchParams.get("testId")?.trim();
+  if (testId) return <LmsQuizByTestId testId={testId} />;
+  return <JessicaQuizMarketingWizard />;
+}
+
+export default function QuizPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-white text-slate-500">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-500" aria-hidden />
+        </div>
+      }
+    >
+      <QuizEntry />
+    </Suspense>
+  );
+}

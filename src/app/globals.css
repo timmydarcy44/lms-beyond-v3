@@ -240,7 +240,23 @@ body.light {
 
 @custom-variant dark (&:is(.dark *));
 
+/* EDGE marketing — SF Pro Bold (système Apple + fallbacks) */
+.font-sf-pro-bold {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700;
+  font-synthesis: none;
+  letter-spacing: -0.022em;
+}
+
 @theme inline {
+  --color-edge-red: #ff3b30;
+  --color-edge-black: #0a0a0a;
+  --color-edge-dark: #111110;
+  --color-edge-darker: #141412;
+  --color-edge-grey: #f5f5f3;
+  --color-edge-photo: #1a1816;
+  --color-edge-photo-light: #e8e4de;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -278,9 +294,21 @@ body.light {
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* blur / backdrop-blur (effet type « Apple » — xl = 20px) */
+  --blur-xs: 2px;
+  --blur-sm: 4px;
+  --blur-md: 8px;
+  --blur-lg: 12px;
+  --blur-xl: 20px;
+  --blur-2xl: 40px;
 }
 
 :root {
+  /* SF Pro via stack système (Apple) ; autres OS : Segoe, Roboto, etc. Nom --font-geist-* conservé pour les styles inline existants */
+  --font-geist-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", ui-sans-serif, system-ui, "Segoe UI", Roboto,
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-geist-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -288,8 +316,9 @@ body.light {
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Default (Beyond) — overridden in /g/:orgSlug via inline style on <body> */
+  --primary: #E50914;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -335,8 +364,9 @@ body.light {
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* Default (Beyond) — keep readable on dark backgrounds */
+  --primary: #E50914;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -367,7 +397,7 @@ body.light {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground overflow-x-hidden;
+    @apply bg-background font-sans text-foreground overflow-x-hidden;
   }
 }
 
@@ -814,6 +844,59 @@ body.light {
   color: #000000 !important;
 }
 
+/* Studio drive / étude de cas : fond clair sous <main class="apprenant-theme"> */
+.apprenant-theme .apprenant-studio-light {
+  color: #0f172a;
+}
+.apprenant-theme .apprenant-studio-light h1,
+.apprenant-theme .apprenant-studio-light h2,
+.apprenant-theme .apprenant-studio-light h3,
+.apprenant-theme .apprenant-studio-light h4,
+.apprenant-theme .apprenant-studio-light h5,
+.apprenant-theme .apprenant-studio-light h6 {
+  color: #000000;
+}
+.apprenant-theme .apprenant-studio-light p,
+.apprenant-theme .apprenant-studio-light li,
+.apprenant-theme .apprenant-studio-light label,
+.apprenant-theme .apprenant-studio-light td,
+.apprenant-theme .apprenant-studio-light th {
+  color: #0f172a;
+}
+
+/* Bat .apprenant-theme span (#e2e8f0) pour les libellés ; l’éditeur redéfinit les span en inherit plus bas */
+.apprenant-theme .apprenant-studio-light span {
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.apprenant-theme .apprenant-studio-light button span,
+.apprenant-theme .apprenant-studio-light [data-slot="button"] span {
+  color: inherit;
+}
+
+.apprenant-theme .apprenant-studio-light [contenteditable="true"],
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] p,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] li,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] h1,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] h2,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] h3,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] h4,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] div {
+  color: #000000;
+}
+/* Nœuds souvent insérés par execCommand / le navigateur */
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] span,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] font,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] b,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] strong,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] i,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] em,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] u,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] blockquote,
+.apprenant-theme .apprenant-studio-light [contenteditable="true"] a {
+  color: inherit;
+}
+
 .apprenant-theme .apprenant-gradient-text {
   background: linear-gradient(90deg, #FF512F, #DD2476, #0072FF);
   -webkit-background-clip: text;
@@ -927,4 +1010,12 @@ body.light {
 
 .animate-scale-in {
   animation: scale-in 0.3s ease-out forwards;
+}
+
+/* Jessica Contentin — typographie Times New Roman (priorité sur les fontFamily inline) */
+.jessica-contentin-site {
+  font-family: "Times New Roman", Times, serif;
+}
+.jessica-contentin-site * {
+  font-family: inherit !important;
 }

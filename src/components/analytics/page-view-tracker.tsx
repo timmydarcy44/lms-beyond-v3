@@ -8,6 +8,8 @@ export default function PageViewTracker() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Debug: désactivé pour nettoyer les logs serveur (PGRST204).
+    return;
     const trackView = async () => {
       try {
         await fetch("/api/page-views", {

@@ -1,4 +1,11 @@
-export type AIAction = "rephrase" | "mindmap" | "schema" | "translate" | "audio" | "insights";
+export type AIAction =
+  | "rephrase"
+  | "mindmap"
+  | "schema"
+  | "translate"
+  | "audio"
+  | "insights"
+  | "synthesis";
 
 export interface TextTransformationOptions {
   style?: "simplify" | "enrich" | "formal" | "casual" | "theoretical" | "examples" | "structured";
@@ -7,13 +14,14 @@ export interface TextTransformationOptions {
 }
 
 export function isValidAIAction(action: string): action is AIAction {
-  return ["rephrase", "mindmap", "schema", "translate", "audio", "insights"].includes(action);
+  return ["rephrase", "mindmap", "schema", "translate", "audio", "insights", "synthesis"].includes(action);
 }
 
 export function getTransformationResultFormat(action: AIAction): "text" | "json" {
   switch (action) {
     case "rephrase":
     case "translate":
+    case "synthesis":
       return "text";
     case "mindmap":
     case "schema":

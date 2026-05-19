@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { normalizeTestQuestions } from "@/lib/tests/normalize-test-questions";
 import { calculateTestDuration, formatTestDuration } from "@/lib/utils/test-duration";
 
 export async function GET(
@@ -48,7 +49,13 @@ export async function GET(
       }, { status: 404 });
     }
 
-    return NextResponse.json({ test });
+    const questions = normalizeTestQuestions((test as { questions?: unknown }).questions);
+    const testOut = {
+      ...(test as Record<string, unknown>),
+      questions,
+    };
+
+    return NextResponse.json({ test: testOut });
 
   } catch (error) {
     console.error("[api/tests/[id]] Erreur inattendue:", error);

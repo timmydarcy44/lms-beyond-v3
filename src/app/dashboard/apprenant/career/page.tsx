@@ -1,22 +1,15 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
-  Award,
-  BookOpen,
   Briefcase,
   Building2,
   ChevronDown,
   ChevronUp,
   GraduationCap,
-  Home,
   Plus,
   Share2,
-  Sparkles,
-  UserCircle,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
@@ -71,18 +64,8 @@ type Diplome = {
   mode?: string | null;
 };
 
-const NAV_ITEMS = [
-  { label: "Tableau de bord", href: "/dashboard/apprenant", icon: Home },
-  { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
-  { label: "Mon coach", href: "/dashboard/apprenant/coach", icon: UserCircle },
-  { label: "Mes badges", href: "/dashboard/apprenant/badges", icon: Sparkles },
-  { label: "Carrière", href: "/dashboard/apprenant/career", icon: BookOpen },
-];
-
 const CareerPage = () => {
   const supabase = createSupabaseBrowserClient();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const pathname = usePathname();
   const [user, setUser] = useState<{
     email?: string;
     user_metadata?: { first_name?: string | null; last_name?: string | null };
@@ -814,10 +797,6 @@ const CareerPage = () => {
   const certifiedSkills = skillEntries.filter((item) => item.validated);
   const nonValidatedSkills = skillEntries.filter((item) => !item.validated);
 
-  const hasOrganisation = Boolean(
-    (profile as Record<string, unknown> | null)?.entreprise_id ||
-      (profile as Record<string, unknown> | null)?.school_id
-  );
   const softSkillsTopMax = softSkillsTop.length
     ? Math.max(...softSkillsTop.map((item) => item.score))
     : 0;
@@ -911,18 +890,6 @@ const CareerPage = () => {
             : "Profil a completer";
     return { score, level, checklist };
   }, [profile, idmcAxes, discScores, softSkillsTop]);
-
-  const navItems = useMemo(() => {
-    const items = [...NAV_ITEMS];
-    if (hasOrganisation) {
-      items.splice(4, 0, {
-        label: "Mon entreprise",
-        href: "/dashboard/apprenant/entreprise",
-        icon: Building2,
-      });
-    }
-    return items;
-  }, [hasOrganisation]);
 
   const handleEditToggle = () => {
     setIsEditing((prev) => !prev);
@@ -1147,60 +1114,13 @@ const CareerPage = () => {
     }
   };
 
-  try {
-      return (
+  return (
         <>
-        <div className="min-h-screen bg-[#0B0D12] text-white">
+        <div className="space-y-8 text-[#e6e9ef] md:space-y-10 md:rounded-[34px] md:border md:border-[#283247] md:bg-[#0b0e14]/90 md:p-8 md:px-10 md:py-10 lg:px-12 md:backdrop-blur font-['Inter']">
         <style jsx global>{`
           @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
         `}</style>
-        <div className="flex h-screen overflow-hidden font-['Inter']">
-          <aside
-            className={`sticky left-0 top-0 hidden h-screen flex-col bg-transparent py-4 transition-all lg:flex ${
-              isSidebarCollapsed ? "w-20 px-3" : "w-64 px-4"
-            }`}
-            style={{ zIndex: 20 }}
-          >
-            <div className="relative flex h-full flex-col overflow-hidden rounded-[32px] border border-white/15 bg-white/15 px-3 py-4 backdrop-blur-3xl shadow-[0_24px_70px_rgba(0,0,0,0.55)] ring-1 ring-white/10">
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/20 via-white/5 to-transparent" />
-              <div className="relative flex items-center rounded-2xl border border-white/10 bg-white/10 px-3 py-2 overflow-visible">
-              <div
-                className={`text-[12px] font-black tracking-[0.4em] text-white ${
-                  isSidebarCollapsed ? "opacity-0" : "opacity-100"
-                }`}
-              >
-                BEYOND
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                className="absolute right-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white/90 hover:bg-white/30"
-              >
-                {isSidebarCollapsed ? "›" : "‹"}
-              </button>
-            </div>
-            <div className="mt-6 flex flex-col gap-2 text-[13px] text-white/70">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition ${
-                    pathname === item.href
-                      ? "bg-white/20 text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
-                      : "hover:bg-white/15"
-                  }`}
-                >
-                  <item.icon className="h-4 w-4 text-white/60" />
-                  <span className={`${isSidebarCollapsed ? "hidden" : "block"}`}>{item.label}</span>
-                </Link>
-              ))}
-            </div>
-            </div>
-          </aside>
-
-          <main
-            className="flex-1 overflow-y-auto px-6 py-10 lg:px-12"
-          >
+        <div className="flex flex-col gap-8">
             <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-[12px] uppercase tracking-[0.3em] text-white/50">Carrière</div>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
@@ -1660,9 +1580,8 @@ const CareerPage = () => {
               ) : null}
 
             </div>
-          </main>
+          </div>
         </div>
-      </div>
 
       {isEditing ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
@@ -2427,8 +2346,5 @@ const CareerPage = () => {
       ) : null}
         </>
       );
-  } catch (error) {
-    return <div className="p-8 text-white">Erreur de rendu</div>;
-  }
-}
+};
 export default CareerPage;

@@ -27,7 +27,7 @@ export function JessicaContentinLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#F8F5F0]">
+    <div className="jessica-contentin-site min-h-screen bg-[#F8F5F0]">
       <JessicaContentinHeader/>
       <main className="pt-0">{children}</main>
       <JessicaContentinFooter />

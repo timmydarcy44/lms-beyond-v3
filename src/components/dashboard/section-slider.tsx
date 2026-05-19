@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
+import { LazyBandwidthVideo } from "@/components/media/lazy-bandwidth-video";
 import { cn } from "@/lib/utils";
 
 type SliderCard = {
@@ -53,6 +54,7 @@ export const SectionSlider = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const isDark = theme === "dark";
   const isCompact = variant === "compact";
+  const isRemoteVideo = (url: string) => url.toLowerCase().endsWith(".mp4") || url.toLowerCase().includes(".mp4");
 
   const scrollBy = (offset: number) => {
     scrollRef.current?.scrollBy({ left: offset, behavior: "smooth" });
@@ -150,26 +152,35 @@ export const SectionSlider = ({
                           : "border-white/90 bg-gradient-to-b from-white via-[#f6f7fb] to-[#e4e7f5] shadow-[0_60px_120px_-75px_rgba(15,23,42,0.45)]",
                       )}
                     >
+                      {card.category ? (
+                        <div className="absolute top-2 left-2 z-10 rounded bg-white/10 px-2 py-1 text-xs text-white shadow-xl backdrop-blur-md border border-white/20">
+                          {card.category}
+                        </div>
+                      ) : null}
                       {card.image && card.image.trim() !== "" ? (
+                        isRemoteVideo(card.image) ? (
+                          <LazyBandwidthVideo
+                            src={card.image}
+                            rootMargin="0px 220px 0px 220px"
+                            className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-105"
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                          />
+                        ) : (
                         <Image
                           src={card.image}
                           alt={card.title}
                           fill
                           className="object-cover transition duration-700 group-hover:scale-105"
                         />
+                        )
                       ) : (
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#f8fafc,#cbd5f5)]" />
+                        <div className="absolute inset-0 bg-slate-800" />
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
                       <div className="absolute inset-x-0 bottom-0 space-y-2 px-4 pb-4">
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em]",
-                            isDark ? "text-white/75" : "text-slate-600",
-                          )}
-                        >
-                          {categoryLabel}
-                        </span>
                         <p
                           className={cn(
                             "text-base font-semibold leading-tight",
@@ -261,28 +272,37 @@ export const SectionSlider = ({
                       style={{ aspectRatio: "3 / 4" }}
                     >
                       {card.image && card.image.trim() !== "" ? (
+                        isRemoteVideo(card.image) ? (
+                          <LazyBandwidthVideo
+                            src={card.image}
+                            rootMargin="0px 220px 0px 220px"
+                            className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-105"
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                          />
+                        ) : (
                         <Image
                           src={card.image}
                           alt={card.title}
                           fill
                           className="object-cover transition duration-700 group-hover:scale-105"
                         />
+                        )
                       ) : (
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#f8fafc,#cbd5f5)]" />
+                        <div className="absolute inset-0 bg-slate-800" />
                       )}
+                      {card.category ? (
+                        <div className="absolute top-2 left-2 z-10 rounded bg-white/10 px-2 py-1 text-xs text-white shadow-xl backdrop-blur-md border border-white/20">
+                          {card.category}
+                        </div>
+                      ) : null}
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-transparent" />
                     </div>
 
                     <div className="space-y-5">
                       <div className="space-y-3">
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em]",
-                            isDark ? "bg-white/15 text-white/70" : "bg-white/80 text-slate-600",
-                          )}
-                        >
-                          {categoryLabel}
-                        </span>
                         <p
                           className={cn(
                             "text-lg font-semibold leading-snug",

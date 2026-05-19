@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { useSupabase } from "@/components/providers/supabase-provider";
 import {
   LayoutDashboard,
+  BarChart3,
   Radar,
   Briefcase,
   MessageCircle,
   Settings,
   Users,
+  Zap,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard/entreprise", icon: LayoutDashboard },
   { label: "Salariés", href: "/dashboard/entreprise/salaries", icon: Users },
+  { label: "Radar Équipe", href: "/dashboard/entreprise/equipe-radar", icon: BarChart3 },
   { label: "Talent Radar", href: "/dashboard/entreprise/talent-radar", icon: Radar },
   { label: "Mes Offres", href: "/dashboard/entreprise/offres", icon: Briefcase },
   { label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
@@ -22,34 +28,94 @@ const NAV_ITEMS = [
 
 export default function EnterpriseSidebar() {
   const pathname = usePathname();
+  const supabase = useSupabase();
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRole() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData.user;
+        if (!user) return;
+        const { data } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+        if (!cancelled) setRole(((data as any)?.role as string | undefined) ?? null);
+      } catch {
+        if (!cancelled) setRole(null);
+      }
+    }
+    loadRole();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-[240px] border-r border-blue-500/20 bg-[#050505]/80 backdrop-blur-xl">
-      <div className="border-b border-blue-500/10 px-6 pb-6 pt-8">
+    <aside className="fixed inset-y-0 left-0 z-50 h-full w-[260px] border-r border-white/10 bg-slate-950/90 backdrop-blur-2xl">
+      {/* Halo cinematic (bas gauche) */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -bottom-40 -left-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.35),rgba(99,102,241,0.18),rgba(2,6,23,0)_62%)] blur-2xl" />
+        <div className="absolute -bottom-28 -left-24 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.22),rgba(2,6,23,0)_66%)] blur-2xl" />
+      </div>
+
+      <div className="relative border-b border-white/10 px-6 pb-6 pt-8">
         <div className="text-[18px] font-extrabold tracking-[-0.5px] text-white">Beyond</div>
-        <div className="mt-1 text-[11px] font-medium uppercase tracking-[1.5px] text-blue-200/70">
-          Enterprise
+        <div className="mt-1 text-[11px] font-medium uppercase tracking-[1.5px] text-slate-400">
+          Enterprise {role ? `· ${role}` : ""}
         </div>
       </div>
-      <nav className="flex flex-col gap-1 px-3 py-6">
+
+      <nav className="relative flex flex-col gap-1 px-3 py-6" aria-label="Navigation entreprise">
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href;
+          const active = item.href === "/dashboard/entreprise"
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+          const Icon = item.icon;
+
           return (
             <Link
               key={item.label}
               href={item.href}
-              className={`flex items-center gap-2 rounded-[12px] px-3 py-2 text-[13.5px] font-semibold transition ${
-                active
-                  ? "bg-blue-500/20 text-white shadow-[0_0_16px_rgba(0,123,255,0.35)]"
-                  : "text-white/70 hover:bg-white/5 hover:text-white"
-              }`}
+              className={cn(
+                "flex items-center gap-2 rounded-[12px] px-3 py-2 text-[13.5px] font-semibold transition",
+                "text-slate-400 hover:bg-white/5 hover:text-white",
+                active && "border border-white/10 bg-white/10 text-white shadow-[0_0_22px_rgba(168,85,247,0.22)]",
+              )}
             >
-              <item.icon size={16} strokeWidth={1.5} />
+              <Icon size={16} strokeWidth={1.5} className={cn("text-slate-500", active && "text-white")} />
               {item.label}
             </Link>
           );
         })}
       </nav>
+
+      <div className="relative mt-auto p-4">
+        <button
+          type="button"
+          className={cn(
+            "group w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition",
+            "hover:border-white/15 hover:bg-white/[0.06]",
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-[0_0_22px_rgba(99,102,241,0.35)]">
+              <Zap size={18} strokeWidth={1.5} className="text-white" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-[13px] font-semibold text-white">Beyond IA</span>
+                <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/80">
+                  BETA
+                </span>
+              </div>
+              <div className="mt-0.5 text-[11px] text-slate-400">
+                Insights, signaux faibles, actions prioritaires.
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
     </aside>
   );
 }

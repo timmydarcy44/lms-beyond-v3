@@ -38,13 +38,20 @@ export default async function SuperAdminModulesPage() {
     redirect("/login");
   }
 
-  // Filtrer uniquement les modules créés par cet utilisateur (pas ceux d'autres super admins)
-  const { data: modulesData } = await supabase
+  const isTimmy = String(user.email ?? "").trim().toLowerCase() === "timmydarcy44@gmail.com";
+
+  let modulesQuery = supabase
     .from("courses")
-    .select("id, title, status, cover_image, created_at, updated_at, creator_id")
-    .or(`creator_id.eq.${user.id},owner_id.eq.${user.id}`)
+    .select("id, title, status, cover_image, created_at, updated_at, creator_id, org_id, organizations(name,slug)")
     .order("updated_at", { ascending: false })
     .limit(100);
+
+  if (!isTimmy) {
+    // Filtrer uniquement les modules créés par cet utilisateur (pas ceux d'autres super admins)
+    modulesQuery = modulesQuery.or(`creator_id.eq.${user.id},owner_id.eq.${user.id}`);
+  }
+
+  const { data: modulesData } = await modulesQuery;
 
   const modules = (modulesData ?? []) as ModuleSummary[];
   const moduleIds = modules.map((module) => module.id);

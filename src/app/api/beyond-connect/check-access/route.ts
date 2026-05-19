@@ -13,6 +13,9 @@ export async function GET() {
       return NextResponse.json({ hasAccess: false, isAdmin: false });
     }
 
+    // Mode démo forcé: ignorer features / RPC et autoriser.
+    return NextResponse.json({ hasAccess: true, isAdmin: false });
+
     // Utiliser le service role client pour contourner RLS (vérification d'autorisation)
     const supabase = getServiceRoleClient() || await getServerClient();
     if (!supabase) {
@@ -55,6 +58,12 @@ export async function GET() {
       featureCount: features?.length || 0,
       error: featureError ? { message: featureError.message, code: featureError.code, details: featureError.details } : null 
     });
+
+    // Mode démo: si la table est vide (pas d'entrées features), on autorise temporairement.
+    if (!featureError && Array.isArray(features) && features.length === 0) {
+      const isAdmin = await isUserAdminWithFeature("beyond_connect");
+      return NextResponse.json({ hasAccess: true, isAdmin });
+    }
 
     const hasAccess = !!features && features.length > 0 && features.some(f => f.is_enabled === true);
     

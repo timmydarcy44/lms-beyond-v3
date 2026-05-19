@@ -12,6 +12,8 @@ export type CatalogItem = {
   price: number;
   is_free: boolean;
   category: string | null;
+  /** courses.category_id (module) — regroupement catalogue */
+  category_id?: string | null;
   thematique: string | null;
   duration: string | null;
   level: string | null;
@@ -167,9 +169,17 @@ export async function getCatalogItems(
         try {
           const { data: courseData } = await supabase
             .from("courses")
-            .select("cover_image, builder_snapshot, price")
+            .select("cover_image, builder_snapshot, price, category_id, category, category_name, slug")
             .eq("id", item.content_id)
             .single();
+
+          // Si la formation est marquée "parcours_only", elle ne doit pas apparaître dans la bibliothèque/catalogue.
+          // (Elle reste accessible uniquement via un parcours.)
+          const snapshot =
+            courseData?.builder_snapshot && typeof courseData.builder_snapshot === "string"
+              ? JSON.parse(courseData.builder_snapshot)
+              : courseData?.builder_snapshot;
+          if (snapshot?.general?.parcours_only) return null;
           
           // Déterminer le format principal du module (text, audio, video)
           let contentFormat: "text" | "audio" | "video" | null = null;
@@ -231,6 +241,13 @@ export async function getCatalogItems(
           }
 
           if (courseData) {
+            const cId = (courseData as { category_id?: string | null }).category_id;
+            if (cId) (item as CatalogItem & { category_id?: string | null }).category_id = String(cId);
+            const nameFromCourse =
+              String((courseData as { category_name?: string | null }).category_name ?? "").trim() ||
+              String((courseData as { category?: string | null }).category ?? "").trim();
+            if (nameFromCourse) item.category = nameFromCourse;
+
             let heroImage = courseData.cover_image;
 
             // Si pas d'image, chercher dans builder_snapshot
@@ -335,7 +352,7 @@ export async function getCatalogItems(
           // Ensuite, récupérer les images depuis la table tests
           let { data: testData, error: testError } = await supabase
             .from("tests")
-            .select("cover_image, hero_image_url, thumbnail_url, price")
+            .select("cover_image, price")
             .eq("id", item.content_id)
             .maybeSingle();
           
@@ -384,7 +401,7 @@ export async function getCatalogItems(
           // Essayer d'abord avec toutes les colonnes
           let { data: resourceData, error: resourceError } = await supabase
             .from("resources")
-            .select("price, cover_url, thumbnail_url, hero_image_url, file_url")
+            .select("price, cover_url, file_url")
             .eq("id", item.content_id)
             .maybeSingle();
           
@@ -392,7 +409,7 @@ export async function getCatalogItems(
           if (resourceError && resourceError.code === '42703') {
             const { data: resourceMinimal, error: resourceMinErr } = await supabase
               .from("resources")
-              .select("price, cover_url, thumbnail_url, file_url")
+              .select("price, cover_url, file_url")
               .eq("id", item.content_id)
               .maybeSingle();
             
@@ -442,7 +459,7 @@ export async function getCatalogItems(
     })
   );
 
-  return enrichedItems;
+  return enrichedItems.filter(Boolean) as CatalogItem[];
 }
 
 /**
@@ -502,7 +519,7 @@ export async function getCatalogItemById(
         // Essayer de trouver dans tests
         const { data: testData, error: testError } = await supabase
           .from("tests")
-          .select("id, title, description, price, category, cover_image, hero_image_url, thumbnail_url, creator_id, created_at, updated_at")
+          .select("id, title, description, price, category, cover_image, creator_id, created_at, updated_at")
           .eq("id", catalogItemId)
           .maybeSingle();
         
@@ -531,7 +548,7 @@ export async function getCatalogItemById(
           // Essayer de trouver dans courses
           const { data: courseData, error: courseError } = await supabase
             .from("courses")
-            .select("id, title, description, price, cover_image, hero_image_url, thumbnail_url, creator_id, slug, created_at, updated_at")
+            .select("id, title, description, price, cover_image, creator_id, slug, created_at, updated_at")
             .eq("id", catalogItemId)
             .maybeSingle();
           
@@ -561,7 +578,7 @@ export async function getCatalogItemById(
             console.log("[catalogue] Trying to find resource directly in resources table:", catalogItemId);
             const { data: resourceData, error: resourceError } = await supabase
               .from("resources")
-              .select("id, title, description, price, kind, created_by, owner_id, created_at, updated_at, cover_url, thumbnail_url, slug")
+              .select("id, title, description, price, kind, created_by, owner_id, created_at, updated_at, cover_url, slug")
               .eq("id", catalogItemId)
               .maybeSingle();
             

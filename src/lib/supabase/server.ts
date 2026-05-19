@@ -81,6 +81,11 @@ export const getServiceRoleClient = () => {
   });
 };
 
+/**
+ * Retourne le client **service role** si `SUPABASE_SERVICE_ROLE_KEY` est défini, sinon le client **session**
+ * (anon + JWT utilisateur). Le fallback n’est **pas** null : ne l’utilisez pas pour des lectures censées
+ * bypasser la RLS (ex. catalogue complet `organizations` pour super-admin) — préférez `getServiceRoleClient()`.
+ */
 export const getServiceRoleClientOrFallback = async () => {
   const serviceRoleClient = getServiceRoleClient();
   if (serviceRoleClient) {

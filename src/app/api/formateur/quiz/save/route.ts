@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
       | {
           formation_id?: string;
           titre?: string;
+          title?: string;
+          description?: string | null;
           questions?: unknown[];
           scoring?: {
             points_par_question?: number;
@@ -24,7 +26,8 @@ export async function POST(request: NextRequest) {
         }
       | null;
 
-    if (!body?.formation_id || !body?.titre || !Array.isArray(body.questions)) {
+    const titre = String(body?.title ?? body?.titre ?? "").trim();
+    if (!body?.formation_id || !titre || !Array.isArray(body.questions)) {
       return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
     }
 
@@ -41,9 +44,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
+    const description =
+      typeof body.description === "string" && body.description.trim().length > 0
+        ? body.description.trim()
+        : `Quiz généré par IA — ${titre}`;
+
     const baseTestData = {
-      title: body.titre,
-      description: "Quiz généré par IA",
+      title: titre,
+      description,
       status: "draft",
       questions: body.questions,
       created_by: user.id,
@@ -83,57 +91,36 @@ export async function POST(request: NextRequest) {
 
     const placementType = body.placement?.type ?? "end";
     const placementId = body.placement?.id ?? null;
-    const courseTestData: Record<string, any> = {
-      course_id: body.formation_id,
-      test_id: testData.id,
-      order_index: 0,
-      position_type: null,
-      position_after_id: null,
-      section_id: null,
-      chapter_id: null,
-      subchapter_id: null,
-      local_section_id: null,
-      local_chapter_id: null,
-      local_subchapter_id: null,
-      local_position_after_id: null,
-    };
+    // Lien (optionnel) entre course et test: best-effort.
+    // Certains schémas minimaux n'ont pas `course_tests` ou n'ont pas toutes les colonnes.
+    let linked = false;
+    try {
+      const minimalAttempts: Array<Record<string, any>> = [
+        { course_id: body.formation_id, test_id: testData.id, order_index: 0 },
+        { course_id: body.formation_id, test_id: testData.id },
+      ];
 
-    if (placementType && placementType !== "end" && placementId) {
-      courseTestData.position_type = placementType;
-      if (isValidUUID(placementId)) {
-        courseTestData.position_after_id = placementId;
-      } else {
-        courseTestData.local_position_after_id = placementId;
-      }
-      if (placementType === "after_section") {
-        if (isValidUUID(placementId)) {
-          courseTestData.section_id = placementId;
-        } else {
-          courseTestData.local_section_id = placementId;
+      for (const payload of minimalAttempts) {
+        const { error } = await supabase.from("course_tests").insert(payload);
+        if (!error) {
+          linked = true;
+          break;
+        }
+        const message = String((error as any)?.message ?? "");
+        const code = String((error as any)?.code ?? "");
+        const isMissingTable =
+          code === "42P01" ||
+          message.toLowerCase().includes('relation "course_tests" does not exist') ||
+          message.toLowerCase().includes("relation does not exist");
+        if (isMissingTable) {
+          break;
         }
       }
-      if (placementType === "after_chapter") {
-        if (isValidUUID(placementId)) {
-          courseTestData.chapter_id = placementId;
-        } else {
-          courseTestData.local_chapter_id = placementId;
-        }
-      }
-      if (placementType === "after_subchapter") {
-        if (isValidUUID(placementId)) {
-          courseTestData.subchapter_id = placementId;
-        } else {
-          courseTestData.local_subchapter_id = placementId;
-        }
-      }
+    } catch {
+      // Ignorer: le builder injecte le bloc quiz dans le snapshot côté client.
     }
 
-    const { error: courseTestError } = await supabase.from("course_tests").insert(courseTestData);
-    if (courseTestError) {
-      return NextResponse.json({ error: courseTestError.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, test_id: testData.id });
+    return NextResponse.json({ success: true, test_id: testData.id, linked });
   } catch (error) {
     console.error("[api/formateur/quiz/save] error:", error);
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 });

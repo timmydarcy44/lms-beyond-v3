@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Sparkles, Languages, AudioLines, Brain, Map, Shapes, Loader2, History } from "lucide-react";
+import {
+  Sparkles,
+  Languages,
+  AudioLines,
+  Brain,
+  Map,
+  Shapes,
+  Loader2,
+  History,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 
@@ -10,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TextTransformationResultModal } from "@/components/apprenant/ai/text-transformation-result-modal";
 import type { AIAction } from "@/lib/ai/utils";
+import { isValidAIAction } from "@/lib/ai/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
@@ -79,6 +90,13 @@ const ACTIONS = [
     shortLabel: "Transformer en schéma",
     description: "Propose un schéma visuel pour visualiser le concept",
     icon: Shapes,
+  },
+  {
+    id: "synthesis",
+    label: "Créer une fiche synthétique",
+    shortLabel: "Fiche synthétique",
+    description: "Résumé structuré avec définitions, schémas et points clés",
+    icon: FileText,
   },
   {
     id: "translate",
@@ -166,6 +184,7 @@ export function LessonSmartAssist({
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showSelectionRequiredHint, setShowSelectionRequiredHint] = useState(false);
   const [transformationResult, setTransformationResult] = useState<TransformationResultState | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const { resolvedTheme } = useTheme();
@@ -270,6 +289,8 @@ export function LessonSmartAssist({
     const params = new URLSearchParams();
     if (isUuid(lessonId)) {
       params.set("lessonId", lessonId);
+    } else if (lessonId && String(lessonId).trim()) {
+      params.set("chapterLocalId", String(lessonId).trim());
     }
     if (isUuid(courseId)) {
       params.set("courseId", courseId);
@@ -303,16 +324,20 @@ export function LessonSmartAssist({
 
       if (data?.success && Array.isArray(data.items)) {
         setHistory(
-          data.items.map((item: any) => ({
-            id: item.id,
-            created_at: item.created_at,
-            lesson_id: item.lesson_id ?? null,
-            course_id: item.course_id ?? null,
-            selection_excerpt: item.selection_excerpt ?? null,
-            action: item.action as AIAction,
-            options: item.options ?? null,
-            transformation: item.transformation ?? null,
-          })),
+          data.items.map((item: any) => {
+            const rawT = item.transformation;
+            const transformation = Array.isArray(rawT) ? rawT[0] ?? null : rawT ?? null;
+            return {
+              id: item.id,
+              created_at: item.created_at,
+              lesson_id: item.lesson_id ?? null,
+              course_id: item.course_id ?? null,
+              selection_excerpt: item.selection_excerpt ?? null,
+              action: item.action as AIAction,
+              options: item.options ?? null,
+              transformation,
+            };
+          }),
         );
       } else {
         setHistory([]);
@@ -338,7 +363,7 @@ export function LessonSmartAssist({
 const executeAction = async (actionId: AIAction, options: Record<string, any> = {}) => {
   const textToTransform = selectionExcerpt;
   if (!textToTransform) {
-    toast.error("Sélectionnez un passage avant de lancer l'action.");
+    setShowSelectionRequiredHint(true);
     return;
   }
 
@@ -353,13 +378,14 @@ const executeAction = async (actionId: AIAction, options: Record<string, any> = 
     const response = await fetch("/api/ai/lesson-assistant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+        body: JSON.stringify({
         text: textToTransform,
         action: actionId,
         options,
         context: {
           courseId: isUuid(courseId) ? courseId : null,
           lessonId: isUuid(lessonId) ? lessonId : null,
+          chapterLocalId: lessonId && !isUuid(lessonId) ? String(lessonId) : null,
         },
       }),
     });
@@ -407,9 +433,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
   }
 
   if (!selectionExcerpt) {
-    toast("Sélectionnez un passage", {
-      description: "Surlignez le texte que vous souhaitez transformer.",
-    });
+    setShowSelectionRequiredHint(true);
     return;
   }
 
@@ -482,10 +506,6 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
     setShowHistoryModal(false);
   };
 
-  function isValidAIAction(action: string): action is AIAction {
-    return ["rephrase", "mindmap", "schema", "translate", "audio", "insights"].includes(action);
-  }
-
   const toolbarLeft = selection ? selection.left : 0;
 
   return (
@@ -494,14 +514,14 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
         <div
           ref={toolbarRef}
           className={cn(
-            "pointer-events-auto absolute z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border px-4 py-2 shadow-xl backdrop-blur-md",
+            "pointer-events-auto absolute z-30 flex max-w-[min(100%,520px)] -translate-x-1/2 flex-wrap items-center justify-center gap-1.5 rounded-full border px-3 py-2 shadow-xl backdrop-blur-md",
             isLight
               ? "border-slate-200 bg-white text-slate-700 shadow-slate-300/60"
               : "border-white/15 bg-gradient-to-r from-[#0f172a]/95 via-[#111827]/95 to-[#1f2937]/95 text-white shadow-black/25",
           )}
           style={{ top: selection.top, left: toolbarLeft }}
         >
-          {ACTIONS.slice(0, 4).map((action) => {
+          {ACTIONS.map((action) => {
             const Icon = action.icon;
             const isHovered = hoveredAction === action.id;
             return (
@@ -509,22 +529,23 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
                 key={action.id}
                 type="button"
                 className={cn(
-                  "flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] transition",
+                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition",
                   isLight ? "text-slate-600 hover:bg-slate-100" : "text-white hover:bg-white/10",
                 )}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleAction(action.id)}
                 onMouseEnter={() => setHoveredAction(action.id)}
                 onMouseLeave={() => setHoveredAction((prev) => (prev === action.id ? null : prev))}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span
                   className={cn(
                     isHovered ? "text-transparent" : isLight ? "text-slate-600" : "text-white",
-                    "transition-colors",
+                    "hidden sm:inline transition-colors",
                   )}
                   style={isHovered ? gradientTextStyle : undefined}
                 >
-                  {action.label}
+                  {action.shortLabel}
                 </span>
               </button>
             );
@@ -560,6 +581,33 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
           </div>
         </div>
       )}
+
+      <Dialog open={showSelectionRequiredHint} onOpenChange={setShowSelectionRequiredHint}>
+        <DialogContent
+          className={cn(
+            "max-w-md space-y-4",
+            isLight ? "bg-white text-slate-900" : "border-white/10 bg-gradient-to-br from-[#0f172a]/95 via-[#111827]/95 to-[#1f2937]/95 text-white",
+          )}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[#8E2DE2]" />
+              Sélection requise
+            </DialogTitle>
+            <DialogDescription className={cn(isLight ? "text-slate-600" : "text-white/75")}>
+              Merci de sélectionner un bout de contenu dans la leçon (surlignez au moins quelques mots), puis relancez la
+              transformation.
+            </DialogDescription>
+          </DialogHeader>
+          <Button
+            type="button"
+            className="w-full rounded-full bg-gradient-to-r from-[#00C6FF] via-[#8E2DE2] to-[#FF6FD8] font-semibold text-white hover:opacity-95"
+            onClick={() => setShowSelectionRequiredHint(false)}
+          >
+            Compris
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showRephraseOptions} onOpenChange={setShowRephraseOptions}>
         <DialogContent
@@ -784,7 +832,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
         >
           <div className="mb-6 space-y-1 text-left">
             <p className="apprenant-force-text text-sm font-light tracking-[0.15em]" style={{ fontFamily: "\"SF Pro Text\", \"SF Pro Display\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif" }}>
-              Beyond Note Ai
+              EDGE AI
             </p>
             <h3 className="apprenant-force-text text-xl font-semibold" style={{ fontFamily: "\"SF Pro Display\", \"SF Pro Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif" }}>
               Transformez et personnalisez le contenu de votre cours
@@ -798,6 +846,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
                   key={action.id}
                   type="button"
                   className="flex h-full flex-col items-center justify-center gap-2 rounded-3xl bg-white p-4 text-center text-black shadow-[0_25px_45px_-34px_rgba(15,23,42,0.25)] transition-all duration-200 hover:-translate-y-0.5"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleAction(action.id)}
                   onMouseEnter={() => setHoveredAction(action.id)}
                   onMouseLeave={() => setHoveredAction((prev) => (prev === action.id ? null : prev))}

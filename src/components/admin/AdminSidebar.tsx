@@ -41,9 +41,10 @@ type AdminSidebarProps = {
   open: boolean;
   onToggle: () => void;
   organizationLogo?: string | null;
+  organizationName?: string | null;
 };
 
-export const AdminSidebar = ({ open, onToggle, organizationLogo }: AdminSidebarProps) => {
+export const AdminSidebar = ({ open, onToggle, organizationLogo, organizationName }: AdminSidebarProps) => {
   useEffect(() => {
     if (open) {
       document.body.style.setProperty("--sidebar-width", "272px");
@@ -85,6 +86,18 @@ export const AdminSidebar = ({ open, onToggle, organizationLogo }: AdminSidebarP
                   className="object-contain"
                 />
               </div>
+            ) : organizationName ? (
+              <div className="h-16 w-full flex items-center justify-center px-2">
+                <span
+                  className="text-center text-base font-semibold tracking-tight text-white"
+                  style={{
+                    fontFamily:
+                      '"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif',
+                  }}
+                >
+                  {organizationName}
+                </span>
+              </div>
             ) : (
               <div className="h-16 w-16 rounded bg-white/10 flex items-center justify-center">
                 <span className="text-xs font-semibold text-white/60">ORG</span>
@@ -93,7 +106,7 @@ export const AdminSidebar = ({ open, onToggle, organizationLogo }: AdminSidebarP
             <span className="text-[10px] text-white/50">Powered by Beyond</span>
           </div>
         ) : (
-          organizationLogo && (
+          organizationLogo ? (
             <div className="relative h-12 w-12">
               <Image
                 src={organizationLogo}
@@ -102,7 +115,7 @@ export const AdminSidebar = ({ open, onToggle, organizationLogo }: AdminSidebarP
                 className="object-contain"
               />
             </div>
-          )
+          ) : null
         )}
         <button
           type="button"

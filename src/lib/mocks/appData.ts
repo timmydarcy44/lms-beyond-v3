@@ -131,6 +131,26 @@ const rawMockUsers: MockUser[] = [
     tutor_feedback:
       "Très à l'aise en boutique, doit canaliser son énergie lors des pics de stress.",
     live_status: "live",
+    cognitive_tests: {
+      mai: {
+        global: 72,
+        declarative: 78,
+        procedures: 68,
+        conditional: 55,
+        error_management: 70,
+      },
+      stress: {
+        restricted: true,
+        physical: 2,
+        management: 3,
+      },
+      dys: {
+        restricted: true,
+        oral_language: 3,
+        executive: 4,
+        motor: 2,
+      },
+    },
   },
   {
     id: "mock-02",

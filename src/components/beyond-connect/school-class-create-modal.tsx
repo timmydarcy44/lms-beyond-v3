@@ -22,6 +22,7 @@ export function SchoolClassCreateModal({ students, schoolId }: SchoolClassCreate
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [className, setClassName] = useState("");
+  const [coverImageUrl, setCoverImageUrl] = useState("");
   const [npcAmount, setNpcAmount] = useState("");
   const [studentQuery, setStudentQuery] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -74,7 +75,17 @@ export function SchoolClassCreateModal({ students, schoolId }: SchoolClassCreate
       setResolvedSchoolId(finalSchoolId);
     }
     if (!finalSchoolId) {
-      setFormError("school_id manquant.");
+      const res = await fetch("/api/dashboard/ecole/school-context");
+      const ctx = await res.json().catch(() => null);
+      if (res.ok && ctx?.schoolId) {
+        finalSchoolId = String(ctx.schoolId);
+        setResolvedSchoolId(finalSchoolId);
+      }
+    }
+    if (!finalSchoolId) {
+      setFormError(
+        "École non identifiée : votre profil n’a pas de school_id et aucune organisation staff n’a été trouvée. Contactez un administrateur.",
+      );
       setIsSaving(false);
       return;
     }
@@ -82,6 +93,7 @@ export function SchoolClassCreateModal({ students, schoolId }: SchoolClassCreate
       name: className.trim(),
       npc_amount: npcAmount ? Number(npcAmount) : null,
       school_id: finalSchoolId,
+      ...(coverImageUrl.trim() ? { cover_image_url: coverImageUrl.trim() } : {}),
     };
     console.log("Données classe envoyées:", payload);
     const { data: classRow, error: classError } = await supabase
@@ -120,6 +132,7 @@ export function SchoolClassCreateModal({ students, schoolId }: SchoolClassCreate
 
     setDialogOpen(false);
     setClassName("");
+    setCoverImageUrl("");
     setNpcAmount("");
     setStudentQuery("");
     setSelectedStudentIds([]);
@@ -152,6 +165,15 @@ export function SchoolClassCreateModal({ students, schoolId }: SchoolClassCreate
               value={className}
               onChange={(event) => setClassName(event.target.value)}
               placeholder="Mastere Business"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40"
+            />
+          </div>
+          <div className="space-y-2 text-sm">
+            <label className="text-xs font-semibold text-white/70">Cover (URL image, optionnel)</label>
+            <input
+              value={coverImageUrl}
+              onChange={(event) => setCoverImageUrl(event.target.value)}
+              placeholder="https://…"
               className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40"
             />
           </div>

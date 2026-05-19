@@ -40,31 +40,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Snapshot invalide" }, { status: 400 });
     }
 
-    // Chercher le chapitre dans le snapshot
-    let foundChapter: any = null;
+    // Chercher le chapitre ou sous-chapitre dans le snapshot
+    let foundNode: any = null;
     for (const section of snapshot.sections || []) {
       for (const chapter of section.chapters || []) {
         if (chapter.id === localChapterId) {
-          foundChapter = chapter;
+          foundNode = chapter;
           break;
         }
+        for (const sub of chapter.subchapters || []) {
+          if (sub.id === localChapterId) {
+            foundNode = sub;
+            break;
+          }
+        }
+        if (foundNode) break;
       }
-      if (foundChapter) break;
+      if (foundNode) break;
     }
 
-    if (!foundChapter) {
+    if (!foundNode) {
       return NextResponse.json({ error: "Chapitre introuvable dans le snapshot" }, { status: 404 });
     }
 
     // Si le chapitre a déjà un UUID de la DB (dans dbId ou id si c'est un UUID)
-    if (foundChapter.dbId) {
-      return NextResponse.json({ chapterId: foundChapter.dbId });
+    if (foundNode.dbId) {
+      return NextResponse.json({ chapterId: foundNode.dbId });
     }
 
     // Vérifier si c'est déjà un UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(foundChapter.id)) {
-      return NextResponse.json({ chapterId: foundChapter.id });
+    if (uuidRegex.test(foundNode.id)) {
+      return NextResponse.json({ chapterId: foundNode.id });
     }
 
     // Le chapitre n'a pas encore d'UUID de la DB, il faut le créer

@@ -27,16 +27,14 @@ export function BeyondNoteList() {
   const loadOrganizations = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/super-admin/organizations");
+      const response = await fetch("/api/super-admin/organisations");
       if (response.ok) {
         const data = await response.json();
         
         // Charger les fonctionnalités pour chaque organisation
         const orgsWithFeatures = await Promise.all(
           (data.organizations || []).map(async (org: any) => {
-            const featuresResponse = await fetch(
-              `/api/super-admin/organizations/${org.id}/features`
-            );
+            const featuresResponse = await fetch(`/api/super-admin/organisations/${org.id}/features`);
             let hasBeyondNote = false;
             if (featuresResponse.ok) {
               const featuresData = await featuresResponse.json();
@@ -69,7 +67,7 @@ export function BeyondNoteList() {
 
   const toggleFeature = async (orgId: string, enable: boolean) => {
     try {
-      const url = `/api/super-admin/organizations/${orgId}/features/beyond_note`;
+      const url = `/api/super-admin/organisations/${orgId}/features/beyond_note`;
       const method = enable ? "POST" : "DELETE";
       
       const response = await fetch(url, {

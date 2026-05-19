@@ -1,4 +1,14 @@
-import { getServerClient } from "@/lib/supabase/server";
+import { extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
+import type { CourseBuilderChapter } from "@/types/course-builder";
+import { EDGE_LAB_COURSE_CATEGORY_LABELS } from "@/lib/edge-lab-course-categories";
+import {
+  EDGE_LAB_GALAXY_LOGO_URL,
+  isEdgeLabOrganizationSlug,
+  isPlaymakersOrganizationSlug,
+} from "@/lib/galaxy-branding";
+import { PLAYMAKERS_BRANDING_LOGO_URL } from "@/lib/queries/organization-nav";
+import { getServerClient, getServiceRoleClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { headers } from "next/headers";
 
 // Fonction pour récupérer les formateurs disponibles pour un apprenant
 export async function getAvailableInstructors(): Promise<Array<{ id: string; name: string; email: string }>> {
@@ -63,11 +73,77 @@ export type LearnerCard = {
   slug: string;
   href: string;
   image?: string | null;
+  /** URL média (image ou vidéo) — aligné sur `courses.cover_image` (+ `cover_url` si présent côté DB). */
+  cover_url?: string | null;
+  /** Fichier / clé telle qu’en base (`courses.cover_image`) — pour les cartes qui lisent ce champ en priorité. */
+  cover_image?: string | null;
+  /** Texte de présentation cours (`courses.presentation`). */
+  presentation?: string | null;
   meta?: string | null;
   category?: string | null;
+  category_id?: string | null;
+  category_name?: string | null;
+  level?: string | null;
+  validatedByPeerId?: string | null;
+  validatedBy?: { id: string; name: string; avatarUrl?: string | null } | null;
   cta?: string | null;
   progress?: number | null;
+  /** Présent si le select Supabase l’inclut — utilisé pour `general.cover_image` côté UI. */
+  builder_snapshot?: unknown;
+  hero_image_url?: string | null;
+  image_url?: string | null;
 };
+
+/** Même règle partout (inscriptions + catalogue org) : les brouillons ne sont pas listés. */
+function isCourseStatusVisibleForApprenant(status: unknown): boolean {
+  return (
+    status === "published" ||
+    status === "active" ||
+    status == null ||
+    !status
+  );
+}
+
+function courseRowToLearnerCard(course: Record<string, unknown>): LearnerCard {
+  const coverMedia =
+    (course.cover_image as string | undefined) ||
+    (course.hero_image_url as string | undefined) ||
+    (course.image_url as string | undefined) ||
+    null;
+  return {
+    id: String(course.id),
+    title: (course.title as string) || "Formation sans titre",
+    slug: (course.slug as string) || String(course.id),
+    href: `/catalog/formations/${(course.slug as string) || course.id}`,
+    image:
+      coverMedia ||
+      "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
+    cover_url: coverMedia,
+    cover_image: (course.cover_image as string | null | undefined) ?? null,
+    presentation: (course.presentation as string | null | undefined) ?? null,
+    meta: (course.description as string | null) || null,
+    category: (course.category as string | null) || null,
+    category_id: course.category_id ? String(course.category_id) : null,
+    category_name: (course.category_name as string | null | undefined) ?? null,
+    level:
+      (course.level as string | null) ??
+      (course.builder_snapshot as { general?: { level?: string } } | null)?.general?.level ??
+      null,
+    validatedByPeerId: course.validated_by_peer_id ? String(course.validated_by_peer_id) : null,
+    validatedBy: null,
+    cta: "Continuer",
+    progress: 0,
+    builder_snapshot: (course as { builder_snapshot?: unknown }).builder_snapshot,
+    hero_image_url: (course.hero_image_url as string | null | undefined) ?? null,
+    image_url: (course.image_url as string | null | undefined) ?? null,
+  };
+}
+
+function isCourseParcoursOnly(course: Record<string, unknown>): boolean {
+  const snap = (course.builder_snapshot as any) ?? null;
+  const v = snap && typeof snap === "object" ? (snap as any)?.general?.parcours_only : null;
+  return Boolean(v);
+}
 
 export type LearnerHero = {
   title: string;
@@ -90,7 +166,34 @@ export type LearnerDetail = {
   trailerUrl?: string | null;
   description?: string;
   tags?: string[];
+  /** `courses.validated_by_peer_id` (absent du seul `builder_snapshot`). */
+  validatedByPeerId?: string | null;
+  /** Ligne `validators` résolue côté serveur (RLS côté client souvent bloquante). */
+  validatorForBadge?: { name: string; professional_title: string; photo_url?: string } | null;
 };
+
+function normalizeValidatorPhotoPublicUrl(url: string): string {
+  return url
+    .replace("/object/public/playmakers/", "/object/public/Playmakers/")
+    .replace("/object/public/home/", "/object/public/Home/");
+}
+
+function mapValidatorRowToBadgeForCatalog(
+  row: Record<string, unknown> | null,
+): { name: string; professional_title: string; photo_url?: string } | null {
+  if (!row) return null;
+  const full = String(row.full_name ?? "").trim();
+  const first = String(row.first_name ?? "").trim();
+  const last = String(row.last_name ?? "").trim();
+  const name = full || `${first} ${last}`.trim();
+  if (!name) return null;
+  const professional_title = String(
+    row.professionnal_title ?? row.professional_title ?? "",
+  ).trim();
+  const raw = String(row.photo_url ?? "").trim();
+  const photo_url = raw ? normalizeValidatorPhotoPublicUrl(raw) : undefined;
+  return { name, professional_title, ...(photo_url ? { photo_url } : {}) };
+}
 
 export type LearnerModule = {
   id: string;
@@ -107,8 +210,12 @@ export type LearnerLesson = {
   description?: string;
   videoUrl?: string;
   duration?: string;
-  kind?: "chapter" | "subchapter";
+  kind?: "chapter" | "subchapter" | "test" | "quiz" | "experiential_interview";
   parentChapterId?: string;
+  quiz_id?: string;
+  interview_context?: string;
+  /** UUID chapitre/sous-chapitre en base (pont avec flashcards `chapter_id` et cache local). */
+  dbChapterId?: string | null;
 };
 
 export type LearnerFlashcard = {
@@ -124,10 +231,25 @@ export type ApprenantDashboardData = {
   ressources: LearnerCard[];
   tests: LearnerCard[];
   continueWatching: LearnerCard[];
+  /** Slug org résolu (param, header `x-org-slug`, etc.) — pour branding côté client sans snapshot. */
+  organizationSlug?: string | null;
+  organizationLogoUrl?: string | null;
+  organizationName?: string | null;
+  /**
+   * EDGE Lab : ordre des thématiques business (côté client aussi via `EDGE_LAB_COURSE_CATEGORY_LABELS`).
+   * Playmakers : `null` — l’apprenant groupe dynamiquement par `category` / `category_name`.
+   */
+  thematicSectionOrder?: string[] | null;
 };
 
 export type PathContentDetail = {
-  courses: Array<{ id: string; title: string; slug: string }>;
+  steps?: any[];
+  title?: string | null;
+  cover_image?: string | null;
+  presentation?: string | null;
+  tools?: string[];
+  objectifs?: string[];
+  courses: Array<{ id: string; title: string; slug: string; cover_url?: string | null }>;
   tests: Array<{ id: string; title: string; slug: string }>;
   resources: Array<{ id: string; title: string; slug: string }>;
 };
@@ -139,7 +261,9 @@ export function isLearnerCategory(category: string): category is LearnerCategory
 }
 
 // Fonctions stub pour éviter les erreurs de build (à implémenter complètement après)
-export async function getApprenantDashboardData(): Promise<ApprenantDashboardData> {
+export async function getApprenantDashboardData(
+  options?: string | { orgSlug?: string | null },
+): Promise<ApprenantDashboardData> {
   const supabase = await getServerClient();
   if (!supabase) {
     return {
@@ -154,6 +278,10 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
       ressources: [],
       tests: [],
       continueWatching: [],
+      organizationSlug: null,
+      organizationLogoUrl: null,
+      organizationName: null,
+      thematicSectionOrder: null,
     };
   }
 
@@ -172,16 +300,91 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
         ressources: [],
         tests: [],
         continueWatching: [],
+        organizationSlug: null,
+        organizationLogoUrl: null,
+        organizationName: null,
+        thematicSectionOrder: null,
       };
     }
 
-    // Récupérer les formations assignées via enrollments
-    // La table enrollments peut avoir user_id OU learner_id
+    const h = await headers();
+    const explicitSlug = typeof options === "string" ? options : options?.orgSlug;
+    const explicitSlugNorm = String(explicitSlug ?? "").trim() || null;
+    // Branding slug: can come from header, even on non-galaxy pages.
+    const orgSlugForBranding =
+      explicitSlugNorm ||
+      (h.get("x-org-slug") ?? "").trim() ||
+      null;
+    const organizationSlug = orgSlugForBranding ? orgSlugForBranding.toLowerCase().replace(/_/g, "-") : null;
+
+    let currentOrgId: string | null = null;
+    let organizationLogoUrl: string | null = null;
+    let organizationName: string | null = null;
+
+    // Scope org: UNIQUEMENT si l’orgSlug est explicitement passé (routes /g/[orgSlug]/...).
+    // Sinon, on évite de sur-filtrer le dashboard “global” à cause d’un header stale.
+    const organizationSlugForScope = explicitSlugNorm ? explicitSlugNorm.toLowerCase().replace(/_/g, "-") : null;
+
+    /** Sous `/g/{slug}/…` : lecture org + catalogue + inscriptions avec service role si dispo (évite RLS / colonnes manquantes). */
+    const galaxyReadClient =
+      organizationSlugForScope != null ? (await getServiceRoleClientOrFallback()) ?? supabase : supabase;
+
+    // Galaxie : résoudre l’org par slug (`id, name, slug` seuls — compatibles toutes les versions de schéma)
+    if (organizationSlugForScope) {
+      try {
+        const { data: orgRow } = await galaxyReadClient
+          .from("organizations")
+          .select("id, name, slug")
+          .eq("slug", organizationSlugForScope)
+          .maybeSingle();
+        type OrgRef = { id?: string; name?: string | null; slug?: string | null };
+        let found: OrgRef | null = orgRow as OrgRef | null;
+        if (!found && isEdgeLabOrganizationSlug(organizationSlugForScope)) {
+          const { data: byAltSlugs } = await galaxyReadClient
+            .from("organizations")
+            .select("id, name, slug")
+            .in("slug", ["edgelab", "edge-lab"]);
+          if (byAltSlugs && byAltSlugs.length === 1) {
+            found = byAltSlugs[0] as OrgRef;
+          } else if (byAltSlugs && byAltSlugs.length > 1) {
+            found =
+              (byAltSlugs as OrgRef[]).find(
+                (r) => String(r?.slug ?? "").toLowerCase().replace(/_/g, "-") === organizationSlug,
+              ) ?? (byAltSlugs[0] as OrgRef);
+          }
+        }
+        if (!found && isPlaymakersOrganizationSlug(organizationSlugForScope)) {
+          const { data: pm } = await galaxyReadClient
+            .from("organizations")
+            .select("id, name, slug")
+            .in("slug", ["playmakers", "play-maker", "play_makers"])
+            .limit(3);
+          const rows = (pm as OrgRef[] | null) ?? [];
+          found = rows.find((r) => String(r?.slug ?? "").toLowerCase().replace(/_/g, "-") === "playmakers") ?? rows[0] ?? null;
+        }
+        if (found) {
+          currentOrgId = String((found as OrgRef).id ?? "").trim() || null;
+          organizationName = String((found as OrgRef).name ?? "").trim() || null;
+        }
+      } catch (e) {
+        console.warn("[apprenant] organizations lookup (slug) failed:", e);
+      }
+    }
+
+    if (organizationSlug && isEdgeLabOrganizationSlug(organizationSlug)) {
+      /* Logo fiable (bucket) — n’hérite pas d’une `logo_url` en base erronée / 404. */
+      organizationLogoUrl = EDGE_LAB_GALAXY_LOGO_URL;
+    }
+    if (organizationSlug && isPlaymakersOrganizationSlug(organizationSlug)) {
+      organizationLogoUrl = PLAYMAKERS_BRANDING_LOGO_URL;
+    }
+
+    // Récupérer les formations assignées via enrollments (schéma normalisé: user_id + course_id)
     let formations: LearnerCard[] = [];
     
     try {
       // Essayer d'abord avec enrollments (sans colonnes qui pourraient ne pas exister)
-      const { data: enrollments, error: enrollError } = await supabase
+      let enrollmentsQuery = galaxyReadClient
         .from("enrollments")
         .select(`
           course_id,
@@ -189,51 +392,73 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
             id,
             title,
             description,
+            presentation,
             slug,
             cover_image,
+            image_url,
             hero_image_url,
-            thumbnail_url,
             builder_snapshot,
             status,
             creator_id,
-            category
+            category,
+            category_id,
+            category_name,
+            level,
+            validated_by_peer_id
           )
         `)
-        .or(`user_id.eq.${user.id},learner_id.eq.${user.id}`);
+        .eq("user_id", user.id);
+
+      if (currentOrgId) {
+        enrollmentsQuery = enrollmentsQuery.eq("courses.org_id", currentOrgId);
+      }
+
+      const { data: enrollments, error: enrollError } = await enrollmentsQuery;
 
       if (enrollError) {
-        console.warn("[apprenant] Failed to load enrollments:", {
-          code: enrollError.code,
-          message: enrollError.message,
-          details: enrollError.details,
-        });
+        // Log minimal (évite bruit console en prod/dev).
+        console.warn("[apprenant] enrollments fetch failed:", enrollError.message);
       } else if (enrollments && enrollments.length > 0) {
-        console.log("[apprenant] Found enrollments:", enrollments.length);
         for (const enrollment of enrollments) {
           const course = (enrollment as any).courses;
           if (course) {
-            // Vérifier si le cours est publié via status (pas de colonne published)
-            const isPublished = course.status === "published" || course.status === "active" || !course.status || course.status === null;
-            console.log("[apprenant] Processing course:", course.id, course.title, "status:", course.status, "isPublished:", isPublished);
-            if (isPublished) {
+            if (isCourseParcoursOnly(course as any)) continue;
+            const c = course as {
+              cover_url?: string | null;
+              cover_image?: string | null;
+              image_url?: string | null;
+              hero_image_url?: string | null;
+            };
+            const coverMedia = c.cover_image || c.hero_image_url || c.image_url || c.cover_url || null;
+            if (isCourseStatusVisibleForApprenant((course as { status?: unknown }).status)) {
               formations.push({
                 id: course.id,
                 title: course.title || "Formation sans titre",
                 slug: course.slug || course.id,
                 href: `/catalog/formations/${course.slug || course.id}`,
                 // Utiliser seulement les colonnes qui existent
-                image: course.cover_image || course.hero_image_url || course.thumbnail_url || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
+                image: coverMedia || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
+                cover_url: coverMedia,
+                cover_image: c.cover_image || null,
+                presentation: course.presentation ?? null,
                 meta: course.description || null,
                 category: course.category || null,
+                category_id: (course as { category_id?: string | null }).category_id
+                  ? String((course as { category_id?: string | null }).category_id)
+                  : null,
+                category_name: (course as { category_name?: string | null }).category_name ?? null,
+                level: (course as any).level ?? (course as any)?.builder_snapshot?.general?.level ?? null,
+                validatedByPeerId: (course as any)?.validated_by_peer_id ? String((course as any).validated_by_peer_id) : null,
+                validatedBy: null,
                 cta: "Continuer",
+                progress: 0,
+                builder_snapshot: (course as { builder_snapshot?: unknown }).builder_snapshot,
+                hero_image_url: c.hero_image_url ?? null,
+                image_url: c.image_url ?? null,
               });
             }
-          } else {
-            console.warn("[apprenant] Enrollment without course:", enrollment.course_id);
           }
         }
-      } else {
-        console.log("[apprenant] No enrollments found for user:", user.id);
       }
     } catch (error) {
       console.error("[apprenant] Exception fetching enrollments:", error);
@@ -245,10 +470,10 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
       console.log("[apprenant] Trying direct course fetch via enrollments course_ids");
       try {
         // Récupérer d'abord les course_ids depuis enrollments (sans join)
-        const { data: enrollmentIds, error: idsError } = await supabase
+        const { data: enrollmentIds, error: idsError } = await galaxyReadClient
           .from("enrollments")
           .select("course_id")
-          .or(`user_id.eq.${user.id},learner_id.eq.${user.id}`);
+          .eq("user_id", user.id);
 
         if (!idsError && enrollmentIds && enrollmentIds.length > 0) {
           const courseIds = enrollmentIds.map(e => e.course_id).filter(Boolean);
@@ -260,18 +485,32 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
           let coursesError: any = null;
           
           // Essayer avec les colonnes de base (sans published qui n'existe peut-être pas)
-          const { data: coursesData, error: coursesErr } = await supabase
+          let baseCoursesQuery = galaxyReadClient
             .from("courses")
-            .select("id, title, description, slug, cover_image, hero_image_url, thumbnail_url, builder_snapshot, status, creator_id, category")
+            .select(
+              "id, title, description, presentation, slug, cover_image, image_url, hero_image_url, builder_snapshot, status, creator_id, category, category_id, category_name, level, validated_by_peer_id",
+            )
             .in("id", courseIds);
+
+          if (currentOrgId) {
+            baseCoursesQuery = baseCoursesQuery.eq("org_id", currentOrgId);
+          }
+
+          const { data: coursesData, error: coursesErr } = await baseCoursesQuery;
           
           if (coursesErr) {
             console.error("[apprenant] Error fetching courses with base columns:", coursesErr);
             // Essayer avec encore moins de colonnes
-            const { data: coursesMinimal, error: coursesMinErr } = await supabase
+            let minimalQuery = galaxyReadClient
               .from("courses")
-              .select("id, title, description, slug, status")
+              .select("id, title, description, presentation, slug, status")
               .in("id", courseIds);
+
+            if (currentOrgId) {
+              minimalQuery = minimalQuery.eq("org_id", currentOrgId);
+            }
+
+            const { data: coursesMinimal, error: coursesMinErr } = await minimalQuery;
             
             if (coursesMinErr) {
               coursesError = coursesMinErr;
@@ -280,7 +519,7 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
               courses = coursesMinimal || [];
             }
           } else {
-            courses = coursesData || [];
+            courses = (coursesData as any[]) || [];
           }
 
           if (coursesError) {
@@ -290,73 +529,331 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
           } else if (courses && courses.length > 0) {
             console.log("[apprenant] Found courses directly:", courses.length);
             // Filtrer par status si disponible, sinon prendre tous
-            const publishedCourses = courses.filter((course: any) => {
-              const isPublished = course.status === "published" || course.status === "active" || !course.status || course.status === null;
-              return isPublished;
-            });
+            const publishedCourses = courses.filter((course: any) =>
+              isCourseStatusVisibleForApprenant(course.status),
+            );
             console.log("[apprenant] Published courses after filtering:", publishedCourses.length);
-            formations = publishedCourses.map((course: any) => ({
+            formations = publishedCourses.map((course: any) => {
+              const coverMedia =
+                course.hero_image_url || course.image_url || course.cover_image || course.cover_url || null;
+              return {
               id: course.id,
               title: course.title || "Formation sans titre",
               slug: course.slug || course.id,
               href: `/catalog/formations/${course.slug || course.id}`,
               // Utiliser seulement les colonnes qui existent
-              image: course.cover_image || course.hero_image_url || course.thumbnail_url || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
+              image: coverMedia || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
+              cover_url: coverMedia,
+              cover_image: course.cover_image || null,
+              presentation: course.presentation ?? null,
               meta: course.description || null,
               category: course.category || null,
+              category_id: course.category_id ? String(course.category_id) : null,
+              category_name: course.category_name ?? null,
+              level: course.level ?? course?.builder_snapshot?.general?.level ?? null,
+              validatedByPeerId: course.validated_by_peer_id ? String(course.validated_by_peer_id) : null,
+              validatedBy: null,
               cta: "Continuer",
-            }));
+            };
+            });
           }
         }
-      } catch (error) {
-        console.error("[apprenant] Exception in direct course fetch:", error);
+    } catch (error) {
+      console.error("[apprenant] Exception in direct course fetch:", error);
       }
     }
-    
+
+    // Catalogue de la galaxie : fusionner les cours de l’org (hors brouillons), même sans inscription
+    if (currentOrgId) {
+      try {
+        const courseClient = organizationSlugForScope ? galaxyReadClient : ((await getServiceRoleClientOrFallback()) ?? supabase);
+        const { data: orgCourses, error: orgCoursesErr } = await courseClient
+          .from("courses")
+          .select(
+            "id, title, description, presentation, slug, cover_image, image_url, hero_image_url, builder_snapshot, status, category, category_id, category_name, level, validated_by_peer_id",
+          )
+          .eq("org_id", currentOrgId);
+
+        if (orgCoursesErr) {
+          console.warn("[apprenant] Org catalog fetch failed:", orgCoursesErr.message);
+        } else {
+          const published = (orgCourses ?? []).filter((row) =>
+            isCourseStatusVisibleForApprenant((row as { status?: unknown }).status),
+          );
+          const byId = new Map<string, LearnerCard>();
+          for (const c of formations) {
+            byId.set(c.id, c);
+          }
+          for (const row of published) {
+            if (isCourseParcoursOnly(row as any)) continue;
+            const id = String((row as { id?: string }).id ?? "");
+            if (!id || byId.has(id)) continue;
+            byId.set(id, courseRowToLearnerCard(row as Record<string, unknown>));
+          }
+          formations = Array.from(byId.values());
+        }
+      } catch (e) {
+        console.warn("[apprenant] Staff org catalog exception:", e);
+      }
+    }
+
+    // Résoudre les validateurs (best-effort)
+    try {
+      const validatorIds = [
+        ...new Set(
+          formations
+            .map((c) => (c as any)?.validatedByPeerId ?? null)
+            .filter(Boolean)
+            .map((x) => String(x)),
+        ),
+      ];
+      if (validatorIds.length > 0) {
+        const { data: vRows } = await supabase.from("validators").select("*").in("id", validatorIds);
+        const byId = new Map<string, any>();
+        for (const r of (vRows ?? []) as any[]) {
+          if (!r?.id) continue;
+          byId.set(String(r.id), r);
+        }
+        formations = formations.map((c: any) => {
+          const vid = String(c?.validatedByPeerId ?? "").trim();
+          if (!vid) return c;
+          const v = byId.get(vid);
+          if (!v) return c;
+          const first = String(v?.first_name ?? "").trim();
+          const last = String(v?.last_name ?? "").trim();
+          const derived = `${first} ${last}`.trim();
+          const name =
+            String(v?.full_name ?? v?.display_name ?? v?.name ?? derived ?? v?.email ?? vid).trim() || vid;
+          const avatarUrl =
+            String(v?.avatar_url ?? v?.photo_url ?? v?.image_url ?? v?.profile_url ?? "").trim() || null;
+          return {
+            ...c,
+            validatedBy: { id: vid, name, avatarUrl },
+          };
+        });
+      }
+    } catch {
+      // ignore
+    }
+
+    /**
+     * Ordre des sections : listes métiers (Playmakers / EDGE Lab) pour éviter
+     * que des libellés historiques finissent tous en « Autres » ; sinon `course_categories`.
+     */
+    let thematicSectionOrder: string[] | null = null;
+    if (organizationSlug && isPlaymakersOrganizationSlug(organizationSlug)) {
+      thematicSectionOrder = null;
+    } else if (organizationSlug && isEdgeLabOrganizationSlug(organizationSlug)) {
+      thematicSectionOrder = [...EDGE_LAB_COURSE_CATEGORY_LABELS];
+    } else if (currentOrgId) {
+      try {
+        const catClient = getServiceRoleClient() ?? supabase;
+        const { data: catRows, error: catErr } = await catClient
+          .from("course_categories")
+          .select("name")
+          .eq("organization_id", currentOrgId)
+          .order("name", { ascending: true });
+        if (!catErr && catRows?.length) {
+          const names = (catRows as { name?: string | null }[])
+            .map((r) => String(r?.name ?? "").trim())
+            .filter(Boolean);
+          if (names.length) thematicSectionOrder = names;
+        }
+      } catch (e) {
+        console.warn("[apprenant] course_categories lookup failed:", e);
+      }
+    }
+
     console.log("[apprenant] Total formations found:", formations.length);
 
-    // Récupérer les parcours assignés via path_progress
-    const { data: pathProgress, error: pathError } = await supabase
-      .from("path_progress")
-      .select(`
-        path_id,
-        paths (
-          id,
-          title,
-          description,
-          slug,
-          cover_image,
-          hero_image_url,
-          thumbnail_url,
-          status,
-          published,
-          creator_id
-        )
-      `)
-      .eq("user_id", user.id);
-
     const parcours: LearnerCard[] = [];
-    if (!pathError && pathProgress) {
-      console.log("[apprenant] path_progress rows", pathProgress.length, pathProgress);
-      for (const progress of pathProgress) {
-        const path = (progress as any).paths;
-        if (path) {
-          console.log("[apprenant] processing path", path.id, path.title, path.status);
-          parcours.push({
-            id: path.id,
-            title: path.title || "Parcours sans titre",
-            slug: path.slug || path.id,
-            href: `/dashboard/apprenant/parcours/${path.slug || path.id}`,
-            image: path.hero_image_url || path.cover_image || path.thumbnail_url || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
-            meta: path.description || (path.published ? null : "Parcours en cours de préparation"),
-            cta: "Continuer",
-          });
+
+    // Accès apprenant = (inscription) + (appartenance org).
+    // On récupère la liste des orgs où l'utilisateur est membre.
+    // (les libellés de rôle varient selon les environnements, donc on ne filtre pas strictement ici)
+    // null = on n'a pas réussi à résoudre les orgs (on évite alors de sur-filtrer)
+    let learnerOrgIds: string[] | null = null;
+    try {
+      const orgClient = (await getServiceRoleClientOrFallback()) ?? supabase;
+      const runMemberships = async (userField: "user_id" | "profile_id") => {
+        return await orgClient.from("org_memberships").select("org_id, role").eq(userField, user.id);
+      };
+
+      let memberships: any[] | null = null;
+      let mErr: any | null = null;
+      {
+        const res = await runMemberships("user_id");
+        memberships = (res as any).data ?? null;
+        mErr = (res as any).error ?? null;
+      }
+      if ((mErr?.code === "PGRST204" || mErr?.code === "42703") && memberships == null) {
+        const res = await runMemberships("profile_id");
+        memberships = (res as any).data ?? null;
+        mErr = (res as any).error ?? null;
+      }
+
+      if (!mErr && memberships?.length) {
+        const ids = (memberships as any[])
+          .map((m) => String(m?.org_id ?? "").trim())
+          .filter(Boolean);
+        learnerOrgIds = Array.from(new Set(ids));
+      } else {
+        // aucune org (membre de rien) => liste vide volontairement
+        learnerOrgIds = [];
+      }
+    } catch {
+      // échec de résolution => ne pas filtrer par org (fail-open) pour éviter un dashboard vide
+      learnerOrgIds = null;
+    }
+
+    // Inscriptions parcours : on évite les jointures PostgREST (`paths(...)`) car elles dépendent
+    // de la détection des FK/caches. On fait donc un fetch en 2 temps:
+    // 1) path_ids via table pivot
+    // 2) paths via IN(path_ids) + scope org
+    try {
+      const parcoursClient = (await getServiceRoleClientOrFallback()) ?? supabase;
+
+      const runPivot = async (table: "path_enrollments" | "path_progress") => {
+        const pivot = parcoursClient.from(table).select("path_id").eq("user_id", user.id).limit(200);
+        const { data, error } = await pivot;
+        if (error || !data?.length) return [] as string[];
+        return (data as any[]).map((r) => String(r?.path_id ?? "").trim()).filter(Boolean);
+      };
+
+      let pathIds: string[] = [];
+      // priority: path_enrollments
+      pathIds = await runPivot("path_enrollments");
+      if (pathIds.length === 0) {
+        // fallback: older envs might use path_progress
+        pathIds = await runPivot("path_progress");
+      }
+
+      if (pathIds.length > 0) {
+        const runPathsQuery = async (select: string) => {
+          let q = parcoursClient.from("paths").select(select).in("id", pathIds).limit(200);
+          if (currentOrgId) {
+            q = q.eq("org_id", currentOrgId);
+          } else if (Array.isArray(learnerOrgIds)) {
+            if (learnerOrgIds.length === 0) {
+              q = q.limit(0);
+            } else {
+              q = q.in("org_id", learnerOrgIds);
+            }
+          }
+          return await q;
+        };
+
+        // Schémas `paths` variables: certaines DB n'ont pas `cover_image` / `description` / `status`.
+        let rows: any[] | null = null;
+        let err: any | null = null;
+        {
+          const res = await runPathsQuery("id, org_id, title, description, cover_image, status, creator_id, path_snapshot");
+          rows = (res as any).data ?? null;
+          err = (res as any).error ?? null;
+        }
+        if (err?.code === "42703") {
+          const res = await runPathsQuery("id, org_id, title, cover_image, status, path_snapshot");
+          rows = (res as any).data ?? null;
+          err = (res as any).error ?? null;
+        }
+        if (err?.code === "42703") {
+          const res = await runPathsQuery("id, org_id, title, status, path_snapshot");
+          rows = (res as any).data ?? null;
+          err = (res as any).error ?? null;
+        }
+        if (err?.code === "42703") {
+          const res = await runPathsQuery("id, org_id, title, path_snapshot");
+          rows = (res as any).data ?? null;
+          err = (res as any).error ?? null;
+        }
+
+        if (!err && rows?.length) {
+          const byId = new Map((rows as any[]).map((p) => [String(p.id), p]));
+          for (const pid of pathIds) {
+            const path = byId.get(pid);
+            if (!path) continue;
+            const snap = path.path_snapshot && typeof path.path_snapshot === "object" ? path.path_snapshot : null;
+            const slug = String((snap as any)?.slug ?? path.id).trim() || String(path.id);
+            const isPublished = String(path.status ?? "").toLowerCase().trim() === "published";
+            const href = organizationSlug
+              ? `/g/${encodeURIComponent(String(organizationSlug))}/dashboard/student/learning/parcours/${encodeURIComponent(String(slug))}`
+              : `/dashboard/student/learning/parcours/${slug}`;
+            parcours.push({
+              id: String(path.id),
+              title: path.title || "Parcours sans titre",
+              slug,
+              href,
+              image:
+                path.cover_image ||
+                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+              meta: path.description || (isPublished ? null : "Parcours en cours de préparation"),
+              cta: "Continuer",
+            });
+          }
         }
       }
+    } catch (e) {
+      console.warn("[apprenant] parcours pivot->paths lookup failed:", e);
+    }
+
+    // Fallback: assignation via `paths.path_snapshot.assignment.learnerIds`
+    // (certains environnements n'écrivent pas dans `path_progress` lors de l'assignation).
+    try {
+      if (parcours.length === 0) {
+        const parcoursClient = (await getServiceRoleClientOrFallback()) ?? supabase;
+        let pathsQuery = parcoursClient
+          .from("paths")
+          .select("id, org_id, title, description, cover_image, status, creator_id, path_snapshot")
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (currentOrgId) {
+          pathsQuery = pathsQuery.eq("org_id", currentOrgId);
+        } else if (Array.isArray(learnerOrgIds)) {
+          if (learnerOrgIds.length === 0) {
+            pathsQuery = pathsQuery.limit(0);
+          } else {
+            pathsQuery = pathsQuery.in("org_id", learnerOrgIds);
+          }
+        }
+
+        const { data: assignedBySnap, error: assignedBySnapError } = await pathsQuery;
+        if (!assignedBySnapError && assignedBySnap?.length) {
+          for (const row of assignedBySnap as any[]) {
+            const snap = row?.path_snapshot;
+            const assignment = snap && typeof snap === "object" ? (snap as any).assignment : null;
+            const learnerIds = Array.isArray(assignment?.learnerIds)
+              ? (assignment.learnerIds as any[]).map((x) => String(x ?? "").trim()).filter(Boolean)
+              : [];
+
+            if (!learnerIds.includes(user.id)) continue;
+
+            const slug = String(((snap as any)?.slug ?? row.id) ?? "").trim() || String(row.id);
+            const isPublished = String(row.status ?? "").toLowerCase().trim() === "published";
+            const href = organizationSlug
+              ? `/g/${encodeURIComponent(String(organizationSlug))}/dashboard/student/learning/parcours/${encodeURIComponent(String(slug))}`
+              : `/dashboard/student/learning/parcours/${slug}`;
+
+            parcours.push({
+              id: row.id,
+              title: row.title || "Parcours sans titre",
+              slug,
+              href,
+              image:
+                row.cover_image ||
+                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+              meta: row.description || (isPublished ? null : "Parcours en cours de préparation"),
+              cta: "Continuer",
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[apprenant] fallback paths via snapshot failed:", e);
     }
 
     // Récupérer les ressources assignées via content_assignments ou resource_views
-    const { data: resourceViews, error: resourceError } = await supabase
+    let resourceViewsQuery = supabase
       .from("resource_views")
       .select(`
         resource_id,
@@ -367,13 +864,18 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
           kind,
           file_url,
           cover_url,
-          thumbnail_url,
           published,
           creator_id
         )
       `)
       .eq("user_id", user.id)
       .limit(10);
+
+    if (currentOrgId) {
+      resourceViewsQuery = resourceViewsQuery.eq("resources.org_id", currentOrgId);
+    }
+
+    const { data: resourceViews, error: resourceError } = await resourceViewsQuery;
 
     const ressources: LearnerCard[] = [];
     if (!resourceError && resourceViews) {
@@ -384,8 +886,8 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
             id: resource.id,
             title: resource.title || "Ressource sans titre",
             slug: resource.id,
-            href: `/dashboard/apprenant/ressources/${resource.id}`,
-            image: resource.cover_url || resource.thumbnail_url || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=1200&q=80",
+            href: `/ressources/${resource.id}`,
+            image: resource.cover_url || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=1200&q=80",
             meta: resource.description || null,
             cta: "Consulter",
           });
@@ -394,7 +896,7 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
     }
 
     // Récupérer les tests assignés (via content_assignments ou test_attempts)
-    const { data: testAttempts, error: testError } = await supabase
+    let testAttemptsQuery = supabase
       .from("test_attempts")
       .select(`
         test_id,
@@ -403,14 +905,18 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
           title,
           description,
           cover_image,
-          hero_image_url,
-          thumbnail_url,
           published,
           creator_id
         )
       `)
       .eq("user_id", user.id)
       .limit(10);
+
+    if (currentOrgId) {
+      testAttemptsQuery = testAttemptsQuery.eq("tests.org_id", currentOrgId);
+    }
+
+    const { data: testAttempts, error: testError } = await testAttemptsQuery;
 
     const tests: LearnerCard[] = [];
     
@@ -424,7 +930,7 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
             title: test.title || "Test sans titre",
             slug: test.slug || test.id,
             href: `/dashboard/student/learning/tests/${test.slug || test.id}`,
-            image: test.hero_image_url || test.cover_image || test.thumbnail_url || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
+            image: test.cover_image || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
             meta: test.description || null,
             cta: "Passer le test",
           });
@@ -446,9 +952,7 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
             description,
             slug,
             status,
-            hero_image_url,
-            cover_image,
-            thumbnail_url
+            cover_image
           )
         `)
         .in("course_id", courseIds);
@@ -463,7 +967,7 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
               title: test.title || "Test sans titre",
               slug: test.slug || test.id,
               href: `/dashboard/student/learning/tests/${test.slug || test.id}`,
-              image: test.hero_image_url || test.cover_image || test.thumbnail_url || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
+              image: test.cover_image || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
               meta: test.description || null,
               cta: "Passer le test",
             });
@@ -485,6 +989,10 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
       ressources,
       tests,
       continueWatching: [...formations.slice(0, 3), ...parcours.slice(0, 2)],
+      organizationSlug,
+      organizationLogoUrl,
+      organizationName,
+      thematicSectionOrder,
     };
   } catch (error) {
     console.error("[apprenant] Error in getApprenantDashboardData:", error);
@@ -500,6 +1008,10 @@ export async function getApprenantDashboardData(): Promise<ApprenantDashboardDat
       ressources: [],
       tests: [],
       continueWatching: [],
+      organizationSlug: null,
+      organizationLogoUrl: null,
+      organizationName: null,
+      thematicSectionOrder: null,
     };
   }
 }
@@ -519,7 +1031,7 @@ export async function getLearnerContentDetail(
       // Essayer d'abord avec le slug
       let { data: course, error: courseError } = await supabase
         .from("courses")
-        .select("id, title, description, slug, cover_image, hero_image_url, thumbnail_url, builder_snapshot, status")
+        .select("id, title, description, slug, cover_image, builder_snapshot, status, validated_by_peer_id")
         .eq("slug", slug)
         .maybeSingle();
 
@@ -528,7 +1040,7 @@ export async function getLearnerContentDetail(
         console.log("[apprenant] Slug looks like UUID, trying by ID:", slug);
         const result = await supabase
           .from("courses")
-          .select("id, title, description, slug, cover_image, hero_image_url, thumbnail_url, builder_snapshot, status")
+          .select("id, title, description, slug, cover_image, builder_snapshot, status, validated_by_peer_id")
           .eq("id", slug)
           .maybeSingle();
         course = result.data;
@@ -540,7 +1052,7 @@ export async function getLearnerContentDetail(
         console.log("[apprenant] Trying with published check:", slug);
         const result = await supabase
           .from("courses")
-          .select("id, title, description, slug, cover_image, hero_image_url, thumbnail_url, builder_snapshot, status")
+          .select("id, title, description, slug, cover_image, builder_snapshot, status, validated_by_peer_id")
           .or(`slug.eq.${slug},id.eq.${slug}`)
           .or("status.eq.published,status.eq.active,status.is.null")
           .maybeSingle();
@@ -599,22 +1111,42 @@ export async function getLearnerContentDetail(
                   videoUrl: chapter.videoUrl || chapter.mediaUrl || chapter.trailerUrl,
                   duration: chapter.duration || "5 min",
                   kind: "chapter",
+                  dbChapterId: chapter.dbId ? String(chapter.dbId) : null,
                 });
               }
               
               // Les sous-chapitres sont aussi des lessons
               if (chapter.subchapters && Array.isArray(chapter.subchapters)) {
                 chapter.subchapters.forEach((subchapter: any) => {
-                  if (subchapter.content || subchapter.title || subchapter.videoUrl || subchapter.mediaUrl) {
+                  const isInterview = subchapter.kind === "experiential_interview";
+                  let interviewContext =
+                    typeof subchapter.interview_context === "string"
+                      ? subchapter.interview_context.trim()
+                      : "";
+                  if (isInterview && !interviewContext) {
+                    interviewContext = extractChapterPlainText(chapter as CourseBuilderChapter).slice(0, 14_000);
+                  }
+                  const hasInterviewContext = interviewContext.length > 0;
+                  if (
+                    subchapter.content ||
+                    subchapter.title ||
+                    subchapter.videoUrl ||
+                    subchapter.mediaUrl ||
+                    isInterview ||
+                    hasInterviewContext
+                  ) {
+                    const isQuiz = subchapter.kind === "quiz" || Boolean(subchapter.quiz_id);
                     lessons.push({
                       id: subchapter.id || `subchapter-${subchapter.title || Date.now()}`,
                       title: subchapter.title || "Sans titre",
                       type: subchapter.type || (subchapter.videoUrl || subchapter.mediaUrl ? "video" : "document"),
-                      description: subchapter.content || subchapter.description,
+                      description: isInterview ? "" : subchapter.content || subchapter.description,
                       videoUrl: subchapter.videoUrl || subchapter.mediaUrl,
                       duration: subchapter.duration || "3 min",
-                      kind: "subchapter",
+                      kind: isQuiz ? "quiz" : isInterview ? "experiential_interview" : "subchapter",
                       parentChapterId: chapter.id || undefined,
+                      quiz_id: subchapter.quiz_id ? String(subchapter.quiz_id) : undefined,
+                      interview_context: hasInterviewContext ? interviewContext : undefined,
                     });
                   }
                 });
@@ -815,55 +1347,26 @@ export async function getLearnerContentDetail(
         });
       }
 
-      // Charger les flashcards du cours depuis la base de données
-      console.log("[apprenant] Loading flashcards for course:", JSON.stringify({
-        courseId: course.id,
-        courseTitle: course.title
-      }));
-      
-      // Essayer d'abord avec l'ID exact
+      // Charger les flashcards du cours depuis la base de données (best-effort).
+      // Si la table n'existe pas (environnement minimal), on ignore silencieusement.
       let { data: flashcardsData, error: flashcardsError } = await supabase
         .from("flashcards")
-        .select("id, front, back, course_id, chapter_id")
+        .select("*")
         .eq("course_id", course.id)
         .order("created_at", { ascending: true });
 
-      // Si aucune flashcard n'est trouvée, vérifier s'il y a des flashcards avec un course_id différent
-      // (peut arriver si le cours a été recréé)
-      if ((!flashcardsData || flashcardsData.length === 0) && course.builder_snapshot) {
-        console.log("[apprenant] No flashcards found with exact course_id, checking all flashcards...");
-        const { data: allFlashcards } = await supabase
-          .from("flashcards")
-          .select("id, front, back, course_id, chapter_id")
-          .limit(100);
-        
-        console.log("[apprenant] All flashcards in DB:", JSON.stringify({
-          total: allFlashcards?.length || 0,
-          sample: allFlashcards?.slice(0, 5).map(f => ({ id: f.id, course_id: f.course_id, chapter_id: f.chapter_id }))
-        }));
-      }
+      const flashcardsErrorMessage = String((flashcardsError as any)?.message ?? "");
+      const flashcardsErrorCode = String((flashcardsError as any)?.code ?? "");
+      const isMissingFlashcardsTable =
+        flashcardsErrorCode === "42P01" ||
+        flashcardsErrorMessage.toLowerCase().includes('relation "flashcards" does not exist') ||
+        flashcardsErrorMessage.toLowerCase().includes("relation does not exist");
 
-      if (flashcardsError) {
+      if (isMissingFlashcardsTable) {
+        flashcardsData = [];
+        flashcardsError = null as any;
+      } else if (flashcardsError) {
         console.error("[apprenant] Error loading flashcards:", JSON.stringify(flashcardsError));
-      }
-
-      console.log("[apprenant] Flashcards loaded:", JSON.stringify({
-        count: flashcardsData?.length || 0,
-        courseId: course.id,
-        flashcards: flashcardsData?.map(f => ({ id: f.id, course_id: f.course_id, chapter_id: f.chapter_id, front: f.front?.substring(0, 30) }))
-      }));
-      
-      // Si aucune flashcard n'est trouvée, vérifier s'il y en a dans la DB pour ce cours
-      if (!flashcardsData || flashcardsData.length === 0) {
-        const { data: allFlashcards, error: allError } = await supabase
-          .from("flashcards")
-          .select("id, front, back, course_id, chapter_id")
-          .limit(10);
-        
-        console.log("[apprenant] Checking all flashcards in DB (sample):", JSON.stringify({
-          totalSample: allFlashcards?.length || 0,
-          sample: allFlashcards?.map(f => ({ id: f.id, course_id: f.course_id, chapter_id: f.chapter_id }))
-        }));
       }
 
       // Construire un mapping des IDs de chapitres depuis le snapshot
@@ -896,76 +1399,97 @@ export async function getLearnerContentDetail(
         localIdMap: Array.from(localIdMap.entries())
       }));
 
-      // Mapper les flashcards aux lessons appropriées
+      // Mapper les flashcards aux lessons appropriées (chapter_id UUID et/ou local_chapter_ref builder)
       if (flashcardsData && flashcardsData.length > 0) {
         flashcardsData.forEach((flashcard) => {
+          const row = flashcard as Record<string, unknown>;
           const learnerFlashcard: LearnerFlashcard = {
-            id: flashcard.id,
-            front: flashcard.front,
-            back: flashcard.back,
+            id: String(row.id ?? ""),
+            front: String(row.front ?? row.question ?? row.title ?? ""),
+            back: String(row.back ?? row.answer ?? row.body ?? ""),
           };
 
-          // Si la flashcard est associée à un chapitre spécifique
-          if (flashcard.chapter_id) {
-            let matched = false;
-            
-            // Trouver toutes les lessons qui correspondent à ce chapter_id
+          const dbChapterId =
+            row.chapter_id != null && String(row.chapter_id).trim() !== ""
+              ? String(row.chapter_id)
+              : null;
+          const localChapterRef =
+            row.local_chapter_ref != null && String(row.local_chapter_ref).trim() !== ""
+              ? String(row.local_chapter_ref).trim()
+              : null;
+
+          const pushToLesson = (lesson: LearnerLesson) => {
+            const lessonWithFlashcards = lesson as LearnerLesson & { flashcards?: LearnerFlashcard[] };
+            if (!lessonWithFlashcards.flashcards) {
+              lessonWithFlashcards.flashcards = [];
+            }
+            lessonWithFlashcards.flashcards.push(learnerFlashcard);
+          };
+
+          let matched = false;
+
+          if (dbChapterId) {
             modules.forEach((module) => {
               module.lessons?.forEach((lesson) => {
-                // Vérifier si la leçon correspond directement
-                if (lesson.id === flashcard.chapter_id || lesson.parentChapterId === flashcard.chapter_id) {
-                  const lessonWithFlashcards = lesson as LearnerLesson & { flashcards?: LearnerFlashcard[] };
-                  if (!lessonWithFlashcards.flashcards) {
-                    lessonWithFlashcards.flashcards = [];
-                  }
-                  lessonWithFlashcards.flashcards.push(learnerFlashcard);
+                if (lesson.id === dbChapterId) {
+                  pushToLesson(lesson);
                   matched = true;
                   console.log("[apprenant] Flashcard matched directly:", JSON.stringify({
                     flashcardId: flashcard.id,
-                    chapterId: flashcard.chapter_id,
-                    lessonId: lesson.id
+                    chapterId: dbChapterId,
+                    lessonId: lesson.id,
                   }));
                 } else {
-                  // Vérifier si le chapter_id correspond à un dbId dans le snapshot
-                  // Convertir le dbId en localId
-                  const localId = chapterIdMap.get(flashcard.chapter_id);
-                  if (localId && (lesson.id === localId || lesson.parentChapterId === localId)) {
-                    const lessonWithFlashcards = lesson as LearnerLesson & { flashcards?: LearnerFlashcard[] };
-                    if (!lessonWithFlashcards.flashcards) {
-                      lessonWithFlashcards.flashcards = [];
-                    }
-                    lessonWithFlashcards.flashcards.push(learnerFlashcard);
+                  const localId = chapterIdMap.get(dbChapterId);
+                  if (localId && lesson.id === localId) {
+                    pushToLesson(lesson);
                     matched = true;
                     console.log("[apprenant] Flashcard matched via dbId mapping:", JSON.stringify({
                       flashcardId: flashcard.id,
-                      chapterId: flashcard.chapter_id,
-                      localId: localId,
-                      lessonId: lesson.id
+                      chapterId: dbChapterId,
+                      localId,
+                      lessonId: lesson.id,
                     }));
                   }
                 }
               });
             });
-            
+
             if (!matched) {
               console.warn("[apprenant] Flashcard not matched to any lesson:", JSON.stringify({
                 flashcardId: flashcard.id,
-                chapterId: flashcard.chapter_id,
-                availableLessonIds: modules.flatMap(m => m.lessons?.map(l => l.id) || [])
+                chapterId: dbChapterId,
+                localChapterRef,
+                availableLessonIds: modules.flatMap((m) => m.lessons?.map((l) => l.id) || []),
+              }));
+            }
+          } else if (localChapterRef) {
+            modules.forEach((module) => {
+              module.lessons?.forEach((lesson) => {
+                if (lesson.id === localChapterRef) {
+                  pushToLesson(lesson);
+                  matched = true;
+                  console.log("[apprenant] Flashcard matched via local_chapter_ref:", JSON.stringify({
+                    flashcardId: flashcard.id,
+                    localChapterRef,
+                    lessonId: lesson.id,
+                  }));
+                }
+              });
+            });
+
+            if (!matched) {
+              console.warn("[apprenant] Flashcard not matched (local_chapter_ref inconnu dans le snapshot):", JSON.stringify({
+                flashcardId: flashcard.id,
+                localChapterRef,
+                availableLessonIds: modules.flatMap((m) => m.lessons?.map((l) => l.id) || []),
               }));
             }
           } else {
-            // Flashcard associée au cours entier, l'ajouter à toutes les lessons
-            modules.forEach((module) => {
-              module.lessons?.forEach((lesson) => {
-                const lessonWithFlashcards = lesson as LearnerLesson & { flashcards?: LearnerFlashcard[] };
-                if (!lessonWithFlashcards.flashcards) {
-                  lessonWithFlashcards.flashcards = [];
-                }
-                lessonWithFlashcards.flashcards.push(learnerFlashcard);
-              });
-            });
-            console.log("[apprenant] Flashcard added to all lessons (no chapter_id):", JSON.stringify({ flashcardId: flashcard.id }));
+            console.warn(
+              "[apprenant] Flashcard ignorée (chapter_id et local_chapter_ref absents):",
+              JSON.stringify({ flashcardId: flashcard.id }),
+            );
           }
         });
       }
@@ -977,6 +1501,21 @@ export async function getLearnerContentDetail(
         }, 0) || 0);
       }, 0);
       console.log("[apprenant] Total flashcards mapped to lessons:", JSON.stringify({ total: totalFlashcards }));
+
+      const peerIdRaw = (course as { validated_by_peer_id?: string | null }).validated_by_peer_id;
+      const validatedByPeerId =
+        peerIdRaw != null && String(peerIdRaw).trim() !== "" ? String(peerIdRaw).trim() : null;
+
+      let validatorForBadge: { name: string; professional_title: string; photo_url?: string } | null = null;
+      if (validatedByPeerId) {
+        try {
+          const vdb = getServiceRoleClient() ?? supabase;
+          const { data: vRow } = await vdb.from("validators").select("*").eq("id", validatedByPeerId).maybeSingle();
+          validatorForBadge = mapValidatorRowToBadgeForCatalog((vRow ?? null) as Record<string, unknown> | null);
+        } catch {
+          /* ignore */
+        }
+      }
 
       // Construire la card
       const card: LearnerCard = {
@@ -993,6 +1532,12 @@ export async function getLearnerContentDetail(
       const objectives = snapshot?.objectives || [];
       const skills = snapshot?.skills || [];
       const trailerUrl = snapshot?.general?.trailerUrl || null;
+      const presentation =
+        (snapshot as any)?.presentation ??
+        (snapshot as any)?.general?.presentation ??
+        (snapshot as any)?.general?.description ??
+        course.presentation ??
+        null;
 
       // Construire le detail
       const detail: LearnerDetail = {
@@ -1011,8 +1556,13 @@ export async function getLearnerContentDetail(
         objectives,
         skills,
         trailerUrl,
+        // Champs additionnels (best-effort) pour UI premium catalog.
+        ...(presentation ? ({ presentation } as any) : {}),
+        ...(snapshot ? ({ builder_snapshot: snapshot } as any) : {}),
         description: snapshot?.general?.description || course.description || "",
         tags: snapshot?.general?.tags || ["Formation"],
+        validatedByPeerId,
+        validatorForBadge,
       };
 
       return { card, detail };
@@ -1022,7 +1572,7 @@ export async function getLearnerContentDetail(
       console.log("[apprenant] Fetching test with slug/id:", slug);
 
       const selectColumns =
-        "id, slug, title, description, hero_image_url, thumbnail_url, cover_image, duration, evaluation_type, display_format, skills";
+        "id, slug, title, description, cover_image, duration, evaluation_type, display_format, skills";
 
       let { data: test, error: testError } = await supabase
         .from("tests")
@@ -1053,7 +1603,7 @@ export async function getLearnerContentDetail(
         return null;
       }
 
-      const heroImage = test.hero_image_url || test.thumbnail_url || test.cover_image || "";
+      const heroImage = test.cover_image || "";
       const testSlug = test.slug || test.id;
       const skills =
         typeof test.skills === "string"
@@ -1106,8 +1656,153 @@ export async function getLearnerContentDetail(
 }
 
 export async function getLearnerPathDetail(pathId: string): Promise<PathContentDetail | null> {
-  // TODO: Implémenter complètement cette fonction
-  return null;
+  const supabase = await getServiceRoleClientOrFallback();
+  if (!supabase) return null;
+
+  try {
+    const runPathSelect = async (select: string) => {
+      return await supabase.from("paths").select(select).eq("id", pathId).maybeSingle();
+    };
+
+    // Schémas `paths` variables selon les environnements: cover_image/description peuvent ne pas exister.
+    let pathRow: any | null = null;
+    let pErr: any | null = null;
+    {
+      const res = await runPathSelect("id, title, cover_image, description, path_snapshot");
+      pathRow = (res as any).data ?? null;
+      pErr = (res as any).error ?? null;
+    }
+    if (pErr?.code === "PGRST204" || pErr?.code === "42703") {
+      const res = await runPathSelect("id, title, description, path_snapshot");
+      pathRow = (res as any).data ?? null;
+      pErr = (res as any).error ?? null;
+    }
+    if (pErr?.code === "PGRST204" || pErr?.code === "42703") {
+      const res = await runPathSelect("id, title, path_snapshot");
+      pathRow = (res as any).data ?? null;
+      pErr = (res as any).error ?? null;
+    }
+
+    if (pErr || !pathRow) return null;
+
+    const snap = (pathRow as any).path_snapshot;
+    const steps = Array.isArray(snap?.steps) ? snap.steps : [];
+    const objectifs = Array.isArray((snap as any)?.objectifs)
+      ? ((snap as any).objectifs as any[]).map((x) => String(x ?? "").trim()).filter(Boolean)
+      : typeof (snap as any)?.objective === "string"
+        ? [String((snap as any).objective).trim()].filter(Boolean)
+        : [];
+    const tools = Array.isArray((snap as any)?.tools)
+      ? ((snap as any).tools as any[]).map((x) => String(x ?? "").trim()).filter(Boolean)
+      : [];
+    const presentation =
+      (typeof (snap as any)?.presentation === "string" && String((snap as any).presentation).trim()) ||
+      (typeof (pathRow as any)?.description === "string" && String((pathRow as any).description).trim()) ||
+      null;
+    const cover_image =
+      (typeof (snap as any)?.cover_image === "string" && String((snap as any).cover_image).trim()) ||
+      (typeof (pathRow as any)?.cover_image === "string" && String((pathRow as any).cover_image).trim()) ||
+      null;
+    const title =
+      (typeof (snap as any)?.title === "string" && String((snap as any).title).trim()) ||
+      (typeof (pathRow as any)?.title === "string" && String((pathRow as any).title).trim()) ||
+      null;
+
+    const normalizeKind = (raw: unknown) => {
+      const k = String(raw ?? "").trim().toLowerCase();
+      if (k === "formation" || k === "formations") return "course";
+      if (k === "cours" || k === "course" || k === "courses") return "course";
+      if (k === "test" || k === "quiz" || k === "tests") return "test";
+      if (k === "resource" || k === "resources" || k === "ressource" || k === "ressources") return "resource";
+      return k;
+    };
+    const normalizeId = (raw: unknown) => String(raw ?? "").trim();
+    const kindOfStep = (s: any) => normalizeKind(s?.content_kind ?? s?.contentKind ?? s?.kind);
+    const idOfStep = (s: any) => normalizeId(s?.content_id ?? s?.contentId ?? s?.id);
+
+    const courseIds = Array.from(
+      new Set(
+        steps
+          .filter((s: any) => kindOfStep(s) === "course" && idOfStep(s))
+          .map((s: any) => idOfStep(s)),
+      ),
+    );
+    const testIds = Array.from(
+      new Set(
+        steps
+          .filter((s: any) => kindOfStep(s) === "test" && idOfStep(s))
+          .map((s: any) => idOfStep(s)),
+      ),
+    );
+    const resourceIds = Array.from(
+      new Set(
+        steps
+          .filter((s: any) => kindOfStep(s) === "resource" && idOfStep(s))
+          .map((s: any) => idOfStep(s)),
+      ),
+    );
+
+    const fetchByIds = async (table: "courses" | "tests" | "resources", ids: string[]) => {
+      if (ids.length === 0) return [] as any[];
+      // try with slug, then without
+      let res: any =
+        table === "courses"
+          ? await supabase
+              .from(table)
+              .select("id, title, slug, cover_image, hero_image_url, image_url, builder_snapshot")
+              .in("id", ids)
+              .limit(300)
+          : await supabase.from(table).select("id, title, slug").in("id", ids).limit(300);
+      if (res?.error?.code === "42703" || res?.error?.code === "PGRST204") {
+        res =
+          table === "courses"
+            ? await supabase.from(table).select("id, title, cover_image, hero_image_url, image_url, builder_snapshot").in("id", ids).limit(300)
+            : await supabase.from(table).select("id, title").in("id", ids).limit(300);
+      }
+      return Array.isArray(res?.data) ? (res.data as any[]) : [];
+    };
+
+    const [coursesRows, testsRows, resourcesRows] = await Promise.all([
+      fetchByIds("courses", courseIds),
+      fetchByIds("tests", testIds),
+      fetchByIds("resources", resourceIds),
+    ]);
+
+    const mapRows = (table: "courses" | "tests" | "resources", rows: any[], ids: string[]) => {
+      const byId = new Map(rows.map((r) => [String(r.id), r]));
+      return ids.map((id) => {
+        const r = byId.get(String(id));
+        const title = String(r?.title ?? "Contenu").trim() || "Contenu";
+        const slug = String(r?.slug ?? id).trim() || String(id);
+        const cover_url =
+          table === "courses"
+            ? String(
+                (r as any)?.cover_image ??
+                  (r as any)?.hero_image_url ??
+                  (r as any)?.image_url ??
+                  (r as any)?.builder_snapshot?.general?.heroImage ??
+                  "",
+              ).trim() || null
+            : null;
+        return { id: String(id), title, slug, ...(cover_url ? { cover_url } : {}) };
+      });
+    };
+
+    return {
+      steps,
+      title,
+      cover_image,
+      presentation,
+      tools,
+      objectifs,
+      courses: mapRows("courses", coursesRows, courseIds),
+      tests: mapRows("tests", testsRows, testIds),
+      resources: mapRows("resources", resourcesRows, resourceIds),
+    };
+  } catch (e) {
+    console.warn("[apprenant] getLearnerPathDetail failed:", e);
+    return null;
+  }
 }
 
 export async function getCourseBySlug(slug: string): Promise<any | null> {

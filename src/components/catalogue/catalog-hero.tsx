@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useBranding } from "@/components/super-admin/branding-provider";
+import { LazyBandwidthVideo } from "@/components/media/lazy-bandwidth-video";
 
 type CatalogItem = {
   id: string;
@@ -32,6 +33,27 @@ export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
     .slice(0, 5); // Maximum 5 items dans le carrousel
   
   const currentItem = featuredItems[currentIndex] || items[0];
+
+  // Background dynamique: dernière formation consultée (localStorage) ou aléatoire
+  useEffect(() => {
+    if (featuredItems.length === 0) return;
+    try {
+      const lastMediaUrl = window.localStorage.getItem("beyond:last_course_media_url");
+      if (lastMediaUrl) {
+        const idx = featuredItems.findIndex(
+          (it) => it.hero_image_url === lastMediaUrl,
+        );
+        if (idx >= 0) {
+          setCurrentIndex(idx);
+          return;
+        }
+      }
+      setCurrentIndex(Math.floor(Math.random() * featuredItems.length));
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featuredItems.length]);
   
   // Couleurs - Style Netflix (rouge) ou branding personnalisé
   const isContentin = branding?.background_color === '#F5F0E8' || branding?.background_color === '#F8F9FB';
@@ -77,11 +99,26 @@ export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
                  <>
                    {currentItem.hero_image_url && (() => {
                      const heroUrl = currentItem.hero_image_url;
+                     const isMp4 = heroUrl.toLowerCase().endsWith('.mp4') || heroUrl.toLowerCase().includes('.mp4?');
                      const isGif = heroUrl.toLowerCase().endsWith('.gif') || 
                                    heroUrl.includes('data:image/gif') || 
                                    heroUrl.includes('.gif?') ||
                                    heroUrl.includes('/gif');
                      
+                     if (isMp4) {
+                       return (
+                         <LazyBandwidthVideo
+                           src={heroUrl}
+                           eager
+                           className="h-full w-full object-cover"
+                           autoPlay
+                           loop
+                           muted
+                           playsInline
+                         />
+                       );
+                     }
+
                      if (heroUrl.startsWith('data:image/') || isGif) {
                        return (
                          <img
@@ -145,7 +182,16 @@ export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
           {/* Actions - Toujours affichées */}
           <div className="flex items-center gap-4 pt-6">
             <Button
-              onClick={() => onItemClick(currentItem)}
+              onClick={() => {
+                try {
+                  if (currentItem.hero_image_url) {
+                    window.localStorage.setItem("beyond:last_course_media_url", currentItem.hero_image_url);
+                  }
+                } catch {
+                  // ignore
+                }
+                onItemClick(currentItem);
+              }}
               size="lg"
               className="rounded-full px-8 py-6 text-lg font-semibold shadow-lg transition-all hover:shadow-xl"
               style={{
@@ -166,7 +212,16 @@ export function CatalogHero({ items, onItemClick }: CatalogHeroProps) {
               Commencer maintenant
             </Button>
             <Button
-              onClick={() => onItemClick(currentItem)}
+              onClick={() => {
+                try {
+                  if (currentItem.hero_image_url) {
+                    window.localStorage.setItem("beyond:last_course_media_url", currentItem.hero_image_url);
+                  }
+                } catch {
+                  // ignore
+                }
+                onItemClick(currentItem);
+              }}
               variant="outline"
               size="lg"
               className="rounded-full border-2 px-8 py-6 text-lg font-semibold backdrop-blur-sm"

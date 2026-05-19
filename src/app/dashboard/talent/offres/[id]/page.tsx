@@ -16,6 +16,8 @@ type JobOffer = {
   salary_range?: string | null;
   description?: string | null;
   requirements?: string | null;
+  company_name?: string | null;
+  company_hidden_from_learner?: boolean | null;
 };
 
 export default function TalentOfferDetailPage() {
@@ -103,6 +105,9 @@ export default function TalentOfferDetailPage() {
                 </span>
               </div>
               <p className="mt-2 text-sm text-gray-500">{offer.city || "Ville non precisee"}</p>
+              {!offer.company_hidden_from_learner && offer.company_name?.trim() ? (
+                <p className="mt-1 text-sm font-medium text-gray-700">{offer.company_name.trim()}</p>
+              ) : null}
 
               <div className="mt-8 space-y-6 text-sm text-black/70">
                 <section>

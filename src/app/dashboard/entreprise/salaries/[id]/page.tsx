@@ -1,280 +1,558 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
-import { enterpriseEmployees } from "@/lib/mocks/enterpriseEmployees";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { cn } from "@/lib/utils";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
   PolarAngleAxis,
   PolarGrid,
   PolarRadiusAxis,
   Radar,
   RadarChart,
   ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
-import TalentLog from "@/components/TalentLog";
-import { Lock } from "lucide-react";
-import { motion } from "framer-motion";
-import AfestModal from "@/components/AfestModal";
-import BadgeSlider from "@/components/BadgeSlider";
 
-const formatEuro = (value: number) =>
-  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
+type EmployeeRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string | null;
+  department: string | null;
+};
+
+function getMockCharlieEmployee(): EmployeeRow {
+  // Force display fallback requested by user.
+  return {
+    id: "e-99",
+    first_name: "Charlie",
+    last_name: "Morel",
+    role: "UX Designer",
+    department: "Produit",
+  };
+}
+
+type DiagnosticResultsJson = Partial<
+  Record<"stress" | "organisation" | "communication" | "decision" | "leadership", number>
+>;
+
+type DiagnosticRow = {
+  id: string;
+  employee_id: string;
+  created_at: string;
+  idmc_score: number | null;
+  results: DiagnosticResultsJson | null;
+};
+
+type RecommendedActionRow = {
+  id: string;
+  title: string;
+  dimension_key: string;
+  description: string | null;
+};
+
+type DimensionKey = "stress" | "organisation" | "communication" | "decision" | "leadership";
+type DimScore = { key: DimensionKey; label: string; score: number };
+
+function clamp01(n: number) {
+  return Math.min(1, Math.max(0, n));
+}
+
+function scoreToVigilance(stressScore: number | null | undefined) {
+  const v = typeof stressScore === "number" ? stressScore : null;
+  if (v == null) return { label: "Attention", tone: "amber" as const, emoji: "🟡" };
+  // Exigence produit: rouge si stress < 30, même si IDMC est bon
+  if (v < 30) return { label: "Critique", tone: "red" as const, emoji: "🔴" };
+  if (v < 60) return { label: "Attention", tone: "amber" as const, emoji: "🟡" };
+  return { label: "OK", tone: "emerald" as const, emoji: "🟢" };
+}
+
+function MiniBar({ label, score }: { label: string; score: number }) {
+  const tone = score < 40 ? "red" : score < 60 ? "amber" : "emerald";
+  const fill =
+    tone === "red" ? "bg-red-500" : tone === "amber" ? "bg-amber-500" : "bg-emerald-500";
+  const qualifier = score < 50 ? "Sous le seuil recommandé" : score > 70 ? "Optimal" : "";
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="text-xs font-bold uppercase tracking-widest text-gray-500">{label}</div>
+          {qualifier ? <div className="text-xs font-semibold text-gray-500">{qualifier}</div> : null}
+        </div>
+        <div className="text-sm font-black text-gray-900">{score}</div>
+      </div>
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+        <div
+          className={cn("h-full rounded-full", fill)}
+          style={{ width: `${Math.round(clamp01(score / 100) * 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ProgressRing({ value }: { value: number }) {
+  const size = 84;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = clamp01(value / 100);
+  const dash = c * (1 - pct);
+  return (
+    <div className="relative h-[84px] w-[84px]">
+      <svg width={size} height={size} className="block">
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="#E5E7EB" strokeWidth={stroke} fill="none" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="url(#idmc)"
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={dash}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+        <defs>
+          <linearGradient id="idmc" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#1E3A8A" />
+            <stop offset="1" stopColor="#6D28D9" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 grid place-items-center">
+        <div className="text-center">
+          <div className="text-2xl font-black tracking-tight text-gray-950">{Math.round(value)}</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">IDMC</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SoftSkillsRadar({ data }: { data: Array<{ skill: string; score: number }> }) {
+  return (
+    <div className="h-[260px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <RadarChart data={data}>
+          <PolarGrid stroke="rgba(15,23,42,0.10)" />
+          <PolarAngleAxis dataKey="skill" tick={{ fill: "rgba(15,23,42,0.75)", fontSize: 10 }} />
+          <PolarRadiusAxis domain={[0, 100]} tick={false} />
+          {/* Zone de rupture (scores < 40) */}
+          {/* Recharts ne fournit pas un "reference area" polar, on dessine un disque central. */}
+          {/* eslint-disable-next-line react/no-unknown-property */}
+          <circle cx="50%" cy="50%" r="22%" fill="rgba(244,63,94,0.12)" />
+          {/* eslint-disable-next-line react/no-unknown-property */}
+          <text x="50%" y="52%" textAnchor="middle" fill="rgba(244,63,94,0.65)" fontSize="10" fontWeight="700">
+            Zone de Rupture
+          </text>
+          <Radar dataKey="score" stroke="#4F46E5" fill="rgba(79,70,229,0.22)" strokeWidth={2} />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 export default function SalarieDetailPage() {
-  const params = useParams();
-  const employee = useMemo(
-    () => enterpriseEmployees.find((item) => item.id === params.id),
-    [params.id],
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const supabase = useSupabase();
+
+  const employeeId = params?.id;
+  // Debug 404 / routing
+  console.log("ID reçu :", employeeId);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [employee, setEmployee] = useState<EmployeeRow | null>(null);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
+  const [recommendedAction, setRecommendedAction] = useState<RecommendedActionRow | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!employeeId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const isUuid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(employeeId);
+
+        // 1) Employee : if not UUID (ex: e-01), try mocks first (fast, resilient).
+        let emp: EmployeeRow | null = null;
+
+        if (employeeId === "e-01") {
+          // Force: always show Charlie Morel when hitting /salaries/e-01, even if DB empty.
+          emp = getMockCharlieEmployee();
+        } else if (!isUuid) {
+          const { enterpriseEmployees } = await import("@/lib/mocks/enterpriseEmployees");
+          const mock = enterpriseEmployees.find((e) => e.id === employeeId);
+          if (mock) {
+            const [first, ...rest] = mock.name.split(" ");
+            emp = {
+              id: mock.id,
+              first_name: first ?? mock.name,
+              last_name: rest.join(" ") || null,
+              role: mock.role,
+              department: mock.department,
+            };
+          }
+        }
+
+        // 2) UUID → DB first (or if mocks didn't match).
+        if (!emp) {
+          const byId = await supabase
+            .from("employees")
+            .select("id,first_name,last_name,role,department")
+            .eq("id", employeeId)
+            .maybeSingle();
+          if (byId.error) throw byId.error;
+          emp = (byId.data ?? null) as EmployeeRow | null;
+        }
+
+        if (!emp) {
+          // optional columns - ignore errors if they don't exist
+          const byExternal = await supabase
+            .from("employees")
+            .select("id,first_name,last_name,role,department")
+            .eq("external_id", employeeId)
+            .maybeSingle();
+          if (!byExternal.error) emp = (byExternal.data ?? null) as EmployeeRow | null;
+        }
+
+        if (!emp) {
+          const bySlug = await supabase
+            .from("employees")
+            .select("id,first_name,last_name,role,department")
+            .eq("slug", employeeId)
+            .maybeSingle();
+          if (!bySlug.error) emp = (bySlug.data ?? null) as EmployeeRow | null;
+        }
+
+        // 3) If still nothing, keep emp null but continue: UI must render (no notFound).
+
+        const { data: diag, error: diagErr } = await supabase
+          .from("diagnostic_results")
+          .select("id,employee_id,created_at,idmc_score,results")
+          .eq("employee_id", emp?.id ?? employeeId)
+          .order("created_at", { ascending: false })
+          .limit(12);
+        if (diagErr) throw diagErr;
+
+        // Action recommandée via table de liaison `recommended_action_employees`
+        // recommended_action_employees(employee_id, action_id, created_at) -> recommended_actions(...)
+        const { data: linkRows } = await supabase
+          .from("recommended_action_employees")
+          .select("created_at, action:recommended_actions(id,title,dimension_key,description)")
+          .eq("employee_id", emp?.id ?? employeeId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        const linkedAction = (linkRows?.[0] as any)?.action ?? null;
+
+        if (!cancelled) {
+          setEmployee((emp ?? null) as EmployeeRow | null);
+          setDiagnostics((diag ?? []) as DiagnosticRow[]);
+          setRecommendedAction((linkedAction ?? null) as RecommendedActionRow | null);
+        }
+      } catch (e) {
+        if (!cancelled) setError("Impossible de charger la fiche collaborateur.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId, supabase]);
+
+  const mockEmployee = useMemo(() => getMockCharlieEmployee(), []);
+  const displayEmployee = employee || mockEmployee;
+
+  const latest = diagnostics[0] ?? null;
+  const idmc = latest?.idmc_score ?? 0;
+  const stressScore = latest?.results?.stress ?? null;
+  const vigilance = scoreToVigilance(stressScore);
+
+  const dims: DimScore[] = useMemo(() => {
+    const r = latest?.results ?? {};
+    return [
+      { key: "stress", label: "Stress", score: r.stress ?? 0 },
+      { key: "organisation", label: "Organisation", score: r.organisation ?? 0 },
+      { key: "communication", label: "Communication", score: r.communication ?? 0 },
+      { key: "decision", label: "Décision", score: r.decision ?? 0 },
+      { key: "leadership", label: "Leadership", score: r.leadership ?? 0 },
+    ];
+  }, [latest]);
+
+  const radarData = useMemo(
+    () => dims.map((d) => ({ skill: d.label, score: Math.round(d.score) })),
+    [dims],
   );
 
-  if (!employee) {
-    return (
-      <div className="min-h-screen bg-[#050505] text-white">
-        <EnterpriseSidebar />
-        <main className="min-h-screen px-8 py-10 pl-[260px]">
-          <div className="rounded-[20px] border border-blue-500/20 bg-white/5 p-6">
-            Salarié introuvable.
-          </div>
-        </main>
-      </div>
-    );
-  }
+  const strengths = useMemo(() => {
+    const top = [...dims].sort((a, b) => b.score - a.score).slice(0, 3);
+    return top.map((t) => {
+      if (t.key === "organisation") return "Travaille mieux avec des priorités claires.";
+      if (t.key === "communication") return "Communique de façon fluide et constructive.";
+      if (t.key === "decision") return "Décide plus facilement quand le cadre est posé.";
+      if (t.key === "leadership") return "Prend naturellement le lead sur des sujets précis.";
+      return "Garde une bonne stabilité sous pression.";
+    });
+  }, [dims]);
 
-  const radarData = [
-    { skill: "Connaissance de soi", value: 72 },
-    { skill: "Maîtrise des méthodes", value: 68 },
-    { skill: "Adaptation au contexte", value: 70 },
-    { skill: "Organisation", value: 74 },
-    { skill: "Traitement de l'info", value: 66 },
-    { skill: "Résolution de problèmes", value: 78 },
-    { skill: "Suivi", value: 64 },
-    { skill: "Auto-évaluation", value: 60 },
-  ];
+  const watchouts = useMemo(() => {
+    const low = [...dims].sort((a, b) => a.score - b.score).slice(0, 2);
+    const list = low.map((t) => {
+      if (t.key === "stress") return "Risque de surcharge cognitive si le rythme s’accélère.";
+      if (t.key === "organisation") return "Peut se disperser sans priorités explicites.";
+      if (t.key === "communication") return "Peut se fermer si les échanges deviennent flous.";
+      if (t.key === "decision") return "Peut hésiter quand les objectifs ne sont pas tranchés.";
+      return "Peut se désengager si le rôle n’est pas clarifié.";
+    });
+    return Array.from(new Set(list));
+  }, [dims]);
 
-  const lineData = employee.idmcHistory;
-  const idmcAverage =
-    Math.round(radarData.reduce((sum, item) => sum + item.value, 0) / radarData.length) || 0;
-  const dominantAxis = radarData.reduce((best, item) => (item.value > best.value ? item : best), radarData[0]);
-  const discDominant = Object.entries(employee.disc).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "S";
-  const renderRadarTooltip = (props: any) => {
-    const { active, payload } = props as {
-      active?: boolean;
-      payload?: Array<{ payload: { skill: string; value: number } }>;
-    };
-    if (!active || !payload?.length) return null;
-    const data = payload[0].payload;
-    const score = Math.round((data.value / 100) * 15);
-    return (
-      <div className="rounded-full border border-blue-500/40 bg-[#007BFF]/20 px-3 py-1 text-[11px] text-blue-100 shadow-[0_0_12px_rgba(0,123,255,0.6)]">
-        {data.skill} : {score}/15
-      </div>
-    );
-  };
+  const aiInsight = useMemo(() => {
+    const org = dims.find((d) => d.key === "organisation")?.score ?? 0;
+    const stress = dims.find((d) => d.key === "stress")?.score ?? 0;
+    if (org >= 70 && stress >= 60) {
+      return "Perform(e) mieux dans un cadre clair : objectifs simples, priorités visibles, rituels courts.";
+    }
+    if (stress < 50) {
+      return "Gagne en efficacité quand la charge est stabilisée et que les attentes sont explicites.";
+    }
+    return "Progresse plus vite quand les consignes sont concrètes et les retours réguliers.";
+  }, [dims]);
 
-  const iaPrompt =
-    "Tu es un expert en psychologie et en psychologie comportementale. À l'aide des résultats des tests (IDMC: {idmc}, Test comportemental: {disc}, Soft Skills: {skills}), crée une présentation précise de {nom_prenom}. Analyse comment son style comportemental interagit avec son autonomie d'apprentissage (métacognition) pour définir son profil professionnel unique et ses leviers de motivation.";
-
-  const [afestModalOpen, setAfestModalOpen] = useState(false);
+  const actionBlock = useMemo(() => {
+    if (recommendedAction) return recommendedAction;
+    const stress = dims.find((d) => d.key === "stress")?.score ?? 0;
+    if (stress < 50) {
+      return {
+        id: "fallback-stress",
+        title: "Coaching 1:1 recommandé",
+        dimension_key: "stress",
+        description: "Un atelier collectif est recommandé si plusieurs signaux convergent.",
+      } satisfies RecommendedActionRow;
+    }
+    return {
+      id: "fallback-orga",
+      title: "Clarifier la priorisation",
+      dimension_key: "organisation",
+      description: "Un accompagnement individuel est recommandé.",
+    } satisfies RecommendedActionRow;
+  }, [dims, recommendedAction]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="flex min-h-screen bg-white font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
       <EnterpriseSidebar />
-      <main className="min-h-screen px-8 py-10 pl-[260px]">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-[22px] font-extrabold">{employee.name}</div>
-            <div className="text-[12px] text-white/60">{employee.role}</div>
+      <main className="relative z-10 flex-1 px-8 py-10 pl-[280px]">
+        {error && (
+          <div className="mb-8 rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+            {error}
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button className="rounded-full border border-blue-500/40 px-4 py-2 text-[12px] text-blue-200">
-              Exporter l&apos;Audit de Compétences
-            </button>
-            <button className="rounded-full bg-[#007BFF] px-4 py-2 text-[12px] font-semibold text-black">
-              Générer Rapport de Sélection
-            </button>
-            <button
-              onClick={() => setAfestModalOpen(true)}
-              className="rounded-full border border-blue-500 px-4 py-2 text-[12px] font-semibold text-blue-200 shadow-[0_0_10px_rgba(0,123,255,0.5)]"
-            >
-              Faire une demande d&apos;AFEST
-            </button>
+        )}
+
+        <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Vue 3s</p>
+            <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950">
+              {displayEmployee.first_name ?? "—"} {displayEmployee.last_name ?? ""}
+            </h1>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm text-gray-600">
+              <span className="rounded-full border border-gray-200 bg-white px-3 py-1">
+                {displayEmployee.role ?? "Poste non renseigné"}
+              </span>
+              <span className="rounded-full border border-gray-200 bg-white px-3 py-1">
+                {displayEmployee.department ?? "Département"}
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr_1fr]">
-          <section className="rounded-[24px] border border-white/5 bg-white/5 p-6">
-            <img
-              src={employee.avatar}
-              alt={employee.name}
-              className="h-24 w-24 rounded-full border border-blue-500/20 object-cover"
-            />
-            <div className="mt-4 text-[18px] font-bold">{employee.name}</div>
-            <div className="text-[12px] text-white/60">{employee.role}</div>
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="mt-4 rounded-[16px] border border-[#007BFF]/30 bg-[#0B0B0B] p-4 text-[12px] text-white/70"
-            >
-              <div className="text-[12px] font-semibold text-white">Synthèse Beyond IA</div>
-              <div className="mt-2 space-y-3 text-[13px] leading-relaxed text-white/70">
-                <p className="text-[14px] font-semibold text-white">
-                  Un profil professionnel affirmé, aligné sur un style comportemental {discDominant}.
-                </p>
-                <p>
-                  Les résultats indiquent une capacité d&apos;apprentissage élevée et une adaptabilité stable dans des
-                  environnements complexes. Le score de {idmcAverage} confirme une autonomie d&apos;apprentissage
-                  solide, particulièrement sur l&apos;axe {dominantAxis.skill}.
-                </p>
-                <p>
-                  Ce profil se distingue par une posture méthodique et une progression continue, avec des leviers de
-                  motivation liés aux missions de structuration et de résolution de problèmes.
-                </p>
-                <span className="block text-[11px] text-white/40">Prompt IA: {iaPrompt}</span>
-              </div>
-            </motion.div>
-            <div
-              className="mt-3 inline-flex items-center gap-2 text-[14px] text-white/80"
-              title="Donnée à accès restreint (Admin RH uniquement) - Conforme RGPD."
-            >
-              Salaire annuel : <span className="text-white">{formatEuro(employee.salary)}</span>
-              <Lock size={12} className="text-white/40" />
-            </div>
-            {employee.rqth && (
-              <div
-                className="mt-4 inline-flex items-center gap-2 rounded-full border border-blue-500/40 bg-blue-500/10 px-3 py-1 text-[12px] text-blue-200"
-                title="Accès restreint - Donnée RH sensible"
-              >
-                <Lock size={12} />
-                RQTH déclaré
-              </div>
-            )}
-            <button className="mt-6 w-full rounded-full bg-[#007BFF] px-4 py-2 text-[13px] font-semibold text-black">
-              Modifier le contrat
-            </button>
-          </section>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/entreprise/salaries")}
+            className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            ← Retour
+          </button>
+        </header>
 
-          <section className="rounded-[24px] border border-white/5 bg-white/5 p-6">
-            <div
-              className="text-[16px] font-extrabold"
-              title="Mesure la métacognition : capacité du collaborateur à piloter son apprentissage, à s'auto-évaluer et à s'ajuster seul face à la complexité."
-            >
-              Potentiel d&apos;Apprentissage & Adaptabilité
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-gray-500">Score global</div>
+                <div className="mt-2 text-2xl font-black tracking-tight text-gray-950">IDMC</div>
+                <p className="mt-2 text-sm text-gray-600">
+                  Synthèse de fonctionnement, compréhension, décision et activation.
+                </p>
+              </div>
+              <ProgressRing value={idmc} />
             </div>
-            <div className="mt-4 h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                  <PolarAngleAxis dataKey="skill" tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 10 }} />
-                  <PolarRadiusAxis domain={[0, 100]} tick={false} />
-                  <Tooltip content={renderRadarTooltip} />
-                  <Radar
-                    dataKey="value"
-                    stroke="#007BFF"
-                    fill="rgba(0,123,255,0.25)"
-                    strokeWidth={2}
-                    activeDot={{ r: 4, fill: "#007BFF", stroke: "#FFFFFF", strokeWidth: 1 }}
-                    dot={{ r: 2, fill: "#007BFF" }}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-white/60">
-              <span className="rounded-full border border-white/10 px-3 py-1">Famille Analyse</span>
-              <span className="rounded-full border border-white/10 px-3 py-1">Famille Pilotage</span>
-            </div>
-            <div className="mt-6">
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-xs font-bold uppercase tracking-widest text-gray-500">Vigilance</div>
               <div
-                className="text-[14px] font-semibold"
-                title="Mesure la métacognition : capacité du collaborateur à piloter son apprentissage, à s'auto-évaluer et à s'ajuster seul face à la complexité."
+                className={cn(
+                  "rounded-full px-4 py-2 text-sm font-black",
+                  vigilance.tone === "emerald" && "bg-emerald-50 text-emerald-700",
+                  vigilance.tone === "amber" && "bg-amber-50 text-amber-800",
+                  vigilance.tone === "red" && "bg-red-50 text-red-700",
+                )}
               >
-                Oracle de Progression (Potentiel d&apos;Apprentissage & Adaptabilité)
-              </div>
-              <div className="mt-1 text-[12px] text-white/60">12 derniers mois</div>
-              <div className="mt-3 h-[160px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineData}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                    <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 10 }} />
-                    <YAxis domain={[40, 100]} tick={false} />
-                    <Tooltip contentStyle={{ background: "#0B0B0B", border: "1px solid rgba(255,255,255,0.1)" }} />
-                    <Line type="monotone" dataKey="score" stroke="#007BFF" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-3 inline-flex rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-[11px] text-blue-200">
-                Progression : +12% vs Moyenne Secteur
+                {vigilance.emoji} {vigilance.label}
               </div>
             </div>
+            <p className="mt-4 text-xs text-gray-500">
+              Un IDMC élevé peut coexister avec une vigilance critique si une dimension (ex: stress) chute.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm lg:col-span-2">
+            <h2 className="text-xl font-black tracking-tight text-gray-950">Profil synthétique</h2>
+            <p className="mt-2 text-sm text-gray-600">Fonctionnement du collaborateur, en langage simple.</p>
+
+            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50/40 p-6">
+                <div className="text-xs font-black uppercase tracking-widest text-emerald-700">Forces</div>
+                <ul className="mt-4 space-y-3 text-sm text-emerald-900">
+                  {strengths.slice(0, 3).map((s) => (
+                    <li key={s} className="flex items-start gap-3">
+                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden />
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-3xl border border-amber-200 bg-amber-50/40 p-6">
+                <div className="text-xs font-black uppercase tracking-widest text-amber-800">Points de vigilance</div>
+                <ul className="mt-4 space-y-3 text-sm text-amber-900">
+                  {watchouts.slice(0, 3).map((s) => (
+                    <li key={s} className="flex items-start gap-3">
+                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden />
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm lg:col-span-2">
+            <h2 className="text-xl font-black tracking-tight text-gray-950">Dimensions clés</h2>
+            <p className="mt-2 text-sm text-gray-600">Radar + repères lisibles pour décider vite.</p>
             <div className="mt-6">
-              <div className="text-[14px] font-semibold">Test comportemental</div>
-              <div className="relative mt-4 h-[180px] rounded-[16px] border border-white/5 bg-[#0B0B0B]">
-                <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
-                  <div className="border-b border-r border-white/5" />
-                  <div className="border-b border-white/5" />
-                  <div className="border-r border-white/5" />
-                  <div />
-                </div>
-                <div className="absolute left-3 top-2 text-[10px] text-white/50">D</div>
-                <div className="absolute right-3 top-2 text-[10px] text-white/50">I</div>
-                <div className="absolute left-3 bottom-2 text-[10px] text-white/50">S</div>
-                <div className="absolute right-3 bottom-2 text-[10px] text-white/50">C</div>
+              {loading ? <div className="h-[260px] rounded-3xl bg-gray-100" /> : <SoftSkillsRadar data={radarData} />}
+            </div>
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              {dims.map((d) => (
+                <MiniBar key={d.key} label={d.label} score={Math.round(d.score)} />
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <h2 className="text-xl font-black tracking-tight text-gray-950">Insights & recommandations</h2>
+            <div className="mt-5 rounded-3xl border border-gray-200 bg-gray-50/60 p-6">
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500">Insight IA</div>
+              <p className="mt-3 text-sm text-gray-700">{aiInsight}</p>
+            </div>
+
+            <div className="mt-5 rounded-3xl border border-indigo-200 bg-indigo-50 p-6">
+              <div className="text-xs font-black uppercase tracking-widest text-indigo-900">Action recommandée</div>
+              <p className="mt-3 text-sm font-bold text-indigo-950">{actionBlock.title}</p>
+              <p className="mt-2 text-sm text-indigo-900/80">
+                {actionBlock.description ?? "Action concrète proposée par Beyond."}
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard/entreprise/actions/demo-stress")}
+                className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-gray-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-gray-900"
+              >
+                Accéder aux Experts Qualifiés <ChevronRight className="h-4 w-4" aria-hidden />
+              </button>
+              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                <div className="text-xs font-black uppercase tracking-widest text-emerald-800">Impact Business estimé</div>
+                <p className="mt-2 text-sm font-semibold text-emerald-950">
+                  Réduction du risque d&apos;absentéisme et gain de productivité estimé : +15% sur le trimestre.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <h3 className="text-lg font-black tracking-tight text-gray-950">Autonome</h3>
+            <p className="mt-2 text-sm text-gray-600">Micro-parcours et exercices ciblés (5 min).</p>
+            <div className="mt-5 space-y-3">
+              {["Respiration & pause", "Priorisation (1 chose)", "Feedback simple"].map((t) => (
                 <div
-                  className="absolute h-3 w-3 rounded-full bg-[#007BFF] shadow-[0_0_12px_rgba(0,123,255,0.8)]"
-                  style={{
-                    left: `${Math.min(95, Math.max(5, (employee.disc.I - employee.disc.C + 100) / 2))}%`,
-                    top: `${Math.min(95, Math.max(5, (employee.disc.D - employee.disc.S + 100) / 2))}%`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                />
-              </div>
+                  key={t}
+                  className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800"
+                >
+                  {t}
+                </div>
+              ))}
             </div>
-          </section>
+          </div>
 
-          <section className="rounded-[24px] border border-white/5 bg-white/5 p-6">
-            <div className="text-[16px] font-extrabold">Suivi</div>
-            <div className="mt-4">
-              <div className="text-[12px] text-white/60">Mémoire Institutionnelle</div>
-              <div className="mt-3">
-                <TalentLog initialEntries={employee.observations} />
-              </div>
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <h3 className="text-lg font-black tracking-tight text-gray-950">Accompagné</h3>
+            <p className="mt-2 text-sm text-gray-600">Accès aux experts recommandés après prescription.</p>
+            <button
+              type="button"
+              onClick={() =>
+                router.push(`/dashboard/entreprise?recommendedActionId=${encodeURIComponent(actionBlock.id)}`)
+              }
+              className="mt-5 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-950 transition hover:bg-gray-50"
+            >
+              Accéder aux experts recommandés
+            </button>
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 text-sm text-gray-700">
+              <AlertTriangle className="mt-0.5 h-4 w-4 text-gray-500" aria-hidden />
+              <span>Pas de marketplace : l’accès experts reste réservé au tunnel de recommandation Beyond.</span>
             </div>
-            <div className="mt-6">
-              <div className="text-[12px] text-white/60">Entretiens Annuels</div>
-              <div className="mt-3 space-y-3">
-                {[
-                  { date: "03/2024", label: "Compte-rendu PDF" },
-                  { date: "03/2023", label: "Compte-rendu PDF" },
-                ].map((item) => (
-                  <div
-                    key={item.date}
-                    className="flex items-center justify-between rounded-[14px] border border-white/5 bg-[#0B0B0B] px-4 py-3 text-[12px]"
-                  >
-                    <span className="text-white/80">{item.date}</span>
-                    <button className="rounded-full border border-blue-500/30 px-3 py-1 text-[11px] text-blue-200">
-                      {item.label}
-                    </button>
+          </div>
+
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <h3 className="text-lg font-black tracking-tight text-gray-950">Historique</h3>
+            <p className="mt-2 text-sm text-gray-600">Diagnostics passés & actions engagées.</p>
+            <div className="mt-5 space-y-4">
+              {loading ? (
+                <div className="text-sm text-gray-500">Chargement…</div>
+              ) : diagnostics.length === 0 ? (
+                <div className="text-sm text-gray-500">Aucun diagnostic enregistré.</div>
+              ) : (
+                diagnostics.slice(0, 6).map((d) => (
+                  <div key={d.id} className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-bold text-gray-900">
+                        {new Date(d.created_at).toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        IDMC {d.idmc_score ?? "—"} · Stress {d.results?.stress ?? "—"}
+                      </div>
+                    </div>
+                    <div className="h-2.5 w-2.5 rounded-full bg-gray-300" aria-hidden />
                   </div>
-                ))}
-              </div>
+                ))
+              )}
             </div>
-          </section>
-        </div>
-
-        <BadgeSlider />
-        <AfestModal
-          open={afestModalOpen}
-          onOpenChange={setAfestModalOpen}
-          employee={{ name: employee.name, role: employee.role, contract: employee.contract }}
-        />
+          </div>
+        </section>
       </main>
     </div>
   );
 }
+

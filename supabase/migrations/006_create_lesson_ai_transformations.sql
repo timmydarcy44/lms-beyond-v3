@@ -201,6 +201,36 @@ create table if not exists public.ai_usage_events (
 create index if not exists ai_usage_events_created_idx on public.ai_usage_events (created_at desc);
 create index if not exists ai_usage_events_user_idx on public.ai_usage_events (user_id, created_at desc);
 
+-- Référencée par ai_usage_events_select_super_admin ; sinon la migration échoue si 002/003 n’ont pas été jouées.
+create or replace function public.user_has_role(
+  user_id uuid,
+  roles text[]
+) returns boolean
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare
+  user_role text;
+begin
+  select p.role into user_role
+  from public.profiles p
+  where p.id = user_id;
+
+  if user_role is null then
+    return false;
+  end if;
+
+  return user_role = any(roles);
+exception
+  when others then
+    return false;
+end;
+$$;
+
+grant execute on function public.user_has_role(uuid, text[]) to authenticated;
+
 alter table public.ai_usage_events enable row level security;
 
 do $$

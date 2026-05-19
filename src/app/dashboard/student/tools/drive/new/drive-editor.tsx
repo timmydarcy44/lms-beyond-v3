@@ -22,6 +22,10 @@ import {
   Strikethrough,
   Type as TypeIcon,
   Underline,
+  Table,
+  ChevronLeft,
+  ChevronRight,
+  PanelLeftOpen,
   Undo,
   Video,
 } from "lucide-react";
@@ -45,12 +49,45 @@ type FormattingCommand = {
   action: () => void;
 };
 
-function DriveEditorContent({ consigneId, messageId }: { consigneId: string | null; messageId: string | null }) {
+function asJsonObject(value: unknown): Record<string, unknown> {
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function jsonStringField(obj: Record<string, unknown>, key: string): string | undefined {
+  const v = obj[key];
+  return typeof v === "string" ? v : undefined;
+}
+
+type CaseStudyFromPath = {
+  pathId: string;
+  stepId: string;
+  minScore: number;
+  prevCourseId: string | null;
+  context: string;
+  consigne: string;
+};
+
+function DriveEditorContent({
+  consigneId,
+  messageId,
+  caseStudyFromPath,
+}: {
+  consigneId: string | null;
+  messageId: string | null;
+  caseStudyFromPath: CaseStudyFromPath | null;
+}) {
   const router = useRouter();
   const addDocument = useDriveDocuments((state) => state.addDocument);
 
   const [isLoadingConsigne, setIsLoadingConsigne] = useState(!!consigneId);
   const [consigneData, setConsigneData] = useState<{ title: string; content: string } | null>(null);
+  const [caseBusy, setCaseBusy] = useState(false);
+  const [caseResult, setCaseResult] = useState<{ score: number; passed: boolean; feedback?: string } | null>(null);
+  /** Panneau contexte + consigne (parcours étude de cas) */
+  const [caseStudyPanelOpen, setCaseStudyPanelOpen] = useState(true);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("Note sans titre");
@@ -63,6 +100,7 @@ function DriveEditorContent({ consigneId, messageId }: { consigneId: string | nu
 
   // Charger les formateurs disponibles
   useEffect(() => {
+    if (caseStudyFromPath) return;
     fetch("/api/drive/instructors")
       .then((res) => {
         console.log("[DriveEditor] API response status:", res.status, res.statusText);
@@ -90,7 +128,7 @@ function DriveEditorContent({ consigneId, messageId }: { consigneId: string | nu
       .catch((err) => {
         console.error("[DriveEditor] Error loading instructors:", err);
       });
-  }, []);
+  }, [caseStudyFromPath]);
 
   // Charger les données de la consigne si présente
   useEffect(() => {
@@ -127,10 +165,21 @@ function DriveEditorContent({ consigneId, messageId }: { consigneId: string | nu
   }, [consigneId, messageId, isLoadingConsigne]);
 
   useEffect(() => {
+    if (consigneId || messageId || caseStudyFromPath) return;
     if (editorRef.current) {
       editorRef.current.innerHTML = DEFAULT_CONTENT;
     }
-  }, []);
+  }, [consigneId, messageId, caseStudyFromPath]);
+
+  useEffect(() => {
+    if (!caseStudyFromPath) return;
+    setTitle("Étude de cas");
+    const html = "<p>Rédigez votre analyse ici.</p>";
+    setContent(html);
+    if (editorRef.current) editorRef.current.innerHTML = html;
+    setTextColor("#0f172a");
+    setHighlightColor("#fde047");
+  }, [caseStudyFromPath]);
 
   const exec = (command: string, value?: string) => {
     if (typeof document === "undefined") return;
@@ -177,6 +226,17 @@ function DriveEditorContent({ consigneId, messageId }: { consigneId: string | nu
 
   const clearFormatting = () => {
     exec("removeFormat");
+  };
+
+  const insertTable = () => {
+    if (typeof document === "undefined") return;
+    editorRef.current?.focus();
+    const html =
+      '<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;border-color:#cbd5e1;"><tbody>' +
+      "<tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr>" +
+      "</tbody></table><p><br></p>";
+    document.execCommand("insertHTML", false, html);
+    setContent(editorRef.current?.innerHTML ?? "");
   };
 
   const plainText = useMemo(() => {
@@ -238,18 +298,18 @@ function DriveEditorContent({ consigneId, messageId }: { consigneId: string | nu
       // Vérifier d'abord si la réponse est OK
       if (!response.ok) {
         // Si erreur, récupérer le texte brut pour debug
-        let errorData: any = {};
+        let errorData: Record<string, unknown> = {};
         const contentType = response.headers.get("content-type");
         
         try {
           if (contentType?.includes("application/json")) {
-            errorData = await response.json();
+            errorData = asJsonObject(await response.json());
           } else {
             const text = await response.text();
             errorData = { rawText: text };
             // Essayer de parser comme JSON si possible
             try {
-              errorData = JSON.parse(text);
+              errorData = asJsonObject(JSON.parse(text));
             } catch {
               // Garder le texte brut
             }
@@ -259,17 +319,21 @@ function DriveEditorContent({ consigneId, messageId }: { consigneId: string | nu
           errorData = { parseError: String(parseError) };
         }
 
-        const errorMessage = errorData?.details || errorData?.error || errorData?.message || `Erreur serveur (${response.status})`;
+        const errorMessage =
+          jsonStringField(errorData, "details") ??
+          jsonStringField(errorData, "error") ??
+          jsonStringField(errorData, "message") ??
+          `Erreur serveur (${response.status})`;
         console.error("[DriveEditor] Server error:", {
           status: response.status,
           statusText: response.statusText,
           contentType,
           errorData: errorData,
-          error: errorData?.error,
-          details: errorData?.details,
-          code: errorData?.code,
-          hint: errorData?.hint,
-          type: errorData?.type,
+          error: errorData["error"],
+          details: errorData["details"],
+          code: errorData["code"],
+          hint: errorData["hint"],
+          type: errorData["type"],
         });
         throw new Error(errorMessage);
       }
@@ -306,11 +370,54 @@ function DriveEditorContent({ consigneId, messageId }: { consigneId: string | nu
       
       // Délai avant redirection pour voir le message de confirmation
       setTimeout(() => {
-        router.push("/dashboard/student/tools/drive");
+        if (!caseStudyFromPath) {
+          router.push("/dashboard/student/tools/drive");
+        }
       }, 1500);
     } catch (error) {
       console.error("[DriveEditor] Error saving document:", error);
       toast.error(error instanceof Error ? error.message : "Erreur lors de la sauvegarde du document");
+    }
+  };
+
+  const submitCaseStudyEval = async () => {
+    if (!caseStudyFromPath) return;
+    const plain = editorRef.current?.innerText.replace(/\s+/g, " ").trim() ?? "";
+    const placeholderSnippet = "rédigez votre analyse";
+    if (!plain || plain.toLowerCase().includes(placeholderSnippet)) {
+      toast.error("Rédigez votre analyse dans la zone de rédaction avant d’envoyer.");
+      return;
+    }
+    setCaseBusy(true);
+    setCaseResult(null);
+    try {
+      const res = await fetch("/api/path-triggers/submit-case-study", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pathId: caseStudyFromPath.pathId,
+          stepId: caseStudyFromPath.stepId,
+          minScore: caseStudyFromPath.minScore,
+          prevCourseId: caseStudyFromPath.prevCourseId,
+          text: plain,
+        }),
+      });
+      const json = asJsonObject(await res.json().catch(() => ({})));
+      if (!res.ok) throw new Error(jsonStringField(json, "error") ?? "SUBMIT_FAILED");
+      const scoreRaw = json["score"];
+      const score = typeof scoreRaw === "number" && !Number.isNaN(scoreRaw) ? scoreRaw : Number(scoreRaw ?? 0);
+      const passed = Boolean(json["passed"]);
+      const feedback = jsonStringField(json, "feedback") ?? "";
+      setCaseResult({
+        score: Number.isFinite(score) ? score : 0,
+        passed,
+        feedback,
+      });
+      toast.success(passed ? "Réponse envoyée et validée." : "Réponse envoyée — voici les points à retravailler.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l’envoi.");
+    } finally {
+      setCaseBusy(false);
     }
   };
 
@@ -334,7 +441,237 @@ function DriveEditorContent({ consigneId, messageId }: { consigneId: string | nu
     { icon: <Undo className="h-4 w-4" />, label: "Annuler", action: () => exec("undo") },
     { icon: <Redo className="h-4 w-4" />, label: "Rétablir", action: () => exec("redo") },
     { icon: <Eraser className="h-4 w-4" />, label: "Effacer le style", action: clearFormatting },
+    { icon: <Table className="h-4 w-4" />, label: "Tableau", action: insertTable },
   ];
+
+  if (caseStudyFromPath) {
+    const ctx = String(caseStudyFromPath.context ?? "").trim();
+    const consigne = String(caseStudyFromPath.consigne ?? "").trim();
+
+    return (
+      <div className="apprenant-studio-light w-full max-w-[1600px] pb-12 text-slate-900 lg:mx-auto">
+        <header className="mb-8 space-y-3 px-0 lg:px-1">
+          <h1
+            className="text-5xl font-semibold leading-[0.95] tracking-[-0.045em] text-black antialiased md:text-6xl md:tracking-[-0.055em]"
+            style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif' }}
+          >
+            Votre studio
+          </h1>
+          <p className="max-w-2xl text-sm text-black/80 md:text-base">
+            Consultez le contexte à gauche, rédigez au centre puis envoyez. Réduisez le panneau pour gagner de la largeur.
+          </p>
+        </header>
+
+        {/* Mobile : bandeau si panneau fermé */}
+        {!caseStudyPanelOpen ? (
+          <div className="mb-4 flex lg:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-xl border-slate-300 bg-white py-6 text-sm font-medium text-slate-800 hover:bg-slate-50"
+              aria-expanded={false}
+              onClick={() => setCaseStudyPanelOpen(true)}
+            >
+              <PanelLeftOpen className="mr-2 inline h-4 w-4" />
+              Afficher le contexte et la consigne
+            </Button>
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-0">
+          {/* Panneau gauche : contexte + consigne */}
+          <aside
+            className={cn(
+              "order-2 flex shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-[width,max-width] duration-300 ease-out lg:order-1 lg:rounded-r-none lg:border-r-0",
+              caseStudyPanelOpen
+                ? "w-full lg:max-w-[min(460px,44vw)] lg:min-w-[280px]"
+                : "hidden w-full overflow-visible border-0 bg-transparent shadow-none lg:flex lg:h-auto lg:w-14 lg:min-w-[3.5rem] lg:flex-col lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm",
+            )}
+          >
+            {caseStudyPanelOpen ? (
+              <div className="flex min-h-0 max-h-[min(72vh,720px)] flex-1 flex-col">
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 bg-white px-3 py-2.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.32em] text-black/70">
+                    Contexte et consigne
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-lg text-slate-600 hover:bg-slate-100"
+                    aria-label="Réduire le panneau"
+                    aria-expanded={true}
+                    onClick={() => setCaseStudyPanelOpen(false)}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-4">
+                  {ctx ? (
+                    <div>
+                      <h2 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-black/70">Contexte</h2>
+                      <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-black">{ctx}</div>
+                    </div>
+                  ) : null}
+                  {consigne ? (
+                    <div>
+                      <h2 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-black/70">Consigne</h2>
+                      <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-black">{consigne}</div>
+                    </div>
+                  ) : null}
+                  {!ctx && !consigne ? (
+                    <p className="text-center text-sm text-black/50">Aucun texte dans ce panneau pour le moment.</p>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              /* Colonne rétractée (desktop) */
+              <div className="hidden h-full min-h-[240px] flex-col items-center border-slate-100 py-4 lg:flex">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 shrink-0 text-slate-700 hover:bg-slate-100"
+                  aria-label="Afficher le contexte et la consigne"
+                  aria-expanded={false}
+                  title="Afficher le contexte"
+                  onClick={() => setCaseStudyPanelOpen(true)}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+                <span
+                  className="mt-6 hidden text-[10px] font-semibold uppercase tracking-[0.35em] text-black/45 [writing-mode:vertical-rl] lg:inline-block lg:rotate-180"
+                  aria-hidden
+                >
+                  Contexte
+                </span>
+              </div>
+            )}
+          </aside>
+
+          {/* Zone principale : rédaction (prend tout l’espace restant si panneau fermé) */}
+          <div className="order-1 min-w-0 flex-1 space-y-4 lg:order-2 lg:border lg:border-l-0 lg:border-slate-200 lg:bg-white lg:shadow-sm lg:rounded-2xl lg:rounded-l-none">
+            <section className="overflow-hidden lg:rounded-2xl lg:rounded-l-none lg:border-0 lg:shadow-none">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm lg:border-0 lg:shadow-none">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2.5 lg:rounded-tr-2xl">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-[10px] font-semibold uppercase tracking-[0.32em] text-black/70">Votre rédaction</h2>
+                    {!caseStudyPanelOpen ? (
+                      <span className="hidden text-[11px] text-black/55 md:inline">Panneau réduit · plus de place pour écrire</span>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="hidden shrink-0 rounded-full border-slate-300 lg:inline-flex"
+                      onClick={() => router.push("/dashboard/student/tools/drive")}
+                    >
+                      Drive
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={caseBusy}
+                      className="shrink-0 rounded-full bg-black px-6 text-xs font-semibold uppercase tracking-[0.2em] text-white hover:bg-slate-900"
+                      onClick={() => submitCaseStudyEval()}
+                    >
+                      {caseBusy ? "Envoi…" : "Envoyer"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1 border-b border-slate-100 bg-white px-3 py-2">
+                  {formattingCommands.map((command) => (
+                    <button
+                      key={command.label}
+                      type="button"
+                      title={command.label}
+                      onClick={command.action}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                    >
+                      {command.icon}
+                    </button>
+                  ))}
+                  <div className="ml-1 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1">
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-black/70">Texte</span>
+                    <input
+                      aria-label="Couleur du texte"
+                      type="color"
+                      value={textColor}
+                      onChange={(event) => {
+                        setTextColor(event.target.value);
+                        exec("foreColor", event.target.value);
+                      }}
+                      className="h-6 w-6 cursor-pointer rounded border border-slate-200 bg-white p-0"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1">
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-black/70">Surlignage</span>
+                    <input
+                      aria-label="Surlignage"
+                      type="color"
+                      value={highlightColor}
+                      onChange={(event) => {
+                        setHighlightColor(event.target.value);
+                        exec("hiliteColor", event.target.value);
+                      }}
+                      className="h-6 w-6 cursor-pointer rounded border border-slate-200 bg-white p-0"
+                    />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div
+                    ref={editorRef}
+                    onInput={handleInput}
+                    contentEditable
+                    suppressContentEditableWarning
+                    className="min-h-[min(55vh,520px)] w-full rounded-xl border border-slate-200 bg-white p-6 text-base leading-7 text-black shadow-inner focus:outline-none focus:ring-2 focus:ring-slate-300 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_table]:text-sm"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {caseResult ? (
+              <div
+                className={cn(
+                  "rounded-2xl border p-4 text-sm lg:rounded-none lg:border-x-0 lg:border-b-0 lg:border-t lg:border-t-slate-200",
+                  caseResult.passed ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-950",
+                )}
+              >
+                <div className="text-xs font-semibold uppercase tracking-[0.2em]">
+                  Résultat — {caseResult.score}% — {caseResult.passed ? "Validé" : "À améliorer"}
+                </div>
+                {caseResult.feedback ? (
+                  <div className="mt-2 whitespace-pre-wrap text-slate-800">{caseResult.feedback}</div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Mobile / bas de page */}
+            <div className="flex flex-wrap items-center gap-3 px-1 lg:hidden">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                onClick={() => router.push("/dashboard/student/tools/drive")}
+              >
+                Retour au drive
+              </Button>
+              <Button
+                type="button"
+                disabled={caseBusy}
+                className="rounded-full bg-black px-8 text-sm font-semibold text-white hover:bg-slate-900"
+                onClick={() => submitCaseStudyEval()}
+              >
+                {caseBusy ? "Envoi…" : "Envoyer"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -523,8 +860,28 @@ function DriveEditorWithParams() {
   const searchParams = useSearchParams();
   const consigneId = searchParams.get("consigne");
   const messageId = searchParams.get("message");
-  
-  return <DriveEditorContent consigneId={consigneId} messageId={messageId} />;
+  const kind = String(searchParams.get("kind") ?? "").trim();
+  const pathId = String(searchParams.get("pathId") ?? "").trim();
+  const stepId = String(searchParams.get("stepId") ?? "").trim();
+  const minScoreRaw = String(searchParams.get("minScore") ?? "").trim();
+  const minScore = Number(minScoreRaw);
+  const context = String(searchParams.get("context") ?? "");
+  const consigne = String(searchParams.get("consigne") ?? "");
+  const prevCourseIdRaw = String(searchParams.get("prevCourseId") ?? "").trim();
+
+  const caseStudyFromPath =
+    kind === "case_study" && pathId && stepId
+      ? {
+          pathId,
+          stepId,
+          minScore: Number.isFinite(minScore) ? Math.max(0, Math.min(100, Math.round(minScore))) : 75,
+          context,
+          consigne,
+          prevCourseId: prevCourseIdRaw || null,
+        }
+      : null;
+
+  return <DriveEditorContent consigneId={consigneId} messageId={messageId} caseStudyFromPath={caseStudyFromPath} />;
 }
 
 export default function DriveEditor() {

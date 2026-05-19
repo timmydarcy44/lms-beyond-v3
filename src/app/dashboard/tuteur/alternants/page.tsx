@@ -2,13 +2,23 @@
 
 import Link from "next/link";
 import { TuteurShell } from "@/components/tuteur/tuteur-shell";
-import { mockAlternants } from "@/lib/mocks/tuteur";
+import { useTutorWorkspace } from "@/lib/tuteur/use-tutor-workspace";
 
 export default function TutorAlternantsPage() {
-  const tutorName = "Paul Martin";
+  const { data, error, loading } = useTutorWorkspace();
+  const tutorName = data?.tutorName ?? "Tuteur";
+  const assignments = data?.assignments ?? [];
+
+  if (error === "auth") {
+    return (
+      <TuteurShell tutorName={tutorName}>
+        <div className="px-6 py-10 text-sm text-gray-500">Accès réservé aux tuteurs.</div>
+      </TuteurShell>
+    );
+  }
 
   return (
-    <TuteurShell tutorName={tutorName}>
+    <TuteurShell tutorName={tutorName} navBadges={{ missions: data?.kpis.pendingMissionActions }}>
       <div className="bg-[#f5f5f7] min-h-screen px-6 py-10">
         <div className="max-w-5xl mx-auto space-y-8">
           <div>
@@ -16,10 +26,16 @@ export default function TutorAlternantsPage() {
             <p className="text-sm text-gray-500">Suivez la progression de vos alternants</p>
           </div>
 
+          {loading ? <p className="text-sm text-gray-500">Chargement…</p> : null}
+
+          {!loading && assignments.length === 0 ? (
+            <p className="text-sm text-gray-600">Aucun rattachement actif. Contactez votre organisme pour être assigné à des alternants.</p>
+          ) : null}
+
           <div className="grid gap-6 md:grid-cols-2">
-            {mockAlternants.map((alternant) => {
-              const progress = alternant.missions_total
-                ? Math.round((alternant.missions_validees / alternant.missions_total) * 100)
+            {assignments.map((alternant) => {
+              const progress = alternant.missionsTotal
+                ? Math.round((alternant.missionsValidees / alternant.missionsTotal) * 100)
                 : 0;
               return (
                 <div
@@ -28,18 +44,16 @@ export default function TutorAlternantsPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-14 w-14 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-semibold">
-                      {alternant.first_name.slice(0, 1).toUpperCase()}
+                      {alternant.firstName.slice(0, 1).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {alternant.first_name} {alternant.last_name}
-                      </p>
+                      <p className="text-lg font-semibold text-gray-900">{alternant.displayName}</p>
                       <p className="text-sm text-gray-500">
-                        {alternant.ecole} • {alternant.contrat_type}
+                        {(alternant.ecole ?? "Organisme") + (alternant.contratType ? ` • ${alternant.contratType}` : "")}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        Rythme : {alternant.rythme_alternance}
-                      </p>
+                      {alternant.rythmeAlternance ? (
+                        <p className="text-sm text-gray-500">Rythme : {alternant.rythmeAlternance}</p>
+                      ) : null}
                     </div>
                   </div>
 
@@ -47,7 +61,7 @@ export default function TutorAlternantsPage() {
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <span>Progression missions</span>
                       <span>
-                        {alternant.missions_validees}/{alternant.missions_total}
+                        {alternant.missionsValidees}/{alternant.missionsTotal}
                       </span>
                     </div>
                     <div className="mt-2 h-1.5 rounded-full bg-gray-100">

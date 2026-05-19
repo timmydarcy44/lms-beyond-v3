@@ -1,7 +1,7 @@
 const { createClient } = require("@supabase/supabase-js");
 const { randomUUID } = require("crypto");
 
-const SUPABASE_URL = "https://fqqqejpakbccwvrlolpc.supabase.co";
+const SUPABASE_URL = "https://zmcefidiiqqppowymoxt.supabase.co";
 const ORG_ID = "33e9a355-9e75-4151-83b9-dda09e83a70d";
 const CREATED_BY = "60c88469-3c53-417f-a81d-565a662ad2f5";
 

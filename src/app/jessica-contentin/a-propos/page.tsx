@@ -125,14 +125,6 @@ export default function AProposPage() {
             >
               Psychopédagogue certifiée en neuroéducation à Bretteville sur Odon (Caen)
             </p>
-            <p
-              className="text-lg text-[#2F2A25]/70 max-w-2xl mx-auto mt-4"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              }}
-            >
-              Accompagnement personnalisé pour troubles DYS, TDA-H, harcèlement scolaire et phobie scolaire. Cabinet à Bretteville sur Odon, près de Caen en Normandie.
-            </p>
           </motion.div>
         </div>
       </section>
@@ -185,7 +177,7 @@ export default function AProposPage() {
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}
                 >
-                  Diplômée d'un <strong>Master en Ingénierie des Politiques Sanitaires et Sociales (IAE de Caen)</strong> et d'un <strong>Master MEEF (mention Très Bien)</strong>, je suis également <strong>professeure certifiée en Santé, titulaire d'un concours national de l'Éducation nationale</strong>.
+                  Diplômée d'un <strong>Master en Ingénierie des Politiques Sanitaires et Sociales (IAE de Caen)</strong> et d'un <strong>Master MEEF</strong>, je suis également <strong>professeure certifiée en santé, titulaire d'un concours national de l'Éducation nationale</strong>.
                 </p>
               </motion.div>
 

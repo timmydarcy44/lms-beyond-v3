@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +41,7 @@ type CompanyCard = {
   contact_phone?: string;
   positions?: number;
   hot?: boolean;
+  company_status?: string | null;
 };
 
 type SchoolClassOption = {
@@ -204,6 +206,7 @@ function DroppableColumn({
 export default function SchoolProspectionPage() {
   const supabase = createSupabaseBrowserClient();
   const [cards, setCards] = useState<CompanyCard[]>([]);
+  const [crmView, setCrmView] = useState<"pipeline" | "clients">("pipeline");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CompanyCard | null>(null);
@@ -237,14 +240,6 @@ export default function SchoolProspectionPage() {
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
   const [contractType, setContractType] = useState<"Alternance" | "Stage" | "Apprentissage">("Alternance");
   const [contractClauses, setContractClauses] = useState("");
-  const [handicapPin, setHandicapPin] = useState("");
-  const [handicapUnlocked, setHandicapUnlocked] = useState(false);
-  const [handicapType, setHandicapType] = useState("");
-  const [handicapExtraTime, setHandicapExtraTime] = useState("");
-  const [handicapFiles, setHandicapFiles] = useState<File[]>([]);
-  const [handicapSaving, setHandicapSaving] = useState(false);
-  const [handicapError, setHandicapError] = useState<string | null>(null);
-  const requiredHandicapCode = process.env.NEXT_PUBLIC_HANDICAP_ACCESS_CODE || "";
   const setFormData = (
     updater: (prev: {
       name: string;
@@ -293,9 +288,18 @@ export default function SchoolProspectionPage() {
   const [modalStep, setModalStep] = useState<1 | 2>(1);
   const [createdProspectId, setCreatedProspectId] = useState<string | null>(null);
   const potentialCA = useMemo(() => npcTable[cursus], [cursus]);
+  const pipelineCards = useMemo(
+    () => cards.filter((c) => String(c.company_status ?? "").toLowerCase() !== "client"),
+    [cards],
+  );
+  const clientCards = useMemo(
+    () => cards.filter((c) => String(c.company_status ?? "").toLowerCase() === "client"),
+    [cards],
+  );
+
   const columnStats = useMemo(() => {
     return columns.reduce<Record<string, { count: number; ca: number }>>((acc, column) => {
-      const items = cards.filter((card) => card.status === column);
+      const items = pipelineCards.filter((card) => card.status === column);
       const ca = items.reduce((sum, item) => {
         const npc = npcTable[item.cursus || "Mastere"] || 0;
         const fallback = npc * (item.positions || 1);
@@ -305,7 +309,7 @@ export default function SchoolProspectionPage() {
       acc[column] = { count: items.length, ca };
       return acc;
     }, {});
-  }, [cards]);
+  }, [pipelineCards]);
 
   const updateSelectedCard = (updates: Partial<CompanyCard>) => {
     if (!selectedCard) return;
@@ -361,53 +365,6 @@ export default function SchoolProspectionPage() {
     await getStatistics(schoolId);
   };
 
-  const handleHandicapUnlock = () => {
-    if (!requiredHandicapCode || handicapPin === requiredHandicapCode) {
-      setHandicapUnlocked(true);
-      setHandicapError(null);
-      return;
-    }
-    setHandicapError("Code d'accès invalide.");
-  };
-
-  const handleHandicapSave = async () => {
-    if (!supabase || !selectedCard?.id) return;
-    setHandicapSaving(true);
-    setHandicapError(null);
-    try {
-      let uploadedPaths: string[] = [];
-      if (handicapFiles.length) {
-        const uploads = await Promise.all(
-          handicapFiles.map(async (file) => {
-            const path = `${selectedCard.id}/${Date.now()}-${file.name}`;
-            const { error } = await supabase.storage.from("handicap-justificatifs").upload(path, file, {
-              upsert: true,
-            });
-            if (error) throw error;
-            return path;
-          })
-        );
-        uploadedPaths = uploads;
-      }
-      const { error } = await supabase
-        .from("student_handicap_data")
-        .upsert(
-          {
-            student_id: selectedCard.id,
-            accommodation_type: handicapType,
-            extra_time_duration: handicapExtraTime,
-            justification_files: uploadedPaths.length ? uploadedPaths : null,
-          },
-          { onConflict: "student_id" }
-        );
-      if (error) throw error;
-    } catch (error) {
-      setHandicapError((error as { message?: string })?.message || "Erreur lors de la sauvegarde");
-    } finally {
-      setHandicapSaving(false);
-    }
-  };
-
   const normalizeStep = (value?: string | null) => {
     if (!value) return "Prospect";
     if (value === "Presentation") return "Présentation";
@@ -417,29 +374,29 @@ export default function SchoolProspectionPage() {
     return value;
   };
 
-  const derivedTotals = useMemo(() => calculateTotals(cards), [cards]);
+  const derivedTotals = useMemo(() => calculateTotals(pipelineCards), [pipelineCards]);
   const entrepriseAvecOffres = derivedTotals.offers;
   const caPotentiel = derivedTotals.caPotentiel;
   const caSecurise = derivedTotals.caSecurise;
 
   const caNpcPotentiel = useMemo(() => {
-    return cards.reduce((sum, card) => {
+    return pipelineCards.reduce((sum, card) => {
       const selectedClass = schoolClasses.find((item) => item.id === card.target_class_id);
       const opcoValue = card.opco_name || card.opco || getOpcoFromNaf(card.naf_code || card.naf_ape || "");
       const npcAmount = calculateNPC(opcoValue || "", selectedClass?.name || "", selectedClass?.npc_amount);
       return sum + (npcAmount || 0);
     }, 0);
-  }, [cards, schoolClasses]);
+  }, [pipelineCards, schoolClasses]);
 
   const caNpcSigne = useMemo(() => {
-    return cards.reduce((sum, card) => {
+    return pipelineCards.reduce((sum, card) => {
       if (!card.is_signed) return sum;
       const selectedClass = schoolClasses.find((item) => item.id === card.target_class_id);
       const opcoValue = card.opco_name || card.opco || getOpcoFromNaf(card.naf_code || card.naf_ape || "");
       const npcAmount = calculateNPC(opcoValue || "", selectedClass?.name || "", selectedClass?.npc_amount);
       return sum + (npcAmount || 0);
     }, 0);
-  }, [cards, schoolClasses]);
+  }, [pipelineCards, schoolClasses]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -447,13 +404,17 @@ export default function SchoolProspectionPage() {
     const target = over.id as string;
     if (!columns.includes(target)) return;
     setCards((prev) =>
-      prev.map((card) => (card.id === String(active.id) ? { ...card, status: target } : card))
+      prev.map((card) =>
+        card.id === String(active.id)
+          ? { ...card, status: target, company_status: target === "Gagné" ? "client" : "prospect" }
+          : card,
+      ),
     );
     if (supabase && schoolId) {
-      const nextStatus = target === "Gagné" ? "client" : "prospect";
+      const nextCompanyStatus = target === "Gagné" ? "client" : "prospect";
       await supabase
         .from("crm_prospects")
-        .update({ step: target, company_status: nextStatus })
+        .update({ step: target, company_status: nextCompanyStatus })
         .eq("id", active.id);
     }
   };
@@ -645,6 +606,7 @@ export default function SchoolProspectionPage() {
           target_class_id: row.target_class_id || null,
           is_signed: row.is_signed ?? null,
           hot: false,
+          company_status: row.company_status ?? null,
         }))
       );
     } else {
@@ -710,22 +672,6 @@ export default function SchoolProspectionPage() {
   }, [dialogOpen]);
 
   useEffect(() => {
-    const loadHandicap = async () => {
-      if (!supabase || !selectedCard?.id || !handicapUnlocked) return;
-      const { data } = await supabase
-        .from("student_handicap_data")
-        .select("accommodation_type, extra_time_duration, justification_files")
-        .eq("student_id", selectedCard.id)
-        .maybeSingle();
-      if (data) {
-        setHandicapType(data.accommodation_type || "");
-        setHandicapExtraTime(data.extra_time_duration || "");
-      }
-    };
-    loadHandicap();
-  }, [supabase, selectedCard?.id, handicapUnlocked]);
-
-  useEffect(() => {
     const label = selectedCard?.company_name || selectedCard?.name;
     if (!label) return;
     const contacts = getContactsFromDomain(label);
@@ -776,6 +722,7 @@ export default function SchoolProspectionPage() {
         company_name: data.company_name || card.company_name,
         status: normalizeStep(data.step),
         city: data.city || card.city,
+        company_status: (data as { company_status?: string | null }).company_status ?? card.company_status ?? null,
       });
       return;
     }
@@ -972,6 +919,32 @@ export default function SchoolProspectionPage() {
               Ajouter une entreprise
             </button>
           </div>
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-black/10 pt-4">
+            <button
+              type="button"
+              onClick={() => setCrmView("pipeline")}
+              className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] ${
+                crmView === "pipeline" ? "bg-black text-white" : "bg-black/5 text-black/70 hover:bg-black/10"
+              }`}
+            >
+              Prospection (pipeline)
+            </button>
+            <button
+              type="button"
+              onClick={() => setCrmView("clients")}
+              className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] ${
+                crmView === "clients" ? "bg-black text-white" : "bg-black/5 text-black/70 hover:bg-black/10"
+              }`}
+            >
+              Clients ({clientCards.length})
+            </button>
+            <Link
+              href="/dashboard/ecole/entreprises"
+              className="ml-auto self-center text-xs font-semibold text-[#007AFF] underline"
+            >
+              Fiche entreprises partenaires →
+            </Link>
+          </div>
         </header>
         <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm font-semibold text-black">
           CA Potentiel : <span className="text-black">{formatMoney(caNpcPotentiel)}</span> · CA Signé :{" "}
@@ -1008,10 +981,32 @@ export default function SchoolProspectionPage() {
             </div>
           ))}
         </section>
+        {crmView === "clients" ? (
+          <section className="grid gap-4 md:grid-cols-2">
+            {clientCards.length ? (
+              clientCards.map((card) => (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => handleSelectCard(card)}
+                  className="rounded-2xl border border-emerald-500/30 bg-emerald-50/80 p-4 text-left text-black shadow-sm transition hover:border-emerald-500/60"
+                >
+                  <p className="font-semibold">{card.company_name || card.name}</p>
+                  <p className="mt-1 text-xs text-black/50">{card.siret || "—"}</p>
+                  <p className="mt-2 text-xs text-emerald-800">Statut : client</p>
+                </button>
+              ))
+            ) : (
+              <p className="text-sm text-black/50">
+                Aucun client pour le moment. Glissez une carte vers la colonne « Gagné » pour la convertir.
+              </p>
+            )}
+          </section>
+        ) : (
         <DndContext onDragEnd={handleDragEnd}>
           <section className="flex h-[calc(100vh-220px)] gap-4 overflow-x-auto overflow-y-auto pb-4 scroll-smooth">
             {columns.map((column, index) => {
-              const columnCards = cards.filter((card) => card.status === column);
+              const columnCards = pipelineCards.filter((card) => card.status === column);
               const stats = columnStats[column];
               const header = (
                 <div className="flex items-center justify-between text-xs text-black/50">
@@ -1050,6 +1045,7 @@ export default function SchoolProspectionPage() {
             })}
           </section>
         </DndContext>
+        )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -1377,96 +1373,6 @@ export default function SchoolProspectionPage() {
                 );
               })()}
             </div>
-            <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-indigo-200">Handicap</p>
-              {!handicapUnlocked ? (
-                <div className="mt-4 space-y-4">
-                  <p className="text-xs text-indigo-100/80">Accès restreint aux référents.</p>
-                  <div className="rounded-xl border border-indigo-400/30 bg-indigo-900/20 p-4">
-                    <div className="mb-3 text-center text-lg font-semibold tracking-[0.3em] text-white">
-                      {handicapPin.padEnd(4, "•")}
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-                        <button
-                          key={digit}
-                          type="button"
-                          onClick={() => setHandicapPin((prev) => (prev.length < 4 ? `${prev}${digit}` : prev))}
-                          className="rounded-lg border border-indigo-400/20 bg-indigo-800/40 py-2 text-sm font-semibold text-white"
-                        >
-                          {digit}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setHandicapPin("")}
-                        className="rounded-lg border border-indigo-400/20 bg-indigo-800/40 py-2 text-xs font-semibold text-white"
-                      >
-                        Effacer
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setHandicapPin((prev) => (prev.length < 4 ? `${prev}0` : prev))}
-                        className="rounded-lg border border-indigo-400/20 bg-indigo-800/40 py-2 text-sm font-semibold text-white"
-                      >
-                        0
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleHandicapUnlock}
-                        className="rounded-lg bg-indigo-500 py-2 text-xs font-semibold text-white"
-                      >
-                        Valider
-                      </button>
-                    </div>
-                    {handicapError ? <p className="mt-3 text-xs text-red-200">{handicapError}</p> : null}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 space-y-4 text-sm text-white">
-                  <div>
-                    <label className="text-xs uppercase tracking-[0.2em] text-indigo-100/70">
-                      Type d'aménagement
-                    </label>
-                    <input
-                      value={handicapType}
-                      onChange={(event) => setHandicapType(event.target.value)}
-                      className="mt-2 w-full rounded-lg border border-indigo-500/30 bg-indigo-950/40 px-3 py-2 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs uppercase tracking-[0.2em] text-indigo-100/70">
-                      Durée du tiers-temps
-                    </label>
-                    <input
-                      value={handicapExtraTime}
-                      onChange={(event) => setHandicapExtraTime(event.target.value)}
-                      className="mt-2 w-full rounded-lg border border-indigo-500/30 bg-indigo-950/40 px-3 py-2 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs uppercase tracking-[0.2em] text-indigo-100/70">
-                      Justificatifs
-                    </label>
-                    <input
-                      type="file"
-                      multiple
-                      onChange={(event) => setHandicapFiles(Array.from(event.target.files || []))}
-                      className="mt-2 w-full rounded-lg border border-indigo-500/30 bg-indigo-950/40 px-3 py-2 text-xs text-white file:mr-4 file:rounded-md file:border-0 file:bg-indigo-500 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleHandicapSave}
-                    disabled={handicapSaving}
-                    className="rounded-lg bg-indigo-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60"
-                  >
-                    {handicapSaving ? "Sauvegarde..." : "Sauvegarder"}
-                  </button>
-                  {handicapError ? <p className="text-xs text-red-200">{handicapError}</p> : null}
-                </div>
-              )}
-            </div>
             {contractDialogOpen ? (
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
                 <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">
@@ -1677,8 +1583,8 @@ export default function SchoolProspectionPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const company = encodeURIComponent(selectedCard?.name || "");
-                  window.location.assign(`/dashboard/ecole/offres?company=${company}`);
+                  const company = encodeURIComponent(selectedCard?.company_name || selectedCard?.name || "");
+                  window.location.assign(`/dashboard/ecole/offres?create=1&company=${company}`);
                 }}
                 className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white"
               >

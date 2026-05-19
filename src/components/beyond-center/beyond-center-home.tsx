@@ -19,6 +19,7 @@ import {
 } from "@/components/beyond-center/beyond-center-shared";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Brain, Rocket, ScanSearch } from "lucide-react";
+import { BeyondCenterPricingSection } from "@/components/beyond-center/pricing-section";
 
 function ParallaxImage({
   src,
@@ -397,6 +398,37 @@ export function BeyondCenterHome() {
         </div>
       </Section>
 
+      <BeyondCenterPricingSection id="pricing" variant="light" />
+
+      {/* —— REJOINDRE LE RÉSEAU —— */}
+      <Section id="reseau" className="scroll-mt-24 border-t border-slate-200/80 bg-white py-20 text-slate-900 md:py-28">
+        <div className="mx-auto max-w-6xl px-6 md:px-8">
+          <div className="grid items-center gap-10 md:grid-cols-[1.2fr_0.8fr]">
+            <div>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.28em] text-slate-400">Rejoindre le réseau</p>
+              <h2 className="mt-4 text-[clamp(1.8rem,3vw,2.35rem)] font-semibold tracking-[-0.03em] text-slate-900">
+                Devenez Spécialiste Beyond.
+              </h2>
+              <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-slate-600">
+                Rejoignez un réseau d’experts orientés transformation, avec un onboarding conçu pour la qualité et
+                l’impact terrain.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/register/expert"
+                className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-8 py-4 text-[14px] font-semibold text-white shadow-[0_16px_40px_-20px_rgba(15,23,42,0.45)] transition-transform hover:scale-[1.01]"
+              >
+                Devenir Spécialiste
+              </Link>
+              <div className="text-center text-[11px] font-medium text-slate-500">
+                Statut : candidature • revue • activation
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+
       {/* —— CTA —— */}
       <section id="pilote" className="relative scroll-mt-24 overflow-hidden py-24 md:py-32">
         <DarkAmbientBackground />
@@ -414,6 +446,11 @@ export function BeyondCenterHome() {
               Lancer un pilote
             </Link>
           </motion.div>
+          <div className="mt-6 text-center">
+            <Link href="/register/expert" className="text-[13px] font-semibold text-white/80 underline-offset-4 hover:underline">
+              Ou devenir Spécialiste →
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -95,11 +95,29 @@ export async function getLearnerMessages(): Promise<Message[]> {
       error: recipientsError ? { code: recipientsError.code, message: recipientsError.message } : null,
     });
 
+    const messagesSelectFull =
+      "id, sender_id, content, subject, body, type, metadata, created_at";
+    const messagesSelectCompat =
+      "id, sender_id, content, subject, body, metadata, created_at";
+
     // 2. Récupérer les messages ENVOYÉS (où l'utilisateur est expéditeur)
-    const { data: sentMessages, error: sentError } = await supabase
+    let { data: sentMessages, error: sentError } = await supabase
       .from("messages")
-      .select("id, sender_id, content, subject, body, type, metadata, created_at")
+      .select(messagesSelectFull)
       .eq("sender_id", userId);
+
+    if (
+      sentError &&
+      (String(sentError.message ?? "").toLowerCase().includes("type") ||
+        String(sentError.code ?? "") === "42703")
+    ) {
+      const retry = await supabase
+        .from("messages")
+        .select(messagesSelectCompat)
+        .eq("sender_id", userId);
+      sentMessages = retry.data ?? [];
+      sentError = retry.error;
+    }
 
     console.log("[messaging] sent messages query result:", {
       count: sentMessages?.length || 0,
@@ -110,10 +128,23 @@ export async function getLearnerMessages(): Promise<Message[]> {
     let receivedMessages: any[] = [];
     if (messageRecipients && messageRecipients.length > 0) {
       const messageIds = messageRecipients.map((mr: any) => mr.message_id);
-      const { data: receivedMessagesData, error: messagesError } = await supabase
+      let { data: receivedMessagesData, error: messagesError } = await supabase
         .from("messages")
-        .select("id, sender_id, content, subject, body, type, metadata, created_at")
+        .select(messagesSelectFull)
         .in("id", messageIds);
+
+      if (
+        messagesError &&
+        (String(messagesError.message ?? "").toLowerCase().includes("type") ||
+          String(messagesError.code ?? "") === "42703")
+      ) {
+        const retry = await supabase
+          .from("messages")
+          .select(messagesSelectCompat)
+          .in("id", messageIds);
+        receivedMessagesData = retry.data ?? [];
+        messagesError = retry.error;
+      }
 
       if (!messagesError && receivedMessagesData) {
         receivedMessages = receivedMessagesData;
@@ -247,13 +278,30 @@ async function getLearnerMessagesFromNotifications(userId: string): Promise<Mess
   }
 
   try {
-    // La table notifications utilise recipient_id et payload (JSONB)
-    const { data: notifications, error } = await supabase
+    const notifSelectFull = "id, type, recipient_id, payload, read_at, created_at";
+    const notifSelectCompat = "id, recipient_id, payload, created_at";
+
+    let { data: notifications, error } = await supabase
       .from("notifications")
-      .select("id, type, recipient_id, payload, read_at, created_at")
+      .select(notifSelectFull)
       .eq("recipient_id", userId)
       .eq("type", "consigne")
       .order("created_at", { ascending: false });
+
+    if (
+      error &&
+      (String(error.message ?? "").toLowerCase().includes("read_at") ||
+        String(error.message ?? "").toLowerCase().includes("type") ||
+        String(error.code ?? "") === "42703")
+    ) {
+      const retry = await supabase
+        .from("notifications")
+        .select(notifSelectCompat)
+        .eq("recipient_id", userId)
+        .order("created_at", { ascending: false });
+      notifications = retry.data ?? [];
+      error = retry.error;
+    }
 
     if (error || !notifications) {
       console.error("[messaging] Error fetching notifications:", error);
@@ -261,12 +309,13 @@ async function getLearnerMessagesFromNotifications(userId: string): Promise<Mess
     }
 
     return notifications.map((notif: any) => {
-      const payload = notif.payload || {};
+      const payload = (notif.payload || {}) as Record<string, unknown>;
+      const readAt = notif.read_at ?? payload.read_at ?? null;
       return {
         id: notif.id,
-        sender_id: "", // Notifications n'ont pas de sender_id
+        sender_id: "",
         sender_name: "Formateur",
-        content: payload.message || payload.title || "",
+        content: String(payload.message ?? payload.title ?? ""),
         type: "consigne" as const,
         metadata: {
           title: payload.title,
@@ -274,8 +323,8 @@ async function getLearnerMessagesFromNotifications(userId: string): Promise<Mess
           fileUrl: payload.fileUrl,
         },
         created_at: notif.created_at,
-        read: !!notif.read_at, // Si read_at existe, c'est lu
-        read_at: notif.read_at,
+        read: Boolean(readAt),
+        read_at: readAt as string | undefined,
       };
     });
   } catch (error) {

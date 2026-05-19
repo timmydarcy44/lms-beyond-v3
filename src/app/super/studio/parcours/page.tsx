@@ -33,6 +33,7 @@ export default async function SuperAdminParcoursPage() {
   // Récupérer l'utilisateur actuel
   const { data: { user } } = await supabase.auth.getUser();
   const creatorId = user?.id;
+  const isTimmy = String(user?.email ?? "").trim().toLowerCase() === "timmydarcy44@gmail.com";
 
   const baseSelect = `
       id,
@@ -41,12 +42,14 @@ export default async function SuperAdminParcoursPage() {
       created_at,
       updated_at,
       owner_id,
-      creator_id
+      creator_id,
+      org_id,
+      organizations(name,slug)
     `;
 
   let query = supabase.from("paths").select(baseSelect).limit(100);
 
-  if (creatorId) {
+  if (!isTimmy && creatorId) {
     query = query.or(`owner_id.eq.${creatorId},creator_id.eq.${creatorId}`).order("updated_at", { ascending: false });
   } else {
     query = query.order("updated_at", { ascending: false });
@@ -180,13 +183,22 @@ export default async function SuperAdminParcoursPage() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-semibold">{path.title || "Sans titre"}</h3>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    path.status === "published"
-                      ? "bg-emerald-500/20 text-emerald-100" 
-                      : "bg-white/10 text-white/70"
-                  }`}>
-                    {path.status === "published" ? "Publié" : "Brouillon"}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        path.status === "published"
+                          ? "bg-emerald-500/20 text-emerald-100"
+                          : "bg-white/10 text-white/70"
+                      }`}
+                    >
+                      {path.status === "published" ? "Publié" : "Brouillon"}
+                    </span>
+                    {isTimmy ? (
+                      <span className="px-2 py-1 text-[11px] font-semibold rounded-full bg-white/10 text-white/70">
+                        {(path as any)?.organizations?.name ?? "Galaxie inconnue"}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-white/60">
                   <Calendar className="h-3 w-3" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CatalogHero } from "./catalog-hero";
 import { CatalogRow } from "./catalog-row";
@@ -20,6 +20,7 @@ type CatalogItem = {
   price: number;
   is_free: boolean;
   category: string | null;
+  category_name?: string | null;
   thematique: string | null;
   duration: string | null;
   level: string | null;
@@ -28,6 +29,15 @@ type CatalogItem = {
   created_at?: string;
   updated_at?: string;
   content_format?: "text" | "audio" | "video" | null;
+  /** Renseigné pour les modules enrichis depuis `courses` */
+  category_id?: string | null;
+};
+
+const AUTRES_ROW_KEY = "__autres__";
+
+export type CatalogViewAppleTVProps = {
+  /** Permet d'utiliser la vue Apple TV avec des données déjà chargées (ex: dashboard apprenant). */
+  initialItems?: CatalogItem[];
 };
 
 const TIM_SUPER_ADMIN_ID = "60c88469-3c53-417f-a81d-565a662ad2f5";
@@ -52,10 +62,14 @@ function applyBrandingToRoot(branding: Record<string, string>) {
   root.style.setProperty("--brand-text-secondary", branding.text_secondary_color ?? "");
 }
 
-export function CatalogViewAppleTV() {
+export function CatalogViewAppleTV({ initialItems }: CatalogViewAppleTVProps) {
   const pathname = usePathname();
   const isSuperAdminPreview = pathname?.includes('/super/catalogue/preview');
-  console.log("[catalogue] pathname:", pathname, "isSuperAdminPreview:", isSuperAdminPreview);
+  const currentOrgSlug = useMemo(() => {
+    const p = String(pathname ?? "");
+    const m = p.match(/^\/g\/([^/]+)/i);
+    return m?.[1] ? decodeURIComponent(m[1]) : null;
+  }, [pathname]);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [featuredItems, setFeaturedItems] = useState<CatalogItem[]>([]);
@@ -63,6 +77,45 @@ export function CatalogViewAppleTV() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [catalogBranding, setCatalogBranding] = useState<any>(null);
   const [initialThemeApplied, setInitialThemeApplied] = useState(false);
+  const [orgCategoryList, setOrgCategoryList] = useState<Array<{ id: string; name: string }> | null>(null);
+
+  useEffect(() => {
+    if (!initialItems) return;
+    setCatalogItems(initialItems);
+    setFeaturedItems(initialItems.filter((item) => item.hero_image_url));
+    setLoading(false);
+  }, [initialItems]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Netflix-style rows: thématiques de la galaxie courante uniquement.
+    setOrgCategoryList(null);
+    if (!currentOrgSlug) return () => { cancelled = true; };
+    (async () => {
+      try {
+        const res = await fetch(`/api/course-categories?orgSlug=${encodeURIComponent(currentOrgSlug)}`, {
+          credentials: "include",
+        });
+        const json = await res.json().catch(() => ({}));
+        const list = Array.isArray((json as any)?.categories) ? (json as any).categories : [];
+        const cleaned = (list as unknown[])
+          .map((x) => {
+            if (x && typeof x === "object" && "id" in (x as object) && "name" in (x as object)) {
+              const o = x as { id: unknown; name: unknown };
+              return { id: String(o.id ?? "").trim(), name: String(o.name ?? "").trim() };
+            }
+            return null;
+          })
+          .filter((c): c is { id: string; name: string } => Boolean(c?.id && c?.name));
+        if (!cancelled) setOrgCategoryList(cleaned);
+      } catch {
+        if (!cancelled) setOrgCategoryList([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentOrgSlug]);
 
   // Charger le branding du catalogue
   useEffect(() => {
@@ -102,6 +155,7 @@ export function CatalogViewAppleTV() {
     
     async function loadCatalog() {
       try {
+        if (initialItems) return;
         setLoading(true);
         
         // Créer un AbortController pour pouvoir annuler la requête
@@ -210,61 +264,89 @@ export function CatalogViewAppleTV() {
     };
   }, [isSuperAdminPreview]);
 
-  // Pas de filtre par thématique (supprimé)
-  const filteredItems = catalogItems;
+  // Debug demandé : vérifier que les données arrivent bien jusqu'au composant.
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("Cours reçus par le composant:", catalogItems);
+  }, [catalogItems]);
 
-  // Grouper les items par catégorie et trier par date de création (plus récent en premier)
-  const itemsByCategory = filteredItems.reduce((acc, item) => {
-    const category = item.category || "Autres";
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(item);
-    return acc;
-  }, {} as Record<string, CatalogItem[]>);
-  
-  // Trier les items dans chaque catégorie par date de création (plus récent en premier)
-  Object.keys(itemsByCategory).forEach(category => {
-    itemsByCategory[category].sort((a, b) => {
-      const dateA = new Date(a.created_at || 0).getTime();
-      const dateB = new Date(b.created_at || 0).getTime();
-      return dateB - dateA; // Plus récent en premier
+  const { filteredItems, itemsByRowKey, sortedRows } = useMemo(() => {
+    // Contexte /g/:orgSlug : ne pas filtrer sur organization_id (colonne problématique).
+    // On se base uniquement sur les IDs de thématiques de l'API.
+    const allowedCategoryIds = new Set((orgCategoryList ?? []).map((c) => c.id));
+
+    const scoped = currentOrgSlug
+      ? catalogItems.map((item) => {
+          const id = String(item.category_id ?? "").trim();
+          // Si l'item a un category_id qui ne fait pas partie de la galaxie,
+          // on le garde mais on le basculera en "Autres" via la clé de grouping.
+          if (id && allowedCategoryIds.size > 0 && !allowedCategoryIds.has(id)) {
+            return { ...item, category_id: null };
+          }
+          return item;
+        })
+      : catalogItems;
+
+    const byKey = scoped.reduce((acc, item) => {
+      const id = String(item.category_id ?? "").trim();
+      const name =
+        String(item.category_name ?? "").trim() ||
+        String(item.category ?? "").trim() ||
+        String(item.thematique ?? "").trim();
+
+      // Fallback : category_id → sinon category_name/category → sinon "Autres".
+      const key = id || name || AUTRES_ROW_KEY;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {} as Record<string, CatalogItem[]>);
+
+    Object.keys(byKey).forEach((k) => {
+      byKey[k].sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
     });
-  });
 
-  // Trier les catégories par ordre de priorité (catégories populaires en premier)
-  const categoryPriority: Record<string, number> = {
-    "Business": 1,
-    "Intelligence Artificielle": 2,
-    "Soft Skills": 3,
-    "Bac+2": 4,
-    "Leadership": 5,
-    "Neurosciences": 6,
-    "Management": 7,
-    "Vente": 8,
-    "Communication": 9,
-    "Développement personnel": 10,
-    "Autres": 50, // Changé de 999 à 50 pour que "Autres" apparaisse avant les catégories non définies
-  };
+    const titleForKey = (key: string) => {
+      if (key === AUTRES_ROW_KEY) return "Autres";
+      // UUID -> titre depuis l'API (category_name), sinon fallback item.category_name/category.
+      const api = (orgCategoryList ?? []).find((c) => c.id === key);
+      if (api?.name) return api.name;
+      const first = byKey[key]?.[0];
+      return (
+        String(first?.category_name ?? "").trim() ||
+        String(first?.category ?? "").trim() ||
+        String(first?.thematique ?? "").trim() ||
+        key
+      );
+    };
 
-  // Obtenir les catégories triées
-  const sortedCategories = Object.keys(itemsByCategory).sort((a, b) => {
-    const priorityA = categoryPriority[a] || 100;
-    const priorityB = categoryPriority[b] || 100;
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB;
+    const rows: Array<{ key: string; title: string }> = [];
+
+    // Rangées API (tri alphabétique) en premier si galaxie
+    if (currentOrgSlug && orgCategoryList) {
+      const apiSorted = [...orgCategoryList].sort((a, b) =>
+        a.name.localeCompare(b.name, "fr", { sensitivity: "base" }),
+      );
+      for (const c of apiSorted) {
+        if ((byKey[c.id]?.length ?? 0) > 0) rows.push({ key: c.id, title: c.name });
+      }
     }
-    // Si même priorité, trier par date de création (plus récent en premier)
-    const itemsA = itemsByCategory[a];
-    const itemsB = itemsByCategory[b];
-    if (itemsA.length > 0 && itemsB.length > 0) {
-      const latestA = new Date(Math.max(...itemsA.map(item => new Date(item.created_at || 0).getTime())));
-      const latestB = new Date(Math.max(...itemsB.map(item => new Date(item.created_at || 0).getTime())));
-      return latestB.getTime() - latestA.getTime();
-    }
-    // Si même priorité, trier alphabétiquement
-    return a.localeCompare(b, 'fr');
-  });
+
+    const used = new Set(rows.map((r) => r.key));
+    const orphanKeys = Object.keys(byKey)
+      .filter((k) => (byKey[k]?.length ?? 0) > 0)
+      .filter((k) => k !== AUTRES_ROW_KEY)
+      .filter((k) => !used.has(k));
+    orphanKeys.sort((a, b) => titleForKey(a).localeCompare(titleForKey(b), "fr", { sensitivity: "base" }));
+    for (const k of orphanKeys) rows.push({ key: k, title: titleForKey(k) });
+
+    if ((byKey[AUTRES_ROW_KEY]?.length ?? 0) > 0) rows.push({ key: AUTRES_ROW_KEY, title: "Autres" });
+
+    return { filteredItems: scoped, itemsByRowKey: byKey, sortedRows: rows };
+  }, [catalogItems, currentOrgSlug, orgCategoryList]);
 
   // Grouper les items par type
   const itemsByType = {
@@ -331,8 +413,8 @@ export function CatalogViewAppleTV() {
           <div className="h-[85vh] -mt-[44px]" style={{ backgroundColor: bgColor }} />
         )}
 
-        {/* Carrousels horizontaux par catégorie - Style Netflix */}
-        <div className="space-y-10 px-8 pb-16 pt-8">
+        {/* Carrousels horizontaux par thématique - Style Netflix */}
+        <div className="w-full max-w-none space-y-10 px-0 pb-16 pt-8">
           {/* Si pas de contenu, afficher un message */}
           {catalogItems.length === 0 && (
             <div className="text-center py-20">
@@ -342,30 +424,31 @@ export function CatalogViewAppleTV() {
           )}
 
           {/* Afficher une ligne par catégorie (Business, IA, Soft Skills, etc.) */}
-          {sortedCategories.length > 0 ? (
-            sortedCategories.map((category) => {
-              const categoryItems = itemsByCategory[category];
+          {sortedRows.length > 0 ? (
+            sortedRows.map(({ key, title }) => {
+              const categoryItems = itemsByRowKey[key];
               if (!categoryItems || categoryItems.length === 0) return null;
 
               return (
-                <CatalogRow
-                  key={category}
-                  title={category}
-                  items={categoryItems}
-                  onItemClick={(item) => {
-                    if (item.item_type === "module") {
-                      window.location.href = `/dashboard/catalogue/module/${item.id}`;
-                    } else if (item.item_type === "ressource") {
-                      window.location.href = `/dashboard/catalogue/ressource/${item.id}`;
-                    } else if (item.item_type === "test") {
-                      window.location.href = `/dashboard/catalogue/test/${item.id}`;
-                    } else if (item.item_type === "parcours") {
-                      window.location.href = `/dashboard/catalogue/parcours/${item.id}`;
-                    } else {
-                      window.location.href = `/dashboard/catalogue/module/${item.id}`;
-                    }
-                  }}
-                />
+                <div key={key} className="w-full max-w-none">
+                  <CatalogRow
+                    title={title}
+                    items={categoryItems}
+                    onItemClick={(item) => {
+                      if (item.item_type === "module") {
+                        window.location.href = `/dashboard/catalogue/module/${item.id}`;
+                      } else if (item.item_type === "ressource") {
+                        window.location.href = `/dashboard/catalogue/ressource/${item.id}`;
+                      } else if (item.item_type === "test") {
+                        window.location.href = `/dashboard/catalogue/test/${item.id}`;
+                      } else if (item.item_type === "parcours") {
+                        window.location.href = `/dashboard/catalogue/parcours/${item.id}`;
+                      } else {
+                        window.location.href = `/dashboard/catalogue/module/${item.id}`;
+                      }
+                    }}
+                  />
+                </div>
               );
             })
           ) : (

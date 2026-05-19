@@ -26,7 +26,7 @@ export default function SoftSkillsResultsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const response = await fetch("/api/soft-skills/results");
+        const response = await fetch("/api/soft-skills/results", { credentials: "include" });
         if (response.ok) {
           const data = (await response.json()) as ResultPayload;
           if (data?.exists && data?.result?.scores) {
@@ -55,7 +55,7 @@ export default function SoftSkillsResultsPage() {
       router.replace("/soft-skills");
     };
     load();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const fetchAi = async () => {
@@ -165,27 +165,27 @@ export default function SoftSkillsResultsPage() {
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
       `}</style>
-      <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-6 py-20">
-        <div className="w-full space-y-10">
+      <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-12 sm:px-6 sm:py-20">
+        <div className="w-full max-w-full space-y-8 sm:space-y-10">
           <div className="text-center">
-            <h1 className="text-6xl font-semibold tracking-tight">
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
               <span className="bg-gradient-to-r from-white via-[#E5E7EB] to-[#9CA3AF] bg-clip-text text-transparent">
                 Voici ton empreinte.
               </span>
             </h1>
-            <p className="mt-4 text-[15px] text-[#9CA3AF]">Ton potentiel n&apos;est plus invisible.</p>
+            <p className="mt-3 text-sm text-[#9CA3AF] sm:mt-4 sm:text-[15px]">Ton potentiel n&apos;est plus invisible.</p>
           </div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6 }}
-            className="mx-auto h-[420px] w-full max-w-4xl"
+            className="mx-auto h-[280px] w-full max-w-4xl sm:h-[360px] lg:h-[420px]"
           >
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
                 <PolarGrid stroke="rgba(255,255,255,0.12)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: "#E5E7EB", fontSize: 12 }} />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: "#E5E7EB", fontSize: 10 }} />
                 <Radar dataKey="score" stroke="#FF9900" fill="rgba(255,153,0,0.2)" />
                 <Tooltip
                   contentStyle={{ background: "#0F0F0F", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}
@@ -208,9 +208,12 @@ export default function SoftSkillsResultsPage() {
             <h3 className="text-[16px] font-semibold text-white">Ton ADN en détails</h3>
             <div className="space-y-3">
               {ranking.map((skill, index) => (
-                <div key={skill.label} className="flex items-center gap-4 text-[12px]">
-                  <span className="w-40 text-[#9CA3AF]">{skill.label}</span>
-                  <div className="flex-1">
+                <div
+                  key={skill.label}
+                  className="flex flex-col gap-2 text-[12px] sm:flex-row sm:items-center sm:gap-4"
+                >
+                  <span className="min-w-0 shrink-0 text-[#9CA3AF] sm:w-40">{skill.label}</span>
+                  <div className="min-w-0 flex-1">
                     <div className="h-1 rounded-full bg-white/10">
                       <motion.div
                         initial={{ width: 0 }}
@@ -220,7 +223,7 @@ export default function SoftSkillsResultsPage() {
                       />
                     </div>
                   </div>
-                  <span className="w-12 text-right text-white">{skill.value}/15</span>
+                  <span className="shrink-0 text-right text-white sm:w-12">{skill.value}/15</span>
                 </div>
               ))}
             </div>

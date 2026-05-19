@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { LazyBandwidthVideo } from "@/components/media/lazy-bandwidth-video";
 import { cn } from "@/lib/utils";
 import type { LearnerHero as LearnerHeroType, LearnerCard } from "@/lib/queries/apprenant";
 
@@ -55,6 +55,7 @@ type LearnerHeroProps = {
   stats?: HeroStat[];
   quickActions?: QuickAction[];
   highlights?: HeroHighlight[];
+  primaryCtaHref?: string;
 };
 
 export const LearnerHero = ({
@@ -63,6 +64,7 @@ export const LearnerHero = ({
   stats = [],
   quickActions = [],
   highlights = [],
+  primaryCtaHref,
 }: LearnerHeroProps) => {
   const [tasks, setTasks] = useState<TodoTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,6 +108,9 @@ export const LearnerHero = ({
 
   const taskCount = tasks.length;
   const hasHeroImage = hero.backgroundImage && hero.backgroundImage.trim() !== "";
+  const isHeroVideo =
+    (hero.backgroundImage ?? "").toLowerCase().endsWith(".mp4") ||
+    (hero.backgroundImage ?? "").toLowerCase().includes(".mp4?");
 
   return (
     <section className="relative overflow-hidden rounded-[40px] border border-slate-200/70 bg-white text-slate-900 shadow-[0_40px_90px_-55px_rgba(15,23,42,0.4)]">
@@ -323,9 +328,12 @@ export const LearnerHero = ({
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Button className="flex items-center gap-2 rounded-full bg-slate-900 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+              <Link
+                href={primaryCtaHref ?? "/dashboard/student/learning/formations"}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+              >
                 <Play className="h-4 w-4" /> Reprendre
-              </Button>
+              </Link>
               <Button
                 variant="outline"
                 className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -339,13 +347,23 @@ export const LearnerHero = ({
             {hasHeroImage ? (
               <div className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-br from-white to-slate-100 p-6 shadow-[0_30px_60px_-45px_rgba(15,23,42,0.35)]">
                 <div className="relative aspect-[5/4] overflow-hidden rounded-[24px] bg-white">
-                  <Image
-                    src={hero.backgroundImage ?? ""}
-                    alt={hero.title}
-                    fill
-                    priority
-                    className="object-cover"
-                  />
+                  {isHeroVideo ? (
+                    <LazyBandwidthVideo
+                      src={hero.backgroundImage ?? ""}
+                      rootMargin="80px"
+                      className="absolute inset-0 h-full w-full object-cover"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={hero.backgroundImage ?? ""}
+                      alt={hero.title}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  )}
                 </div>
               </div>
             ) : null}

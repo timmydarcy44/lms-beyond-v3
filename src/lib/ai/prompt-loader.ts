@@ -7,6 +7,7 @@ import {
   buildTranslatePrompt,
   buildAudioPrompt,
   buildInsightsPrompt,
+  buildSynthesisSheetPrompt,
 } from "./prompts/text-transformation";
 
 type PromptFeatureId =
@@ -125,6 +126,12 @@ La structure doit être :
       return buildInsightsPrompt(text);
     }
 
+    case "transform-text-synthesis": {
+      const { text } = variables;
+      if (!text) throw new Error("text is required for transform-text-synthesis");
+      return buildSynthesisSheetPrompt(text);
+    }
+
     default:
       throw new Error(`Unknown feature ID: ${featureId}`);
   }
@@ -141,6 +148,7 @@ export function mapTextTransformActionToFeatureId(action: string): PromptFeature
     translate: "transform-text-translate",
     audio: "transform-text-audio",
     insights: "transform-text-insights",
+    synthesis: "transform-text-synthesis",
   };
 
   return mapping[action] || "transform-text-rephrase";

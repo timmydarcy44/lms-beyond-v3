@@ -43,7 +43,7 @@ export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {
       <div className="flex h-full flex-col px-4 py-5 text-white">
         <div className="flex flex-col items-center text-center">
           <img
-            src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Beyond%20Network/Logo_SU_Dives_Cabourg_-_2024.svg"
+            src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Beyond%20Network/Logo_SU_Dives_Cabourg_-_2024.svg"
             alt="SU Dives Cabourg"
             className="h-16 w-16 object-contain"
           />

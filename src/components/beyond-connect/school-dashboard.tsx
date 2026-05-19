@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BarChart3, KanbanSquare } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -33,11 +33,15 @@ type SchoolDashboardProps = {
     created_at?: string | null;
     status?: string | null;
     city?: string | null;
+    salary?: string | null;
+    contract_type?: string | null;
+    description?: string | null;
   }>;
   latestConnected: Array<{
     id: string;
     first_name?: string | null;
     last_name?: string | null;
+    full_name?: string | null;
     updated_at?: string | null;
     role_type?: string | null;
   }>;
@@ -213,7 +217,6 @@ export function SchoolDashboard({
   fullName,
 }: SchoolDashboardProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<ActiveTabKey>("overview");
@@ -272,13 +275,29 @@ export function SchoolDashboard({
   };
 
   const handleTabClick = (tab: ActiveTabKey) => {
+    if (tab === "students") {
+      router.push("/dashboard/ecole/apprenants");
+      return;
+    }
+    if (tab === "classes") {
+      router.push("/dashboard/ecole/classes");
+      return;
+    }
+    if (tab === "companies") {
+      router.push("/dashboard/ecole/entreprises");
+      return;
+    }
+    if (tab === "prospection") {
+      router.push("/dashboard/ecole/prospection");
+      return;
+    }
     setActiveTab(tab);
     if (tab === "overview") {
-      router.replace(pathname);
+      router.replace("/dashboard/ecole");
       return;
     }
     const queryValue = tabToQuery(tab);
-    router.replace(`${pathname}?tab=${queryValue}`);
+    router.replace(`/dashboard/ecole?tab=${queryValue}`);
   };
 
   const discColors: Record<string, string> = {
@@ -603,14 +622,37 @@ export function SchoolDashboard({
 
           <section className="grid gap-4 lg:grid-cols-3" id="offres">
             <div className="rounded-2xl border border-white/20 bg-white/70 p-5 shadow-xl shadow-black/5 backdrop-blur-md">
-              <h3 className="text-sm font-semibold">Dernières Offres</h3>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Dernières Offres</h3>
+                <Link
+                  href="/dashboard/ecole/offres?create=1"
+                  className="shrink-0 rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-semibold text-black/80 hover:bg-black/5"
+                >
+                  + Créer une offre
+                </Link>
+              </div>
               <div className="mt-4 space-y-3 text-sm text-black/70">
                 {latestOffers.length ? (
                   latestOffers.map((offer) => (
-                    <div key={offer.id} className="flex items-center justify-between">
-                      <span>{offer.title || "Offre"}</span>
-                      <span className="text-xs text-black/40">{offer.city || "-"}</span>
-                    </div>
+                    <Link
+                      key={offer.id}
+                      href={`/dashboard/ecole/offres/${offer.id}`}
+                      className="flex flex-col gap-1 rounded-xl border border-black/5 bg-white/80 px-3 py-2.5 transition hover:border-indigo-200 hover:bg-white hover:shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-medium text-black">{offer.title || "Offre"}</span>
+                        {offer.status ? (
+                          <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black/50">
+                            {offer.status}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-black/45">
+                        <span>{offer.city || "—"}</span>
+                        {offer.contract_type ? <span>{offer.contract_type}</span> : null}
+                        {offer.salary ? <span>{offer.salary}</span> : null}
+                      </div>
+                    </Link>
                   ))
                 ) : (
                   <p className="text-xs text-black/40">Aucune offre récente.</p>
@@ -624,7 +666,9 @@ export function SchoolDashboard({
                   latestConnected.map((row) => (
                     <div key={row.id} className="flex items-center justify-between">
                       <span>
-                        {(row.first_name || "") + " " + (row.last_name || "")}
+                        {String(row.full_name || "").trim() ||
+                          `${row.first_name || ""} ${row.last_name || ""}`.trim() ||
+                          "—"}
                       </span>
                       <span className="text-xs text-black/40">{row.role_type || "-"}</span>
                     </div>
@@ -1378,9 +1422,9 @@ export function SchoolDashboard({
                 return (
                   <label
                     key={offer.id}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -1392,9 +1436,19 @@ export function SchoolDashboard({
                           }
                         }}
                       />
-                      <span className="text-black/80">{offer.title || "Offre"}</span>
+                      <span className="truncate text-black/80">{offer.title || "Offre"}</span>
                     </div>
-                    <span className="text-xs font-semibold text-[#0071E3]">{matchScore}%</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-xs font-semibold text-[#0071E3]">{matchScore}%</span>
+                      <Link
+                        href={`/dashboard/ecole/offres/${offer.id}`}
+                        className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        Fiche
+                      </Link>
+                    </div>
                   </label>
                 );
               })

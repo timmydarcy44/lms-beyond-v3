@@ -70,6 +70,9 @@ const roleMapping: Record<UserRole, "learner" | "instructor" | "tutor" | "admin"
   admin: "admin",
   entreprise: "admin",
   ecole: "admin",
+  club: "admin",
+  partenaire: "admin",
+  demo: "learner",
 };
 
 // Types de tâches par rôle
@@ -259,7 +262,25 @@ export function KanbanBoard({ role }: KanbanBoardProps) {
       const response = await fetch(`/api/todo-tasks?role_filter=${roleFilter}`);
       if (!response.ok) throw new Error("Erreur lors du chargement");
       const data = await response.json();
-      setTasks(data);
+      const raw = Array.isArray(data) ? data : [];
+      const mapped: TodoTask[] = raw.map((row: Record<string, unknown>) => ({
+        id: String(row.id),
+        title: String(row.title ?? ""),
+        description: (row.description as string | null) ?? null,
+        due_date: (row.due_date as string | null) ?? null,
+        priority: ((row.priority as TaskPriority) || "normal") as TaskPriority,
+        status: ((row.status as TaskStatus) || "todo") as TaskStatus,
+        task_type: ((row.task_type as TaskType) || "student_followup") as TaskType,
+        role_filter: ((row.role_filter as TodoTask["role_filter"]) || roleFilter) as TodoTask["role_filter"],
+        tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+        subtasks: Array.isArray(row.subtasks)
+          ? (row.subtasks as Array<{ id: string; title: string; completed: boolean }>)
+          : [],
+        kanban_position: typeof row.kanban_position === "number" ? row.kanban_position : 0,
+        created_at: String(row.created_at ?? new Date().toISOString()),
+        updated_at: String(row.updated_at ?? row.created_at ?? new Date().toISOString()),
+      }));
+      setTasks(mapped);
     } catch (error) {
       console.error("[kanban] Error loading tasks:", error);
       toast.error("Erreur lors du chargement des tâches");

@@ -17,7 +17,7 @@ export async function GET() {
     }
 
     const { data, error } = await supabase
-      .from("soft_skills_results")
+      .from("soft_skills_resultats")
       .select("*")
       .eq("learner_id", user.id)
       .order("taken_at", { ascending: false })

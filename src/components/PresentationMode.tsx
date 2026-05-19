@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { LazyBandwidthVideo } from "@/components/media/lazy-bandwidth-video";
 
 type Slide = {
   id: number;
@@ -26,7 +27,7 @@ const SLIDES: Slide[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=2000&q=80",
     videoUrl:
-      "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/video_header%20(2).mp4",
+      "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/video_header%20(2).mp4",
     imageCaption:
       "Visuel abstrait : connexions lumineuses, lignes de code vers un arbre de compétences / cerveau stylisé.",
     body: (
@@ -287,9 +288,12 @@ export default function PresentationMode() {
               ) : null}
               {current.videoUrl ? (
                 <div className="mt-6 overflow-hidden rounded-[28px] border border-white/10 bg-white/5">
-                  <video
+                  <LazyBandwidthVideo
                     src={current.videoUrl}
-                    className="h-[260px] w-full object-cover"
+                    poster={current.imageUrl}
+                    eager
+                    className="absolute inset-0 h-full w-full object-cover"
+                    wrapperClassName="relative h-[260px] w-full"
                     autoPlay
                     muted
                     loop

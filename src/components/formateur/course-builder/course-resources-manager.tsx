@@ -3,10 +3,13 @@
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { nanoid } from "nanoid";
+import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -30,9 +33,11 @@ type GeneratedQuestion = {
   explication?: string;
   points?: number;
   type?: string;
+  image_keyword?: string;
 };
 
 export function CourseResourcesManager({ courseId }: { courseId?: string }) {
+  const pathname = usePathname();
   const snapshot = useCourseBuilder((state) => state.snapshot);
   const resources = useCourseBuilder((state) => state.snapshot.resources);
   const tests = useCourseBuilder((state) => state.snapshot.tests);
@@ -41,6 +46,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   const removeResource = useCourseBuilder((state) => state.removeResource);
   const updateTest = useCourseBuilder((state) => state.updateTest);
   const removeTest = useCourseBuilder((state) => state.removeTest);
+  const hydrateFromSnapshot = useCourseBuilder((state) => state.hydrateFromSnapshot);
 
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [selectedSectionIds, setSelectedSectionIds] = useState<Record<string, boolean>>({});
@@ -57,6 +63,15 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
   const [placementType, setPlacementType] = useState("end");
   const [placementId, setPlacementId] = useState("");
+  const [quizTitle, setQuizTitle] = useState("");
+
+  const effectiveCourseId = useMemo(() => {
+    if (courseId) return String(courseId);
+    const match = String(pathname ?? "").match(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i,
+    );
+    return match ? match[0] : undefined;
+  }, [courseId, pathname]);
 
   const placementOptions = useMemo(() => {
     const options: Array<{ value: string; label: string; type: string; id?: string }> = [
@@ -65,21 +80,21 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
     snapshot.sections.forEach((section, sectionIndex) => {
       options.push({
         value: `after_section:${section.id}`,
-        label: `Après la section ${sectionIndex + 1} · ${section.title || "Sans titre"}`,
+        label: `À la fin de la section ${sectionIndex + 1} · ${section.title || "Sans titre"}`,
         type: "after_section",
         id: section.id,
       });
       section.chapters.forEach((chapter, chapterIndex) => {
         options.push({
           value: `after_chapter:${chapter.id}`,
-          label: `Après le chapitre ${sectionIndex + 1}.${chapterIndex + 1} · ${chapter.title || "Sans titre"}`,
+          label: `À la fin du chapitre ${sectionIndex + 1}.${chapterIndex + 1} · ${chapter.title || "Sans titre"}`,
           type: "after_chapter",
           id: chapter.id,
         });
         chapter.subchapters.forEach((sub, subIndex) => {
           options.push({
             value: `after_subchapter:${sub.id}`,
-            label: `Après le sous-chapitre ${sectionIndex + 1}.${chapterIndex + 1}.${subIndex + 1} · ${sub.title || "Sans titre"}`,
+            label: `Juste après le sous-chapitre ${sectionIndex + 1}.${chapterIndex + 1}.${subIndex + 1} · ${sub.title || "Sans titre"}`,
             type: "after_subchapter",
             id: sub.id,
           });
@@ -198,6 +213,10 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
           explication: question.explication || "",
           points: pointsPerQuestion,
           type: questionType === "mixed" ? "qcm" : questionType,
+          image_keyword:
+            typeof question.image_keyword === "string" && question.image_keyword.trim()
+              ? question.image_keyword.trim()
+              : undefined,
         })),
       );
     } catch (error) {
@@ -209,8 +228,14 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   };
 
   const handleSaveQuiz = async () => {
-    if (!courseId) {
+    console.info("[quiz] SAVE_CLICK", { courseId: effectiveCourseId, generatedQuestionsCount: generatedQuestions.length });
+    if (!effectiveCourseId) {
       toast.error("Enregistrez la formation avant de sauvegarder un quiz.");
+      return;
+    }
+    const trimmedQuizTitle = quizTitle.trim();
+    if (!trimmedQuizTitle) {
+      toast.error("Indiquez un titre pour ce quiz.");
       return;
     }
     if (generatedQuestions.length === 0) {
@@ -218,14 +243,16 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
       return;
     }
     setIsSaving(true);
+    const loadingId = toast.loading("Sauvegarde du quiz…");
     try {
-      const testTitle = `Quiz IA · ${snapshot.general.title || "Formation"}`;
       const response = await fetch("/api/formateur/quiz/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          formation_id: courseId,
-          titre: testTitle,
+          formation_id: effectiveCourseId,
+          title: trimmedQuizTitle,
+          titre: trimmedQuizTitle,
+          description: "",
           questions: generatedQuestions,
           scoring: {
             points_par_question: pointsPerQuestion,
@@ -238,13 +265,160 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
       });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload?.error || "Sauvegarde impossible");
+        const code = String(payload?.code ?? "");
+        const message = String(payload?.error ?? "Sauvegarde impossible");
+        const details = payload?.details || payload?.hint || payload?.code || "";
+        const isMissingTable =
+          code === "42P01" ||
+          message.toLowerCase().includes("42p01") ||
+          message.toLowerCase().includes("relation") && message.toLowerCase().includes("does not exist");
+        if (isMissingTable) {
+          throw new Error("La table de base de données [tests] est manquante. Veuillez contacter l'administrateur.");
+        }
+        throw new Error(details ? `${message} (${details})` : message);
       }
-      toast.success("Félicitations, votre quiz est crée");
+      const testId = payload?.test_id ? String(payload.test_id) : "";
+      const quizUrl = testId ? `/quiz?testId=${encodeURIComponent(testId)}` : "";
+
+      // Construire un snapshot unique (évite d'écraser `tests` lors de l'injection)
+      const next = structuredClone(snapshot) as any;
+
+      // Ajouter au snapshot.tests (réutilisable ensuite pour insertion manuelle / preview)
+      const testLocalId = nanoid();
+      next.tests = Array.isArray(next.tests) ? next.tests : [];
+      next.tests = [...next.tests, { id: testLocalId, title: trimmedQuizTitle, type: "quiz", url: quizUrl }];
+
+      // Injection : le quiz est un sous-chapitre (kind: "quiz"), jamais un chapitre vide dédié.
+      const insertQuizBlock = (base: any) => {
+        const updated = base as any;
+        const quizBlock = {
+          id: nanoid(),
+          title: trimmedQuizTitle,
+          duration: "",
+          type: "document",
+          summary: "",
+          content: quizUrl
+            ? `<p><a href="${quizUrl}" target="_blank" rel="noreferrer">Ouvrir le quiz</a></p>`
+            : "<p>Ouvrir le quiz</p>",
+          quiz_id: testId,
+          kind: "quiz",
+        };
+
+        const appendQuizToChapter = (ch: any) => {
+          if (!ch) return false;
+          ch.subchapters = Array.isArray(ch.subchapters) ? ch.subchapters : [];
+          ch.subchapters.push(quizBlock);
+          return true;
+        };
+
+        const place = placementType;
+        const pid = placementId;
+
+        if (place === "after_section") {
+          const sectionIndex = updated.sections.findIndex((s: any) => s.id === pid);
+          if (sectionIndex >= 0) {
+            const s = updated.sections[sectionIndex];
+            s.chapters = Array.isArray(s.chapters) ? s.chapters : [];
+            if (s.chapters.length === 0) {
+              s.chapters.push({
+                id: nanoid(),
+                title: "Chapitre",
+                duration: "",
+                type: "document",
+                summary: "",
+                content: "",
+                subchapters: [quizBlock],
+              });
+            } else {
+              appendQuizToChapter(s.chapters[s.chapters.length - 1]);
+            }
+            return updated;
+          }
+        }
+
+        if (place === "after_chapter") {
+          for (const s of updated.sections) {
+            const chapterIndex = (s.chapters || []).findIndex((c: any) => c.id === pid);
+            if (chapterIndex >= 0) {
+              const ch = s.chapters[chapterIndex];
+              appendQuizToChapter(ch);
+              return updated;
+            }
+          }
+        }
+
+        if (place === "after_subchapter") {
+          for (const s of updated.sections) {
+            for (const ch of s.chapters || []) {
+              const subs = Array.isArray(ch.subchapters) ? ch.subchapters : [];
+              const idx = subs.findIndex((sub: any) => sub.id === pid);
+              if (idx >= 0) {
+                ch.subchapters = subs;
+                ch.subchapters.splice(idx + 1, 0, quizBlock);
+                return updated;
+              }
+            }
+          }
+        }
+
+        // end / fallback → dernier sous-chapitre du dernier chapitre du dernier module
+        const lastSection = updated.sections[updated.sections.length - 1];
+        if (lastSection) {
+          lastSection.chapters = Array.isArray(lastSection.chapters) ? lastSection.chapters : [];
+          if (lastSection.chapters.length === 0) {
+            lastSection.chapters.push({
+              id: nanoid(),
+              title: "Chapitre",
+              duration: "",
+              type: "document",
+              summary: "",
+              content: "",
+              subchapters: [quizBlock],
+            });
+          } else {
+            appendQuizToChapter(lastSection.chapters[lastSection.chapters.length - 1]);
+          }
+          return updated;
+        }
+
+        // Aucune section → créer une section minimale avec un chapitre qui ne contient que le quiz
+        updated.sections = updated.sections || [];
+        updated.sections.push({
+          id: nanoid(),
+          title: "Section",
+          description: "",
+          chapters: [
+            {
+              id: nanoid(),
+              title: "Chapitre",
+              duration: "",
+              type: "document",
+              summary: "",
+              content: "",
+              subchapters: [quizBlock],
+            },
+          ],
+        });
+        return updated;
+      };
+
+      try {
+        const injected = insertQuizBlock(next);
+        hydrateFromSnapshot(injected);
+      } catch (e) {
+        console.warn("[quiz] injection failed", e);
+        hydrateFromSnapshot(next);
+      }
+
+      toast.dismiss(loadingId);
+      toast.success("Quiz créé", { description: "Le quiz a été ajouté au builder et à la liste des tests." });
       setIsQuizModalOpen(false);
     } catch (error) {
       console.error(error);
-      toast.error("Erreur lors de la sauvegarde du quiz.");
+      toast.dismiss(loadingId);
+      toast.error("Erreur lors de la sauvegarde du quiz.", {
+        description: error instanceof Error ? error.message : "Une erreur est survenue.",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -300,7 +474,10 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
             <Plus className="mr-2 h-3.5 w-3.5" /> Ressource
           </Button>
           <Button
-            onClick={() => setIsQuizModalOpen(true)}
+            onClick={() => {
+              setQuizTitle("");
+              setIsQuizModalOpen(true);
+            }}
             className="rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-xs font-semibold text-white"
           >
             ✨ Générer un quiz IA
@@ -402,44 +579,61 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
       </CardContent>
 
       <Dialog open={isQuizModalOpen} onOpenChange={setIsQuizModalOpen}>
-        <DialogContent className="max-w-4xl border border-white/10 bg-[#0a0a0a] text-white p-0">
+        <DialogContent className="max-w-4xl overflow-hidden border border-white/10 bg-slate-950 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-fuchsia-900/20 p-0 text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.9)] backdrop-blur-xl">
           <div className="flex max-h-[85vh] flex-col">
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <DialogHeader>
-                <DialogTitle>Sélectionnez les chapitres à analyser</DialogTitle>
-                <DialogDescription className="text-white/60">
-                  L&apos;IA va lire le contenu de ces chapitres et générer des questions automatiquement
+                <DialogTitle className="text-white">Générer un quiz avec l&apos;IA</DialogTitle>
+                <DialogDescription className="text-slate-300">
+                  Choisissez les chapitres sources, positionnez le quiz, puis générez et ajustez vos questions.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-3 rounded-2xl border border-white/10 bg-[#111] p-4 text-sm text-white/80">
+              <div className="space-y-2">
+                <Label htmlFor="quiz-title" className="text-sm font-semibold text-white">
+                  Titre du quiz <span className="text-rose-300">*</span>
+                </Label>
+                <Input
+                  id="quiz-title"
+                  value={quizTitle}
+                  onChange={(event) => setQuizTitle(event.target.value)}
+                  placeholder="Ex. : Bilan — fondamentaux HSE"
+                  required
+                  className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/35"
+                />
+                <p className="text-xs text-slate-300/80">Ce titre apparaîtra dans le sommaire côté apprenant.</p>
+              </div>
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-slate-100 backdrop-blur-md">
                 {snapshot.sections.map((section) => (
                   <div key={section.id} className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-semibold">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-white">
                       <input
                         type="checkbox"
                         checked={Boolean(selectedSectionIds[section.id])}
                         onChange={(event) => toggleSection(section.id, event.target.checked)}
+                        className="accent-indigo-400"
                       />
                       {section.title || "Section"}
                     </label>
                     <div className="space-y-2 pl-4">
                       {section.chapters.map((chapter) => (
                         <div key={chapter.id} className="space-y-1">
-                          <label className="flex items-center gap-2 text-sm text-white/80">
+                          <label className="flex items-center gap-2 text-sm text-slate-200">
                             <input
                               type="checkbox"
                               checked={Boolean(selectedChapterIds[chapter.id])}
                               onChange={(event) => toggleChapter(section.id, chapter.id, event.target.checked)}
+                              className="accent-indigo-400"
                             />
                             Chapitre : {chapter.title || "Sans titre"}
                           </label>
-                          <div className="space-y-1 pl-4 text-xs text-white/60">
+                          <div className="space-y-1 pl-4 text-xs text-slate-300/90">
                             {chapter.subchapters.map((sub) => (
                               <label key={sub.id} className="flex items-center gap-2">
                                 <input
                                   type="checkbox"
                                   checked={Boolean(selectedSubchapterIds[sub.id])}
                                   onChange={(event) => toggleSubchapter(sub.id, event.target.checked)}
+                                  className="accent-indigo-400"
                                 />
                                 {sub.title || "Sous-chapitre"}
                               </label>
@@ -469,7 +663,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                   <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-white">
                     <SelectValue placeholder="Choisir un emplacement" />
                   </SelectTrigger>
-                  <SelectContent className="border border-white/10 bg-[#1a1a1a] text-white">
+                  <SelectContent className="border border-white/10 bg-slate-950/95 text-white backdrop-blur-xl">
                     {placementOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value} className="text-white">
                         {option.label}
@@ -483,7 +677,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                   <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-white">
                     <SelectValue placeholder="Nombre de questions" />
                   </SelectTrigger>
-                  <SelectContent className="border border-white/10 bg-[#1a1a1a] text-white">
+                  <SelectContent className="border border-white/10 bg-slate-950/95 text-white backdrop-blur-xl">
                     {["5", "10", "15", "20"].map((value) => (
                       <SelectItem key={value} value={value} className="text-white">
                         {value}
@@ -495,7 +689,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                   <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-white">
                     <SelectValue placeholder="Type de questions" />
                   </SelectTrigger>
-                  <SelectContent className="border border-white/10 bg-[#1a1a1a] text-white">
+                  <SelectContent className="border border-white/10 bg-slate-950/95 text-white backdrop-blur-xl">
                     <SelectItem value="qcm" className="text-white">QCM (choix multiple)</SelectItem>
                     <SelectItem value="vrai_faux" className="text-white">Vrai / Faux</SelectItem>
                     <SelectItem value="ordering" className="text-white">Remise en ordre</SelectItem>
@@ -506,7 +700,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                   <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-white">
                     <SelectValue placeholder="Niveau de difficulté" />
                   </SelectTrigger>
-                  <SelectContent className="border border-white/10 bg-[#1a1a1a] text-white">
+                  <SelectContent className="border border-white/10 bg-slate-950/95 text-white backdrop-blur-xl">
                     {["Facile", "Moyen", "Difficile"].map((value) => (
                       <SelectItem key={value} value={value} className="text-white">
                         {value}
@@ -574,7 +768,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                         ? ["Vrai", "Faux"]
                         : question.options;
                       return (
-                        <div key={`${question.question}-${index}`} className="rounded-2xl border border-white/10 bg-[#111] p-4 space-y-3">
+                        <div key={`${question.question}-${index}`} className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur-md">
                           <div className="flex items-center justify-between gap-2">
                             <Input
                               value={question.question}
@@ -677,7 +871,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                                 <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-white">
                                   <SelectValue placeholder="Bonne réponse" />
                                 </SelectTrigger>
-                                <SelectContent className="border border-white/10 bg-[#1a1a1a] text-white">
+                                <SelectContent className="border border-white/10 bg-slate-950/95 text-white backdrop-blur-xl">
                                   {options.map((_, optIndex) => (
                                     <SelectItem key={`${index}-correct-${optIndex}`} value={String(optIndex)} className="text-white">
                                       Option {optIndex + 1}
@@ -732,7 +926,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                 </div>
               ) : null}
             </div>
-            <div className="sticky bottom-0 border-t border-white/10 bg-[#0a0a0a]/95 px-6 py-4 backdrop-blur">
+            <div className="sticky bottom-0 border-t border-white/10 bg-slate-950/80 px-6 py-4 backdrop-blur-xl">
               <div className="flex items-center justify-end gap-3">
                 <Button
                   type="button"
@@ -746,7 +940,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                   type="button"
                   onClick={handleSaveQuiz}
                   disabled={isSaving}
-                  className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-black"
+                  className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-white/90"
                 >
                   Sauvegarder
                 </Button>

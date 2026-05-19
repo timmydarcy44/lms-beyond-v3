@@ -56,6 +56,7 @@ export default function SoftSkillsTestPage() {
       const response = await fetch("/api/soft-skills/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ answers }),
       });
       if (response.ok) {
@@ -97,7 +98,7 @@ export default function SoftSkillsTestPage() {
           </motion.div>
         </div>
 
-        <div className="flex min-h-screen flex-col justify-between px-10 py-12">
+        <div className="flex min-h-screen flex-col justify-between px-4 py-8 sm:px-8 sm:py-12 lg:px-10">
           <div>
             <div className="h-1 w-full rounded-full bg-white/10">
               <div className="h-1 rounded-full bg-[#F59E0B]" style={{ width: `${progress}%` }} />
@@ -114,12 +115,12 @@ export default function SoftSkillsTestPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -32 }}
                 transition={{ duration: 0.35 }}
-                className="mt-12 space-y-4"
+                className="mt-8 space-y-4 sm:mt-12"
               >
-                <div className="text-[12px] font-semibold uppercase tracking-[0.25em] text-[#F59E0B]">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#F59E0B] sm:text-[12px]">
                   {currentQuestion.skill}
                 </div>
-                <h1 className="text-[28px] font-semibold leading-snug text-white">
+                <h1 className="text-xl font-semibold leading-snug text-white sm:text-2xl md:text-[28px]">
                   {currentQuestion.text}
                 </h1>
               </motion.div>

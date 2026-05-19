@@ -3,10 +3,11 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getSession } from "@/lib/auth/session";
 import { getTenantFromHeaders } from "@/lib/tenant/detection-server";
+import { isJessicaContentinMarketingHostname } from "@/lib/tenant/config";
 import { getSuperAdminBranding } from "@/lib/queries/super-admin-branding";
 import { getServerClient } from "@/lib/supabase/server";
 import { LandingPage } from "@/components/tenant/landing-page";
-import { BeyondCenterHome } from "@/components/beyond-center/beyond-center-home";
+import { BeyondSaasLanding } from "@/components/marketing/beyond-saas-landing";
 import { generateSEOMetadata } from "@/lib/seo/jessica-contentin-seo";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,19 @@ export async function generateMetadata(): Promise<Metadata> {
     hostname.startsWith("127.0.0.1") ||
     hostname.includes("localhost");
 
-  if (tenant?.id === "jessica-contentin" && !isLocalhost) {
+  const hostOnly = hostname.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
+  if (hostOnly === "edgebs.fr" && !isLocalhost) {
+    return {
+      metadataBase: new URL("https://edgebs.fr"),
+      title: "EDGE — Club privé d’apprentissage",
+      description:
+        "IA, vente, management, comportement : parcours concrets, compétences validées par livrables réels.",
+      alternates: {
+        canonical: "https://edgebs.fr/",
+      },
+    };
+  }
+  if ((tenant?.id === "jessica-contentin" || isJessicaContentinMarketingHostname(hostname)) && !isLocalhost) {
     return {
       ...generateSEOMetadata("home"),
       metadataBase: new URL("https://jessicacontentin.fr"),
@@ -34,7 +47,6 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   }
 
-  const hostOnly = hostname.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
   if (hostOnly === "beyondcenter.fr" && !isLocalhost) {
     return {
       metadataBase: new URL("https://beyondcenter.fr"),
@@ -62,9 +74,25 @@ export default async function Home() {
   const headersList = await headers();
   const hostname = headersList.get('host') || '';
   const isLocalhost = hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1') || hostname.includes('localhost');
-  
-  console.log('[Home] Hostname:', hostname, 'Tenant:', tenant?.id, 'IsLocalhost:', isLocalhost);
-  
+  const hostOnly = hostname.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
+
+  /** EDGE Lab sur domaine dédié. */
+  if (!isLocalhost && hostOnly === "edgebs.fr") {
+    const { default: EdgeLabLandingPage } = await import("@/app/edge-lab/page");
+    return <EdgeLabLandingPage />;
+  }
+
+  /** Home vitrine Jessica : ne jamais servir Beyond ici, même si les headers tenant sont absents. */
+  if (!isLocalhost && isJessicaContentinMarketingHostname(hostname)) {
+    const { default: JessicaContentinHomePage } = await import("@/app/jessica-contentin/page");
+    const { JessicaContentinLayout } = await import("@/app/jessica-contentin/layout");
+    return (
+      <JessicaContentinLayout>
+        <JessicaContentinHomePage />
+      </JessicaContentinLayout>
+    );
+  }
+
   if (tenant && !isLocalhost) {
     // Si c'est le tenant jessica-contentin-app (app.jessicacontentin.fr), rediriger vers la page ressources
     if (tenant.id === 'jessica-contentin-app') {
@@ -97,18 +125,41 @@ export default async function Home() {
         branding = await getSuperAdminBranding(profile.id);
       }
 
-      console.log('[Home] Rendering LandingPage for tenant:', tenant.id);
       return <LandingPage tenant={tenant} branding={branding} />;
     }
   }
-  
-  console.log('[Home] Using default LMS behavior (localhost or no tenant)');
 
   // Sinon, page d'accueil Beyond Center (B2B)
   const session = await getSession();
   if (session) {
-    redirect("/dashboard/profil");
+    const supabase = await getServerClient();
+    if (!supabase) {
+      redirect("/dashboard");
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, company_id")
+      .eq("id", session.id)
+      .maybeSingle();
+
+    const role = String((profile as any)?.role ?? session.role ?? "")
+      .trim()
+      .toLowerCase();
+    const companyId = ((profile as any)?.company_id as string | null | undefined) ?? null;
+
+    if (role === "admin_hr") {
+      redirect(companyId ? "/dashboard/entreprise" : "/dashboard/apprenant");
+    }
+    if (role === "expert") {
+      redirect("/dashboard/expert/interventions");
+    }
+    if (role === "employee") {
+      redirect("/dashboard/salarie");
+    }
+
+    redirect("/dashboard");
   }
 
-  return <BeyondCenterHome />;
+  return <BeyondSaasLanding />;
 }

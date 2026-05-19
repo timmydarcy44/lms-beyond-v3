@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import {
   getLearnerContentDetail,
-  isLearnerCategory,
   type LearnerCategory,
 } from "@/lib/queries/apprenant";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SectionSlider } from "@/components/dashboard/section-slider";
 import { FormationDetailView, type Episode } from "./view";
+import { edgeOnlinePublicHref, type EdgeOnlineHrefPrefix } from "@/lib/edge-online-public-path";
 
 const CATEGORY_LABEL: Record<LearnerCategory, string> = {
   formations: "Formation",
@@ -26,6 +26,16 @@ export default async function FormationDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  return await renderFormationDetailPage({ slug, orgSlug: null });
+}
+
+export async function renderFormationDetailPage(args: {
+  slug: string;
+  orgSlug: string | null;
+  /** Présent sur `/edgeonline/formations/*` : fil d’Ariane + cartes connexes avec chemins canoniques `/formations`. */
+  edgeOnlineHrefPrefix?: EdgeOnlineHrefPrefix;
+}) {
+  const { slug, orgSlug, edgeOnlineHrefPrefix } = args;
   const category: LearnerCategory = "formations";
 
   const detail = await getLearnerContentDetail(category, slug);
@@ -38,11 +48,40 @@ export default async function FormationDetailPage({
   const firstLesson = lessons[0];
   const playHref = firstLesson ? `${card.href}/play/${firstLesson.id}` : card.href;
 
-  const breadcrumbs = [
-    { label: "Dashboard", href: "/dashboard/apprenant" },
-    { label: CATEGORY_LABEL[category] },
-    { label: info.title },
-  ];
+  const formationsIndexHref =
+    orgSlug && edgeOnlineHrefPrefix !== undefined
+      ? edgeOnlinePublicHref("/formations", edgeOnlineHrefPrefix)
+      : null;
+
+  const breadcrumbs = orgSlug
+    ? formationsIndexHref
+      ? [
+          { label: "Formations", href: formationsIndexHref },
+          { label: CATEGORY_LABEL[category] },
+          { label: info.title },
+        ]
+      : [
+          { label: "Dashboard", href: `/g/${encodeURIComponent(orgSlug)}/dashboard/student/learning/formations` },
+          { label: CATEGORY_LABEL[category] },
+          { label: info.title },
+        ]
+    : [
+        { label: "Dashboard", href: "/dashboard/apprenant" },
+        { label: CATEGORY_LABEL[category] },
+        { label: info.title },
+      ];
+
+  const relatedForSlider =
+    edgeOnlineHrefPrefix !== undefined && related.length > 0
+      ? related.map((rc) => {
+          const rs = String(rc.slug ?? rc.id ?? "").trim();
+          if (!rs) return rc;
+          return {
+            ...rc,
+            href: edgeOnlinePublicHref(`/formations/${encodeURIComponent(rs)}`, edgeOnlineHrefPrefix),
+          };
+        })
+      : related;
 
   const contentType = "course";
 
@@ -72,6 +111,7 @@ export default async function FormationDetailPage({
         title: lesson.title,
         description: lesson.summary ?? lesson.description ?? undefined,
         imageUrl: resolvedImage,
+        videoUrl: lesson.videoUrl ?? lesson.mediaUrl ?? undefined,
         href: `${card.href}/play/${lesson.id}`,
         progress: lesson.progress ?? module.progress ?? null,
         durationLabel: typeof lesson.durationLabel === "string" ? lesson.durationLabel : null,
@@ -83,25 +123,28 @@ export default async function FormationDetailPage({
 
   return (
     <LearningSessionTracker contentType={contentType} contentId={card.id}>
-      <div className="min-h-screen bg-black text-white">
+      <div className="m-0 ml-0 min-h-screen w-full max-w-none bg-black p-0 pl-0 text-white">
         <DashboardShell
           title={info.title}
           breadcrumbs={breadcrumbs}
           forcedTheme="dark"
           className="bg-black text-white"
+          hideSidebar
+          mainClassName="!m-0 !ml-0 !mt-0 !p-0 !px-0 !pl-0 !pt-0 w-full max-w-none"
         >
           <FormationDetailView
             card={card}
             info={info}
-            related={related}
+            related={relatedForSlider}
             playHref={playHref}
             episodes={episodes}
             breadcrumbs={breadcrumbs}
+            orgSlug={orgSlug}
           />
-          {related.length > 0 && (
+          {relatedForSlider.length > 0 && (
             <SectionSlider
               title="Vous aimerez aussi"
-              cards={related.map((card) => ({
+              cards={relatedForSlider.map((card) => ({
                 ...card,
                 cta: card.cta ?? undefined,
                 meta: card.meta ?? undefined,

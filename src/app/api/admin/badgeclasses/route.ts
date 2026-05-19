@@ -236,10 +236,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, badgeClass });
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[badgeclasses][post] error", error);
-    }
+    console.error("[badgeclasses][post] error", {
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : undefined,
+    });
     if (error instanceof PrismaClientKnownRequestError) {
+      console.error("[badgeclasses][post] prisma error details", { code: error.code, meta: error.meta });
       if (error.code === "P2002") {
         const target = Array.isArray(error.meta?.target) ? error.meta?.target.join(",") : "";
         const field = target.includes("name") ? "name" : target.includes("slug") ? "slug" : undefined;
@@ -265,9 +267,8 @@ export async function POST(request: Request) {
     }
     return NextResponse.json(
       {
-        ok: false,
         error: "INTERNAL_ERROR",
-        message: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 },
     );
@@ -275,24 +276,43 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const auth = requireRole(request, [UserRole.SUPER_ADMIN]);
-  if (!auth.ok) return auth.response;
+  try {
+    const auth = requireRole(request, [UserRole.SUPER_ADMIN]);
+    if (!auth.ok) return auth.response;
 
-  const url = new URL(request.url);
-  const queryOrgId = url.searchParams.get("organizationId");
-  if (queryOrgId && queryOrgId !== auth.user.orgId) {
-    return NextResponse.json({ error: "ORG_MISMATCH" }, { status: 400 });
+    const url = new URL(request.url);
+    const queryOrgId = url.searchParams.get("organizationId");
+    if (queryOrgId && queryOrgId !== auth.user.orgId) {
+      return NextResponse.json({ error: "ORG_MISMATCH", details: "organizationId mismatch" }, { status: 400 });
+    }
+
+    const badgeClasses = await prisma.badgeClass.findMany({
+      where: { orgId: auth.user.orgId },
+      include: {
+        issuer: true,
+        criteria: { orderBy: { sortOrder: "asc" } },
+        receivability: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ ok: true, badgeClasses: badgeClasses ?? [] }, { status: 200 });
+  } catch (error) {
+    // Si la table n'existe pas (migration manquante), on ne fait pas planter l'admin UI.
+    console.error("[badgeclasses][get] error", {
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : undefined,
+    });
+    if (error instanceof PrismaClientKnownRequestError) {
+      console.error("[badgeclasses][get] prisma error details", { code: error.code, meta: error.meta });
+      // Prisma: "The table `...` does not exist in the current database."
+      if (error.code === "P2021") {
+        return NextResponse.json({ ok: true, badgeClasses: [] }, { status: 200 });
+      }
+    }
+    return NextResponse.json(
+      { error: "INTERNAL_ERROR", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    );
   }
-
-  const badgeClasses = await prisma.badgeClass.findMany({
-    where: { orgId: auth.user.orgId },
-    include: {
-      issuer: true,
-      criteria: { orderBy: { sortOrder: "asc" } },
-      receivability: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json({ ok: true, badgeClasses });
 }

@@ -1,6 +1,6 @@
 const { createClient } = require("@supabase/supabase-js");
 
-const SUPABASE_URL = "https://fqqqejpakbccwvrlolpc.supabase.co";
+const SUPABASE_URL = "https://zmcefidiiqqppowymoxt.supabase.co";
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!key) {

@@ -42,7 +42,7 @@ export function OrganizationFeaturesManager({
     setLoading(true);
     console.log("[OrganizationFeaturesManager] Loading features for orgId:", orgId);
     try {
-      const response = await fetch(`/api/super-admin/organizations/${orgId}/features`);
+      const response = await fetch(`/api/super-admin/organisations/${orgId}/features`);
       console.log("[OrganizationFeaturesManager] API response status:", response.status);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -68,7 +68,7 @@ export function OrganizationFeaturesManager({
     setUpdating(featureKey);
     try {
       const response = await fetch(
-        `/api/super-admin/organizations/${orgId}/features/${featureKey}`,
+        `/api/super-admin/organisations/${orgId}/features/${featureKey}`,
         {
           method: enabled ? "POST" : "DELETE",
           headers: { "Content-Type": "application/json" },

@@ -1,150 +1,136 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Video } from "lucide-react";
-import { env } from "@/lib/env";
 
-// Fonction pour construire l'URL Supabase Storage
-function getSupabaseStorageUrl(bucket: string, path: string): string {
-  const supabaseUrl = 
-    env.supabaseUrl || 
-    (typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) ||
-    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
-  
-  if (!supabaseUrl) {
-    return "";
-  }
-  
-  const encodedBucket = encodeURIComponent(bucket);
-  const pathParts = path.split('/');
-  const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
-  
-  return `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
-}
+/** Fichier public Supabase — hero vitrine */
+const HERO_VIDEO_MP4 =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/video%20hero%20v4.mp4";
 
-const BUCKET_NAME = "Jessica CONTENTIN";
-const VIDEO_PATH = "Design sans titre (2).mp4";
+const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=1920&q=80";
 
 export function VideoHero() {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
-  const [useIframe, setUseIframe] = useState(false);
   const [mediaFailed, setMediaFailed] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [needsPlay, setNeedsPlay] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const videoUrl = getSupabaseStorageUrl(BUCKET_NAME, VIDEO_PATH);
-  
-  // URL de l'iframe pour la lecture (à configurer selon vos besoins)
-  // Exemple : YouTube, Vimeo, ou un lecteur personnalisé
-  const iframeUrl = videoUrl || ""; // Utilisez l'URL de votre lecteur iframe
-
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+  const tryPlay = async () => {
+    const el = videoRef.current;
+    if (!el) return;
+    try {
+      // Certains navigateurs n’autorisent pas l’autoplay même muted.
+      await el.play();
+      // Si la vidéo reste en pause malgré play(), on propose un bouton de lancement.
+      setNeedsPlay(el.paused);
+    } catch {
+      setNeedsPlay(true);
     }
   };
 
   return (
     <motion.section
+      id="accueil-video"
       initial={{ opacity: 0, y: 50 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6 }}
-      className="relative w-full h-[400px] md:h-[450px] lg:h-[500px] mx-4 mb-4 rounded-2xl overflow-hidden shadow-2xl"
+      className="relative mx-0 mb-0 h-[calc(100vh-4rem)] min-h-[560px] scroll-mt-4 overflow-hidden md:mx-4 md:mb-4 md:rounded-2xl"
     >
-      {/* Vidéo en arrière-plan - Iframe ou Video */}
+      {/* Vidéo pleine frame — lisibilité du texte assurée par le panneau crème (z-10), sans voile sur la vidéo */}
       <div className="absolute inset-0">
         {mediaFailed ? (
           <img
-            src="https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=1920&q=80"
-            alt="Accompagnement personnalisé"
+            src={FALLBACK_IMAGE}
+            alt=""
             className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : useIframe && iframeUrl ? (
-          <iframe
-            src={iframeUrl}
-            className="absolute inset-0 w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            style={{ border: "none" }}
-            onError={() => {
-              setUseIframe(false);
-              setMediaFailed(true);
-            }}
           />
         ) : (
           <>
             <video
               ref={videoRef}
-              src={videoUrl}
+              src={HERO_VIDEO_MP4}
               autoPlay
               loop
-              muted={isMuted}
+              muted
               playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-              onError={() => {
-                // Si la vidéo échoue, essayer l'iframe si disponible
-                if (iframeUrl) {
-                  setUseIframe(true);
-                  return;
-                }
-                setMediaFailed(true);
+              preload="metadata"
+              poster={FALLBACK_IMAGE}
+              className="absolute inset-0 h-full w-full object-cover [filter:saturate(1.12)_contrast(1.04)_sepia(0.14)_hue-rotate(-6deg)]"
+              onError={() => setMediaFailed(true)}
+              onLoadedMetadata={() => void tryPlay()}
+              onCanPlay={() => void tryPlay()}
+              onPlay={() => setNeedsPlay(false)}
+              onPause={() => {
+                const el = videoRef.current;
+                if (el && el.currentTime < 0.25) setNeedsPlay(true);
               }}
             />
-            {/* Overlay sombre pour améliorer la lisibilité */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+            {/* Filtre chaud léger (ambiance dorée / coucher de soleil) sans masquer la vidéo */}
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-500/18 via-orange-600/12 to-rose-900/22 mix-blend-soft-light"
+              aria-hidden
+            />
           </>
         )}
-        {mediaFailed && (
-          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/50" />
-        )}
+        {mediaFailed ? <div className="absolute inset-0 bg-[#F8F2EA]/80" /> : null}
       </div>
 
-      {/* Contenu centré sur la vidéo */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 text-center">
+      {/* Texte sur panneau crème lisible */}
+      <div className="relative z-10 flex h-full items-center px-6 lg:px-16">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="max-w-4xl"
+          className="max-w-3xl rounded-2xl border border-white/55 bg-white/20 p-6 shadow-[0_18px_60px_-28px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8"
         >
-          <h2
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 leading-tight px-4"
+          <p
+            className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9A7B52] md:text-base"
             style={{
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              textShadow: '0 2px 20px rgba(0,0,0,0.5)',
             }}
           >
-            Maîtrisez les domaines de votre vie
-          </h2>
-          
+            Jessica Contentin
+          </p>
+          <p
+            className="mt-2 text-base font-medium text-[#5C5348] md:text-lg"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+            }}
+          >
+            Professeure en santé et psychopédagogue certifiée
+          </p>
+          <p
+            className="mt-1 text-lg font-medium text-[#5C5348] md:text-xl"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+            }}
+          >
+            Spécialiste en neuroéducation
+          </p>
+          <h1
+            className="mt-5 text-2xl font-light leading-tight text-[#2F2A25] md:text-4xl md:leading-[1.14]"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+            }}
+          >
+            Approche spécialisée du fonctionnement cognitif et émotionnel
+          </h1>
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-6 md:mb-8 leading-relaxed px-4"
+            className="mt-6 max-w-2xl text-base leading-relaxed text-[#2F2A25]/85 md:text-xl"
             style={{
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              textShadow: '0 2px 10px rgba(0,0,0,0.5)',
             }}
           >
-            Un accompagnement personnalisé pour comprendre, ajuster et progresser
+            J’accompagne les enfants, adolescents et parents à dépasser les blocages, comprendre leur fonctionnement et
+            avancer sereinement.
           </motion.p>
 
           <motion.div
@@ -152,65 +138,60 @@ export function VideoHero() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.6 }}
+            className="mt-8 flex flex-wrap gap-3"
           >
             <Button
+              asChild
               size="lg"
-              className="bg-[#C6A664] hover:bg-[#B88A44] text-white rounded-full px-6 md:px-10 py-5 md:py-7 text-base md:text-lg shadow-xl transition-transform hover:scale-105"
+              variant="outline"
+              className="rounded-full border-[#C6A664]/60 bg-white px-8 py-6 text-base text-[#2F2A25] hover:bg-[#FDF9F3] md:text-lg"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
-              onClick={() => {
-                window.location.href = "/quiz";
+            >
+              <a href="#parcours">Découvrir les accompagnements</a>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              className="rounded-full bg-[#C6A664] px-8 py-6 text-base text-white hover:bg-[#B88A44] md:text-lg"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Commencer
+              <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                Prendre rendez-vous
+              </a>
             </Button>
           </motion.div>
+
+          {needsPlay ? (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="rounded-full border border-[#C6A664]/40 bg-[#FDF9F3] px-6 py-5 text-sm font-semibold text-[#2F2A25] hover:bg-[#F8F2EA]"
+                onClick={() => void tryPlay()}
+              >
+                Lancer la vidéo
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="rounded-full border border-[#E6D9C6] bg-white/80 px-6 py-5 text-sm font-semibold text-[#5C5348] hover:bg-[#FDF9F3]"
+                onClick={() => {
+                  const el = videoRef.current;
+                  if (!el) return;
+                  el.muted = false;
+                  void tryPlay();
+                }}
+              >
+                Activer le son
+              </Button>
+            </div>
+          ) : null}
         </motion.div>
       </div>
-
-      {/* Contrôles vidéo (optionnels, en bas à droite) */}
-      {!useIframe && !mediaFailed && (
-        <div className="absolute bottom-4 right-4 z-20 flex gap-2">
-          <button
-            onClick={togglePlay}
-            className="p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur-sm"
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? (
-              <Pause className="h-5 w-5" />
-            ) : (
-              <Play className="h-5 w-5" />
-            )}
-          </button>
-          <button
-            onClick={toggleMute}
-            className="p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur-sm"
-            aria-label={isMuted ? "Activer le son" : "Désactiver le son"}
-          >
-            {isMuted ? (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            )}
-          </button>
-          {iframeUrl && (
-            <button
-              onClick={() => setUseIframe(!useIframe)}
-              className="p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors backdrop-blur-sm"
-              aria-label="Basculer vers le lecteur iframe"
-              title="Utiliser le lecteur iframe"
-            >
-              <Video className="h-5 w-5" />
-            </button>
-          )}
-        </div>
-      )}
     </motion.section>
   );
 }

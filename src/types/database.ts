@@ -1,3 +1,51 @@
+export type CertificationStatus = "none" | "training" | "certified";
+
+export type Expert = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email?: string | null;
+  headline?: string | null;
+  bio?: string | null;
+  photo_url?: string | null;
+  avatar_url?: string | null;
+  registration_step?: number | null;
+  is_active?: boolean | null;
+  is_certified_beyond?: boolean | null;
+  certification_status?: CertificationStatus | string | null;
+  specialties?: string[] | null;
+  formats_supported?: string[] | null;
+  formats?: string[] | null;
+};
+
+export type ActionRequestStatus =
+  | "pending_hr_validation"
+  | "expert_notified"
+  | "accepted"
+  | "scheduled"
+  | "completed"
+  | "awaiting_rerun"
+  | "cancelled"
+  | (string & {});
+
+export type ActionRequest = {
+  id: string;
+  expert_id?: string | null;
+  action_type: string | null;
+  target_label: string | null;
+  target_count?: number | null;
+  status: ActionRequestStatus | null;
+  created_at: string | null;
+  updated_at?: string | null;
+  scheduled_at?: string | null;
+  initial_score?: number | null;
+  final_score?: number | null;
+  impact_category?: string | null;
+  completion_notes?: string | null;
+  metadata?: any;
+  expert?: Pick<Expert, "id" | "first_name" | "last_name" | "headline" | "photo_url" | "certification_status"> | null;
+};
+
 export type UserRole =
   | "formateur"
   | "apprenant"
@@ -40,17 +88,22 @@ export interface Chapter {
 
 export interface Flashcard {
   id: string;
-  chapter_id: string;
+  chapter_id: string | null;
+  course_id?: string | null;
+  local_chapter_ref?: string | null;
   front: string;
   back: string;
+  question?: string | null;
+  answer?: string | null;
   created_at: string;
 }
 
 export interface Enrollment {
   id: string;
   user_id: string;
-  formation_id: string;
-  progress: number;
+  course_id: string;
+  progress?: number | null;
+  role?: string | null;
   created_at: string;
 }
 

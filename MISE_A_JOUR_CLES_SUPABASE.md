@@ -8,7 +8,7 @@ Supabase a mis à jour son système de clés API. Vous devez mettre à jour votr
 
 ### 1. Récupérer les nouvelles clés depuis le dashboard Supabase
 
-1. **Allez sur** : https://supabase.com/dashboard/project/fqqqejpakbccwvrlolpc/settings/api
+1. **Allez sur** : https://supabase.com/dashboard/project/zmcefidiiqqppowymoxt/settings/api
 2. **Dans la section "Clé publiable"** :
    - Copiez la clé complète (commence par `sb_publishable_...`)
    - C'est votre nouvelle `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -24,7 +24,7 @@ Ouvrez le fichier `.env.local` à la racine du projet et mettez à jour :
 
 ```env
 # Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://fqqqejpakbccwvrlolpc.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://zmcefidiiqqppowymoxt.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_Gq5AoN45aV71xNDq2mvkCQ_x-UZTWZE
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_vf5Ab... (la clé complète révélée)
 ```

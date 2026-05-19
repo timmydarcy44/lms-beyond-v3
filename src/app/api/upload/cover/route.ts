@@ -15,18 +15,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier le type de fichier
-    if (!file.type.startsWith("image/")) {
+    console.log("Fichier reçu:", file.name, file.size);
+
+    const isImage = file.type.startsWith("image/");
+    const isMp4 = file.type === "video/mp4" || /\.mp4$/i.test(file.name);
+    if (!isImage && !isMp4) {
       return NextResponse.json(
-        { error: "Le fichier doit être une image" },
+        { error: "Le fichier doit être une image ou une vidéo .mp4" },
         { status: 400 }
       );
     }
 
-    // Vérifier la taille (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    const maxBytes = isMp4 ? 40 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
       return NextResponse.json(
-        { error: "L'image ne doit pas dépasser 5MB" },
+        { error: isMp4 ? "La vidéo ne doit pas dépasser 40 Mo" : "L'image ne doit pas dépasser 5 Mo" },
         { status: 400 }
       );
     }
@@ -34,7 +37,10 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceRoleClient();
     if (!supabase) {
       return NextResponse.json(
-        { error: "Supabase non configuré" },
+        {
+          error: "Supabase non configuré",
+          details: "Service role client indisponible (variables d'environnement manquantes ?)",
+        },
         { status: 500 }
       );
     }
@@ -59,9 +65,20 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error("[upload/cover] Upload error:", uploadError);
+      console.error("[upload/cover] Upload error:", {
+        bucket,
+        folder,
+        fileName,
+        fileType: file.type,
+        fileSize: file.size,
+        code: (uploadError as any)?.code,
+        message: (uploadError as any)?.message,
+        details: (uploadError as any)?.details,
+        hint: (uploadError as any)?.hint,
+        raw: uploadError,
+      });
       return NextResponse.json(
-        { error: uploadError.message },
+        { error: uploadError.message, code: (uploadError as any)?.code, hint: (uploadError as any)?.hint },
         { status: 500 }
       );
     }
@@ -76,9 +93,13 @@ export async function POST(request: NextRequest) {
       fileName: uploadData.path,
     });
   } catch (error) {
-    console.error("[upload/cover] Error:", error);
+    console.error("[upload/cover] Error:", {
+      message: (error as any)?.message,
+      stack: (error as any)?.stack,
+      raw: error,
+    });
     return NextResponse.json(
-      { error: "Erreur lors de l'upload" },
+      { error: "Erreur lors de l'upload", details: (error as any)?.message ?? String(error) },
       { status: 500 }
     );
   }

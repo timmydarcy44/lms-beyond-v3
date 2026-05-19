@@ -25,7 +25,7 @@ export default function EntreprisesPage() {
           <div className="enterprise-hero-media">
             <img
               className="enterprise-hero-image"
-              src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/header_entreprise%20(2).png"
+              src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/header_entreprise%20(2).png"
               alt="Beyond No School - Entreprises"
             />
           </div>

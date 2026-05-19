@@ -33,6 +33,7 @@ export default async function SuperAdminRessourcesPage() {
   // Récupérer l'utilisateur actuel
   const { data: { user } } = await supabase.auth.getUser();
   const creatorId = user?.id;
+  const isTimmy = String(user?.email ?? "").trim().toLowerCase() === "timmydarcy44@gmail.com";
 
   // Récupérer les ressources créées par le Super Admin
   let { data: resources, error } = await supabase
@@ -44,11 +45,33 @@ export default async function SuperAdminRessourcesPage() {
       published,
       created_at,
       updated_at,
-      created_by
+      created_by,
+      org_id,
+      organizations(name,slug)
     `)
-    .eq("created_by", creatorId)
     .order("updated_at", { ascending: false })
     .limit(100);
+
+  if (!isTimmy && creatorId) {
+    const filtered = await supabase
+      .from("resources")
+      .select(`
+        id,
+        title,
+        kind,
+        published,
+        created_at,
+        updated_at,
+        created_by,
+        org_id,
+        organizations(name,slug)
+      `)
+      .eq("created_by", creatorId)
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    resources = filtered.data;
+    error = filtered.error;
+  }
 
   if (error) {
     console.error("[super-admin/ressources] Error fetching resources:", error);
@@ -142,13 +165,20 @@ export default async function SuperAdminRessourcesPage() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">{resource.title || "Sans titre"}</h3>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    resource.published 
-                      ? "bg-emerald-100 text-emerald-700" 
-                      : "bg-gray-100 text-gray-600"
-                  }`}>
-                    {resource.published ? "Publié" : "Brouillon"}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        resource.published ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {resource.published ? "Publié" : "Brouillon"}
+                    </span>
+                    {isTimmy ? (
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                        {(resource as any)?.organizations?.name ?? "Galaxie inconnue"}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <p className="text-sm text-gray-500 mb-4">
                   Type: {resource.kind || "Non spécifié"}

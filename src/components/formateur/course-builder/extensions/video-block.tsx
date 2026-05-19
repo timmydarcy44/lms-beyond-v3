@@ -1,5 +1,5 @@
 import { mergeAttributes, Node } from "@tiptap/core";
-import { ReactNodeViewRenderer } from "@tiptap/react";
+import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import type { NodeViewRendererProps } from "@tiptap/react";
 import { useMemo } from "react";
 
@@ -27,29 +27,33 @@ const VideoNodeView = ({ node }: NodeViewRendererProps) => {
 
   if (!src) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-6 text-center text-sm text-white/50">
-        Vidéo indisponible
-      </div>
+      <NodeViewWrapper className="video-wrapper">
+        <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-6 text-center text-sm text-white/50">
+          Vidéo indisponible
+        </div>
+      </NodeViewWrapper>
     );
   }
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-[0_18px_45px_rgba(12,20,31,0.5)]">
-      {isIframe ? (
-        <iframe
-          src={src}
-          className="h-full w-full"
-          allowFullScreen
-          title="Video"
-        />
-      ) : (
-        <video
-          src={src}
-          controls
-          className="h-full w-full"
-        />
-      )}
-    </div>
+    <NodeViewWrapper className="video-wrapper">
+      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-[0_18px_45px_rgba(12,20,31,0.5)]">
+        {isIframe ? (
+          <iframe
+            src={src}
+            className="h-full w-full rounded-xl shadow-2xl"
+            allowFullScreen
+            title="Video"
+          />
+        ) : (
+          <video
+            src={src}
+            controls
+            className="h-full w-full rounded-xl shadow-2xl"
+          />
+        )}
+      </div>
+    </NodeViewWrapper>
   );
 };
 
@@ -58,6 +62,7 @@ export const VideoBlock = Node.create<VideoBlockOptions>({
 
   group: "block",
   atom: true,
+  allowGapCursor: true,
   draggable: false,
   selectable: true,
 

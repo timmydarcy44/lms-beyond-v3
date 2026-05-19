@@ -131,19 +131,28 @@ Chaque flashcard doit avoir :
 
           if (course?.builder_snapshot) {
             const snapshot = course.builder_snapshot as any;
-            for (const section of snapshot.sections || []) {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            outer: for (const section of snapshot.sections || []) {
               for (const chapter of section.chapters || []) {
                 if (chapter.id === chapterId) {
-                  // Si le chapitre a un dbId, l'utiliser
                   if (chapter.dbId) {
                     actualChapterId = chapter.dbId;
-                  } else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chapter.id)) {
+                  } else if (uuidRegex.test(chapter.id)) {
                     actualChapterId = chapter.id;
                   }
-                  break;
+                  break outer;
+                }
+                for (const sub of chapter.subchapters || []) {
+                  if (sub.id === chapterId) {
+                    if (sub.dbId) {
+                      actualChapterId = sub.dbId;
+                    } else if (uuidRegex.test(sub.id)) {
+                      actualChapterId = sub.id;
+                    }
+                    break outer;
+                  }
                 }
               }
-              if (actualChapterId) break;
             }
           }
         } catch (findError) {
@@ -156,13 +165,30 @@ Chaque flashcard doit avoir :
     // Elles seront mises à jour plus tard quand le chapitre sera sauvegardé
     if (courseId && typeof courseId === "string") {
       try {
-        // Préparer les données pour l'insertion
-        const flashcardsToInsert = result.flashcards.map((flashcard: any) => ({
-          course_id: courseId,
-          chapter_id: actualChapterId, // Utiliser l'UUID du chapitre si trouvé, sinon null
-          front: flashcard.question || "",
-          back: flashcard.answer || "",
-        }));
+        const uuidRe =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const localChapterRefForInsert =
+          chapterId && typeof chapterId === "string" && !uuidRe.test(String(chapterId))
+            ? String(chapterId).trim()
+            : null;
+
+        // Préparer les données pour l'insertion (front/back + miroir question/answer)
+        const flashcardsToInsert = result.flashcards
+          .map((flashcard: any) => {
+            const q = String(flashcard.question ?? "").trim();
+            const a = String(flashcard.answer ?? "").trim();
+            if (!q || !a) return null;
+            return {
+              course_id: courseId,
+              chapter_id: actualChapterId,
+              local_chapter_ref: localChapterRefForInsert,
+              front: q,
+              back: a,
+              question: q,
+              answer: a,
+            };
+          })
+          .filter(Boolean);
 
         // Vérifier si l'utilisateur est un super admin
         const { data: superAdminCheck } = await supabase
@@ -197,11 +223,13 @@ Chaque flashcard doit avoir :
           }));
         }
 
-        // Insérer les flashcards dans la base de données
-        const { data: insertedFlashcards, error: insertError } = await supabase
-          .from("flashcards")
-          .insert(flashcardsToInsert)
-          .select();
+        let insertedFlashcards: any[] = [];
+        let insertError: { message?: string; code?: string; details?: string; hint?: string } | null = null;
+        if (flashcardsToInsert.length > 0) {
+          const ins = await supabase.from("flashcards").insert(flashcardsToInsert).select();
+          insertedFlashcards = ins.data || [];
+          insertError = ins.error;
+        }
 
         if (insertError) {
           console.error("[ai/generate-flashcards] Error saving flashcards to database:", JSON.stringify({
@@ -241,13 +269,15 @@ Chaque flashcard doit avoir :
       durationMs: duration,
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       flashcards: result.flashcards,
       saved: savedFlashcards.length > 0,
       savedCount: savedFlashcards.length,
-      savedFlashcards: savedFlashcards, // Retourner les flashcards sauvegardées avec leurs IDs
-      chapterId: actualChapterId // Retourner l'UUID du chapitre si trouvé
+      savedFlashcards: savedFlashcards,
+      chapterId: actualChapterId,
+      /** Id builder (chapitre ou sous-chapitre) envoyé par le client — pour router les événements UI */
+      builderChapterKey: typeof chapterId === "string" ? chapterId : null,
     });
   } catch (error) {
     console.error("[ai] Error in generate-flashcards", error);

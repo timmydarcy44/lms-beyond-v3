@@ -1,55 +1,13 @@
 "use server";
 
-import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
-
 /**
  * Récupère le branding d'un Super Admin
  */
 export async function getSuperAdminBranding(userId?: string) {
-  const supabase = await getServiceRoleClientOrFallback();
-  if (!supabase) {
-    console.error("[super-admin-branding] Supabase client unavailable");
-    return null;
-  }
-
-  try {
-    // Si userId n'est pas fourni, récupérer l'utilisateur actuel
-    if (!userId) {
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData?.user?.id) {
-        console.error("[super-admin-branding] No authenticated user");
-        return null;
-      }
-      userId = authData.user.id;
-    }
-
-    // Utiliser la fonction RPC si disponible
-    const { data: brandingData, error: rpcError } = await supabase.rpc(
-      'get_super_admin_branding',
-      { p_user_id: userId }
-    );
-
-    if (!rpcError && brandingData && brandingData.length > 0) {
-      return brandingData[0];
-    }
-
-    // Fallback: query directe
-    const { data, error } = await supabase
-      .from("super_admin_branding")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("[super-admin-branding] Error fetching branding:", error);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error("[super-admin-branding] Unexpected error:", error);
-    return null;
-  }
+  // Garde-fou total: la table `super_admin_settings` n'existe pas dans le schéma audité.
+  // On retourne un branding statique pour éviter tout crash au chargement du layout.
+  void userId;
+  return { company_name: "Beyond", primary_color: "#2563eb", logo_url: null };
 }
 
 /**

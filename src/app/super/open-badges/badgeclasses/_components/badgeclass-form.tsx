@@ -125,7 +125,7 @@ export function BadgeClassForm({
 
   useEffect(() => {
     const loadOrganizations = async () => {
-      const res = await fetch("/api/super-admin/organizations");
+      const res = await fetch("/api/super-admin/organisations");
       const json = await res.json();
       setOrganizations(json.organizations ?? []);
     };

@@ -3,7 +3,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -20,17 +20,31 @@ export default async function SuperAdminFormationsPage() {
     return null;
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     redirect("/login");
   }
 
-  // Récupérer toutes les formations créées par les super admins
-  const { data: courses } = await supabase
-    .from("courses")
-    .select("id, title, slug, status, created_at, updated_at")
-    .eq("creator_id", user.id)
-    .order("updated_at", { ascending: false });
+  const baseSelect =
+    "id, title, slug, status, created_at, updated_at, org_id, organizations(name,slug)";
+
+  /**
+   * Les politiques RLS sur `courses` authentifient souvent seulement `profiles.role = 'admin'`,
+   * pas `super_admin` : avec le client « user », la liste est vide en prod pour un super admin.
+   * Même logique que /super/organisations : service role pour lire toutes les lignes.
+   */
+  const service = await getServiceRoleClientOrFallback();
+  const db = service ?? supabase;
+  const seeAllCourses = Boolean(service);
+
+  let query = db.from("courses").select(baseSelect).order("updated_at", { ascending: false });
+  if (!seeAllCourses) {
+    query = query.eq("creator_id", user.id);
+  }
+
+  const { data: courses } = await query;
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
@@ -64,6 +78,14 @@ export default async function SuperAdminFormationsPage() {
                 <span className={course.status === "published" ? "text-green-600" : "text-orange-600"}>
                   {course.status === "published" ? "Publié" : "Brouillon"}
                 </span>
+                {seeAllCourses ? (
+                  <>
+                    <span>•</span>
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                      {(course as any)?.organizations?.name ?? "Galaxie inconnue"}
+                    </span>
+                  </>
+                ) : null}
                 <span>•</span>
                 <span>Modifié le {new Date(course.updated_at).toLocaleDateString("fr-FR")}</span>
               </div>

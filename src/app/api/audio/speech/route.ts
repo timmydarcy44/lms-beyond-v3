@@ -21,7 +21,8 @@ export async function POST(request: Request) {
     const response = await client.audio.speech.create({
       model: "tts-1",
       voice,
-      input: text.slice(0, 300),
+      // TTS input limit is large; keep a conservative cap for latency/cost.
+      input: text.slice(0, 2500),
     });
 
     const arrayBuffer = await response.arrayBuffer();

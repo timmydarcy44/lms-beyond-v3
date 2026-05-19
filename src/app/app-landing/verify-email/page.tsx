@@ -10,7 +10,7 @@ function VerifyEmailContent() {
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
       <img
-        src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
+        src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
         alt="Nevo"
         className="h-10 mb-8"
       />

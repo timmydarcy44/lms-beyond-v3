@@ -3,16 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Check, ChevronRight, ListChecks, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { TestQuestion, useTestSessions } from "@/hooks/use-test-sessions";
 import { toast } from "sonner";
+import { buildCategoryRadar, buildQuizReviewItems } from "@/lib/quiz/build-question-review";
+import { QuizWelcome } from "@/components/quiz/quiz-welcome";
+import { QuizResults } from "@/components/quiz/quiz-results";
 
-type TestFlowProps = {
+export type TestFlowProps = {
   slug: string;
   title: string;
   questions: TestQuestion[];
@@ -20,61 +22,188 @@ type TestFlowProps = {
   onClose?: () => void;
   fullscreen?: boolean;
   className?: string;
+  /** Score minimum affiché sur l’écran d’accueil (%) */
+  minScorePercent?: number;
+  /** UI immersive claire (intro + fond blanc). Mettre false pour retrouver le thème sombre historique. */
+  immersive?: boolean;
+  /** Après complétion (résumé affiché), ex. pour débloquer la navigation formation */
+  onQuizCompleted?: (testId: string) => void;
 };
 
 const questionVariants = {
-  initial: {
-    opacity: 0,
-    x: 60,
-    scale: 0.98,
-  },
+  initial: { opacity: 0, x: 48, scale: 0.99 },
   animate: {
     opacity: 1,
     x: 0,
     scale: 1,
-    transition: {
-      duration: 0.45,
-      ease: [0.16, 1, 0.3, 1] as const as [number, number, number, number],
-    },
+    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const },
   },
   exit: {
     opacity: 0,
-    x: -60,
-    scale: 0.98,
-    transition: {
-      duration: 0.3,
-      ease: [0.7, 0, 0.84, 0] as [number, number, number, number],
-    },
+    x: -40,
+    scale: 0.99,
+    transition: { duration: 0.28, ease: [0.7, 0, 0.84, 0] as const },
   },
 };
 
-export default function TestFlow({ slug, title, questions, summary, onClose, fullscreen, className }: TestFlowProps) {
+const PREMIUM_IMAGE_PREFIX = "minimalist, editorial photography, high-end";
+
+function questionHasVisualMedia(question: TestQuestion | undefined): boolean {
+  if (!question) return false;
+  const kw = String(question.image_keyword ?? (question as { imageKeyword?: string }).imageKeyword ?? "").trim();
+  const url = String(question.imageUrl ?? "").trim();
+  return Boolean(url || kw);
+}
+
+function withPremiumImageKeyword(keyword: string) {
+  const t = keyword.trim();
+  if (!t) return PREMIUM_IMAGE_PREFIX;
+  if (/minimalist.*editorial.*high-end/i.test(t)) return t.replace(/\s+/g, ",").replace(/,+/g, ",");
+  return `${PREMIUM_IMAGE_PREFIX},${t.replace(/\s+/g, ",")}`.replace(/,+/g, ",");
+}
+
+function buildUnsplashKeywordSrc(keyword: string, w = 800, h = 450) {
+  const q = withPremiumImageKeyword(keyword);
+  return `https://source.unsplash.com/${w}x${h}/?${encodeURIComponent(q)}`;
+}
+
+function QuestionMedia({
+  question,
+  variant = "compact",
+}: {
+  question: TestQuestion;
+  variant?: "compact" | "split";
+}) {
+  const [broken, setBroken] = useState(false);
+  const keyword =
+    question.image_keyword ||
+    (question as { imageKeyword?: string }).imageKeyword ||
+    "";
+  const explicit = question.imageUrl?.trim();
+  const fallbackFeatured = `https://source.unsplash.com/featured/1200x1600/?${encodeURIComponent(withPremiumImageKeyword("education,abstract"))}`;
+  const primarySrc = explicit || (keyword ? buildUnsplashKeywordSrc(keyword, 1200, 1600) : "");
+
+  const splitWrap = "absolute inset-0 min-h-0 w-full overflow-hidden !bg-white";
+  const compactFrame =
+    "relative h-36 w-full max-w-xs overflow-hidden rounded-xl border-2 border-slate-300 !bg-white";
+
+  if (variant === "split") {
+    if (broken && !explicit) {
+      return (
+        <div className={splitWrap}>
+          <div className="absolute inset-0 bg-slate-100" />
+          <p className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-bold !text-slate-950">
+            Visuel indisponible
+          </p>
+        </div>
+      );
+    }
+    if (!primarySrc) {
+      return (
+        <div className={splitWrap}>
+          <div className="absolute inset-0 bg-slate-100" />
+        </div>
+      );
+    }
+    return (
+      <div className={splitWrap}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={primarySrc}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      </div>
+    );
+  }
+
+  if (broken && !explicit) {
+    return (
+      <div className={cn(compactFrame, "bg-white")}>
+        <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-xs font-black !text-slate-950">
+          Visuel
+        </p>
+      </div>
+    );
+  }
+
+  if (!primarySrc) {
+    return (
+      <div className={compactFrame}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={fallbackFeatured}
+          alt=""
+          className="relative z-10 h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={compactFrame}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={primarySrc}
+        alt=""
+        className="h-full w-full object-cover"
+        loading="lazy"
+        onError={() => setBroken(true)}
+      />
+    </div>
+  );
+}
+
+export default function TestFlow({
+  slug,
+  title,
+  questions,
+  summary,
+  onClose,
+  fullscreen,
+  className,
+  minScorePercent = 70,
+  immersive = true,
+  onQuizCompleted,
+}: TestFlowProps) {
   const router = useRouter();
   const startSession = useTestSessions((state) => state.startSession);
   const recordAnswer = useTestSessions((state) => state.recordAnswer);
   const completeSession = useTestSessions((state) => state.completeSession);
   const session = useTestSessions((state) => state.sessions[slug]);
 
+  const [showWelcome, setShowWelcome] = useState(immersive);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  // État local pour les réponses texte (pour validation immédiate)
   const [localTextAnswers, setLocalTextAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (questions.length) {
-      startSession({ slug, title, totalQuestions: questions.length });
-    }
-  }, [slug, startSession, title, questions.length]);
+    setShowWelcome(immersive);
+    setCurrentIndex(0);
+    setShowSummary(false);
+    setLocalTextAnswers({});
+  }, [slug, questions.length, immersive]);
 
   const currentQuestion = questions[currentIndex];
   const answers = session?.answers ?? {};
 
-  // Synchroniser l'état local avec les réponses du store quand on change de question
+  const reviewItems = useMemo(
+    () => (session?.answers ? buildQuizReviewItems(questions, session.answers) : []),
+    [session?.answers, questions],
+  );
+  const radarRows = useMemo(
+    () => (session?.answers ? buildCategoryRadar(questions, session.answers) : []),
+    [session?.answers, questions],
+  );
+
   useEffect(() => {
     if (currentQuestion && currentQuestion.type === "text") {
       const storeValue = answers[currentQuestion.id];
-      // Si on a une valeur dans le store mais pas dans l'état local, la synchroniser
       if (storeValue && typeof storeValue === "string" && !localTextAnswers[currentQuestion.id]) {
         setLocalTextAnswers((prev) => ({
           ...prev,
@@ -82,42 +211,17 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
         }));
       }
     }
-  }, [currentQuestion?.id, currentQuestion?.type, answers, currentQuestion]);
-  const answeredCount = useMemo(
-    () =>
-      Object.entries(answers).reduce((count, [key, value]) => {
-        if (!questions.find((question) => question.id === key)) {
-          return count;
-        }
-
-        if (Array.isArray(value)) {
-          return value.length ? count + 1 : count;
-        }
-
-        if (typeof value === "number") {
-          return !Number.isNaN(value) ? count + 1 : count;
-        }
-
-        if (typeof value === "string") {
-          return value.trim().length ? count + 1 : count;
-        }
-
-        return value ? count + 1 : count;
-      }, 0),
-    [answers, questions],
-  );
+  }, [currentQuestion?.id, currentQuestion?.type, answers, currentQuestion, localTextAnswers]);
 
   const handleSingleSelect = (questionId: string, optionValue: string) => {
     recordAnswer(slug, questionId, optionValue);
-    // Navigation automatique après sélection (avec délai pour l'animation)
     setTimeout(() => {
       if (currentIndex < questions.length - 1) {
         setCurrentIndex((index) => Math.min(index + 1, questions.length - 1));
       } else {
-        // Dernière question, finaliser
         goNext();
       }
-    }, 300);
+    }, 280);
   };
 
   const handleMultipleSelect = (questionId: string, optionValue: string) => {
@@ -126,7 +230,6 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
       ? existing.filter((value) => value !== optionValue)
       : [...existing, optionValue];
     recordAnswer(slug, questionId, next);
-    // Pour les questions multiples, on n'avance pas automatiquement car l'utilisateur peut vouloir sélectionner plusieurs réponses
   };
 
   const handleScaleChange = (questionId: string, value: number) => {
@@ -134,58 +237,68 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
   };
 
   const handleTextChange = (questionId: string, value: string) => {
-    // Mettre à jour l'état local immédiatement pour la validation
     setLocalTextAnswers((prev) => ({ ...prev, [questionId]: value }));
     recordAnswer(slug, questionId, value);
   };
 
   const ensureAnswered = (question: TestQuestion): boolean => {
-    // Pour les questions texte, utiliser l'état local pour une validation immédiate
     if (question.type === "text") {
       const localValue = localTextAnswers[question.id];
       const storeValue = answers[question.id];
-      // Prioriser la valeur locale (plus récente) puis la valeur du store
-      // Si localValue est une chaîne (même vide), l'utiliser, sinon utiliser storeValue
-      const textValue = (typeof localValue === "string" 
-        ? localValue 
-        : (typeof storeValue === "string" ? storeValue : "")).trim();
+      const textValue = (typeof localValue === "string" ? localValue : typeof storeValue === "string" ? storeValue : "").trim();
       return textValue.length >= 3;
     }
-    
     const value = answers[question.id];
-    if (question.type === "multiple") {
-      return Array.isArray(value) && value.length > 0;
-    }
-    if (question.type === "single") {
-      return typeof value === "string" && value.trim().length > 0;
-    }
-    if (question.type === "scale") {
-      return typeof value === "number" && !Number.isNaN(value);
-    }
+    if (question.type === "multiple") return Array.isArray(value) && value.length > 0;
+    if (question.type === "single") return typeof value === "string" && value.trim().length > 0;
+    if (question.type === "scale") return typeof value === "number" && !Number.isNaN(value);
     return false;
+  };
+
+  const handleWelcomeStart = () => {
+    if (questions.length) {
+      startSession({ slug, title, totalQuestions: questions.length });
+    }
+    setCurrentIndex(0);
+    setShowWelcome(false);
   };
 
   const goNext = async () => {
     if (!currentQuestion) return;
-    
-    // Vérifier la réponse
     if (!ensureAnswered(currentQuestion)) {
       if (currentQuestion.type === "text") {
         toast.error("Votre réponse doit contenir au moins 3 caractères ✍️");
       } else {
-        toast.error("Merci de répondre avant de continuer ✍️");
+        toast.error("Merci de répondre avant de valider ✍️");
       }
       return;
     }
     if (currentIndex === questions.length - 1) {
       try {
         setIsSubmitting(true);
-        const result = completeSession(slug);
-        if (!result) {
-          throw new Error("Impossible d'enregistrer le test");
+        const result = completeSession(slug, { questions });
+        if (!result) throw new Error("Impossible d'enregistrer le test");
+        const reviewPayload = {
+          items: buildQuizReviewItems(questions, result.answers),
+          radar: buildCategoryRadar(questions, result.answers),
+        };
+        try {
+          await fetch("/api/quiz/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              testId: slug,
+              score: result.score,
+              answers: result.answers,
+              review: reviewPayload,
+            }),
+          });
+        } catch (e) {
+          console.warn("[test-flow] quiz_submissions insert", e);
         }
-        toast.success("Test complété ! Vos résultats seront bientôt synchronisés.");
+        toast.success("Quiz complété !");
         setShowSummary(true);
+        onQuizCompleted?.(slug);
       } catch (error) {
         console.error(error);
         toast.error("Un souci est survenu, réessayez");
@@ -198,12 +311,15 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
   };
 
   const goPrevious = () => {
+    if (showWelcome) {
+      if (onClose) onClose();
+      else router.back();
+      return;
+    }
     if (currentIndex === 0) {
-      if (onClose) {
-        onClose();
-      } else {
-        router.back();
-      }
+      if (immersive) setShowWelcome(true);
+      else if (onClose) onClose();
+      else router.back();
       return;
     }
     setCurrentIndex((index) => Math.max(index - 1, 0));
@@ -211,10 +327,10 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
 
   if (!questions.length) {
     return (
-      <Card className="border-white/10 bg-white/5 text-white">
+      <Card className={cn(immersive ? "!border-2 !border-slate-200 !bg-white" : "border-white/10 bg-white/5 text-white")}>
         <CardContent className="flex items-center gap-3 py-12">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <p className="text-sm text-white/70">Chargement du test en cours…</p>
+          <Loader2 className={cn("h-5 w-5 animate-spin", immersive ? "!text-indigo-600" : "text-white/70")} />
+          <p className={cn("text-sm font-semibold", immersive ? "!text-slate-950" : "text-white/70")}>Chargement du quiz…</p>
         </CardContent>
       </Card>
     );
@@ -229,125 +345,82 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
     });
 
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.2, 0.8, 0.2, 1] }}
-        className={cn("space-y-8", fullscreen && "min-h-[70vh]")}
-      >
-        <Card className="border-white/10 bg-gradient-to-br from-[#1B2AC9] via-[#4A00E0] to-[#8E2DE2] text-white">
-          <CardContent className="space-y-6 p-10">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs uppercase tracking-[0.35em] text-white/70">
-              <ListChecks className="h-4 w-4" /> Résultats sauvegardés
-            </div>
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="mb-4 inline-flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#00C6FF] to-[#0072FF] text-3xl font-bold text-white shadow-lg shadow-[#00C6FF]/30">
-                  {session.score}
-                </div>
-                <h2 className="text-4xl font-bold">Score : {session.score}/100</h2>
-                <p className="mt-2 text-lg text-white/70">
-                  {session.score >= 85 
-                    ? "Excellent ! Vous maîtrisez parfaitement le sujet." 
-                    : session.score >= 70 
-                    ? "Très bien ! Vous avez une bonne compréhension."
-                    : session.score >= 55
-                    ? "Bien ! Continuez à vous améliorer."
-                    : "À renforcer. N'hésitez pas à revoir les chapitres."}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <p className="text-sm text-white/80">
-                  Vos réponses sont enregistrées et synchronisées. Elles sont disponibles dans votre espace "Mon compte" et partagées avec votre formateur, admin et tuteur.
-                </p>
-                <p className="mt-4 text-xs uppercase tracking-[0.35em] text-white/60">Terminé le {completionDelay}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-white/80">Résumé</p>
-              <p className="text-sm text-white/70">{summary ?? "Continuez à documenter vos prises de décision pour affiner votre profil pédagogique."}</p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={() => {
-                  if (onClose) {
-                    onClose();
-                  } else {
-                    router.push("/dashboard/student/learning/tests");
-                  }
-                }}
-                className="rounded-full bg-white px-6 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-[#4A00E0]"
-              >
-                Retour aux tests
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setCurrentIndex(0);
-                  setShowSummary(false);
-                }}
-                className="rounded-full border border-white/25 bg-white/10 px-6 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/80 hover:border-white/40 hover:text-white"
-              >
-                Revoir mes réponses
-              </Button>
-              {onClose ? (
-                <Button
-                  variant="ghost"
-                  onClick={onClose}
-                  className="rounded-full border border-white/25 bg-transparent px-6 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/80 hover:border-white/40 hover:text-white"
-                >
-                  Fermer
-                </Button>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <QuizResults
+        score={session.score}
+        minScorePercent={minScorePercent}
+        summary={summary}
+        completionLabel={`Terminé le ${completionDelay}`}
+        reviewItems={reviewItems}
+        radarRows={radarRows}
+        onClose={() => {
+          if (onClose) onClose();
+          else router.push("/dashboard/student/learning/tests");
+        }}
+        onReviewAgain={() => {
+          setCurrentIndex(0);
+          setShowSummary(false);
+          setShowWelcome(immersive);
+        }}
+        fullscreen={fullscreen}
+        className={className}
+      />
     );
   }
 
-  const progressValue = (answeredCount / questions.length) * 100;
+  if (immersive && showWelcome) {
+    return (
+      <QuizWelcome
+        title={title}
+        questionCount={questions.length}
+        minScorePercent={minScorePercent}
+        onStart={handleWelcomeStart}
+        onQuit={onClose}
+        fullscreen={fullscreen}
+        className={className}
+      />
+    );
+  }
+
+  const headerProgress = ((currentIndex + 1) / questions.length) * 100;
+
+  const hasSplitMedia = currentQuestion ? questionHasVisualMedia(currentQuestion) : false;
 
   return (
-    <div className={cn(
-      "space-y-8",
-      fullscreen ? "min-h-screen flex flex-col w-full max-w-none ml-0" : "min-h-[80vh]",
-      className
-    )}>
-      <div className={cn(
-        "flex items-center justify-between gap-4",
-        fullscreen && "px-6 pt-6 w-full max-w-none"
-      )}>
-        {fullscreen ? (
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/50">
-            <span>Mode Focus</span>
-            <span>•</span>
-            <span>Évaluation en cours</span>
-          </div>
-        ) : (
+    <div
+      className={cn(
+        "quiz-force-light flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden !bg-white",
+        fullscreen && "min-h-[100dvh]",
+        className,
+      )}
+    >
+      <header className="shrink-0 border-b border-slate-200 !bg-white px-4 pb-2 pt-3 sm:px-6 [&_h2]:!text-slate-950 [&_span]:!text-slate-950">
+        <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between gap-3">
           <Button
+            type="button"
             variant="ghost"
+            size="sm"
             onClick={goPrevious}
-            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/60 hover:border-white/30 hover:text-white"
+            className="shrink-0 rounded-full font-semibold !text-slate-950 hover:!bg-slate-100"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" /> {currentIndex === 0 ? "Retour" : "Précédent"}
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline">{currentIndex === 0 ? "Retour" : "Précédent"}</span>
           </Button>
-        )}
-        <div className="flex flex-1 flex-col gap-2">
-          <div className="flex items-center justify-between text-xs text-white/60">
-            <span>
-              Question {currentIndex + 1}/{questions.length}
-            </span>
-            <span>{Math.round(progressValue)}%</span>
-          </div>
-          <Progress value={progressValue} className="h-1.5" />
+          <h2 className="min-w-0 flex-1 truncate text-center text-sm font-bold tracking-tight !text-slate-950 sm:text-base">{title}</h2>
+          <span className="shrink-0 tabular-nums text-xs font-bold !text-slate-950 sm:text-sm">
+            {currentIndex + 1}/{questions.length}
+          </span>
         </div>
-      </div>
+        <div className="mx-auto mt-2 h-1.5 w-full max-w-[1920px] overflow-hidden rounded-full bg-slate-200">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-slate-950 via-indigo-600 to-violet-600"
+            initial={false}
+            animate={{ width: `${headerProgress}%` }}
+            transition={{ type: "spring", stiffness: 120, damping: 22 }}
+          />
+        </div>
+      </header>
 
-      <div className={cn(
-        "relative overflow-hidden bg-gradient-to-br from-[#131313] via-[#0B0B0B] to-[#050505]",
-        fullscreen ? "flex-1 flex flex-col rounded-none w-full max-w-none" : "rounded-3xl border border-white/10"
-      )}>
+      <main className="mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 flex-col !bg-white">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentQuestion?.id}
@@ -356,126 +429,154 @@ export default function TestFlow({ slug, title, questions, summary, onClose, ful
             animate="animate"
             exit="exit"
             className={cn(
-              "space-y-10 text-white flex-1 flex flex-col",
-              fullscreen ? "p-12" : "p-10"
+              "grid min-h-0 flex-1 overflow-hidden",
+              hasSplitMedia ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1",
             )}
           >
-            <div className="space-y-3">
-              <h2 className="text-3xl font-semibold leading-tight md:text-4xl">{currentQuestion?.title}</h2>
-              {currentQuestion?.helper ? (
-                <p className="max-w-2xl text-sm text-white/60">{currentQuestion.helper}</p>
-              ) : null}
-            </div>
-
-            {currentQuestion ? (
-              <div className="flex-1 flex flex-col">
-                <QuestionRenderer
-                  question={currentQuestion}
-                  answer={currentQuestion.type === "text" 
-                    ? (localTextAnswers[currentQuestion.id] || answers[currentQuestion.id] || "")
-                    : answers[currentQuestion.id]}
-                  onSelectSingle={handleSingleSelect}
-                  onSelectMultiple={handleMultipleSelect}
-                  onScaleChange={handleScaleChange}
-                  onTextChange={handleTextChange}
-                />
+            {hasSplitMedia && currentQuestion ? (
+              <div className="relative hidden min-h-0 lg:block">
+                <QuestionMedia question={currentQuestion} variant="split" />
+              </div>
+            ) : null}
+            {hasSplitMedia && currentQuestion ? (
+              <div className="relative h-44 min-h-0 shrink-0 lg:hidden">
+                <QuestionMedia question={currentQuestion} variant="split" />
               </div>
             ) : null}
 
-            <div className={cn(
-              "flex flex-wrap justify-end gap-3 mt-auto",
-              fullscreen && "pt-8 border-t border-white/10"
-            )}>
-              {fullscreen && currentIndex > 0 && (
-                <Button
-                  variant="ghost"
-                  onClick={goPrevious}
-                  className="rounded-full border border-white/15 bg-white/5 px-6 py-2 text-xs uppercase tracking-[0.35em] text-white/60 hover:border-white/30 hover:text-white"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Précédent
-                </Button>
+            <div
+              className={cn(
+                "flex min-h-0 flex-col justify-center gap-6 overflow-y-auto !bg-white px-6 py-8 lg:gap-8 lg:px-20 lg:py-12",
+                !hasSplitMedia && "lg:mx-auto lg:max-w-4xl lg:w-full",
               )}
-              <Button
-                onClick={goNext}
-                disabled={isSubmitting}
-                className="rounded-full bg-gradient-to-r from-[#FF512F] to-[#DD2476] px-6 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white hover:opacity-90"
-              >
-                {currentIndex === questions.length - 1 ? "Finaliser" : "Suivant"}
-                {isSubmitting ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <ChevronRight className="ml-2 h-4 w-4" />}
-              </Button>
+            >
+              <div className="shrink-0">
+                <h3 className="!text-3xl !font-black !text-black leading-tight tracking-tight">
+                  {currentQuestion?.title}
+                </h3>
+                {currentQuestion?.helper ? (
+                  <p className="mt-3 text-base font-medium !text-slate-950 sm:text-lg">{currentQuestion.helper}</p>
+                ) : null}
+              </div>
+
+              {currentQuestion ? (
+                <div className="min-h-0 flex-1">
+                  <QuestionRendererLight
+                    question={currentQuestion}
+                    answer={
+                      currentQuestion.type === "text"
+                        ? localTextAnswers[currentQuestion.id] || answers[currentQuestion.id] || ""
+                        : answers[currentQuestion.id]
+                    }
+                    onSelectSingle={handleSingleSelect}
+                    onSelectMultiple={handleMultipleSelect}
+                    onScaleChange={handleScaleChange}
+                    onTextChange={handleTextChange}
+                  />
+                </div>
+              ) : null}
             </div>
           </motion.div>
         </AnimatePresence>
-      </div>
+      </main>
+
+      <footer className="shrink-0 border-t border-slate-200 !bg-white px-4 py-3 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[1920px] justify-end gap-2">
+          {currentIndex > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goPrevious}
+              className="rounded-full border-2 border-slate-300 !bg-white px-5 !text-slate-950 hover:!border-indigo-400 hover:!bg-indigo-50"
+            >
+              Précédent
+            </Button>
+          )}
+          <Button
+            onClick={goNext}
+            disabled={isSubmitting}
+            className="min-w-[132px] rounded-full !bg-indigo-600 px-6 py-2 text-sm font-semibold !text-white shadow-sm hover:!bg-indigo-700"
+          >
+            {currentIndex === questions.length - 1 ? "Terminer" : "Suivant"}
+            {isSubmitting ? (
+              <Loader2 className="ml-2 inline h-4 w-4 animate-spin !text-white" />
+            ) : (
+              <ChevronRight className="ml-1 inline h-4 w-4 !text-white" />
+            )}
+          </Button>
+        </div>
+      </footer>
     </div>
   );
 }
 
-type QuestionRendererProps = {
-  question: TestQuestion;
-  answer: unknown;
-  onSelectSingle: (questionId: string, value: string) => void;
-  onSelectMultiple: (questionId: string, value: string) => void;
-  onScaleChange: (questionId: string, value: number) => void;
-  onTextChange: (questionId: string, value: string) => void;
-};
-
-function QuestionRenderer({
+function QuestionRendererLight({
   question,
   answer,
   onSelectSingle,
   onSelectMultiple,
   onScaleChange,
   onTextChange,
-}: QuestionRendererProps) {
+}: {
+  question: TestQuestion;
+  answer: unknown;
+  onSelectSingle: (questionId: string, value: string) => void;
+  onSelectMultiple: (questionId: string, value: string) => void;
+  onScaleChange: (questionId: string, value: number) => void;
+  onTextChange: (questionId: string, value: string) => void;
+}) {
+  const optionBase =
+    "flex min-h-[56px] items-center justify-between rounded-xl border-2 border-slate-300 bg-slate-100 px-4 py-3 text-left text-sm font-medium opacity-100 transition hover:border-indigo-500 hover:bg-slate-100";
+  const optionActive =
+    "!border-indigo-600 !bg-white font-bold !text-slate-950 !opacity-100 shadow-sm ring-1 ring-indigo-600/15";
+
   if (question.type === "single") {
     return (
-      <div className="grid gap-3 md:grid-cols-2">
-        {(question.options ?? []).map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onSelectSingle(question.id, option.value)}
-            className={cn(
-              "group flex min-h-[80px] items-center justify-between rounded-2xl border border-white/15 bg-white/5 px-6 py-4 text-left text-sm text-white/80 transition duration-300 hover:border-white/35 hover:bg-white/10",
-              answer === option.value && "border-white/60 bg-white/15 text-white",
-            )}
-          >
-            <span>{option.label}</span>
-            <Check
-              className={cn(
-                "h-4 w-4 text-white/40 opacity-0 transition duration-300",
-                answer === option.value && "opacity-100 text-white",
-              )}
-            />
-          </button>
-        ))}
+      <div
+        className="grid auto-rows-fr gap-3 sm:grid-cols-2 !text-black !opacity-100"
+        style={{ color: "#000000", opacity: 1 }}
+      >
+        {(question.options ?? []).map((option) => {
+          const active = String(answer ?? "") === String(option.value ?? "");
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onSelectSingle(question.id, String(option.value))}
+              className={cn(optionBase, active && optionActive, "!text-slate-950")}
+            >
+              <span className={cn("!text-black !opacity-100 !text-slate-950", active && "font-bold")}>{option.label}</span>
+              <Check
+                className={cn("h-4 w-4 shrink-0 text-indigo-600", active ? "opacity-100" : "opacity-0")}
+                aria-hidden
+              />
+            </button>
+          );
+        })}
       </div>
     );
   }
 
   if (question.type === "multiple") {
-    const selected = Array.isArray(answer) ? answer : [];
+    const selected = Array.isArray(answer) ? answer.map(String) : [];
     return (
-      <div className="grid gap-3 md:grid-cols-2">
+      <div
+        className="grid auto-rows-fr gap-3 sm:grid-cols-2 !text-black !opacity-100"
+        style={{ color: "#000000", opacity: 1 }}
+      >
         {(question.options ?? []).map((option) => {
-          const isActive = selected.includes(option.value);
+          const isActive = selected.includes(String(option.value));
           return (
             <button
               key={option.value}
               type="button"
-              onClick={() => onSelectMultiple(question.id, option.value)}
-              className={cn(
-                "group flex min-h-[80px] items-center justify-between rounded-2xl border border-white/15 bg-white/5 px-6 py-4 text-left text-sm text-white/80 transition duration-300 hover:border-white/35 hover:bg-white/10",
-                isActive && "border-white/60 bg-white/15 text-white",
-              )}
+              onClick={() => onSelectMultiple(question.id, String(option.value))}
+              className={cn(optionBase, isActive && optionActive, "!text-slate-950")}
             >
-              <span>{option.label}</span>
+              <span className={cn("!text-black !opacity-100 !text-slate-950", isActive && "font-bold")}>{option.label}</span>
               <Check
-                className={cn(
-                  "h-4 w-4 text-white/40 opacity-0 transition duration-300",
-                  isActive && "opacity-100 text-white",
-                )}
+                className={cn("h-4 w-4 shrink-0 text-indigo-600", isActive ? "opacity-100" : "opacity-0")}
+                aria-hidden
               />
             </button>
           );
@@ -488,10 +589,10 @@ function QuestionRenderer({
     const scale = question.scale ?? { min: 0, max: 10, step: 1 };
     const currentValue = typeof answer === "number" ? answer : Math.round((scale.max - scale.min) / 2);
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/40">
+      <div className="space-y-4 rounded-xl border-2 border-slate-300 !bg-white p-5">
+        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider !text-slate-950">
           <span>{scale.leftLabel ?? "Faible"}</span>
-          <span>{scale.rightLabel ?? "Elevé"}</span>
+          <span>{scale.rightLabel ?? "Élevé"}</span>
         </div>
         <input
           type="range"
@@ -500,35 +601,27 @@ function QuestionRenderer({
           step={scale.step ?? 1}
           value={currentValue}
           onChange={(event) => onScaleChange(question.id, Number(event.target.value))}
-          className="h-2 w-full appearance-none rounded-full bg-white/10 accent-[#FF512F]"
+          className="h-2 w-full appearance-none rounded-full bg-slate-200 accent-indigo-600"
         />
-        <p className="text-sm text-white/60">Intensité : {currentValue}</p>
+        <p className="text-sm font-bold !text-slate-950">Valeur : {currentValue}</p>
       </div>
     );
   }
 
   const textValue = typeof answer === "string" ? answer : "";
   const trimmedLength = textValue.trim().length;
-  
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <textarea
-        rows={5}
-        className="w-full resize-none rounded-2xl border border-white/15 bg-white/5 p-4 text-sm text-white placeholder:text-white/40 focus:border-white/50 focus:outline-none"
+        rows={4}
+        className="w-full resize-none rounded-xl border-2 border-slate-300 !bg-white p-4 text-base font-medium !text-slate-950 placeholder:!text-slate-950/50 focus:!border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/20"
         value={textValue}
         onChange={(event) => onTextChange(question.id, event.target.value)}
-        placeholder={question.placeholder ?? "Expliquez votre réponse"}
+        placeholder={question.placeholder ?? "Votre réponse"}
       />
-      <p className={cn(
-        "text-xs",
-        trimmedLength >= 3 ? "text-white/60" : "text-white/40"
-      )}>
-        {trimmedLength < 3 
-          ? `Minimum 3 caractères (${trimmedLength}/3)` 
-          : "Réponse valide"}
+      <p className="text-sm font-bold !text-slate-950">
+        {trimmedLength < 3 ? `Minimum 3 caractères (${trimmedLength}/3)` : "Réponse valide"}
       </p>
     </div>
   );
 }
-
-

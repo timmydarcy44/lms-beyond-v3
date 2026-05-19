@@ -23,7 +23,7 @@ type SizeAllocationState = Record<string, number>;
 
 const INTRO_SESSION_KEY_T1 = "beyondfc_seen_intro_t1";
 const INTRO_VIDEO_SRC =
-  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/openbadge.mp4";
+  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/openbadge.mp4";
 
 export default function BeyondFCTurnPage() {
   const router = useRouter();

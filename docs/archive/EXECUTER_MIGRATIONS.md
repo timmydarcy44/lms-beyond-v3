@@ -14,7 +14,7 @@
 
 1. Allez sur **https://app.supabase.com**
 2. **Connectez-vous** à votre compte
-3. **Sélectionnez votre projet** (celui avec l'URL : `fqqqejpakbccwvrlolpc.supabase.co`)
+3. **Sélectionnez votre projet** (celui avec l'URL : `zmcefidiiqqppowymoxt.supabase.co`)
 4. Dans le menu de gauche, cliquez sur **SQL Editor** (icône </>)
 
 #### Étape 2 : Exécuter la Migration 000

@@ -8,6 +8,10 @@ import {
   createEmptyCourseBuilderSnapshot,
 } from "@/data/course-builder-fallback";
 import {
+  appendChapterAssessment,
+  insertLearningSubchapter,
+} from "@/lib/course-builder/chapter-content-text";
+import {
   CourseBuilderChapter,
   CourseBuilderSnapshot,
   CourseBuilderSection,
@@ -46,6 +50,13 @@ type CourseBuilderState = {
     targetIndex?: number,
   ) => void;
   addSubchapter: (sectionId: string, chapterId: string) => void;
+  /** Ajoute un sous-chapitre spécial (quiz, entretien, …) en fin de chapitre. */
+  appendSubchapterBlock: (
+    sectionId: string,
+    chapterId: string,
+    block: Omit<CourseBuilderSubchapter, "id"> & { id?: string },
+    options?: { selectAfterCreate?: boolean },
+  ) => string;
   updateSubchapter: (
     sectionId: string,
     chapterId: string,
@@ -151,7 +162,7 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
       const newSection: CourseBuilderSection = {
         id: nanoid(),
         title: "Nouvelle section",
-        description: "Décrivez le rôle de cette section dans votre parcours.",
+        description: "",
         chapters: [],
       };
       const sections = [...state.snapshot.sections, newSection];
@@ -220,8 +231,11 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
                     title: "Nouveau chapitre",
                     duration: "",
                     type: "video",
-                    summary: "Décrivez le résultat pédagogique attendu.",
+                    summary: "",
                     content: "",
+                    access_start_date: null,
+                    access_end_date: null,
+                    unlock_condition: "previous_chapter_completed",
                     subchapters: [],
                   },
                 ],
@@ -355,17 +369,14 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
                   chapter.id === chapterId
                     ? {
                         ...chapter,
-                        subchapters: [
-                          ...chapter.subchapters,
-                          {
-                            id: nanoid(),
-                            title: "Nouveau sous-chapitre",
-                            duration: "",
-                            type: "text",
-                            summary: "Précisez la promesse pédagogique.",
-                            content: "",
-                          },
-                        ],
+                        subchapters: insertLearningSubchapter(chapter.subchapters, {
+                          id: nanoid(),
+                          title: "Nouveau sous-chapitre",
+                          duration: "",
+                          type: "text",
+                          summary: "Précisez la promesse pédagogique.",
+                          content: "",
+                        }),
                       }
                     : chapter,
                 ),
@@ -374,6 +385,53 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
         ),
       },
     })),
+  appendSubchapterBlock: (sectionId, chapterId, block, options) => {
+    const newId = block.id?.trim() || nanoid();
+    const replaceKind = block.kind ? String(block.kind) : undefined;
+    const newSub: CourseBuilderSubchapter = {
+      id: newId,
+      title: block.title || "Bloc",
+      duration: block.duration ?? "",
+      type: block.type ?? "text",
+      summary: block.summary,
+      content: block.content,
+      mediaUrl: block.mediaUrl,
+      content_validated: block.content_validated,
+      kind: block.kind,
+      quiz_id: block.quiz_id,
+      interview_context: block.interview_context,
+    };
+    const selectAfterCreate = options?.selectAfterCreate !== false;
+    set((state) => ({
+      snapshot: {
+        ...state.snapshot,
+        sections: state.snapshot.sections.map((section) =>
+          section.id === sectionId
+            ? {
+                ...section,
+                chapters: section.chapters.map((chapter) =>
+                  chapter.id === chapterId
+                    ? {
+                        ...chapter,
+                        subchapters: appendChapterAssessment(chapter.subchapters, newSub, replaceKind),
+                      }
+                    : chapter,
+                ),
+              }
+            : section,
+        ),
+      },
+      selection: selectAfterCreate
+        ? {
+            type: "subchapter",
+            sectionId,
+            chapterId,
+            subchapterId: newId,
+          }
+        : state.selection,
+    }));
+    return newId;
+  },
   updateSubchapter: (sectionId, chapterId, subchapterId, payload) =>
     set((state) => ({
       snapshot: {

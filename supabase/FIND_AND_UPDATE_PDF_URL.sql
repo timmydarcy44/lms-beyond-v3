@@ -13,10 +13,10 @@
 -- Le format est généralement: https://[PROJECT_ID].supabase.co/storage/v1/object/public/[BUCKET]/[PATH]
 
 -- Exemple pour le bucket "Public":
--- https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Public/Guide_pratique_le_sommeil.pdf
+-- https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Public/Guide_pratique_le_sommeil.pdf
 
 -- Exemple pour le bucket "Jessica CONTENTIN":
--- https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Jessica%20CONTENTIN/Guide_pratique_le_sommeil.pdf
+-- https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Jessica%20CONTENTIN/Guide_pratique_le_sommeil.pdf
 
 -- Mettre à jour l'URL du PDF
 -- ⚠️ REMPLACER 'VOTRE_URL_PDF_ICI' par l'URL réelle du fichier uploadé

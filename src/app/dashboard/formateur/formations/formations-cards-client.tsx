@@ -29,6 +29,17 @@ const FILTERS: Array<{ value: FilterValue; label: string }> = [
   { value: "draft", label: "Brouillons" },
 ];
 
+const levelToBars = (level?: string | null): number => {
+  const v = String(level ?? "").trim().toLowerCase();
+  if (!v) return 0;
+  if (v.includes("débutant") || v.includes("debutant")) return 1;
+  if (v.includes("acquisition")) return 2;
+  if (v.includes("interm")) return 3;
+  if (v.includes("spécialiste") || v.includes("specialiste")) return 4;
+  if (v.includes("expert")) return 5;
+  return 0;
+};
+
 export function FormationsCardsClient({ courses, statusConfig }: FormationsCardsClientProps) {
   const [activeFilter, setActiveFilter] = useState<FilterValue>("all");
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
@@ -148,8 +159,8 @@ export function FormationsCardsClient({ courses, statusConfig }: FormationsCards
               className={cn(
                 "rounded-full border px-4 py-2 text-sm font-medium transition",
                 activeFilter === filter.value
-                  ? "border-cyan-400/60 bg-cyan-500/18 text-cyan-50 shadow-[0_0_0_1px_rgba(34,_211,_238,0.35)]"
-                  : "border-white/10 bg-white/8 text-white/55 hover:border-white/20 hover:text-white/80",
+                  ? "border-cyan-300 bg-cyan-50 text-cyan-900 shadow-sm"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
               )}
             >
               {filter.label}
@@ -342,17 +353,22 @@ function FormationRail({
   }
 
   return (
-    <section className={cn("space-y-5 rounded-[28px] border border-white/10 bg-slate-900/65 p-5 shadow-[0_18px_45px_rgba(2,6,23,0.22)] backdrop-blur-sm", "bg-gradient-to-br", accent)}>
+    <section
+      className={cn(
+        "space-y-5 rounded-[28px] border border-slate-200/90 bg-gradient-to-br p-5 shadow-sm",
+        accent,
+      )}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-white md:text-xl">{title}</h2>
-          {subtitle ? <p className="text-sm text-white/60">{subtitle}</p> : null}
+          <h2 className="text-lg font-semibold text-slate-900 md:text-xl">{title}</h2>
+          {subtitle ? <p className="text-sm text-slate-600">{subtitle}</p> : null}
         </div>
       </div>
-      <div className="group/rail relative">
+      <div className="group/rail relative max-w-full">
         <div
           ref={railRef}
-          className="flex gap-5 overflow-x-auto pb-5 pr-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 scroll-smooth snap-x snap-mandatory"
+          className="flex max-w-full gap-5 overflow-x-auto overflow-y-visible pb-5 pr-1 scrollbar-thin scrollbar-track-slate-100 scrollbar-thumb-slate-300 scroll-smooth snap-x snap-mandatory"
         >
           {courses.map((course) => (
             <FormationCard
@@ -369,13 +385,13 @@ function FormationRail({
 
         <div
           className={cn(
-            "pointer-events-none absolute left-0 top-1/2 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-black/70 to-transparent text-white transition md:flex",
+            "pointer-events-none absolute left-0 top-1/2 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-white to-transparent text-slate-700 transition md:flex",
             canScroll.left ? "opacity-100" : "opacity-0",
           )}
         >
           <button
             type="button"
-            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white transition hover:border-cyan-300/40 hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-300 hover:text-cyan-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             onClick={() => handleScroll(-1)}
             aria-label="Faire défiler vers la gauche"
           >
@@ -385,13 +401,13 @@ function FormationRail({
 
         <div
           className={cn(
-            "pointer-events-none absolute right-0 top-1/2 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-l from-black/70 to-transparent text-white transition md:flex",
+            "pointer-events-none absolute right-0 top-1/2 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-l from-white to-transparent text-slate-700 transition md:flex",
             canScroll.right ? "opacity-100" : "opacity-0",
           )}
         >
           <button
             type="button"
-            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white transition hover:border-cyan-300/40 hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-300 hover:text-cyan-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             onClick={() => handleScroll(1)}
             aria-label="Faire défiler vers la droite"
           >
@@ -413,18 +429,20 @@ type FormationCardProps = {
 };
 
 function FormationCard({ course, statusConfig, accent, onAssignLearner, onAssignGroup, onAssignPath }: FormationCardProps) {
-  const status = statusConfig[course.status] ?? { label: course.status, tone: "bg-white/10 text-white/60" };
+  const status = statusConfig[course.status] ?? { label: course.status, tone: "bg-slate-100 text-slate-600 border border-slate-200" };
   const completion = course.completion ?? 0;
   const formattedUpdatedAt = formatDistanceToNow(new Date(course.updatedAt), { addSuffix: true, locale: fr });
   const primaryLabel = course.status === "published" ? "Consulter" : "Continuer";
   const microcopy =
     course.status === "published" ? "Prêt à diffuser" : completion >= 80 ? "Encore une étape" : completion >= 40 ? "Belle progression" : "À reprendre en douceur";
   const statusColorClass =
-    course.status === "published" ? "text-emerald-200" : course.status === "draft" ? "text-orange-200" : "text-cyan-200";
+    course.status === "published" ? "text-emerald-700" : course.status === "draft" ? "text-orange-700" : "text-cyan-700";
+  const filledBars = levelToBars((course as any).level ?? null);
+  const levelLabel = String((course as any).level ?? "").trim();
 
   return (
     <article
-      className="group relative w-[260px] flex-shrink-0 snap-start overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 shadow-[0_12px_30px_rgba(2,6,23,0.35)] transition-shadow duration-200 focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-300/80 hover:shadow-[0_18px_45px_rgba(2,6,23,0.45)] md:w-[300px]"
+      className="group relative w-[min(300px,85vw)] max-w-[300px] flex-shrink-0 snap-start overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-400/80 hover:shadow-md md:w-[300px]"
       tabIndex={0}
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden">
@@ -452,51 +470,68 @@ function FormationCard({ course, statusConfig, accent, onAssignLearner, onAssign
             ) : null}
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-3 pt-10">
-          <div className="flex flex-col gap-2 text-xs text-white/70">
-            <span className="inline-flex items-center gap-2 text-white">
-              <CalendarClock className="h-3.5 w-3.5 text-white/60" />
-              {course.category || "Sans catégorie"}
-            </span>
-            <Badge className={cn("w-fit rounded-full bg-black/30 text-[11px] uppercase tracking-[0.3em]", status.tone)}>{status.label}</Badge>
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 via-black/35 to-transparent px-4 pb-3 pt-10">
+          <div className="flex flex-col gap-2 text-xs text-white/85">
+            <Badge className={cn("w-fit rounded-full text-[11px] uppercase tracking-[0.3em]", status.tone)}>{status.label}</Badge>
           </div>
         </div>
       </div>
 
       <div className="space-y-4 px-5 py-5">
         <div className="space-y-2">
-          <h3 className="line-clamp-2 text-lg font-semibold text-white">{course.title}</h3>
-          <p className="text-xs text-white/45">Modifié {formattedUpdatedAt}</p>
+          <h3 className="line-clamp-2 text-lg font-semibold text-slate-900">{course.title}</h3>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+            {course.category ? (
+              <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-600">
+                {course.category}
+              </span>
+            ) : null}
+            {filledBars > 0 && levelLabel ? (
+              <span className="inline-flex items-center gap-2 text-[10px] font-medium text-slate-900/60">
+                <span className="flex items-end gap-1 origin-left scale-[0.8]">
+                  {(["h-2", "h-3", "h-4", "h-5", "h-6"] as const).map((h, i) => (
+                    <span
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={i}
+                      className={`${h} w-1 rounded-sm ${i < filledBars ? "bg-slate-900" : "bg-slate-200"}`}
+                    />
+                  ))}
+                </span>
+                <span>{levelLabel}</span>
+              </span>
+            ) : null}
+          </div>
+          <p className="text-xs text-slate-500">Modifié {formattedUpdatedAt}</p>
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-white/60">
+          <div className="flex items-center justify-between text-xs text-slate-600">
             <span className={statusColorClass}>{microcopy}</span>
-            <span className="text-white/75">{completion}%</span>
+            <span className="text-slate-800">{completion}%</span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/12">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 transition-[width] duration-300 motion-reduce:transition-none"
+              className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-[width] duration-300 motion-reduce:transition-none"
               style={{ width: `${Math.min(100, Math.max(0, completion))}%` }}
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-white/58">
-          <span className="rounded-full bg-white/12 px-3 py-1 text-white/70">{course.learners} apprenants</span>
-          {course.nextStep ? <span className="truncate text-white/45">Prochaine étape · {course.nextStep}</span> : null}
+        <div className="flex items-center gap-2 text-xs text-slate-600">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{course.learners} apprenants</span>
+          {course.nextStep ? <span className="truncate text-slate-500">Prochaine étape · {course.nextStep}</span> : null}
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-slate-950/80 via-slate-950/50 to-transparent opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 motion-reduce:transition-none">
+      <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-slate-900/90 via-slate-900/55 to-transparent opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 motion-reduce:transition-none">
         <div className="space-y-3 px-4 pb-4">
           <div className="flex flex-wrap items-center gap-2">
             <Button
               asChild
               size="sm"
-              className="flex-1 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-xs font-semibold text-white shadow-lg shadow-cyan-500/15 hover:shadow-cyan-500/25"
+              className="flex-1 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-xs font-semibold text-white shadow-md"
             >
-              <Link href={`/dashboard/formateur/formations/${course.id}/structure`} aria-label={`${primaryLabel} ${course.title}`}>
+              <Link href={`/dashboard/formateur/formations/${course.id}`} aria-label={`${primaryLabel} ${course.title}`}>
                 <Play className="mr-2 h-3.5 w-3.5" />
                 {primaryLabel}
               </Link>
@@ -505,9 +540,9 @@ function FormationCard({ course, statusConfig, accent, onAssignLearner, onAssign
               asChild
               size="sm"
               variant="secondary"
-              className="flex-1 rounded-full border border-white/12 bg-white/10 text-xs font-semibold text-white/80 hover:bg-white/15"
+              className="flex-1 rounded-full border border-white/25 bg-white/15 text-xs font-semibold text-white hover:bg-white/25"
             >
-              <Link href={`/dashboard/formateur/formations/${course.id}/structure`} aria-label={`Modifier ${course.title}`}>
+              <Link href={`/dashboard/formateur/formations/${course.id}`} aria-label={`Modifier ${course.title}`}>
                 <PenSquare className="mr-2 h-3.5 w-3.5" />
                 Modifier
               </Link>
@@ -515,17 +550,17 @@ function FormationCard({ course, statusConfig, accent, onAssignLearner, onAssign
             <Button
               size="sm"
               variant="ghost"
-              className="rounded-full border border-white/12 bg-white/8 px-3 text-xs font-semibold text-white/70 hover:border-white/20 hover:text-white/90"
+              className="rounded-full border border-white/20 bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20"
             >
               <Copy className="mr-2 h-3.5 w-3.5" />
               Dupliquer
             </Button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-white/90">
             <button
               type="button"
               onClick={() => onAssignLearner(course.id)}
-              className="inline-flex items-center gap-2 rounded-full bg-white/6 px-3 py-1 transition hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+              className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
             >
               <UserPlus className="h-3.5 w-3.5" />
               Assigner apprenant
@@ -533,7 +568,7 @@ function FormationCard({ course, statusConfig, accent, onAssignLearner, onAssign
             <button
               type="button"
               onClick={() => onAssignGroup(course.id)}
-              className="inline-flex items-center gap-2 rounded-full bg-white/6 px-3 py-1 transition hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+              className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
             >
               <Users className="h-3.5 w-3.5" />
               Groupe
@@ -541,7 +576,7 @@ function FormationCard({ course, statusConfig, accent, onAssignLearner, onAssign
             <button
               type="button"
               onClick={() => onAssignPath(course.id)}
-              className="inline-flex items-center gap-2 rounded-full bg-white/6 px-3 py-1 transition hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+              className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
             >
               <Route className="h-3.5 w-3.5" />
               Parcours
@@ -550,7 +585,7 @@ function FormationCard({ course, statusConfig, accent, onAssignLearner, onAssign
         </div>
       </div>
 
-      <div className={cn("pointer-events-none absolute inset-0 opacity-0 transition duration-200", `bg-gradient-to-br ${accent}`, "group-hover:opacity-55")} />
+      <div className={cn("pointer-events-none absolute inset-0 opacity-0 transition duration-200", `bg-gradient-to-br ${accent}`, "group-hover:opacity-25")} />
     </article>
   );
 }

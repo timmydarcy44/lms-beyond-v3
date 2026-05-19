@@ -1,14 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Youtube from "@tiptap/extension-youtube";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
 import TextAlign from "@tiptap/extension-text-align";
-import Link from "@tiptap/extension-link";
-import Underline from "@tiptap/extension-underline";
 import {
   AlignCenter,
   AlignLeft,
@@ -26,14 +24,24 @@ import {
   Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FontSize } from "./extensions/font-size";
 import { ResizableImage } from "./extensions/resizable-image";
 import { VideoBlock } from "./extensions/video-block";
-import { MediaPlaceholder } from "./extensions/media-placeholder";
+import { MediaPlaceholder, type MediaPlaceholderRequest } from "./extensions/media-placeholder";
 import { TemplatePickerModal, type TemplateDefinition } from "./template-picker-modal";
+import { Callout } from "./extensions/callout";
 
 type RichTextEditorProps = {
   content: string;
@@ -133,10 +141,13 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
-  const [mediaMenu, setMediaMenu] = useState<{
-    rect: DOMRect | null;
+  const [mediaPicker, setMediaPicker] = useState<{
+    mode: "image" | "video";
+    replacePlaceholder: boolean;
     getPos: (() => number) | null;
   } | null>(null);
+  const [mediaTab, setMediaTab] = useState<"upload" | "link">("upload");
+  const [mediaLinkDraft, setMediaLinkDraft] = useState("");
   const [pendingMediaTarget, setPendingMediaTarget] = useState<{
     type: "image" | "video";
     replacePlaceholder: boolean;
@@ -145,23 +156,31 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const onMediaPlaceholderRequestRef = useRef<(payload: MediaPlaceholderRequest) => void>(() => {});
+  onMediaPlaceholderRequestRef.current = (payload) => {
+    setMediaPicker({
+      mode: payload.type,
+      replacePlaceholder: true,
+      getPos: payload.getPos,
+    });
+    setMediaTab("upload");
+    setMediaLinkDraft("");
+  };
 
-  const handleMediaPlaceholderRequest = useCallback(
-    (payload: any) => {
-      setMediaMenu({
-        rect: payload?.rect ?? null,
-        getPos: payload?.getPos ?? null,
-      });
-    },
-    [],
-  );
-  
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
         },
+        // Link + Underline + Gapcursor sont déjà fournis par StarterKit : ne pas les redéclarer (doublons).
+        link: {
+          openOnClick: false,
+          HTMLAttributes: {
+            class: "text-indigo-600 underline cursor-pointer hover:text-indigo-700",
+          },
+        },
+        gapcursor: {},
       }),
       TextStyle,
       FontSize,
@@ -169,18 +188,18 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),
+      Callout,
       ResizableImage,
-      VideoBlock,
-      MediaPlaceholder.configure({
-        onRequestMedia: handleMediaPlaceholderRequest,
-      }),
-      Link.configure({
-        openOnClick: false,
+      Youtube.configure({
+        inline: false,
         HTMLAttributes: {
-          class: "text-indigo-600 underline cursor-pointer hover:text-indigo-700",
+          class: "rounded-xl shadow-lg aspect-video w-full",
         },
       }),
-      Underline,
+      VideoBlock,
+      MediaPlaceholder.configure({
+        onRequestMedia: (payload) => onMediaPlaceholderRequestRef.current(payload),
+      }),
     ] as any,
     content,
     immediatelyRender: false,
@@ -229,7 +248,23 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
     editor?.chain().focus().setFontSize(size.toString()).run();
   };
 
-  const closeMediaMenu = () => setMediaMenu(null);
+  const closeMediaPicker = () => {
+    setMediaPicker(null);
+    setMediaTab("upload");
+    setMediaLinkDraft("");
+  };
+
+  useEffect(() => {
+    if (!mediaPicker) {
+      setPendingMediaTarget(null);
+      return;
+    }
+    setPendingMediaTarget({
+      type: mediaPicker.mode,
+      replacePlaceholder: mediaPicker.replacePlaceholder,
+      getPos: mediaPicker.getPos,
+    });
+  }, [mediaPicker]);
 
   const resolvePlaceholderPosition = (getPos: (() => number) | null) => {
     if (getPos) {
@@ -263,7 +298,18 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
   ) => {
     if (!editor || pos === null) return false;
     const schema = editor.view.state.schema;
+    const youtubeType = (schema.nodes as any).youtube;
     const videoType = schema.nodes.videoBlock;
+    if (payload.provider === "youtube" && youtubeType) {
+      return editor.commands.command(({ tr, state }) => {
+        const node = state.doc.nodeAt(pos);
+        if (!node || node.type.name !== "mediaPlaceholder") {
+          return false;
+        }
+        tr.replaceWith(pos, pos + node.nodeSize, youtubeType.create({ src: payload.src }));
+        return true;
+      });
+    }
     if (!videoType) return false;
     return editor.commands.command(({ tr, state }) => {
       const node = state.doc.nodeAt(pos);
@@ -282,6 +328,10 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
 
   const insertVideo = (src: string, embed: "iframe" | "video", provider: "youtube" | "vimeo" | "file") => {
     if (!editor) return;
+    if (provider === "youtube") {
+      editor.chain().focus().setYoutubeVideo({ src }).run();
+      return;
+    }
     editor
       .chain()
       .focus()
@@ -304,7 +354,7 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
       }
     }
     setPendingMediaTarget(null);
-    closeMediaMenu();
+    closeMediaPicker();
   };
 
   const applyVideoInsertion = (
@@ -326,71 +376,22 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
       }
     }
     setPendingMediaTarget(null);
-    closeMediaMenu();
+    closeMediaPicker();
   };
 
+  /** HTML plat : pas de wrappers `div` non supportés par le schéma TipTap. */
+  const SIMPLE_IMAGE_TEMPLATE =
+    '<p>---</p><div data-media-placeholder data-type="image"></div><p>Saisissez votre texte ici...</p><p>---</p>';
+  const SIMPLE_VIDEO_TEMPLATE =
+    '<p>---</p><div data-media-placeholder data-type="video"></div><p>Saisissez votre texte ici...</p><p>---</p>';
+
   const templateMarkup: Record<string, string> = {
-    "single-column": `
-      <section class="rt-layout rt-layout-single" data-template="single-column">
-        <div class="rt-block rt-text-block">
-          <p data-placeholder="Écrivez ici…"><br/></p>
-        </div>
-        <div class="rt-block rt-media-block">
-          <media-placeholder data-role="media" data-template="single-column"></media-placeholder>
-        </div>
-      </section>
-    `,
-    "two-columns": `
-      <section class="rt-layout columns-2" data-template="two-columns">
-        <div class="rt-block rt-text-block">
-          <p data-placeholder="Écrivez ici…"><br/></p>
-        </div>
-        <div class="rt-block rt-media-block">
-          <media-placeholder data-role="media" data-template="two-columns"></media-placeholder>
-        </div>
-      </section>
-    `,
-    "two-columns-30-70": `
-      <section class="rt-layout columns-30-70" data-template="two-columns-30-70">
-        <div class="rt-block rt-text-block">
-          <p data-placeholder="Écrivez ici…"><br/></p>
-        </div>
-        <div class="rt-block rt-media-block">
-          <media-placeholder data-role="media" data-template="two-columns-30-70"></media-placeholder>
-        </div>
-      </section>
-    `,
-    "image-left-text-right": `
-      <section class="rt-layout columns-2" data-template="image-left-text-right">
-        <div class="rt-block rt-media-block">
-          <media-placeholder data-role="media" data-template="image-left-text-right"></media-placeholder>
-        </div>
-        <div class="rt-block rt-text-block">
-          <p data-placeholder="Écrivez ici…"><br/></p>
-        </div>
-      </section>
-    `,
-    "image-right-text-left": `
-      <section class="rt-layout columns-2" data-template="image-right-text-left">
-        <div class="rt-block rt-text-block">
-          <p data-placeholder="Écrivez ici…"><br/></p>
-        </div>
-        <div class="rt-block rt-media-block">
-          <media-placeholder data-role="media" data-template="image-right-text-left"></media-placeholder>
-        </div>
-      </section>
-    `,
-    hero: `
-      <section class="rt-layout rt-layout-hero" data-template="hero">
-        <div class="rt-block rt-text-block">
-          <h2 data-placeholder="Titre principal…"><br/></h2>
-          <p data-placeholder="Développez votre message…"><br/></p>
-        </div>
-        <div class="rt-block rt-media-block">
-          <media-placeholder data-role="media" data-template="hero"></media-placeholder>
-        </div>
-      </section>
-    `,
+    "single-column": SIMPLE_IMAGE_TEMPLATE,
+    "two-columns": SIMPLE_IMAGE_TEMPLATE,
+    "two-columns-30-70": SIMPLE_IMAGE_TEMPLATE,
+    "image-left-text-right": SIMPLE_IMAGE_TEMPLATE,
+    "image-right-text-left": SIMPLE_IMAGE_TEMPLATE,
+    hero: SIMPLE_VIDEO_TEMPLATE,
   };
 
   const insertTemplateLayout = useCallback(
@@ -414,9 +415,7 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
       }
 
       try {
-        const selectionStart = editor.state.selection.from;
         const inserted = editor.chain().focus().insertContent(html).run();
-
         if (!inserted) {
           console.error("[Templates] INSERT_ERROR", { templateId, reason: "command-rejected" });
           toast.error("Impossible d'insérer le modèle.");
@@ -428,26 +427,10 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
           docSize: JSON.stringify(editor.getJSON()).length,
         });
 
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-
-        const { doc } = editor.state;
-        const docSize = doc.content.size;
-        let targetPos = Math.min(selectionStart + 1, docSize);
-
-        doc.nodesBetween(selectionStart, docSize, (node, pos) => {
-          if (node.isTextblock) {
-            targetPos = Math.min(pos + 1, docSize);
-            return false;
-          }
-          return true;
-        });
-
-        editor.commands.setTextSelection(targetPos);
-        editor.commands.focus();
-
         return true;
       } catch (error) {
-        console.error("[Templates] INSERT_ERROR", { templateId, error });
+        console.error("[Templates] INSERT_ERROR", { templateId });
+        console.dir(error);
         toast.error("Impossible d'insérer le modèle.");
         return false;
       }
@@ -514,19 +497,6 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
     }
   };
 
-  const handleImageUrl = (target?: typeof pendingMediaTarget) => {
-    const url = window.prompt("URL de l'image");
-    if (!url) return;
-    applyImageInsertion(url, target ?? null);
-  };
-
-  const handleVideoUrl = (target?: typeof pendingMediaTarget) => {
-    const url = window.prompt("URL de la vidéo (YouTube, Vimeo, MP4, ...)");
-    if (!url) return;
-    const parsed = parseVideoUrl(url);
-    applyVideoInsertion(parsed.src, parsed.embed, parsed.provider, target ?? null);
-  };
-
   const handleLink = () => {
     if (!editor) return;
     const previous = editor.getAttributes("link").href;
@@ -541,97 +511,48 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
 
   const insertLayout = (id: string) => {
     if (!editor) return;
-    const template = LAYOUT_TEMPLATES.find((tpl) => tpl.id === id);
-    if (!template) return;
-    editor.chain().focus().insertContent(template.html).run();
+    const html = templateMarkup[id];
+    if (!html) return;
+    try {
+      editor.chain().focus().insertContent(html).run();
+    } catch (error) {
+      console.error("[Templates] INSERT_ERROR", { templateId: id, via: "insertLayout" });
+      console.dir(error);
+      toast.error("Impossible d'insérer le modèle.");
+    }
   };
 
   if (!editor) {
     return null;
   }
 
-  const mediaMenuPortal =
-    mediaMenu && typeof document !== "undefined"
-      ? createPortal(
-          <div
-            className="fixed inset-0 z-[90]"
-            onClick={() => {
-              closeMediaMenu();
-            }}
-          >
-            <div
-              className="absolute w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"
-              style={{
-                top: (mediaMenu.rect?.bottom ?? mediaMenu.rect?.top ?? 0) + window.scrollY + 12,
-                left: (mediaMenu.rect?.left ?? 0) + window.scrollX,
-              }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Ajouter un média</p>
-              <div className="mt-3 space-y-2">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-600"
-                  onClick={() => {
-                    setPendingMediaTarget({
-                      type: "image",
-                      replacePlaceholder: true,
-                      getPos: mediaMenu.getPos,
-                    });
-                    closeMediaMenu();
-                    imageInputRef.current?.click();
-                  }}
-                >
-                  <span>Téléverser une image</span>
-                </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-600"
-                  onClick={() =>
-                    handleImageUrl({
-                      type: "image",
-                      replacePlaceholder: true,
-                      getPos: mediaMenu.getPos,
-                    })
-                  }
-                >
-                  <span>Insérer une image via URL</span>
-                </button>
-                <div className="h-px w-full bg-slate-200" />
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-600"
-                  onClick={() => {
-                    setPendingMediaTarget({
-                      type: "video",
-                      replacePlaceholder: true,
-                      getPos: mediaMenu.getPos,
-                    });
-                    closeMediaMenu();
-                    videoInputRef.current?.click();
-                  }}
-                >
-                  <span>Téléverser une vidéo</span>
-                </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-600"
-                  onClick={() =>
-                    handleVideoUrl({
-                      type: "video",
-                      replacePlaceholder: true,
-                      getPos: mediaMenu.getPos,
-                    })
-                  }
-                >
-                  <span>Insérer une vidéo via URL</span>
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )
-      : null;
+  const openMediaPickerFromToolbar = (mode: "image" | "video") => {
+    setMediaPicker({ mode, replacePlaceholder: false, getPos: null });
+    setMediaTab("upload");
+    setMediaLinkDraft("");
+  };
+
+  const submitMediaLink = () => {
+    if (!mediaPicker) return;
+    const url = mediaLinkDraft.trim();
+    if (!url) {
+      toast.error("Collez un lien valide");
+      return;
+    }
+    const target = {
+      type: mediaPicker.mode,
+      replacePlaceholder: mediaPicker.replacePlaceholder,
+      getPos: mediaPicker.getPos,
+    };
+    if (mediaPicker.mode === "image") {
+      applyImageInsertion(url, target);
+      toast.success("Image ajoutée");
+    } else {
+      const parsed = parseVideoUrl(url);
+      applyVideoInsertion(parsed.src, parsed.embed, parsed.provider, target);
+      toast.success("Vidéo ajoutée");
+    }
+  };
 
   return (
     <div className="space-y-2 rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -833,59 +754,35 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
 
         <Separator orientation="vertical" className="h-6 bg-slate-200" />
 
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-8 w-8 p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-              isImageUploading && "cursor-wait opacity-60",
-            )}
-            disabled={isImageUploading}
-            title="Sélectionner une image"
-            onClick={() => {
-              setPendingMediaTarget(null);
-              imageInputRef.current?.click();
-            }}
-          >
-            <ImageIcon className="h-4 w-4" />
-          </Button>
-          <button
-            type="button"
-            onClick={() => handleImageUrl(null)}
-            className="rounded px-2 text-xs font-medium text-indigo-600 transition hover:text-indigo-700"
-          >
-            URL
-          </button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-8 w-8 p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+            isImageUploading && "cursor-wait opacity-60",
+          )}
+          disabled={isImageUploading}
+          title="Image"
+          onClick={() => openMediaPickerFromToolbar("image")}
+        >
+          <ImageIcon className="h-4 w-4" />
+        </Button>
 
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-8 w-8 p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-              isVideoUploading && "cursor-wait opacity-60",
-            )}
-            disabled={isVideoUploading}
-            title="Sélectionner une vidéo"
-            onClick={() => {
-              setPendingMediaTarget(null);
-              videoInputRef.current?.click();
-            }}
-          >
-            <Video className="h-4 w-4" />
-          </Button>
-          <button
-            type="button"
-            onClick={() => handleVideoUrl(null)}
-            className="rounded px-2 text-xs font-medium text-indigo-600 transition hover:text-indigo-700"
-          >
-            URL
-          </button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-8 w-8 p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+            isVideoUploading && "cursor-wait opacity-60",
+          )}
+          disabled={isVideoUploading}
+          title="Vidéo"
+          onClick={() => openMediaPickerFromToolbar("video")}
+        >
+          <Video className="h-4 w-4" />
+        </Button>
 
         <Button
           type="button"
@@ -928,7 +825,81 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
         onSelect={(template) => insertTemplateLayout(template.id)}
       />
 
-      {mediaMenuPortal}
+      <Dialog
+        open={Boolean(mediaPicker)}
+        onOpenChange={(open) => {
+          if (!open) closeMediaPicker();
+        }}
+      >
+        <DialogContent className="max-w-md rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl sm:max-w-md">
+          <DialogHeader className="space-y-1 border-b border-slate-100 px-6 pb-4 pt-6 text-left">
+            <DialogTitle className="text-lg font-semibold text-slate-900">
+              {mediaPicker?.mode === "video" ? "Insérer une vidéo" : "Insérer une image"}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500">
+              Téléversez un fichier ou collez un lien (YouTube, Vimeo, image ou fichier vidéo).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 pb-6 pt-2">
+            <Tabs value={mediaTab} onValueChange={(v) => setMediaTab(v as "upload" | "link")} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 rounded-xl bg-slate-100 p-1">
+                <TabsTrigger value="upload" className="rounded-lg text-sm font-medium">
+                  Uploader
+                </TabsTrigger>
+                <TabsTrigger value="link" className="rounded-lg text-sm font-medium">
+                  Lien externe
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="upload" className="mt-4 space-y-3">
+                <p className="text-sm text-slate-600">
+                  {mediaPicker?.mode === "video"
+                    ? "Choisissez un fichier vidéo sur votre appareil."
+                    : "Choisissez une image sur votre appareil."}
+                </p>
+                <Button
+                  type="button"
+                  className="w-full rounded-xl bg-slate-900 py-5 text-sm font-semibold text-white hover:bg-slate-800"
+                  disabled={mediaPicker?.mode === "video" ? isVideoUploading : isImageUploading}
+                  onClick={() => {
+                    if (mediaPicker?.mode === "video") {
+                      videoInputRef.current?.click();
+                    } else {
+                      imageInputRef.current?.click();
+                    }
+                  }}
+                >
+                  {mediaPicker?.mode === "video"
+                    ? isVideoUploading
+                      ? "Téléversement…"
+                      : "Choisir un fichier vidéo"
+                    : isImageUploading
+                      ? "Téléversement…"
+                      : "Choisir un fichier image"}
+                </Button>
+              </TabsContent>
+              <TabsContent value="link" className="mt-4 space-y-3">
+                <Input
+                  value={mediaLinkDraft}
+                  onChange={(e) => setMediaLinkDraft(e.target.value)}
+                  placeholder={
+                    mediaPicker?.mode === "video"
+                      ? "https://youtube.com/… ou URL directe"
+                      : "https://… (URL de l’image)"
+                  }
+                  className="rounded-xl border-slate-200 bg-slate-50"
+                />
+                <Button
+                  type="button"
+                  className="w-full rounded-xl bg-slate-900 py-5 text-sm font-semibold text-white hover:bg-slate-800"
+                  onClick={submitMediaLink}
+                >
+                  Insérer depuis le lien
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

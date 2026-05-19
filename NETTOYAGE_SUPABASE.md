@@ -10,7 +10,7 @@ Ce guide vous permet de nettoyer des données obsolètes dans Supabase pour lib�
 
 Avant tout nettoyage, faites un backup de votre base de données :
 
-1. Allez sur : https://supabase.com/dashboard/project/fqqqejpakbccwvrlolpc/database/backups
+1. Allez sur : https://supabase.com/dashboard/project/zmcefidiiqqppowymoxt/database/backups
 2. Créez un backup manuel
 3. Ou utilisez l'export SQL : Database → Backups → Download backup
 
@@ -18,7 +18,7 @@ Avant tout nettoyage, faites un backup de votre base de données :
 
 Exécutez d'abord le script de diagnostic pour voir ce qui peut être nettoyé :
 
-1. Allez sur : https://supabase.com/dashboard/project/fqqqejpakbccwvrlolpc/sql/new
+1. Allez sur : https://supabase.com/dashboard/project/zmcefidiiqqppowymoxt/sql/new
 2. Copiez-collez le contenu de `supabase/DIAGNOSTIC_NETTOYAGE.sql`
 3. Exécutez le script
 4. **Notez les résultats** pour voir combien d'éléments seront supprimés
@@ -27,7 +27,7 @@ Exécutez d'abord le script de diagnostic pour voir ce qui peut être nettoyé :
 
 **⚠️ Ne faites cette étape que si le diagnostic montre des données nettoyables ET que vous avez fait un backup.**
 
-1. Allez sur : https://supabase.com/dashboard/project/fqqqejpakbccwvrlolpc/sql/new
+1. Allez sur : https://supabase.com/dashboard/project/zmcefidiiqqppowymoxt/sql/new
 2. Copiez-collez le contenu de `supabase/NETTOYAGE_SECURISE.sql`
 3. **Relisez attentivement** ce qui sera supprimé
 4. Exécutez le script
@@ -63,7 +63,7 @@ Après le nettoyage, vous devriez voir une réduction de la taille de la base de
 ## 🔄 Si vous avez besoin de restaurer
 
 Si vous avez besoin de restaurer des données supprimées :
-1. Allez sur : https://supabase.com/dashboard/project/fqqqejpakbccwvrlolpc/database/backups
+1. Allez sur : https://supabase.com/dashboard/project/zmcefidiiqqppowymoxt/database/backups
 2. Restaurez le backup créé avant le nettoyage
 
 ## ⚠️ Recommandations

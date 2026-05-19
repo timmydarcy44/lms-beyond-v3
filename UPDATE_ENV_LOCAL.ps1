@@ -13,7 +13,7 @@ if (-not (Test-Path .env.local)) {
 }
 
 Write-Host "📋 Instructions:" -ForegroundColor Yellow
-Write-Host "1. Allez sur: https://supabase.com/dashboard/project/fqqqejpakbccwvrlolpc/settings/api" -ForegroundColor White
+Write-Host "1. Allez sur: https://supabase.com/dashboard/project/zmcefidiiqqppowymoxt/settings/api" -ForegroundColor White
 Write-Host "2. Copiez la 'Clé publiable' (commence par sb_publishable_)" -ForegroundColor White
 Write-Host "3. Révélez et copiez la 'Clé secrète' (commence par sb_secret_)" -ForegroundColor White
 Write-Host ""

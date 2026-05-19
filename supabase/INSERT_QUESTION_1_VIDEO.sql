@@ -1,5 +1,5 @@
 -- Script pour insérer la vidéo "Question 1.mp4" dans la table gamification_videos
--- Remplacez YOUR_SUPABASE_PROJECT_ID par votre vrai ID de projet (ex: fqqqejpakbccwvrlolpc)
+-- Remplacez YOUR_SUPABASE_PROJECT_ID par votre vrai ID de projet (ex: zmcefidiiqqppowymoxt)
 
 -- 1. Vérifier d'abord si la table existe
 DO $$

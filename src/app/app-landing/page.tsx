@@ -219,7 +219,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-8">
           <div>
             <img
-              src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
+              src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
               alt="Nevo"
               className="h-8 mb-4"
             />

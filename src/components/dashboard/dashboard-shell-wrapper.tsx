@@ -1,5 +1,5 @@
 import { DashboardShell } from "./dashboard-shell";
-import { getUserOrganizationLogo } from "@/lib/queries/organization";
+import { getOrganizationNavBrandingForUser } from "@/lib/queries/organization-nav";
 import type { DashboardBreadcrumb } from "@/components/layout/header";
 
 type DashboardShellWrapperProps = {
@@ -14,9 +14,9 @@ type DashboardShellWrapperProps = {
 };
 
 export async function DashboardShellWrapper(props: DashboardShellWrapperProps) {
-  const organizationLogo = await getUserOrganizationLogo();
-  
-  return <DashboardShell {...props} organizationLogo={organizationLogo} />;
+  const { logoUrl, name } = await getOrganizationNavBrandingForUser();
+
+  return <DashboardShell {...props} organizationLogo={logoUrl} organizationName={name} />;
 }
 
 

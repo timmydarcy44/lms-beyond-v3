@@ -17,6 +17,7 @@ const OPENAI_ACTION_COSTS: Partial<Record<AIAction, number>> = {
   translate: parseFloat(process.env.AI_COST_OPENAI_TRANSLATE_EUR ?? "0.0020"),
   audio: parseFloat(process.env.AI_COST_OPENAI_AUDIO_EUR ?? "0.0025"),
   insights: parseFloat(process.env.AI_COST_OPENAI_INSIGHTS_EUR ?? "0.0028"),
+  synthesis: parseFloat(process.env.AI_COST_OPENAI_SYNTHESIS_EUR ?? "0.0030"),
 };
 
 function getOpenAIActionCost(action: AIAction): number {
@@ -104,6 +105,13 @@ export async function POST(request: NextRequest) {
         fullPrompt = await loadPrompt(featureId, { text });
         result = await generateJSON(fullPrompt);
         format = "json";
+        break;
+      }
+
+      case "synthesis": {
+        fullPrompt = await loadPrompt(featureId, { text });
+        result = await generateText(fullPrompt, { model: "gpt-4o", maxTokens: 4500 });
+        format = "text";
         break;
       }
 

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 
 export default function LoginPage() {
+  const router = useRouter();
   const supabase = useSupabase();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +26,16 @@ export default function LoginPage() {
         setError(signInError.message || "Identifiants incorrects.");
         return;
       }
-      window.location.href = "/dashboard";
+
+      const res = await fetch("/api/auth/resolve-destination", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+        credentials: "same-origin",
+      });
+      const payload = (await res.json().catch(() => ({}))) as { destination?: string };
+      const dest = payload.destination ?? "/dashboard/entreprise";
+      router.push(dest);
     } catch {
       setError("Impossible de se connecter.");
     } finally {

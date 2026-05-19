@@ -6,9 +6,10 @@ import { AdminSidebarWrapper } from "./AdminSidebarWrapper";
 type AdminLayoutWrapperProps = {
   children: React.ReactNode;
   organizationLogo?: string | null;
+  organizationName?: string | null;
 };
 
-export function AdminLayoutWrapper({ children, organizationLogo }: AdminLayoutWrapperProps) {
+export function AdminLayoutWrapper({ children, organizationLogo, organizationName }: AdminLayoutWrapperProps) {
   const pathname = usePathname();
   const isBeyondCarePage = pathname?.includes("beyond-care");
   const isBeyondConnectPage = pathname?.includes("beyond-connect");
@@ -47,7 +48,7 @@ export function AdminLayoutWrapper({ children, organizationLogo }: AdminLayoutWr
         clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
       }} />
       
-      <AdminSidebarWrapper organizationLogo={organizationLogo} />
+      <AdminSidebarWrapper organizationLogo={organizationLogo} organizationName={organizationName} />
       <main className="flex-1 transition-[margin-left] duration-300 ease-in-out relative z-10 overflow-x-hidden w-full" style={{ marginLeft: 'var(--sidebar-width, 272px)' }}>
         <div className="w-full max-w-7xl mx-auto">
           {children}

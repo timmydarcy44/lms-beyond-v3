@@ -1,6 +1,6 @@
 const { createClient } = require("@supabase/supabase-js");
 
-const SUPABASE_URL = "https://fqqqejpakbccwvrlolpc.supabase.co";
+const SUPABASE_URL = "https://zmcefidiiqqppowymoxt.supabase.co";
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const TIM_SUPER_ADMIN_ID = "60c88469-3c53-417f-a81d-565a662ad2f5";

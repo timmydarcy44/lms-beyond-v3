@@ -36,11 +36,16 @@ export async function POST(_request: NextRequest) {
     }
 
     if (hasPaid) {
-      return NextResponse.json({ url: "/dashboard/apprenant/soft-skills" });
+      return NextResponse.json({ url: "/soft-skills/test" });
     }
 
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const allowUnpaidSoftSkillsAccess =
+      process.env.SOFT_SKILLS_ALLOW_UNPAID_ACCESS === "true" || process.env.NODE_ENV === "development";
     if (!stripeSecretKey) {
+      if (allowUnpaidSoftSkillsAccess) {
+        return NextResponse.json({ url: "/soft-skills/test" });
+      }
       return NextResponse.json({ error: "Stripe non configure" }, { status: 503 });
     }
     const stripe = new Stripe(stripeSecretKey, {
@@ -66,7 +71,7 @@ export async function POST(_request: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${baseUrl}/dashboard/apprenant/soft-skills?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/soft-skills/test?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/dashboard/apprenant/soft-skills-intro`,
       metadata: {
         user_id: user.id,

@@ -19,7 +19,7 @@
 
 Vérifiez que votre fichier `.env.local` contient bien :
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://fqqqejpakbccwvrlolpc.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://zmcefidiiqqppowymoxt.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_ici
 ```
 

@@ -188,7 +188,7 @@ export function ParcoursCardsClient({ paths, statusConfig, learners, groups, con
                     asChild
                     className="w-full rounded-xl border border-white/10 bg-white/12 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/18 focus-visible:ring-2 focus-visible:ring-white/30"
                   >
-                    <Link href={`/dashboard/formateur/parcours/${path.id}`}>Voir le parcours</Link>
+                    <Link href={`/dashboard/formateur/parcours/${path.id}/edit`}>Voir le parcours</Link>
                   </Button>
                   <Button 
                     asChild 

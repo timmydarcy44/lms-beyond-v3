@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const CLUB_LOGO_URL =
-  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Beyond%20FC/Logo%20FCB.jpeg";
+  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Beyond%20FC/Logo%20FCB.jpeg";
 
 export default function BeyondFCPage() {
   const router = useRouter();

@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
+/** Uniquement `learning_sessions` (colonnes content_type, content_id, …). Ne pas utiliser `diagnostic_sessions`. */
+const LEARNING_SESSIONS_TABLE = "learning_sessions";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_RE.test(value.trim());
+}
+
+function apiErrorResponse(error: unknown, status = 500) {
+  console.error("API_ERROR:", error);
+  const message = error instanceof Error ? error.message : "Internal server error";
+  return NextResponse.json({ error: message }, { status });
+}
+
 // POST - Créer une nouvelle session
 export async function POST(request: NextRequest) {
   try {
@@ -17,30 +33,60 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { content_type, content_id } = body;
+    let body: {
+      content_type?: string;
+      content_id?: string;
+      user_id?: string | null;
+    };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const { content_type, content_id, user_id: bodyUserId } = body;
 
     if (!content_type || !content_id) {
+      return NextResponse.json({ error: "content_type and content_id are required" }, { status: 400 });
+    }
+
+    if (!isUuid(content_id)) {
       return NextResponse.json(
-        { error: "content_type and content_id are required" },
-        { status: 400 }
+        { error: "content_id must be a valid UUID (not a slug or composite value)" },
+        { status: 400 },
       );
     }
 
-    // Utiliser le service role client pour contourner RLS
+    if (bodyUserId != null && bodyUserId !== user.id) {
+      return NextResponse.json({ error: "user_id must match authenticated user" }, { status: 403 });
+    }
+
     const adminClient = await getServiceRoleClientOrFallback();
     const queryClient = adminClient ?? supabase;
 
-    // Créer la session
+    const { data: profile, error: profileError } = await queryClient
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("[learning-sessions] profile lookup:", profileError);
+      return NextResponse.json({ error: profileError.message }, { status: 500 });
+    }
+    if (!profile) {
+      return NextResponse.json(
+        { error: "Profil introuvable : impossible d’enregistrer la session sans ligne profiles." },
+        { status: 403 },
+      );
+    }
+
     const { data: session, error } = await queryClient
-      .from("learning_sessions")
+      .from(LEARNING_SESSIONS_TABLE)
       .insert({
         user_id: user.id,
         content_type,
-        content_id,
-        started_at: new Date().toISOString(),
-        duration_seconds: 0,
-        duration_active_seconds: 0,
+        content_id: content_id.trim(),
       })
       .select("id")
       .single();
@@ -52,11 +98,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sessionId: session.id });
   } catch (error) {
-    console.error("[learning-sessions] Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, 500);
   }
 }
 
@@ -76,45 +118,44 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { sessionId, duration_seconds, duration_active_seconds, ended_at } = body;
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: "sessionId is required" },
-        { status: 400 }
-      );
+    let body: {
+      sessionId?: string;
+    };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    // Utiliser le service role client pour contourner RLS
+    const { sessionId } = body;
+
+    if (!sessionId) {
+      return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+    }
+
+    if (!isUuid(sessionId)) {
+      return NextResponse.json({ error: "sessionId must be a valid UUID" }, { status: 400 });
+    }
+
     const adminClient = await getServiceRoleClientOrFallback();
     const queryClient = adminClient ?? supabase;
 
-    // Vérifier que la session appartient à l'utilisateur
     const { data: existingSession, error: checkError } = await queryClient
-      .from("learning_sessions")
+      .from(LEARNING_SESSIONS_TABLE)
       .select("user_id")
-      .eq("id", sessionId)
+      .eq("id", sessionId.trim())
       .single();
 
     if (checkError || !existingSession) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    if (existingSession.user_id !== user.id) {
+    if (String(existingSession.user_id) !== String(user.id)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Mettre à jour la session
-    const updateData: any = {};
-    if (duration_seconds !== undefined) updateData.duration_seconds = duration_seconds;
-    if (duration_active_seconds !== undefined) updateData.duration_active_seconds = duration_active_seconds;
-    if (ended_at) updateData.ended_at = ended_at;
-
-    const { error } = await queryClient
-      .from("learning_sessions")
-      .update(updateData)
-      .eq("id", sessionId);
+    // Pas de mise à jour de colonnes métier pour l’instant (timestamps gérés via `updated_at` côté DB).
+    const { error } = await queryClient.from(LEARNING_SESSIONS_TABLE).update({}).eq("id", sessionId.trim());
 
     if (error) {
       console.error("[learning-sessions] Error updating session:", error);
@@ -123,13 +164,6 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[learning-sessions] Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, 500);
   }
 }
-
-
-

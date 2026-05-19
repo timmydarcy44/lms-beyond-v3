@@ -9,7 +9,8 @@ import Script from "next/script";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
-const CABINET_VIDEO_URL = "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Jessica%20CONTENTIN/video_cabinet.MOV";
+const CABINET_VIDEO_URL =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/video%20hero%20v4.mp4";
 
 export default function ConsultationsPage() {
   const consultations = [

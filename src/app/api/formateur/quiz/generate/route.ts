@@ -39,6 +39,7 @@ Pour chaque question retourne UNIQUEMENT ce JSON :
   'questions': [
     {
       'question': string,
+      'image_keyword': string (après le préfixe fixe "minimalist, editorial photography, high-end", ajoute 2 à 5 mots de thématique en anglais, ex. "minimalist, editorial photography, high-end, photography rule of thirds"),
       'options': [string, string, string, string],
       'correct': number (index 0-3),
       'explication': string

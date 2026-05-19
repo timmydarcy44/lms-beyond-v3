@@ -43,7 +43,7 @@ export const partenaireClub: PartnerClub = {
   name: "SU Dives Cabourg",
   initials: "SD",
   logoUrl:
-    "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Beyond%20Network/Logo_SU_Dives_Cabourg_-_2024.svg",
+    "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Beyond%20Network/Logo_SU_Dives_Cabourg_-_2024.svg",
   gradientFrom: "#C8102E",
   gradientTo: "#1B2A4A",
 };

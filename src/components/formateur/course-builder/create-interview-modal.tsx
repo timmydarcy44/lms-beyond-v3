@@ -1,0 +1,184 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, MessageCircle } from "lucide-react";
+import { nanoid } from "nanoid";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useCourseBuilder } from "@/hooks/use-course-builder";
+import type { CourseBuilderChapter } from "@/types/course-builder";
+import { extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
+import {
+  buildAssessmentPlacementOptions,
+  insertSubchapterAtPlacement,
+  parsePlacementValue,
+} from "@/lib/course-builder/assessment-placement";
+
+type CreateInterviewModalProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Chapitre courant (pré-sélection du contexte et emplacement par défaut). */
+  chapter: CourseBuilderChapter;
+  sectionTitle: string;
+};
+
+function chapterHasInterview(chapter: CourseBuilderChapter): boolean {
+  return (chapter.subchapters ?? []).some((s) => (s as { kind?: string }).kind === "experiential_interview");
+}
+
+export function CreateInterviewModal({
+  open,
+  onOpenChange,
+  chapter,
+  sectionTitle,
+}: CreateInterviewModalProps) {
+  const snapshot = useCourseBuilder((s) => s.snapshot);
+  const hydrateFromSnapshot = useCourseBuilder((s) => s.hydrateFromSnapshot);
+  const [placementValue, setPlacementValue] = useState(`after_chapter:${chapter.id}`);
+  const [busy, setBusy] = useState(false);
+
+  const placementOptions = useMemo(
+    () => buildAssessmentPlacementOptions(snapshot.sections),
+    [snapshot.sections],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const defaultPlacement = placementOptions.some((o) => o.value === `after_chapter:${chapter.id}`)
+      ? `after_chapter:${chapter.id}`
+      : "end";
+    setPlacementValue(defaultPlacement);
+  }, [open, chapter.id, placementOptions]);
+
+  const plain = extractChapterPlainText(chapter);
+  const canUseAi = plain.length >= 80;
+
+  const handleCreate = () => {
+    if (chapterHasInterview(chapter)) {
+      toast.message("Un entretien existe déjà sur ce chapitre.");
+      return;
+    }
+    if (!canUseAi) {
+      toast.error("Ajoutez du contenu au chapitre (80 caractères min.) avant de créer l’entretien.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const blockId = nanoid();
+      const block = {
+        id: blockId,
+        title: "Entretien expérientiel",
+        duration: "10–15 min",
+        type: "text" as const,
+        summary: "Conversation guidée par l’IA pour contextualiser vos apprentissages.",
+        content: "",
+        kind: "experiential_interview" as const,
+        interview_context: plain.slice(0, 14_000),
+      };
+
+      const placement = parsePlacementValue(placementValue);
+      const next = insertSubchapterAtPlacement(snapshot, block, placement);
+      hydrateFromSnapshot(next);
+
+      const label =
+        placementOptions.find((o) => o.value === placementValue)?.label ?? "formation";
+      toast.success("Entretien créé", {
+        description: `Placé : ${label}. Enregistrez la formation puis prévisualisez.`,
+      });
+      onOpenChange(false);
+    } catch (e) {
+      console.error("[create-interview]", e);
+      toast.error(e instanceof Error ? e.message : "Impossible de créer l’entretien");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl overflow-hidden border border-violet-500/20 bg-slate-950 bg-gradient-to-br from-violet-950/40 via-slate-950 to-fuchsia-950/30 p-0 text-white shadow-2xl">
+        <div className="flex max-h-[85vh] flex-col">
+          <div className="flex-1 space-y-6 overflow-y-auto p-6">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <MessageCircle className="h-5 w-5 text-violet-300" />
+                Créer un entretien expérientiel
+              </DialogTitle>
+              <DialogDescription className="text-slate-300">
+                Choisissez où placer l&apos;entretien dans la formation. Le contexte est tiré du chapitre «{" "}
+                {chapter.title || "Sans titre"} » ({sectionTitle}).
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-white">Où placer cet entretien ?</Label>
+              <Select value={placementValue} onValueChange={setPlacementValue}>
+                <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-white">
+                  <SelectValue placeholder="Choisir un emplacement" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 border border-white/10 bg-slate-950/95 text-white">
+                  {placementOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value} className="text-white">
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-400">
+                Comme pour un quiz : l&apos;entretien apparaît comme une étape dédiée dans le parcours apprenant.
+              </p>
+            </div>
+
+            {!canUseAi ? (
+              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                Le chapitre source doit contenir au moins 80 caractères de contenu pédagogique.
+              </p>
+            ) : (
+              <p className="rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-3 text-xs text-violet-100">
+                Contexte IA : {plain.length.toLocaleString("fr-FR")} caractères extraits du chapitre.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="border-t border-white/10 bg-black/20 px-6 py-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              className="text-white/80 hover:text-white"
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              disabled={busy || !canUseAi}
+              onClick={handleCreate}
+              className="rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 font-semibold text-white hover:opacity-95"
+            >
+              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Créer l&apos;entretien
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

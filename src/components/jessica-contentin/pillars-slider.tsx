@@ -35,7 +35,7 @@ const pillars = [
     title: "Gestion du stress",
     description: "Apprenez à gérer votre stress et retrouvez votre sérénité",
     image: "",
-    video: "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Jessica%20CONTENTIN/Video_gest_du_stress.mp4",
+    video: "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Jessica%20CONTENTIN/Video_gest_du_stress.mp4",
     href: "/jessica-contentin/specialites/gestion-stress",
   },
   {

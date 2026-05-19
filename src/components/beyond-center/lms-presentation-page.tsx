@@ -266,19 +266,28 @@ export function LMSPresentationPage() {
               className={`absolute inset-0 ${index === currentIndex ? 'z-10' : 'z-0'}`}
             >
               {slide.type === "video" ? (
-                <video
-                  key={slide.src}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  controls={false}
-                  poster={slide.poster}
-                >
-                  <source src={slide.src} type="video/mp4" />
-                  {slide.alt && <track kind="captions" label={slide.alt} />}
-                </video>
+                index === currentIndex ? (
+                  <video
+                    key={slide.src}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    controls={false}
+                    poster={slide.poster}
+                    preload="none"
+                    src={slide.src}
+                  />
+                ) : slide.poster ? (
+                  <img
+                    src={slide.poster}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-black" aria-hidden />
+                )
               ) : (
                 <Image
                   src={slide.src}

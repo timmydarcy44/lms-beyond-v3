@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, ShoppingBag, Menu, X, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBranding } from "@/components/super-admin/branding-provider";
 import { useCatalogAuth } from "@/hooks/use-catalog-auth";
 
@@ -27,6 +27,11 @@ export function CatalogTopNav({
   const router = useRouter();
   const { branding } = useBranding();
   const { isAuthenticated, loading: authLoading } = useCatalogAuth();
+  const currentOrgSlug = useMemo(() => {
+    const p = String(pathname ?? "");
+    const m = p.match(/^\/g\/([^/]+)/i);
+    return m?.[1] ? decodeURIComponent(m[1]) : null;
+  }, [pathname]);
   
   // Couleurs du branding - Style Netflix (fond noir par défaut)
   // Détecter si c'est contentin (beige) ou tim (noir)
@@ -37,14 +42,63 @@ export function CatalogTopNav({
   const primaryColor = isContentin ? (branding?.primary_color || '#8B6F47') : (branding?.primary_color || '#e50914'); // Rouge Netflix
   const platformName = branding?.platform_name || 'Beyond';
 
-  const categories = [
-    "Leadership",
-    "Neurosciences",
-    "Management",
-    "Vente",
-    "Communication",
-    "Développement personnel",
-  ];
+  const [orgCategories, setOrgCategories] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Sync UI : à chaque changement de galaxie, on vide puis on recharge.
+    setOrgCategories(null);
+    if (!currentOrgSlug) return () => { cancelled = true; };
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/course-categories?orgSlug=${encodeURIComponent(currentOrgSlug)}`, {
+          credentials: "include",
+        });
+        const json = await res.json().catch(() => ({}));
+        const list = Array.isArray((json as any)?.categories) ? (json as any).categories : [];
+        const cleaned = list
+          .map((x: any) =>
+            x && typeof x === "object" && x.name != null
+              ? String(x.name ?? "").trim()
+              : String(x ?? "").trim(),
+          )
+          .filter(Boolean);
+        if (!cancelled) setOrgCategories(cleaned);
+      } catch {
+        if (!cancelled) setOrgCategories([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentOrgSlug]);
+
+  const categories = useMemo(() => {
+    // Si on est dans une galaxie /g/:orgSlug, on utilise la table `course_categories`.
+    if (currentOrgSlug) return orgCategories ?? [];
+
+    // Sinon fallback legacy (hors galaxie).
+    const platform = String(branding?.platform_name ?? "").toLowerCase();
+    if (platform.includes("playmakers")) {
+      return [
+        "Commercial & Revenus",
+        "Marketing & Communication",
+        "Activation Partenaires",
+        "Sportif & Performance",
+        "Gouvernance & Structure",
+      ];
+    }
+    return [
+      "Leadership",
+      "Neurosciences",
+      "Management",
+      "Vente",
+      "Communication",
+      "Développement personnel",
+    ];
+  }, [branding?.platform_name, currentOrgSlug, orgCategories]);
 
   const navLinks = [
     { label: "Store", href: "#" },

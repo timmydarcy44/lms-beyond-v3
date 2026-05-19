@@ -43,7 +43,7 @@ export function CatalogContentAssignmentModal({
   const fetchOrganizations = async () => {
     setFetching(true);
     try {
-      const response = await fetch("/api/super-admin/organizations");
+      const response = await fetch("/api/super-admin/organisations");
       if (!response.ok) throw new Error("Erreur lors de la récupération des organisations");
       const data = await response.json();
       setOrganizations(data.organizations || []);

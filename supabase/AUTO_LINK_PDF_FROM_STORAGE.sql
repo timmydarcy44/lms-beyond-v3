@@ -19,7 +19,7 @@ DECLARE
     pdf_url TEXT;
     bucket_name TEXT;
     file_path TEXT;
-    supabase_url TEXT := 'https://fqqqejpakbccwvrlolpc.supabase.co';
+    supabase_url TEXT := 'https://zmcefidiiqqppowymoxt.supabase.co';
 BEGIN
     -- Récupérer le titre de la ressource
     SELECT title INTO resource_title

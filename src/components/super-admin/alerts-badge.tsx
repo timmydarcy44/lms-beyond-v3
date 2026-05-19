@@ -8,11 +8,8 @@ export function AlertsBadge() {
   const [alertCount, setAlertCount] = useState<number | null>(null);
 
   useEffect(() => {
-    // Fetch le nombre d'alertes
-    fetch("/api/super-admin/alert-count")
-      .then(res => res.json())
-      .then(data => setAlertCount(data.count || 0))
-      .catch(() => setAlertCount(0));
+    // Désactivé: route lente/non essentielle pour accélérer le boot.
+    setAlertCount(0);
   }, []);
 
   if (alertCount === null) {

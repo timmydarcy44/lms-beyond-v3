@@ -112,28 +112,38 @@ export default function CreerEspacePage() {
       } else if (signupData?.user) {
         const userId = signupData.user.id;
 
-        const { error: profileError } = await supabase.from("profiles").insert({
-          id: userId,
-          email,
-          first_name: contactFirstName,
-          last_name: contactLastName,
-          phone,
-          role: "entreprise",
-        });
-        if (profileError) {
-          console.error("Erreur Supabase profiles:", profileError.message, (profileError as any).details);
-          throw profileError;
-        }
-
-        const { error: companyError } = await supabase.from("beyond_connect_companies").insert({
-          id: userId,
-          name: companyName,
-          city: aiCity || "",
-          website: "",
-        });
+        // Onboarding Entreprise (profiles + companies)
+        const { data: company, error: companyError } = await supabase
+          .from("companies")
+          .insert({
+            name: companyName,
+          })
+          .select("id")
+          .maybeSingle();
         if (companyError) {
           console.error("Erreur Supabase companies:", companyError.message, (companyError as any).details);
           throw companyError;
+        }
+        const newCompanyId = (company as any)?.id ?? null;
+        if (!newCompanyId) {
+          throw new Error("Impossible de créer la compagnie.");
+        }
+
+        const { error: profileError } = await supabase.from("profiles").upsert(
+          {
+            id: userId,
+            email,
+            first_name: contactFirstName,
+            last_name: contactLastName,
+            phone,
+            role: "admin_hr",
+            company_id: newCompanyId,
+          },
+          { onConflict: "id" },
+        );
+        if (profileError) {
+          console.error("Erreur Supabase profiles:", profileError.message, (profileError as any).details);
+          throw profileError;
         }
 
         const offerText = validatedOfferText || aiOfferDraft;
@@ -144,7 +154,7 @@ export default function CreerEspacePage() {
         const salaryRange = aiSalary ? String(aiSalary) : null;
         const experienceLevel = autonomy || "";
         const offerPayload = {
-          company_id: userId,
+          company_id: newCompanyId,
           title,
           description,
           city: aiCity || "",
@@ -235,7 +245,7 @@ export default function CreerEspacePage() {
         <section className="grid min-h-screen w-full grid-cols-1 lg:grid-cols-2">
           <div className="hidden lg:block">
             <img
-              src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/header_entreprise%20(2).png"
+              src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/header_entreprise%20(2).png"
               alt="Beyond Connect"
               className="h-full w-full object-cover"
             />

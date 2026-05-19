@@ -9,6 +9,7 @@ export type FrontendRole =
   | "admin"
   | "tuteur"
   | "entreprise"
+  | "admin_hr"
   | "ecole"
   | "club"
   | "partenaire"
@@ -19,6 +20,7 @@ export type DatabaseRole =
   | "admin"
   | "tutor"
   | "entreprise"
+  | "admin_hr"
   | "ecole"
   | "club"
   | "partenaire"
@@ -37,6 +39,7 @@ export function frontendToDatabaseRole(role: FrontendRole): DatabaseRole {
     admin: "admin",
     tuteur: "tutor",
     entreprise: "entreprise",
+    admin_hr: "admin_hr",
     ecole: "ecole",
     club: "club",
     partenaire: "partenaire",
@@ -49,9 +52,7 @@ export function frontendToDatabaseRole(role: FrontendRole): DatabaseRole {
  * Convertit un rôle de la base de données vers le frontend
  */
 export function databaseToFrontendRole(role: DatabaseRole): FrontendRole {
-  if (role === "entreprise") {
-    return "entreprise";
-  }
+  if (role === "entreprise" || role === "admin_hr") return "entreprise";
   if (role === "ecole") {
     return "ecole";
   }
@@ -76,6 +77,7 @@ export function databaseToFrontendRole(role: DatabaseRole): FrontendRole {
     admin: "admin",
     tutor: "tuteur",
     entreprise: "entreprise",
+    admin_hr: "entreprise",
     ecole: "ecole",
     club: "club",
     partenaire: "partenaire",

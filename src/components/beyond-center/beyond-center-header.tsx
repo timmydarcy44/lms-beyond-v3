@@ -269,6 +269,17 @@ export function BeyondCenterHeader() {
             </nav>
 
             <div className="flex items-center gap-3">
+              <Link
+                href="/register/expert"
+                className={cn(
+                  "hidden rounded-full px-4 py-2.5 text-[13px] font-semibold transition-colors sm:inline-flex",
+                  isLight
+                    ? "border border-slate-200/80 bg-white text-slate-900 hover:bg-slate-50"
+                    : "border border-white/15 bg-white/5 text-white hover:bg-white/10",
+                )}
+              >
+                Devenir Spécialiste
+              </Link>
               <motion.a
                 href="/pilote"
                 whileHover={{ scale: 1.02 }}
@@ -463,6 +474,13 @@ export function BeyondCenterHeader() {
                   onClick={() => setMobileOpen(false)}
                 >
                   Connexion
+                </Link>
+                <Link
+                  href="/register/expert"
+                  className="rounded-xl px-4 py-3.5 text-[15px] font-medium text-slate-800 hover:bg-slate-50"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Devenir Spécialiste
                 </Link>
               </nav>
               <div className="border-t border-slate-100 p-5">

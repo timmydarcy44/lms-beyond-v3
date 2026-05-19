@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { addMemberToOrganizationAction } from "@/app/super/organisations/[orgId]/add-member/actions";
+import { addMemberToOrganizationAction } from "@/app/super/organisations/[id]/add-member/actions";
 import { toast } from "sonner";
 import { Loader2, UserPlus } from "lucide-react";
 

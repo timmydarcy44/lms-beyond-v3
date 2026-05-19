@@ -12,10 +12,10 @@ Oui, **configurer sur Vercel est une excellente solution** ! Cela évite :
 ### 1. Préparer vos Clés Supabase
 
 1. **Allez sur** https://app.supabase.com
-2. **Sélectionnez votre projet** (fqqqejpakbccwvrlolpc)
+2. **Sélectionnez votre projet** (zmcefidiiqqppowymoxt)
 3. **Cliquez sur Settings (⚙️) → API**
 4. **Copiez ces 3 valeurs** (gardez-les ouvertes dans un onglet) :
-   - **Project URL** : `https://fqqqejpakbccwvrlolpc.supabase.co`
+   - **Project URL** : `https://zmcefidiiqqppowymoxt.supabase.co`
    - **anon/public key** : La clé complète (très longue !)
    - **service_role key** : La clé complète (très longue !)
 
@@ -30,7 +30,7 @@ Oui, **configurer sur Vercel est une excellente solution** ! Cela évite :
 
    **Variable 1 :**
    - **Name** : `NEXT_PUBLIC_SUPABASE_URL`
-   - **Value** : `https://fqqqejpakbccwvrlolpc.supabase.co`
+   - **Value** : `https://zmcefidiiqqppowymoxt.supabase.co`
    - **Environments** : ✅ Production, ✅ Preview, ✅ Development
    - Cliquez sur **Save**
 

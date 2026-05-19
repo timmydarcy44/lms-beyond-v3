@@ -1,44 +1,82 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
   Building2,
   CheckSquare,
   ChevronsLeft,
+  ClipboardCheck,
+  Euro,
   GitBranch,
   GraduationCap,
   LayoutDashboard,
   LogOut,
+  MonitorPlay,
   ShieldCheck,
   Users,
 } from "lucide-react";
+import { HandicapSidebarNav } from "@/components/beyond-connect/handicap-sidebar-nav";
+import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
+import { EcoleFloatingAssistant } from "@/components/beyond-connect/ecole-floating-assistant";
 
 type SchoolLayoutProps = {
   children: React.ReactNode;
 };
 
+type EcoleNavItem = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  activePathPrefix?: string;
+};
+
+function isEcoleNavActive(pathname: string, item: EcoleNavItem): boolean {
+  if (item.activePathPrefix) {
+    const p = item.activePathPrefix;
+    return pathname === p || pathname.startsWith(`${p}/`);
+  }
+  if (item.href === "/dashboard/ecole") return pathname === item.href;
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
 export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isCompaniesOpen, setIsCompaniesOpen] = useState(true);
   const isTodo = pathname.startsWith("/dashboard/ecole/todo");
 
-  const navItems = [
+  const pricingNavItem: EcoleNavItem = {
+    label: "Tarifs",
+    href: "/dashboard/ecole/pricing",
+    icon: Euro,
+  };
+
+  const mainNavItems: EcoleNavItem[] = [
     { label: "Tableau de bord", href: "/dashboard/ecole", icon: LayoutDashboard },
-    { label: "Mes apprenants", href: "/dashboard/ecole?tab=apprenants", icon: Users },
-    { label: "Mes classes", href: "/dashboard/ecole?tab=classes", icon: GraduationCap },
+    { label: "Mes apprenants", href: "/dashboard/ecole/apprenants", icon: Users },
+    { label: "Mes classes", href: "/dashboard/ecole/classes", icon: GraduationCap },
     { label: "Offres", href: "/dashboard/ecole/offres", icon: Briefcase },
+    {
+      label: "Suivi formations",
+      href: "/dashboard/ecole/formations-suivi",
+      icon: ClipboardCheck,
+    },
     { label: "Prospection", href: "/dashboard/ecole/prospection", icon: GitBranch },
     { label: "Ma todo", href: "/dashboard/ecole/todo", icon: CheckSquare },
     { label: "Qualiopi", href: "/dashboard/ecole/qualiopi", icon: ShieldCheck },
+    {
+      label: "EDGE Online",
+      href: EDGE_ONLINE_APP_SURFACE_PATH,
+      icon: MonitorPlay,
+      activePathPrefix: EDGE_ONLINE_APP_SURFACE_PATH,
+    },
   ];
 
-  const tabItems = navItems.slice(0, 4);
+  const tabItems = [...mainNavItems.slice(0, 4), pricingNavItem];
 
   return (
     <div
@@ -48,11 +86,11 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
       <div className="flex min-h-screen">
         {!isTodo ? (
           <aside
-            className={`fixed left-0 top-0 hidden h-full flex-col bg-[#121212] px-4 py-6 text-[#F5F2E8] transition-all md:flex ${
+            className={`fixed left-0 top-0 z-30 hidden h-screen min-h-0 flex-col bg-[#121212] px-4 py-6 text-[#F5F2E8] transition-all md:flex ${
               isCollapsed ? "w-20" : "w-64"
             }`}
           >
-          <div className="flex items-center justify-between">
+          <div className="flex shrink-0 items-center justify-between">
             {!isCollapsed ? (
               <div>
                 <div className="text-lg font-semibold tracking-tight">BEYOND CONNECT</div>
@@ -70,15 +108,10 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
               <ChevronsLeft className={`h-4 w-4 transition-transform ${isCollapsed ? "rotate-180" : ""}`} />
             </button>
           </div>
-          <nav className="mt-8 space-y-2 text-sm">
-            {navItems.map((item) => {
-              const isTabLink = item.href.startsWith("/dashboard/ecole?tab=");
-              const tabValue = isTabLink ? item.href.split("tab=")[1] : null;
-              const isActive = isTabLink
-                ? pathname === "/dashboard/ecole" && tabParam === tabValue
-                : item.href === "/dashboard/ecole"
-                  ? pathname === item.href && (!tabParam || tabParam === "overview")
-                  : pathname.startsWith(item.href);
+          <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <nav className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain text-sm">
+            {mainNavItems.map((item) => {
+              const isActive = isEcoleNavActive(pathname, item);
               const Icon = item.icon;
               return (
                 <Link
@@ -167,28 +200,31 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
               ) : null}
             </div>
           </nav>
-          <div className="mt-4">
-            <svg aria-hidden="true" className="absolute h-0 w-0">
-              <defs>
-                <linearGradient id="handicapGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#D65151" />
-                  <stop offset="100%" stopColor="#E86B6B" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <Link
-              href="/dashboard/ecole/handicap"
-              className="flex items-center gap-3 px-3 py-2 text-sm font-semibold"
-            >
-              <ShieldCheck className="h-4 w-4" style={{ stroke: "url(#handicapGradient)" }} />
-              {!isCollapsed ? (
-                <span className="bg-gradient-to-r from-[#D65151] to-[#E86B6B] bg-clip-text text-transparent">
-                  Handicap
-                </span>
-              ) : null}
-            </Link>
+          <div className="shrink-0 pt-2">
+            <HandicapSidebarNav collapsed={isCollapsed} labelVariant="handicap" />
           </div>
-          <div className="mt-auto">
+          </div>
+          <div className="shrink-0 space-y-1 border-t border-white/10 pt-3">
+            <Link
+              href={pricingNavItem.href}
+              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
+                isEcoleNavActive(pathname, pricingNavItem)
+                  ? "bg-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.2)] backdrop-blur"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span
+                className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full ${
+                  isEcoleNavActive(pathname, pricingNavItem) ? "bg-[#007AFF]" : "bg-transparent"
+                }`}
+              />
+              <Euro
+                className={`h-4 w-4 ${
+                  isEcoleNavActive(pathname, pricingNavItem) ? "text-[#007AFF]" : "text-white/40"
+                }`}
+              />
+              {!isCollapsed ? <span>{pricingNavItem.label}</span> : null}
+            </Link>
             <Link
               href="/logout"
               className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white"
@@ -208,33 +244,28 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
         </main>
       </div>
       {!isTodo ? (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E5E5EA] bg-white/95 px-6 py-2 md:hidden">
-          <div className="flex items-center justify-around">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E5E5EA] bg-white/95 px-2 py-2 md:hidden">
+          <div className="flex items-center justify-around gap-0.5">
             {tabItems.map((item) => {
-              const isTabLink = item.href.startsWith("/dashboard/ecole?tab=");
-              const tabValue = isTabLink ? item.href.split("tab=")[1] : null;
-              const isActive = isTabLink
-                ? pathname === "/dashboard/ecole" && tabParam === tabValue
-                : item.href === "/dashboard/ecole"
-                  ? pathname === item.href && (!tabParam || tabParam === "overview")
-                  : pathname.startsWith(item.href);
+              const isActive = isEcoleNavActive(pathname, item);
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center gap-1 text-[10px] font-semibold ${
+                  className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 text-[9px] font-semibold leading-tight sm:text-[10px] ${
                     isActive ? "text-[#1D1D1F]" : "text-[#86868B]"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 ${isActive ? "text-[#1D1D1F]" : "text-[#86868B]"}`} />
-                  {item.label}
+                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-[#1D1D1F]" : "text-[#86868B]"}`} />
+                  <span className="line-clamp-2 text-center">{item.label}</span>
                 </Link>
               );
             })}
           </div>
         </nav>
       ) : null}
+      {!isTodo ? <EcoleFloatingAssistant /> : null}
     </div>
   );
 }

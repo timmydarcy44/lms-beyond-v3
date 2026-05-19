@@ -193,7 +193,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
           <Link href="/app-landing" className="flex items-center">
             {/* Logo blanc — sur hero avant scroll */}
             <Image
-              src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
+              src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
               alt="Nevo."
               width={120}
               height={40}
@@ -205,7 +205,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
             />
             {/* Logo coloré — au scroll ou pages blanches */}
             <Image
-              src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./nevo.scroll2.png"
+              src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/nevo./nevo.scroll2.png"
               alt="Nevo."
               width={80}
               height={28}
@@ -640,7 +640,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-8">
           <div>
             <Image
-              src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
+              src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
               alt="Nevo."
               width={120}
               height={40}

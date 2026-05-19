@@ -43,7 +43,7 @@ function getSupabaseStorageUrl(bucket: string, path: string): string {
 }
 
 const BUCKET_NAME = "Jessica CONTENTIN";
-const SIGNUP_IMAGE_PATH = "mere enfant.jpg"; // Image pour la page d'inscription
+const SIGNUP_IMAGE_PATH = "Jessica contentin re.jpg"; // Aligné avec la page connexion « Commencer »
 
 const signupSchema = z
   .object({

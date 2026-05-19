@@ -1,0 +1,88 @@
+/**
+ * Pages de présentation des parcours (route Next : `jessica-contentin/programmes/[slug]`).
+ * Sur le domaine vitrine, le middleware expose des URL courtes `/programmes/[slug]`.
+ * Les fiches SEO longues restent sur `/specialites/[slug]`.
+ */
+
+/** Lien public à utiliser partout (cartes home, CTA) — réécrit vers la route interne sur jessicacontentin.fr */
+export function programmePresentationHref(slug: string): string {
+  return `/programmes/${encodeURIComponent(slug)}`;
+}
+
+export type ProgrammeDefinition = {
+  slug: string;
+  headline: string;
+  tag: string;
+  heroImageUrl: string;
+  specialitySlug: string;
+  /** Sous-titre court sous le hero */
+  intro: string;
+  /** Hero type bannière (ex. Apaiser le mental) */
+  heroKicker?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  /** Vidéo promotionnelle sous le hero (optionnel) */
+  promoVideoUrl?: string;
+  promoPosterUrl?: string;
+};
+
+const VIDEO_APAISER_MENTAL =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Copie%20de%20Sans%20titre.mp4";
+
+export const PROGRAMMES: ProgrammeDefinition[] = [
+  {
+    slug: "declic-etudes",
+    headline: "Déclic études",
+    tag: "Retrouver confiance et progresser efficacement",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1600&q=85",
+    specialitySlug: "strategie-apprentissage",
+    intro:
+      "Des méthodes de travail adaptées à votre profil, pour débloquer les situations scolaires et reconstruire une relation saine aux apprentissages.",
+    heroKicker: "Programme",
+  },
+  {
+    slug: "comprendre-pour-apaiser",
+    headline: "Comprendre pour apaiser",
+    tag: "Accompagner son enfant sans conflit",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1600&q=85",
+    specialitySlug: "guidance-parentale",
+    intro:
+      "Un cadre pour comprendre les comportements, désamorcer les tensions et retrouver des échanges plus calmes au quotidien.",
+    heroKicker: "Programme",
+  },
+  {
+    slug: "apaiser-le-mental",
+    headline: "Apaiser le mental",
+    tag: "Sortir du stress et retrouver de la sérénité",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1600&q=85",
+    specialitySlug: "gestion-stress",
+    intro:
+      "Identifier les déclencheurs, apaiser le corps et les pensées, et réinstaller des rythmes de vie plus soutenables — à votre rythme.",
+    heroKicker: "Programme",
+    promoVideoUrl: VIDEO_APAISER_MENTAL,
+  },
+  {
+    slug: "trouver-sa-voie",
+    headline: "Trouver sa voie",
+    tag: "Clarifier son avenir et faire les bons choix",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1600&q=85",
+    specialitySlug: "orientation-professionnelle",
+    intro:
+      "Exploration des intérêts et des compétences, mise en cohérence avec les filières et les projets — pour avancer avec plus de clarté.",
+    heroKicker: "Programme",
+  },
+];
+
+export const PROGRAMMES_BY_SLUG: Record<string, ProgrammeDefinition> = Object.fromEntries(
+  PROGRAMMES.map((p) => [p.slug, p]),
+);
+
+export const programmeSlugs = PROGRAMMES.map((p) => p.slug);
+
+export function getProgramme(slug: string): ProgrammeDefinition | undefined {
+  return PROGRAMMES_BY_SLUG[slug];
+}

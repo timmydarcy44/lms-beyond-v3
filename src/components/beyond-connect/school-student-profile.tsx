@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Check, FileText, Sparkles, Star, ShieldCheck } from "lucide-react";
 import {
@@ -12,6 +12,38 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from "recharts";
+
+import type { WalletEarnedBadgeRow } from "@/lib/dashboard/ecole-learner-wallet";
+
+function formatWalletEarnedDate(iso: string): string {
+  if (!iso?.trim()) return "—";
+  try {
+    return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(iso));
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+function badgeInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+type WalletCardModel = {
+  key: string;
+  name: string;
+  dateLabel: string;
+  imageUrl: string | null;
+  description: string;
+  criteria: string;
+  evidenceLabel: string;
+  evidenceUrl: string;
+  expiration: string;
+  hash: string;
+  issuer: string;
+};
 
 type SchoolStudentProfileProps = {
   profile: {
@@ -27,11 +59,11 @@ type SchoolStudentProfileProps = {
     cerfa_url?: string | null;
     bio_ai?: string | null;
     hard_skills?: string[] | null;
-    open_badges?: Array<string | { name?: string; image_url?: string; url?: string }> | null;
+    open_badges?: Array<string | { name?: string | null; image_url?: string | null; url?: string | null }> | null;
     soft_skills_scores?: Record<string, number> | null;
-    disc_profile?: string | null;
-    disc_scores?: { D: number; I: number; S: number; C: number } | null;
-    tutor_feedback?: string | null;
+    placement_status?: string | null;
+    date_of_birth?: string | null;
+    has_driving_license_b?: boolean | null;
     cognitive_tests?: {
       mai: {
         global: number;
@@ -60,12 +92,29 @@ type SchoolStudentProfileProps = {
     salary?: string | null;
     description?: string | null;
   }>;
+  /** Badges issus de `user_badges` (serveur) ; sinon repli sur `profile.open_badges`. */
+  walletEarnedBadges?: WalletEarnedBadgeRow[] | null;
+  /** Fiche « Mes apprenants » côté école : mise en page plus simple. */
+  ecoleStaffSimplified?: boolean;
 };
 
 const defaultRadarLabels = ["Leadership", "Organisation", "Communication", "Adaptabilite", "Creativite"];
 const demoRadarLabels = ["Empathie", "Resilience", "Leadership", "Negotiation", "Rigueur"];
 
-export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfileProps) {
+const PLACEMENT_LABELS: Record<string, string> = {
+  initial: "Initial",
+  recherche_alternance: "En recherche d'alternance",
+  en_alternance: "En alternance",
+  en_stage: "En stage",
+  contrat_fip: "Contrat FIP",
+};
+
+export function SchoolStudentProfile({
+  profile,
+  offers,
+  walletEarnedBadges,
+  ecoleStaffSimplified = false,
+}: SchoolStudentProfileProps) {
   const rawScores = profile.soft_skills_scores || {};
   const radarLabels = demoRadarLabels.every((label) => label in rawScores) ? demoRadarLabels : defaultRadarLabels;
   const radarData = radarLabels.map((label) => ({
@@ -83,10 +132,24 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
   const topSkillSet = new Set(sortedSkills.slice(0, 3).map((item) => item.skill));
 
   const displayName = profile.first_name || "Jean";
-  const discProfile = profile.disc_profile || null;
-  const discLabel = profile.disc_scores
-    ? `D:${profile.disc_scores.D} I:${profile.disc_scores.I} S:${profile.disc_scores.S} C:${profile.disc_scores.C}`
-    : null;
+  const placementLabel =
+    profile.placement_status && PLACEMENT_LABELS[profile.placement_status]
+      ? PLACEMENT_LABELS[profile.placement_status]
+      : profile.placement_status?.trim() || null;
+  const dobDisplay =
+    profile.date_of_birth && String(profile.date_of_birth).trim()
+      ? (() => {
+          try {
+            return new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "UTC" }).format(
+              new Date(`${String(profile.date_of_birth).slice(0, 10)}T12:00:00Z`),
+            );
+          } catch {
+            return String(profile.date_of_birth).slice(0, 10);
+          }
+        })()
+      : null;
+  const permisLabel =
+    profile.has_driving_license_b === true ? "Permis B : oui" : profile.has_driving_license_b === false ? "Permis B : non" : null;
   const cognitiveTests = profile.cognitive_tests;
   const mai = cognitiveTests?.mai;
   const stress = cognitiveTests?.stress;
@@ -108,7 +171,7 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
   const isValentin = `${profile.first_name || ""} ${profile.last_name || ""}`.toLowerCase().includes("valentin");
   const aiSummary = isValentin
     ? "Profil stable avec une excellente conscience métacognitive (MAI). Vigilance sur la planification des tâches complexes. Gestion du stress optimale (Score 16)."
-    : `Le profil DISC "${discProfile || "Stable"}" de cet apprenant, couplé à un score MAI ${maiLabel} en gestion de l'erreur, indique une forte résilience opérationnelle malgré un stress académique ${stressLabel}.`;
+    : `Synthèse indicative : score MAI ${maiLabel} en gestion de l'erreur et stress académique ${stressLabel} — utile pour ajuster le rythme et le type d'accompagnement.`;
   const adminItems = [
     {
       label: "CV",
@@ -137,78 +200,65 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
   const [showForm, setShowForm] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [softSkillsOpen, setSoftSkillsOpen] = useState(false);
-  const [activeBadge, setActiveBadge] = useState<null | {
-    name: string;
-    date: string;
-    issuer: string;
-    description: string;
-    criteria: string;
-    evidenceLabel: string;
-    evidenceUrl: string;
-    expiration: string;
-    hash: string;
-    image: string;
-  }>(null);
-  const badgeImage =
-    "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/20260125_2104_Image%20Generation_simple_compose_01kfvc2fm7f8at8xz8bpktqt6q.png";
-  const badgeVideo =
-    "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/20260131_1658_New%20Video_simple_compose_01kgace1jve2d9y5pqwnabcpp5.mp4";
+  const [activeBadge, setActiveBadge] = useState<WalletCardModel | null>(null);
   const [walletShareLink, setWalletShareLink] = useState<string | null>(null);
 
-  const walletBadges = [
-    {
-      name: "Expert Prospection B2B",
-      date: "10/02/2026",
-      issuer: "Beyond No School",
+  const walletList = useMemo((): WalletCardModel[] => {
+    const fromDb = (walletEarnedBadges ?? []).map((b, i) => ({
+      key: `db-${b.earnedAt}-${i}`,
+      name: b.name,
+      dateLabel: formatWalletEarnedDate(b.earnedAt),
+      imageUrl: b.imageUrl,
       description:
-        "Cet Open Badge valide le fait que la personne a su faire preuve de négociation professionnelle et de résilience à travers une étude de cas complexe.",
-      criteria: "A réalisé 50 appels à froid avec succès et présenté une stratégie d'approche.",
-      evidenceLabel: "Télécharger l'étude de cas",
-      evidenceUrl: "https://example.com/etude-de-cas.pdf",
-      expiration: "10/02/2029",
-      hash: "0x7b9d3a8f51c4e1a2",
-      image: badgeImage,
-    },
-    {
-      name: "Leadership",
-      date: "25/01/2026",
-      issuer: "Beyond No School",
-      description:
-        "Ce badge certifie la capacité à mobiliser un collectif et à maintenir un cap ambitieux en contexte exigeant.",
-      criteria: "A piloté un projet en autonomie et validé 3 évaluations terrain.",
-      evidenceLabel: "Voir le livrable",
-      evidenceUrl: "https://example.com/livrable.pdf",
-      expiration: "25/01/2029",
-      hash: "0x1f4a9d2c7e6b8031",
-      image: badgeImage,
-    },
-    {
-      name: "Négociation",
-      date: "12/12/2025",
-      issuer: "Beyond No School",
-      description:
-        "Validation des compétences de négociation stratégique et de pilotage d'accords commerciaux.",
-      criteria: "A conclu 2 accords B2B et défendu une grille tarifaire.",
-      evidenceLabel: "Télécharger la synthèse",
-      evidenceUrl: "https://example.com/synthese.pdf",
-      expiration: "12/12/2028",
-      hash: "0x9c21b0d54e7f3a11",
-      image: badgeImage,
-    },
-    {
-      name: "Organisation",
-      date: "30/11/2025",
-      issuer: "Beyond No School",
-      description:
-        "Certification d'une capacité d'organisation avancée et d'une exécution rigoureuse des priorités.",
-      criteria: "A structuré un plan d'action sur 6 semaines avec KPI validés.",
-      evidenceLabel: "Voir le plan d'action",
-      evidenceUrl: "https://example.com/plan-action.pdf",
-      expiration: "30/11/2028",
-      hash: "0x4ea2f6b18c0d9e23",
-      image: badgeImage,
-    },
-  ];
+        (b.description && b.description.trim()) ||
+        `Compétence ou parcours certifié sur la plateforme : ${b.name}.`,
+      criteria: "",
+      evidenceLabel: "",
+      evidenceUrl: "",
+      expiration: "—",
+      hash: "—",
+      issuer: "Beyond LMS",
+    }));
+    if (fromDb.length) return fromDb;
+
+    const raw = Array.isArray(profile.open_badges) ? profile.open_badges : [];
+    return raw.map((entry, i) => {
+      if (typeof entry === "string") {
+        const name = entry.trim() || "Badge";
+        return {
+          key: `ob-str-${i}`,
+          name,
+          dateLabel: "—",
+          imageUrl: null,
+          description: `Référence badge enregistrée sur le profil : ${name}.`,
+          criteria: "",
+          evidenceLabel: "",
+          evidenceUrl: "",
+          expiration: "—",
+          hash: "—",
+          issuer: "Profil apprenant",
+        };
+      }
+      const name = (entry && typeof entry === "object" && entry.name && String(entry.name).trim()) || "Badge";
+      const url =
+        entry && typeof entry === "object" && entry.image_url && String(entry.image_url).trim()
+          ? String(entry.image_url).trim()
+          : null;
+      return {
+        key: `ob-obj-${i}`,
+        name,
+        dateLabel: "—",
+        imageUrl: url,
+        description: `Open Badge associé au profil : ${name}.`,
+        criteria: "",
+        evidenceLabel: entry && typeof entry === "object" && entry.url ? "Ouvrir le badge" : "",
+        evidenceUrl: entry && typeof entry === "object" && entry.url ? String(entry.url) : "",
+        expiration: "—",
+        hash: "—",
+        issuer: "Profil apprenant",
+      };
+    });
+  }, [walletEarnedBadges, profile.open_badges]);
 
   const handleShareWallet = () => {
     const token = Math.random().toString(36).slice(2, 10);
@@ -219,13 +269,6 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
       navigator.clipboard.writeText(link).catch(() => undefined);
     }
   };
-
-  const tutorComments = [
-    profile.tutor_feedback ||
-      "Très bonne posture terrain, progression notable sur la prise de rendez-vous.",
-    "Objectifs atteints sur la prospection, continuer à renforcer la négociation.",
-  ];
-  const missionsAverage = 85;
 
   const handleAddAppointment = () => {
     if (!newNotes.trim()) return;
@@ -263,13 +306,15 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="grid gap-6 lg:grid-cols-3"
+      className={`grid gap-6 ${ecoleStaffSimplified ? "lg:mx-auto lg:max-w-3xl lg:grid-cols-1" : "lg:grid-cols-3"}`}
     >
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.02 }}
-        className="lg:col-span-3 grid gap-6 rounded-2xl border border-[#E5E5EA] bg-white p-6 shadow-sm md:grid-cols-[1.2fr_1fr]"
+        className={`lg:col-span-3 grid gap-6 rounded-2xl border border-[#E5E5EA] bg-white p-6 shadow-sm ${
+          ecoleStaffSimplified ? "grid-cols-1" : "md:grid-cols-[1.2fr_1fr]"
+        }`}
       >
         <div>
           <div className="flex items-center gap-6">
@@ -285,20 +330,29 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
                 {(profile.first_name || "") + " " + (profile.last_name || "")}
               </h1>
               <p className="text-sm text-[#86868B]">{profile.email || "Email non renseigné"}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#86868B]">
-                {discProfile ? (
-                  <span className="rounded-full bg-[#F5F5F7] px-3 py-1 font-semibold text-[#1D1D1F]">
-                    {discProfile}
-                  </span>
-                ) : null}
-                {discLabel ? <span className="text-xs text-[#86868B]">{discLabel}</span> : null}
-              </div>
-              <span className="mt-2 inline-flex rounded-full bg-[#F5F5F7] px-3 py-1 text-xs font-semibold text-[#1D1D1F]">
-                Profil complété à 85%
-              </span>
+              {placementLabel || dobDisplay || permisLabel ? (
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-[#86868B]">
+                  {placementLabel ? (
+                    <span className="rounded-full bg-[#F5F5F7] px-3 py-1 font-semibold text-[#1D1D1F]">
+                      {placementLabel}
+                    </span>
+                  ) : null}
+                  {dobDisplay ? (
+                    <span className="rounded-full bg-[#F5F5F7] px-3 py-1 font-medium text-[#1D1D1F]">{dobDisplay}</span>
+                  ) : null}
+                  {permisLabel ? (
+                    <span className="rounded-full bg-[#F5F5F7] px-3 py-1 font-medium text-[#1D1D1F]">{permisLabel}</span>
+                  ) : null}
+                </div>
+              ) : null}
+              {!ecoleStaffSimplified ? (
+                <span className="mt-2 inline-flex rounded-full bg-[#F5F5F7] px-3 py-1 text-xs font-semibold text-[#1D1D1F]">
+                  Profil complété à 85%
+                </span>
+              ) : null}
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
             {profile.cv_url ? (
               <a
                 href={profile.cv_url}
@@ -309,19 +363,28 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
             ) : (
               <span className="text-xs text-[#86868B]">CV non fourni</span>
             )}
-            <button
-              type="button"
-              className="rounded-full border border-transparent bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em]"
-              style={{
-                background:
-                  "linear-gradient(white, white) padding-box, linear-gradient(90deg, #3b82f6, #8b5cf6) border-box",
-                border: "1px solid transparent",
-              }}
-            >
-              <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                Wallet Badges
-              </span>
-            </button>
+            {ecoleStaffSimplified ? (
+              <a
+                href="#wallet-badges-ecole"
+                className="rounded-full border border-[#E5E5EA] bg-white px-4 py-2 text-xs font-semibold text-[#1D1D1F]"
+              >
+                Wallet
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="rounded-full border border-transparent bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em]"
+                style={{
+                  background:
+                    "linear-gradient(white, white) padding-box, linear-gradient(90deg, #3b82f6, #8b5cf6) border-box",
+                  border: "1px solid transparent",
+                }}
+              >
+                <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+                  Wallet Badges
+                </span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowAdmin((prev) => !prev)}
@@ -337,6 +400,7 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
             </a>
           </div>
         </div>
+        {!ecoleStaffSimplified ? (
         <div className="rounded-2xl border border-[#E5E5EA] bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between text-xs text-[#86868B]">
             <span>Complétion administrative</span>
@@ -375,8 +439,10 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
             ))}
           </div>
         </div>
+        ) : null}
       </motion.section>
 
+      {!ecoleStaffSimplified ? (
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -385,6 +451,7 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
       >
         <ProfileAIAnalysis />
       </motion.section>
+      ) : null}
 
       <motion.section
         initial={{ opacity: 0, y: 12 }}
@@ -432,25 +499,6 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="rounded-2xl border border-[#E5E5EA] bg-white p-4">
-            <p className="text-sm font-semibold text-[#1D1D1F]">DISC</p>
-            <div className="mt-4 grid grid-cols-4 gap-3 text-center text-xs text-[#86868B]">
-              {[
-                { label: "D", value: rawScores.Rouge ?? 80, color: "bg-red-500" },
-                { label: "I", value: rawScores.Jaune ?? 55, color: "bg-yellow-400" },
-                { label: "S", value: rawScores.Vert ?? 80, color: "bg-[#8E8E93]" },
-                { label: "C", value: rawScores.Bleu ?? 75, color: "bg-blue-600" },
-              ].map((item) => (
-                <div key={item.label} className="flex flex-col items-center gap-2">
-                  <div className="flex h-28 w-7 items-end rounded-full bg-[#F5F5F7]">
-                    <div className={`w-full rounded-t-full ${item.color}`} style={{ height: `${item.value}%` }} />
-                  </div>
-                  <span className="font-semibold text-[#1D1D1F]">{item.label}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="relative rounded-2xl border border-[#E5E5EA] bg-white p-4">
@@ -548,22 +596,6 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
         </div>
       </motion.section>
 
-      <motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.06 }}
-        className="lg:col-span-3 rounded-3xl border border-white/10 bg-white/70 p-6 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.35)] backdrop-blur-xl"
-      >
-        <p className="text-xs uppercase tracking-[0.2em] text-black/50">Retours tuteur</p>
-        <div className="mt-4 space-y-3 text-sm text-black/70">
-          {tutorComments.map((comment) => (
-            <div key={comment} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
-              {comment}
-            </div>
-          ))}
-        </div>
-      </motion.section>
-
       {showAdmin ? (
         <motion.section
           initial={{ opacity: 0, y: 12 }}
@@ -605,6 +637,7 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
         </motion.section>
       ) : null}
 
+      {!ecoleStaffSimplified ? (
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -627,6 +660,7 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
           </ResponsiveContainer>
         </div>
       </motion.section>
+      ) : null}
 
       <motion.section
         initial={{ opacity: 0, y: 12 }}
@@ -688,6 +722,7 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
         </div>
       ) : null}
 
+      {!ecoleStaffSimplified ? (
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -711,8 +746,10 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
           )}
         </div>
       </motion.section>
+      ) : null}
 
       <motion.section
+        id={ecoleStaffSimplified ? "wallet-badges-ecole" : undefined}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.27 }}
@@ -738,69 +775,56 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
             Lien du wallet genere : <span className="text-white">{walletShareLink}</span>
           </p>
         ) : null}
-        <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {walletBadges.map((badge) => (
-            <button
-              key={badge.name}
-              type="button"
-              onClick={() => setActiveBadge(badge)}
-              className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-black p-6 text-white shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)]"
-            >
-              <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                <div className="h-full w-full bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35),_transparent_60%)]" />
-              </div>
-              <div className="relative z-10 flex flex-col gap-6">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-black shadow-[0_0_20px_rgba(59,130,246,0.35)]">
-                  <img src={badge.image} alt={badge.name} className="h-10 w-10 rounded-full object-cover" />
+        {walletList.length ? (
+          <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {walletList.map((badge) => (
+              <button
+                key={badge.key}
+                type="button"
+                onClick={() => setActiveBadge(badge)}
+                className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-black p-6 text-white shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)]"
+              >
+                <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100">
+                  <div className="h-full w-full bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35),_transparent_60%)]" />
                 </div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold">{badge.name}</p>
-                  <p className="text-xs text-white/60">Obtenu le {badge.date}</p>
+                <div className="relative z-10 flex flex-col gap-6">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white/10 shadow-[0_0_20px_rgba(59,130,246,0.35)]">
+                    {badge.imageUrl ? (
+                      <img
+                        src={badge.imageUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-bold tracking-tight text-white">{badgeInitials(badge.name)}</span>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold">{badge.name}</p>
+                    <p className="text-xs text-white/60">Obtenu le {badge.dateLabel}</p>
+                  </div>
+                  <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold text-white/80">
+                    <ShieldCheck className="h-3 w-3 text-blue-400" />
+                    Parcours Beyond Connect
+                  </div>
                 </div>
-                <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold text-white/80">
-                  <ShieldCheck className="h-3 w-3 text-blue-400" />
-                  Certifie par l'IA Beyond
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          className="mt-6 inline-flex rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 hover:border-white/40"
-        >
-          Voir d'autres badges
-        </button>
-      </motion.section>
-
-      <motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.29 }}
-        className="lg:col-span-3 rounded-3xl border border-white/10 bg-gradient-to-r from-[#C2410C] to-[#FB923C] p-6 text-white shadow-[0_30px_80px_-60px_rgba(194,65,12,0.6)]"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-white/70">Suivi de l'apprenant</p>
-            <p className="mt-2 text-lg font-semibold">Derniers retours du tuteur</p>
-            <div className="mt-3 space-y-2 text-sm text-white/90">
-              {tutorComments.map((comment) => (
-                <div key={comment} className="rounded-2xl border border-white/30 bg-white/10 px-3 py-2">
-                  {comment}
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-sm text-white/90">
-              Moyenne générale des missions : <span className="font-semibold">{missionsAverage}%</span>
-            </p>
+              </button>
+            ))}
           </div>
-          <a
-            href={`/dashboard/ecole/apprenants/${profile.id || "profil"}/suivi`}
-            className="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#C2410C]"
+        ) : (
+          <p className="mt-6 max-w-xl text-sm leading-relaxed text-white/55">
+            Aucun badge enregistré pour le moment. Les badges obtenus sur les parcours (table des récompenses LMS)
+            apparaîtront ici ; vous pouvez aussi renseigner des références sur le profil apprenant.
+          </p>
+        )}
+        {walletList.length ? (
+          <button
+            type="button"
+            className="mt-6 inline-flex rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 hover:border-white/40"
           >
-            Accéder au suivi complet
-          </a>
-        </div>
+            Voir d&apos;autres badges
+          </button>
+        ) : null}
       </motion.section>
 
       <motion.section
@@ -883,10 +907,16 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
         className="rounded-3xl border border-white/10 bg-white/70 p-6 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.35)] backdrop-blur-xl"
       >
         <p className="text-xs uppercase tracking-[0.2em] text-black/50">Portfolio & Liens</p>
-        <div className="mt-4 space-y-2 text-sm text-black/70">
-          <a href="https://github.com" className="hover:underline">GitHub</a>
-          <a href="https://behance.net" className="hover:underline">Behance</a>
-          <a href="https://example.com" className="hover:underline">Étude de cas</a>
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-black/70">
+          <a href="https://github.com" className="rounded-lg hover:underline" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+          <a href="https://behance.net" className="rounded-lg hover:underline" target="_blank" rel="noreferrer">
+            Behance
+          </a>
+          <a href="https://example.com" className="rounded-lg hover:underline" target="_blank" rel="noreferrer">
+            Étude de cas
+          </a>
         </div>
       </motion.section>
 
@@ -933,33 +963,16 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
         </div>
       </motion.section>
 
-      <motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.4 }}
-        className="lg:col-span-3 rounded-3xl border border-white/10 bg-gradient-to-r from-white/80 to-white/60 p-6 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.35)] backdrop-blur-xl"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm font-semibold text-black/70">
-            Préparez votre audit Qualiopi en toute sécurité
-          </p>
-          <a
-            href="/dashboard/ecole/qualiopi"
-            className="inline-flex rounded-lg bg-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white"
-          >
-            Accéder à Qualiopi
-          </a>
-        </div>
-      </motion.section>
       {activeBadge ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="h-[90vh] w-[90vw] overflow-hidden rounded-3xl border border-white/10 bg-black p-8 text-white">
-            <div className="flex items-center justify-between">
-              <p className="text-xl font-semibold">Open Badge</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-white/10 bg-black p-6 text-white md:p-8">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xl font-semibold">Détail du badge</p>
               <button
                 type="button"
                 onClick={() => setActiveBadge(null)}
-                className="text-2xl text-white/70 hover:text-white"
+                className="text-2xl leading-none text-white/70 hover:text-white"
+                aria-label="Fermer"
               >
                 ×
               </button>
@@ -967,51 +980,72 @@ export function SchoolStudentProfile({ profile, offers }: SchoolStudentProfilePr
             <div className="mt-6 grid gap-8 lg:grid-cols-2">
               <div>
                 <div className="flex items-center gap-4">
-                  <img src={activeBadge.image} alt={activeBadge.name} className="h-16 w-16 rounded-full" />
+                  {activeBadge.imageUrl ? (
+                    <img
+                      src={activeBadge.imageUrl}
+                      alt=""
+                      className="h-16 w-16 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/10 text-lg font-bold">
+                      {badgeInitials(activeBadge.name)}
+                    </div>
+                  )}
                   <div>
-                    <p className="text-3xl font-semibold">{activeBadge.name}</p>
-                    <p className="text-sm text-white/60">Obtenu le {activeBadge.date}</p>
+                    <p className="text-2xl font-semibold md:text-3xl">{activeBadge.name}</p>
+                    <p className="text-sm text-white/60">Obtenu le {activeBadge.dateLabel}</p>
                   </div>
                 </div>
-                <p className="mt-4 text-sm text-white/60">Date d'expiration : {activeBadge.expiration}</p>
-                <p className="text-sm text-white/60">Identifiant unique : {activeBadge.hash}</p>
+                <p className="mt-4 text-sm text-white/60">Date d&apos;expiration : {activeBadge.expiration}</p>
+                <p className="text-sm text-white/60">Référence : {activeBadge.hash}</p>
                 <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
                   <p className="text-xs uppercase tracking-[0.3em] text-white/50">Description</p>
                   <p className="mt-2 text-sm text-white/70">{activeBadge.description}</p>
                 </div>
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/50">Critères</p>
-                  <p className="mt-2 text-sm text-white/70">{activeBadge.criteria}</p>
-                </div>
+                {activeBadge.criteria.trim() ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/50">Critères</p>
+                    <p className="mt-2 text-sm text-white/70">{activeBadge.criteria}</p>
+                  </div>
+                ) : null}
                 <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <img src={badgeImage} alt="Verified by Beyond" className="h-10 w-10 rounded-full" />
+                  <ShieldCheck className="h-10 w-10 shrink-0 text-blue-400" />
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">Issuer</p>
-                    <p className="text-sm text-white/80">
-                      {activeBadge.issuer} · Verified by Beyond
-                    </p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">Émetteur</p>
+                    <p className="text-sm text-white/80">{activeBadge.issuer}</p>
                   </div>
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-white/50">Preuves</p>
-                <a
-                  href={activeBadge.evidenceUrl}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-black"
-                >
-                  {activeBadge.evidenceLabel}
-                </a>
-                <div className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-                  <div className="relative h-[36vh] w-full bg-black">
-                    <img src={activeBadge.image} alt="Vignette" className="h-full w-full object-cover opacity-60" />
-                    <button
-                      type="button"
-                      className="absolute inset-0 m-auto h-12 w-48 rounded-full bg-white/20 text-xs font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md"
+                {activeBadge.evidenceUrl.trim() && activeBadge.evidenceLabel.trim() ? (
+                  <>
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/50">Preuves</p>
+                    <a
+                      href={activeBadge.evidenceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-black"
                     >
-                      Voir la vidéo
-                    </button>
-                  </div>
-                  <video className="hidden" src={badgeVideo} />
+                      {activeBadge.evidenceLabel}
+                    </a>
+                  </>
+                ) : (
+                  <p className="text-sm text-white/50">Aucun lien de preuve associé à ce badge.</p>
+                )}
+                <div className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+                  {activeBadge.imageUrl ? (
+                    <div className="relative aspect-video w-full bg-black">
+                      <img
+                        src={activeBadge.imageUrl}
+                        alt=""
+                        className="h-full w-full object-contain opacity-90"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex min-h-[200px] items-center justify-center px-6 py-12 text-center text-sm text-white/45">
+                      Aperçu graphique non disponible pour ce badge.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

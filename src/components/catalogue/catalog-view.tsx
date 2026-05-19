@@ -134,7 +134,7 @@ export function CatalogView() {
             onItemClick={(item) => {
               // Utiliser course_slug si disponible, sinon l'ID
               const identifier = item.course_slug || item.id;
-              window.location.href = `/catalog/formations/${identifier}`;
+              window.location.href = `/formations/${identifier}`;
             }}
             />
           )}

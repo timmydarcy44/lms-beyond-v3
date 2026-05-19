@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { CheckCircle2, Link2, ArrowLeft, ArrowRight } from "lucide-react";
+import { LazyBandwidthVideo } from "@/components/media/lazy-bandwidth-video";
 
 const accentGold = "text-[#C5A059]";
 const premiumText = "text-[#EAEAEA]";
@@ -42,15 +43,15 @@ export function BeyondNoSchoolLanding() {
 
       <section className="relative min-h-[70vh] overflow-hidden px-6 pb-28 pt-20 sm:px-12 lg:px-24" id="cours-gratuit">
         <div className="absolute inset-0">
-          <video
+          <LazyBandwidthVideo
+            src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/video_header.mp4"
+            eager
             className="absolute inset-0 h-full w-full object-cover"
             autoPlay
             loop
             muted
             playsInline
-          >
-            <source src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/video_header.mp4" type="video/mp4" />
-          </video>
+          />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.95)_0%,rgba(0,0,0,0.7)_45%,rgba(0,0,0,0.15)_75%,rgba(0,0,0,0)_100%)]" />
         </div>
         <div className="relative mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
@@ -127,10 +128,10 @@ export function BeyondNoSchoolLanding() {
                 logo: "Nike",
                 company: "NIKE",
                 logoUrl:
-                  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/png-clipart-angle-font-nike-angle-white-removebg-preview.png",
+                  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/png-clipart-angle-font-nike-angle-white-removebg-preview.png",
                 logoClassName: "mix-blend-screen brightness-110",
                 photoUrl:
-                  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/PhilippeCorrot.jpg",
+                  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/PhilippeCorrot.jpg",
               },
               {
                 name: "Antoine Verdier",
@@ -138,18 +139,18 @@ export function BeyondNoSchoolLanding() {
                 logo: "FC Versailles",
                 company: "FC VERSAILLES",
                 logoUrl:
-                  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/logo_fcv.png",
+                  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/logo_fcv.png",
                 photoUrl:
-                  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/1738412961092.jpg",
+                  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/1738412961092.jpg",
               },
               {
                 name: "Miguel Farina",
                 role: "Head of sales",
                 company: "OLYMPIQUE LYONNAIS",
                 photoUrl:
-                  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/Miguel%20OL.jpg",
+                  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/Miguel%20OL.jpg",
                 logoUrl:
-                  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/stickers-ol.jpg",
+                  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/stickers-ol.jpg",
                 logoClassName: "grayscale brightness-0 invert",
                 logo: "Olympique Lyonnais",
               },
@@ -158,9 +159,9 @@ export function BeyondNoSchoolLanding() {
                 role: "Directeur commercial",
                 company: "STADE RENNAIS FC",
                 photoUrl:
-                  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/Richard%20SR.jpg",
+                  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/Richard%20SR.jpg",
                 logoUrl:
-                  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/logo-srfc-blanc-v1.png",
+                  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/logo-srfc-blanc-v1.png",
                 logo: "Stade Rennais Football Club",
               },
               {

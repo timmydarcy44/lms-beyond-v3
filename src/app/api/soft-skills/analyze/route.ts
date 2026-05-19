@@ -25,11 +25,9 @@ export async function POST(request: NextRequest) {
     const scores = body?.scores ?? {};
 
     const { data: latest } = await supabase
-      .from("soft_skills_results")
-      .select("id, ai_analysis")
+      .from("soft_skills_resultats")
+      .select("learner_id, ai_analysis")
       .eq("learner_id", user.id)
-      .order("taken_at", { ascending: false })
-      .limit(1)
       .maybeSingle();
 
     if (latest?.ai_analysis) {
@@ -59,11 +57,11 @@ export async function POST(request: NextRequest) {
 
     const analysis = response.choices[0]?.message?.content?.trim() || "";
 
-    if (analysis && latest?.id) {
+    if (analysis) {
       const { error: updateError } = await supabase
-        .from("soft_skills_results")
+        .from("soft_skills_resultats")
         .update({ ai_analysis: analysis })
-        .eq("id", latest.id);
+        .eq("learner_id", user.id);
       if (updateError) {
         console.error("[soft-skills/analyze] update error", updateError);
       }

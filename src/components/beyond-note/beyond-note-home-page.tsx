@@ -602,7 +602,7 @@ export function BeyondNoteHomePage() {
       <aside className="hidden md:flex w-64 bg-[#be1354] text-white flex-col">
         <div className="px-6 py-6">
           <img
-            src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
+            src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png"
             alt="Nevo"
             className="h-14 object-contain"
           />

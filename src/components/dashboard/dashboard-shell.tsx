@@ -24,9 +24,15 @@ type DashboardShellProps = {
   email?: string | null;
   compactHeader?: boolean; // Mode compact pour réduire le header
   organizationLogo?: string | null;
+  organizationName?: string | null;
   forcedTheme?: "light" | "dark";
   className?: string;
   mainClassName?: string;
+  hideSidebar?: boolean;
+  hideHeader?: boolean;
+  forceSidebar?: boolean;
+  /** Hero plein viewport : pas d’overflow-hidden racine ni clip horizontal du main (ex. Edge Online). */
+  fullBleed?: boolean;
 };
 
 const getDesktopMatch = () =>
@@ -42,9 +48,14 @@ export const DashboardShell = ({
   email,
   compactHeader = false,
   organizationLogo,
+  organizationName,
   forcedTheme,
   className,
   mainClassName,
+  hideSidebar = false,
+  hideHeader = false,
+  forceSidebar = false,
+  fullBleed = false,
 }: DashboardShellProps) => {
   const { resolvedTheme } = useTheme();
   const pathname = usePathname();
@@ -68,13 +79,17 @@ export const DashboardShell = ({
     forcedTheme ??
     (isBeyondCareArea ? "light" : isLight ? "light" : "dark");
   const useDarkBackground = effectiveTheme === "dark";
-  const useSidebar = !isLearnerSurface;
+  const useSidebar = (forceSidebar || !isLearnerSurface) && !hideSidebar;
   
   // Initialiser avec false pour éviter les problèmes d'hydratation
   // On mettra à jour après le montage dans useEffect
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [navBranding, setNavBranding] = useState<{ logoUrl: string | null; name: string | null }>({
+    logoUrl: organizationLogo ?? null,
+    name: organizationName ?? null,
+  });
 
   useEffect(() => {
     setIsMounted(true);
@@ -87,6 +102,25 @@ export const DashboardShell = ({
       setIsOpen(false);
     }
   }, [initialCollapsed]);
+
+  useEffect(() => {
+    setNavBranding({ logoUrl: organizationLogo ?? null, name: organizationName ?? null });
+  }, [organizationLogo, organizationName]);
+
+  useEffect(() => {
+    if (navBranding.logoUrl || navBranding.name) return;
+    fetch("/api/organizations/nav-branding", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        const b = data?.branding;
+        const logoUrl = typeof b?.logoUrl === "string" && b.logoUrl.trim() ? b.logoUrl.trim() : null;
+        const name = typeof b?.name === "string" && b.name.trim() ? b.name.trim() : null;
+        if (logoUrl || name) setNavBranding({ logoUrl, name });
+      })
+      .catch(() => {
+        // ignore
+      });
+  }, [navBranding.logoUrl, navBranding.name]);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -115,18 +149,11 @@ export const DashboardShell = ({
       ? `Vous êtes dans ${breadcrumbs.map((crumb) => crumb.label).join(" › ")}`
       : "Bienvenue sur votre espace de pilotage.");
 
-  const sidebarWidth = useSidebar
-    ? isDesktop
-      ? isOpen
-        ? "18rem"
-        : "5rem"
-      : "0"
-    : "0";
-
   return (
     <div
       className={cn(
-        "flex min-h-screen transition-colors relative overflow-hidden",
+        "flex min-h-screen transition-colors relative",
+        fullBleed ? "overflow-x-visible overflow-y-visible" : "overflow-hidden",
         className,
         isBeyondCareArea
           ? "bg-white text-slate-900"
@@ -201,7 +228,8 @@ export const DashboardShell = ({
           <Sidebar
             isOpen={isOpen}
             onToggle={() => setIsOpen((prev) => !prev)}
-            organizationLogo={organizationLogo}
+            organizationLogo={navBranding.logoUrl}
+            organizationName={navBranding.name}
             forcedTheme={effectiveTheme}
           />
 
@@ -216,15 +244,13 @@ export const DashboardShell = ({
         </>
       ) : null}
 
-      <div 
-        className="flex flex-1 flex-col relative transition-[margin-left] duration-300 ease-in-out min-w-0"
+      <div
+        className="flex flex-1 flex-col relative min-w-0"
         style={{
-          marginLeft: sidebarWidth,
           backgroundColor: isBeyondCareArea ? "#ffffff" : useDarkBackground ? "transparent" : undefined,
-          ["--sidebar-width" as string]: sidebarWidth,
         }}
       >
-        {useSidebar ? (
+        {useSidebar && !hideHeader ? (
           <DashboardHeader
             title={displayTitle}
             subtitle={displaySubtitle}
@@ -232,18 +258,21 @@ export const DashboardShell = ({
             onToggleSidebar={
               useSidebar && !isDesktop ? () => setIsOpen((prev) => !prev) : undefined
             }
-            isSidebarOpen={useSidebar ? (isDesktop ? true : isOpen) : false}
+            isSidebarOpen={useSidebar ? isOpen : false}
             compact={compactHeader}
             forcedTheme={effectiveTheme}
           />
         ) : null}
         <main
           className={cn(
-            "relative flex-1 overflow-x-hidden overflow-y-auto px-4 pb-16 md:px-10 transition-colors w-full",
-            mainClassName,
-            isLearnerSurface ? "pt-0 md:pt-0 apprenant-theme" : "pt-8",
+            "relative flex-1 overflow-y-auto transition-colors w-full",
+            fullBleed
+              ? "!overflow-x-visible !px-0 pb-16"
+              : "overflow-x-hidden px-4 pb-16 md:px-10",
+            isLearnerSurface ? "pt-0 md:pt-0 apprenant-theme" : fullBleed ? "pt-0" : "pt-8",
             !isDesktop && isOpen ? "blur-sm" : "",
             useDarkBackground ? "bg-transparent" : "bg-slate-50",
+            mainClassName,
           )}
           style={
             useDarkBackground

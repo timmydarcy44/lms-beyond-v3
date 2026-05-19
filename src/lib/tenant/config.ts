@@ -183,6 +183,22 @@ export const TENANTS: Record<string, TenantConfig> = {
 };
 
 /**
+ * Site vitrine Jessica (pas app.jessicacontentin.fr).
+ * Utilisé en filet si le Host n’est pas une clé exacte de TENANTS mais doit quand même résoudre le tenant Jessica.
+ */
+export function isJessicaContentinMarketingHostname(hostname: string): boolean {
+  const raw = hostname.split(":")[0]?.trim().toLowerCase() ?? "";
+  const h = raw.replace(/^www\./, "");
+  if (!h || h.startsWith("app.")) return false;
+  return (
+    h === "jessicacontentin.fr" ||
+    h === "jessica-contentin.fr" ||
+    h.endsWith(".jessicacontentin.fr") ||
+    h.endsWith(".jessica-contentin.fr")
+  );
+}
+
+/**
  * Détecte le tenant basé sur le hostname
  */
 export function getTenantFromHostname(hostname: string): TenantConfig | null {
@@ -208,7 +224,11 @@ export function getTenantFromHostname(hostname: string): TenantConfig | null {
       return TENANTS[baseDomain];
     }
   }
-  
+
+  if (isJessicaContentinMarketingHostname(host)) {
+    return TENANTS["jessicacontentin.fr"];
+  }
+
   return null;
 }
 

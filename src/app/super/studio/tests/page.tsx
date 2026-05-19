@@ -33,6 +33,7 @@ export default async function SuperAdminTestsPage() {
   // Récupérer l'utilisateur actuel
   const { data: { user } } = await supabase.auth.getUser();
   const creatorId = user?.id;
+  const isTimmy = String(user?.email ?? "").trim().toLowerCase() === "timmydarcy44@gmail.com";
 
   // Récupérer les tests créés par le Super Admin
   let { data: tests, error } = await supabase
@@ -43,11 +44,32 @@ export default async function SuperAdminTestsPage() {
       published,
       created_at,
       updated_at,
-      creator_id
+      creator_id,
+      org_id,
+      organizations(name,slug)
     `)
-    .eq("creator_id", creatorId)
     .order("updated_at", { ascending: false })
     .limit(100);
+
+  if (!isTimmy && creatorId) {
+    const filtered = await supabase
+      .from("tests")
+      .select(`
+        id,
+        title,
+        published,
+        created_at,
+        updated_at,
+        creator_id,
+        org_id,
+        organizations(name,slug)
+      `)
+      .eq("creator_id", creatorId)
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    tests = filtered.data;
+    error = filtered.error;
+  }
 
   if (error) {
     if ((error as any)?.code === "42P01") {
@@ -146,13 +168,20 @@ export default async function SuperAdminTestsPage() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">{test.title || "Sans titre"}</h3>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    test.published 
-                      ? "bg-emerald-100 text-emerald-700" 
-                      : "bg-gray-100 text-gray-600"
-                  }`}>
-                    {test.published ? "Publié" : "Brouillon"}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        test.published ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {test.published ? "Publié" : "Brouillon"}
+                    </span>
+                    {isTimmy ? (
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                        {(test as any)?.organizations?.name ?? "Galaxie inconnue"}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
                   <Calendar className="h-3 w-3" />

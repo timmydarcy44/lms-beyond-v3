@@ -54,6 +54,17 @@ import { fr } from "date-fns/locale";
 import Image from "next/image";
 import Link from "next/link";
 
+function isVideoUrl(url: string): boolean {
+  const u = String(url ?? "").trim().toLowerCase();
+  if (!u) return false;
+  try {
+    const p = new URL(u).pathname.toLowerCase();
+    return p.endsWith(".mp4") || p.endsWith(".webm");
+  } catch {
+    return u.endsWith(".mp4") || u.endsWith(".webm");
+  }
+}
+
 const profileSchema = z.object({
   firstName: z.string().min(1, { message: "Le prénom est requis" }),
   lastName: z.string().min(1, { message: "Le nom est requis" }),
@@ -759,12 +770,23 @@ export default function AccountOverview() {
                         <div className="flex items-start gap-4">
                           {course.cover_image && (
                             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg">
-                              <Image
-                                src={course.cover_image}
-                                alt={course.title}
-                                fill
-                                className="object-cover"
-                              />
+                              {isVideoUrl(course.cover_image) ? (
+                                <video
+                                  src={course.cover_image}
+                                  className="h-full w-full object-cover"
+                                  autoPlay
+                                  loop
+                                  muted
+                                  playsInline
+                                />
+                              ) : (
+                                <Image
+                                  src={course.cover_image}
+                                  alt={course.title}
+                                  fill
+                                  className="object-cover"
+                                />
+                              )}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">

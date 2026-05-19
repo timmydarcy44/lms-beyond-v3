@@ -1,16 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from "@tiptap/react";
 import type { NodeViewRendererProps } from "@tiptap/react";
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ImagePlus, Video } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export type MediaPlaceholderRequest =
-  | { type: "image" }
-  | { type: "video" };
+export type MediaPlaceholderRequest = {
+  type: "image" | "video";
+  getPos: () => number;
+  rect?: DOMRect | null;
+};
 
 export type MediaPlaceholderOptions = {
   onRequestMedia?: (request: MediaPlaceholderRequest) => void;
@@ -32,63 +33,53 @@ declare module "@tiptap/core" {
 const MediaPlaceholderComponent = ({
   node,
   extension,
+  getPos,
 }: NodeViewRendererProps & { extension: MediaPlaceholderExtension }) => {
   const { type = "image" } = node.attrs as { type?: "image" | "video" };
-  const [hovered, setHovered] = useState(false);
+  const zoneRef = useRef<HTMLDivElement | null>(null);
   const icon = useMemo(() => (type === "video" ? Video : ImagePlus), [type]);
   const Icon = icon;
 
-  const requestMedia = useCallback(
-    (requestType: "image" | "video") => {
-      const handler = extension.options.onRequestMedia;
-      if (!handler) return;
-      handler({ type: requestType });
-    },
-    [extension.options.onRequestMedia],
-  );
+  const openMediaPicker = useCallback(() => {
+    const handler = extension.options.onRequestMedia;
+    if (!handler) return;
+    const pos = typeof getPos === "function" ? getPos : null;
+    if (!pos) return;
+    handler({
+      type,
+      getPos: pos,
+      rect: zoneRef.current?.getBoundingClientRect() ?? null,
+    });
+  }, [extension.options.onRequestMedia, getPos, type]);
 
   return (
-    <NodeViewWrapper
-      className={cn(
-        "rt-media-placeholder relative flex min-h-[160px] items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/5 p-6 text-center text-white/70 transition",
-        hovered ? "border-white/35 bg-white/10 shadow-[0_18px_45px_rgba(12,20,31,0.4)]" : "",
-      )}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      data-placeholder-type={type}
-    >
-      <div className="flex flex-col items-center gap-3">
-        <div className="rounded-full bg-white/10 p-3 text-white">
-          <Icon className="h-6 w-6" />
+    <NodeViewWrapper data-placeholder-type={type}>
+      <div
+        ref={zoneRef}
+        role="button"
+        tabIndex={0}
+        onClick={(e) => {
+          e.preventDefault();
+          openMediaPicker();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openMediaPicker();
+          }
+        }}
+        className={cn(
+          "rt-media-placeholder flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center text-slate-600 outline-none transition hover:border-slate-400 hover:bg-slate-100/80 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2",
+        )}
+      >
+        <div className="rounded-full bg-white/90 p-3 text-slate-500 shadow-sm ring-1 ring-slate-200/80">
+          <Icon className="h-7 w-7" />
         </div>
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-white/85">
-            {type === "video" ? "Ajoutez une vidéo" : "Ajoutez une image"}
-          </p>
-          <p className="text-xs text-white/60">
-            Glissez-déposez un fichier ou utilisez les actions ci-dessous.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="rounded-full border border-white/15 bg-white/10 px-4 text-xs text-white/80 hover:border-white/25 hover:text-white"
-            onClick={() => requestMedia("image")}
-          >
-            Insérer une image
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="rounded-full border border-white/15 bg-white/10 px-4 text-xs text-white/80 hover:border-white/25 hover:text-white"
-            onClick={() => requestMedia("video")}
-          >
-            Insérer une vidéo
-          </Button>
-        </div>
+        <p className="max-w-sm text-sm font-medium text-slate-700">
+          Cliquez ici pour insérer une image/vidéo
+        </p>
+        <NodeViewContent className="hidden" />
       </div>
-      <NodeViewContent className="hidden" />
     </NodeViewWrapper>
   );
 };
@@ -99,6 +90,7 @@ export const MediaPlaceholder = Node.create<MediaPlaceholderOptions>({
   group: "block",
   atom: true,
   selectable: true,
+  allowGapCursor: true,
   draggable: false,
   defining: true,
 

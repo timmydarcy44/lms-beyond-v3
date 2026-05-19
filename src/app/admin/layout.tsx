@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { AdminLayoutWrapper } from "@/components/admin/AdminLayoutWrapper";
-import { getOrganizationLogo } from "@/lib/queries/super-admin";
+import { getOrganizationNavBrandingForUser } from "@/lib/queries/organization-nav";
 
 export default async function AdminLayout({
   children,
@@ -80,26 +80,12 @@ export default async function AdminLayout({
     }
   }
 
-  // Récupérer le logo de l'organisation
-  let organizationLogo: string | null = null;
-  try {
-    const { data: membership } = await supabase
-      .from("org_memberships")
-      .select("org_id")
-      .eq("user_id", session.id)
-      .eq("role", "admin")
-      .limit(1)
-      .single();
-    
-    if (membership?.org_id) {
-      organizationLogo = await getOrganizationLogo(membership.org_id);
-    }
-  } catch (error) {
-    console.error("[admin/layout] Error fetching organization logo:", error);
-  }
+  const { logoUrl: organizationLogo, name: organizationName } = await getOrganizationNavBrandingForUser({
+    membershipRole: "admin",
+  });
 
   return (
-    <AdminLayoutWrapper organizationLogo={organizationLogo}>
+    <AdminLayoutWrapper organizationLogo={organizationLogo} organizationName={organizationName}>
       {children}
     </AdminLayoutWrapper>
   );

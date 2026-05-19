@@ -546,15 +546,7 @@ create policy tutor_mission_logs_self on public.tutor_mission_logs
     )
   );
 create policy tutor_mission_logs_write on public.tutor_mission_logs
-  for insert using (
-    exists (
-      select 1
-      from public.tutor_missions m
-      join public.tutor_assignments a on a.id = m.assignment_id
-      where m.id = public.tutor_mission_logs.mission_id
-        and (a.tutor_id = auth.uid() or auth.uid() = a.learner_id)
-    )
-  ) with check (
+  for insert with check (
     exists (
       select 1
       from public.tutor_missions m
@@ -694,14 +686,7 @@ create policy learning_session_events_self on public.learning_session_events
     )
   );
 create policy learning_session_events_self_insert on public.learning_session_events
-  for insert using (
-    exists (
-      select 1
-      from public.learning_sessions ls
-      where ls.id = public.learning_session_events.session_id
-        and ls.user_id = auth.uid()
-    )
-  ) with check (
+  for insert with check (
     exists (
       select 1
       from public.learning_sessions ls

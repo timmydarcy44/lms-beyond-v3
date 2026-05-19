@@ -1,6 +1,6 @@
 # Script pour mettre à jour .env.local avec la clé anon complète
 
-$url = "https://fqqqejpakbccwvrlolpc.supabase.co"
+$url = "https://zmcefidiiqqppowymoxt.supabase.co"
 $anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxcXFlanBha2JjY3d2cmxvbHBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NTQwMDUsImV4cCI6MjA3NjIzMDAwNX0.2HIll5PWNU_N2uJm9aZnwTbRRpXu0pB8gKnuyNKs0xc"
 
 Write-Host "Mise à jour de .env.local..."

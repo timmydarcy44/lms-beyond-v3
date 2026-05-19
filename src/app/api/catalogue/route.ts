@@ -13,6 +13,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ items: [] }, { status: 200 });
     }
 
+    // --- Galaxies: force org scope from /g/:orgSlug ---
+    const orgSlug = (request.headers.get("x-org-slug") ?? "").trim() || null;
+    let forcedOrgId: string | null = null;
+    if (orgSlug) {
+      const { data: org } = await supabase.from("organizations").select("id").eq("slug", orgSlug).maybeSingle();
+      forcedOrgId = (org as any)?.id ?? null;
+      if (!forcedOrgId) {
+        return NextResponse.json({ error: "ORG_NOT_FOUND" }, { status: 404 });
+      }
+    }
+
     // Détecter le tenant depuis les headers (pour app.jessicacontentin.fr)
     const tenantId = request.headers.get('x-tenant-id');
     const tenantSuperAdminEmail = request.headers.get('x-super-admin-email');
@@ -51,6 +62,10 @@ export async function GET(request: NextRequest) {
 
     // Si pas d'utilisateur authentifié, retourner le catalogue public (filtré par superAdminId si fourni)
     if (authError || !user) {
+      // Sur /g/:orgSlug, on ne sert jamais du public : membership requis.
+      if (forcedOrgId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       console.log("[api/catalogue] Public access - no authenticated user");
       if (resolvedSuperAdminId) {
         const items = await getCatalogItems(undefined, undefined, undefined, resolvedSuperAdminId);
@@ -79,6 +94,20 @@ export async function GET(request: NextRequest) {
 
     // Récupérer l'organisation de l'utilisateur (essayer depuis profile d'abord, puis org_memberships)
     let organizationId = profile?.org_id;
+
+    // Galaxies: on force l'org depuis l'URL et on vérifie membership
+    if (forcedOrgId) {
+      const { data: membership } = await supabase
+        .from("org_memberships")
+        .select("org_id")
+        .eq("org_id", forcedOrgId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!membership) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      organizationId = forcedOrgId;
+    }
 
     if (!organizationId) {
       const { data: membership } = await supabase

@@ -14,6 +14,8 @@ type AdminProfile = {
 
 type SchoolAdminDocumentsModalProps = {
   profile: AdminProfile;
+  /** Classes Tailwind pour le bouton déclencheur (ex. variante violette sur fond sombre). */
+  triggerClassName?: string;
 };
 
 type SlotKey = "cv" | "lm" | "rqth" | "cerfa";
@@ -25,7 +27,10 @@ const slotLabels: Record<SlotKey, string> = {
   cerfa: "CERFA",
 };
 
-export function SchoolAdminDocumentsModal({ profile }: SchoolAdminDocumentsModalProps) {
+export function SchoolAdminDocumentsModal({
+  profile,
+  triggerClassName = "rounded-full bg-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white",
+}: SchoolAdminDocumentsModalProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [files, setFiles] = useState<Record<SlotKey, string>>({
     cv: "",
@@ -48,11 +53,7 @@ export function SchoolAdminDocumentsModal({ profile }: SchoolAdminDocumentsModal
 
   return (
     <div className="flex items-center justify-end">
-      <button
-        type="button"
-        onClick={() => setDialogOpen(true)}
-        className="rounded-full bg-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white"
-      >
+      <button type="button" onClick={() => setDialogOpen(true)} className={triggerClassName}>
         + Administratif
       </button>
 

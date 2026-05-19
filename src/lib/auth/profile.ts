@@ -7,6 +7,7 @@ export type ProfileWithAccess = {
   avatar_url: string | null;
   role: string | null;
   role_type: string | null;
+  company_id: string | null;
   school_id: string | null;
   access_lms: boolean | null;
   access_connect: boolean | null;
@@ -20,7 +21,7 @@ type AuthUser = {
 };
 
 const PROFILE_SELECT =
-  "id, email, full_name, avatar_url, role, role_type, school_id, access_lms, access_connect, access_care";
+  "id, email, full_name, avatar_url, role, role_type, company_id, school_id, access_lms, access_connect, access_care";
 
 const pickProfileByEmail = (rows: ProfileWithAccess[] | null, userId: string) => {
   if (!rows || rows.length === 0) return null;

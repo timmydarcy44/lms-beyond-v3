@@ -9,7 +9,7 @@ L'erreur "Invalid API key" signifie que les clés API dans `.env.local` sont inc
 ### 1. Obtenir les bonnes clés depuis Supabase
 
 1. **Allez sur** https://app.supabase.com
-2. **Sélectionnez votre projet** (celui avec l'URL `https://fqqqejpakbccwvrlolpc.supabase.co`)
+2. **Sélectionnez votre projet** (celui avec l'URL `https://zmcefidiiqqppowymoxt.supabase.co`)
 3. **Cliquez sur Settings (⚙️) → API** dans le menu de gauche
 4. **Copiez les valeurs suivantes :**
 
@@ -22,7 +22,7 @@ L'erreur "Invalid API key" signifie que les clés API dans `.env.local` sont inc
 Ouvrez le fichier `.env.local` et remplacez par :
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://fqqqejpakbccwvrlolpc.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://zmcefidiiqqppowymoxt.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<collez la clé anon complète ici>
 SUPABASE_SERVICE_ROLE_KEY=<collez la clé service_role complète ici>
 

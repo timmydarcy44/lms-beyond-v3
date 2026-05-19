@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { fetchSchoolGateProfile, schoolDashboardAllowed } from "@/lib/auth/school-access";
 import { getSession } from "@/lib/auth/session";
+import { getMiddlewarePathname } from "@/lib/http/request-pathname";
 import { getServerClient } from "@/lib/supabase/server";
 
 export const dynamic = 'force-dynamic';
@@ -24,30 +26,20 @@ export default async function SchoolProspectsPage() {
   }
 
   const isDemo = session.role === "demo";
+  const gate = await fetchSchoolGateProfile(session.id, session.email, supabase);
+  const requestPath = await getMiddlewarePathname();
+  const ok = schoolDashboardAllowed({
+    isDemoSession: isDemo,
+    sessionFrontendRole: session.role,
+    role: gate?.role ?? "",
+    roleType: gate?.roleType ?? "",
+    schoolIdPresent: Boolean(gate?.school_id),
+    profileRowPresent: Boolean(gate),
+    requestPath: requestPath || undefined,
+  });
+  if (!ok) redirect("/dashboard/apprenant");
 
-  const { data: profileById } = await supabase
-    .from("profiles")
-    .select("id, role_type, school_id")
-    .eq("id", session.id)
-    .maybeSingle();
-  let currentProfile = profileById;
-  if (!currentProfile && session.email) {
-    const { data: profileByEmail } = await supabase
-      .from("profiles")
-      .select("id, role_type, school_id")
-      .eq("email", session.email)
-      .maybeSingle();
-    currentProfile = profileByEmail ?? null;
-  }
-
-  const normalizedRole = String(currentProfile?.role_type ?? "").trim().toLowerCase();
-  const isSchoolProfile = ["ecole", "school", "cfa", "admin_ecole", "admin_school"].includes(normalizedRole);
-  const hasSchoolScope = Boolean(currentProfile?.school_id);
-  if (!isDemo && (!currentProfile || (!isSchoolProfile && !hasSchoolScope))) {
-    redirect("/dashboard/apprenant");
-  }
-
-  const schoolId = currentProfile?.school_id ?? null;
+  const schoolId = gate?.school_id ?? null;
 
   const { data: prospects } = await supabase
     .from("crm_prospects")

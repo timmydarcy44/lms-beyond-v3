@@ -3,29 +3,56 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
   Building2,
   CheckSquare,
   ChevronsLeft,
+  Euro,
   GitBranch,
   GraduationCap,
   LayoutDashboard,
   LogOut,
+  MonitorPlay,
   ShieldCheck,
   Users,
 } from "lucide-react";
+import { HandicapSidebarNav } from "@/components/beyond-connect/handicap-sidebar-nav";
+import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
 type TodoLayoutProps = {
   children: React.ReactNode;
 };
+
+type EcoleNavItem = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  activePathPrefix?: string;
+};
+
+function isEcoleNavActive(pathname: string, item: EcoleNavItem): boolean {
+  if (item.activePathPrefix) {
+    const p = item.activePathPrefix;
+    return pathname === p || pathname.startsWith(`${p}/`);
+  }
+  if (item.href === "/dashboard/ecole") return pathname === item.href;
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
 
 export default function TodoLayout({ children }: TodoLayoutProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isCompaniesOpen, setIsCompaniesOpen] = useState(true);
 
-  const navItems = [
+  const pricingNavItem: EcoleNavItem = {
+    label: "Tarifs",
+    href: "/dashboard/ecole/pricing",
+    icon: Euro,
+  };
+
+  const mainNavItems: EcoleNavItem[] = [
     { label: "Tableau de bord", href: "/dashboard/ecole", icon: LayoutDashboard },
     { label: "Mes apprenants", href: "/dashboard/ecole/apprenants", icon: Users },
     { label: "Mes classes", href: "/dashboard/ecole/classes", icon: GraduationCap },
@@ -33,17 +60,23 @@ export default function TodoLayout({ children }: TodoLayoutProps) {
     { label: "Prospection", href: "/dashboard/ecole/prospection", icon: GitBranch },
     { label: "Ma todo", href: "/dashboard/ecole/todo", icon: CheckSquare },
     { label: "Qualiopi", href: "/dashboard/ecole/qualiopi", icon: ShieldCheck },
+    {
+      label: "EDGE Online",
+      href: EDGE_ONLINE_APP_SURFACE_PATH,
+      icon: MonitorPlay,
+      activePathPrefix: EDGE_ONLINE_APP_SURFACE_PATH,
+    },
   ];
 
   return (
     <div className="min-h-screen w-full bg-[#121212] text-white">
       <div className="flex min-h-screen">
         <aside
-          className={`fixed left-0 top-0 flex h-full flex-col bg-[#121212] px-4 py-6 text-[#F5F2E8] transition-all ${
+          className={`fixed left-0 top-0 z-30 flex h-screen min-h-0 flex-col bg-[#121212] px-4 py-6 text-[#F5F2E8] transition-all ${
             isCollapsed ? "w-20" : "w-64"
           }`}
         >
-          <div className="flex items-center justify-between">
+          <div className="shrink-0 flex items-center justify-between">
             {!isCollapsed ? (
               <div>
                 <div className="text-lg font-semibold tracking-tight">BEYOND CONNECT</div>
@@ -61,10 +94,10 @@ export default function TodoLayout({ children }: TodoLayoutProps) {
               <ChevronsLeft className={`h-4 w-4 transition-transform ${isCollapsed ? "rotate-180" : ""}`} />
             </button>
           </div>
-          <nav className="mt-8 space-y-2 text-sm">
-            {navItems.map((item) => {
-              const isActive =
-                item.href === "/dashboard/ecole" ? pathname === item.href : pathname.startsWith(item.href);
+          <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <nav className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain text-sm">
+            {mainNavItems.map((item) => {
+              const isActive = isEcoleNavActive(pathname, item);
               const Icon = item.icon;
               return (
                 <Link
@@ -137,28 +170,31 @@ export default function TodoLayout({ children }: TodoLayoutProps) {
               ) : null}
             </div>
           </nav>
-          <div className="mt-4">
-            <svg aria-hidden="true" className="absolute h-0 w-0">
-              <defs>
-                <linearGradient id="handicapGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#064e3b" />
-                  <stop offset="100%" stopColor="#22c55e" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <Link
-              href="/dashboard/ecole/handicap"
-              className="flex items-center gap-3 px-3 py-2 text-sm font-semibold"
-            >
-              <ShieldCheck className="h-4 w-4" style={{ stroke: "url(#handicapGradient)" }} />
-              {!isCollapsed ? (
-                <span className="bg-gradient-to-r from-[#064e3b] to-[#22c55e] bg-clip-text text-transparent">
-                  Handicap
-                </span>
-              ) : null}
-            </Link>
+          <div className="shrink-0 pt-2">
+            <HandicapSidebarNav collapsed={isCollapsed} labelVariant="todo" />
           </div>
-          <div className="mt-auto">
+          </div>
+          <div className="shrink-0 space-y-1 border-t border-white/10 pt-3">
+            <Link
+              href={pricingNavItem.href}
+              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
+                isEcoleNavActive(pathname, pricingNavItem)
+                  ? "bg-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.2)] backdrop-blur"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span
+                className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full ${
+                  isEcoleNavActive(pathname, pricingNavItem) ? "bg-[#007AFF]" : "bg-transparent"
+                }`}
+              />
+              <Euro
+                className={`h-4 w-4 ${
+                  isEcoleNavActive(pathname, pricingNavItem) ? "text-[#007AFF]" : "text-white/40"
+                }`}
+              />
+              {!isCollapsed ? <span>{pricingNavItem.label}</span> : null}
+            </Link>
             <Link
               href="/logout"
               className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white"

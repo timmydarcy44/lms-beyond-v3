@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 type MissionItem = {
@@ -12,6 +12,8 @@ type MissionItem = {
 
 type Props = {
   missions: MissionItem[];
+  /** Après PATCH réussi (ex. recharger la fiche alternant). */
+  onAfterChange?: () => void;
 };
 
 const statusLabels: Record<string, string> = {
@@ -33,11 +35,20 @@ const normalizeStatus = (status: string) => {
   if (value === "VALIDEE" || value === "DONE") return "done";
   if (value === "EN_COURS" || value === "IN_PROGRESS") return "in_progress";
   if (value === "INVALIDEE" || value === "INVALID") return "invalid";
+  if (value === "TODO" || value === "A_FAIRE" || value === "EN_ATTENTE") return "todo";
+  const lower = String(status ?? "").toLowerCase();
+  if (lower === "done") return "done";
+  if (lower === "in_progress") return "in_progress";
+  if (lower === "invalid") return "invalid";
+  if (lower === "todo") return "todo";
   return "todo";
 };
 
-export function MissionList({ missions }: Props) {
+export function MissionList({ missions, onAfterChange }: Props) {
   const [items, setItems] = useState<MissionItem[]>(missions);
+  useEffect(() => {
+    setItems(missions);
+  }, [missions]);
   const [invalidMissionId, setInvalidMissionId] = useState<string | null>(null);
   const [motif, setMotif] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -59,6 +70,7 @@ export function MissionList({ missions }: Props) {
         )
       );
       toast.success("Mission mise à jour");
+      onAfterChange?.();
     } catch (error) {
       console.error("Error updating mission:", error);
       toast.error("Erreur lors de la mise à jour");

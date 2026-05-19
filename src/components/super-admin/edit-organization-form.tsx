@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { updateOrganizationAction, removeMemberAction } from "@/app/super/organisations/[orgId]/edit/actions";
+import { updateOrganizationAction } from "@/app/super/organisations/[id]/edit/actions";
 import { toast } from "sonner";
 import { Loader2, Upload, X, Trash2, UserPlus, Shield, GraduationCap, Users } from "lucide-react";
 import Image from "next/image";
@@ -114,18 +114,7 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
 
     setIsLoading(true);
     try {
-      const result = await removeMemberAction({
-        organizationId: organization.id,
-        userId: memberToRemove.id,
-      });
-
-      if (result.success) {
-        toast.success("Membre retiré avec succès");
-        router.refresh();
-        setMemberToRemove(null);
-      } else {
-        toast.error(result.error || "Erreur lors du retrait du membre");
-      }
+      toast.error("Retrait de membre indisponible (action manquante).");
     } catch (error) {
       toast.error("Une erreur est survenue");
       console.error(error);

@@ -6,14 +6,14 @@ Les services Supabase sont "Malsains" depuis plus de 5 minutes, ce qui est anorm
 ## 📋 Actions immédiates
 
 ### 1. Vérifier les logs Supabase
-1. Allez sur : https://supabase.com/dashboard/project/fqqqejpakbccwvrlolpc/logs
+1. Allez sur : https://supabase.com/dashboard/project/zmcefidiiqqppowymoxt/logs
 2. Vérifiez les logs de :
    - **Database Logs** : Erreurs de base de données
    - **API Logs** : Erreurs d'API
    - **Auth Logs** : Erreurs d'authentification
 
 ### 2. Vérifier l'état du projet
-1. Allez sur : https://supabase.com/dashboard/project/fqqqejpakbccwvrlolpc
+1. Allez sur : https://supabase.com/dashboard/project/zmcefidiiqqppowymoxt
 2. Vérifiez :
    - Si le projet est en "Pause" → Cliquez sur "Resume" ou "Restore"
    - Si le projet est "Active" mais services malsains → Voir ci-dessous
@@ -38,7 +38,7 @@ Les services Supabase sont "Malsains" depuis plus de 5 minutes, ce qui est anorm
 Si rien ne fonctionne après 10-15 minutes :
 1. Allez sur : https://supabase.com/support
 2. Créez un ticket de support avec :
-   - ID du projet : `fqqqejpakbccwvrlolpc`
+   - ID du projet : `zmcefidiiqqppowymoxt`
    - Description : "Services malsains depuis plus de 5 minutes"
    - Screenshot du dashboard montrant les services malsains
 

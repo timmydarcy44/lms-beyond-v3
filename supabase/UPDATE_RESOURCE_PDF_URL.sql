@@ -5,7 +5,7 @@
 --
 -- INSTRUCTIONS:
 -- 1. Uploader le PDF dans Supabase Storage (bucket "Public" ou "Jessica CONTENTIN")
--- 2. Récupérer l'URL publique du fichier (ex: https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Public/nom-du-fichier.pdf)
+-- 2. Récupérer l'URL publique du fichier (ex: https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Public/nom-du-fichier.pdf)
 -- 3. Remplacer 'VOTRE_URL_PDF_ICI' ci-dessous par l'URL réelle du PDF
 -- 4. Exécuter ce script
 

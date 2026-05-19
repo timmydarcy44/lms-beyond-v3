@@ -13,6 +13,12 @@ type CourseCardProps = {
     status?: string | null;
     slug?: string | null;
     cover_image?: string | null;
+    image_url?: string | null;
+    builder_snapshot?: {
+      general?: {
+        image?: string | null;
+      } | null;
+    } | null;
   };
   isBeyond?: boolean;
   isPSG?: boolean;
@@ -49,8 +55,10 @@ export function CourseCard({ course, isBeyond = false, isPSG = false }: CourseCa
     ? "inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-500/30 text-blue-200 border border-blue-400/40"
     : "";
 
-  const coverImage = course.cover_image || 
-    "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80";
+  const coverImage =
+    course.image_url ||
+    course.builder_snapshot?.general?.image ||
+    "/fallback.svg";
 
   return (
     <Link href={courseDetailUrl} className="block">
@@ -63,7 +71,7 @@ export function CourseCard({ course, isBeyond = false, isPSG = false }: CourseCa
             fill
             className="object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80";
+              (e.target as HTMLImageElement).src = "/fallback.svg";
             }}
           />
           {isBeyond && (

@@ -6,6 +6,18 @@ export type TestQuestion = {
   id: string;
   type: "single" | "multiple" | "scale" | "text";
   title: string;
+  /** Réponse attendue (scoring / admin) — mappée depuis correct_option, correct, etc. */
+  correct_answer?: string | number | string[] | null;
+  /** Domaine / axe pour le radar (ex. Logistique, Sécurité) */
+  category?: string;
+  /** Explication affichée si la réponse est incorrecte (« Pourquoi ») */
+  explanation_wrong?: string;
+  /** Feedback court (optionnel) */
+  feedback?: string;
+  /** URL absolue d’illustration si déjà connue */
+  imageUrl?: string;
+  /** Mots-clés pour image placeholder (ex. unsplash) */
+  image_keyword?: string;
   helper?: string;
   options?: { value: string; label: string }[];
   placeholder?: string;
@@ -39,9 +51,98 @@ type TestSessionsStore = {
   history: CompletedTest[];
   startSession: (payload: { slug: string; title: string; totalQuestions: number }) => void;
   recordAnswer: (slug: string, questionId: string, value: TestAnswerValue) => void;
-  completeSession: (slug: string, overrideScore?: number) => CompletedTest | null;
+  completeSession: (slug: string, options?: { questions?: TestQuestion[]; overrideScore?: number }) => CompletedTest | null;
   resetSession: (slug: string) => void;
 };
+
+function normalizeAnswerToken(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "number" && !Number.isNaN(v)) return String(v);
+  return String(v).trim();
+}
+
+function normalizeTextForSimilarity(s: string): string {
+  return s
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "") // accents
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const al = a.length;
+  const bl = b.length;
+  if (al === 0) return bl;
+  if (bl === 0) return al;
+
+  const v0 = new Array<number>(bl + 1);
+  const v1 = new Array<number>(bl + 1);
+  for (let i = 0; i <= bl; i += 1) v0[i] = i;
+
+  for (let i = 0; i < al; i += 1) {
+    v1[0] = i + 1;
+    for (let j = 0; j < bl; j += 1) {
+      const cost = a[i] === b[j] ? 0 : 1;
+      v1[j + 1] = Math.min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost);
+    }
+    for (let j = 0; j <= bl; j += 1) v0[j] = v1[j];
+  }
+  return v1[bl];
+}
+
+/** Fuzzy matching text: accepte jusqu'à 20% d'écart (typos). */
+export function checkSimilarity(a: string, b: string, tolerance = 0.2): boolean {
+  const aa = normalizeTextForSimilarity(String(a ?? ""));
+  const bb = normalizeTextForSimilarity(String(b ?? ""));
+  if (!aa || !bb) return false;
+  if (aa === bb) return true;
+  const dist = levenshtein(aa, bb);
+  const denom = Math.max(aa.length, bb.length);
+  if (denom === 0) return false;
+  return dist / denom <= tolerance;
+}
+
+/** Comparaison stricte après normalisation string (évite string vs number, objets, etc.). */
+export function answerMatchesCorrect(question: TestQuestion, userValue: TestAnswerValue | undefined): boolean {
+  const correct = question.correct_answer;
+  if (correct === undefined || correct === null) return false;
+
+  if (question.type === "multiple") {
+    const expected = Array.isArray(correct)
+      ? correct.map(normalizeAnswerToken).sort()
+      : [normalizeAnswerToken(correct)];
+    const got = Array.isArray(userValue) ? userValue.map(normalizeAnswerToken).sort() : [];
+    if (expected.length !== got.length) return false;
+    return expected.every((val, i) => val === got[i]);
+  }
+
+  if (question.type === "single" || question.type === "scale") {
+    return normalizeAnswerToken(userValue) === normalizeAnswerToken(correct);
+  }
+
+  if (question.type === "text") {
+    return checkSimilarity(normalizeAnswerToken(userValue), normalizeAnswerToken(correct), 0.2);
+  }
+
+  return false;
+}
+
+/** Pourcentage sur les questions qui ont une bonne réponse définie ; null si aucune. */
+export function computeAccuracyScorePercent(
+  questions: TestQuestion[],
+  answers: Record<string, TestAnswerValue>,
+): number | null {
+  const graded = questions.filter((q) => q.correct_answer !== undefined && q.correct_answer !== null);
+  if (!graded.length) return null;
+  let ok = 0;
+  for (const q of graded) {
+    if (answerMatchesCorrect(q, answers[q.id])) ok += 1;
+  }
+  return Math.round((ok / graded.length) * 100);
+}
 
 const computeScore = (session: TestSession): number => {
   const answeredCount = Object.values(session.answers).filter((value) => {
@@ -115,7 +216,7 @@ export const useTestSessions = create<TestSessionsStore>((set) => ({
         history: state.history,
       };
     }),
-  completeSession: (slug, overrideScore) => {
+  completeSession: (slug, options) => {
     let completed: CompletedTest | null = null;
 
     set((state) => {
@@ -123,7 +224,11 @@ export const useTestSessions = create<TestSessionsStore>((set) => ({
       if (!session) return state;
 
       const completedAt = new Date();
-      const score = overrideScore ?? computeScore(session);
+      const accuracy =
+        options?.questions?.length ? computeAccuracyScorePercent(options.questions, session.answers) : null;
+      const score =
+        options?.overrideScore ??
+        (accuracy !== null ? accuracy : computeScore(session));
 
       const updatedSession: TestSession = {
         ...session,

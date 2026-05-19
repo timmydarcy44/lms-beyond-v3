@@ -168,7 +168,7 @@ export default function SignupTalentPage() {
       <section className="grid min-h-screen w-full grid-cols-1 lg:grid-cols-2">
         <div className="hidden lg:block">
           <img
-            src="https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/Center/header_entreprise%20(2).png"
+            src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Center/header_entreprise%20(2).png"
             alt="Beyond Connect"
             className="h-full w-full object-cover"
           />

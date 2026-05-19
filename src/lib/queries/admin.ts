@@ -827,25 +827,25 @@ export const getAdminAssignableCatalog = async (): Promise<AdminAssignableCatalo
       supabase.from("groups").select("id, name").eq("org_id", orgId).order("name"),
       supabase
         .from("courses")
-        .select("id, title, status, slug, creator_id, owner_id, cover_image, cover_url, hero_image_url, thumbnail_url")
+        .select("id, title, status, slug, creator_id, owner_id, cover_image, cover_url")
         .eq("org_id", orgId)
         .order("title")
         .limit(200),
       supabase
         .from("paths")
-        .select("id, title, status, slug, creator_id, owner_id, thumbnail_url, hero_url")
+        .select("id, title, status, slug, creator_id, owner_id, hero_url")
         .eq("org_id", orgId)
         .order("title")
         .limit(200),
       supabase
         .from("resources")
-        .select("id, title, type, status, slug, created_by, owner_id, cover_url, thumbnail_url")
+        .select("id, title, type, status, slug, created_by, owner_id, cover_url")
         .eq("org_id", orgId)
         .order("title")
         .limit(200),
       supabase
         .from("tests")
-        .select("id, title, status, slug, created_by, owner_id, cover_image, thumbnail_url")
+        .select("id, title, status, slug, created_by, owner_id, cover_image")
         .eq("org_id", orgId)
         .order("title")
         .limit(200),

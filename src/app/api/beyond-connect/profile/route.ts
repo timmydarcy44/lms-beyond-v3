@@ -51,13 +51,42 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { first_name, last_name, phone, birth_date, bio, passions, current_studies, education_level, city, cv_url, cv_file_name, employment_type, avatar_url } = body;
+    const {
+      first_name,
+      last_name,
+      phone,
+      email,
+      school_class,
+      soft_skills_scores,
+      birth_date,
+      bio,
+      passions,
+      current_studies,
+      education_level,
+      city,
+      cv_url,
+      cv_file_name,
+      employment_type,
+      avatar_url,
+    } = body;
 
     // Mettre à jour le profil
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (first_name !== undefined) updateData.first_name = first_name;
     if (last_name !== undefined) updateData.last_name = last_name;
-    if (phone !== undefined) updateData.phone = phone;
+    if (phone !== undefined) {
+      updateData.phone = phone;
+      updateData.telephone = phone;
+    }
+    if (email !== undefined && email !== null && String(email).trim() !== "") {
+      updateData.email = String(email).trim();
+    }
+    if (school_class !== undefined) {
+      updateData.school_class = school_class === null || school_class === "" ? null : String(school_class).trim();
+    }
+    if (soft_skills_scores !== undefined && soft_skills_scores !== null && typeof soft_skills_scores === "object") {
+      updateData.soft_skills_scores = soft_skills_scores;
+    }
     // Ne pas envoyer birth_date si c'est une chaîne vide
     if (birth_date !== undefined && birth_date !== null && birth_date !== "") {
       updateData.birth_date = birth_date;

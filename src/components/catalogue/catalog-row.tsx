@@ -87,70 +87,71 @@ export function CatalogRow({ title, items, onItemClick }: CatalogRowProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Titre de la section */}
-      <div className="flex items-center justify-between">
-        <h2 
-          className="text-2xl font-bold"
-          style={{ color: textColor }}
-        >
-          {title}
-        </h2>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => scroll("left")}
-            className="h-10 w-10 rounded-full border transition-all hover:scale-110"
-            style={{
-              borderColor: `${primaryColor}40`,
-              backgroundColor: `${primaryColor}10`,
-              color: textColor,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = `${primaryColor}20`;
-              e.currentTarget.style.borderColor = `${primaryColor}60`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = `${primaryColor}10`;
-              e.currentTarget.style.borderColor = `${primaryColor}40`;
-            }}
+    <div className="w-full max-w-none space-y-4">
+      {/* Titre de la section (aligné avec le début des vignettes via px-8) */}
+      <div className="px-8">
+        <div className="flex items-center justify-between">
+          <h2
+            className="text-2xl font-bold"
+            style={{ color: textColor }}
           >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => scroll("right")}
-            className="h-10 w-10 rounded-full border transition-all hover:scale-110"
-            style={{
-              borderColor: `${primaryColor}40`,
-              backgroundColor: `${primaryColor}10`,
-              color: textColor,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = `${primaryColor}20`;
-              e.currentTarget.style.borderColor = `${primaryColor}60`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = `${primaryColor}10`;
-              e.currentTarget.style.borderColor = `${primaryColor}40`;
-            }}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
+            {title}
+          </h2>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => scroll("left")}
+              className="h-10 w-10 rounded-full border transition-all hover:scale-110"
+              style={{
+                borderColor: `${primaryColor}40`,
+                backgroundColor: `${primaryColor}10`,
+                color: textColor,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = `${primaryColor}20`;
+                e.currentTarget.style.borderColor = `${primaryColor}60`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = `${primaryColor}10`;
+                e.currentTarget.style.borderColor = `${primaryColor}40`;
+              }}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => scroll("right")}
+              className="h-10 w-10 rounded-full border transition-all hover:scale-110"
+              style={{
+                borderColor: `${primaryColor}40`,
+                backgroundColor: `${primaryColor}10`,
+                color: textColor,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = `${primaryColor}20`;
+                e.currentTarget.style.borderColor = `${primaryColor}60`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = `${primaryColor}10`;
+                e.currentTarget.style.borderColor = `${primaryColor}40`;
+              }}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Carrousel horizontal - Style Apple TV pour contentin.cabinet@gmail.com */}
-      <div className="relative">
+      <div className="relative min-w-0">
         <div
           ref={scrollRef}
           className={cn(
-            "flex overflow-x-auto [&::-webkit-scrollbar]:hidden",
-            isContentinCabinet 
-              ? "gap-6 px-2 py-4" // Style Apple TV avec plus d'espace
-              : "gap-4" // Style normal
+            "flex overflow-x-auto overflow-y-visible py-2 [&::-webkit-scrollbar]:hidden",
+            isContentinCabinet
+              ? "gap-6 px-8 py-4"
+              : "gap-4 px-8",
           )}
           style={{
             scrollbarWidth: "none",
@@ -174,20 +175,29 @@ export function CatalogRow({ title, items, onItemClick }: CatalogRowProps) {
               <div
                 key={item.id}
                 className={cn(
-                  "group relative flex-shrink-0 cursor-pointer transition-all duration-300",
+                  "group relative z-0 flex-shrink-0 cursor-pointer transition-all duration-300 will-change-transform",
                   isContentinCabinet
-                    ? "min-w-[280px] md:min-w-[320px] hover:scale-110 hover:z-10" // Style Apple TV avec zoom au survol
-                    : "min-w-[400px] md:min-w-[450px]"
+                    ? "min-w-[280px] md:min-w-[320px] hover:z-10 hover:scale-105"
+                    : "min-w-[400px] md:min-w-[450px] hover:z-10 hover:scale-105",
                 )}
-                onClick={() => onItemClick(item)}
+                onClick={() => {
+                  try {
+                    const media = item.hero_image_url || item.thumbnail_url || null;
+                    if (media) window.localStorage.setItem("beyond:last_course_media_url", media);
+                  } catch {
+                    // ignore
+                  }
+                  onItemClick(item);
+                }}
               >
                 {/* Card - Style Apple TV pour contentin.cabinet@gmail.com */}
                 <div className={cn(
                   "relative w-full overflow-hidden bg-gradient-to-br from-gray-900 to-black shadow-lg transition-all duration-300",
                   isContentinCabinet
-                    ? "h-[200px] rounded-2xl hover:shadow-2xl" // Hauteur fixe pour cohérence visuelle
-                    : "h-[250px] rounded-xl" // Hauteur fixe pour cohérence visuelle
-                )}>
+                    ? "h-[200px] rounded-2xl group-hover:shadow-2xl" // hauteur fixe, ombre au survol du parent
+                    : "h-[250px] rounded-xl group-hover:shadow-2xl",
+                )}
+                >
                   <CatalogCardImage
                     src={item.thumbnail_url || item.hero_image_url}
                     alt={item.title}

@@ -7,7 +7,7 @@ type AppleEmailParams = {
 };
 
 const LOGO_URL =
-  "https://fqqqejpakbccwvrlolpc.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png";
+  "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/nevo./Nevo_logo.png";
 
 export function getSiteBranding() {
   const currentUrl = process.env.NEXT_PUBLIC_SITE_URL || "";

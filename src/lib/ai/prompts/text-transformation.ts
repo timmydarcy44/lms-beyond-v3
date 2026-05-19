@@ -3,6 +3,14 @@ export const SENTENCE_CASE_PROMPT_VERSION = "sentence-case-v1";
 
 const SENTENCE_CASE_RULE = "N'utilise surtout pas de 'Title Case'. Écris en casse phrase: seule la première lettre d'une phrase ou les noms propres sont en majuscule.";
 
+const MARKDOWN_STRUCTURE_RULE = `Structure ta réponse en Markdown lisible :
+- Utilise ## pour les titres de sections (ex. "## Introduction", "## Définition : …", "## Exemple concret : …").
+- Utilise ### pour les sous-parties si nécessaire.
+- Paragraphes séparés par une ligne vide.
+- Listes à puces avec "- " pour les étapes ou éléments courts.
+- Mets en **gras** les notions importantes (avec parcimonie).
+Pas de balises HTML. Pas de préambule ("Voici…").`;
+
 type RephraseStyle =
   | "simplify"
   | "enrich"
@@ -32,10 +40,12 @@ export function buildRephrasePrompt(text: string, style?: RephraseStyle): string
   return `${instruction}
 ${SENTENCE_CASE_RULE}
 
+${MARKDOWN_STRUCTURE_RULE}
+
 Texte à transformer :
 "${text}"
 
-Réponds uniquement avec le texte reformulé, sans commentaire additionnel.`;
+Réponds uniquement avec le Markdown reformulé, sans commentaire hors contenu.`;
 }
 
 export function buildMindMapPrompt(text: string): string {
@@ -104,17 +114,50 @@ Réponds uniquement avec le JSON, sans texte additionnel.`;
 }
 
 export function buildRevisionSheetPrompt(text: string): string {
-  return `Crée une fiche de révision structurée à partir du texte suivant.
-- Résumé des points clés
-- Concepts importants avec définition
-- Exemples concrets
-- Questions de révision
+  return buildSynthesisSheetPrompt(text);
+}
 
-Important : entoure chaque définition par [DEF]...[/DEF] et chaque exemple par [EX]...[/EX].
-Ne mets pas de markdown autour de ces tags.
+/** Fiche synthétique : résumé, définitions, schémas (Mermaid), points clés — format Markdown. */
+export function buildSynthesisSheetPrompt(text: string): string {
+  return `Tu es un concepteur pédagogique. À partir du texte ci-dessous, rédige une **fiche synthétique** complète pour réviser et comprendre le sujet.
 
-Texte :
-${text}`;
+${SENTENCE_CASE_RULE}
+
+${MARKDOWN_STRUCTURE_RULE}
+
+Structure obligatoire (dans cet ordre, avec les titres exacts en ##) :
+
+## Synthèse
+- 1 paragraphe d’introduction (5–8 lignes) qui résume l’essentiel.
+- 3 à 6 puces « à retenir absolument ».
+
+## Définitions clés
+Pour chaque notion importante (4 à 8 max) :
+### [Nom de la notion]
+- **Définition** : formulation claire en 1–3 phrases.
+- **Pourquoi c’est important** : une phrase.
+- **Exemple** : cas concret court.
+
+## Schémas et relations
+- Explique les liens entre les concepts en prose (2–4 phrases).
+- Ajoute **un schéma Mermaid** (bloc \`\`\`mermaid) : flowchart TD ou mindmap selon ce qui convient le mieux (6 nœuds max, libellés courts en français).
+
+## Mise en pratique
+- 2 à 4 actions ou conseils applicables.
+
+## Questions de révision
+- 4 à 6 questions avec réponses courtes (format : **Q :** … **R :** …).
+
+Contraintes :
+- Fidélité au texte source : ne pas inventer de faits absents du passage.
+- Ton pédagogique, français, accessible.
+- Pas de préambule (« voici la fiche… »).
+- Longueur cible : environ 600–1200 mots selon la richesse du texte.
+
+Texte source :
+"${text}"
+
+Réponds uniquement avec le Markdown de la fiche.`;
 }
 
 export function buildTranslatePrompt(text: string, targetLanguage: string): string {
@@ -128,7 +171,9 @@ Instructions :
 - Utilise un vocabulaire adapté au contexte pédagogique
 - ${SENTENCE_CASE_RULE}
 
-Réponds uniquement avec la traduction, sans commentaire additionnel.`;
+${MARKDOWN_STRUCTURE_RULE}
+
+Réponds uniquement avec la traduction en Markdown, sans commentaire hors contenu.`;
 }
 
 export function buildAudioPrompt(text: string): string {

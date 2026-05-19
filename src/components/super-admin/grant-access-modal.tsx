@@ -44,7 +44,7 @@ export function GrantAccessModal({ open, onOpenChange, onGranted }: GrantAccessM
     if (open) {
       // Charger les organisations et items
       Promise.all([
-        fetch("/api/super-admin/organizations").then((r) => r.json()),
+        fetch("/api/super-admin/organisations").then((r) => r.json()),
         fetch("/api/super-admin/catalogue/items").then((r) => r.json()),
       ])
         .then(([orgsData, itemsData]) => {

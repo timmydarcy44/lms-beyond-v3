@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-import { getEdgeOnlineHrefPrefixFromPathname } from "@/lib/edge-online-public-path";
+import { resolveEdgeOnlineHrefPrefix, type EdgeOnlineHrefPrefix } from "@/lib/edge-online-public-path";
 
 import { EdgeOnlineHrefPrefixProvider } from "./edge-online-href-context";
 import { EdgeOnlineTopNav } from "./edge-online-top-nav";
@@ -16,9 +16,17 @@ function normalizePath(pathname: string | null): string {
  * Sur `/formations` en mobile, la page fournit son propre chrome type Netflix
  * (header + barre du bas) : on masque la nav supérieure globale pour éviter le doublon.
  */
-export function EdgeOnlineLayoutClient({ children }: { children: React.ReactNode }) {
+export function EdgeOnlineLayoutClient({
+  children,
+  hrefPrefix: hrefPrefixFromServer,
+}: {
+  children: React.ReactNode;
+  hrefPrefix?: EdgeOnlineHrefPrefix;
+}) {
   const pathname = usePathname();
-  const prefix = getEdgeOnlineHrefPrefixFromPathname(pathname);
+  const prefix =
+    hrefPrefixFromServer ??
+    resolveEdgeOnlineHrefPrefix(pathname, typeof window !== "undefined" ? window.location.host : undefined);
   const norm = normalizePath(pathname);
   const isFormationsIndex = norm === "/" || norm === "/formations";
 

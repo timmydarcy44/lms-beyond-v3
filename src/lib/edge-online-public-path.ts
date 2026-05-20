@@ -2,6 +2,7 @@
 export type EdgeOnlineHrefPrefix = "" | "/edgeonline";
 
 const EDGE_ONLINE_PUBLIC_HOSTS = new Set(["edgeonline.fr", "www.edgeonline.fr"]);
+const EDGE_BS_HOSTS = new Set(["edgebs.fr", "www.edgebs.fr"]);
 
 export function getEdgeOnlineHrefPrefixFromHost(hostHeader: string | null | undefined): EdgeOnlineHrefPrefix {
   const h = String(hostHeader ?? "")
@@ -10,7 +11,18 @@ export function getEdgeOnlineHrefPrefixFromHost(hostHeader: string | null | unde
     .split(":")[0]
     ?.toLowerCase() ?? "";
   if (EDGE_ONLINE_PUBLIC_HOSTS.has(h)) return "";
+  if (EDGE_BS_HOSTS.has(h)) return "/edgeonline";
   return "/edgeonline";
+}
+
+/** Préfixe effectif : priorité au chemin affiché (edgeonline.fr), sinon au host (edgebs.fr). */
+export function resolveEdgeOnlineHrefPrefix(
+  pathname: string | null | undefined,
+  hostHeader?: string | null,
+): EdgeOnlineHrefPrefix {
+  const fromPath = getEdgeOnlineHrefPrefixFromPathname(pathname);
+  if (fromPath) return fromPath;
+  return getEdgeOnlineHrefPrefixFromHost(hostHeader);
 }
 
 /**

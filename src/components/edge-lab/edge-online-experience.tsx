@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EDGE_MARKETING_HREFS } from "@/lib/edge-lab-marketing";
+import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 import type { EdgeOnlineCourse } from "@/lib/queries/edge-online";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -67,7 +68,7 @@ const LEVELS = [
 ] as const;
 
 function formationHref(slug: string) {
-  return `/catalog/formations/${encodeURIComponent(slug)}`;
+  return `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/${encodeURIComponent(slug)}`;
 }
 
 function matchesHints(c: EdgeOnlineCourse, hints: string[]): boolean {

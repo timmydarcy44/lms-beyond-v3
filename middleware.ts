@@ -140,6 +140,7 @@ export async function middleware(request: NextRequest) {
       "/online",
       "/entreprises",
       "/orientation",
+      "/votre-orientation",
       "/postuler",
     ] as const;
     const isEdgeBsMarketingPath =
@@ -151,6 +152,29 @@ export async function middleware(request: NextRequest) {
       const rewriteUrl = request.nextUrl.clone();
       rewriteUrl.pathname = url.pathname === "/" ? "/edge-lab" : `/edge-lab${url.pathname}`;
       return NextResponse.rewrite(rewriteUrl);
+    }
+
+    // Catalogue EDGE Online sur edgebs.fr : URLs courtes /formations → surface /edgeonline
+    const isEdgeBsOnlineCatalogPath =
+      url.pathname === "/edgeonline" ||
+      url.pathname.startsWith("/edgeonline/") ||
+      url.pathname === "/formations" ||
+      url.pathname.startsWith("/formations/");
+    if (isEdgeBsOnlineCatalogPath) {
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set("x-url-pathname", url.pathname);
+      requestHeaders.set("x-org-slug", "edgelab");
+      requestHeaders.set("x-site-tenant", "edgeonline");
+
+      const rewriteUrl = request.nextUrl.clone();
+      if (url.pathname === "/edgeonline") {
+        rewriteUrl.pathname = "/edgeonline";
+      } else if (url.pathname.startsWith("/edgeonline/")) {
+        rewriteUrl.pathname = url.pathname;
+      } else {
+        rewriteUrl.pathname = `/edgeonline${url.pathname}`.replace(/\/{2,}/g, "/");
+      }
+      return NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
     }
   }
 

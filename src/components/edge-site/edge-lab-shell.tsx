@@ -8,7 +8,9 @@ import { OrientationTopBanner } from "@/components/edge-site/orientation-top-ban
 export function EdgeLabShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMinimalShell =
-    pathname?.includes("/orientation") || pathname?.includes("/postuler");
+    pathname?.includes("/votre-orientation") ||
+    pathname?.includes("/orientation") ||
+    pathname?.includes("/postuler");
 
   if (isMinimalShell) {
     return <>{children}</>;

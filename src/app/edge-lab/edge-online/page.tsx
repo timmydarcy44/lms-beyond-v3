@@ -1,123 +1,64 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import { EdgeOnlineExperience } from "@/components/edge-lab/edge-online-experience";
 import { EdgeButton } from "@/components/edge-site/edge-button";
-import { FaqAccordion } from "@/components/edge-site/faq-accordion";
 import { EDGE_HREFS } from "@/lib/edge-site/constants";
-import { EDGE_ONLINE_THEMATIQUES, FAQ_EDGE_ONLINE } from "@/lib/parcours";
 import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
+import { getEdgeOnlinePublishedCourses } from "@/lib/queries/edge-online";
 
 export const metadata: Metadata = {
   title: "EDGE Online — Le Netflix de la compétence pro",
-  description: "12 thématiques, 19€/mois ou 149€/an. Micro-formations et parcours certifiants.",
+  description:
+    "Micro-formations par thématique, test d’orientation et accès streaming. 19€/mois ou 149€/an.",
 };
 
-const COMPARISON = [
-  {
-    title: "EDGE Online",
-    items: [
-      { ok: true, text: "Badges thématiques" },
-      { ok: true, text: "Accès libre aux modules" },
-      { ok: false, text: "Livrables évalués par expert" },
-      { ok: false, text: "Open Badge IMS Global" },
-    ],
-  },
-  {
-    title: "Parcours certifiant",
-    items: [
-      { ok: true, text: "Open Badge IMS Global" },
-      { ok: true, text: "Livrables évalués" },
-      { ok: true, text: "Accompagnement expert" },
-      { ok: true, text: "Speed meeting (selon parcours)" },
-    ],
-  },
-] as const;
+export const dynamic = "force-dynamic";
 
-export default function EdgeOnlinePage() {
+export default async function EdgeOnlineMarketingPage() {
+  const courses = await getEdgeOnlinePublishedCourses();
+
   return (
-    <>
-      <section className="bg-edge-black px-5 py-20 text-center sm:px-10 sm:py-[80px]">
-        <div className="mx-auto max-w-2xl">
-          <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-medium leading-[1.05] tracking-[-0.02em] text-white">
-            Le Netflix de la compétence pro.
+    <div className="bg-white">
+      <section className="border-b border-black/[0.06] bg-white px-5 py-16 text-center sm:px-10 sm:py-24">
+        <div className="mx-auto max-w-3xl">
+          <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-black/35">EDGE Online</p>
+          <h1 className="mt-5 text-[clamp(2rem,4.5vw,3.25rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-[#1d1d1f]">
+            Le Netflix de la compétence pro,
+            <span className="text-edge-red"> pensé comme Apple.</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-md text-[15px] leading-[1.7] text-white/45">
-            12 thématiques, 80+ micro-modules. Apprenez à votre rythme ou passez au parcours certifiant.
+          <p className="mx-auto mt-6 max-w-xl text-[17px] leading-[1.55] text-black/45">
+            12 thématiques, 80+ micro-modules. Parcourez le catalogue en streaming, affinez avec le test
+            d’orientation, puis ouvrez votre espace de développement.
           </p>
-          <div className="mt-10 flex flex-wrap items-baseline justify-center gap-6">
-            <p className="text-white">
-              <span className="text-[32px] font-medium">19€</span>
-              <span className="text-white/45"> / mois</span>
+          <div className="mt-10 flex flex-wrap items-baseline justify-center gap-8">
+            <p className="text-[#1d1d1f]">
+              <span className="text-[40px] font-semibold tracking-tight">19€</span>
+              <span className="text-black/40"> / mois</span>
             </p>
-            <p className="text-white/45">
-              ou <span className="font-medium text-white">149€/an</span>
-              <span className="text-white/30"> (2 mois offerts)</span>
+            <p className="text-black/40">
+              ou <span className="font-semibold text-[#1d1d1f]">149€/an</span>
+              <span className="text-black/30"> (2 mois offerts)</span>
             </p>
           </div>
-          <div className="mt-10">
-            <EdgeButton href={EDGE_ONLINE_APP_SURFACE_PATH} ariaLabel="Commencer gratuitement">
-              Commencer gratuitement
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <EdgeButton href={EDGE_ONLINE_APP_SURFACE_PATH} ariaLabel="Ouvrir le catalogue">
+              Ouvrir le catalogue
+            </EdgeButton>
+            <EdgeButton variant="outline-red" href={EDGE_HREFS.orientation} ariaLabel="Faire le test d’orientation">
+              Faire le test
             </EdgeButton>
           </div>
+          <p className="mt-8 text-[13px] text-black/35">
+            Déjà abonné ?{" "}
+            <Link href={EDGE_HREFS.login} className="text-[#0066cc] hover:underline">
+              Se connecter
+            </Link>
+          </p>
         </div>
       </section>
 
-      <section className="bg-white px-5 py-20 sm:px-10 sm:py-[80px]" aria-labelledby="themes-grid">
-        <div className="mx-auto max-w-6xl">
-          <h2 id="themes-grid" className="sr-only">
-            Thématiques
-          </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {EDGE_ONLINE_THEMATIQUES.map((t) => (
-              <article key={t.slug} className="rounded-[4px] bg-edge-grey p-5">
-                <p className="text-[10px] uppercase tracking-[0.2em] text-edge-red">Thématique</p>
-                <h3 className="mt-2 text-[15px] font-medium text-edge-black">{t.label}</h3>
-                <p className="mt-2 text-[13px] text-black/40">{t.modules} modules</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-edge-grey px-5 py-20 sm:px-10 sm:py-[80px]" aria-labelledby="compare-online">
-        <div className="mx-auto max-w-4xl">
-          <h2 id="compare-online" className="text-center text-[clamp(1.75rem,3vw,2rem)] font-medium text-edge-black">
-            Netflix vs Programme
-          </h2>
-          <div className="mt-12 grid gap-8 md:grid-cols-2">
-            {COMPARISON.map((col) => (
-              <div key={col.title} className="bg-white p-8">
-                <h3 className="text-lg font-medium text-edge-black">{col.title}</h3>
-                <ul className="mt-6 space-y-3">
-                  {col.items.map((item) => (
-                    <li key={item.text} className="flex items-center gap-3 text-[14px] text-black/40">
-                      <span className={item.ok ? "text-edge-red" : "text-black/20"} aria-hidden>
-                        {item.ok ? "✓" : "×"}
-                      </span>
-                      {item.text}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 text-center">
-            <EdgeButton href={EDGE_HREFS.parcours} variant="outline-red" ariaLabel="Passer au parcours certifiant">
-              Passer au parcours certifiant
-            </EdgeButton>
-          </div>
-        </div>
-      </section>
-
-      <section id="orientation" className="bg-white px-5 py-20 sm:px-10 sm:py-[80px]" aria-labelledby="faq-online">
-        <div className="mx-auto max-w-2xl">
-          <h2 id="faq-online" className="text-[clamp(1.75rem,3vw,2rem)] font-medium text-edge-black">
-            FAQ
-          </h2>
-          <div className="mt-10">
-            <FaqAccordion items={FAQ_EDGE_ONLINE} />
-          </div>
-        </div>
-      </section>
-    </>
+      <EdgeOnlineExperience initialCourses={courses} />
+    </div>
   );
 }

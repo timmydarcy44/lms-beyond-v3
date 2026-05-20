@@ -1,9 +1,6 @@
-import { OrientationTunnel } from "@/components/OrientationTunnel";
+import { redirect } from "next/navigation";
 
-export default function EdgeOrientationPage() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <OrientationTunnel />
-    </div>
-  );
+/** Ancienne URL marketing — redirige vers le tunnel EDGE unifié. */
+export default function EdgeOrientationLegacyPage() {
+  redirect("/votre-orientation");
 }

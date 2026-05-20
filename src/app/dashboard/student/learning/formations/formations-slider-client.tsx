@@ -57,9 +57,11 @@ function resolveDisplayUrl(card: SliderCard): string {
 function FormationPoster({
   course,
   aspect = "video",
+  overlayVariant = "default",
 }: {
   course: SliderCard;
   aspect?: "video" | "portrait";
+  overlayVariant?: "default" | "edgeonline";
 }) {
   const [failed, setFailed] = useState(false);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -79,7 +81,13 @@ function FormationPoster({
 
   return (
     <div className={`relative ${aspectClass} w-full ${failed ? "ring-2 ring-red-500" : ""}`}>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+      <div
+        className={
+          overlayVariant === "edgeonline"
+            ? "absolute inset-0 bg-[rgba(0,0,0,0.55)]"
+            : "absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"
+        }
+      />
       {showMedia ? (
         isVideo ? (
           <LazyBandwidthVideo
@@ -132,10 +140,11 @@ export function FormationsSliderClient({
   title: string;
   cards: SliderCard[];
   /** Affiches plus verticales, titres type Netflix mobile. */
-  layoutVariant?: "default" | "netflixMobile";
+  layoutVariant?: "default" | "netflixMobile" | "edgeonlineLight";
 }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const isNetflix = layoutVariant === "netflixMobile";
+  const isEdgeLight = layoutVariant === "edgeonlineLight";
 
   const normalized = useMemo(() => {
     const raw = Array.isArray(cards) ? cards : [];
@@ -186,7 +195,9 @@ export function FormationsSliderClient({
           className={
             isNetflix
               ? "min-w-0 flex-1 text-[15px] font-medium leading-snug tracking-wide text-white"
-              : "text-lg font-semibold tracking-tight text-white"
+              : isEdgeLight
+                ? "text-lg font-medium tracking-tight text-[#0a0a0a]"
+                : "text-lg font-semibold tracking-tight text-white"
           }
         >
           {title}
@@ -196,7 +207,11 @@ export function FormationsSliderClient({
           <Button
             type="button"
             variant="ghost"
-            className="h-8 w-8 rounded-full border border-white/10 bg-black/30 p-0 text-white/70 hover:border-white/20 hover:bg-black/40"
+            className={
+              isEdgeLight
+                ? "h-8 w-8 rounded-full border border-black/[0.06] bg-[#f5f5f3] p-0 text-black/50 hover:border-black/10 hover:bg-black/[0.04]"
+                : "h-8 w-8 rounded-full border border-white/10 bg-black/30 p-0 text-white/70 hover:border-white/20 hover:bg-black/40"
+            }
             onClick={() => scrollBy(-520)}
             aria-label="Précédent"
           >
@@ -205,7 +220,11 @@ export function FormationsSliderClient({
           <Button
             type="button"
             variant="ghost"
-            className="h-8 w-8 rounded-full border border-white/10 bg-black/30 p-0 text-white/70 hover:border-white/20 hover:bg-black/40"
+            className={
+              isEdgeLight
+                ? "h-8 w-8 rounded-full border border-black/[0.06] bg-[#f5f5f3] p-0 text-black/50 hover:border-black/10 hover:bg-black/[0.04]"
+                : "h-8 w-8 rounded-full border border-white/10 bg-black/30 p-0 text-white/70 hover:border-white/20 hover:bg-black/40"
+            }
             onClick={() => scrollBy(520)}
             aria-label="Suivant"
           >
@@ -236,7 +255,11 @@ export function FormationsSliderClient({
                   : "group relative w-[min(360px,calc(100vw-2.5rem))] max-w-[85vw] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition duration-300 hover:border-white/25 hover:bg-white/10 sm:max-w-none"
               }
             >
-              <FormationPoster course={course} aspect={isNetflix ? "portrait" : "video"} />
+              <FormationPoster
+                course={course}
+                aspect={isNetflix ? "portrait" : "video"}
+                overlayVariant={isEdgeLight ? "edgeonline" : "default"}
+              />
               <div className={isNetflix ? "absolute bottom-0 left-0 right-0 p-2" : "absolute bottom-0 left-0 right-0 p-4"}>
                 <div
                   className={

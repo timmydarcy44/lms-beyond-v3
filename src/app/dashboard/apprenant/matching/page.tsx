@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Building2, Lock } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { APPRENANT_CARD_CLASS } from "@/lib/apprenant/connect-nav";
+import {
+  APPRENANT_CARD_CLASS,
+  APPRENANT_PAGE_KICKER,
+  APPRENANT_PAGE_LEAD,
+  APPRENANT_PAGE_SHELL,
+  APPRENANT_PAGE_TITLE,
+} from "@/lib/apprenant/connect-nav";
 
 type JobOffer = {
   id: string;
@@ -82,23 +88,19 @@ export default function ApprenantMatchingPage() {
   }, [supabase]);
 
   return (
-    <div className="space-y-6 text-[#e6e9ef] md:space-y-8 md:rounded-[34px] md:border md:border-[#283247] md:bg-[#0b0e14]/90 md:p-8 md:px-10 md:py-10 lg:px-12 md:backdrop-blur">
+    <div className={APPRENANT_PAGE_SHELL}>
       <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#cbb6ff]/80">
-          Opportunités
-        </p>
-        <h1 className="text-[clamp(1.45rem,2.5vw,1.85rem)] font-semibold text-white md:text-[clamp(1.95rem,3vw,2.4rem)]">
-          Mes matchings
-        </h1>
-        <p className="max-w-2xl text-sm text-[#9aa8c9]">
+        <p className={APPRENANT_PAGE_KICKER}>Opportunités</p>
+        <h1 className={APPRENANT_PAGE_TITLE}>Mes matchings</h1>
+        <p className={APPRENANT_PAGE_LEAD}>
           Détail réservé aux profils reliés à un centre ou à un accès Beyond Connect étendu. Tu vois ici les
           offres disponibles en aperçu.
         </p>
       </section>
 
       {!hasOrganisation ? (
-        <div className={`${APPRENANT_CARD_CLASS} flex flex-wrap items-start gap-3 px-5 py-4 text-sm text-[#a5b8e4]`}>
-          <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-300/90" aria-hidden />
+        <div className={`${APPRENANT_CARD_CLASS} flex flex-wrap items-start gap-3 px-5 py-4 text-sm text-white/55`}>
+          <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-edge-red" aria-hidden />
           <p>
             Associe ton compte à une organisation (école ou entreprise) depuis ton espace pour activer les
             volets avancés côté équipe formation.
@@ -106,7 +108,7 @@ export default function ApprenantMatchingPage() {
         </div>
       ) : null}
 
-      <section className="relative overflow-hidden rounded-3xl border border-[#2a3347] bg-[#101622]/95 p-6 md:p-8">
+      <section className="relative overflow-hidden rounded-3xl border border-white/[0.06] bg-[#141412] p-6 md:p-8">
         <div className="pointer-events-none select-none blur-[5px] opacity-70">
           {isLoading ? (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -148,8 +150,8 @@ export default function ApprenantMatchingPage() {
           <div
             className={`${APPRENANT_CARD_CLASS} w-full max-w-3xl p-6 text-center shadow-[0_25px_60px_-30px_rgba(0,0,0,0.85)] md:p-8`}
           >
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-white/[0.12] bg-[#1a2230]">
-              <Lock className="h-6 w-6 text-[#e6e9ef]" />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-edge-red/25 bg-edge-red/10">
+              <Lock className="h-6 w-6 text-edge-red" />
             </div>
             <h2 className="text-xl font-semibold text-white md:text-2xl">Débloquez vos matchings complets</h2>
             <p className="mt-3 text-sm text-[#9aa8c9] md:text-base">
@@ -159,7 +161,7 @@ export default function ApprenantMatchingPage() {
             <div className="mt-6 flex flex-col gap-3 md:flex-row md:justify-center">
               <Link
                 href="/dashboard/apprenant/entreprise"
-                className="inline-flex items-center justify-center rounded-full border border-white/[0.14] bg-[#161c28] px-5 py-2.5 text-sm font-semibold text-white transition hover:border-violet-400/40 hover:bg-[#1c2434]"
+                className="inline-flex items-center justify-center rounded-full border border-white/20 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition hover:border-edge-red/40 hover:bg-edge-red/[0.06]"
               >
                 Je passe par mon centre
               </Link>

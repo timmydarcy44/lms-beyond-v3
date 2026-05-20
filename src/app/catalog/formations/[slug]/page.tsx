@@ -43,29 +43,32 @@ export async function renderFormationDetailPage(args: {
     notFound();
   }
 
-  const { card, detail: info, related = [] } = detail;
+  const { card: rawCard, detail: info, related = [] } = detail;
+  const formationBaseHref =
+    edgeOnlineHrefPrefix !== undefined
+      ? edgeOnlinePublicHref(`/formations/${encodeURIComponent(slug)}`, edgeOnlineHrefPrefix)
+      : rawCard.href;
+  const card = { ...rawCard, href: formationBaseHref };
   const lessons = info.modules.flatMap((module) => module.lessons ?? []);
   const firstLesson = lessons[0];
-  const playHref = firstLesson ? `${card.href}/play/${firstLesson.id}` : card.href;
+  const playHref = firstLesson ? `${formationBaseHref}/play/${firstLesson.id}` : formationBaseHref;
 
   const formationsIndexHref =
-    orgSlug && edgeOnlineHrefPrefix !== undefined
-      ? edgeOnlinePublicHref("/formations", edgeOnlineHrefPrefix)
-      : null;
+    edgeOnlineHrefPrefix !== undefined ? edgeOnlinePublicHref("/", edgeOnlineHrefPrefix) : null;
 
-  const breadcrumbs = orgSlug
-    ? formationsIndexHref
+  const breadcrumbs = formationsIndexHref
+    ? [
+        { label: "Formations", href: formationsIndexHref },
+        { label: CATEGORY_LABEL[category] },
+        { label: info.title },
+      ]
+    : orgSlug
       ? [
-          { label: "Formations", href: formationsIndexHref },
-          { label: CATEGORY_LABEL[category] },
-          { label: info.title },
-        ]
-      : [
           { label: "Dashboard", href: `/g/${encodeURIComponent(orgSlug)}/dashboard/student/learning/formations` },
           { label: CATEGORY_LABEL[category] },
           { label: info.title },
         ]
-    : [
+      : [
         { label: "Dashboard", href: "/dashboard/apprenant" },
         { label: CATEGORY_LABEL[category] },
         { label: info.title },

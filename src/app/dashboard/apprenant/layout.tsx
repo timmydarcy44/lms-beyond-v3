@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+
+import "@/styles/edge-connect.css";
 import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import { ApprenantConnectShell } from "@/components/apprenant/apprenant-connect-shell";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";

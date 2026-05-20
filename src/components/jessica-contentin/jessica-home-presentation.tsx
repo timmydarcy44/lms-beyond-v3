@@ -32,66 +32,72 @@ export function JessicaHomePresentation() {
           </div>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            Professeure certifiée en santé dans l&apos;enseignement supérieur et psychopédagogue spécialisée en
-            neuroéducation, j&apos;accompagne les enfants, adolescents, étudiants et familles confrontés à des difficultés
-            d&apos;apprentissage, émotionnelles, attentionnelles ou scolaires.
+            Professeure certifiée dans le domaine de la santé et psychopédagogue spécialisée en neuroéducation,
+            j&apos;accompagne les enfants, adolescents, étudiants et familles confrontés à des difficultés
+            d&apos;apprentissage, attentionnelles, émotionnelles ou scolaires, à travers une approche globale fondée sur
+            la compréhension du fonctionnement cognitif et émotionnel de chaque jeune.
           </p>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
             Titulaire d&apos;un Master en Ingénierie des Politiques Sanitaires et Sociales (IAE de Caen), d&apos;un second
             master obtenu avec mention Très Bien ainsi que d&apos;un concours national de l&apos;Éducation nationale dans le
-            domaine de la santé, j&apos;ai progressivement développé une expertise centrée sur les mécanismes des
-            apprentissages, le fonctionnement neurocognitif, les fonctions exécutives et les troubles du
-            neurodéveloppement.
+            domaine de la santé, j&apos;ai développé au fil de mon parcours une expertise centrée sur les mécanismes des
+            apprentissages, les fonctions exécutives, la régulation émotionnelle et les troubles du neurodéveloppement.
           </p>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            Mon approche s&apos;appuie sur les apports des neurosciences cognitives, de la psychopédagogie et de la
-            neuroéducation afin de mieux comprendre les interactions entre cognition, émotions, attention, régulation
-            émotionnelle et apprentissages.
+            Mon approche s&apos;appuie sur les apports des neurosciences, de la psychopédagogie et de la neuroéducation afin
+            de mieux comprendre les interactions entre attention, cognition, émotions et apprentissages.
           </p>
 
           <div className="space-y-3 text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
             <p>
-              Je suis également certifiée en psychopédagogie et neuroéducation, avec une spécialisation dans
-              l&apos;accompagnement :
+              Certifiée en psychopédagogie et en neuroéducation, je suis spécialisée dans l&apos;accompagnement :
             </p>
             <ul className="list-disc space-y-1.5 pl-5 marker:text-[#9A7B52]">
-              <li>des troubles du neurodéveloppement,</li>
+              <li>des troubles du neurodéveloppement (TDAH, TSA, troubles DYS, HPI),</li>
               <li>des difficultés attentionnelles et exécutives,</li>
-              <li>de l&apos;anxiété scolaire,</li>
-              <li>de la phobie scolaire,</li>
+              <li>de l&apos;anxiété scolaire et de la phobie scolaire,</li>
               <li>des difficultés de régulation émotionnelle,</li>
-              <li>ainsi que des problématiques de confiance en soi et de décrochage scolaire.</li>
+              <li>du manque de confiance en soi,</li>
+              <li>du décrochage scolaire.</li>
             </ul>
           </div>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            Mon expérience professionnelle au sein de la MDPH du Calvados, ainsi que mes travaux de recherche autour des
-            troubles du spectre de l&apos;autisme (TSA), ont renforcé ma réflexion autour de l&apos;inclusion, de la
-            coordination des accompagnements et des besoins spécifiques liés aux troubles du neurodéveloppement.
+            Mon expérience professionnelle au sein de la MDPH du Calvados ainsi que mes travaux de recherche autour des
+            troubles du spectre de l&apos;autisme (TSA) ont renforcé ma réflexion autour de l&apos;inclusion, des besoins
+            spécifiques liés aux troubles du neurodéveloppement et de l&apos;importance d&apos;une coordination adaptée entre les
+            différents acteurs de l&apos;accompagnement.
           </p>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            Par ailleurs, mon premier mémoire de recherche portait sur la transdisciplinarité dans l&apos;accompagnement des
-            enfants présentant un trouble du spectre de l&apos;autisme (TSA), renforçant ainsi ma réflexion autour du travail
-            collaboratif et de la coordination des accompagnements.
+            Mon premier mémoire de recherche portait sur la transdisciplinarité dans l&apos;accompagnement des enfants
+            présentant un trouble du spectre de l&apos;autisme, consolidant ainsi mon intérêt pour le travail collaboratif entre
+            familles, professionnels de santé et milieu scolaire.
           </p>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
             Passionnée par la psychologie des apprentissages et le fonctionnement cognitif, j&apos;adopte une approche
-            globale intégrant les dimensions cognitives, émotionnelles, attentionnelles et comportementales de chaque
-            jeune.
+            bienveillante, structurée et individualisée, prenant en compte les dimensions cognitives, émotionnelles,
+            comportementales et relationnelles de chaque jeune.
           </p>
 
-          <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            Mon objectif est d&apos;aider chaque jeune à mieux comprendre son fonctionnement, développer des stratégies
-            adaptées, renforcer son autonomie et retrouver un meilleur équilibre dans ses apprentissages et son quotidien.
-          </p>
+          <div className="space-y-3 text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
+            <p>Mon objectif est d&apos;aider chaque enfant, adolescent ou étudiant à :</p>
+            <ul className="list-disc space-y-1.5 pl-5 marker:text-[#9A7B52]">
+              <li>mieux comprendre son fonctionnement,</li>
+              <li>développer des stratégies adaptées,</li>
+              <li>renforcer son autonomie,</li>
+              <li>retrouver confiance en lui,</li>
+              <li>et évoluer plus sereinement dans ses apprentissages et son quotidien.</li>
+            </ul>
+          </div>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            J&apos;accompagne également les familles avec une approche bienveillante, structurée et individualisée afin de
-            soutenir durablement l&apos;épanouissement scolaire, émotionnel et personnel de leur enfant.
+            J&apos;accompagne également les familles à travers des temps de guidance parentale afin de leur apporter des
+            repères concrets, des outils adaptés et une meilleure compréhension du fonctionnement de leur enfant, dans une
+            démarche collaborative et durable.
           </p>
 
           <div className="flex flex-wrap gap-3 border-t border-[#E6D9C6]/80 pt-6">

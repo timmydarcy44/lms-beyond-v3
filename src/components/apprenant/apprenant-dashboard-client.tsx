@@ -27,6 +27,7 @@ import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import { ApprenantConnectOverview } from "@/components/apprenant/apprenant-connect-overview";
 import { useApprenantShell } from "@/components/apprenant/apprenant-shell-context";
 import { EDGE_LAB_ONLINE_CATALOG_HREF } from "@/lib/galaxy-branding";
+import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 
 type IdmcData = {
   scores?: Record<string, unknown> | null;
@@ -111,7 +112,15 @@ const DiscHistogram = ({
 
 
 
-export function ApprenantDashboardClient({ initialView }: { initialView: "home" | "profil" }) {
+export type ApprenantPrimaryParcours = { title: string; href: string };
+
+export function ApprenantDashboardClient({
+  initialView,
+  primaryParcours = null,
+}: {
+  initialView: "home" | "profil";
+  primaryParcours?: ApprenantPrimaryParcours | null;
+}) {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [isLoading, setIsLoading] = useState(true);
@@ -621,13 +630,21 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
     load();
   }, [supabase]);
 
-  const fallbackIdentity = user?.email?.split("@")[0];
-  const firstName =
-    profile?.first_name ||
-    user?.user_metadata?.first_name ||
-    cachedFirstName ||
-    fallbackIdentity ||
-    "Apprenant";
+  const firstName = useMemo(() => {
+    const resolved = resolveLearnerDisplayFirstName({
+      profileFirstName: profile?.first_name ?? cachedFirstName,
+      metadataFirstName: user?.user_metadata?.first_name,
+      metadataGivenName: (user?.user_metadata as { given_name?: string } | undefined)?.given_name,
+      email: user?.email ?? profile?.email,
+    });
+    return resolved;
+  }, [
+    profile?.first_name,
+    profile?.email,
+    cachedFirstName,
+    user?.user_metadata,
+    user?.email,
+  ]);
   const greetingWord = useMemo(() => {
     const h = new Date().getHours();
     if (h >= 18 || h < 6) return "Bonsoir";
@@ -1207,8 +1224,8 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0b0e14] px-6 py-20 text-white">
-        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
+      <div className="px-2 py-12 text-white">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/[0.06] bg-[#141412] p-6 text-sm text-white/45">
           Chargement du profil...
         </div>
       </div>
@@ -1363,7 +1380,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                           onboardingSelectedStacks.map((stack) => (
                             <span
                               key={stack}
-                              className="rounded-full border border-emerald-300/40 bg-emerald-300/15 px-2 py-1 text-[11px] text-emerald-100"
+                              className="rounded-full border border-edge-red/35 bg-edge-red/10 px-2 py-1 text-[11px] text-edge-red/90"
                             >
                               {stack}
                             </span>
@@ -1386,7 +1403,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                           onClick={() => setOnboardingForm((prev) => ({ ...prev, disponibilite: "Oui" }))}
                           className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                             onboardingForm.disponibilite === "Oui"
-                              ? "bg-emerald-400/25 text-emerald-200"
+                              ? "bg-edge-red/15 text-edge-red"
                               : "text-white/70"
                           }`}
                         >
@@ -1569,7 +1586,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                                   onClick={() => toggleOnboardingStack(item)}
                                   className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left ${
                                     active
-                                      ? "border-emerald-300/40 bg-emerald-300/10"
+                                      ? "border-edge-red/35 bg-edge-red/10"
                                       : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
                                   }`}
                                 >
@@ -1612,6 +1629,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
             tagline={greetingTagline}
             profileCompletionPct={profileCompletion.score}
             catalogHref={EDGE_LAB_ONLINE_CATALOG_HREF}
+            primaryParcours={primaryParcours}
             badgesHref="/dashboard/apprenant/badges"
             resultsHref="/dashboard/apprenant/results"
             matchingHref="/dashboard/apprenant/matching"
@@ -1660,7 +1678,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                       </button>
                     </div>
                     {schoolJoinError ? <p className="mt-2 text-xs text-red-300">{schoolJoinError}</p> : null}
-                    {schoolJoinMessage ? <p className="mt-2 text-xs text-emerald-200/95">{schoolJoinMessage}</p> : null}
+                    {schoolJoinMessage ? <p className="mt-2 text-xs text-edge-red/90">{schoolJoinMessage}</p> : null}
                   </div>
                 ) : null}
 
@@ -1712,14 +1730,14 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                   <button
                     type="button"
                     onClick={() => appShell?.openEditProfile()}
-                    className="rounded-full border border-violet-500/40 bg-violet-500/15 px-4 py-2 text-xs font-semibold text-violet-100 transition hover:bg-violet-500/25"
+                    className="rounded-full border border-edge-red/40 bg-edge-red/10 px-4 py-2 text-xs font-medium text-edge-red transition hover:bg-edge-red/15"
                   >
                     Modifier mon profil
                   </button>
                 </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
-            <section className="rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <section className="rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Identité & Bio</div>
@@ -1759,7 +1777,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
               {isUploadingAvatar ? <div className="mt-2 text-xs text-white/60">Upload en cours...</div> : null}
             </section>
 
-            <section className="rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <section className="rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="flex items-center justify-between gap-4">
                 <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Jauge de profil</div>
                 <button
@@ -1773,11 +1791,11 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
               </div>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div className="text-3xl font-extrabold text-white">{profileCompletion.score}%</div>
-                <div className="text-xs font-semibold text-emerald-200">{profileCompletion.level}</div>
+                <div className="text-xs font-medium text-white/70">{profileCompletion.level}</div>
               </div>
               <div className="mt-3 h-2 w-full rounded-full bg-white/10">
                 <div
-                  className="h-2 rounded-full bg-emerald-300 transition-all"
+                  className="h-2 rounded-full bg-edge-red transition-all"
                   style={{ width: `${profileCompletion.score}%` }}
                 />
               </div>
@@ -1786,7 +1804,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                   {profileCompletion.checklist.map((item) => (
                     <div key={item.key} className="flex items-center justify-between gap-3">
                       <span>{item.label}</span>
-                      <span className={item.done ? "text-emerald-200" : "text-white/50"}>
+                      <span className={item.done ? "text-edge-red" : "text-white/45"}>
                         {item.done ? `+${item.weight}` : "0"}
                       </span>
                     </div>
@@ -1796,7 +1814,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
             </section>
           </div>
 
-          <section className="mt-6 rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <section className="mt-6 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
             <div className="flex items-center justify-between gap-3">
               <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Matchings</div>
               <span className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-white/70">
@@ -1824,7 +1842,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                             : "url('https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80')",
                     }}
                   />
-                  <div className="absolute inset-0 bg-[#0b0e14]/78 backdrop-blur-sm" />
+                  <div className="absolute inset-0 bg-[#111110]/78 backdrop-blur-sm" />
                   <div className="relative">
                     <div className="text-sm font-semibold text-white/90">{title}</div>
                     <div className="mt-2 text-xs text-white/65">
@@ -1894,7 +1912,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
             </div>
           </div>
 
-          <section className="mt-10 rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <section className="mt-10 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
             <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
               Résultats Test Comportemental
             </div>
@@ -1910,7 +1928,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
             </div>
           </section>
 
-          <section className="mt-10 rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <section className="mt-10 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
             <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">IDMC</div>
             <div className="mt-2 text-lg font-semibold text-white">Radar & Analyse</div>
             {idmcAxes ? (
@@ -2145,7 +2163,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
             </div>
           ) : null}
 
-          <section className="mt-10 rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <section className="mt-10 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
@@ -2207,14 +2225,14 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                             <div className="flex-1">
                               <div className="h-2 rounded-full bg-white/10">
                                 <div
-                                  className="h-2 rounded-full bg-emerald-300"
+                                  className="h-2 rounded-full bg-edge-red"
                                   style={{
                                     width: `${softSkillsMax ? (item.score / softSkillsMax) * 100 : 0}%`,
                                   }}
                                 />
                               </div>
                             </div>
-                            <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-200">
+                            <span className="rounded-full border border-edge-red/30 bg-edge-red/10 px-2 py-0.5 text-[11px] font-semibold text-edge-red">
                               {normalized.toFixed(1)}/10
                             </span>
                           </div>
@@ -2265,11 +2283,11 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                           return (
                             <div
                               key={item.skill}
-                              className="flex flex-col items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 text-center text-xs text-emerald-100"
+                              className="flex flex-col items-center justify-center rounded-full border border-edge-red/30 bg-edge-red/10 text-center text-xs text-edge-red/90"
                               style={{ width: size, height: size }}
                             >
                               <div className="text-[10px] font-semibold">{item.skill}</div>
-                              <div className="text-[10px] text-emerald-200">{normalized.toFixed(1)}/10</div>
+                              <div className="text-[10px] text-edge-red">{normalized.toFixed(1)}/10</div>
                             </div>
                           );
                         })}
@@ -2309,7 +2327,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
             )}
           </section>
 
-          <section className="mt-10 rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <section className="mt-10 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
@@ -2372,7 +2390,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                           </>
                         ) : (
                           <>
-                            <span className="text-emerald-300">✅</span>
+                            <span className="text-edge-red">✅</span>
                             <span>{skill}{level}</span>
                           </>
                         )}
@@ -2385,7 +2403,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
                           Passer le badge
                         </Link>
                       ) : (
-                        <span className="text-xs text-emerald-200">Certifié Beyond</span>
+                        <span className="text-xs text-edge-red">Certifié Beyond</span>
                       )}
                     </div>
                   );
@@ -2397,7 +2415,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
           </section>
 
           <section className="mt-10 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
@@ -2508,7 +2526,7 @@ export function ApprenantDashboardClient({ initialView }: { initialView: "home" 
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/[0.08] bg-[#10151c] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">

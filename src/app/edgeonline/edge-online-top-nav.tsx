@@ -10,7 +10,7 @@ import { useOptionalEdgeOnlineHrefPrefix } from "./edge-online-href-context";
 
 /** Ordre : Formations en premier, puis Parcours, Profil, etc. */
 const NAV_ITEMS = [
-  { href: "/formations", label: "Formations" },
+  { href: "/", label: "Formations" },
   { href: "/parcours", label: "Parcours" },
   { href: "/profil", label: "Profil" },
   { href: "/progression", label: "Progression" },
@@ -38,7 +38,7 @@ export function EdgeOnlineTopNav() {
 
   return (
     <header
-      className="pointer-events-none fixed inset-x-0 top-0 z-[100] bg-gradient-to-b from-black/80 via-black/35 to-transparent pb-10 pt-[max(0.65rem,env(safe-area-inset-top))]"
+      className="pointer-events-none fixed inset-x-0 top-0 z-[100] border-b border-black/[0.06] bg-[#0a0a0a] pb-3 pt-[max(0.65rem,env(safe-area-inset-top))]"
       aria-label="Navigation"
     >
       <div className="pointer-events-auto mx-auto flex w-full max-w-[1920px] justify-center px-3 sm:px-5">
@@ -62,7 +62,7 @@ export function EdgeOnlineTopNav() {
                   {it.label}
                   {active ? (
                     <span
-                      className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-red-600 shadow-[0_0_14px_rgba(220,38,38,0.55)]"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-edge-red"
                       aria-hidden
                     />
                   ) : null}

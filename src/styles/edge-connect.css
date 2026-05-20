@@ -1,0 +1,83 @@
+/**
+ * Beyond Connect — Option B
+ * Sidebar #0a0a0a (dark) · contenu principal #ffffff (clair)
+ */
+[data-connect-shell="edge"] {
+  --connect-sidebar: #0a0a0a;
+  --connect-main-bg: #ffffff;
+  --connect-card: #f5f5f3;
+  --connect-text: #0a0a0a;
+  --connect-accent: #ff3b30;
+}
+
+/* ——— Zone principale claire ——— */
+[data-connect-main] {
+  background-color: var(--connect-main-bg);
+  color: var(--connect-text);
+}
+
+[data-connect-main] .connect-progress-track {
+  background-color: rgba(0, 0, 0, 0.08);
+  border-radius: 100px;
+}
+
+[data-connect-main] .connect-progress-fill {
+  background-color: var(--connect-accent);
+  border-radius: 100px;
+}
+
+/* Legacy dark tokens → clair (fiche profil, sections héritées) */
+[data-connect-main] [class*="bg-\\[#141412"],
+[data-connect-main] [class*="bg-\\[#111110"],
+[data-connect-main] [class*="bg-\\[#10151c"],
+[data-connect-main] [class*="bg-\\[#101622"] {
+  background-color: #f5f5f3 !important;
+}
+
+[data-connect-main] [class*="border-white\\/\\[0\\.06\\]"],
+[data-connect-main] [class*="border-white/10"],
+[data-connect-main] [class*="border-white/15"] {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-connect-main] .text-white:not([class*="bg-edge-red"]):not([class*="bg-red"]) {
+  color: #0a0a0a !important;
+}
+
+[data-connect-main] [class*="text-white\\/45"],
+[data-connect-main] [class*="text-white\\/55"],
+[data-connect-main] [class*="text-white\\/60"],
+[data-connect-main] [class*="text-white\\/70"] {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-connect-main] [class*="text-white\\/25"],
+[data-connect-main] [class*="text-white\\/40"] {
+  color: rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-connect-main] [class*="bg-white\\/\\[0\\.08\\]"],
+[data-connect-main] [class*="bg-white/10"],
+[data-connect-main] [class*="bg-white/5"] {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-connect-main] [class*="bg-white\\/\\[0\\.04\\]"] {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Accents rouge conservés */
+[data-connect-main] [class*="text-edge-red"],
+[data-connect-main] [class*="bg-edge-red"],
+[data-connect-main] [class*="border-edge-red"] {
+  /* pas d’override */
+}
+
+/* Violet / vert legacy → rouge */
+[data-connect-shell="edge"] [data-connect-main] [class*="from-violet"],
+[data-connect-shell="edge"] [data-connect-main] [class*="from-purple"],
+[data-connect-shell="edge"] [data-connect-main] [class*="bg-emerald-300"] {
+  --tw-gradient-from: #ff3b30 var(--tw-gradient-from-position) !important;
+  background-color: #ff3b30 !important;
+}
+

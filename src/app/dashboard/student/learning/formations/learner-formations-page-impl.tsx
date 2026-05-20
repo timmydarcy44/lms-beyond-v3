@@ -282,11 +282,8 @@ function EdgeOnlineFormationsNetflixMobile({
     <div className="bg-black pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:hidden">
       <header className="fixed inset-x-0 top-0 z-[95] border-b border-white/5 bg-black pt-[env(safe-area-inset-top,0px)]">
         <div className="flex h-11 items-center justify-between px-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#E50914] text-sm font-black text-white">
-              E
-            </span>
-            <span className="truncate text-lg font-bold tracking-tight text-white">Formations</span>
+          <div className="flex min-w-0 items-center">
+            <span className="text-lg font-semibold tracking-[0.18em] text-white">EDGE</span>
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
             <Link
@@ -310,7 +307,7 @@ function EdgeOnlineFormationsNetflixMobile({
             <a
               key={`${p.href}-${p.label}`}
               href={p.href}
-              className="shrink-0 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1.5 text-[12px] font-medium text-white/90 backdrop-blur-sm transition hover:bg-white/[0.14] hover:text-white"
+              className="shrink-0 rounded-full border border-black/[0.06] bg-[#f5f5f3] px-3 py-1.5 text-[12px] font-medium text-black/50 transition hover:bg-black/[0.04] hover:text-black/70"
             >
               {p.label}
             </a>
@@ -648,10 +645,15 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
         </section>
 
         <div
-          className={`space-y-10 pr-4 md:pr-10 ${contentShift} ${isEdgeOnlineSurface ? "pl-4 sm:pl-6 md:pl-8" : ""}`}
+          className={`space-y-10 pr-4 md:pr-10 ${contentShift} ${isEdgeOnlineSurface ? "bg-white pl-4 sm:pl-6 md:pl-8" : ""}`}
         >
           {rows.map((row) => (
-            <FormationsSliderClient key={row.title} title={row.title} cards={row.items} />
+            <FormationsSliderClient
+              key={row.title}
+              title={row.title}
+              cards={row.items}
+              layoutVariant={isEdgeOnlineSurface ? "edgeonlineLight" : "default"}
+            />
           ))}
         </div>
       </div>

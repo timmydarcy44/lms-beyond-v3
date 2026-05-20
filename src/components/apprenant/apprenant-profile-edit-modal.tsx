@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type ProfileShape = {
@@ -26,11 +27,13 @@ type ProfileShape = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Profil minimal pour préremplissage ; rechargé quand initialProfileRefreshed change */
   initialProfile: ProfileShape | null;
   refreshToken?: number;
   onSaved?: () => void;
 };
+
+const inputClass =
+  "mt-2 w-full rounded-xl border border-black/[0.06] bg-[#f5f5f3] px-3 py-2 text-sm text-[#0a0a0a] outline-none focus:border-edge-red/50";
 
 export function ApprenantProfileEditModal({
   open,
@@ -136,21 +139,21 @@ export function ApprenantProfileEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-3xl border border-white/[0.1] bg-[#10151c] text-white sm:max-w-lg">
+      <DialogContent className="max-w-lg rounded-3xl border border-black/[0.06] bg-white text-[#0a0a0a] sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Modifier mon profil</DialogTitle>
-          <DialogDescription className="text-white/55">
+          <DialogTitle className="font-medium text-[#0a0a0a]">Modifier mon profil</DialogTitle>
+          <DialogDescription className="text-black/45">
             Ces informations sont visibles par votre CFA sur la fiche apprenant (Beyond Connect École).
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 pt-2">
-          <label className="block text-xs font-medium text-white/70">
+          <label className="block text-xs font-medium text-black/60">
             Photo de profil
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
               disabled={uploading}
-              className="mt-2 block w-full text-xs text-white/80 file:mr-2 file:rounded-lg file:border-0 file:bg-violet-500/80 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
+              className="mt-2 block w-full text-xs text-black/70 file:mr-2 file:rounded-lg file:border-0 file:bg-edge-red file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) void persistAvatar(f);
@@ -159,66 +162,44 @@ export function ApprenantProfileEditModal({
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs text-white/70">
+            <label className="text-xs text-black/60">
               Prénom
-              <input
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50"
-              />
+              <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClass} />
             </label>
-            <label className="text-xs text-white/70">
+            <label className="text-xs text-black/60">
               Nom
-              <input
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50"
-              />
+              <input value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputClass} />
             </label>
           </div>
-          <label className="text-xs text-white/70">
+          <label className="text-xs text-black/60">
             E-mail
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50"
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
           </label>
-          <label className="text-xs text-white/70">
+          <label className="text-xs text-black/60">
             Téléphone
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50"
-            />
+            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
           </label>
           {linkedSchool ? (
-            <label className="text-xs text-white/70">
-              Cursus / classe <span className="text-white/40">(visible côté école)</span>
+            <label className="text-xs text-black/60">
+              Cursus / classe <span className="text-black/40">(visible côté école)</span>
               <input
                 value={schoolClass}
                 onChange={(e) => setSchoolClass(e.target.value)}
                 placeholder="Ex. BTS MCO 2ᵉ année"
-                className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50"
+                className={inputClass}
               />
             </label>
           ) : null}
         </div>
         <DialogFooter className="gap-2 sm:gap-2">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="rounded-xl border border-white/15 bg-transparent px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/5"
-          >
+          <button type="button" onClick={() => onOpenChange(false)} className={CONNECT_BTN_SECONDARY}>
             Annuler
           </button>
           <button
             type="button"
             disabled={saving || uploading}
             onClick={() => void saveIdentity()}
-            className="rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 disabled:opacity-50"
+            className={`${CONNECT_BTN_PRIMARY} disabled:opacity-50`}
           >
             {saving ? "Enregistrement…" : "Enregistrer"}
           </button>

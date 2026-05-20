@@ -1,12 +1,10 @@
-import { LearnerFormationsPageImpl } from "@/app/dashboard/student/learning/formations/learner-formations-page-impl";
-import { getEdgeOnlineFormationsPageData } from "@/lib/queries/edge-online";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+import { edgeOnlinePublicHref } from "@/lib/edge-online-public-path";
+import { getEdgeOnlineHrefPrefixServer } from "@/lib/edge-online-public-path.server";
 
-export default async function EdgeOnlineFormationsPage() {
-  const data = await getEdgeOnlineFormationsPageData();
-  return (
-    <LearnerFormationsPageImpl data={data} orgSlug="edgelab" surfaceVariant="edgeonline" />
-  );
+/** Ancienne URL catalogue — redirige vers la home EDGE Online (`/` ou `/edgeonline`). */
+export default async function EdgeOnlineFormationsRedirectPage() {
+  const prefix = await getEdgeOnlineHrefPrefixServer();
+  redirect(edgeOnlinePublicHref("/", prefix));
 }

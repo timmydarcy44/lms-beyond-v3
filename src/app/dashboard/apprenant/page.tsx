@@ -1,7 +1,19 @@
-"use client";
-
 import { ApprenantDashboardClient } from "@/components/apprenant/apprenant-dashboard-client";
+import { getApprenantDashboardData } from "@/lib/queries/apprenant";
 
-export default function ApprenantHomePage() {
-  return <ApprenantDashboardClient initialView="home" />;
+export const dynamic = "force-dynamic";
+
+export default async function ApprenantHomePage() {
+  const data = await getApprenantDashboardData();
+  const primary = data.parcours?.[0];
+  const primaryParcours = primary
+    ? { title: String(primary.title ?? "Parcours"), href: String(primary.href ?? "") }
+    : null;
+
+  return (
+    <ApprenantDashboardClient
+      initialView="home"
+      primaryParcours={primaryParcours?.href ? primaryParcours : null}
+    />
+  );
 }

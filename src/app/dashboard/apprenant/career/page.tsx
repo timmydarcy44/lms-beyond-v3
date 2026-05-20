@@ -1116,7 +1116,7 @@ const CareerPage = () => {
 
   return (
         <>
-        <div className="space-y-8 text-[#e6e9ef] md:space-y-10 md:rounded-[34px] md:border md:border-[#283247] md:bg-[#0b0e14]/90 md:p-8 md:px-10 md:py-10 lg:px-12 md:backdrop-blur font-['Inter']">
+        <div className="space-y-8 font-['Inter'] md:space-y-10">
         <style jsx global>{`
           @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
         `}</style>
@@ -1136,7 +1136,7 @@ const CareerPage = () => {
                     key={item.label}
                     className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
                       item.done
-                        ? "border-emerald-300/40 bg-emerald-300/15 text-emerald-200"
+                        ? "border-edge-red/35/40 bg-edge-red/15 text-edge-red"
                         : "border-white/15 bg-white/5 text-white/60"
                     }`}
                   >
@@ -1182,11 +1182,11 @@ const CareerPage = () => {
                 </div>
                 <div className="mt-3 flex items-end justify-between gap-4">
                   <div className="text-3xl font-extrabold text-white">{profileCompletion.score}%</div>
-                  <div className="text-xs font-semibold text-emerald-200">{profileCompletion.level}</div>
+                  <div className="text-xs font-semibold text-edge-red">{profileCompletion.level}</div>
                 </div>
                 <div className="mt-3 h-2 w-full rounded-full bg-white/10">
                   <div
-                    className="h-2 rounded-full bg-emerald-300 transition-all"
+                    className="h-2 rounded-full bg-edge-red transition-all"
                     style={{ width: `${profileCompletion.score}%` }}
                   />
                 </div>
@@ -1195,7 +1195,7 @@ const CareerPage = () => {
                     {profileCompletion.checklist.map((item) => (
                       <div key={item.key} className="flex items-center justify-between gap-3">
                         <span>{item.label}</span>
-                        <span className={item.done ? "text-emerald-200" : "text-white/50"}>
+                        <span className={item.done ? "text-edge-red" : "text-white/50"}>
                           {item.done ? `+${item.weight}` : "0"}
                         </span>
                       </div>
@@ -1320,7 +1320,7 @@ const CareerPage = () => {
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-emerald-300/20 px-3 py-1 text-xs font-semibold text-emerald-200">
+                              <span className="rounded-full bg-edge-red/20 px-3 py-1 text-xs font-semibold text-edge-red">
                                 {idmcInterpretation.label}
                               </span>
                               <span className="text-xs text-white/60">{idmcInterpretation.detail}</span>
@@ -1443,17 +1443,17 @@ const CareerPage = () => {
                     {[...softSkillsTop].map((item) => (
                       <div
                         key={item.skill}
-                        className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-center"
+                        className="rounded-2xl border border-edge-red/35/20 bg-edge-red/10 p-4 text-center"
                       >
                         <div className="text-sm font-semibold text-white">{item.skill}</div>
-                        <div className="mt-3 text-2xl font-semibold text-emerald-200">
+                        <div className="mt-3 text-2xl font-semibold text-edge-red">
                           {softSkillsTopMax
                             ? `${((item.score / softSkillsTopMax) * 10).toFixed(1)}/10`
                             : "—"}
                         </div>
                         <div className="mt-3 h-1.5 w-full rounded-full bg-white/10">
                           <div
-                            className="h-1.5 rounded-full bg-emerald-300"
+                            className="h-1.5 rounded-full bg-edge-red"
                             style={{
                               width: `${
                                 softSkillsTopMax ? (item.score / softSkillsTopMax) * 100 : 0
@@ -1482,7 +1482,7 @@ const CareerPage = () => {
                       Expériences Pro
                     </div>
                     {experiencesPro?.length ? (
-                      <div className="mt-5 space-y-6 border-l border-emerald-400/40 pl-6">
+                      <div className="mt-5 space-y-6 border-l border-edge-red/40/40 pl-6">
                         {(experiencesPro ?? []).map((exp) => {
                           const missions = String(exp.missions ?? "")
                             .split("\n")
@@ -1493,7 +1493,7 @@ const CareerPage = () => {
                               key={exp.id ?? `${exp.employeur}-${exp.date_debut}`}
                               className="relative rounded-2xl border border-white/10 bg-gray-800/40 p-4 backdrop-blur"
                             >
-                              <span className="absolute -left-[9px] top-4 h-3 w-3 rounded-full bg-emerald-300/80" />
+                              <span className="absolute -left-[9px] top-4 h-3 w-3 rounded-full bg-edge-red/80" />
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-center gap-3">
                                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white/80">
@@ -1530,13 +1530,13 @@ const CareerPage = () => {
                       Diplômes & formations
                     </div>
                     {diplomes?.length ? (
-                      <div className="mt-5 space-y-5 border-l border-emerald-400/40 pl-6">
+                      <div className="mt-5 space-y-5 border-l border-edge-red/40/40 pl-6">
                         {(diplomes ?? []).map((dip) => (
                           <div
                             key={dip.id ?? `${dip.intitule}-${dip.ecole}`}
                             className="relative rounded-2xl border border-white/10 bg-gray-800/40 p-4 backdrop-blur"
                           >
-                            <span className="absolute -left-[9px] top-4 h-3 w-3 rounded-full bg-emerald-300/80" />
+                            <span className="absolute -left-[9px] top-4 h-3 w-3 rounded-full bg-edge-red/80" />
                             <div className="text-sm font-semibold text-white">
                               {dip.intitule || "Diplôme"}
                             </div>
@@ -1564,7 +1564,7 @@ const CareerPage = () => {
                           <span>{review.date}</span>
                         </div>
                         <div className="mt-2 text-white">{review.comment}</div>
-                        <div className="mt-2 text-xs text-emerald-200">
+                        <div className="mt-2 text-xs text-edge-red">
                           {"★".repeat(review.rating).padEnd(5, "☆")}
                         </div>
                       </div>
@@ -1897,7 +1897,7 @@ const CareerPage = () => {
                       key={tool}
                       type="button"
                       onClick={() => setSelectedTools((prev) => prev.filter((item) => item !== tool))}
-                      className="rounded-full border border-emerald-300/50 bg-emerald-300/20 px-3 py-1 text-xs font-semibold text-emerald-100"
+                      className="rounded-full border border-edge-red/35/50 bg-edge-red/20 px-3 py-1 text-xs font-semibold text-edge-red/90"
                     >
                       {tool} ×
                     </button>
@@ -2046,7 +2046,7 @@ const CareerPage = () => {
                         }}
                         className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left ${
                           selected
-                            ? "border-emerald-300/40 bg-emerald-300/10"
+                            ? "border-edge-red/35/40 bg-edge-red/10"
                             : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
                         }`}
                       >
@@ -2192,7 +2192,7 @@ const CareerPage = () => {
                       onClick={() => setQualificationForm((prev) => ({ ...prev, disponibilite: "Oui" }))}
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
                         qualificationForm.disponibilite === "Oui"
-                          ? "bg-emerald-400/25 text-emerald-200"
+                          ? "bg-edge-red/25 text-edge-red"
                           : "bg-white/5 text-white/65"
                       }`}
                     >

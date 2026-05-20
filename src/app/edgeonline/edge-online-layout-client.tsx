@@ -20,7 +20,7 @@ export function EdgeOnlineLayoutClient({ children }: { children: React.ReactNode
   const pathname = usePathname();
   const prefix = getEdgeOnlineHrefPrefixFromPathname(pathname);
   const norm = normalizePath(pathname);
-  const isFormationsIndex = norm === "/formations";
+  const isFormationsIndex = norm === "/" || norm === "/formations";
 
   return (
     <EdgeOnlineHrefPrefixProvider prefix={prefix}>

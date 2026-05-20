@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBodyOptionalGzip } from "@/lib/api/read-json-body-optional-gzip";
+import { buildPathsInsertRow, pathsWriteWithFallback } from "@/lib/paths/paths-write-row";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -85,19 +86,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
-      .from("paths")
-      .insert({
-        creator_id: creatorId,
-        org_id: orgId,
-        title,
-        description,
-        ...(coverImage ? { cover_image: coverImage } : {}),
-        status,
-        path_snapshot: snapshot,
-      })
-      .select("id, creator_id, title, status")
-      .single();
+    const insertRow = buildPathsInsertRow({
+      creatorId,
+      orgId,
+      title,
+      description,
+      status,
+      coverImage,
+      snapshot,
+    });
+
+    const { data, error } = await pathsWriteWithFallback(
+      (row) =>
+        supabase.from("paths").insert(row).select("id, creator_id, title, status").single(),
+      insertRow,
+    );
 
     if (error) {
       console.error("[api/paths] insert error:", {

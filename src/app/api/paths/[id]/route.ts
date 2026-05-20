@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBodyOptionalGzip } from "@/lib/api/read-json-body-optional-gzip";
+import { buildPathsUpdateRow, pathsWriteWithFallback } from "@/lib/paths/paths-write-row";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -190,50 +191,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         ? mergeStepsSafely(existing.path_snapshot, snapshot)
         : snapshot;
 
-    const baseUpdateRow: Record<string, unknown> = {
-      ...(title !== null ? { title } : {}),
-      ...(description !== null ? { description } : {}),
-      ...(coverImage !== null ? { cover_image: coverImage } : {}),
-      ...(status !== null ? { status } : {}),
-      path_snapshot: mergedSnapshot,
-      ...(orgId ? { org_id: orgId } : {}),
-    };
+    const updateRow = buildPathsUpdateRow({
+      title,
+      description,
+      status,
+      coverImage,
+      snapshot: mergedSnapshot,
+      orgId,
+    });
 
-    const updateWithFallback = async () => {
-      let attemptRow = { ...baseUpdateRow };
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        const res = await supabase
+    const { data, error } = await pathsWriteWithFallback(
+      (row) =>
+        supabase
           .from("paths")
-          .update(attemptRow as never)
+          .update(row as never)
           .eq("id", id)
           .select("id, creator_id, title, status")
-          .single();
-
-        const err: any = (res as any).error ?? null;
-        if (!err) return res;
-
-        // Certaines DB n'ont pas `paths.cover_image` → on le garde uniquement dans path_snapshot.
-        if ((err?.code === "PGRST204" || err?.code === "42703") && "cover_image" in attemptRow) {
-          const next = { ...attemptRow };
-          delete (next as any).cover_image;
-          attemptRow = next;
-          continue;
-        }
-
-        return res;
-      }
-      // fallback: dernière tentative déjà faite sans cover_image
-      const next = { ...baseUpdateRow } as any;
-      delete next.cover_image;
-      return await supabase
-        .from("paths")
-        .update(next as never)
-        .eq("id", id)
-        .select("id, creator_id, title, status")
-        .single();
-    };
-
-    const { data, error } = await updateWithFallback();
+          .single(),
+      updateRow,
+    );
 
     if (error) {
       console.error("[api/paths/[id]] update error:", {

@@ -13,6 +13,12 @@ import {
   type OrientationResult,
   type ProfilId,
 } from "@/lib/orientation-tunnel";
+import {
+  isValidOrientationLeadContact,
+  ORIENTATION_EMPLOYMENT_STATUSES,
+  type OrientationEmploymentStatusId,
+  type OrientationLeadContact,
+} from "@/lib/orientation-lead";
 import { EDGE_CTA_LABELS, EDGE_HREFS } from "@/lib/edge-site/constants";
 import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
@@ -21,10 +27,23 @@ type Props = {
   defaultStep?: number;
 };
 
-const STEPS = ["Objectif", "Profil", "Format"] as const;
+const STEPS = ["Coordonnées", "Objectif", "Profil", "Format"] as const;
+type TunnelStep = 1 | 2 | 3 | 4;
+
+const emptyContact = (): OrientationLeadContact => ({
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  employmentStatus: "en_poste",
+});
 
 export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
-  const [step, setStep] = useState(defaultStep);
+  const [step, setStep] = useState<TunnelStep>(Math.min(4, Math.max(1, defaultStep)) as TunnelStep);
+  const [contact, setContact] = useState<OrientationLeadContact>(emptyContact);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [objectifs, setObjectifs] = useState<ObjectifId[]>([]);
   const [profil, setProfil] = useState<ProfilId | null>(null);
   const [format, setFormat] = useState<FormatId | null>(null);
@@ -41,17 +60,63 @@ export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
     setObjectifs((prev) => (prev.includes(id) ? prev.filter((o) => o !== id) : [...prev, id]));
   };
 
-  const goNext = () => {
-    if (step === 1 && objectifs.length === 0) return;
-    if (step === 2 && !profil) return;
-    if (step === 3) {
-      if (!format || !profil || objectifs.length === 0) return;
-      const r = buildOrientationResult(objectifs, profil, format);
-      setShowResult(true);
-      onComplete?.(r);
+  const submitLeadAndShowResult = async () => {
+    if (!format || !profil || objectifs.length === 0) return;
+    if (!isValidOrientationLeadContact(contact)) {
+      setContactError("Vérifiez vos coordonnées (étape 1).");
+      setStep(1);
       return;
     }
-    setStep((s) => Math.min(3, s + 1) as 1 | 2 | 3);
+
+    const r = buildOrientationResult(objectifs, profil, format);
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const res = await fetch("/api/edge-orientation-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...contact,
+          objectifs,
+          profil,
+          format,
+          result: {
+            format: r.format,
+            parcoursSlugs: r.parcours?.map((p) => p.slug) ?? [],
+          },
+        }),
+      });
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error ?? "Enregistrement impossible");
+      }
+      setShowResult(true);
+      onComplete?.(r);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Enregistrement impossible. Réessayez.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const goNext = () => {
+    if (step === 1) {
+      if (!isValidOrientationLeadContact(contact)) {
+        setContactError("Renseignez tous les champs obligatoires.");
+        return;
+      }
+      setContactError(null);
+      setStep(2);
+      return;
+    }
+    if (step === 2 && objectifs.length === 0) return;
+    if (step === 3 && !profil) return;
+    if (step === 4) {
+      void submitLeadAndShowResult();
+      return;
+    }
+    setStep((s) => Math.min(4, s + 1) as TunnelStep);
   };
 
   const goBack = () => {
@@ -59,7 +124,7 @@ export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
       setShowResult(false);
       return;
     }
-    setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3);
+    setStep((s) => Math.max(1, s - 1) as TunnelStep);
   };
 
   if (showResult && result) {
@@ -75,17 +140,28 @@ export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
       <ProgressBar currentStep={step} />
       <div className="mt-10 flex min-h-0 flex-1 flex-col">
         {step === 1 ? (
+          <StepContact
+            value={contact}
+            onChange={setContact}
+            error={contactError}
+          />
+        ) : null}
+        {step === 2 ? (
           <StepObjectifs selected={objectifs} onToggle={toggleObjectif} />
         ) : null}
-        {step === 2 ? <StepProfil selected={profil} onSelect={setProfil} /> : null}
-        {step === 3 ? <StepFormat selected={format} onSelect={setFormat} /> : null}
+        {step === 3 ? <StepProfil selected={profil} onSelect={setProfil} /> : null}
+        {step === 4 ? <StepFormat selected={format} onSelect={setFormat} /> : null}
       </div>
+      {submitError ? (
+        <p className="mt-4 text-center text-[13px] text-edge-red">{submitError}</p>
+      ) : null}
       <div className="mt-10 flex gap-3">
         {step > 1 ? (
           <button
             type="button"
             onClick={goBack}
-            className="rounded-full border border-black/20 px-6 py-2.5 text-[13px] font-medium text-edge-black transition-colors hover:border-black/35"
+            disabled={isSubmitting}
+            className="rounded-full border border-black/20 px-6 py-2.5 text-[13px] font-medium text-edge-black transition-colors hover:border-black/35 disabled:opacity-40"
           >
             Retour
           </button>
@@ -94,13 +170,14 @@ export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
           type="button"
           onClick={goNext}
           disabled={
-            (step === 1 && objectifs.length === 0) ||
-            (step === 2 && !profil) ||
-            (step === 3 && !format)
+            isSubmitting ||
+            (step === 2 && objectifs.length === 0) ||
+            (step === 3 && !profil) ||
+            (step === 4 && !format)
           }
           className="ml-auto rounded-full bg-edge-red px-8 py-2.5 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {step === 3 ? "Voir mes recommandations" : "Continuer"}
+          {step === 4 ? (isSubmitting ? "Enregistrement…" : "Voir mes recommandations") : "Continuer"}
         </button>
       </div>
     </div>
@@ -129,6 +206,107 @@ function ProgressBar({ currentStep }: { currentStep: number }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function StepContact({
+  value,
+  onChange,
+  error,
+}: {
+  value: OrientationLeadContact;
+  onChange: (v: OrientationLeadContact) => void;
+  error: string | null;
+}) {
+  const fieldClass =
+    "w-full rounded-lg border border-black/[0.08] bg-[#f8f8f6] px-4 py-3 text-[15px] text-edge-black outline-none transition-colors placeholder:text-black/30 focus:border-edge-red/40";
+
+  return (
+    <div>
+      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Vos coordonnées</h2>
+      <p className="mt-2 text-[15px] text-black/40">
+        Pour personnaliser vos recommandations et vous recontacter si besoin.
+      </p>
+      <div className="mt-8 space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1.5 block text-[13px] font-medium text-edge-black">Prénom *</span>
+            <input
+              type="text"
+              autoComplete="given-name"
+              value={value.firstName}
+              onChange={(e) => onChange({ ...value, firstName: e.target.value })}
+              className={fieldClass}
+              required
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[13px] font-medium text-edge-black">Nom *</span>
+            <input
+              type="text"
+              autoComplete="family-name"
+              value={value.lastName}
+              onChange={(e) => onChange({ ...value, lastName: e.target.value })}
+              className={fieldClass}
+              required
+            />
+          </label>
+        </div>
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-edge-black">Adresse e-mail *</span>
+          <input
+            type="email"
+            autoComplete="email"
+            value={value.email}
+            onChange={(e) => onChange({ ...value, email: e.target.value })}
+            className={fieldClass}
+            required
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-edge-black">Numéro de téléphone *</span>
+          <input
+            type="tel"
+            autoComplete="tel"
+            value={value.phone}
+            onChange={(e) => onChange({ ...value, phone: e.target.value })}
+            className={fieldClass}
+            required
+          />
+        </label>
+        <fieldset>
+          <legend className="mb-3 text-[13px] font-medium text-edge-black">Situation actuelle *</legend>
+          <ul className="space-y-2">
+            {ORIENTATION_EMPLOYMENT_STATUSES.map((s) => (
+              <li key={s.id}>
+                <label
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                    value.employmentStatus === s.id
+                      ? "border-edge-red bg-edge-red/[0.04]"
+                      : "border-black/[0.08] bg-[#f8f8f6]"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="employment-status"
+                    className="accent-edge-red"
+                    checked={value.employmentStatus === s.id}
+                    onChange={() =>
+                      onChange({ ...value, employmentStatus: s.id as OrientationEmploymentStatusId })
+                    }
+                  />
+                  <span className="text-[15px] text-edge-black">{s.label}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      </div>
+      {error ? <p className="mt-4 text-[13px] text-edge-red">{error}</p> : null}
+      <p className="mt-6 text-[12px] leading-relaxed text-black/35">
+        En continuant, vous acceptez d&apos;être recontacté par EDGE dans le cadre de votre orientation.
+      </p>
     </div>
   );
 }

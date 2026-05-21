@@ -60,7 +60,6 @@ export async function FormationInterviewPlayPage({
 
   const contextText = resolveInterviewContext(activeLesson as Record<string, unknown>, modules);
   const returnHref = `${card.href}/play/${lessonId}`;
-  const allLessons = modules.flatMap((m) => m.lessons ?? []);
   const displayChapterTitle = resolveInterviewParentChapterTitle(allLessons, activeLesson);
   const revisionItems = buildInterviewRevisionOutline(modules, activeLesson, `${card.href}/play`);
 

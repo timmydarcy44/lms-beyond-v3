@@ -32,12 +32,12 @@ function BulletSection({
   };
   return (
     <div className={cn("rounded-2xl border p-4", tones[tone])}>
-      <h4 className="text-xs font-bold uppercase tracking-[0.28em] opacity-70">{title}</h4>
-      <ul className="mt-3 space-y-2 text-sm leading-relaxed">
+      <h4 className="text-xs font-bold uppercase tracking-[0.28em] text-inherit opacity-90">{title}</h4>
+      <ul className="mt-3 space-y-2 text-sm leading-relaxed text-inherit">
         {items.map((item, i) => (
-          <li key={`${title}-${i}`} className="flex gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-50" />
-            <span>{item}</span>
+          <li key={`${title}-${i}`} className="flex gap-2 text-inherit">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60" />
+            <span className="text-inherit">{item}</span>
           </li>
         ))}
       </ul>
@@ -55,7 +55,7 @@ export function InterviewFeedbackPanel({
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-2xl space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8",
+        "apprenant-studio-light mx-auto w-full max-w-2xl space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8 text-slate-900",
         className,
       )}
     >

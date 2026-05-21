@@ -671,6 +671,7 @@ export function LessonPlayView({
   }, [pomodoroState.phase, pomodoroState.isActive]);
 
   const lessonHref = useMemo(() => (lessonId: string) => `${cardHref}/play/${lessonId}`, [cardHref]);
+  const entretienHref = `${lessonHref(activeLesson.id)}/entretien`;
 
   const isQuizLikeLesson = (lesson: unknown) => {
     const L = lesson as Record<string, unknown> | null;
@@ -1469,10 +1470,35 @@ export function LessonPlayView({
           ) : null}
 
           {isExperientialInterviewLesson ? (
-            <InterviewLessonCard
-              entretienHref={entretienHref}
-              chapterTitle={activeLesson.title || undefined}
-            />
+            <div className="apprenant-studio-light">
+              {interviewDoneForActiveLesson ? (
+                <div className="mx-auto w-full max-w-3xl space-y-6 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-8 text-slate-900">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-800">
+                    Entretien terminé
+                  </p>
+                  <h3 className="text-xl font-bold text-slate-900">Bilan enregistré</h3>
+                  <p className="text-sm leading-relaxed text-slate-700">
+                    Vous avez complété l&apos;entretien expérientiel. Poursuivez la formation pour la suite du
+                    parcours.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {nextLesson ? (
+                      <Button asChild className="rounded-full bg-slate-900 text-white hover:bg-slate-800">
+                        <Link href={lessonHref(nextLesson.id)}>Chapitre suivant</Link>
+                      </Button>
+                    ) : null}
+                    <Button asChild variant="outline" className="rounded-full border-slate-300 text-slate-800">
+                      <Link href={entretienHref}>Revoir le bilan</Link>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <InterviewLessonCard
+                  entretienHref={entretienHref}
+                  chapterTitle={activeLesson.title || undefined}
+                />
+              )}
+            </div>
           ) : isTestFlow ? (
             <div className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
               {!testStarted ? (

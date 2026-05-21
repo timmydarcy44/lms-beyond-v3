@@ -59,7 +59,10 @@ export async function FormationInterviewPlayPage({
   if (!isInterview) notFound();
 
   const contextText = resolveInterviewContext(activeLesson as Record<string, unknown>, modules);
-  const returnHref = `${card.href}/play/${lessonId}`;
+  const activeIndex = allLessons.findIndex((l) => l.id === lessonId);
+  const nextLesson =
+    activeIndex >= 0 && activeIndex < allLessons.length - 1 ? allLessons[activeIndex + 1] : null;
+  const returnHref = nextLesson ? `${card.href}/play/${nextLesson.id}` : card.href;
   const displayChapterTitle = resolveInterviewParentChapterTitle(allLessons, activeLesson);
   const revisionItems = buildInterviewRevisionOutline(modules, activeLesson, `${card.href}/play`);
 
@@ -73,6 +76,7 @@ export async function FormationInterviewPlayPage({
           forcedTheme="light"
           className="bg-white text-slate-900"
         >
+          <div className="apprenant-studio-light">
           <InterviewPlayClient
             contextText={contextText}
             chapterTitle={displayChapterTitle}
@@ -81,6 +85,7 @@ export async function FormationInterviewPlayPage({
             returnHref={returnHref}
             revisionItems={revisionItems}
           />
+          </div>
         </DashboardShell>
       </div>
     </DyslexiaModeProvider>

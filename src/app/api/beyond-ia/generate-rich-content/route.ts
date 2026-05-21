@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import OpenAI, { APIError } from "openai";
+
+export const maxDuration = 90;
+
+const OPENAI_MODEL = process.env.BEYOND_IA_OPENAI_MODEL?.trim() || "gpt-4o-mini";
+const MAX_PREVIOUS_CONTENT_CHARS = 14_000;
+const MAX_PROMPT_CHARS = 24_000;
 
 /** Valeurs UI (modal chapitre / sous-chapitre). */
 type ContentStructureUi = "standard" | "definitions" | "schema" | "table" | "scientific_sources";
@@ -94,6 +100,15 @@ const CALLOUT_EXAMPLE_RE =
 
 /** Retire les encarts rouge/vert et garde le texte intérieur en paragraphe simple. */
 function stripPedagogicalCallouts(html: string): string {
+  try {
+    return stripPedagogicalCalloutsInner(html);
+  } catch (e) {
+    console.warn("[beyond-ia/generate-rich-content] stripPedagogicalCallouts failed", e);
+    return html;
+  }
+}
+
+function stripPedagogicalCalloutsInner(html: string): string {
   return html.replace(CALLOUT_DEFINITION_RE, (block) => {
     const inner = block
       .replace(/<div[^>]*>/i, "")
@@ -109,6 +124,30 @@ function stripPedagogicalCallouts(html: string): string {
       .trim();
     return inner ? `<p>${inner}</p>` : "";
   });
+}
+
+function truncateForContext(text: string, maxChars: number): string {
+  const t = String(text ?? "").trim();
+  if (t.length <= maxChars) return t;
+  return `${t.slice(0, maxChars)}\n\n[… contenu tronqué pour la génération …]`;
+}
+
+function openAiErrorMessage(error: unknown): string {
+  if (error instanceof APIError) {
+    if (error.status === 429) {
+      return "Quota ou limite OpenAI atteinte. Réessayez dans quelques minutes.";
+    }
+    if (error.status === 401) {
+      return "Clé OpenAI invalide côté serveur.";
+    }
+    const msg = String(error.message ?? "").trim();
+    if (msg && !/sk-[a-zA-Z0-9]/i.test(msg)) return msg.slice(0, 280);
+  }
+  if (error instanceof Error) {
+    const msg = error.message.trim();
+    if (msg && !/sk-[a-zA-Z0-9]/i.test(msg)) return msg.slice(0, 280);
+  }
+  return "Erreur serveur";
 }
 
 /**
@@ -173,8 +212,11 @@ function upgradeSchemaTableToFlexCards(html: string): string {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Payload;
-    const prompt = String(body?.prompt ?? "").trim();
-    const previousContent = String(body?.previousContent ?? "").trim();
+    const prompt = truncateForContext(String(body?.prompt ?? ""), MAX_PROMPT_CHARS);
+    const previousContent = truncateForContext(
+      String(body?.previousContent ?? ""),
+      MAX_PREVIOUS_CONTENT_CHARS,
+    );
     const mode = body?.mode === "theory_examples" ? "theory_examples" : "theory";
     const rawStructure = body?.contentStructure;
     const structureKey: ContentStructureLegacy =
@@ -243,8 +285,10 @@ export async function POST(req: NextRequest) {
 
     const isSchema = structureKey === "schema";
     const isScientificEvidence = structureKey === "scientific_evidence";
+    const useScientificCallouts = isScientificEvidence;
     const usePedagogicalCallouts =
-      structureKey === "definition_example" || promptRequestsPedagogicalCallouts(prompt);
+      structureKey === "definition_example" ||
+      (!isScientificEvidence && promptRequestsPedagogicalCallouts(prompt));
 
     const pedagogyRules = [
       "Tu es un ingénieur pédagogique.",
@@ -293,7 +337,19 @@ export async function POST(req: NextRequest) {
       "IMPORTANT : Je ne veux pas de listes de définitions. Pas de catalogue de définitions à la suite.",
       "Style : évite les gros blocs. Paragraphes courts et resserrés.",
       "",
-      ...(usePedagogicalCallouts
+      ...(useScientificCallouts
+        ? [
+            "ENCARTS SOURCÉS (bleu — obligatoires pour ce type de contenu) :",
+            "- Chaque preuve / donnée / résultat d’étude dans :",
+            "  <div class=\"bg-sky-50 border-l-4 border-sky-600 p-4 my-6 rounded-r-lg text-slate-900\">",
+            "    <strong>Élément sourcé :</strong> [affirmation chiffrée ou constat]<br />",
+            "    <span class=\"text-sm text-slate-700\"><em>Source :</em> [type d’étude, auteur ou organisme, année si pertinent, périmètre]</span>",
+            "  </div>",
+            "- Les paragraphes du corps introduisent l’idée ; l’encart bleu apporte la preuve.",
+            "- Tu peux structurer le texte avec des titres <h2>/<h3> et des paragraphes ; les sections « définition » ou « exemple » du brief utilisateur se font en prose ou encarts bleus, pas en encarts rouge/vert.",
+            "- Au moins 3 encarts bleus sur l’ensemble du contenu généré.",
+          ]
+        : usePedagogicalCallouts
         ? [
             "INSTRUCTION STRICTE (encarts colorés — uniquement parce qu’ils sont demandés) :",
             "",
@@ -308,18 +364,7 @@ export async function POST(req: NextRequest) {
                 ]
               : []),
           ]
-        : isScientificEvidence
-          ? [
-              "ENCARTS SOURCÉS (bleu — obligatoires pour ce type de contenu) :",
-              "- Chaque preuve / donnée / résultat d’étude dans :",
-              "  <div class=\"bg-sky-50 border-l-4 border-sky-600 p-4 my-6 rounded-r-lg text-slate-900\">",
-              "    <strong>Élément sourcé :</strong> [affirmation chiffrée ou constat]<br />",
-              "    <span class=\"text-sm text-slate-700\"><em>Source :</em> [type d’étude, auteur ou organisme, année si pertinent, périmètre]</span>",
-              "  </div>",
-              "- Les paragraphes du corps introduisent l’idée ; l’encart bleu apporte la preuve.",
-              "- Pas d’encarts rouge (définition) ni vert (exemple) sauf demande explicite dans le prompt utilisateur.",
-            ]
-          : [
+        : [
               "ENCARTS ROUGE / VERT : INTERDIT par défaut.",
               "- N’utilise PAS <div class=\"bg-red-50\">, <div class=\"bg-green-50\">, border-red-500, border-green-500.",
               "- N’écris PAS « Définition : » ni « Exemple concret : » comme titres d’encarts colorés.",
@@ -341,7 +386,9 @@ export async function POST(req: NextRequest) {
       "IMPORTANT : Ne génère pas de blocs de code Markdown (pas de ```html). Écris le HTML directement dans le texte.",
     ].join("\n");
 
-    const systemPrompt = pedagogyRules.replaceAll("{prompt}", prompt);
+    const promptSummary =
+      prompt.length > 600 ? `${prompt.slice(0, 600)}… (consignes complètes dans le message utilisateur)` : prompt;
+    const systemPrompt = pedagogyRules.replaceAll("{prompt}", promptSummary);
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -368,23 +415,26 @@ export async function POST(req: NextRequest) {
       ? " Rappel final : le schéma = uniquement des <div> en flex + pastilles (message système). Aucun <table> pour les étapes. Aucune <ol> seule sous le titre du schéma."
       : "";
 
+    const userParts: string[] = [];
+    if (previousContent) {
+      userParts.push(
+        "Contexte (contenu précédent) à respecter pour la continuité des exemples et du fil conducteur:",
+        previousContent,
+        "",
+        "Instruction: Sers-toi du contenu précédent pour assurer une continuité dans les exemples et le fil conducteur pédagogique.",
+        "",
+      );
+    }
+    userParts.push("Consignes et sujet à rédiger (priorité absolue):", prompt, "", userHtmlRules, userSchemaReminder);
+
     const client = new OpenAI({ apiKey });
     const resp = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: OPENAI_MODEL,
       temperature: 0.3,
+      max_tokens: 8000,
       messages: [
         { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content:
-            (previousContent
-              ? "Contexte (contenu précédent) à respecter pour la continuité des exemples et du fil conducteur:\n" +
-                previousContent +
-                "\n\nInstruction: Sers-toi du contenu précédent pour assurer une continuité dans les exemples et le fil conducteur pédagogique.\n\n"
-              : "") +
-            userHtmlRules +
-            userSchemaReminder,
-        },
+        { role: "user", content: userParts.join("\n") },
       ],
     });
 
@@ -398,7 +448,7 @@ export async function POST(req: NextRequest) {
     }
 
     let contentHtml = content.startsWith("<") ? content : asHtml(content);
-    if (!usePedagogicalCallouts && !isScientificEvidence && contentHtml.includes("<")) {
+    if (!usePedagogicalCallouts && !useScientificCallouts && contentHtml.includes("<")) {
       contentHtml = stripPedagogicalCallouts(contentHtml);
     }
     if (isSchema && contentHtml.includes("<")) {
@@ -413,7 +463,12 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[beyond-ia/generate-rich-content] error", error);
-    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
+    const message = openAiErrorMessage(error);
+    const status =
+      error instanceof APIError && error.status && error.status >= 400 && error.status < 600
+        ? error.status
+        : 500;
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 

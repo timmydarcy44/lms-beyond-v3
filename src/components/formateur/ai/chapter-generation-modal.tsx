@@ -24,7 +24,7 @@ import {
 import { toast } from "sonner";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 
-export type ContentStructure = "standard" | "definitions" | "schema" | "table";
+export type ContentStructure = "standard" | "definitions" | "schema" | "table" | "scientific_sources";
 
 type ChapterGenerationModalProps = {
   open: boolean;
@@ -173,9 +173,15 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
                   <SelectItem value="definitions">Théorie + définitions + exemples</SelectItem>
                   <SelectItem value="schema">Théorie avec schémas</SelectItem>
                   <SelectItem value="table">Théorie avec tableaux comparatifs</SelectItem>
+                  <SelectItem value="scientific_sources">
+                    Avec sources scientifiques ou études (données &amp; preuves)
+                  </SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-600">Ce choix structure le prompt envoyé à l’IA.</p>
+              <p className="text-xs text-slate-600">
+                Encarts définition / exemple uniquement avec « Théorie + définitions + exemples ». Le type « sources scientifiques »
+                ajoute des encarts bleus sourcés (chiffres, études, références vérifiables).
+              </p>
             </div>
             <Textarea
               id="prompt"

@@ -203,9 +203,15 @@ export function SubchapterGenerationModal({
                   <SelectItem value="definitions">Théorie + définitions + exemples</SelectItem>
                   <SelectItem value="schema">Théorie avec schémas</SelectItem>
                   <SelectItem value="table">Théorie avec tableaux comparatifs</SelectItem>
+                  <SelectItem value="scientific_sources">
+                    Avec sources scientifiques ou études (données &amp; preuves)
+                  </SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-600">Ce choix structure le prompt envoyé à l’IA.</p>
+              <p className="text-xs text-slate-600">
+                « Sources scientifiques » : contenu argumenté avec chiffres et références d&apos;études. Encarts rouge / vert
+                seulement avec « Théorie + définitions + exemples ».
+              </p>
             </div>
             <Textarea
               id="prompt"

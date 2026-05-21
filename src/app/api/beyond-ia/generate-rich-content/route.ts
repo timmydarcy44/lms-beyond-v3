@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 /** Valeurs UI (modal chapitre / sous-chapitre). */
-type ContentStructureUi = "standard" | "definitions" | "schema" | "table";
+type ContentStructureUi = "standard" | "definitions" | "schema" | "table" | "scientific_sources";
 /** Anciennes valeurs ou interne. */
-type ContentStructureLegacy = "text" | "definition_example" | "schema" | "table";
+type ContentStructureLegacy =
+  | "text"
+  | "definition_example"
+  | "schema"
+  | "table"
+  | "scientific_evidence";
 
 type Payload = {
   prompt?: string;
@@ -75,6 +80,37 @@ function upgradeSchemaOlToFlexCards(html: string): string {
 
 const stripTagsOneLine = (s: string) => String(s ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
+/** L’utilisateur demande explicitement des définitions / exemples dans le texte du prompt. */
+function promptRequestsPedagogicalCallouts(prompt: string): boolean {
+  return /\b(définition|définir|définissez|exemple|exemples|illustrer|illustration|encadré|encadre)\b/i.test(
+    prompt,
+  );
+}
+
+const CALLOUT_DEFINITION_RE =
+  /<div[^>]*class="[^"]*bg-red-50[^"]*"[^>]*>[\s\S]*?<\/div>/gi;
+const CALLOUT_EXAMPLE_RE =
+  /<div[^>]*class="[^"]*bg-green-50[^"]*"[^>]*>[\s\S]*?<\/div>/gi;
+
+/** Retire les encarts rouge/vert et garde le texte intérieur en paragraphe simple. */
+function stripPedagogicalCallouts(html: string): string {
+  return html.replace(CALLOUT_DEFINITION_RE, (block) => {
+    const inner = block
+      .replace(/<div[^>]*>/i, "")
+      .replace(/<\/div>\s*$/i, "")
+      .replace(/<strong>\s*Définition\s*:\s*<\/strong>/gi, "")
+      .trim();
+    return inner ? `<p>${inner}</p>` : "";
+  }).replace(CALLOUT_EXAMPLE_RE, (block) => {
+    const inner = block
+      .replace(/<div[^>]*>/i, "")
+      .replace(/<\/div>\s*$/i, "")
+      .replace(/<strong>\s*Exemple\s+concret\s*:\s*<\/strong>/gi, "")
+      .trim();
+    return inner ? `<p>${inner}</p>` : "";
+  });
+}
+
 /**
  * <table> après un titre « schéma » (souvent confondu avec la règle « utilise des tableaux ») → même frise flex.
  */
@@ -141,14 +177,16 @@ export async function POST(req: NextRequest) {
     const previousContent = String(body?.previousContent ?? "").trim();
     const mode = body?.mode === "theory_examples" ? "theory_examples" : "theory";
     const rawStructure = body?.contentStructure;
-    const structureKey: "text" | "definition_example" | "schema" | "table" =
+    const structureKey: ContentStructureLegacy =
       rawStructure === "definitions" || rawStructure === "definition_example"
         ? "definition_example"
-        : rawStructure === "schema"
-          ? "schema"
-          : rawStructure === "table"
-            ? "table"
-            : "text";
+        : rawStructure === "scientific_sources" || rawStructure === "scientific_evidence"
+          ? "scientific_evidence"
+          : rawStructure === "schema"
+            ? "schema"
+            : rawStructure === "table"
+              ? "table"
+              : "text";
     if (prompt.length < 10) {
       return NextResponse.json(
         { success: false, error: "Prompt trop court (min 10 caractères)." },
@@ -191,12 +229,22 @@ export async function POST(req: NextRequest) {
                 "TYPE DE CONTENU : Théorie avec tableaux comparatifs.",
                 "- Utilise au moins un tableau HTML comparatif (colonnes claires) pour structurer l’information.",
               ]
-            : [
-                "TYPE DE CONTENU : Cours théorique standard (texte rédigé).",
-                "- Privilégie un exposé fluide en paragraphes (peu d’encarts).",
-              ];
+            : structureKey === "scientific_evidence"
+              ? [
+                  "TYPE DE CONTENU : Cours théorique sourcé (preuves, données, études).",
+                  "- Chaque affirmation importante doit être étayée par une donnée chiffrée, une étude ou une source reconnue.",
+                  "- Privilégie la crédibilité : méthodologie, ordre de grandeur, limites éventuelles.",
+                  "- N’invente pas de DOI, d’URL fictive ni d’étude inexistante : cite des types de sources plausibles (méta-analyse, enquête INSEE, rapport OCDE, revue à comité de lecture…) avec année indicative si besoin.",
+                ]
+              : [
+                  "TYPE DE CONTENU : Cours théorique standard (texte rédigé).",
+                  "- Privilégie un exposé fluide en paragraphes (peu d’encarts).",
+                ];
 
     const isSchema = structureKey === "schema";
+    const isScientificEvidence = structureKey === "scientific_evidence";
+    const usePedagogicalCallouts =
+      structureKey === "definition_example" || promptRequestsPedagogicalCallouts(prompt);
 
     const pedagogyRules = [
       "Tu es un ingénieur pédagogique.",
@@ -219,23 +267,65 @@ export async function POST(req: NextRequest) {
             "STRUCTURE (mode schéma) :",
             "- Introduction très courte.",
             "- Bloc schéma visuel OBLIGATOIRE (voir TYPE DE CONTENU) placé tôt dans le HTML.",
-            "- Puis compléments : paragraphes courts ; éventuellement 1 définition + 1 exemple encadrés si le sujet s’y prête.",
+            "- Puis compléments : paragraphes courts uniquement.",
           ]
-        : [
-            "STRUCTURE IMPÉRATIVE (cycle pédagogique) :",
-            "- Introduction (accroche + contexte).",
-            "- Corps du texte (explications fluides en paragraphes courts).",
-            "- Encart Focus : 1 définition précise + 1 exemple concret.",
-            "- Transition vers le point suivant.",
-            "- Répète ce cycle autant de fois que nécessaire pour couvrir le sujet en profondeur.",
-          ]),
+        : isScientificEvidence
+          ? [
+              "STRUCTURE (sources scientifiques) :",
+              "- Introduction : enjeu + pourquoi les preuves comptent sur ce sujet.",
+              "- Pour chaque section <h2> : développement argumenté, puis au moins un encart bleu « Élément sourcé » (donnée + source).",
+              "- Au moins 3 encarts sourcés sur l’ensemble du chapitre.",
+              "- Conclusion courte : ce que les données permettent de conclure (sans généralités non étayées).",
+            ]
+          : usePedagogicalCallouts
+            ? [
+                "STRUCTURE (définitions + exemples demandés) :",
+                "- Introduction (accroche + contexte).",
+                "- Pour chaque notion importante : courte explication, puis encart Définition, puis encart Exemple concret si utile.",
+                "- Transition fluide entre les notions.",
+              ]
+            : [
+                "STRUCTURE (cours standard) :",
+                "- Introduction (accroche + contexte).",
+                "- Corps du texte : explications fluides en paragraphes <p> et titres <h2>/<h3>.",
+                "- Pas de cycle « définition + exemple encadré » systématique.",
+              ]),
       "IMPORTANT : Je ne veux pas de listes de définitions. Pas de catalogue de définitions à la suite.",
       "Style : évite les gros blocs. Paragraphes courts et resserrés.",
       "",
-      "INSTRUCTION STRICTE (IMPÉRATIVE): Tu DOIS utiliser du HTML brut pour la mise en forme suivante :",
-      "",
-      "DÉFINITIONS : Enveloppe TOUTES les définitions dans <div class=\"bg-red-50 border-l-4 border-red-500 p-4 my-6 rounded-r-lg text-red-900\"><strong>Définition :</strong> ...</div>.",
-      "EXEMPLES : Enveloppe TOUS les exemples dans <div class=\"bg-green-50 border-l-4 border-green-500 p-4 my-6 rounded-r-lg text-green-900\"><strong>Exemple concret :</strong> ...</div>.",
+      ...(usePedagogicalCallouts
+        ? [
+            "INSTRUCTION STRICTE (encarts colorés — uniquement parce qu’ils sont demandés) :",
+            "",
+            "DÉFINITIONS : chaque définition formelle dans <div class=\"bg-red-50 border-l-4 border-red-500 p-4 my-6 rounded-r-lg text-red-900\"><strong>Définition :</strong> ...</div>.",
+            "EXEMPLES : chaque exemple illustratif dans <div class=\"bg-green-50 border-l-4 border-green-500 p-4 my-6 rounded-r-lg text-green-900\"><strong>Exemple concret :</strong> ...</div>.",
+            "N’utilise ces encarts que pour de vraies définitions et de vrais exemples — pas pour tout le corps du cours.",
+            ...(mode === "theory_examples"
+              ? [
+                  "",
+                  "MODE : Théorie + exemples encadrés.",
+                  "- Au moins un encart vert par grande idée.",
+                ]
+              : []),
+          ]
+        : isScientificEvidence
+          ? [
+              "ENCARTS SOURCÉS (bleu — obligatoires pour ce type de contenu) :",
+              "- Chaque preuve / donnée / résultat d’étude dans :",
+              "  <div class=\"bg-sky-50 border-l-4 border-sky-600 p-4 my-6 rounded-r-lg text-slate-900\">",
+              "    <strong>Élément sourcé :</strong> [affirmation chiffrée ou constat]<br />",
+              "    <span class=\"text-sm text-slate-700\"><em>Source :</em> [type d’étude, auteur ou organisme, année si pertinent, périmètre]</span>",
+              "  </div>",
+              "- Les paragraphes du corps introduisent l’idée ; l’encart bleu apporte la preuve.",
+              "- Pas d’encarts rouge (définition) ni vert (exemple) sauf demande explicite dans le prompt utilisateur.",
+            ]
+          : [
+              "ENCARTS ROUGE / VERT : INTERDIT par défaut.",
+              "- N’utilise PAS <div class=\"bg-red-50\">, <div class=\"bg-green-50\">, border-red-500, border-green-500.",
+              "- N’écris PAS « Définition : » ni « Exemple concret : » comme titres d’encarts colorés.",
+              "- Intègre le vocabulaire dans des paragraphes <p> ; les termes clés peuvent être en <strong> dans le flux du texte.",
+              "- N’ajoute pas d’exemples détaillés sauf si l’instruction utilisateur le demande explicitement.",
+            ]),
       ...(isSchema
         ? [
             "",
@@ -249,18 +339,6 @@ export async function POST(req: NextRequest) {
           ]),
       "",
       "IMPORTANT : Ne génère pas de blocs de code Markdown (pas de ```html). Écris le HTML directement dans le texte.",
-      ...(mode === "theory_examples"
-        ? [
-            "",
-            "MODE : Cours théorique + exemples.",
-            "- Ajoute des exemples concrets à chaque grande idée (au moins 1).",
-            "- Chaque exemple doit être dans un encadré vert.",
-          ]
-        : [
-            "",
-            "MODE : Cours théorique.",
-            "- Limite les exemples au strict nécessaire (uniquement si cela clarifie un concept).",
-          ]),
     ].join("\n");
 
     const systemPrompt = pedagogyRules.replaceAll("{prompt}", prompt);
@@ -320,11 +398,19 @@ export async function POST(req: NextRequest) {
     }
 
     let contentHtml = content.startsWith("<") ? content : asHtml(content);
+    if (!usePedagogicalCallouts && !isScientificEvidence && contentHtml.includes("<")) {
+      contentHtml = stripPedagogicalCallouts(contentHtml);
+    }
     if (isSchema && contentHtml.includes("<")) {
       contentHtml = upgradeSchemaTableToFlexCards(contentHtml);
       contentHtml = upgradeSchemaOlToFlexCards(contentHtml);
     }
-    return NextResponse.json({ success: true, contentHtml, mode: "openai" });
+    return NextResponse.json({
+      success: true,
+      contentHtml,
+      mode: "openai",
+      callouts: usePedagogicalCallouts,
+    });
   } catch (error) {
     console.error("[beyond-ia/generate-rich-content] error", error);
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });

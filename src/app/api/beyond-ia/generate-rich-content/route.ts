@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI, { APIError } from "openai";
+import { buildScientificSourcesSystemMessage } from "@/lib/beyond-ia/scientific-sources-system-prompt";
 
 export const maxDuration = 90;
 
@@ -132,13 +133,43 @@ function truncateForContext(text: string, maxChars: number): string {
   return `${t.slice(0, maxChars)}\n\n[… contenu tronqué pour la génération …]`;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function createChatCompletionWithRetry(
+  client: OpenAI,
+  params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
+) {
+  const backoffMs = [0, 2_000, 6_000];
+  let lastError: unknown;
+  for (let attempt = 0; attempt < backoffMs.length; attempt++) {
+    if (backoffMs[attempt] > 0) await sleep(backoffMs[attempt]);
+    try {
+      return await client.chat.completions.create(params);
+    } catch (error) {
+      lastError = error;
+      const retryable =
+        error instanceof APIError &&
+        error.status === 429 &&
+        !String(error.code ?? "").toLowerCase().includes("insufficient_quota");
+      if (!retryable || attempt === backoffMs.length - 1) throw error;
+    }
+  }
+  throw lastError;
+}
+
 function openAiErrorMessage(error: unknown): string {
   if (error instanceof APIError) {
+    const code = String(error.code ?? "").toLowerCase();
     if (error.status === 429) {
-      return "Quota ou limite OpenAI atteinte. Réessayez dans quelques minutes.";
+      if (code.includes("insufficient_quota") || /exceeded.*quota|billing/i.test(String(error.message))) {
+        return "Crédits OpenAI épuisés. Ajoutez un moyen de paiement ou rechargez sur platform.openai.com (Billing).";
+      }
+      return "Limite de débit OpenAI (trop de requêtes). Attendez 1 à 2 minutes puis réessayez.";
     }
     if (error.status === 401) {
-      return "Clé OpenAI invalide côté serveur.";
+      return "Clé OpenAI invalide côté serveur (Vercel : variable OPENAI_API_KEY).";
     }
     const msg = String(error.message ?? "").trim();
     if (msg && !/sk-[a-zA-Z0-9]/i.test(msg)) return msg.slice(0, 280);
@@ -236,6 +267,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const isSchema = structureKey === "schema";
+    const isScientificEvidence = structureKey === "scientific_evidence";
+
     const structureRules =
       structureKey === "definition_example"
         ? [
@@ -271,26 +305,16 @@ export async function POST(req: NextRequest) {
                 "TYPE DE CONTENU : Théorie avec tableaux comparatifs.",
                 "- Utilise au moins un tableau HTML comparatif (colonnes claires) pour structurer l’information.",
               ]
-            : structureKey === "scientific_evidence"
-              ? [
-                  "TYPE DE CONTENU : Cours théorique sourcé (preuves, données, études).",
-                  "- Chaque affirmation importante doit être étayée par une donnée chiffrée, une étude ou une source reconnue.",
-                  "- Privilégie la crédibilité : méthodologie, ordre de grandeur, limites éventuelles.",
-                  "- N’invente pas de DOI, d’URL fictive ni d’étude inexistante : cite des types de sources plausibles (méta-analyse, enquête INSEE, rapport OCDE, revue à comité de lecture…) avec année indicative si besoin.",
-                ]
-              : [
+            : [
                   "TYPE DE CONTENU : Cours théorique standard (texte rédigé).",
                   "- Privilégie un exposé fluide en paragraphes (peu d’encarts).",
                 ];
 
-    const isSchema = structureKey === "schema";
-    const isScientificEvidence = structureKey === "scientific_evidence";
-    const useScientificCallouts = isScientificEvidence;
     const usePedagogicalCallouts =
       structureKey === "definition_example" ||
       (!isScientificEvidence && promptRequestsPedagogicalCallouts(prompt));
 
-    const pedagogyRules = [
+    const pedagogyRules = isScientificEvidence ? "" : [
       "Tu es un ingénieur pédagogique.",
       "IMPORTANT : Le SUJET du cours est {prompt}.",
       ...structureRules,
@@ -313,15 +337,7 @@ export async function POST(req: NextRequest) {
             "- Bloc schéma visuel OBLIGATOIRE (voir TYPE DE CONTENU) placé tôt dans le HTML.",
             "- Puis compléments : paragraphes courts uniquement.",
           ]
-        : isScientificEvidence
-          ? [
-              "STRUCTURE (sources scientifiques) :",
-              "- Introduction : enjeu + pourquoi les preuves comptent sur ce sujet.",
-              "- Pour chaque section <h2> : développement argumenté, puis au moins un encart bleu « Élément sourcé » (donnée + source).",
-              "- Au moins 3 encarts sourcés sur l’ensemble du chapitre.",
-              "- Conclusion courte : ce que les données permettent de conclure (sans généralités non étayées).",
-            ]
-          : usePedagogicalCallouts
+        : usePedagogicalCallouts
             ? [
                 "STRUCTURE (définitions + exemples demandés) :",
                 "- Introduction (accroche + contexte).",
@@ -337,19 +353,7 @@ export async function POST(req: NextRequest) {
       "IMPORTANT : Je ne veux pas de listes de définitions. Pas de catalogue de définitions à la suite.",
       "Style : évite les gros blocs. Paragraphes courts et resserrés.",
       "",
-      ...(useScientificCallouts
-        ? [
-            "ENCARTS SOURCÉS (bleu — obligatoires pour ce type de contenu) :",
-            "- Chaque preuve / donnée / résultat d’étude dans :",
-            "  <div class=\"bg-sky-50 border-l-4 border-sky-600 p-4 my-6 rounded-r-lg text-slate-900\">",
-            "    <strong>Élément sourcé :</strong> [affirmation chiffrée ou constat]<br />",
-            "    <span class=\"text-sm text-slate-700\"><em>Source :</em> [type d’étude, auteur ou organisme, année si pertinent, périmètre]</span>",
-            "  </div>",
-            "- Les paragraphes du corps introduisent l’idée ; l’encart bleu apporte la preuve.",
-            "- Tu peux structurer le texte avec des titres <h2>/<h3> et des paragraphes ; les sections « définition » ou « exemple » du brief utilisateur se font en prose ou encarts bleus, pas en encarts rouge/vert.",
-            "- Au moins 3 encarts bleus sur l’ensemble du contenu généré.",
-          ]
-        : usePedagogicalCallouts
+      ...(usePedagogicalCallouts
         ? [
             "INSTRUCTION STRICTE (encarts colorés — uniquement parce qu’ils sont demandés) :",
             "",
@@ -388,7 +392,10 @@ export async function POST(req: NextRequest) {
 
     const promptSummary =
       prompt.length > 600 ? `${prompt.slice(0, 600)}… (consignes complètes dans le message utilisateur)` : prompt;
-    const systemPrompt = pedagogyRules.replaceAll("{prompt}", promptSummary);
+    const systemPrompt = isScientificEvidence
+      ? buildScientificSourcesSystemMessage()
+      : pedagogyRules.replaceAll("{prompt}", promptSummary);
+    const completionMaxTokens = isScientificEvidence ? 2000 : 4500;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -425,13 +432,17 @@ export async function POST(req: NextRequest) {
         "",
       );
     }
-    userParts.push("Consignes et sujet à rédiger (priorité absolue):", prompt, "", userHtmlRules, userSchemaReminder);
+    if (isScientificEvidence) {
+      userParts.push("DESCRIPTION À RÉDIGER :", prompt, "", userHtmlRules);
+    } else {
+      userParts.push("Consignes et sujet à rédiger (priorité absolue):", prompt, "", userHtmlRules, userSchemaReminder);
+    }
 
     const client = new OpenAI({ apiKey });
-    const resp = await client.chat.completions.create({
+    const resp = await createChatCompletionWithRetry(client, {
       model: OPENAI_MODEL,
-      temperature: 0.3,
-      max_tokens: 8000,
+      temperature: isScientificEvidence ? 0.35 : 0.3,
+      max_tokens: completionMaxTokens,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userParts.join("\n") },
@@ -448,7 +459,7 @@ export async function POST(req: NextRequest) {
     }
 
     let contentHtml = content.startsWith("<") ? content : asHtml(content);
-    if (!usePedagogicalCallouts && !useScientificCallouts && contentHtml.includes("<")) {
+    if (!usePedagogicalCallouts && !isScientificEvidence && contentHtml.includes("<")) {
       contentHtml = stripPedagogicalCallouts(contentHtml);
     }
     if (isSchema && contentHtml.includes("<")) {
@@ -459,7 +470,7 @@ export async function POST(req: NextRequest) {
       success: true,
       contentHtml,
       mode: "openai",
-      callouts: usePedagogicalCallouts,
+      callouts: usePedagogicalCallouts || isScientificEvidence,
     });
   } catch (error) {
     console.error("[beyond-ia/generate-rich-content] error", error);

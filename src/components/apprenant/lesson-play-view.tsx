@@ -28,6 +28,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import {
+  groupLessonsForOutline,
+  outlineKeysContainingLesson,
+} from "@/lib/apprenant/lesson-outline-groups";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -38,6 +42,7 @@ import {
   Headphones,
   PlayCircle,
   ClipboardCheck,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -148,6 +153,7 @@ async function resolveFlashcardStorageScopeIds(
 }
 
 const LESSON_OUTLINE_COLLAPSED_KEY = "lms-lesson-outline-collapsed";
+const LESSON_OUTLINE_EXPANDED_GROUPS_KEY = "lms-lesson-outline-expanded-groups";
 
 function flashcardsFetchUrl(courseId: string, scopeId: string): string {
   const base = `/api/flashcards?courseId=${encodeURIComponent(courseId)}`;
@@ -328,6 +334,7 @@ export function LessonPlayView({
     }
   });
   const [outlineCollapsedReady, setOutlineCollapsedReady] = useState(false);
+  const [expandedOutlineGroups, setExpandedOutlineGroups] = useState<Set<string>>(() => new Set());
   const { state: pomodoroState } = usePomodoro();
   const router = useRouter();
   const { isDyslexiaMode, toggleDyslexiaMode } = useDyslexiaMode();
@@ -361,6 +368,50 @@ export function LessonPlayView({
       // ignore
     }
   }, [outlineCollapsed, outlineCollapsedReady]);
+
+  useEffect(() => {
+    const keysToOpen = new Set<string>();
+    for (const module of modules) {
+      const groups = groupLessonsForOutline(module.lessons ?? []);
+      for (const k of outlineKeysContainingLesson(groups, activeLesson.id)) {
+        keysToOpen.add(k);
+      }
+    }
+    if (keysToOpen.size === 0) {
+      const first = modules[0]?.lessons?.[0];
+      if (first) keysToOpen.add(String(first.parentChapterId || first.id));
+    }
+    setExpandedOutlineGroups((prev) => {
+      const next = new Set(prev);
+      for (const k of keysToOpen) next.add(k);
+      return next;
+    });
+  }, [activeLesson.id, modules]);
+
+  useEffect(() => {
+    if (!outlineCollapsedReady) return;
+    try {
+      localStorage.setItem(
+        LESSON_OUTLINE_EXPANDED_GROUPS_KEY,
+        JSON.stringify([...expandedOutlineGroups]),
+      );
+    } catch {
+      // ignore
+    }
+  }, [expandedOutlineGroups, outlineCollapsedReady]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LESSON_OUTLINE_EXPANDED_GROUPS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        setExpandedOutlineGroups(new Set(parsed.map(String)));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -829,6 +880,117 @@ export function LessonPlayView({
     };
   }, [focusMode]);
 
+  const toggleOutlineGroup = (key: string) => {
+    setExpandedOutlineGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const renderOutlineLessonLink = (moduleLesson: LearnerLesson) => {
+    const isActive = moduleLesson.id === activeLesson.id;
+    const isSubchapter = moduleLesson.kind === "subchapter";
+    const lessonQuizId = extractLinkedQuizTestId(moduleLesson as any);
+    const isQuizOutline = moduleLesson.kind === "quiz" || Boolean(lessonQuizId) || moduleLesson.type === "quiz";
+    const isInterviewOutline = isInterviewLikeLesson(moduleLesson);
+    const lessonHrefForItem = isInterviewOutline
+      ? `${lessonHref(moduleLesson.id)}/entretien`
+      : lessonHref(moduleLesson.id);
+    const lessonRaw = String((moduleLesson as any).content || (moduleLesson as any).description || "");
+    const hasVideoHint =
+      moduleLesson.type === "video" ||
+      Boolean(extractYouTubeId(lessonRaw)) ||
+      /\.(mp4|webm|mov)\b/i.test(lessonRaw);
+    const LessonIcon = isQuizOutline
+      ? Trophy
+      : isInterviewOutline
+        ? MessageCircle
+        : (moduleLesson as any).kind === "test" || moduleLesson.type === "test"
+          ? ClipboardCheck
+          : hasVideoHint
+            ? PlayCircle
+            : FileText;
+    const isTestLesson = (moduleLesson as any).kind === "test" || moduleLesson.type === "test";
+
+    return (
+      <li key={moduleLesson.id}>
+        <Link
+          href={lessonHrefForItem}
+          prefetch={true}
+          className={cn(
+            "relative block rounded-2xl border border-transparent py-3 text-sm text-white/75 transition-colors hover:text-white",
+            (isSubchapter || isQuizOutline || isInterviewOutline)
+              ? "pl-9 pr-4 before:absolute before:left-4 before:top-3 before:bottom-3 before:w-px before:bg-white/10"
+              : "px-4",
+            isActive && "border-l-2 border-purple-500 border-white/10 bg-white/10 pl-3 text-white",
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                "mt-0.5 flex flex-shrink-0 items-center justify-center rounded-lg",
+                isQuizOutline
+                  ? "h-7 w-7 bg-gradient-to-br from-blue-400 via-purple-500 to-fuchsia-500 text-white shadow-sm"
+                  : isInterviewOutline
+                    ? "h-7 w-7 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 text-white shadow-sm"
+                    : cn("h-4 w-4 text-white/70", isSubchapter && "text-white/45"),
+                isActive && !isQuizOutline && !isInterviewOutline && "text-white",
+                isTestLesson && !isQuizOutline && "text-sky-400",
+              )}
+            >
+              <LessonIcon
+                className={cn("h-3.5 w-3.5", (isSubchapter || isQuizOutline || isInterviewOutline) && "h-3 w-3")}
+                aria-hidden="true"
+              />
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "block leading-tight",
+                    (isQuizOutline || isInterviewOutline) &&
+                      "rounded-lg bg-slate-900/50 px-2 py-1 font-bold text-white ring-1 ring-white/10",
+                    !isQuizOutline && !isInterviewOutline && "font-medium text-white",
+                    isActive &&
+                      !isQuizOutline &&
+                      !isInterviewOutline &&
+                      "bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text font-bold text-transparent",
+                    isActive &&
+                      isQuizOutline &&
+                      "bg-gradient-to-r from-blue-400 via-purple-500 to-fuchsia-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20",
+                    isActive &&
+                      isInterviewOutline &&
+                      "bg-gradient-to-r from-violet-400 via-purple-500 to-fuchsia-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20",
+                  )}
+                >
+                  {moduleLesson.title}
+                </span>
+                {isQuizOutline ? (
+                  <span className="inline-flex items-center rounded-full border border-indigo-300/40 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-100">
+                    Quiz
+                  </span>
+                ) : null}
+                {isInterviewOutline ? (
+                  <span className="inline-flex items-center rounded-full border border-violet-300/40 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-100">
+                    Entretien
+                  </span>
+                ) : null}
+                {isTestLesson ? (
+                  <span className="inline-flex items-center rounded-full border border-sky-400/35 bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-100">
+                    Évaluation
+                  </span>
+                ) : null}
+              </div>
+              <span className="text-xs text-white/55">{moduleLesson.duration}</span>
+            </div>
+          </div>
+        </Link>
+      </li>
+    );
+  };
+
   const renderOutline = () => (
     <div className="space-y-5 font-['SF_Pro_Display',_sans-serif] text-white">
       <div className="text-white">
@@ -839,6 +1001,7 @@ export function LessonPlayView({
       <div className="space-y-4">
         {modules.map((module) => {
           const isModuleActive = module.id === activeModule?.id;
+          const groups = groupLessonsForOutline(module.lessons ?? []);
           return (
             <div
               key={module.id}
@@ -856,109 +1019,64 @@ export function LessonPlayView({
                   <span>{module.length}</span>
                 </div>
               </div>
-              <ul className="space-y-2">
-                {module.lessons?.map((moduleLesson) => {
-                  const isActive = moduleLesson.id === activeLesson.id;
-                  const isSubchapter = moduleLesson.kind === "subchapter";
-                  const lessonQuizId = extractLinkedQuizTestId(moduleLesson as any);
-                  const isQuizOutline = moduleLesson.kind === "quiz" || Boolean(lessonQuizId) || moduleLesson.type === "quiz";
-                  const isInterviewOutline = isInterviewLikeLesson(moduleLesson);
-                  const lessonHrefForItem = isInterviewOutline
-                    ? `${lessonHref(moduleLesson.id)}/entretien`
-                    : lessonHref(moduleLesson.id);
-                  const lessonRaw = String((moduleLesson as any).content || (moduleLesson as any).description || "");
-                  const hasVideoHint =
-                    moduleLesson.type === "video" ||
-                    Boolean(extractYouTubeId(lessonRaw)) ||
-                    /\.(mp4|webm|mov)\b/i.test(lessonRaw);
-                  const LessonIcon = isQuizOutline
-                    ? Trophy
-                    : isInterviewOutline
-                      ? MessageCircle
-                      : (moduleLesson as any).kind === "test" || moduleLesson.type === "test"
-                        ? ClipboardCheck
-                        : hasVideoHint
-                          ? PlayCircle
-                          : FileText;
-                  const isTestLesson =
-                    (moduleLesson as any).kind === 'test' || moduleLesson.type === 'test';
+              <div className="space-y-2">
+                {groups.map((group) => {
+                  const hasChildren = group.items.length > 0;
+                  const isExpanded = expandedOutlineGroups.has(group.key);
+                  const chapterLesson = group.chapter;
+                  const groupHasActive =
+                    chapterLesson?.id === activeLesson.id ||
+                    group.items.some((i) => i.id === activeLesson.id);
+
+                  if (!hasChildren && chapterLesson) {
+                    return renderOutlineLessonLink(chapterLesson);
+                  }
+
+                  const headerTitle =
+                    chapterLesson?.title?.trim() ||
+                    group.items[0]?.title?.trim() ||
+                    "Chapitre";
+
                   return (
-                    <li key={moduleLesson.id}>
-                      <Link
-                        href={lessonHrefForItem}
-                        prefetch={true}
-                        className={cn(
-                          "relative block rounded-2xl border border-transparent py-3 text-sm text-white/75 hover:text-white transition-colors",
-                          (isSubchapter || isQuizOutline || isInterviewOutline)
-                            ? "pl-9 pr-4 before:absolute before:left-4 before:top-3 before:bottom-3 before:w-px before:bg-white/10"
-                            : "px-4",
-                          isActive && "border-white/10 bg-white/10 text-white border-l-2 border-purple-500 pl-3",
-                        )}
+                    <div
+                      key={group.key}
+                      className={cn(
+                        "overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]",
+                        groupHasActive && "border-white/20",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleOutlineGroup(group.key)}
+                        className="flex w-full items-center gap-2 px-3 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/[0.06]"
+                        aria-expanded={isExpanded}
                       >
-                        <div className="flex items-start gap-3">
-                          <div
-                            className={cn(
-                              "mt-0.5 flex flex-shrink-0 items-center justify-center rounded-lg",
-                              isQuizOutline
-                                ? "h-7 w-7 bg-gradient-to-br from-blue-400 via-purple-500 to-fuchsia-500 text-white shadow-sm"
-                                : isInterviewOutline
-                                  ? "h-7 w-7 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 text-white shadow-sm"
-                                  : cn("h-4 w-4 text-white/70", isSubchapter && "text-white/45"),
-                              isActive && !isQuizOutline && !isInterviewOutline && "text-white",
-                              isTestLesson && !isQuizOutline && "text-sky-400",
-                            )}
-                          >
-                            <LessonIcon
-                              className={cn("h-3.5 w-3.5", (isSubchapter || isQuizOutline || isInterviewOutline) && "h-3 w-3")}
-                              aria-hidden="true"
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={cn(
-                                  "block leading-tight",
-                                  (isQuizOutline || isInterviewOutline) &&
-                                    "rounded-lg bg-slate-900/50 px-2 py-1 font-bold text-white ring-1 ring-white/10",
-                                  !isQuizOutline && !isInterviewOutline && "font-medium text-white",
-                                  isActive &&
-                                    !isQuizOutline &&
-                                    !isInterviewOutline &&
-                                    "bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent font-bold",
-                                  isActive &&
-                                    isQuizOutline &&
-                                    "bg-gradient-to-r from-blue-400 via-purple-500 to-fuchsia-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20",
-                                  isActive &&
-                                    isInterviewOutline &&
-                                    "bg-gradient-to-r from-violet-400 via-purple-500 to-fuchsia-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20",
-                                )}
-                              >
-                                {moduleLesson.title}
-                              </span>
-                              {isQuizOutline ? (
-                                <span className="inline-flex items-center rounded-full border border-indigo-300/40 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-100">
-                                  Quiz
-                                </span>
-                              ) : null}
-                              {isInterviewOutline ? (
-                                <span className="inline-flex items-center rounded-full border border-violet-300/40 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-100">
-                                  Entretien
-                                </span>
-                              ) : null}
-                              {isTestLesson ? (
-                                <span className="inline-flex items-center rounded-full border border-sky-400/35 bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-100">
-                                  Évaluation
-                                </span>
-                              ) : null}
-                            </div>
-                            <span className="text-xs text-white/55">{moduleLesson.duration}</span>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-white/60 transition-transform",
+                            !isExpanded && "-rotate-90",
+                          )}
+                          aria-hidden
+                        />
+                        <span className="flex-1 leading-tight">{headerTitle}</span>
+                        {hasChildren ? (
+                          <span className="text-[10px] font-medium uppercase tracking-wider text-white/45">
+                            {group.items.length}
+                          </span>
+                        ) : null}
+                      </button>
+                      {isExpanded ? (
+                        <ul className="space-y-1 border-t border-white/10 px-1 pb-2 pt-1">
+                          {chapterLesson && chapterLesson.kind === "chapter"
+                            ? renderOutlineLessonLink(chapterLesson)
+                            : null}
+                          {group.items.map((item) => renderOutlineLessonLink(item))}
+                        </ul>
+                      ) : null}
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             </div>
           );
         })}

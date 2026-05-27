@@ -22,10 +22,14 @@ if (!envExists) {
   const hasUrl = envContent.includes('NEXT_PUBLIC_SUPABASE_URL');
   const hasAnonKey = envContent.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   const hasServiceKey = envContent.includes('SUPABASE_SERVICE_ROLE_KEY');
+  const hasDatabaseUrl = envContent.includes('DATABASE_URL=');
+  const hasDbPassword = envContent.includes('SUPABASE_DB_PASSWORD=');
   
   console.log(`   ${hasUrl ? '✅' : '❌'} NEXT_PUBLIC_SUPABASE_URL`);
   console.log(`   ${hasAnonKey ? '✅' : '❌'} NEXT_PUBLIC_SUPABASE_ANON_KEY`);
-  console.log(`   ${hasServiceKey ? '✅' : '❌'} SUPABASE_SERVICE_ROLE_KEY\n`);
+  console.log(`   ${hasServiceKey ? '✅' : '❌'} SUPABASE_SERVICE_ROLE_KEY`);
+  console.log(`   ${hasDatabaseUrl || hasDbPassword ? '✅' : '⚠️ '} DATABASE_URL ou SUPABASE_DB_PASSWORD (Prisma optionnel)`);
+  console.log('   ℹ️  Open Badges admin : supabase/migrations/20260527130000_open_badges_admin_columns.sql\n');
 }
 
 // Vérifier les migrations

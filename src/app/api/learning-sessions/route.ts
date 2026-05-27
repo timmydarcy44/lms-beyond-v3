@@ -120,6 +120,10 @@ export async function PATCH(request: NextRequest) {
 
     let body: {
       sessionId?: string;
+      session_id?: string;
+      duration_seconds?: number;
+      duration_active_seconds?: number;
+      metadata?: Record<string, unknown>;
     };
     try {
       body = await request.json();
@@ -127,7 +131,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { sessionId } = body;
+    const sessionId = (body.sessionId ?? body.session_id)?.trim();
 
     if (!sessionId) {
       return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
@@ -154,8 +158,18 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Pas de mise à jour de colonnes métier pour l’instant (timestamps gérés via `updated_at` côté DB).
-    const { error } = await queryClient.from(LEARNING_SESSIONS_TABLE).update({}).eq("id", sessionId.trim());
+    const patch: Record<string, unknown> = { ended_at: new Date().toISOString() };
+    if (typeof body.duration_seconds === "number" && body.duration_seconds >= 0) {
+      patch.duration_seconds = Math.floor(body.duration_seconds);
+    }
+    if (typeof body.duration_active_seconds === "number" && body.duration_active_seconds >= 0) {
+      patch.duration_active_seconds = Math.floor(body.duration_active_seconds);
+    }
+    if (body.metadata && typeof body.metadata === "object") {
+      patch.metadata = body.metadata;
+    }
+
+    const { error } = await queryClient.from(LEARNING_SESSIONS_TABLE).update(patch).eq("id", sessionId);
 
     if (error) {
       console.error("[learning-sessions] Error updating session:", error);

@@ -11,6 +11,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
+import {
+  normalizeProfileSituation,
+  PROFILE_SITUATION_OPTIONS,
+  type ProfileSituationValue,
+} from "@/lib/apprenant/profile-situation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type ProfileShape = {
@@ -19,9 +24,12 @@ type ProfileShape = {
   email?: string | null;
   phone?: string | null;
   telephone?: string | null;
+  birth_date?: string | null;
+  city?: string | null;
   school_class?: string | null;
   school_id?: string | null;
   avatar_url?: string | null;
+  type_profil?: string | null;
 };
 
 type Props = {
@@ -43,26 +51,67 @@ export function ApprenantProfileEditModal({
   onSaved,
 }: Props) {
   const supabase = createSupabaseBrowserClient();
+  const [fullProfile, setFullProfile] = useState<ProfileShape | null>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [city, setCity] = useState("");
   const [schoolClass, setSchoolClass] = useState("");
+  const [situation, setSituation] = useState<ProfileSituationValue | "">("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (!open || !initialProfile) return;
-    setFirstName(String(initialProfile.first_name ?? "").trim());
-    setLastName(String(initialProfile.last_name ?? "").trim());
-    setEmail(String(initialProfile.email ?? "").trim());
+    if (!open) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/beyond-connect/profile", { method: "GET" });
+        const data = (await res.json().catch(() => null)) as { profile?: ProfileShape } | null;
+        if (!cancelled && res.ok && data?.profile) {
+          setFullProfile(data.profile);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData?.user?.id;
+        if (!uid) return;
+        const { data } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
+        if (!cancelled && data) {
+          setFullProfile(data as ProfileShape);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, refreshToken, supabase]);
+
+  const effectiveProfile = (fullProfile ?? initialProfile) as ProfileShape | null;
+
+  useEffect(() => {
+    if (!open || !effectiveProfile) return;
+    setFirstName(String(effectiveProfile.first_name ?? "").trim());
+    setLastName(String(effectiveProfile.last_name ?? "").trim());
+    setEmail(String(effectiveProfile.email ?? "").trim());
     const tel =
-      initialProfile.phone != null && String(initialProfile.phone).trim()
-        ? String(initialProfile.phone).trim()
-        : String(initialProfile.telephone ?? "").trim();
+      effectiveProfile.phone != null && String(effectiveProfile.phone).trim()
+        ? String(effectiveProfile.phone).trim()
+        : String(effectiveProfile.telephone ?? "").trim();
     setPhone(tel);
-    setSchoolClass(String(initialProfile.school_class ?? "").trim());
-  }, [open, initialProfile, refreshToken]);
+    setBirthDate(String(effectiveProfile.birth_date ?? "").trim());
+    setCity(String(effectiveProfile.city ?? "").trim());
+    setSchoolClass(String(effectiveProfile.school_class ?? "").trim());
+    setSituation(normalizeProfileSituation(effectiveProfile.type_profil));
+  }, [open, effectiveProfile, refreshToken]);
 
   const persistAvatar = async (file: File) => {
     const { data: userData } = await supabase.auth.getUser();
@@ -94,6 +143,11 @@ export function ApprenantProfileEditModal({
         throw new Error(j?.error || "Mise à jour refusée");
       }
       toast.success("Photo enregistrée.");
+      try {
+        window.dispatchEvent(new CustomEvent("apprenant-profile-updated"));
+      } catch {
+        // ignore
+      }
       onSaved?.();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
@@ -115,7 +169,9 @@ export function ApprenantProfileEditModal({
         phone: phone.trim() || null,
       };
       if (email.trim()) body.email = email.trim().toLowerCase();
-      if (initialProfile?.school_id && schoolClass.trim()) {
+      if (birthDate.trim()) body.birth_date = birthDate.trim();
+      if (city.trim()) body.city = city.trim();
+      if (effectiveProfile?.school_id && schoolClass.trim()) {
         body.school_class = schoolClass.trim();
       }
       const res = await fetch("/api/beyond-connect/profile", {
@@ -126,6 +182,11 @@ export function ApprenantProfileEditModal({
       const j = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) throw new Error(j?.error || "Enregistrement impossible");
       toast.success("Profil mis à jour.");
+      try {
+        window.dispatchEvent(new CustomEvent("apprenant-profile-updated"));
+      } catch {
+        // ignore
+      }
       onOpenChange(false);
       onSaved?.();
     } catch (e) {
@@ -135,7 +196,7 @@ export function ApprenantProfileEditModal({
     }
   };
 
-  const linkedSchool = Boolean(initialProfile?.school_id);
+  const linkedSchool = Boolean(effectiveProfile?.school_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -179,6 +240,41 @@ export function ApprenantProfileEditModal({
             Téléphone
             <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
           </label>
+          <label className="text-xs text-black/60">
+            Situation
+            <select
+              value={situation}
+              onChange={(e) => setSituation(e.target.value as ProfileSituationValue | "")}
+              className={inputClass}
+            >
+              <option value="">Sélectionner…</option>
+              {PROFILE_SITUATION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-black/60">
+              Date de naissance
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className={inputClass}
+              />
+            </label>
+            <label className="text-xs text-black/60">
+              Ville
+              <input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Ex. Le Havre"
+                className={inputClass}
+              />
+            </label>
+          </div>
           {linkedSchool ? (
             <label className="text-xs text-black/60">
               Cursus / classe <span className="text-black/40">(visible côté école)</span>

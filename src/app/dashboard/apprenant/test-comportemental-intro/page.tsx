@@ -1,59 +1,117 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { DISC_QUESTION_COUNT } from "@/lib/disc/disc-questions";
 
 export default function TestComportementalIntroPage() {
+  const router = useRouter();
+  const [firstName, setFirstName] = useState("Apprenant");
+  const [phase, setPhase] = useState<"welcome" | "ready">("welcome");
+
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) return;
+      const { data } = await supabase.auth.getUser();
+      const meta = data.user?.user_metadata as { first_name?: string; firstName?: string } | undefined;
+      const fromMeta = meta?.first_name ?? meta?.firstName;
+      if (fromMeta?.trim()) {
+        setFirstName(fromMeta.trim());
+        return;
+      }
+      if (data.user?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (profile?.first_name?.trim()) setFirstName(profile.first_name.trim());
+      }
+    };
+    void load();
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setPhase("ready"), 2200);
+    return () => window.clearTimeout(t);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="relative min-h-screen overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(17,24,39,0.95),_rgba(3,7,18,0.98)_55%,_rgba(0,0,0,1))]" />
-        <div className="absolute inset-0 opacity-20">
-          <div
-            className="h-full w-full bg-[url('/images/neurons.jpg')] bg-cover bg-center"
-            aria-hidden
-          />
-        </div>
+    <div className="fixed inset-0 z-[200] flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#030303] px-6 text-center text-white">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 55% at 50% 35%, rgba(255,59,48,0.38) 0%, transparent 58%)",
+        }}
+      />
+      <motion.div
+        className="absolute inset-0 bg-[length:220%_220%] opacity-20"
+        style={{
+          backgroundImage:
+            "linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.14) 50%, transparent 58%)",
+        }}
+        animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
+        transition={{ duration: 2.8, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
+      />
 
-        <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-16">
-          <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.35em] text-white/70">
-            <span className="rounded-full border border-white/25 px-3 py-1">2026</span>
-            <span className="rounded-full border border-white/25 px-3 py-1">Élite</span>
-            <span className="rounded-full border border-white/25 px-3 py-1">★★★★★</span>
-            <span className="rounded-full border border-white/25 px-3 py-1">10 min</span>
-          </div>
+      <motion.div
+        className="relative z-10 mx-auto flex max-w-lg flex-col items-center gap-6"
+        initial={{ opacity: 0, y: 24, filter: "blur(12px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <motion.p
+          className="text-sm font-medium tracking-wide text-white/70"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0.6 }}
+        >
+          Bienvenue {firstName}
+        </motion.p>
 
-          <h1 className="mt-8 max-w-4xl text-4xl font-black uppercase tracking-wide sm:text-5xl lg:text-6xl">
-            ANALYSE DE VOTRE PROFIL COMPORTEMENTAL
-          </h1>
-          <p className="mt-6 max-w-2xl text-base text-white/70">
-            Découvrez vos forces naturelles et votre mode de communication privilégié.
-          </p>
+        <motion.h1
+          className="text-2xl font-semibold leading-snug sm:text-3xl"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0, y: phase === "ready" ? 0 : 12 }}
+          transition={{ delay: 0.15, duration: 0.6 }}
+        >
+          Vous vous apprêtez à passer le test DISC
+        </motion.h1>
 
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Link
-              href="/dashboard/apprenant/disc/test"
-              className="rounded-full bg-[#E50914] px-8 py-3 text-sm font-black uppercase text-white shadow-[0_0_40px_rgba(229,9,20,0.45)] transition hover:shadow-[0_0_60px_rgba(229,9,20,0.75)]"
-            >
-              DÉMARRER L&apos;ANALYSE
-            </Link>
-          </div>
+        <motion.p
+          className="text-lg text-[#FF3B30] font-medium"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+        >
+          {DISC_QUESTION_COUNT} questions
+        </motion.p>
 
-          <div className="mt-12 flex flex-wrap items-center gap-4 text-sm text-white/50">
-            <span>✔ Profil comportemental détaillé</span>
-            <span>✔ Recommandations actionnables</span>
-            <span>✔ Restitution claire et certifiée</span>
-          </div>
-
-          <div className="mt-16">
-            <Link
-              href="/dashboard/apprenant"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50 hover:text-white"
-            >
-              Retour au dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
+        <motion.div
+          className="mt-4 flex flex-col items-center gap-4"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0, scale: phase === "ready" ? 1 : 0.95 }}
+          transition={{ delay: 0.55, duration: 0.45 }}
+        >
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/apprenant/disc/test")}
+            className="rounded-full bg-[#FF3B30] px-10 py-3.5 text-sm font-bold uppercase tracking-wide text-white shadow-[0_0_40px_rgba(255,59,48,0.45)] transition hover:bg-[#e6352b]"
+          >
+            Commencer le test
+          </button>
+          <Link
+            href="/dashboard/apprenant"
+            className="text-xs uppercase tracking-[0.2em] text-white/40 hover:text-white/70"
+          >
+            Retour au dashboard
+          </Link>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

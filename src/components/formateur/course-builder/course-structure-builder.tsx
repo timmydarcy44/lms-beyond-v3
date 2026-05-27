@@ -123,9 +123,8 @@ function arborescenceNodeStatus(opts: {
     return opts.quizId ? "complete" : "empty";
   }
   if ((opts as { isInterview?: boolean }).isInterview) {
-    return (opts as { interviewContext?: string }).interviewContext?.trim()
-      ? "complete"
-      : "empty";
+    const ctx = String((opts as { interviewContext?: string }).interviewContext ?? "").trim();
+    return ctx.length >= 80 ? "complete" : "empty";
   }
   const contentLen = stripTagsLen(opts.content);
   if (contentLen === 0) return "empty";
@@ -1004,6 +1003,7 @@ function SubchapterRow({
       : null,
     isInterview: isInterviewBlock,
     interviewContext: (subchapter as { interview_context?: string }).interview_context,
+    interviewObjectives: (subchapter as { interview_objectives?: string }).interview_objectives,
     contentValidated: subchapter.content_validated,
   });
 
@@ -1449,6 +1449,9 @@ function EditorPanel({
     const meta = CONTENT_TYPE_MAP[nodes.subchapter.type];
     const isInterviewEditor = (nodes.subchapter as { kind?: string }).kind === "experiential_interview";
   const interviewCtx = String((nodes.subchapter as { interview_context?: string }).interview_context ?? "").trim();
+  const interviewObjectives = String(
+    (nodes.subchapter as { interview_objectives?: string }).interview_objectives ?? "",
+  ).trim();
 
     if (isInterviewEditor) {
       content = (
@@ -1471,6 +1474,27 @@ function EditorPanel({
                 : "rounded-xl border border-white/10 bg-white/5 text-sm text-white"
             }
           />
+          <Label className={cn("text-xs font-semibold uppercase tracking-[0.2em]", isLight ? "text-slate-600" : "text-white/60")}>
+            Objectifs pédagogiques
+          </Label>
+          <Textarea
+            value={interviewObjectives}
+            onChange={(event) =>
+              updateSubchapter(selection.sectionId, selection.chapterId, selection.subchapterId, {
+                interview_objectives: event.target.value,
+              } as Partial<CourseBuilderSubchapter>)
+            }
+            rows={5}
+            className={
+              isLight
+                ? "rounded-xl border border-slate-200 bg-white text-sm text-slate-800"
+                : "rounded-xl border border-white/10 bg-white/5 text-sm text-white"
+            }
+            placeholder="Ce que l'entretien doit faire progresser chez l'apprenant…"
+          />
+          <Label className={cn("text-xs font-semibold uppercase tracking-[0.2em]", isLight ? "text-slate-600" : "text-white/60")}>
+            Contexte chapitre (pour l&apos;IA)
+          </Label>
           <Textarea
             value={interviewCtx}
             onChange={(event) =>
@@ -1493,6 +1517,7 @@ function EditorPanel({
               </p>
               <ExperientialInterviewView
                 contextText={interviewCtx}
+                interviewObjectives={interviewObjectives}
                 chapterTitle={nodes.chapter?.title || nodes.subchapter.title || "Chapitre"}
                 courseTitle={formationTitle}
               />

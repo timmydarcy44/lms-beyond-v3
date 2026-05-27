@@ -17,6 +17,8 @@ export type CourseBuilderSubchapter = {
   quiz_id?: string;
   /** Contexte texte pour l’entretien IA (contenu du chapitre au moment de la création). */
   interview_context?: string;
+  /** Objectifs pédagogiques guidant les questions de l’entretien. */
+  interview_objectives?: string;
 };
 
 export type ChapterUnlockCondition = "previous_chapter_completed" | "previous_quiz_score";

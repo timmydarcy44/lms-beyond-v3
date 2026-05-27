@@ -24,6 +24,7 @@ type PreviewNode = {
   chapterTitle: string;
   kind: "content" | "quiz" | "interview";
   interviewContext?: string;
+  interviewObjectives?: string;
 };
 
 export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
@@ -53,6 +54,9 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
               html.toLowerCase().includes("ouvrir le quiz");
             const isInterview = subKind === "experiential_interview";
             const interviewContext = String((sub as { interview_context?: string }).interview_context ?? "").trim();
+            const interviewObjectives = String(
+              (sub as { interview_objectives?: string }).interview_objectives ?? "",
+            ).trim();
             out.push({
               key: `s${sIdx}-c${cIdx}-sub${subIdx}`,
               label: sub.title || `Sous-chapitre ${subIdx + 1}`,
@@ -64,6 +68,7 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
               kind: isQuiz ? "quiz" : isInterview ? "interview" : "content",
               interviewContext:
                 interviewContext || (isInterview ? chapterPlain.slice(0, 14_000) : undefined),
+              interviewObjectives: interviewObjectives || undefined,
             });
           });
         } else {
@@ -141,6 +146,7 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
             ) : active.kind === "interview" ? (
               <ExperientialInterviewView
                 contextText={active.interviewContext || ""}
+                interviewObjectives={active.interviewObjectives}
                 chapterTitle={active.chapterTitle}
                 courseTitle={general.title}
                 className="h-full min-h-[min(72vh,640px)]"

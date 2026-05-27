@@ -18,6 +18,7 @@ type DiagnosticQuestion = {
 
 type InterviewRevisionDiagnosticProps = {
   contextText: string;
+  interviewObjectives?: string;
   chapterTitle: string;
   revisionItems: RevisionLessonItem[];
   onBack: () => void;
@@ -27,6 +28,7 @@ type InterviewRevisionDiagnosticProps = {
 
 export function InterviewRevisionDiagnostic({
   contextText,
+  interviewObjectives,
   chapterTitle,
   revisionItems,
   onBack,
@@ -59,6 +61,7 @@ export function InterviewRevisionDiagnostic({
         body: JSON.stringify({
           action: "generate",
           contextText,
+          interviewObjectives: interviewObjectives?.trim() || undefined,
           chapterTitle,
           revisionItems: revisionItems.map((r) => ({ id: r.id, title: r.title, kind: r.kind })),
         }),
@@ -76,7 +79,7 @@ export function InterviewRevisionDiagnostic({
     } finally {
       setLoading(false);
     }
-  }, [contextText, chapterTitle, revisionItems]);
+  }, [contextText, interviewObjectives, chapterTitle, revisionItems]);
 
   const finishDiagnostic = async (finalAnswers: Record<string, string>) => {
     setLoading(true);
@@ -88,6 +91,7 @@ export function InterviewRevisionDiagnostic({
         body: JSON.stringify({
           action: "analyze",
           contextText,
+          interviewObjectives: interviewObjectives?.trim() || undefined,
           chapterTitle,
           revisionItems: revisionItems.map((r) => ({ id: r.id, title: r.title, kind: r.kind })),
           questions,

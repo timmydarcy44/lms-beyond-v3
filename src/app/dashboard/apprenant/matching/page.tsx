@@ -5,7 +5,9 @@ import Link from "next/link";
 import { Building2, Lock } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
-  APPRENANT_CARD_CLASS,
+  APPRENANT_CARD_BODY,
+  APPRENANT_CARD_KICKER,
+  APPRENANT_CARD_TITLE,
   APPRENANT_PAGE_KICKER,
   APPRENANT_PAGE_LEAD,
   APPRENANT_PAGE_SHELL,
@@ -99,7 +101,7 @@ export default function ApprenantMatchingPage() {
       </section>
 
       {!hasOrganisation ? (
-        <div className={`${APPRENANT_CARD_CLASS} flex flex-wrap items-start gap-3 px-5 py-4 text-sm text-white/55`}>
+        <div className={`${APPRENANT_CARD_BODY} flex-row flex-wrap items-start gap-3 text-sm text-white/55`}>
           <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-edge-red" aria-hidden />
           <p>
             Associe ton compte à une organisation (école ou entreprise) depuis ton espace pour activer les
@@ -108,39 +110,40 @@ export default function ApprenantMatchingPage() {
         </div>
       ) : null}
 
-      <section className="relative overflow-hidden rounded-3xl border border-white/[0.06] bg-[#141412] p-6 md:p-8">
+      <section className="relative">
         <div className="pointer-events-none select-none blur-[5px] opacity-70">
           {isLoading ? (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, index) => (
-                <div key={`matching-skeleton-${index}`} className={`${APPRENANT_CARD_CLASS} h-44 animate-pulse`} />
+                <div key={`matching-skeleton-${index}`} className={`${APPRENANT_CARD_BODY} h-44 animate-pulse`} />
               ))}
             </div>
           ) : offers.length ? (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {offers.map((offer) => (
-                <article key={offer.id} className={`${APPRENANT_CARD_CLASS} p-5`}>
-                  <div className="text-base font-semibold text-white">
+                <article key={offer.id} className={APPRENANT_CARD_BODY}>
+                  <p className={APPRENANT_CARD_KICKER}>Offre</p>
+                  <div className={APPRENANT_CARD_TITLE}>
                     {offer.title || "Offre en recrutement"}
                   </div>
                   {!offer.company_hidden_from_learner && offer.company_name?.trim() ? (
-                    <div className="mt-1 text-xs font-medium text-[#c8d5f5]">{offer.company_name.trim()}</div>
+                    <div className="mt-1 text-xs font-medium text-sky-200/80">{offer.company_name.trim()}</div>
                   ) : null}
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#9aa8c9]">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/45">
                     <span className="rounded-full border border-white/[0.12] px-2.5 py-1">
                       {offer.contract_type || "Contrat"}
                     </span>
                     <span>{offer.city || "Localisation"}</span>
                   </div>
-                  <div className="mt-3 text-xs text-[#7d8cae]">{offer.salary_range || "Salaire selon profil"}</div>
-                  <p className="mt-4 line-clamp-3 text-sm text-[#8b98b8]">
+                  <div className="mt-3 text-xs text-white/40">{offer.salary_range || "Salaire selon profil"}</div>
+                  <p className="mt-4 line-clamp-3 text-sm text-white/55">
                     {offer.description || "Description non disponible."}
                   </p>
                 </article>
               ))}
             </div>
           ) : (
-            <div className={`${APPRENANT_CARD_CLASS} p-8 text-center text-sm text-[#9aa8c9]`}>
+            <div className={`${APPRENANT_CARD_BODY} text-center text-sm text-white/45`}>
               Aucune offre active pour le moment.
             </div>
           )}
@@ -148,12 +151,12 @@ export default function ApprenantMatchingPage() {
 
         <div className="absolute inset-0 flex items-center justify-center p-6">
           <div
-            className={`${APPRENANT_CARD_CLASS} w-full max-w-3xl p-6 text-center shadow-[0_25px_60px_-30px_rgba(0,0,0,0.85)] md:p-8`}
+            className={`${APPRENANT_CARD_BODY} mx-auto w-full max-w-3xl text-center`}
           >
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-edge-red/25 bg-edge-red/10">
               <Lock className="h-6 w-6 text-edge-red" />
             </div>
-            <h2 className="text-xl font-semibold text-white md:text-2xl">Débloquez vos matchings complets</h2>
+            <h2 className={`${APPRENANT_CARD_TITLE} md:text-xl`}>Débloquez vos matchings complets</h2>
             <p className="mt-3 text-sm text-[#9aa8c9] md:text-base">
               En alternance via une école ? Demande à ton centre l’activation. Particulier ? La fonctionnalité
               sera bientôt disponible.

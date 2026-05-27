@@ -1,8 +1,5 @@
-import { getAllUsers } from "@/lib/queries/super-admin";
+import { getCrmUsers } from "@/lib/queries/super-admin";
 import { UsersPageClient } from "./users-page-client";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 
 export default async function UsersPage({
   searchParams,
@@ -13,21 +10,16 @@ export default async function UsersPage({
   const initialRoleParam = params?.role;
   const initialRole = Array.isArray(initialRoleParam) ? initialRoleParam[0] : initialRoleParam;
 
-  const users = await getAllUsers();
+  const users = await getCrmUsers();
 
   return (
-    <div className="space-y-8">
-      {/* Header centré avec gradient */}
-      <div className="flex flex-col items-center justify-center space-y-6 py-8">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-          Utilisateurs
-        </h1>
-        <Link href="/super/utilisateurs/new">
-          <Button className="bg-black text-white hover:bg-gray-900">
-            <Plus className="h-4 w-4 mr-2" />
-            Créer un utilisateur
-          </Button>
-        </Link>
+    <div className="mx-auto max-w-[1440px] space-y-6 px-6 py-8">
+      <div className="space-y-1">
+        <p className="text-xs font-medium uppercase tracking-wider text-gray-500">CRM / Contacts</p>
+        <h1 className="text-3xl font-bold text-gray-900">Contacts</h1>
+        <p className="text-sm text-gray-600">
+          Vue type pipeline : filtrez par label, recherchez et ouvrez un profil.
+        </p>
       </div>
       <UsersPageClient initialUsers={users} initialRole={initialRole ?? "all"} />
     </div>

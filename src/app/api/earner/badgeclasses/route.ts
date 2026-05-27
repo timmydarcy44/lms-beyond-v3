@@ -9,7 +9,11 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
 
   const badgeClasses = await prisma.badgeClass.findMany({
-    where: { orgId: auth.user.orgId, status: "ACTIVE" },
+    where: {
+      orgId: auth.user.orgId,
+      status: "ACTIVE",
+      visibleInLearnerDashboard: true,
+    },
     select: {
       id: true,
       name: true,

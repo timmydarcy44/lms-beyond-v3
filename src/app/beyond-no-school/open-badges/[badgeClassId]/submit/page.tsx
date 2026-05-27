@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { BnsPrivateHeader } from "@/components/beyond-no-school/bns-private-header";
-import OpenBadgeSubmitView from "./view";
+import { BadgeSubmitClient } from "./badge-submit-client";
 
 export default async function OpenBadgeSubmitPage({
   params,
@@ -25,7 +25,7 @@ export default async function OpenBadgeSubmitPage({
       <BnsPrivateHeader />
 
       <section className="mx-auto max-w-4xl space-y-8 px-6 pb-20 pt-12 sm:px-12 lg:px-24">
-        <OpenBadgeSubmitView auth={auth} badgeClassId={params.badgeClassId} />
+        <BadgeSubmitClient auth={auth} badgeClassId={params.badgeClassId} />
       </section>
     </main>
   );

@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       action?: "generate" | "analyze";
       contextText?: string;
+      interviewObjectives?: string;
       chapterTitle?: string;
       revisionItems?: RevisionItem[];
       questions?: DiagnosticQuestion[];
@@ -47,8 +48,12 @@ export async function POST(request: NextRequest) {
     };
 
     const contextText = String(body.contextText ?? "").trim().slice(0, 12_000);
+    const interviewObjectives = String(body.interviewObjectives ?? "").trim().slice(0, 2000);
     const chapterTitle = String(body.chapterTitle ?? "Chapitre").trim();
     const revisionItems = Array.isArray(body.revisionItems) ? body.revisionItems.slice(0, 24) : [];
+    const objectivesSuffix = interviewObjectives
+      ? `\n\nObjectifs de l'entretien à venir (prioriser dans les questions) :\n${interviewObjectives}`
+      : "";
 
     if (!contextText || contextText.length < 40) {
       return NextResponse.json({ error: "Contexte du chapitre insuffisant" }, { status: 400 });
@@ -80,7 +85,7 @@ Règles :
             content: `Chapitre : ${chapterTitle}
 
 Contenu :
-${contextText}
+${contextText}${objectivesSuffix}
 
 Leçons disponibles pour orientation :
 ${outline || "(aucune liste — utilise des topics génériques et lessonId vide)"}`,
@@ -145,6 +150,7 @@ recommendedLessonIds : sous-ensemble des ids fournis, prioriser les lacunes.`,
             role: "user",
             content: `Chapitre : ${chapterTitle}
 Leçons : ${revisionItems.map((r) => r.id + " — " + r.title).join("\n")}
+${interviewObjectives ? `Objectifs entretien : ${interviewObjectives}\n` : ""}
 Erreurs : ${wrongTopics.length ? JSON.stringify(wrongTopics) : "Aucune erreur — bon niveau global."}`,
           },
         ],

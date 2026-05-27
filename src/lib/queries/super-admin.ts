@@ -3,6 +3,9 @@
 import { getServerClient, getServiceRoleClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import type { FormateurContentLibrary } from "@/lib/queries/formateur";
+import { splitFullName, type CrmUserListItem } from "@/lib/crm/crm-shared";
+
+export type { CrmUserListItem } from "@/lib/crm/crm-shared";
 
 // ============================================================================
 // TYPES
@@ -722,6 +725,99 @@ export async function getOrganizationFullDetails(orgId: string): Promise<Organiz
 // ============================================================================
 // UTILISATEURS
 // ============================================================================
+
+export async function getCrmUsers(): Promise<CrmUserListItem[]> {
+  const baseUsers = await getAllUsers();
+  if (baseUsers.length === 0) return [];
+
+  const supabase = getServiceRoleClient() ?? (await getServerClient());
+  if (!supabase) {
+    return baseUsers.map((u) => ({
+      ...u,
+      ...splitFullName(u.fullName),
+      createdAt: null,
+      lastSignInAt: null,
+      totalRevenue: 0,
+    }));
+  }
+
+  const userIds = baseUsers.map((u) => u.id);
+
+  const [{ data: profileRows }, revenueByUser, lastSignInByUser] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, created_at, full_name")
+      .in("id", userIds),
+    fetchUserRevenueMap(supabase, userIds),
+    fetchLastSignInMap(supabase),
+  ]);
+
+  const createdAtMap = new Map(
+    (profileRows ?? []).map((p: { id: string; created_at?: string }) => [
+      p.id,
+      p.created_at ?? null,
+    ]),
+  );
+
+  return baseUsers.map((user) => {
+    const { firstName, lastName } = splitFullName(user.fullName);
+    return {
+      ...user,
+      firstName,
+      lastName,
+      createdAt: createdAtMap.get(user.id) ?? null,
+      lastSignInAt: lastSignInByUser.get(user.id) ?? null,
+      totalRevenue: revenueByUser.get(user.id) ?? 0,
+    };
+  });
+}
+
+async function fetchUserRevenueMap(
+  supabase: NonNullable<Awaited<ReturnType<typeof getServerClient>>>,
+  userIds: string[],
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (userIds.length === 0) return map;
+
+  const { data: accessRows } = await supabase
+    .from("catalog_access")
+    .select("user_id, access_status, catalog_items ( price )")
+    .in("user_id", userIds)
+    .in("access_status", ["purchased", "manually_granted"]);
+
+  for (const row of accessRows ?? []) {
+    const uid = (row as { user_id?: string }).user_id;
+    if (!uid) continue;
+    const item = (row as { catalog_items?: { price?: number } | { price?: number }[] }).catalog_items;
+    const price = Array.isArray(item) ? Number(item[0]?.price ?? 0) : Number(item?.price ?? 0);
+    map.set(uid, (map.get(uid) ?? 0) + price);
+  }
+
+  return map;
+}
+
+async function fetchLastSignInMap(
+  supabase: NonNullable<Awaited<ReturnType<typeof getServerClient>>>,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const admin = (supabase as { auth?: { admin?: { listUsers?: (opts: { page?: number; perPage?: number }) => Promise<{ data?: { users?: Array<{ id: string; last_sign_in_at?: string | null }> } }> } } }).auth?.admin;
+  if (!admin?.listUsers) return map;
+
+  let page = 1;
+  const perPage = 200;
+  for (let i = 0; i < 20; i += 1) {
+    const { data } = await admin.listUsers({ page, perPage });
+    const users = data?.users ?? [];
+    if (users.length === 0) break;
+    for (const u of users) {
+      if (u.last_sign_in_at) map.set(u.id, u.last_sign_in_at);
+    }
+    if (users.length < perPage) break;
+    page += 1;
+  }
+
+  return map;
+}
 
 export async function getAllUsers(): Promise<UserListItem[]> {
   const isAdmin = await isSuperAdmin();

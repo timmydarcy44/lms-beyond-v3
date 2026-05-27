@@ -3,9 +3,9 @@
 
 insert into public.organizations (name, slug, description)
 select
-  'EDGE Lab',
+  'EDGE',
   'edgelab',
-  'Galaxie EDGE Lab — catalogue et espace école (slug URL /g/edgelab/…)'
+  'Galaxie EDGE — catalogue et espace école (slug URL /g/edgelab/…)'
 where not exists (
   select 1
   from public.organizations o

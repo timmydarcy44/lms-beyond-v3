@@ -874,6 +874,21 @@ body.light {
   color: inherit;
 }
 
+/* Entretien expérientiel immersif (fond sombre — annule les couleurs globales apprenant-theme) */
+.apprenant-theme [data-interview-immersive],
+.apprenant-theme [data-interview-immersive] h1,
+.apprenant-theme [data-interview-immersive] h2,
+.apprenant-theme [data-interview-immersive] h3,
+.apprenant-theme [data-interview-immersive] h4,
+.apprenant-theme [data-interview-immersive] h5,
+.apprenant-theme [data-interview-immersive] h6,
+.apprenant-theme [data-interview-immersive] p,
+.apprenant-theme [data-interview-immersive] span,
+.apprenant-theme [data-interview-immersive] li,
+.apprenant-theme [data-interview-immersive] label {
+  color: inherit;
+}
+
 .apprenant-theme .apprenant-studio-light [contenteditable="true"],
 .apprenant-theme .apprenant-studio-light [contenteditable="true"] p,
 .apprenant-theme .apprenant-studio-light [contenteditable="true"] li,

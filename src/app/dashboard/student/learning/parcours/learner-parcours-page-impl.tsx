@@ -47,14 +47,9 @@ export function LearnerParcoursPageImpl({ data, orgSlug, featuredHero }: Learner
   const title = useMemo(() => String(assigned[0]?.title ?? "Parcours").trim() || "Parcours", [assigned]);
 
   return (
-    <DashboardShell forceSidebar title="Mes parcours" subtitle="" mainClassName="!px-0 !pt-0">
+    <DashboardShell forceSidebar hideHeader title="" subtitle="" mainClassName="!px-0 !pt-0">
       {featuredHero ? (
-        <div className="flex min-h-[calc(100svh-4rem)] w-full flex-col text-white md:min-h-[calc(100svh-4.5rem)]">
-          <div className="mx-auto w-full max-w-7xl shrink-0 px-6 pt-8 pb-3 md:px-10 md:pt-10">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">
-              Parcours à la une
-            </div>
-          </div>
+        <div className="flex min-h-[calc(100svh-3.25rem)] w-full flex-col text-white md:min-h-screen">
           <div className="flex min-h-0 flex-1 flex-col">
             <LearnerPathProgramHero
               featuredOverview

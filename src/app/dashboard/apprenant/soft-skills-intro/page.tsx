@@ -21,7 +21,25 @@ export default function SoftSkillsIntroPage() {
     };
   }, []);
 
+  const paymentUrl =
+    typeof process.env.NEXT_PUBLIC_SOFT_SKILLS_PAYMENT_URL === "string"
+      ? process.env.NEXT_PUBLIC_SOFT_SKILLS_PAYMENT_URL.trim()
+      : "";
+
   const handleStartTest = async () => {
+    if (isLoading) return;
+    setCheckoutError(null);
+
+    if (!paymentUrl) {
+      window.location.href = "/dashboard/apprenant/soft-skills/paiement";
+      return;
+    }
+
+    setIsLoading(true);
+    window.location.href = paymentUrl;
+  };
+
+  const handleStripeCheckout = async () => {
     if (isLoading) return;
     setCheckoutError(null);
     setIsLoading(true);

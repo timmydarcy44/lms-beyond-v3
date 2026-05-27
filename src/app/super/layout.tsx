@@ -6,6 +6,8 @@ import { BrandingProvider } from "@/components/super-admin/branding-provider";
 import { getSuperAdminBranding } from "@/lib/queries/super-admin-branding";
 import { getServerClient } from "@/lib/supabase/server";
 import { FloatingCreateButton } from "@/components/jessica-contentin/floating-create-button";
+import { SuperJarvis } from "@/components/super-admin/super-jarvis";
+import { CrmAreaWrapper } from "@/components/super-admin/crm-area-wrapper";
 
 export default async function SuperLayout({
   children,
@@ -36,7 +38,8 @@ export default async function SuperLayout({
     <BrandingProvider initialBranding={branding}>
       <div className={`min-h-screen ${isContentin ? "bg-[#F5F5DC]" : "bg-white"}`}>
         {isContentin ? <JessicaHeader /> : <SuperAdminHeaderApple />}
-        {children}
+        <CrmAreaWrapper>{children}</CrmAreaWrapper>
+        {!isContentin && <SuperJarvis />}
         {isContentin && <FloatingCreateButton />}
       </div>
     </BrandingProvider>

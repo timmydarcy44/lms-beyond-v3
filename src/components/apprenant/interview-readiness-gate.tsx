@@ -8,10 +8,18 @@ import { cn } from "@/lib/utils";
 type InterviewReadinessGateProps = {
   chapterTitle: string;
   courseTitle?: string;
+  interviewObjectives?: string;
   onReady: () => void;
   onRevise: () => void;
   className?: string;
 };
+
+function parseObjectivesList(raw: string): string[] {
+  return raw
+    .split(/\n+/)
+    .map((line) => line.replace(/^[\s•\-–—*]+/, "").trim())
+    .filter(Boolean);
+}
 
 const CHOICE_STYLES = {
   ready: {
@@ -81,17 +89,20 @@ function ReadinessChoice({
 export function InterviewReadinessGate({
   chapterTitle,
   courseTitle,
+  interviewObjectives,
   onReady,
   onRevise,
   className,
 }: InterviewReadinessGateProps) {
+  const objectives = parseObjectivesList(String(interviewObjectives ?? "").trim());
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "mx-auto max-w-2xl overflow-hidden rounded-3xl border border-violet-500/25 bg-gradient-to-b from-[#1a0a2e] via-[#12081f] to-[#050208] p-6 shadow-2xl sm:p-8",
+        "mx-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-violet-500/25 bg-gradient-to-b from-[#1a0a2e] via-[#12081f] to-[#050208] p-6 text-white shadow-2xl sm:p-8",
         className,
       )}
     >
@@ -119,6 +130,23 @@ export function InterviewReadinessGate({
           Vous allez passer l&apos;entretien expérientiel : un échange guidé pour relier ce que vous avez appris à
           votre pratique.
         </p>
+        {objectives.length > 0 ? (
+          <div className="mx-auto mt-4 max-w-md rounded-2xl border border-violet-400/25 bg-violet-500/10 px-4 py-3 text-left">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-violet-200/80">
+              Objectifs de cet entretien
+            </p>
+            <ul className="mt-2 space-y-1.5 text-sm text-white/80">
+              {objectives.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="text-violet-300" aria-hidden>
+                    •
+                  </span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <p className="flex items-center justify-center gap-2 text-sm font-medium text-amber-200/90">
           <BookOpen className="h-4 w-4 shrink-0" />
           Êtes-vous prêt ?

@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# local uploads (dev fallback)
+/public/uploads/
+
 # production
 /build
 

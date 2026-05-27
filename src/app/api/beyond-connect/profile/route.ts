@@ -68,6 +68,7 @@ export async function PATCH(request: NextRequest) {
       cv_file_name,
       employment_type,
       avatar_url,
+      type_profil,
     } = body;
 
     // Mettre à jour le profil
@@ -100,6 +101,10 @@ export async function PATCH(request: NextRequest) {
     if (cv_file_name !== undefined) updateData.cv_file_name = cv_file_name;
     if (employment_type !== undefined) updateData.employment_type = employment_type;
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
+    if (type_profil !== undefined) {
+      const normalized = String(type_profil ?? "").trim().toLowerCase();
+      updateData.type_profil = normalized || null;
+    }
 
     // Mettre à jour full_name si first_name ou last_name changent
     if (first_name || last_name) {

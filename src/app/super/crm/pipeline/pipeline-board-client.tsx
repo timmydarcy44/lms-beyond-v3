@@ -1,0 +1,423 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  computePipelineRevenueCents,
+  formatDealAmount,
+  shouldShowRevenueBar,
+  type PipelineDeal,
+  type PipelineStage,
+  type PipelineType,
+} from "@/lib/crm/pipeline-shared";
+import { Badge } from "@/components/ui/badge";
+import { RefreshCw } from "lucide-react";
+
+type DealForm = {
+  id?: string;
+  stage_slug: string;
+  company_name: string;
+  contact_first_name: string;
+  email: string;
+  phone: string;
+  amount: string;
+  notes: string;
+};
+
+const emptyDeal = (stage: string): DealForm => ({
+  stage_slug: stage,
+  company_name: "",
+  contact_first_name: "",
+  email: "",
+  phone: "",
+  amount: "",
+  notes: "",
+});
+
+export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineType }) {
+  const isBtoc = pipelineType === "btoc";
+  const defaultStage = isBtoc ? "inscription" : "a_appeler";
+
+  const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [deals, setDeals] = useState<PipelineDeal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState<DealForm>(emptyDeal(defaultStage));
+  const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
+  const [stageLabelDraft, setStageLabelDraft] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const sync = isBtoc ? "&sync=1" : "";
+      const res = await fetch(`/api/super-admin/crm/pipeline?type=${pipelineType}${sync}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setStages(json.stages ?? []);
+      setDeals(json.deals ?? []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Chargement impossible");
+    } finally {
+      setLoading(false);
+    }
+  }, [pipelineType, isBtoc]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const runBtocSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/super-admin/crm/pipeline/sync-btoc", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(`Synchronisation BTOC : ${json.synced ?? 0} contact(s)`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Sync impossible");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const dealsByStage = useMemo(() => {
+    const map = new Map<string, PipelineDeal[]>();
+    for (const s of stages) map.set(s.slug, []);
+    for (const d of deals) {
+      const list = map.get(d.stage_slug) ?? [];
+      list.push(d);
+      map.set(d.stage_slug, list);
+    }
+    return map;
+  }, [stages, deals]);
+
+  const showCa = !isBtoc && shouldShowRevenueBar(deals);
+  const caTotal = computePipelineRevenueCents(deals);
+
+  const openCreate = (stageSlug: string) => {
+    setForm(emptyDeal(stageSlug));
+    setDialogOpen(true);
+  };
+
+  const openEdit = (deal: PipelineDeal) => {
+    setForm({
+      id: deal.id,
+      stage_slug: deal.stage_slug,
+      company_name: deal.company_name,
+      contact_first_name: deal.contact_first_name,
+      email: deal.email ?? "",
+      phone: deal.phone ?? "",
+      amount: deal.amount_cents ? String(deal.amount_cents / 100) : "",
+      notes: deal.notes ?? "",
+    });
+    setDialogOpen(true);
+  };
+
+  const saveDeal = async () => {
+    if (!form.company_name.trim()) {
+      toast.error("Nom de l'entreprise requis");
+      return;
+    }
+    const payload = {
+      stage_slug: form.stage_slug,
+      company_name: form.company_name,
+      contact_first_name: form.contact_first_name,
+      email: form.email || null,
+      phone: form.phone || null,
+      amount: form.amount,
+      notes: form.notes || null,
+    };
+
+    try {
+      if (form.id) {
+        const res = await fetch(`/api/super-admin/crm/pipeline/deals/${form.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, pipeline_type: pipelineType }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
+      } else {
+        const res = await fetch("/api/super-admin/crm/pipeline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, pipeline_type: pipelineType }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
+      }
+      setDialogOpen(false);
+      await load();
+      toast.success("Enregistré");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    }
+  };
+
+  const deleteDeal = async (id: string) => {
+    if (!confirm("Supprimer cette carte ?")) return;
+    const res = await fetch(`/api/super-admin/crm/pipeline/deals/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Suppression impossible");
+      return;
+    }
+    await load();
+  };
+
+  const moveDeal = async (dealId: string, stageSlug: string) => {
+    const res = await fetch(`/api/super-admin/crm/pipeline/deals/${dealId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stage_slug: stageSlug }),
+    });
+    if (!res.ok) {
+      toast.error("Déplacement impossible");
+      return;
+    }
+    await load();
+  };
+
+  const saveStageLabel = async () => {
+    if (!editingStage || !stageLabelDraft.trim()) return;
+    const res = await fetch(
+      `/api/super-admin/crm/pipeline/stages/${editingStage.slug}?type=${pipelineType}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: stageLabelDraft }),
+      },
+    );
+    const json = await res.json();
+    if (!res.ok) {
+      toast.error(json.error ?? "Erreur");
+      return;
+    }
+    setEditingStage(null);
+    await load();
+    toast.success("Étape mise à jour");
+  };
+
+  if (loading) {
+    return <p className="text-sm text-gray-500 py-12 text-center">Chargement du pipeline…</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {isBtoc ? (
+        <div className="flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <span>
+            Pipeline synchronisé automatiquement : profils B2C → Inscription / Badge passé (Open Badges) /
+            Paiement (catalog_access).
+          </span>
+          <Button variant="outline" size="sm" disabled={syncing} onClick={() => void runBtocSync()}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            Resynchroniser
+          </Button>
+        </div>
+      ) : null}
+
+      {showCa ? (
+        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-6 py-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
+              <DollarSign className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Chiffre d&apos;affaires pipeline</p>
+              <p className="text-2xl font-bold text-gray-900">{formatDealAmount(caTotal)}</p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 max-w-md text-right">
+            Affiché dès qu&apos;une carte atteint « Proposition envoyé » ou « Réussi »
+          </p>
+        </div>
+      ) : null}
+
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {stages.map((stage) => {
+          const columnDeals = dealsByStage.get(stage.slug) ?? [];
+          const columnTotal = columnDeals.reduce((s, d) => s + d.amount_cents, 0);
+
+          return (
+            <div
+              key={stage.slug}
+              className="flex w-[280px] shrink-0 flex-col rounded-lg border border-gray-200 bg-gray-50/80"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const dealId = e.dataTransfer.getData("dealId");
+                if (dealId) void moveDeal(dealId, stage.slug);
+              }}
+            >
+              <div className="border-b border-gray-200 bg-white px-3 py-2 rounded-t-lg">
+                <div className="flex items-start justify-between gap-1">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{stage.label}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatDealAmount(columnTotal)} · {columnDeals.length} deal{columnDeals.length > 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-gray-400 hover:text-gray-700"
+                    onClick={() => {
+                      setEditingStage(stage);
+                      setStageLabelDraft(stage.label);
+                    }}
+                    title="Renommer l'étape"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-2 p-2 min-h-[120px]">
+                {columnDeals.map((deal) => (
+                  <div
+                    key={deal.id}
+                    draggable
+                    onDragStart={(e) => e.dataTransfer.setData("dealId", deal.id)}
+                    className="cursor-grab rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:border-gray-300 active:cursor-grabbing"
+                  >
+                    <p className="font-medium text-gray-900 text-sm">{deal.company_name}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{deal.contact_first_name}</p>
+                    {deal.email ? (
+                      <p className="text-xs text-gray-500 truncate mt-1">{deal.email}</p>
+                    ) : null}
+                    {deal.phone ? <p className="text-xs text-gray-500">{deal.phone}</p> : null}
+                    {deal.source === "auto" ? (
+                      <Badge variant="secondary" className="mt-1 text-[10px]">
+                        Auto
+                      </Badge>
+                    ) : null}
+                    {deal.amount_cents > 0 ? (
+                      <p className="text-xs font-semibold text-emerald-700 mt-2">
+                        {formatDealAmount(deal.amount_cents)}
+                      </p>
+                    ) : null}
+                    <div className="mt-2 flex gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => openEdit(deal)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-red-600"
+                        onClick={() => void deleteDeal(deal.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-2 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => openCreate(stage.slug)}
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  Ajouter
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{form.id ? "Modifier la carte" : "Nouvelle opportunité"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Étape</Label>
+              <select
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                value={form.stage_slug}
+                onChange={(e) => setForm({ ...form, stage_slug: e.target.value })}
+              >
+                {stages.map((s) => (
+                  <option key={s.slug} value={s.slug}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>{isBtoc ? "Nom / libellé *" : "Entreprise *"}</Label>
+              <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Prénom du contact</Label>
+              <Input
+                value={form.contact_first_name}
+                onChange={(e) => setForm({ ...form, contact_first_name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Téléphone</Label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Montant (€) — pour le CA</Label>
+              <Input
+                type="number"
+                min={0}
+                step={100}
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={() => void saveDeal()}>Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingStage} onOpenChange={(v) => !v && setEditingStage(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renommer l&apos;étape</DialogTitle>
+          </DialogHeader>
+          <Input value={stageLabelDraft} onChange={(e) => setStageLabelDraft(e.target.value)} />
+          <DialogFooter>
+            <Button onClick={() => void saveStageLabel()}>Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -1,0 +1,70 @@
+export type PipelineType = "btob" | "btoc";
+
+/** Stades à partir desquels le bandeau CA s’affiche (proposition envoyée et au-delà). */
+export const CRM_REVENUE_STAGE_SLUGS = [
+  "proposition_envoyee",
+  "reussi",
+] as const;
+
+export const DEFAULT_BTOC_PIPELINE_STAGES = [
+  { slug: "inscription", label: "Inscription", sort_order: 0 },
+  { slug: "badge_passe", label: "Badge passé", sort_order: 1 },
+  { slug: "paiement", label: "Paiement", sort_order: 2 },
+] as const;
+
+export const DEFAULT_PIPELINE_STAGES = [
+  { slug: "a_appeler", label: "A appeler", sort_order: 0 },
+  { slug: "envoi_mail", label: "Envoi mail", sort_order: 1 },
+  { slug: "presentation_programmee", label: "Présentation programmé", sort_order: 2 },
+  { slug: "demo_realisee", label: "Demo réalisé", sort_order: 3 },
+  { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 4 },
+  { slug: "proposition_envoyee", label: "Proposition envoyé", sort_order: 5 },
+  { slug: "reussi", label: "Réussi", sort_order: 6 },
+  { slug: "echec", label: "Échec", sort_order: 7 },
+] as const;
+
+export type PipelineStage = {
+  pipeline_type?: string;
+  slug: string;
+  label: string;
+  sort_order: number;
+};
+
+export type PipelineDeal = {
+  id: string;
+  pipeline_type?: string;
+  stage_slug: string;
+  profile_id?: string | null;
+  source?: string;
+  company_name: string;
+  contact_first_name: string;
+  email: string | null;
+  phone: string | null;
+  amount_cents: number;
+  sort_order: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function formatDealAmount(cents: number): string {
+  return (cents / 100).toLocaleString("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  });
+}
+
+export function shouldShowRevenueBar(deals: PipelineDeal[]): boolean {
+  return deals.some((d) =>
+    CRM_REVENUE_STAGE_SLUGS.includes(d.stage_slug as (typeof CRM_REVENUE_STAGE_SLUGS)[number]),
+  );
+}
+
+export function computePipelineRevenueCents(deals: PipelineDeal[]): number {
+  return deals
+    .filter((d) =>
+      CRM_REVENUE_STAGE_SLUGS.includes(d.stage_slug as (typeof CRM_REVENUE_STAGE_SLUGS)[number]),
+    )
+    .reduce((sum, d) => sum + (d.amount_cents ?? 0), 0);
+}

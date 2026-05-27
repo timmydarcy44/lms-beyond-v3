@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { getPublicShareBaseUrl } from "@/lib/openbadges/urls";
 
 const DEFAULT_COVER =
   "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1600&q=80";
@@ -16,7 +17,7 @@ const slugToDisplayName = (slug: string) =>
     .join(" ")
     .trim();
 
-const absoluteUrl = (path: string) => `https://getbeyond.fr${path}`;
+const absoluteUrl = (path: string) => `${getPublicShareBaseUrl().replace(/\/$/, "")}${path}`;
 
 export async function generateMetadata({
   params,

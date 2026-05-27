@@ -95,6 +95,19 @@ export async function GET(request: Request) {
         resolvedUserId = String((profileByNames as { id?: string }).id ?? "");
       }
     }
+    if (!resolvedUserId && lastPart) {
+      const { data: byLast } = await supabase
+        .from("profiles")
+        .select("*")
+        .ilike("first_name", firstPart ? `%${firstPart}%` : "%")
+        .ilike("last_name", `%${lastPart}%`)
+        .limit(1)
+        .maybeSingle();
+      if (byLast) {
+        profileRow = byLast as Record<string, unknown>;
+        resolvedUserId = String((byLast as { id?: string }).id ?? "");
+      }
+    }
   }
 
   if (!resolvedUserId && !profileRow) {

@@ -23,11 +23,11 @@ export function InterviewCinematicTransition({
       return;
     }
     setPhase("in");
-    const hold = window.setTimeout(() => setPhase("hold"), 400);
-    const out = window.setTimeout(() => setPhase("out"), 2200);
+    const hold = window.setTimeout(() => setPhase("hold"), 280);
+    const out = window.setTimeout(() => setPhase("out"), 900);
     const done = window.setTimeout(() => {
       onComplete();
-    }, 3000);
+    }, 1200);
     return () => {
       window.clearTimeout(hold);
       window.clearTimeout(out);
@@ -39,7 +39,9 @@ export function InterviewCinematicTransition({
     <AnimatePresence>
       {active && phase !== "idle" ? (
         <motion.div
-          className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-[#050208]"
+          className="fixed inset-0 z-[200] flex min-h-dvh items-center justify-center overflow-hidden bg-[#050208]"
+          role="presentation"
+          onClick={() => onComplete()}
           initial={{ opacity: 0 }}
           animate={{ opacity: phase === "out" ? 0 : 1 }}
           exit={{ opacity: 0 }}
@@ -84,12 +86,12 @@ export function InterviewCinematicTransition({
               Entretien expérientiel
             </p>
             <h2 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Je me teste
+              Entretien expérientiel
             </h2>
             {chapterTitle ? (
-              <p className="mt-3 text-sm leading-relaxed text-white/65">{chapterTitle}</p>
+              <p className="mt-3 text-sm leading-relaxed text-white/75">{chapterTitle}</p>
             ) : null}
-            <p className="mt-6 text-xs uppercase tracking-[0.35em] text-white/40">Préparation…</p>
+            <p className="mt-6 text-xs uppercase tracking-[0.35em] text-white/50">Chargement…</p>
           </motion.div>
         </motion.div>
       ) : null}

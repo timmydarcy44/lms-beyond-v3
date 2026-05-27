@@ -59,6 +59,9 @@ export async function FormationInterviewPlayPage({
   if (!isInterview) notFound();
 
   const contextText = resolveInterviewContext(activeLesson as Record<string, unknown>, modules);
+  const interviewObjectives = String(
+    (activeLesson as { interview_objectives?: string }).interview_objectives ?? "",
+  ).trim();
   const activeIndex = allLessons.findIndex((l) => l.id === lessonId);
   const nextLesson =
     activeIndex >= 0 && activeIndex < allLessons.length - 1 ? allLessons[activeIndex + 1] : null;
@@ -68,24 +71,27 @@ export async function FormationInterviewPlayPage({
 
   return (
     <DyslexiaModeProvider>
-      <div className="min-h-screen bg-white text-slate-900">
+      <div className="min-h-dvh bg-[#050208]">
         <DashboardShell
           title="Entretien expérientiel"
           breadcrumbs={[{ label: activeLesson.title }]}
           initialCollapsed={true}
           forcedTheme="light"
-          className="bg-white text-slate-900"
+          hideSidebar
+          hideHeader
+          fullBleed
+          className="min-h-dvh bg-[#050208]"
+          mainClassName="!bg-[#050208] !p-0"
         >
-          <div className="apprenant-studio-light">
           <InterviewPlayClient
             contextText={contextText}
+            interviewObjectives={interviewObjectives || undefined}
             chapterTitle={displayChapterTitle}
             courseTitle={card.title}
             lessonId={activeLesson.id}
             returnHref={returnHref}
             revisionItems={revisionItems}
           />
-          </div>
         </DashboardShell>
       </div>
     </DyslexiaModeProvider>

@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import type { CourseBuilderChapter } from "@/types/course-builder";
 import { extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
@@ -51,7 +52,15 @@ export function CreateInterviewModal({
 }: CreateInterviewModalProps) {
   const snapshot = useCourseBuilder((s) => s.snapshot);
   const hydrateFromSnapshot = useCourseBuilder((s) => s.hydrateFromSnapshot);
+  const formationObjectifs = useMemo(
+    () =>
+      (snapshot.general.objectifs ?? [])
+        .map((x) => String(x ?? "").trim())
+        .filter(Boolean),
+    [snapshot.general.objectifs],
+  );
   const [placementValue, setPlacementValue] = useState(`after_chapter:${chapter.id}`);
+  const [objectives, setObjectives] = useState("");
   const [busy, setBusy] = useState(false);
 
   const placementOptions = useMemo(
@@ -60,12 +69,25 @@ export function CreateInterviewModal({
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setObjectives("");
+      return;
+    }
     const defaultPlacement = placementOptions.some((o) => o.value === `after_chapter:${chapter.id}`)
       ? `after_chapter:${chapter.id}`
       : "end";
     setPlacementValue(defaultPlacement);
-  }, [open, chapter.id, placementOptions]);
+    if (formationObjectifs.length) {
+      setObjectives(
+        formationObjectifs
+          .slice(0, 3)
+          .map((o) => `• ${o}`)
+          .join("\n"),
+      );
+    } else {
+      setObjectives("");
+    }
+  }, [open, chapter.id, placementOptions, formationObjectifs]);
 
   const plain = extractChapterPlainText(chapter);
   const canUseAi = plain.length >= 80;
@@ -79,6 +101,7 @@ export function CreateInterviewModal({
       toast.error("Ajoutez du contenu au chapitre (80 caractères min.) avant de créer l’entretien.");
       return;
     }
+    const objectivesTrim = objectives.trim();
 
     setBusy(true);
     try {
@@ -92,6 +115,7 @@ export function CreateInterviewModal({
         content: "",
         kind: "experiential_interview" as const,
         interview_context: plain.slice(0, 14_000),
+        ...(objectivesTrim ? { interview_objectives: objectivesTrim.slice(0, 2000) } : {}),
       };
 
       const placement = parsePlacementValue(placementValue);
@@ -127,6 +151,23 @@ export function CreateInterviewModal({
                 {chapter.title || "Sans titre"} » ({sectionTitle}).
               </DialogDescription>
             </DialogHeader>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-white">
+                Objectifs pédagogiques <span className="font-normal text-slate-400">(optionnel)</span>
+              </Label>
+              <Textarea
+                value={objectives}
+                onChange={(e) => setObjectives(e.target.value)}
+                rows={5}
+                placeholder="Ex. : Faire verbaliser une mise en situation concrète, identifier 2 difficultés rencontrées, proposer un plan d’action…"
+                className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-slate-500"
+              />
+              <p className="text-xs text-slate-400">
+                L&apos;IA posera ses questions en fonction de ces objectifs (et du contenu du chapitre).
+                {formationObjectifs.length ? " Les objectifs de la formation sont proposés par défaut." : ""}
+              </p>
+            </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-semibold text-white">Où placer cet entretien ?</Label>

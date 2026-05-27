@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       messages?: ChatMessage[];
       contextText?: string;
+      interviewObjectives?: string;
       chapterTitle?: string;
       courseTitle?: string;
     };
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const contextText = String(body.contextText ?? "").trim().slice(0, 10_000);
+    const interviewObjectives = String(body.interviewObjectives ?? "").trim().slice(0, 2000);
     const chapterTitle = String(body.chapterTitle ?? "Chapitre").trim();
     const courseTitle = String(body.courseTitle ?? "").trim();
 
@@ -78,6 +80,7 @@ Chapitre : ${chapterTitle}
 
 Contexte pédagogique :
 ${contextText || "(non fourni)"}
+${interviewObjectives ? `\nObjectifs visés par le formateur :\n${interviewObjectives}` : ""}
 
 Transcript de l'entretien :
 ${transcript}`,

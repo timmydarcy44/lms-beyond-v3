@@ -18,6 +18,7 @@ type FlowPhase = "cinematic" | "readiness" | "revision" | "chat" | "feedback";
 
 type InterviewPlayClientProps = {
   contextText: string;
+  interviewObjectives?: string;
   chapterTitle: string;
   courseTitle?: string;
   lessonId: string;
@@ -25,8 +26,36 @@ type InterviewPlayClientProps = {
   revisionItems: RevisionLessonItem[];
 };
 
+async function fetchOpeningMessage(
+  contextText: string,
+  chapterTitle: string,
+  courseTitle?: string,
+  interviewObjectives?: string,
+): Promise<string | null> {
+  if (!contextText.trim() || contextText.trim().length < 40) return null;
+  try {
+    const res = await fetch("/api/ai/experiential-interview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [],
+        contextText,
+        interviewObjectives: interviewObjectives?.trim() || undefined,
+        chapterTitle,
+        courseTitle,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) return null;
+    return String(data.reply ?? "").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export function InterviewPlayClient({
   contextText,
+  interviewObjectives,
   chapterTitle,
   courseTitle,
   lessonId,
@@ -39,13 +68,26 @@ export function InterviewPlayClient({
   const [feedback, setFeedback] = useState<InterviewFeedbackPayload | null>(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [prefetchedOpening, setPrefetchedOpening] = useState<string | null>(null);
 
   useEffect(() => {
     setFlowPhase("cinematic");
     setMessages([]);
     setFeedback(null);
     setFeedbackError(null);
+    setPrefetchedOpening(null);
   }, [lessonId]);
+
+  useEffect(() => {
+    if (flowPhase !== "cinematic" && flowPhase !== "readiness") return;
+    let cancelled = false;
+    void fetchOpeningMessage(contextText, chapterTitle, courseTitle, interviewObjectives).then((reply) => {
+      if (!cancelled && reply) setPrefetchedOpening(reply);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [flowPhase, contextText, interviewObjectives, chapterTitle, courseTitle, lessonId]);
 
   const userTurns = messages.filter((m) => m.role === "user" && m.content.trim()).length;
   const canFinish = userTurns >= 2;
@@ -71,6 +113,7 @@ export function InterviewPlayClient({
         body: JSON.stringify({
           messages,
           contextText,
+          interviewObjectives: interviewObjectives?.trim() || undefined,
           chapterTitle,
           courseTitle,
         }),
@@ -98,7 +141,7 @@ export function InterviewPlayClient({
 
   if (flowPhase === "feedback") {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center px-4 py-10">
+      <div className="apprenant-studio-light flex min-h-dvh items-center justify-center px-4 py-10">
         <InterviewFeedbackPanel
           feedback={feedback}
           loading={feedbackLoading}
@@ -110,7 +153,7 @@ export function InterviewPlayClient({
   }
 
   return (
-    <>
+    <div data-interview-immersive className="relative min-h-dvh w-full bg-[#050208] text-white">
       <InterviewCinematicTransition
         active={flowPhase === "cinematic"}
         chapterTitle={chapterTitle}
@@ -118,10 +161,11 @@ export function InterviewPlayClient({
       />
 
       {flowPhase === "readiness" ? (
-        <div className="px-4 py-8">
+        <div className="flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6">
           <InterviewReadinessGate
             chapterTitle={chapterTitle}
             courseTitle={courseTitle}
+            interviewObjectives={interviewObjectives}
             onReady={startInterview}
             onRevise={() => setFlowPhase("revision")}
           />
@@ -129,20 +173,22 @@ export function InterviewPlayClient({
       ) : null}
 
       {flowPhase === "revision" ? (
-        <div className="px-4 py-8">
+        <div className="flex min-h-dvh items-start justify-center overflow-y-auto px-4 py-8 sm:px-6">
           <InterviewRevisionPanel
             chapterTitle={chapterTitle}
             contextText={contextText}
+            interviewObjectives={interviewObjectives}
             revisionItems={revisionItems}
             onBack={() => setFlowPhase("readiness")}
             onStartInterview={startInterview}
+            className="text-white"
           />
         </div>
       ) : null}
 
       {flowPhase === "chat" ? (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex min-h-dvh flex-col">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-b border-white/10 bg-[#0a0612]/90 px-4 py-3 backdrop-blur-sm">
             <Button
               type="button"
               variant="outline"
@@ -150,7 +196,7 @@ export function InterviewPlayClient({
                 if (canFinish) void handleFinish();
                 else router.push(returnHref);
               }}
-              className="rounded-full border-slate-200 text-xs uppercase tracking-[0.2em]"
+              className="rounded-full border-white/20 bg-transparent text-xs uppercase tracking-[0.2em] text-white hover:bg-white/10"
             >
               {canFinish ? "Terminer et voir le bilan" : "Quitter"}
             </Button>
@@ -164,19 +210,24 @@ export function InterviewPlayClient({
             </Button>
           </div>
           {!canFinish ? (
-            <p className="text-center text-xs text-slate-500">
+            <p className="shrink-0 px-4 py-2 text-center text-xs text-white/50">
               Échangez au moins deux fois avec l&apos;assistant avant de terminer.
             </p>
           ) : null}
-          <ExperientialInterviewView
-            contextText={contextText}
-            chapterTitle={chapterTitle}
-            courseTitle={courseTitle}
-            conversationActive
-            onMessagesChange={setMessages}
-          />
+          <div className="min-h-0 flex-1">
+            <ExperientialInterviewView
+              contextText={contextText}
+              interviewObjectives={interviewObjectives}
+              chapterTitle={chapterTitle}
+              courseTitle={courseTitle}
+              conversationActive
+              initialAssistantMessage={prefetchedOpening}
+              onMessagesChange={setMessages}
+              className="h-full min-h-0 rounded-none border-0 shadow-none"
+            />
+          </div>
         </div>
       ) : null}
-    </>
+    </div>
   );
 }

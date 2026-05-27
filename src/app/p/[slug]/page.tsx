@@ -1,20 +1,11 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
-import {
-  BadgeCheck,
-  Download,
-  ExternalLink,
-  Lock,
-  Mail,
-  Share2,
-  User,
-} from "lucide-react";
 import { toast } from "sonner";
-import { AxisKey, IdmcRadarChart, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
+import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
+import { EdgePublicProfileView } from "@/components/public-profile/edge-public-profile-view";
+import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 
 type ProfilePublic = {
   name: string;
@@ -51,7 +42,7 @@ const DEFAULT_SETTINGS: ProfileSettings = {
   show_disc: true,
   show_soft_skills: true,
   show_badges: true,
-  show_idmc: false,
+  show_idmc: true,
   show_dys: false,
 };
 
@@ -121,6 +112,36 @@ const normalizeIdentity = (value: string) =>
 const isPlaceholderIdentity = (value: string) =>
   Boolean(value.trim()) && PLACEHOLDER_IDENTITIES.has(normalizeIdentity(value));
 
+function computeAgeFromBirthDate(birthDate: string): number | null {
+  if (!birthDate) return null;
+  const date = new Date(birthDate);
+  if (Number.isNaN(date.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDiff = now.getMonth() - date.getMonth();
+  const dayDiff = now.getDate() - date.getDate();
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+  return age >= 0 ? age : null;
+}
+
+function parseCorrelatedAnalysis(raw: unknown): string | null {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    try {
+      const parsed = JSON.parse(trimmed) as { text?: string };
+      if (parsed && typeof parsed.text === "string" && parsed.text.trim()) {
+        return parsed.text.trim();
+      }
+    } catch {
+      return trimmed;
+    }
+    return trimmed;
+  }
+  return null;
+}
+
 const slugToDisplayName = (value: string) => {
   const parts = value.split("-").filter(Boolean);
   if (!parts.length) return "";
@@ -138,13 +159,6 @@ const slugToDisplayName = (value: string) => {
   return `${firstFormatted} ${last.toUpperCase()}`.trim();
 };
 
-
-const fadeUp = {
-  initial: { opacity: 0, y: 24 },
-  whileInView: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-  viewport: { once: true, amount: 0.2 },
-};
 
 export default function PublicProfilePage({ params }: { params: { slug: string } }) {
   const resolvedParams =
@@ -176,7 +190,10 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
 
   const profile = useMemo(() => DEFAULT_PROFILE, []);
-  const publicUrl = `https://getbeyond.fr/p/${slug}`;
+  const publicUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/p/${slug}`
+      : `https://edgebs.fr/p/${slug}`;
 
   const extractIdmcAxes = useCallback((value: unknown): Record<AxisKey, number> | null => {
     if (!value || typeof value !== "object") return null;
@@ -368,10 +385,11 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       })()
     : fallbackDisplayNameFromSlug;
   const profileTypeLabel = {
-    alternance: "Profil en alternance",
-    freelance: "Profil freelance",
-    emploi: "Profil en poste",
-    reconversion: "Profil en reconversion",
+    alternance: "En alternance",
+    recherche_alternance: "En recherche d'alternance",
+    freelance: "Freelance",
+    emploi: "En poste",
+    reconversion: "En reconversion",
   } as Record<string, string>;
   const displayTitle = profileData
     ? profileTypeLabel[String(profileData.type_profil ?? "").toLowerCase()] ??
@@ -410,28 +428,6 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       ...(skillsMetadata[skill] ?? { level: "Débutant", validated: false, source: "manual" }),
     }))
     .sort((a, b) => Number(b.validated) - Number(a.validated));
-  const softSkillsMax = softSkillsAll.length
-    ? Math.max(...softSkillsAll.map((item) => item.value))
-    : 0;
-  const softSkillsTopMax = softSkillsTop.length
-    ? Math.max(...softSkillsTop.map((item) => item.value))
-    : 0;
-  const idmcGlobalScore = idmcAxes
-    ? Math.round(
-        (Object.values(idmcAxes).reduce((sum, value) => sum + value, 0) /
-          Object.values(idmcAxes).length)
-      )
-    : null;
-  const idmcInterpretation = idmcGlobalScore !== null
-    ? idmcGlobalScore < 40
-      ? { label: "Maîtrise à construire", detail: "Accompagnement ciblé recommandé." }
-      : idmcGlobalScore < 60
-        ? { label: "Maîtrise en développement", detail: "Axes de progrès identifiables." }
-        : idmcGlobalScore < 80
-          ? { label: "Maîtrise opérationnelle", detail: "Stratégies efficaces." }
-          : { label: "Maîtrise experte", detail: "Profil apprenant solide." }
-    : null;
-
   useEffect(() => {
     if (!profileData) return;
     const stored = String((profileData as Record<string, unknown>).bio_ai ?? "").trim();
@@ -492,11 +488,14 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
   };
 
   useEffect(() => {
-    if (aiSummary || !profileData) return;
+    if (!profileData || !publicUserId) return;
     const stored = String((profileData as Record<string, unknown>).bio_ai ?? "").trim();
     if (stored) return;
+    const hasTests =
+      discScores.length > 0 || Boolean(idmcAxes) || softSkillsTop.length > 0;
+    if (!hasTests) return;
     generatePublicSummary(false);
-  }, [aiSummary, profileData]);
+  }, [profileData, publicUserId, discScores, idmcAxes, softSkillsTop]);
 
 
   const handleCopyLink = () => {
@@ -504,435 +503,86 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
     toast.success("Lien copié !");
   };
 
-  const handleContact = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    toast.success("Merci ! Votre message a été envoyé.");
-  };
+  const displayFirstName = profileData
+    ? String(profileData.first_name ?? "").trim()
+    : "";
+  const displayLastName = profileData
+    ? String(profileData.last_name ?? "").trim()
+    : "";
+  const profilePhone = profileData
+    ? String(profileData.telephone ?? profileData.phone ?? "").trim()
+    : "";
+  const profileEmail = profileData ? String(profileData.email ?? "").trim() : "";
+  const profileBirthRaw = profileData
+    ? String(profileData.birth_date ?? profileData.date_naissance ?? "").trim()
+    : "";
+  const birthDateLabel = profileBirthRaw
+    ? (() => {
+        const date = new Date(profileBirthRaw);
+        if (Number.isNaN(date.getTime())) return "—";
+        const formatted = date.toLocaleDateString("fr-FR");
+        const age = computeAgeFromBirthDate(profileBirthRaw);
+        return age != null ? `${formatted} (${age} ans)` : formatted;
+      })()
+    : "—";
 
+  const discScoresObj = useMemo((): DiscScores | null => {
+    if (!discScores.length) return null;
+    const map: DiscScores = { D: 0, I: 0, S: 0, C: 0 };
+    discScores.forEach(({ label, value }) => {
+      const key = label as keyof DiscScores;
+      if (key in map) map[key] = value;
+    });
+    return map;
+  }, [discScores]);
+
+  const softSkillsRadar = useMemo(
+    () =>
+      softSkillsAll.map((item) => ({
+        skill: item.label,
+        score: item.value,
+      })),
+    [softSkillsAll],
+  );
+
+  const correlatedAnalysis = useMemo(() => {
+    if (!profileData) return null;
+    const fromAiAnalysis = parseCorrelatedAnalysis(
+      (profileData as Record<string, unknown>).ai_analysis,
+    );
+    if (fromAiAnalysis) return fromAiAnalysis;
+    return aiSummary || null;
+  }, [profileData, aiSummary]);
 
   return (
-    <div
-      className="public-profile min-h-screen font-['Inter']"
-      data-theme={appliedSettings.theme}
-      style={
-        {
-          "--accent": appliedSettings.accent_color,
-          "--border": appliedSettings.theme === "light" ? "#E5E7EB" : "#2A2A2A",
-        } as React.CSSProperties
-      }
-    >
-      <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
-
-        .public-profile {
-          background: #0b0f1a;
-          color: #ffffff;
-        }
-        .public-profile[data-theme="light"] {
-          background: #0b0f1a;
-          color: #ffffff;
-        }
-        .public-profile .card {
-          background: #1c1c1c;
-          border-color: #2a2a2a;
-        }
-        .public-profile[data-theme="light"] .card {
-          background: #1c1c1c;
-          border-color: #2a2a2a;
-        }
-        .public-profile .card-muted {
-          background: #121212;
-          border-color: #2a2a2a;
-        }
-        .public-profile[data-theme="light"] .card-muted {
-          background: #121212;
-          border-color: #2a2a2a;
-        }
-        .public-profile .text-muted {
-          color: #9ca3af;
-        }
-        .public-profile[data-theme="light"] .text-muted {
-          color: #475569;
-        }
-        .public-profile .accent {
-          color: var(--accent);
-        }
-        .public-profile .accent-bg {
-          background: var(--accent);
-          color: #111827;
-        }
-        .public-profile .accent-border {
-          border-color: var(--accent);
-        }
-      `}</style>
-
-      <div className="mx-auto w-full max-w-[1200px] px-6 py-10">
-        <motion.header {...fadeUp} className="card relative overflow-hidden rounded-[26px] border">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border)] px-6 py-4">
-            {appliedSettings.show_logo && (
-              <div className="flex flex-col">
-                <div className="text-[12px] font-black tracking-[0.3em]">BEYOND</div>
-                <div className="text-[10px] font-semibold accent">Profil certifié Beyond ✓</div>
-              </div>
-            )}
-            <div className="flex flex-wrap items-center gap-2 text-[12px]">
-              <button
-                onClick={handleCopyLink}
-                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-2 text-muted"
-              >
-                <Share2 className="h-4 w-4" /> Copier le lien public
-              </button>
-              <a
-                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicUrl)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-2 text-muted"
-              >
-                <ExternalLink className="h-4 w-4" /> Partager sur LinkedIn
-              </a>
-              <a
-                href={`mailto:?subject=Profil Beyond&body=${encodeURIComponent(publicUrl)}`}
-                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-2 text-muted"
-              >
-                <Mail className="h-4 w-4" /> Envoyer par email
-              </a>
-              <button className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-2 text-muted">
-                <Download className="h-4 w-4" /> Télécharger le profil PDF
-              </button>
-            </div>
-          </div>
-          <div className="relative h-[220px]">
-            <img src={profile.cover} alt="Cover" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
-          </div>
-          <div className="px-6 pb-6 pt-4">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-4">
-                {displayAvatar ? (
-                  <img
-                    src={displayAvatar}
-                    alt={displayName}
-                    className="h-20 w-20 rounded-full border border-[color:var(--border)] object-cover"
-                  />
-                ) : (
-                  <div className="flex h-20 w-20 flex-col items-center justify-center rounded-full border border-[color:var(--border)] bg-white/10 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">
-                    <User className="h-5 w-5 text-white/70" />
-                    User
-                  </div>
-                )}
-                <div className="md:mx-auto md:text-left">
-                  <h1 className="text-[26px] font-extrabold">
-                    {displayName}
-                    {profileData?.age ? ` · ${profileData.age} ans` : ""}
-                    {displayTjm ? (
-                      <span className="ml-3 inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-300/15 px-3 py-1 align-middle text-[12px] font-semibold text-emerald-200">
-                        TJM {displayTjm}
-                      </span>
-                    ) : null}
-                  </h1>
-                  <p className="text-[14px] text-muted">{displayTitle}</p>
-                  {expertiseChips.length ? (
-                    <div className="mt-3 flex flex-wrap justify-start gap-2">
-                      {expertiseChips.slice(0, 4).map((chip) => (
-                        <span
-                          key={chip}
-                          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/85"
-                        >
-                          {getToolLogoForLabel(chip) ? (
-                            <img
-                              src={String(getToolLogoForLabel(chip))}
-                              alt={chip}
-                              className="h-3.5 w-3.5 rounded-sm object-contain"
-                            />
-                          ) : null}
-                          {chip}
-                        </span>
-                      ))}
-                      {expertiseChips.length > 4 ? (
-                        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/70">
-                          ...
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/60">
-                Profil certifie
-              </div>
-            </div>
-
-          </div>
-        </motion.header>
-
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1.6fr_0.8fr]">
-          <div className="space-y-8">
-            <motion.section {...fadeUp} className="card rounded-[24px] border p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-xs uppercase tracking-[0.3em] text-white/50">Présentation (IA)</div>
-                <button
-                  type="button"
-                  onClick={() => generatePublicSummary(true)}
-                  className="inline-flex items-center rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/80 hover:border-white/50 hover:text-white"
-                >
-                  Régénérer
-                </button>
-              </div>
-              {isLoadingSummary ? (
-                <div className="mt-4 text-sm text-white/60">Génération en cours...</div>
-              ) : aiSummary ? (
-                <p className="mt-4 text-sm leading-relaxed text-white/80">{aiSummary}</p>
-              ) : (
-                <div className="mt-4 text-sm text-white/60">
-                  Présentation IA indisponible pour le moment.
-                </div>
-              )}
-            </motion.section>
-
-            <motion.section {...fadeUp} className="card rounded-[24px] border p-6">
-              <div className="text-xs uppercase tracking-[0.3em] text-white/50">IDMC</div>
-              {idmcAxes ? (
-                <div className="mt-4 space-y-4">
-                  <div className="h-[360px] w-full">
-                    <IdmcRadarChart scores={idmcAxes} title="Radar IDMC" responsive />
-                  </div>
-                  {idmcGlobalScore !== null && idmcInterpretation ? (
-                    <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-                      <div
-                        className="relative h-20 w-20 rounded-full"
-                        style={{
-                          background: `conic-gradient(#F59E0B ${Math.round(
-                            idmcGlobalScore
-                          )}%, rgba(255,255,255,0.08) ${Math.round(idmcGlobalScore)}% 100%)`,
-                        }}
-                      >
-                        <div className="absolute inset-2 flex items-center justify-center rounded-full bg-slate-950/90">
-                          <span className="text-lg font-semibold text-white">
-                            {idmcGlobalScore.toFixed(2)}%
-                          </span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-emerald-300/20 px-3 py-1 text-xs font-semibold text-emerald-200">
-                            {idmcInterpretation.label}
-                          </span>
-                          <span className="text-xs text-white/60">{idmcInterpretation.detail}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-white/70">Score global indisponible.</div>
-                  )}
-                </div>
-              ) : (
-                <div className="mt-4 text-sm text-white/70">En attente de test IDMC.</div>
-              )}
-            </motion.section>
-
-            <motion.section {...fadeUp} className="card rounded-[24px] border p-6">
-              <div className="text-xs uppercase tracking-[0.3em] text-white/50">Test comportemental</div>
-              {discScores.length ? (
-                <div className="mt-4 space-y-3 text-sm text-white/70">
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["D", "I", "S", "C"] as const).map((key) => {
-                      const item = discScores.find((entry) => entry.label === key);
-                      return (
-                        <div key={key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                          <div className="text-xs text-white/50">Score {key}</div>
-                          <div className="mt-1 text-lg font-semibold text-white">
-                            {Math.min(Math.round((item?.value ?? 0) * 10), 100)}%
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 text-sm text-white/60">
-                  Complétez le test comportemental pour enrichir votre profil.
-                </div>
-              )}
-            </motion.section>
-
-            <motion.section {...fadeUp} className="card rounded-[24px] border p-6">
-              <div className="text-xs uppercase tracking-[0.3em] text-white/50">Top 5 Soft Skills</div>
-              {softSkillsTop.length ? (
-                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  {[...softSkillsTop].map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-center"
-                    >
-                      <div className="text-sm font-semibold text-white">{item.label}</div>
-                      <div className="mt-3 text-2xl font-semibold text-emerald-200">
-                        {softSkillsTopMax
-                          ? `${((item.value / softSkillsTopMax) * 10).toFixed(1)}/10`
-                          : "—"}
-                      </div>
-                      <div className="mt-3 h-1.5 w-full rounded-full bg-white/10">
-                        <div
-                          className="h-1.5 rounded-full bg-emerald-300"
-                          style={{
-                            width: `${softSkillsTopMax ? (item.value / softSkillsTopMax) * 100 : 0}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 text-sm text-white/60">
-                  Complétez les Soft Skills pour enrichir votre profil.
-                </div>
-              )}
-            </motion.section>
-
-          </div>
-
-          <div className="space-y-6">
-            <motion.section {...fadeUp} className="card rounded-[24px] border p-6">
-              <div className="text-xs uppercase tracking-[0.3em] text-white/50">
-                Coordonnées
-              </div>
-              <div className="relative mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-                <div className="space-y-2 blur-sm select-none">
-                  <div>email@exemple.com</div>
-                  <div>+33 6 12 34 56 78</div>
-                  <div>Ville, Pays</div>
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs font-semibold text-white/80">
-                  <Lock className="h-4 w-4" />
-                  S'inscrire pour améliorer le matching
-                </div>
-              </div>
-            </motion.section>
-
-            <motion.aside
-              {...fadeUp}
-              id="contact"
-              className="card h-fit rounded-[24px] border p-6"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-[16px] font-bold">Je suis recruteur</h3>
-                <div className="text-[11px] text-muted">127 vues · 3 téléchargements</div>
-              </div>
-              <div className="mt-2 text-[12px] text-muted">
-                Découvrez notre système de matching.
-              </div>
-              <div className="card-muted mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[11px] text-muted">
-                <BadgeCheck className="h-4 w-4 accent" /> Profil vérifié par Beyond
-              </div>
-              <div className="mt-4 flex flex-col gap-2">
-                <Link
-                  href="/signup"
-                  className="accent-bg inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-[12px] font-semibold"
-                >
-                  Créer un compte
-                </Link>
-                <Link
-                  href="/login"
-                  className="inline-flex w-full items-center justify-center rounded-full border border-[color:var(--border)] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-white/10"
-                >
-                  Me connecter
-                </Link>
-              </div>
-            </motion.aside>
-
-            <motion.section {...fadeUp} className="card rounded-[24px] border p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[18px] font-extrabold">Hard Skills & Stack technique</h2>
-                <span className="text-[11px] text-muted">Skills metadata Beyond</span>
-              </div>
-              {stackTools.length ? (
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  {stackTools.map((tool) => (
-                    <div
-                      key={tool}
-                      className="flex items-center gap-2 rounded-full border border-[color:var(--border)] px-3 py-2 text-[12px]"
-                    >
-                      {TOOL_LOGOS[tool] ? (
-                        <img
-                          src={TOOL_LOGOS[tool]}
-                          alt={tool}
-                          className="h-4 w-4 rounded-sm object-contain shadow-[0_0_6px_rgba(255,255,255,0.25)]"
-                        />
-                      ) : (
-                        <span className="h-4 w-4 rounded-sm bg-white/10" />
-                      )}
-                      <span>{tool}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 text-[12px] text-muted">Stack technique non renseignée.</div>
-              )}
-              <div className="mt-6 flex flex-wrap gap-3">
-                {hardSkillEntries.length ? (
-                  hardSkillEntries.map((skill) => (
-                  <div
-                    key={skill.name}
-                    title={skill.validated ? "Validé par Beyond" : "Non validé par Beyond"}
-                    className={
-                      skill.validated
-                        ? "flex items-center gap-2 rounded-full border border-yellow-300/40 bg-yellow-300/10 px-4 py-2 text-[12px] font-semibold text-yellow-200 shadow-[0_0_18px_rgba(250,204,21,0.35)]"
-                        : "flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-4 py-2 text-[12px] font-semibold text-amber-200"
-                    }
-                  >
-                      {skill.validated ? "✅" : "⚠️"}
-                      {skill.name} ({skill.level})
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-[12px] text-muted">Aucune compétence certifiée pour le moment.</div>
-                )}
-              </div>
-            </motion.section>
-          </div>
-        </div>
-
-        <motion.section {...fadeUp} className="mt-10">
-          <div className="card rounded-[24px] border p-6">
-            <h2 className="text-[18px] font-extrabold">Parcours & Expérience</h2>
-            <div className="mt-4 space-y-4">
-              {experiences.length ? (
-                experiences.map((exp) => (
-                  <div key={`${exp.title}-${exp.company}`} className="card-muted rounded-[16px] border p-4 text-[12px]">
-                    <div className="text-muted">
-                      {exp.start} - {exp.end}
-                    </div>
-                    <div className="text-[14px] font-semibold">{exp.title}</div>
-                    <div className="text-muted">{exp.company}</div>
-                    {exp.missions ? <div className="mt-2 text-muted">{exp.missions}</div> : null}
-                  </div>
-                ))
-              ) : (
-                <div className="text-[12px] text-muted">Aucune expérience renseignée.</div>
-              )}
-            </div>
-            <div className="mt-6 space-y-3">
-              {diplomas.length ? (
-                diplomas.map((dip) => (
-                  <div key={`${dip.title}-${dip.school}`} className="card-muted rounded-[16px] border p-4 text-[12px]">
-                    <div className="text-muted">
-                      {dip.start} - {dip.end}
-                    </div>
-                    <div className="text-[14px] font-semibold">{dip.title}</div>
-                    <div className="text-muted">{dip.school}</div>
-                    <div className="mt-2 text-muted">{dip.status}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-[12px] text-muted">Aucun diplôme renseigné.</div>
-              )}
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.footer {...fadeUp} className="mt-10" />
-      </div>
-
-    </div>
+    <EdgePublicProfileView
+      displayName={displayName}
+      displayFirstName={displayFirstName}
+      displayLastName={displayLastName}
+      displayTitle={displayTitle}
+      displayAvatar={displayAvatar}
+      phone={profilePhone}
+      email={profileEmail}
+      birthDateLabel={birthDateLabel}
+      presentation={aiSummary}
+      isLoadingPresentation={isLoadingSummary}
+      onRegeneratePresentation={() => generatePublicSummary(true)}
+      discScores={discScoresObj}
+      idmcAxes={idmcAxes}
+      softSkillsRadar={softSkillsRadar}
+      correlatedAnalysis={correlatedAnalysis}
+      publicUrl={publicUrl}
+      onCopyLink={handleCopyLink}
+      experiences={experiences}
+      diplomas={diplomas}
+      hardSkillEntries={hardSkillEntries.map((skill) => ({
+        name: skill.name,
+        level: skill.level,
+        validated: skill.validated,
+      }))}
+      stackTools={stackTools}
+      toolLogoResolver={getToolLogoForLabel}
+    />
   );
 }
 

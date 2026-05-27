@@ -8,6 +8,12 @@ import {
 } from "@/lib/galaxy-branding";
 import { PLAYMAKERS_BRANDING_LOGO_URL } from "@/lib/queries/organization-nav";
 import { getServerClient, getServiceRoleClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import {
+  getLearnerEarnedOpenBadges,
+  getLearnerVisibleOpenBadges,
+  type LearnerEarnedOpenBadge,
+  type LearnerVisibleOpenBadge,
+} from "@/lib/openbadges/learner-visible-badges";
 import { headers } from "next/headers";
 
 // Fonction pour récupérer les formateurs disponibles pour un apprenant
@@ -214,6 +220,7 @@ export type LearnerLesson = {
   parentChapterId?: string;
   quiz_id?: string;
   interview_context?: string;
+  interview_objectives?: string;
   /** UUID chapitre/sous-chapitre en base (pont avec flashcards `chapter_id` et cache local). */
   dbChapterId?: string | null;
 };
@@ -240,6 +247,10 @@ export type ApprenantDashboardData = {
    * Playmakers : `null` — l’apprenant groupe dynamiquement par `category` / `category_name`.
    */
   thematicSectionOrder?: string[] | null;
+  /** Open Badges actifs visibles sur le dashboard (pastille « Disponible pour vous »). */
+  visibleOpenBadges?: LearnerVisibleOpenBadge[];
+  /** Open Badges obtenus (EDGE Wallet). */
+  earnedOpenBadges?: LearnerEarnedOpenBadge[];
 };
 
 export type PathContentDetail = {
@@ -282,6 +293,8 @@ export async function getApprenantDashboardData(
       organizationLogoUrl: null,
       organizationName: null,
       thematicSectionOrder: null,
+      visibleOpenBadges: [],
+      earnedOpenBadges: [],
     };
   }
 
@@ -304,6 +317,8 @@ export async function getApprenantDashboardData(
         organizationLogoUrl: null,
         organizationName: null,
         thematicSectionOrder: null,
+        visibleOpenBadges: [],
+        earnedOpenBadges: [],
       };
     }
 
@@ -977,6 +992,24 @@ export async function getApprenantDashboardData(
       }
     }
 
+    const badgeOrgIds = currentOrgId
+      ? [currentOrgId]
+      : Array.isArray(learnerOrgIds)
+        ? learnerOrgIds
+        : [];
+    let visibleOpenBadges: LearnerVisibleOpenBadge[] = [];
+    let earnedOpenBadges: LearnerEarnedOpenBadge[] = [];
+    try {
+      visibleOpenBadges = await getLearnerVisibleOpenBadges(
+        user.id,
+        badgeOrgIds[0] ?? null,
+        badgeOrgIds,
+      );
+      earnedOpenBadges = await getLearnerEarnedOpenBadges(user.id, badgeOrgIds);
+    } catch (badgeErr) {
+      console.warn("[apprenant] visible open badges:", badgeErr);
+    }
+
         return {
       hero: {
         title: "Bienvenue",
@@ -993,6 +1026,8 @@ export async function getApprenantDashboardData(
       organizationLogoUrl,
       organizationName,
       thematicSectionOrder,
+      visibleOpenBadges,
+      earnedOpenBadges,
     };
   } catch (error) {
     console.error("[apprenant] Error in getApprenantDashboardData:", error);
@@ -1012,6 +1047,8 @@ export async function getApprenantDashboardData(
       organizationLogoUrl: null,
       organizationName: null,
       thematicSectionOrder: null,
+      visibleOpenBadges: [],
+      earnedOpenBadges: [],
     };
   }
 }
@@ -1126,6 +1163,10 @@ export async function getLearnerContentDetail(
                   if (isInterview && !interviewContext) {
                     interviewContext = extractChapterPlainText(chapter as CourseBuilderChapter).slice(0, 14_000);
                   }
+                  const interviewObjectives =
+                    typeof subchapter.interview_objectives === "string"
+                      ? subchapter.interview_objectives.trim()
+                      : "";
                   const hasInterviewContext = interviewContext.length > 0;
                   if (
                     subchapter.content ||
@@ -1147,6 +1188,7 @@ export async function getLearnerContentDetail(
                       parentChapterId: chapter.id || undefined,
                       quiz_id: subchapter.quiz_id ? String(subchapter.quiz_id) : undefined,
                       interview_context: hasInterviewContext ? interviewContext : undefined,
+                      interview_objectives: interviewObjectives || undefined,
                     });
                   }
                 });

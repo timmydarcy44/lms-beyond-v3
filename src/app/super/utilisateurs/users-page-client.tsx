@@ -1,189 +1,216 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, User, Mail, Building2 } from "lucide-react";
-
-type UserListItem = {
-  id: string;
-  email: string;
-  fullName: string | null;
-  role: string;
-  organizations: Array<{ id: string; name: string }>;
-};
+import { Plus, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  CRM_ROLE_LABELS,
+  formatCrmRoleLabel,
+  type CrmUserListItem,
+} from "@/lib/crm/crm-shared";
 
 type UsersPageClientProps = {
-  initialUsers: UserListItem[];
+  initialUsers: CrmUserListItem[];
   initialRole?: string;
 };
 
+const ROLE_FILTER_OPTIONS = [
+  { value: "all", label: "Tous les labels" },
+  ...Object.entries(CRM_ROLE_LABELS).map(([value, label]) => ({ value, label })),
+];
+
+const ROLE_BADGE_STYLES: Record<string, string> = {
+  admin: "bg-violet-100 text-violet-800 border-violet-200",
+  instructor: "bg-sky-100 text-sky-800 border-sky-200",
+  learner: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  student: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  tutor: "bg-amber-100 text-amber-800 border-amber-200",
+  btoc: "bg-rose-100 text-rose-800 border-rose-200",
+  demo: "bg-slate-100 text-slate-700 border-slate-200",
+};
+
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  });
+}
+
 export function UsersPageClient({ initialUsers, initialRole = "all" }: UsersPageClientProps) {
   const [selectedRole, setSelectedRole] = useState<string>(initialRole);
+  const [search, setSearch] = useState("");
 
-  const filteredUsers = selectedRole === "all"
-    ? initialUsers
-    : initialUsers.filter((u) => u.role === selectedRole);
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return initialUsers.filter((user) => {
+      const roleOk = selectedRole === "all" || user.role === selectedRole;
+      if (!roleOk) return false;
+      if (!q) return true;
+      const orgNames = user.organizations.map((o) => o.name).join(" ");
+      const haystack = [
+        user.firstName,
+        user.lastName,
+        user.email,
+        orgNames,
+        formatCrmRoleLabel(user.role),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [initialUsers, selectedRole, search]);
 
-  const roleCounts = {
-    all: initialUsers.length,
-    admin: initialUsers.filter((u) => u.role === "admin").length,
-    instructor: initialUsers.filter((u) => u.role === "instructor").length,
-    learner: initialUsers.filter((u) => u.role === "learner").length,
-    tutor: initialUsers.filter((u) => u.role === "tutor").length,
-    btoc: initialUsers.filter((u) => u.role === "btoc").length,
-  };
-
-  const getLabelForRole = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "Administrateurs";
-      case "instructor":
-        return "Formateurs";
-      case "learner":
-        return "Apprenants";
-      case "tutor":
-        return "Tuteurs";
-      case "btoc":
-        return "B2C";
-      default:
-        return "Tous les utilisateurs";
+  const roleCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: initialUsers.length };
+    for (const user of initialUsers) {
+      counts[user.role] = (counts[user.role] ?? 0) + 1;
     }
-  };
+    return counts;
+  }, [initialUsers]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Utilisateurs</h1>
-          <p className="text-sm text-gray-600">
-            Gérer tous les utilisateurs du système (formateurs, apprenants, tuteurs, admins)
-          </p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Rechercher un contact…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 border-gray-300"
+          />
         </div>
-        <Link href="/super/utilisateurs/new">
-          <Button className="bg-black text-white hover:bg-gray-900">
-            <Plus className="h-4 w-4 mr-2" />
-            Créer un utilisateur
-          </Button>
-        </Link>
-      </div>
-
-      {/* Filtres */}
-      <div className="flex gap-3 flex-wrap">
-        <Button
-          variant={selectedRole === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedRole("all")}
-          className={selectedRole === "all" ? "bg-black text-white hover:bg-gray-900" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
-        >
-          Tous ({roleCounts.all})
-        </Button>
-        <Button
-          variant={selectedRole === "admin" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedRole("admin")}
-          className={selectedRole === "admin" ? "bg-black text-white hover:bg-gray-900" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
-        >
-          Administrateurs ({roleCounts.admin})
-        </Button>
-        <Button
-          variant={selectedRole === "instructor" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedRole("instructor")}
-          className={selectedRole === "instructor" ? "bg-black text-white hover:bg-gray-900" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
-        >
-          Formateurs ({roleCounts.instructor})
-        </Button>
-        <Button
-          variant={selectedRole === "learner" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedRole("learner")}
-          className={selectedRole === "learner" ? "bg-black text-white hover:bg-gray-900" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
-        >
-          Apprenants ({roleCounts.learner})
-        </Button>
-        <Button
-          variant={selectedRole === "tutor" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedRole("tutor")}
-          className={selectedRole === "tutor" ? "bg-black text-white hover:bg-gray-900" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
-        >
-          Tuteurs ({roleCounts.tutor})
-        </Button>
-        <Button
-          variant={selectedRole === "btoc" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedRole("btoc")}
-          className={selectedRole === "btoc" ? "bg-black text-white hover:bg-gray-900" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
-        >
-          B2C ({roleCounts.btoc})
-        </Button>
-      </div>
-
-      {/* Liste des utilisateurs */}
-      <Card className="border-gray-200 bg-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-900">
-            {getLabelForRole(selectedRole)} ({filteredUsers.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredUsers.length === 0 ? (
-            <div className="py-8 text-center">
-              <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">Aucun utilisateur</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:shadow-sm transition"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-                      <User className="h-5 w-5 text-gray-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{user.fullName || user.email}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Mail className="h-3 w-3" />
-                          <span>{user.email}</span>
-                        </div>
-                        {user.organizations.length > 0 && (
-                          <div className="flex items-center gap-1 text-sm text-gray-600">
-                            <Building2 className="h-3 w-3" />
-                            <span>{user.organizations.length} organisation{user.organizations.length > 1 ? "s" : ""}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 capitalize">
-                      {user.role === "instructor" ? "Formateur" : user.role === "learner" ? "Apprenant" : user.role === "admin" ? "Admin" : user.role === "tutor" ? "Tuteur" : user.role}
-                    </span>
-                    <Link 
-                      href={`/super/utilisateurs/${user.id}`}
-                      prefetch={true}
-                      onClick={(e) => {
-                        console.log("[users-page] Clicking on user:", user.id, user.email);
-                      }}
-                    >
-                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
-                        Voir →
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={selectedRole} onValueChange={setSelectedRole}>
+            <SelectTrigger className="w-[200px] border-gray-300">
+              <SelectValue placeholder="Filtrer par label" />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLE_FILTER_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                  {opt.value !== "all" && roleCounts[opt.value] != null
+                    ? ` (${roleCounts[opt.value]})`
+                    : opt.value === "all"
+                      ? ` (${roleCounts.all})`
+                      : ""}
+                </SelectItem>
               ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </SelectContent>
+          </Select>
+          <Link href="/super/utilisateurs/new">
+            <Button className="bg-emerald-600 text-white hover:bg-emerald-700">
+              <Plus className="mr-2 h-4 w-4" />
+              Nouveau contact
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-500">
+        {filteredUsers.length} contact{filteredUsers.length > 1 ? "s" : ""}
+        {selectedRole !== "all" ? ` · label ${formatCrmRoleLabel(selectedRole)}` : ""}
+      </p>
+
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+              <TableHead className="font-semibold text-gray-700">Nom</TableHead>
+              <TableHead className="font-semibold text-gray-700">Prénom</TableHead>
+              <TableHead className="font-semibold text-gray-700">Email</TableHead>
+              <TableHead className="font-semibold text-gray-700">Organization</TableHead>
+              <TableHead className="font-semibold text-gray-700">Label</TableHead>
+              <TableHead className="font-semibold text-gray-700">Dernière connexion</TableHead>
+              <TableHead className="font-semibold text-gray-700">Création compte</TableHead>
+              <TableHead className="font-semibold text-gray-700 text-right">Chiffre d&apos;affaires</TableHead>
+              <TableHead className="w-[120px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-12 text-center text-gray-500">
+                  Aucun contact trouvé
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredUsers.map((user) => {
+                const roleStyle =
+                  ROLE_BADGE_STYLES[user.role] ?? "bg-gray-100 text-gray-700 border-gray-200";
+                const orgLabel =
+                  user.organizations.length > 0
+                    ? user.organizations.map((o) => o.name).join(", ")
+                    : "—";
+
+                return (
+                  <TableRow key={user.id} className="hover:bg-gray-50/50">
+                    <TableCell className="font-medium text-gray-900">{user.lastName}</TableCell>
+                    <TableCell className="text-gray-800">{user.firstName}</TableCell>
+                    <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
+                      {user.email}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600 max-w-[160px] truncate" title={orgLabel}>
+                      {orgLabel}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-xs font-medium border ${roleStyle}`}>
+                        {formatCrmRoleLabel(user.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
+                      {formatDate(user.lastSignInAt)}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
+                      {formatDate(user.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-900 text-right font-medium tabular-nums">
+                      {formatCurrency(user.totalRevenue)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm" asChild className="text-xs">
+                        <Link href={`/super/utilisateurs/${user.id}`}>Voir le profil</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
-

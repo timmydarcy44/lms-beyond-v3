@@ -131,7 +131,7 @@ function emptyEdgeOnlineDashboardShell(): ApprenantDashboardData {
     continueWatching: [],
     organizationSlug: "edgelab",
     organizationLogoUrl: EDGE_LAB_GALAXY_LOGO_URL,
-    organizationName: "EDGE Lab",
+    organizationName: "EDGE",
     thematicSectionOrder: [...EDGE_LAB_COURSE_CATEGORY_LABELS],
   };
 }

@@ -11,21 +11,26 @@ type ChatMessage = { role: "user" | "assistant"; content: string };
 
 type ExperientialInterviewViewProps = {
   contextText: string;
+  interviewObjectives?: string;
   chapterTitle: string;
   courseTitle?: string;
   className?: string;
   onMessagesChange?: (messages: ChatMessage[]) => void;
   /** When false, the AI conversation does not start until the learner confirms readiness. */
   conversationActive?: boolean;
+  /** Premier message préchargé pendant l’écran de choix (évite « Préparation… » au démarrage). */
+  initialAssistantMessage?: string | null;
 };
 
 export function ExperientialInterviewView({
   contextText,
+  interviewObjectives,
   chapterTitle,
   courseTitle,
   className,
   onMessagesChange,
   conversationActive = true,
+  initialAssistantMessage,
 }: ExperientialInterviewViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -48,6 +53,7 @@ export function ExperientialInterviewView({
         body: JSON.stringify({
           messages: history,
           contextText,
+          interviewObjectives: interviewObjectives?.trim() || undefined,
           chapterTitle,
           courseTitle,
         }),
@@ -56,7 +62,7 @@ export function ExperientialInterviewView({
       if (!res.ok) throw new Error(data?.error || "Erreur de l'assistant");
       return String(data.reply ?? "").trim();
     },
-    [contextText, chapterTitle, courseTitle],
+    [contextText, interviewObjectives, chapterTitle, courseTitle],
   );
 
   const bootstrap = useCallback(async () => {
@@ -70,6 +76,12 @@ export function ExperientialInterviewView({
             "Le contexte de cet entretien est incomplet. Le formateur doit enregistrer la formation après avoir créé l'entretien, ou mettre à jour le contexte IA du bloc.",
         },
       ]);
+      setInitializing(false);
+      return;
+    }
+    const cached = String(initialAssistantMessage ?? "").trim();
+    if (cached) {
+      setMessages([{ role: "assistant", content: cached }]);
       setInitializing(false);
       return;
     }
@@ -89,7 +101,7 @@ export function ExperientialInterviewView({
     } finally {
       setInitializing(false);
     }
-  }, [sendToApi]);
+  }, [sendToApi, contextText, initialAssistantMessage]);
 
   useEffect(() => {
     if (!conversationActive) {
@@ -141,15 +153,17 @@ export function ExperientialInterviewView({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg",
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg",
         className,
       )}
     >
-      <div className="grid min-h-[min(72vh,640px)] lg:grid-cols-[minmax(220px,280px)_1fr]">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(220px,280px)_1fr]">
         <aside className="relative hidden flex-col justify-between border-r border-violet-900/30 bg-gradient-to-br from-[#1a0a2e] via-[#2d1b4e] to-[#12081f] p-6 text-white lg:flex">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-violet-300/80">EDGE AI</p>
-            <h2 className="mt-4 text-2xl font-bold leading-tight tracking-tight">Je me teste</h2>
+            <h2 className="mt-4 text-2xl font-bold leading-tight tracking-tight text-white">
+              Entretien expérientiel
+            </h2>
             <p className="mt-3 text-sm leading-relaxed text-white/70">
               Entretien expérientiel guidé : questions courtes, réponses écrites ou à l&apos;oral pour ancrer vos
               apprentissages.
@@ -182,8 +196,8 @@ export function ExperientialInterviewView({
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 lg:px-6">
             {initializing ? (
               <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Préparation de l&apos;entretien…
+                <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+                Connexion à l&apos;assistant…
               </div>
             ) : (
               messages.map((m, i) => (

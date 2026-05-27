@@ -15,6 +15,15 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
 
 # OpenAI (optionnel - pour les fonctionnalités IA)
 OPENAI_API_KEY=sk-...
+
+# Prisma / Open Badges (obligatoire pour créer des badges)
+# Supabase → Settings → Database → Connection string → URI
+DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+
+# Alternative : mot de passe DB (utilisateur session postgres.[ref])
+# SUPABASE_DB_PASSWORD=votre_mot_de_passe_db
+# SUPABASE_DB_REGION=eu-west-1
+# SUPABASE_DB_CONNECTION=session
 ```
 
 ### 🔍 Où trouver ces valeurs ?

@@ -3,6 +3,8 @@
  * Configuration et fonctions utilitaires pour envoyer des emails
  */
 
+import { resolveResendFromEmail } from "@/lib/email/resend-from";
+
 let Resend: any = null;
 let resendInstance: any = null;
 
@@ -47,7 +49,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   }
 
   try {
-    const fromEmail = options.from || process.env.RESEND_FROM_EMAIL || "noreply@beyond-lms.com";
+    const fromEmail = resolveResendFromEmail(options.from);
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
 
     const result = await resend.emails.send({

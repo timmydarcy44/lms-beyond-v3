@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import PageViewTracker from "@/components/analytics/page-view-tracker";
 import { PomodoroProvider } from "@/components/apprenant/pomodoro-provider";
@@ -9,11 +9,14 @@ import { getServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
-  themeColor: "#0d1b2e",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0d1b2e",
 };
 
 export default async function RootLayout({

@@ -1,23 +1,11 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ChevronDown, ChevronUp, Lock, Sparkles } from "lucide-react";
-import {
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-  ResponsiveContainer,
-} from "recharts";
+import { AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import {
-  AxisKey,
-  IdmcRadarChart,
-  resolveIdmcAxes,
-} from "@/components/idmc/IdmcRadarChart";
+import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import {
   GLOBAL_SKILL_REFERENTIAL,
   GLOBAL_STACK_REFERENTIAL,
@@ -25,9 +13,25 @@ import {
 } from "@/lib/profile/competency-referential";
 import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import { ApprenantConnectOverview } from "@/components/apprenant/apprenant-connect-overview";
+import {
+  ApprenantAssessmentResults,
+  type DiscScores,
+} from "@/components/apprenant/apprenant-assessment-results";
+import type {
+  LearnerEarnedOpenBadge,
+  LearnerVisibleOpenBadge,
+} from "@/lib/openbadges/learner-visible-badges";
 import { useApprenantShell } from "@/components/apprenant/apprenant-shell-context";
 import { EDGE_LAB_ONLINE_CATALOG_HREF } from "@/lib/galaxy-branding";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
+import { getProfileSituationLabel } from "@/lib/apprenant/profile-situation";
+import {
+  APPRENANT_CARD_BODY,
+  APPRENANT_CARD_KICKER,
+  APPRENANT_PAGE_KICKER,
+  APPRENANT_PAGE_TITLE,
+  CONNECT_BTN_SECONDARY,
+} from "@/lib/apprenant/connect-nav";
 
 type IdmcData = {
   scores?: Record<string, unknown> | null;
@@ -53,8 +57,6 @@ type Diplome = {
   annee_obtention?: number | null;
   mode?: string | null;
 };
-type DiscScores = { D: number; I: number; S: number; C: number };
-
 /** Erreurs attendues si table absente, colonne manquante ou aucune ligne — ne pas spammer la console. */
 function isBenignOptionalTableError(err: unknown) {
   const e = err as { code?: string; message?: string };
@@ -62,64 +64,32 @@ function isBenignOptionalTableError(err: unknown) {
   return c === "42P01" || c === "42703" || c === "PGRST116";
 }
 
-const DISC_LABELS: Record<keyof DiscScores, string> = {
-  D: "Dominance",
-  I: "Influence",
-  S: "Stabilité",
-  C: "Conformité",
-};
-
-const DISC_COLORS: Record<keyof DiscScores, string> = {
-  D: "#EF4444",
-  I: "#F59E0B",
-  S: "#10B981",
-  C: "#3B82F6",
-};
-
-const DiscHistogram = ({
-  scores,
-  compact = false,
-}: {
-  scores: DiscScores;
-  compact?: boolean;
-}) => {
-  const maxScore = 100;
-  const chartHeight = compact ? 90 : 120;
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-      <div className="text-[12px] text-white/60">Test comportemental</div>
-      <div className="mt-4 flex items-end gap-4" style={{ height: chartHeight }}>
-        {(Object.keys(scores) as Array<keyof DiscScores>).map((key) => {
-          const scaled = Math.min(Number(scores[key]) * 10, 100);
-          const height = Math.round((scaled / maxScore) * chartHeight);
-          return (
-            <div key={key} className="flex flex-1 flex-col items-center gap-2">
-              <div
-                className="w-full rounded-md"
-                style={{ height: `${height}px`, background: DISC_COLORS[key] }}
-              />
-              <div className="text-[11px] font-semibold text-white/70">
-                {DISC_LABELS[key]}
-              </div>
-              <div className="text-[12px] font-semibold text-white">{scaled}</div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-
+function computeAgeFromBirthDate(birthDate: string): number | null {
+  if (!birthDate) return null;
+  const date = new Date(birthDate);
+  if (Number.isNaN(date.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDiff = now.getMonth() - date.getMonth();
+  const dayDiff = now.getDate() - date.getDate();
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+}
 
 export type ApprenantPrimaryParcours = { title: string; href: string };
 
 export function ApprenantDashboardClient({
   initialView,
   primaryParcours = null,
+  visibleOpenBadges = [],
+  earnedOpenBadges = [],
 }: {
   initialView: "home" | "profil";
   primaryParcours?: ApprenantPrimaryParcours | null;
+  visibleOpenBadges?: LearnerVisibleOpenBadge[];
+  earnedOpenBadges?: LearnerEarnedOpenBadge[];
 }) {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -165,8 +135,6 @@ export function ApprenantDashboardClient({
   const [softSkillsRadar, setSoftSkillsRadar] = useState<Array<{ skill: string; score: number }>>(
     []
   );
-  const [softSkillsView, setSoftSkillsView] = useState<"list" | "radar" | "bubbles">("list");
-  const [hasPaidSoftSkills, setHasPaidSoftSkills] = useState<boolean | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [experiencePreview, setExperiencePreview] = useState<Array<Record<string, unknown>>>([]);
   const [skillsMetadata, setSkillsMetadata] = useState<
@@ -439,17 +407,6 @@ export function ApprenantDashboardClient({
             setHardSkills([]);
           }
           try {
-            const { data: settingsData } = await supabase
-              .from("user_profile_settings")
-              .select("has_paid_soft_skills")
-              .eq("user_id", userId)
-              .maybeSingle();
-            setHasPaidSoftSkills(Boolean(settingsData?.has_paid_soft_skills));
-          } catch {
-            setHasPaidSoftSkills(false);
-          }
-
-          try {
             const { data: analysisData } = await supabase
               .from("profiles")
               .select("*")
@@ -630,6 +587,28 @@ export function ApprenantDashboardClient({
     load();
   }, [supabase]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!supabase) return;
+    const handler = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData?.user?.id;
+        if (!uid) return;
+        const { data: fresh } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
+        if (fresh) {
+          setProfile(fresh as typeof profile);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("apprenant-profile-updated", handler as EventListener);
+    return () => {
+      window.removeEventListener("apprenant-profile-updated", handler as EventListener);
+    };
+  }, [supabase]);
+
   const firstName = useMemo(() => {
     const resolved = resolveLearnerDisplayFirstName({
       profileFirstName: profile?.first_name ?? cachedFirstName,
@@ -651,7 +630,18 @@ export function ApprenantDashboardClient({
     return "Bonjour";
   }, []);
   const greetingTagline = "Prêt à avancer aujourd'hui ?";
-  const hasAnyTest = Boolean(idmcAxes);
+  const hasAnyTest = Boolean(
+    discScores || idmcAxes || softSkillsRadar.length > 0,
+  );
+  const testsSignature = useMemo(
+    () =>
+      JSON.stringify({
+        disc: discScores,
+        idmc: idmcAxes,
+        soft: softSkillsRadar.map((s) => [s.skill, s.score]),
+      }),
+    [discScores, idmcAxes, softSkillsRadar],
+  );
   const discAnalysisText = String(
     (profile as Record<string, unknown> | null)?.bio_ai ??
       aiAnalysis ??
@@ -676,15 +666,13 @@ export function ApprenantDashboardClient({
       });
   }, [discAnalysisText]);
 
+  const lastAnalysisSignatureRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!hasAnyTest || !user?.id) return;
-    const idmcTime = idmcUpdatedAt ? new Date(idmcUpdatedAt).getTime() : 0;
-    const latestTestTime = idmcTime;
-    const analysisTime = aiAnalysisUpdatedAt ? new Date(aiAnalysisUpdatedAt).getTime() : 0;
+    if (lastAnalysisSignatureRef.current === testsSignature && aiAnalysis) return;
 
-    if (!latestTestTime) return;
-    if (aiAnalysis && analysisTime >= latestTestTime) return;
-
+    let cancelled = false;
     const run = async () => {
       setAiAnalysisLoading(true);
       try {
@@ -693,7 +681,10 @@ export function ApprenantDashboardClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             firstName,
-            idmcScores: idmcAxes,
+            discScores: discScores ?? {},
+            idmcScores: idmcAxes ?? {},
+            softSkillsTop: softSkillsRadar.slice(0, 5),
+            testsSignature,
             idmcUpdatedAt,
           }),
         });
@@ -701,18 +692,22 @@ export function ApprenantDashboardClient({
           throw new Error("Impossible de générer l'analyse.");
         }
         const payload = (await response.json()) as { analysis?: string; updatedAt?: string };
-        if (payload.analysis) {
+        if (!cancelled && payload.analysis) {
+          lastAnalysisSignatureRef.current = testsSignature;
           setAiAnalysis(payload.analysis);
           setAiAnalysisUpdatedAt(payload.updatedAt ?? new Date().toISOString());
         }
       } catch {
         // no-op
-    } finally {
-        setAiAnalysisLoading(false);
+      } finally {
+        if (!cancelled) setAiAnalysisLoading(false);
       }
     };
     run();
-  }, [idmcAxes, idmcUpdatedAt, aiAnalysis, aiAnalysisUpdatedAt, firstName, user?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [hasAnyTest, testsSignature, firstName, user?.id, discScores, idmcAxes, softSkillsRadar]);
 
   const handleAvatarUpload = async (file: File) => {
     if (!supabase || !user?.id) return;
@@ -818,24 +813,6 @@ export function ApprenantDashboardClient({
       setIsSavingDiplome(false);
     }
   };
-  const discStatus = discScores ? "completed" : "not_started";
-  const idmcStatus = idmcData && idmcAxes ? "completed" : "not_started";
-  const softSkillsStatus = softSkillsData ? "completed" : "not_started";
-  const discAction = discStatus === "completed" ? "Voir mon bilan" : "Commencer";
-  const idmcAction = idmcStatus === "completed" ? "Voir mon bilan" : "Commencer";
-  const softSkillsAction = softSkillsStatus === "completed" ? "Voir mon bilan" : "Commencer";
-  const discCtaHref =
-    discStatus === "completed"
-      ? "/dashboard/apprenant/career"
-      : "/dashboard/apprenant/test-comportemental-intro";
-  const idmcCtaHref =
-    idmcStatus === "completed"
-      ? "/dashboard/apprenant/career"
-      : "/dashboard/apprenant/idmc-intro";
-  const softSkillsCtaHref =
-    softSkillsStatus === "completed"
-      ? "/dashboard/apprenant/career"
-      : "/dashboard/apprenant/soft-skills-intro";
   const weakSignals =
     (idmcData?.scores as Record<string, unknown> | undefined)?.temperature ??
     (idmcData?.responses as Record<string, unknown> | undefined)?.temperature ??
@@ -886,12 +863,6 @@ export function ApprenantDashboardClient({
   };
   const hardSkillItems = hardSkills;
   const CATEGORY_LIST = HARD_SKILL_LIBRARY.map((group) => ({ type: "hard" as const, name: group.category }));
-  const softSkillsMax = softSkillsRadar.length
-    ? Math.max(...softSkillsRadar.map((item) => item.score))
-    : 0;
-  const softSkillsLocked = hasPaidSoftSkills === false;
-  const softSkillsLockedView =
-    softSkillsLocked && (softSkillsView === "radar" || softSkillsView === "bubbles");
   const parsedTools = useMemo(() => {
     const raw = (profile as Record<string, unknown> | null)?.stack_technique;
     if (typeof raw === "string" && raw.trim()) {
@@ -926,16 +897,31 @@ export function ApprenantDashboardClient({
     `${profileFirstName} ${profileLastName ? profileLastName.toUpperCase() : ""}`.trim()
     || String(user?.user_metadata?.first_name ?? "Profil");
   const profileAge = String(profile?.age ?? "").trim();
+  const profileBirthRaw = String(
+    (profile as Record<string, unknown> | null)?.birth_date ??
+      (profile as Record<string, unknown> | null)?.date_naissance ??
+      "",
+  ).trim();
+  const profileBirthDateLabel = profileBirthRaw
+    ? (() => {
+        const date = new Date(profileBirthRaw);
+        if (Number.isNaN(date.getTime())) return "—";
+        const formatted = date.toLocaleDateString("fr-FR");
+        const age = computeAgeFromBirthDate(profileBirthRaw);
+        return age != null ? `${formatted} (${age} ans)` : formatted;
+      })()
+    : profileAge
+      ? `— (${profileAge} ans)`
+      : "—";
   const profileCity = String(profile?.city ?? "").trim();
   const profileBio = String(profile?.bio ?? "").trim();
   const profileEmail = emailValue || String(profile?.email ?? user?.email ?? "").trim();
   const profilePhone = String(profile?.telephone ?? "").trim();
   const displayFirstName = profileFirstName;
   const displayLastName = profileLastName;
-  const profileSituation =
-    String((profile as Record<string, unknown> | null)?.ecole ?? "").trim() ||
-    String((profile as Record<string, unknown> | null)?.entreprise ?? "").trim() ||
-    "—";
+  const profileSituation = getProfileSituationLabel(
+    String((profile as Record<string, unknown> | null)?.type_profil ?? ""),
+  );
 
   useEffect(() => {
     if (!displayFirstName) return;
@@ -977,20 +963,6 @@ export function ApprenantDashboardClient({
       router.replace("/dashboard/apprenant/profil");
     }
   }, [initialView, router]);
-
-  const computeAgeFromBirthDate = (birthDate: string) => {
-    if (!birthDate) return null;
-    const date = new Date(birthDate);
-    if (Number.isNaN(date.getTime())) return null;
-    const now = new Date();
-    let age = now.getFullYear() - date.getFullYear();
-    const monthDiff = now.getMonth() - date.getMonth();
-    const dayDiff = now.getDate() - date.getDate();
-    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      age -= 1;
-    }
-    return age >= 0 ? age : null;
-  };
 
   const handleJoinSchoolByCode = async () => {
     if (!user?.id) return;
@@ -1225,7 +1197,7 @@ export function ApprenantDashboardClient({
   if (isLoading) {
     return (
       <div className="px-2 py-12 text-white">
-        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/[0.06] bg-[#141412] p-6 text-sm text-white/45">
+        <div className={`mx-auto w-full max-w-3xl ${APPRENANT_CARD_BODY} text-sm text-white/45`}>
           Chargement du profil...
         </div>
       </div>
@@ -1633,54 +1605,16 @@ export function ApprenantDashboardClient({
             badgesHref="/dashboard/apprenant/badges"
             resultsHref="/dashboard/apprenant/results"
             matchingHref="/dashboard/apprenant/matching"
-            careerHref="/dashboard/apprenant/career"
+            visibleOpenBadges={visibleOpenBadges}
+            earnedOpenBadges={earnedOpenBadges}
+            discScores={discScores}
+            idmcAxes={idmcAxes}
+            softSkillsRadar={softSkillsRadar}
             onScrollToProfil={scrollToProfilSection}
             onOpenEditProfile={() => appShell?.openEditProfile()}
           />
 
               <div className="mt-6 space-y-6">
-                {!profile?.school_id ? (
-                  <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent px-5 py-4 text-sm">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-200/95">
-                      Lier mon compte à mon établissement
-                    </div>
-                    <p className="mt-2 max-w-3xl text-white/80">
-                      Votre CFA vous communique un <strong>code établissement</strong> (lettres et chiffres). Saisissez-le
-                      ici : vous serez automatiquement rattaché(e), sans envoyer votre identifiant technique à
-                      l&apos;administration.
-                    </p>
-                    <p className="mt-1 text-xs text-white/55">
-                      Lien direct possible :{" "}
-                      <span className="font-mono text-amber-100/90">
-                        /dashboard/apprenant?ecole=
-                        <span className="text-white/70">VOTRE_CODE</span>
-                      </span>
-                    </p>
-                    <div className="mt-4 flex max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
-                      <input
-                        value={schoolJoinCodeInput}
-                        onChange={(e) => {
-                          setSchoolJoinCodeInput(e.target.value);
-                          setSchoolJoinError(null);
-                          setSchoolJoinMessage(null);
-                        }}
-                        placeholder="Ex. : kx9m2p7qzw"
-                        autoComplete="off"
-                        className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 font-mono text-sm text-white placeholder:text-white/35"
-                      />
-                      <button
-                        type="button"
-                        disabled={schoolJoinBusy}
-                        onClick={() => void handleJoinSchoolByCode()}
-                        className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
-                      >
-                        {schoolJoinBusy ? "Liaison…" : "Valider le code"}
-                      </button>
-                    </div>
-                    {schoolJoinError ? <p className="mt-2 text-xs text-red-300">{schoolJoinError}</p> : null}
-                    {schoolJoinMessage ? <p className="mt-2 text-xs text-edge-red/90">{schoolJoinMessage}</p> : null}
-                  </div>
-                ) : null}
 
                 {profile?.school_id ? (
                   <div className="rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 via-cyan-500/5 to-transparent px-5 py-4 text-sm">
@@ -1715,18 +1649,20 @@ export function ApprenantDashboardClient({
             </>
           ) : (
             <>
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-                <h1 className="text-xl font-bold text-white">Mon profil</h1>
-                <Link
-                  href="/dashboard/apprenant"
-                  className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50 hover:text-white"
-                >
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-sky-500/15 pb-4">
+                <div className="space-y-1">
+                  <p className={APPRENANT_PAGE_KICKER}>Profil</p>
+                  <h1 className={APPRENANT_PAGE_TITLE}>Mon profil</h1>
+                </div>
+                <Link href="/dashboard/apprenant" className={CONNECT_BTN_SECONDARY}>
                   Retour à l&apos;accueil
                 </Link>
               </div>
               <div id="section-mon-profil" className="scroll-mt-28 mt-2 space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Fiche détaillée</div>
+                  <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#FF3B30]">
+                    Fiche détaillée
+                  </div>
                   <button
                     type="button"
                     onClick={() => appShell?.openEditProfile()}
@@ -1737,17 +1673,14 @@ export function ApprenantDashboardClient({
                 </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
-            <section className="rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Identité & Bio</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{fullName}</div>
-                </div>
-                <label className="group relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/5">
+            <section className={APPRENANT_CARD_BODY}>
+              <p className={APPRENANT_CARD_KICKER}>Identité & Bio</p>
+              <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-start">
+                <label className="group relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/[0.06]">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-xs text-white/60">Photo</span>
+                    <span className="text-xs text-white/45">Photo</span>
                   )}
                   <input
                     type="file"
@@ -1759,31 +1692,46 @@ export function ApprenantDashboardClient({
                     className="absolute inset-0 cursor-pointer opacity-0"
                   />
                 </label>
-              </div>
-              <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-3">
-                <div>Email : {profileEmail || "—"}</div>
-                <div>Téléphone : {profilePhone || "—"}</div>
-                <div>Ville : {profileCity || "—"}</div>
-                <div>Âge : {profileAge || "—"}</div>
-                <div>
-                  ID technique (optionnel) : {learnerIdentifier}
-                  <span className="ml-1 text-[11px] text-white/45">— utile seulement si l&apos;école rattache à la main</span>
+                <div className="min-w-0 flex-1">
+                  <ul className="space-y-3 text-sm">
+                    <li className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                      <span className="shrink-0 font-medium text-white/45 sm:w-44">Nom et prénom</span>
+                      <span className="font-medium text-white">{fullName}</span>
+                    </li>
+                    <li className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                      <span className="shrink-0 font-medium text-white/45 sm:w-44">Adresse email</span>
+                      <span className="text-white/80">{profileEmail || "—"}</span>
+                    </li>
+                    <li className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                      <span className="shrink-0 font-medium text-white/45 sm:w-44">Numéro de téléphone</span>
+                      <span className="text-white/80">{profilePhone || "—"}</span>
+                    </li>
+                    <li className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                      <span className="shrink-0 font-medium text-white/45 sm:w-44">Date de naissance</span>
+                      <span className="text-white/80">{profileBirthDateLabel}</span>
+                    </li>
+                    <li className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                      <span className="shrink-0 font-medium text-white/45 sm:w-44">Situation</span>
+                      <span className="text-white/80">{profileSituation}</span>
+                    </li>
+                  </ul>
+                  <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/70">
+                    {profileBio || "Présentation en cours de rédaction."}
+                  </div>
+                  {isUploadingAvatar ? (
+                    <div className="mt-2 text-xs text-white/50">Upload en cours...</div>
+                  ) : null}
                 </div>
               </div>
-              <div className="mt-3 text-sm text-white/60">Situation : {profileSituation}</div>
-              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
-                {profileBio || "Présentation en cours de rédaction."}
-              </div>
-              {isUploadingAvatar ? <div className="mt-2 text-xs text-white/60">Upload en cours...</div> : null}
             </section>
 
-            <section className="rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <section className={APPRENANT_CARD_BODY}>
               <div className="flex items-center justify-between gap-4">
-                <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Jauge de profil</div>
+                <p className={APPRENANT_CARD_KICKER}>Jauge de profil</p>
                 <button
                   type="button"
                   onClick={() => setIsProfileGaugeExpanded((prev) => !prev)}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-white/70"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-[11px] text-white/60"
                 >
                   {isProfileGaugeExpanded ? "Réduire" : "Détails"}
                   {isProfileGaugeExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -1791,20 +1739,20 @@ export function ApprenantDashboardClient({
               </div>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div className="text-3xl font-extrabold text-white">{profileCompletion.score}%</div>
-                <div className="text-xs font-medium text-white/70">{profileCompletion.level}</div>
+                <div className="text-xs font-medium text-white/55">{profileCompletion.level}</div>
               </div>
               <div className="mt-3 h-2 w-full rounded-full bg-white/10">
                 <div
-                  className="h-2 rounded-full bg-edge-red transition-all"
+                  className="h-2 rounded-full bg-[#E53935] transition-all"
                   style={{ width: `${profileCompletion.score}%` }}
                 />
               </div>
               {isProfileGaugeExpanded ? (
-                <div className="mt-4 space-y-2 text-[11px] text-white/70">
+                <div className="mt-4 space-y-2 text-[11px] text-white/65">
                   {profileCompletion.checklist.map((item) => (
                     <div key={item.key} className="flex items-center justify-between gap-3">
                       <span>{item.label}</span>
-                      <span className={item.done ? "text-edge-red" : "text-white/45"}>
+                      <span className={item.done ? "text-edge-red" : "text-white/40"}>
                         {item.done ? `+${item.weight}` : "0"}
                       </span>
                     </div>
@@ -1814,150 +1762,32 @@ export function ApprenantDashboardClient({
             </section>
           </div>
 
-          <section className="mt-6 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">Matchings</div>
-              <span className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-white/70">
-                Bientôt disponible
-              </span>
-            </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              {[
-                "Product Manager IA",
-                "Growth Automation Specialist",
-                "Chef de projet data",
-              ].map((title, index) => (
-                <div
-                  key={title}
-                  className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04] p-5"
-                >
-                  <div
-                    className="absolute inset-0 scale-105 bg-cover bg-center blur-md"
-                    style={{
-                      backgroundImage:
-                        index === 0
-                          ? "url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80')"
-                          : index === 1
-                            ? "url('https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80')"
-                            : "url('https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80')",
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-[#111110]/78 backdrop-blur-sm" />
-                  <div className="relative">
-                    <div className="text-sm font-semibold text-white/90">{title}</div>
-                    <div className="mt-2 text-xs text-white/65">
-                      Contenu flouté jusqu’à activation de la fonctionnalité matching.
-                    </div>
-                    <div className="mt-4 h-2 w-2/3 rounded-full bg-white/20" />
-                    <div className="mt-2 h-2 w-1/2 rounded-full bg-white/20" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
-            <div className="relative overflow-hidden rounded-[34px] bg-white text-slate-900 shadow-[0_25px_60px_rgba(15,23,42,0.25)]">
-              <div className="h-44 w-full overflow-hidden">
-                <div className="h-full w-full bg-[url('https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center" />
-              </div>
-              <div className="flex flex-col gap-3 px-5 py-5">
-                <div className="text-[11px] uppercase tracking-[0.35em] text-slate-500">IDMC</div>
-                <div className="text-sm text-slate-700">
-                  Mesurez votre maîtrise cognitive et vos stratégies d'apprentissage.
-                </div>
-                <Link
-                  href={idmcCtaHref}
-                  className="mt-auto inline-flex w-fit rounded-full bg-[#0A84FF] px-4 py-2 text-xs font-semibold text-white"
-                >
-                  {idmcAction}
-                </Link>
-              </div>
-            </div>
-
-            <div className="relative overflow-hidden rounded-[34px] bg-white text-slate-900 shadow-[0_25px_60px_rgba(15,23,42,0.25)]">
-              <div className="h-44 w-full overflow-hidden">
-                <div className="h-full w-full bg-[url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center" />
-              </div>
-              <div className="flex flex-col gap-3 px-5 py-5">
-                <div className="text-[11px] uppercase tracking-[0.35em] text-slate-500">Soft Skills</div>
-                <div className="text-sm text-slate-700">
-                  Découvrez vos compétences comportementales et vos axes forts.
-                </div>
-                <Link
-                  href={softSkillsCtaHref}
-                  className="mt-auto inline-flex w-fit rounded-full bg-[#0A84FF] px-4 py-2 text-xs font-semibold text-white"
-                >
-                  {softSkillsAction}
-                </Link>
-              </div>
-            </div>
-
-            <div className="relative overflow-hidden rounded-[34px] bg-white text-slate-900 shadow-[0_25px_60px_rgba(15,23,42,0.25)]">
-              <div className="h-44 w-full overflow-hidden">
-                <div className="h-full w-full bg-[url('https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center" />
-              </div>
-              <div className="flex flex-col gap-3 px-5 py-5">
-                <div className="text-[11px] uppercase tracking-[0.35em] text-slate-500">Test comportemental</div>
-                <div className="text-sm text-slate-700">
-                  Profil DISC pour comprendre votre style et vos leviers.
-                </div>
-                <Link
-                  href={discCtaHref}
-                  className="mt-auto inline-flex w-fit rounded-full bg-[#0A84FF] px-4 py-2 text-xs font-semibold text-white"
-                >
-                  {discAction}
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <section className="mt-10 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
-              Résultats Test Comportemental
-            </div>
-            <div className="mt-2 text-lg font-semibold text-white">DISC</div>
-            <div className="mt-6">
-              {discScores ? (
-                <DiscHistogram scores={discScores} />
-              ) : (
-                <div className="text-sm text-white/60">
-                  Complétez le test comportemental pour voir vos résultats.
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="mt-10 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">IDMC</div>
-            <div className="mt-2 text-lg font-semibold text-white">Radar & Analyse</div>
-            {idmcAxes ? (
-              <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-                <div className="h-[320px]">
-                  <IdmcRadarChart scores={idmcAxes} responsive />
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-                  {aiAnalysis ? (
-                    <div className="space-y-3">
-                      {analysisBlocks.map((block, index) =>
-                        block.isTitle ? (
-                          <h3 key={`${block.text}-${index}`} className="text-sm font-semibold text-white">
-                            {block.text}
-                          </h3>
-                        ) : (
-                          <p key={`${block.text}-${index}`}>{block.text}</p>
-                        )
-                      )}
-                    </div>
-                  ) : (
-                    <div>Analyse IDMC en cours de génération.</div>
+          <ApprenantAssessmentResults
+            variant="full"
+            firstName={firstName}
+            discScores={discScores}
+            idmcAxes={idmcAxes}
+            softSkillsRadar={softSkillsRadar}
+            correlatedAnalysis={
+              aiAnalysis ? (
+                <div className="space-y-3">
+                  {analysisBlocks.map((block, index) =>
+                    block.isTitle ? (
+                      <h3 key={`${block.text}-${index}`} className="text-sm font-semibold text-white">
+                        {block.text}
+                      </h3>
+                    ) : (
+                      <p key={`${block.text}-${index}`} className="text-black/70">
+                        {block.text}
+                      </p>
+                    ),
                   )}
                 </div>
-              </div>
-            ) : (
-              <div className="mt-4 text-sm text-white/60">Aucun score IDMC disponible.</div>
-            )}
-          </section>
+              ) : hasAnyTest && aiAnalysisLoading ? (
+                <span>Analyse croisée en cours de génération…</span>
+              ) : null
+            }
+          />
               </div>
 
           {showSkillModal ? (
@@ -2163,174 +1993,10 @@ export function ApprenantDashboardClient({
             </div>
           ) : null}
 
-          <section className="mt-10 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <section className={`mt-10 ${APPRENANT_CARD_BODY}`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
-                  Soft Skills
-                </div>
-                <div className="mt-2 text-lg font-semibold text-white">
-                  Visualisations
-                </div>
-              </div>
-              {softSkillsData ? (
-                <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
-                  {(["list", "radar", "bubbles"] as const).map((mode) => {
-                    const locked = softSkillsLocked && mode !== "list";
-                    return (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => {
-                          if (locked) {
-                            window.location.href = "/checkout";
-                            return;
-                          }
-                          setSoftSkillsView(mode);
-                        }}
-                        className={`rounded-full border px-3 py-1 ${
-                          softSkillsView === mode
-                            ? "border-white/40 bg-white/10 text-white"
-                            : "border-white/10 text-white/60"
-                        } ${locked ? "opacity-60" : ""}`}
-                      >
-                        {mode === "list" ? "Classement" : mode === "radar" ? "Radar" : "Bulles"}
-                        {locked ? <Lock className="ml-2 inline h-3 w-3" /> : null}
-                      </button>
-                    );
-                  })}
-                  {softSkillsLocked ? (
-                    <Link
-                      href="/checkout"
-                      className="ml-2 inline-flex items-center rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold text-white/80"
-                    >
-                      Débloquer mon analyse (29,90€)
-                    </Link>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            {softSkillsData && softSkillsRadar.length ? (
-              <>
-                {softSkillsView === "list" ? (
-                  <div className="mt-6 space-y-3">
-                    {[...softSkillsRadar]
-                      .sort((a, b) => b.score - a.score)
-                      .map((item) => {
-                        const normalized = softSkillsMax ? (item.score / softSkillsMax) * 10 : 0;
-                        return (
-                          <div key={item.skill} className="flex items-center gap-4 text-sm text-white/80">
-                            <span className="w-48">{item.skill}</span>
-                            <div className="flex-1">
-                              <div className="h-2 rounded-full bg-white/10">
-                                <div
-                                  className="h-2 rounded-full bg-edge-red"
-                                  style={{
-                                    width: `${softSkillsMax ? (item.score / softSkillsMax) * 100 : 0}%`,
-                                  }}
-                                />
-                              </div>
-                            </div>
-                            <span className="rounded-full border border-edge-red/30 bg-edge-red/10 px-2 py-0.5 text-[11px] font-semibold text-edge-red">
-                              {normalized.toFixed(1)}/10
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                ) : null}
-                {softSkillsView === "radar" ? (
-                  <div className="relative mt-6 h-[320px] min-h-[320px]">
-                    <div className={softSkillsLockedView ? "pointer-events-none blur-sm" : ""}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart
-                          data={[...softSkillsRadar]
-                            .map((item) => ({
-                              axis: item.skill,
-                              value: softSkillsMax ? (item.score / softSkillsMax) * 10 : 0,
-                            }))}
-                        >
-                          <PolarGrid stroke="rgba(255,255,255,0.12)" />
-                          <PolarAngleAxis dataKey="axis" tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 10 }} />
-                          <PolarRadiusAxis domain={[0, 10]} tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 9 }} />
-                          <Radar dataKey="value" stroke="#10B981" fill="rgba(16,185,129,0.25)" />
-                        </RadarChart>
-                      </ResponsiveContainer>
-                    </div>
-                    {softSkillsLockedView ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-black/40 text-center text-sm text-white/80">
-                        <Lock className="h-5 w-5" />
-                        <div>Débloquez votre analyse complète</div>
-                        <Link
-                          href="/checkout"
-                          className="rounded-full bg-[#F59E0B] px-4 py-2 text-xs font-semibold text-black"
-                        >
-                          Débloquer mon analyse (29,90€)
-                        </Link>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-                {softSkillsView === "bubbles" ? (
-                  <div className="relative mt-6">
-                    <div className={`flex flex-wrap items-center gap-4 ${softSkillsLockedView ? "pointer-events-none blur-sm" : ""}`}>
-                      {[...softSkillsRadar]
-                        .sort((a, b) => b.score - a.score)
-                        .map((item) => {
-                          const normalized = softSkillsMax ? (item.score / softSkillsMax) * 10 : 0;
-                          const size = 48 + Math.round(normalized * 6);
-                          return (
-                            <div
-                              key={item.skill}
-                              className="flex flex-col items-center justify-center rounded-full border border-edge-red/30 bg-edge-red/10 text-center text-xs text-edge-red/90"
-                              style={{ width: size, height: size }}
-                            >
-                              <div className="text-[10px] font-semibold">{item.skill}</div>
-                              <div className="text-[10px] text-edge-red">{normalized.toFixed(1)}/10</div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                    {softSkillsLockedView ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-black/40 text-center text-sm text-white/80">
-                        <Lock className="h-5 w-5" />
-                        <div>Débloquez votre analyse complète</div>
-                        <Link
-                          href="/checkout"
-                          className="rounded-full bg-[#F59E0B] px-4 py-2 text-xs font-semibold text-black"
-                        >
-                          Débloquer mon analyse (29,90€)
-                        </Link>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="mt-6 flex flex-col items-center gap-4 text-center">
-                <Lock className="h-6 w-6 text-white/70" />
-                <div className="text-sm text-white/70">Débloquez vos Soft Skills.</div>
-                <Link
-                  href={
-                    softSkillsLocked
-                      ? "/checkout"
-                      : "/dashboard/apprenant/soft-skills-intro"
-                  }
-                  className="inline-flex rounded-full bg-[#F59E0B] px-5 py-2 text-xs font-semibold text-black"
-                >
-                  {softSkillsLocked
-                    ? "Débloquer mon analyse (29,90€)"
-                    : "Découvrir mes Soft Skills"}
-                </Link>
-              </div>
-            )}
-          </section>
-
-          <section className="mt-10 rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
+                <div className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
                   Mes Compétences
                 </div>
                 <div className="mt-2 text-lg font-semibold text-white">
@@ -2340,7 +2006,7 @@ export function ApprenantDashboardClient({
               <button
                 type="button"
                 onClick={() => setShowSkillModal(true)}
-                className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
+                className={CONNECT_BTN_SECONDARY}
               >
                 + Ajouter une compétence
               </button>
@@ -2351,7 +2017,7 @@ export function ApprenantDashboardClient({
                 {parsedTools.map((tool) => (
                   <div
                     key={tool}
-                    className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80"
+                    className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/80"
                   >
                     {resolveToolLogo(tool) ? (
                       <img
@@ -2360,14 +2026,14 @@ export function ApprenantDashboardClient({
                         className="h-4 w-4 rounded-sm object-contain shadow-[0_0_6px_rgba(255,255,255,0.25)]"
                       />
                     ) : (
-                      <span className="h-4 w-4 rounded-sm bg-white/10" />
+                      <span className="h-4 w-4 rounded-sm bg-black/10" />
                     )}
                     {tool}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="mt-4 text-sm text-white/60">Stack technique non renseignée.</div>
+              <div className="mt-4 text-sm text-black/55">Stack technique non renseignée.</div>
             )}
 
             <div className="mt-6 space-y-3">
@@ -2379,7 +2045,7 @@ export function ApprenantDashboardClient({
                   return (
                     <div
                       key={skill}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80"
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
                     >
                       <div className="flex items-center gap-2">
                         {!isValidated ? (
@@ -2409,16 +2075,16 @@ export function ApprenantDashboardClient({
                   );
                 })
               ) : (
-                <div className="text-sm text-white/60">Aucune compétence ajoutée.</div>
+                <div className="text-sm text-black/55">Aucune compétence ajoutée.</div>
               )}
             </div>
           </section>
 
           <section className="mt-10 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className={APPRENANT_CARD_BODY}>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
+                  <div className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
                     Parcours professionnel
                   </div>
                   <div className="mt-2 text-lg font-semibold text-white">
@@ -2428,7 +2094,7 @@ export function ApprenantDashboardClient({
                 <button
                   type="button"
                   onClick={() => setShowExperienceForm((prev) => !prev)}
-                  className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
+                  className={CONNECT_BTN_SECONDARY}
                 >
                   Ajouter une expérience
                 </button>
@@ -2442,14 +2108,14 @@ export function ApprenantDashboardClient({
                       setExperienceForm((prev) => ({ ...prev, employeur: event.target.value }))
                     }
                     placeholder="Employeur"
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                   />
                   <select
                     value={experienceForm.type_contrat}
                     onChange={(event) =>
                       setExperienceForm((prev) => ({ ...prev, type_contrat: event.target.value }))
                     }
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                   >
                     {["CDI", "CDD", "Interim", "Alternance", "Freelance"].map((option) => (
                       <option key={option} value={option}>
@@ -2464,7 +2130,7 @@ export function ApprenantDashboardClient({
                       onChange={(event) =>
                         setExperienceForm((prev) => ({ ...prev, date_debut: event.target.value }))
                       }
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                     />
                     <input
                       type="date"
@@ -2472,7 +2138,7 @@ export function ApprenantDashboardClient({
                       onChange={(event) =>
                         setExperienceForm((prev) => ({ ...prev, date_fin: event.target.value }))
                       }
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                     />
                   </div>
                   <textarea
@@ -2481,21 +2147,21 @@ export function ApprenantDashboardClient({
                       setExperienceForm((prev) => ({ ...prev, missions: event.target.value }))
                     }
                     placeholder="Missions"
-                    className="min-h-[90px] w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                    className="min-h-[90px] w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                   />
                   <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={handleSaveExperience}
                       disabled={isSavingExperience}
-                      className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-xs font-semibold text-white"
+                      className={CONNECT_BTN_SECONDARY}
                     >
                       {isSavingExperience ? "Enregistrement..." : "Enregistrer"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowExperienceForm(false)}
-                      className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold text-white/70"
+                      className="rounded-full border border-black/15 px-5 py-2 text-xs font-semibold text-black/60"
                     >
                       Annuler
                     </button>
@@ -2505,17 +2171,17 @@ export function ApprenantDashboardClient({
 
               <div className="mt-6 space-y-3">
                 {experiencesPro.length === 0 ? (
-                  <div className="text-sm text-white/60">Aucune expérience ajoutée.</div>
+                  <div className="text-sm text-black/55">Aucune expérience ajoutée.</div>
                 ) : (
                   experiencesPro.map((exp) => (
                     <div
                       key={exp.id ?? `${exp.employeur}-${exp.date_debut}`}
-                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80"
+                      className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
                     >
                       <div className="font-semibold text-white">
                         {exp.employeur || "Employeur"}
                       </div>
-                      <div className="text-xs text-white/50">
+                      <div className="text-xs text-black/50">
                         {exp.type_contrat || "Contrat"} · {exp.date_debut || "—"} →{" "}
                         {exp.date_fin || "—"}
                       </div>
@@ -2526,10 +2192,10 @@ export function ApprenantDashboardClient({
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/[0.06] bg-[#141412] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className={APPRENANT_CARD_BODY}>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-[12px] uppercase tracking-[0.3em] text-white/60">
+                  <div className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
                     Diplômes & formations
                   </div>
                   <div className="mt-2 text-lg font-semibold text-white">
@@ -2539,7 +2205,7 @@ export function ApprenantDashboardClient({
                 <button
                   type="button"
                   onClick={() => setShowDiplomeForm((prev) => !prev)}
-                  className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
+                  className={CONNECT_BTN_SECONDARY}
                 >
                   Ajouter un diplôme
                 </button>
@@ -2553,7 +2219,7 @@ export function ApprenantDashboardClient({
                       setDiplomeForm((prev) => ({ ...prev, intitule: event.target.value }))
                     }
                     placeholder="Intitulé"
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                   />
                   <input
                     value={diplomeForm.ecole}
@@ -2561,7 +2227,7 @@ export function ApprenantDashboardClient({
                       setDiplomeForm((prev) => ({ ...prev, ecole: event.target.value }))
                     }
                     placeholder="École"
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                   />
                   <div className="grid gap-4 sm:grid-cols-2">
                     <input
@@ -2570,14 +2236,14 @@ export function ApprenantDashboardClient({
                       onChange={(event) =>
                         setDiplomeForm((prev) => ({ ...prev, annee_obtention: event.target.value }))
                       }
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                     />
                     <select
                       value={diplomeForm.mode}
                       onChange={(event) =>
                         setDiplomeForm((prev) => ({ ...prev, mode: event.target.value }))
                       }
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
                     >
                       {["Alternance", "Initial"].map((option) => (
                         <option key={option} value={option}>
@@ -2591,14 +2257,14 @@ export function ApprenantDashboardClient({
                       type="button"
                       onClick={handleSaveDiplome}
                       disabled={isSavingDiplome}
-                      className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-xs font-semibold text-white"
+                      className={CONNECT_BTN_SECONDARY}
                     >
                       {isSavingDiplome ? "Enregistrement..." : "Enregistrer"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowDiplomeForm(false)}
-                      className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold text-white/70"
+                      className="rounded-full border border-black/15 px-5 py-2 text-xs font-semibold text-black/60"
                     >
                       Annuler
                     </button>
@@ -2608,17 +2274,17 @@ export function ApprenantDashboardClient({
 
               <div className="mt-6 space-y-3">
                 {diplomes.length === 0 ? (
-                  <div className="text-sm text-white/60">Aucun diplôme ajouté.</div>
+                  <div className="text-sm text-black/55">Aucun diplôme ajouté.</div>
                 ) : (
                   diplomes.map((dip) => (
                     <div
                       key={dip.id ?? `${dip.intitule}-${dip.ecole}-${dip.annee_obtention}`}
-                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80"
+                      className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
                     >
                       <div className="font-semibold text-white">
                         {dip.intitule || "Diplôme"}
                       </div>
-                      <div className="text-xs text-white/50">
+                      <div className="text-xs text-black/50">
                         {dip.ecole || "École"} · {dip.annee_obtention ?? "—"} · {dip.mode || "—"}
                       </div>
                     </div>

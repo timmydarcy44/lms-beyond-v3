@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, resolveAndApplyDatabaseUrl } from "@/lib/prisma";
+import { getDatabaseConfigError } from "@/lib/db/database-url";
 import { requireRole } from "@/lib/auth/require-role";
 import { BadgeClassStatus, ReceivabilityReviewMode, UserRole } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { getBadgeCriteriaUrl, getBaseUrl } from "@/lib/openbadges/urls";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { parseBadgeEvaluationConfig } from "@/lib/openbadges/badge-class-payload";
+import {
+  canUseOpenBadgesSupabaseRepo,
+  createBadgeClassViaSupabase,
+  listBadgeClassesViaSupabase,
+  OpenBadgesRpcUnavailableError,
+} from "@/lib/openbadges/badge-repository";
 
 const resolveIssuerForOrg = async (orgId: string) => {
   const org = await prisma.organization.findUnique({
@@ -99,6 +107,9 @@ export async function POST(request: Request) {
 
     const receivabilityReviewMode = (payload.receivabilityReviewMode ?? "HUMAN") as ReceivabilityReviewMode;
     const requiresEnrollment = Boolean(payload.requiresEnrollment);
+    const visibleInLearnerDashboard = requiresEnrollment
+      ? false
+      : Boolean(payload.visibleInLearnerDashboard);
     const requiredCourseId =
       typeof payload.requiredCourseId === "string" && payload.requiredCourseId.trim().length > 0
         ? payload.requiredCourseId.trim()
@@ -116,8 +127,11 @@ export async function POST(request: Request) {
     }
     if (!payload.receivability || typeof payload.receivability !== "object") {
       validationIssues.push("receivability manquant");
-    } else if (!payload.receivability.expectedModalities) {
-      validationIssues.push("receivability.expectedModalities manquant");
+    }
+
+    const evaluationConfig = parseBadgeEvaluationConfig(payload);
+    if (!evaluationConfig.ok) {
+      validationIssues.push(...evaluationConfig.issues);
     }
     if (!payload.imageUrl && !payload.imageTemplateUrl) {
       validationIssues.push("imageUrl manquant");
@@ -135,16 +149,16 @@ export async function POST(request: Request) {
     if (!requiresEnrollment && requiredCourseId) {
       return NextResponse.json({ ok: false, error: "REQUIRED_COURSE_NOT_ALLOWED" }, { status: 400 });
     }
+    const hasMethodConfigs =
+      Array.isArray(payload.methodConfigs) && payload.methodConfigs.length > 0
+      || Array.isArray(payload.receivability?.methodConfigs) && payload.receivability.methodConfigs.length > 0;
+
     if (
       (receivabilityReviewMode === "AI" || receivabilityReviewMode === "MIXED")
+      && !hasMethodConfigs
       && (!payload.receivability?.aiEvaluationPrompt || payload.receivability.aiEvaluationPrompt.trim().length === 0)
     ) {
       return NextResponse.json({ ok: false, error: "AI_PROMPT_REQUIRED" }, { status: 400 });
-    }
-
-    const issuer = await resolveIssuerForOrg(auth.user.orgId);
-    if (!issuer) {
-      return NextResponse.json({ ok: false, error: "ORG_NOT_FOUND" }, { status: 400 });
     }
 
     if (requiresEnrollment && requiredCourseId) {
@@ -180,6 +194,85 @@ export async function POST(request: Request) {
         ? payload.criteriaMarkdown.trim()
         : null;
 
+    const evalData = evaluationConfig.ok ? evaluationConfig.data : null;
+    const orgId = organizationId ?? auth.user.orgId;
+
+    if (canUseOpenBadgesSupabaseRepo()) {
+      try {
+        const badgeClass = await createBadgeClassViaSupabase({
+          orgId,
+          createdByUserId: auth.user.id,
+          name: payload.name,
+          description: payload.description,
+          imageUrl: payload.imageUrl ?? payload.imageTemplateUrl ?? null,
+          imageTemplateUrl: payload.imageUrl ?? payload.imageTemplateUrl ?? "",
+          criteriaUrl: shouldAutofillCriteriaUrl ? null : payload.criteriaUrl,
+          criteriaText,
+          criteriaMarkdown,
+          alignment: payload.alignment ?? null,
+          tags: Array.isArray(payload.tags) ? payload.tags : [],
+          version: payload.version ?? 1,
+          status: (payload.status as string) ?? "DRAFT",
+          receivabilityReviewMode,
+          requiresEnrollment,
+          requiredCourseId: requiresEnrollment ? requiredCourseId : null,
+          visibleInLearnerDashboard,
+          level: evalData?.level ?? null,
+          evaluationMethods: evalData?.evaluationMethods ?? [],
+          validatorExpertId: evalData?.validatorExpertId ?? null,
+          criteria: Array.isArray(payload.criteria)
+            ? payload.criteria.map((criterion: { label: string; description?: string; sortOrder?: number }, index: number) => ({
+                label: criterion.label,
+                description: criterion.description ?? null,
+                sortOrder: Number(criterion.sortOrder ?? index),
+              }))
+            : [],
+          receivability: payload.receivability && evalData
+            ? {
+                expectedModalities: evalData.expectedModalities,
+                aiEvaluationPrompt: evalData.aiEvaluationPrompt,
+                methodConfigs: evalData.methodConfigs,
+              }
+            : null,
+          autofillCriteriaUrl: shouldAutofillCriteriaUrl,
+          baseUrl: getBaseUrl(),
+        });
+        return NextResponse.json({ ok: true, badgeClass });
+      } catch (supabaseErr) {
+        if (!(supabaseErr instanceof OpenBadgesRpcUnavailableError)) {
+          console.error("[badgeclasses][post][supabase]", supabaseErr);
+          return NextResponse.json(
+            {
+              ok: false,
+              error: "BADGE_CREATE_FAILED",
+              message: supabaseErr instanceof Error ? supabaseErr.message : String(supabaseErr),
+            },
+            { status: 500 },
+          );
+        }
+        console.warn("[badgeclasses][post] RPC indisponible, repli Prisma:", supabaseErr.message);
+      }
+    }
+
+    if (!resolveAndApplyDatabaseUrl()) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "OPEN_BADGES_STORAGE_UNAVAILABLE",
+          message: [
+            "Exécutez supabase/migrations/20260527130000_open_badges_admin_columns.sql dans le SQL Editor Supabase,",
+            "ou configurez DATABASE_URL pour le mode Prisma (optionnel).",
+          ].join(" "),
+        },
+        { status: 503 },
+      );
+    }
+
+    const issuer = await resolveIssuerForOrg(orgId);
+    if (!issuer) {
+      return NextResponse.json({ ok: false, error: "ORG_NOT_FOUND" }, { status: 400 });
+    }
+
     const badgeClass = await prisma.$transaction(async (tx) => {
       const created = await tx.badgeClass.create({
         data: {
@@ -200,6 +293,10 @@ export async function POST(request: Request) {
           receivabilityReviewMode,
           requiresEnrollment,
           requiredCourseId: requiresEnrollment ? requiredCourseId : null,
+          visibleInLearnerDashboard,
+          level: evalData?.level ?? null,
+          evaluationMethods: evalData?.evaluationMethods ?? [],
+          validatorExpertId: evalData?.validatorExpertId ?? null,
         },
       });
 
@@ -221,12 +318,13 @@ export async function POST(request: Request) {
         });
       }
 
-      if (payload.receivability) {
+      if (payload.receivability && evalData) {
         await tx.badgeReceivability.create({
           data: {
             badgeClassId: created.id,
-            expectedModalities: payload.receivability.expectedModalities,
-            aiEvaluationPrompt: payload.receivability.aiEvaluationPrompt ?? "",
+            expectedModalities: evalData.expectedModalities,
+            aiEvaluationPrompt: evalData.aiEvaluationPrompt,
+            methodConfigs: evalData.methodConfigs,
           },
         });
       }
@@ -284,6 +382,21 @@ export async function GET(request: Request) {
     const queryOrgId = url.searchParams.get("organizationId");
     if (queryOrgId && queryOrgId !== auth.user.orgId) {
       return NextResponse.json({ error: "ORG_MISMATCH", details: "organizationId mismatch" }, { status: 400 });
+    }
+
+    if (canUseOpenBadgesSupabaseRepo()) {
+      try {
+        const badgeClasses = await listBadgeClassesViaSupabase(auth.user.orgId);
+        return NextResponse.json({ ok: true, badgeClasses }, { status: 200 });
+      } catch (supabaseErr) {
+        if (!(supabaseErr instanceof OpenBadgesRpcUnavailableError)) {
+          throw supabaseErr;
+        }
+      }
+    }
+
+    if (!resolveAndApplyDatabaseUrl()) {
+      return NextResponse.json({ ok: true, badgeClasses: [] }, { status: 200 });
     }
 
     const badgeClasses = await prisma.badgeClass.findMany({

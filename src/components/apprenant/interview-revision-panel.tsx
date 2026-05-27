@@ -12,6 +12,7 @@ import type { RevisionLessonItem } from "@/lib/apprenant/interview-revision-outl
 type InterviewRevisionPanelProps = {
   chapterTitle: string;
   contextText: string;
+  interviewObjectives?: string;
   revisionItems: RevisionLessonItem[];
   onBack: () => void;
   onStartInterview: () => void;
@@ -21,6 +22,7 @@ type InterviewRevisionPanelProps = {
 export function InterviewRevisionPanel({
   chapterTitle,
   contextText,
+  interviewObjectives,
   revisionItems,
   onBack,
   onStartInterview,
@@ -34,6 +36,7 @@ export function InterviewRevisionPanel({
       <div className={cn("mx-auto max-w-2xl space-y-4", className)}>
         <InterviewRevisionDiagnostic
           contextText={contextText}
+          interviewObjectives={interviewObjectives}
           chapterTitle={chapterTitle}
           revisionItems={revisionItems}
           onBack={() => setShowDiagnostic(false)}

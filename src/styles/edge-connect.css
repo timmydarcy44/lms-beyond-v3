@@ -1,83 +1,58 @@
-/**
- * Beyond Connect — Option B
- * Sidebar #0a0a0a (dark) · contenu principal #ffffff (clair)
- */
-[data-connect-shell="edge"] {
-  --connect-sidebar: #0a0a0a;
-  --connect-main-bg: #ffffff;
-  --connect-card: #f5f5f3;
-  --connect-text: #0a0a0a;
-  --connect-accent: #ff3b30;
-}
-
-/* ——— Zone principale claire ——— */
-[data-connect-main] {
-  background-color: var(--connect-main-bg);
-  color: var(--connect-text);
-}
-
-[data-connect-main] .connect-progress-track {
-  background-color: rgba(0, 0, 0, 0.08);
-  border-radius: 100px;
-}
-
-[data-connect-main] .connect-progress-fill {
-  background-color: var(--connect-accent);
-  border-radius: 100px;
-}
-
-/* Legacy dark tokens → clair (fiche profil, sections héritées) */
-[data-connect-main] [class*="bg-\\[#141412"],
-[data-connect-main] [class*="bg-\\[#111110"],
-[data-connect-main] [class*="bg-\\[#10151c"],
-[data-connect-main] [class*="bg-\\[#101622"] {
-  background-color: #f5f5f3 !important;
-}
-
-[data-connect-main] [class*="border-white\\/\\[0\\.06\\]"],
-[data-connect-main] [class*="border-white/10"],
-[data-connect-main] [class*="border-white/15"] {
-  border-color: rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-connect-main] .text-white:not([class*="bg-edge-red"]):not([class*="bg-red"]) {
-  color: #0a0a0a !important;
-}
-
-[data-connect-main] [class*="text-white\\/45"],
-[data-connect-main] [class*="text-white\\/55"],
-[data-connect-main] [class*="text-white\\/60"],
-[data-connect-main] [class*="text-white\\/70"] {
-  color: rgba(0, 0, 0, 0.45) !important;
-}
-
-[data-connect-main] [class*="text-white\\/25"],
-[data-connect-main] [class*="text-white\\/40"] {
-  color: rgba(0, 0, 0, 0.25) !important;
-}
-
-[data-connect-main] [class*="bg-white\\/\\[0\\.08\\]"],
-[data-connect-main] [class*="bg-white/10"],
-[data-connect-main] [class*="bg-white/5"] {
-  background-color: rgba(0, 0, 0, 0.08) !important;
-}
-
-[data-connect-main] [class*="bg-white\\/\\[0\\.04\\]"] {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-
-/* Accents rouge conservés */
-[data-connect-main] [class*="text-edge-red"],
-[data-connect-main] [class*="bg-edge-red"],
-[data-connect-main] [class*="border-edge-red"] {
-  /* pas d’override */
-}
-
-/* Violet / vert legacy → rouge */
-[data-connect-shell="edge"] [data-connect-main] [class*="from-violet"],
-[data-connect-shell="edge"] [data-connect-main] [class*="from-purple"],
-[data-connect-shell="edge"] [data-connect-main] [class*="bg-emerald-300"] {
-  --tw-gradient-from: #ff3b30 var(--tw-gradient-from-position) !important;
-  background-color: #ff3b30 !important;
-}
-
+/**
+ * Beyond Connect — EDGE Dashboard (Finance Premium)
+ * Dark mode intégral · accent unique #2563EB
+ */
+[data-connect-shell="edge"] {
+  --connect-main-bg: #0d0d12;
+  --connect-card: #17171f;
+  --connect-card-2: #1c1c28;
+  --connect-card-border: rgba(255, 255, 255, 0.06);
+  --connect-text: #f1f5f9;
+  --connect-text-muted: rgba(255, 255, 255, 0.4);
+  --connect-accent: #2563eb;
+  --connect-accent-soft: rgba(37, 99, 235, 0.4);
+}
+
+[data-connect-sidebar] {
+  background: #0a0a0f;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-connect-main] {
+  position: relative;
+  background: var(--connect-main-bg);
+  color: var(--connect-text);
+}
+
+[data-connect-main] .connect-progress-track {
+  background-color: rgba(255, 255, 255, 0.07);
+  border-radius: 100px;
+}
+
+[data-connect-main] .connect-progress-fill {
+  background: var(--connect-accent);
+  border-radius: 100px;
+}
+
+/* Cartes dashboard */
+[data-connect-main] [data-cockpit-card] {
+  border: 1px solid var(--connect-card-border);
+  background: var(--connect-card);
+}
+
+[data-connect-main] [data-cockpit-card]:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-connect-main] [data-cockpit-kicker] {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #60a5fa;
+}
+
+[data-connect-main] [data-cockpit-accent-line] {
+  border-left: 2px solid var(--connect-accent);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.12), transparent);
+}

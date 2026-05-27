@@ -137,6 +137,11 @@ model BadgeClass {
   receivabilityReviewMode ReceivabilityReviewMode @default(HUMAN)
   requiresEnrollment Boolean        @default(false)
   requiredCourseId String?
+  /** Affiché sur le dashboard apprenant avec pastille « Disponible pour vous ». */
+  visibleInLearnerDashboard Boolean @default(false)
+  level              Int?
+  evaluationMethods  String[]         @default([])
+  validatorExpertId  String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -171,6 +176,7 @@ model BadgeReceivability {
   badgeClassId       String     @unique
   expectedModalities String
   aiEvaluationPrompt String
+  methodConfigs      Json?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -202,9 +208,11 @@ model Assessment {
   status       AssessmentStatus @default(DRAFT)
   rubric       Json?
   decisionAt   DateTime?
-  notes        String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  notes             String?
+  integrityMetrics  Json?
+  methodResponses   Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   badgeClass BadgeClass @relation(fields: [badgeClassId], references: [id])
   earner     User       @relation("AssessmentEarner", fields: [earnerId], references: [id])

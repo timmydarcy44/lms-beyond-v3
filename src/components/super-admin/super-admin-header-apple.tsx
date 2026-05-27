@@ -13,11 +13,6 @@ import {
   MessageSquare,
   LogOut,
   Bell,
-  BookOpen,
-  Route,
-  FileText,
-  ClipboardList,
-  Plus,
   Sparkles,
   Store,
   Gamepad2,
@@ -41,41 +36,9 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/super" },
-  {
-      label: "Studio",
-      href: "/super/studio",
-      children: [
-        { label: "Modules", href: "/super/studio/modules/new/choose", icon: "modules" },
-      { label: "Parcours", href: "/super/studio/parcours/new", icon: "parcours" },
-      { label: "Ressources", href: "/super/studio/ressources/new", icon: "ressources" },
-      { label: "Tests", href: "/super/studio/tests/new", icon: "tests" },
-      { label: "Voir tous les modules", href: "/super/studio/modules", isSubItem: true },
-      { label: "Voir tous les parcours", href: "/super/studio/parcours", isSubItem: true },
-      { label: "Voir toutes les ressources", href: "/super/studio/ressources", isSubItem: true },
-      { label: "Voir tous les tests", href: "/super/studio/tests", isSubItem: true },
-    ],
-  },
-  {
-    label: "Utilisateurs",
-    href: "/super/utilisateurs",
-    children: [
-      { label: "Organisations", href: "/super/organisations" },
-      { label: "Formateurs", href: "/super/utilisateurs?role=instructor" },
-      { label: "Apprenants", href: "/super/utilisateurs?role=learner" },
-      { label: "Tuteurs", href: "/super/utilisateurs?role=tutor" },
-      { label: "B2C", href: "/super/utilisateurs?role=btoc" },
-    ],
-  },
+  { label: "CRM", href: "/super/utilisateurs" },
+  { label: "Open Badges", href: "/super/open-badges/badgeclasses" },
   { label: "IA", href: "/super/ia" },
-  {
-    label: "No School",
-    href: "/super/catalogue",
-    children: [
-      { label: "Voir No School", href: "/super/catalogue/preview" },
-      { label: "Voir les contenus", href: "/super/catalogue" },
-      { label: "Preuves (builder)", href: "/super/no-school/preuves" },
-    ],
-  },
   { label: "Chiffre d'affaires", href: "/super/chiffre-affaires" },
   { label: "Statistiques", href: "/super/statistiques" },
   {
@@ -127,10 +90,12 @@ export function SuperAdminHeaderApple() {
           const hiddenLabels = [
             "Dashboard", // Remplacé par le dashboard Jessica
             "No School",
+            "Open Badges",
             "Premium",
             "Chiffre d'affaires",
             "Statistiques",
-            "Utilisateurs", // Utilisateurs généraux (remplacé par Gestion client)
+            "CRM",
+            "Utilisateurs",
             "IA",
           ];
           return !hiddenLabels.includes(item.label);
@@ -202,7 +167,7 @@ export function SuperAdminHeaderApple() {
                     </Link>
 
                     {/* Dropdown Menu - Zone grisée pour les menus normaux */}
-                    {isHovered && item.children && item.label !== "Studio" && (
+                    {isHovered && item.children && (
                       <div 
                         className={cn(
                           "absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[200px] rounded-lg border backdrop-blur-xl shadow-lg py-1.5",
@@ -237,77 +202,6 @@ export function SuperAdminHeaderApple() {
                       </div>
                     )}
 
-                    {/* Dropdown Menu spécial pour "Studio" - Design sombre avec grille */}
-                    {isHovered && item.children && item.label === "Studio" && (
-                      <div 
-                        className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[280px] rounded-xl border border-gray-700/50 bg-black/70 backdrop-blur-md shadow-2xl p-3"
-                        style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
-                        onMouseEnter={() => setHoveredItem(item.label)}
-                        onMouseLeave={() => setHoveredItem(null)}
-                      >
-                        {/* Grille 2x2 pour les éléments principaux */}
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                          {item.children.filter((child) => !child.isSubItem && child.icon).map((child) => {
-                            const IconComponent = 
-                              child.icon === "modules" ? BookOpen :
-                              child.icon === "parcours" ? Route :
-                              child.icon === "ressources" ? FileText :
-                              child.icon === "tests" ? ClipboardList :
-                              null;
-                            
-                            return (
-                              <Link
-                                key={child.href}
-                                href={child.href}
-                                className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-white hover:bg-white/10 transition-colors"
-                                onClick={() => setHoveredItem(null)}
-                              >
-                                {IconComponent && <IconComponent className="h-6 w-6 text-white" />}
-                                <span className="text-xs font-medium text-white">{child.label}</span>
-                              </Link>
-                            );
-                          })}
-                        </div>
-
-                        {/* Séparateur */}
-                        <div className="h-px bg-gray-700/50 my-2" />
-
-                        {/* Liens "Voir tous les..." */}
-                        <div className="flex flex-col gap-1 mb-2">
-                          {item.children.filter((child) => child.isSubItem).map((child) => {
-                            const isChildActive = pathname === child.href || pathname?.startsWith(child.href + "/");
-                            return (
-                              <Link
-                                key={child.href}
-                                href={child.href}
-                                className={cn(
-                                  "px-3 py-1.5 rounded-lg text-[13px] font-normal transition-colors",
-                                  isChildActive
-                                    ? "text-white bg-white/10"
-                                    : "text-gray-300 hover:text-white hover:bg-white/5",
-                                )}
-                                onClick={() => setHoveredItem(null)}
-                              >
-                                {child.label}
-                              </Link>
-                            );
-                          })}
-                        </div>
-
-                        {/* Séparateur */}
-                        <div className="h-px bg-gray-700/50 my-2" />
-
-                        {/* Bouton Créer */}
-                        <Link
-                          href="/super/studio/modules/new"
-                          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
-                          onClick={() => setHoveredItem(null)}
-                        >
-                          <Plus className="h-4 w-4" />
-                          <span>Créer</span>
-                        </Link>
-                      </div>
-                    )}
                   </div>
                 );
               }

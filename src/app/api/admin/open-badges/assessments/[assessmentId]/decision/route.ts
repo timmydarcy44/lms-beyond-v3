@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { issueBadge } from "@/lib/openbadges/issue";
 import { getBaseUrl } from "@/lib/openbadges/urls";
 import { AssessmentStatus, UserRole } from "@prisma/client";
+import { canAutoApproveBadge, evaluateIntegrityMetrics } from "@/lib/openbadges/badge-assessment-integrity";
 
 type RouteParams = { assessmentId: string };
 
@@ -60,6 +61,21 @@ export async function POST(
   }
 
   if (status === "APPROVED") {
+    const integrity = evaluateIntegrityMetrics(
+      assessment.integrityMetrics as Parameters<typeof evaluateIntegrityMetrics>[0],
+    );
+    if (!canAutoApproveBadge(integrity)) {
+      return NextResponse.json(
+        {
+          error: "INTEGRITY_FAILED",
+          message:
+            "Validation refusée : l’apprenant a quitté l’onglet ou la page pendant la rédaction.",
+          reasons: integrity.integrityFailureReasons,
+        },
+        { status: 409 },
+      );
+    }
+
     await prisma.assessment.update({
       where: { id: assessment.id },
       data: {

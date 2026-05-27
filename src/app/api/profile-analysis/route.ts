@@ -6,6 +6,8 @@ type AnalysisPayload = {
   firstName: string;
   discScores: Record<string, number>;
   idmcScores: Record<string, number>;
+  softSkillsTop?: Array<{ skill?: string; label?: string; score?: number; value?: number }>;
+  testsSignature?: string;
   discUpdatedAt?: string | null;
   idmcUpdatedAt?: string | null;
 };
@@ -35,11 +37,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "OpenAI non configuré." }, { status: 500 });
     }
 
-    const prompt = `Tu es expert en analyse comportementale. Analyse les résultats de ${firstName}. Voici ses scores DISC : ${JSON.stringify(
-      discScores
-    )} et ses scores IDMC : ${JSON.stringify(
-      idmcScores
-    )}. Explique ses forces majeures et ses axes d'amélioration de manière concise, encourageante et professionnelle (style Apple : direct et inspirant).`;
+    const softSkills = (body?.softSkillsTop ?? []).map((item) => ({
+      skill: item.skill ?? item.label ?? "",
+      score: item.score ?? item.value ?? 0,
+    }));
+
+    const prompt = `Tu es expert en analyse comportementale et motivationnelle. Réalise une synthèse croisée pour ${firstName} en reliant DISC, IDMC et soft skills (ne les traite pas isolément).
+
+Scores DISC : ${JSON.stringify(discScores)}
+Scores IDMC (axes A1–A8, 0–100) : ${JSON.stringify(idmcScores)}
+Top soft skills : ${JSON.stringify(softSkills)}
+
+Structure la réponse en français avec ces titres :
+## Forces majeures
+## Axes d'amélioration
+## Synthèse EDGE
+
+Ton : professionnel, encourageant, factuel (style Apple : direct et inspirant). 180 à 280 mots au total.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -57,6 +71,7 @@ export async function POST(request: NextRequest) {
       const analysisPayload = JSON.stringify({
         text: analysis,
         updated_at: updatedAt,
+        tests_signature: body?.testsSignature ?? null,
         disc_updated_at: body?.discUpdatedAt ?? null,
         idmc_updated_at: body?.idmcUpdatedAt ?? null,
       });

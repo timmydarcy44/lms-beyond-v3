@@ -512,11 +512,16 @@ export function BadgeClassForm({
         if (process.env.NODE_ENV !== "production") {
           console.error("[badgeclass][upload] failed", { status: res.status, raw, json });
         }
+        const hint = (json?.hint as string | undefined) ?? "";
         const message =
           (json?.error as string | undefined)
           ?? (json?.message as string | undefined)
           ?? raw
           ?? "Unknown error";
+        const userMessage = hint
+          ? `Échec de l’upload : ${message}. ${hint}`
+          : `Échec de l’upload : ${message}`;
+        setErrors((prev) => ({ ...prev, imageUrl: userMessage }));
         toast.error(`Upload image: ${res.status} ${message}`);
         return;
       }

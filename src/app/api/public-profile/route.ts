@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { loadPublicProfileEarnedBadges } from "@/lib/openbadges/public-profile-earned-badges";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,43 @@ const resolveIdmcAxesServer = (scores: unknown): Record<AxisKey, number> | null 
   if (hasAllAxes) return candidate as Record<AxisKey, number>;
   return null;
 };
+
+function parseDiscScoresRow(raw: unknown): Array<{ label: string; value: number }> {
+  if (!raw) return [];
+  let scores = raw;
+  if (typeof raw === "string") {
+    try {
+      scores = JSON.parse(raw) as unknown;
+    } catch {
+      return [];
+    }
+  }
+  if (!scores || typeof scores !== "object" || Array.isArray(scores)) return [];
+  const map = scores as Record<string, unknown>;
+  return [
+    { label: "D", value: Number(map.D ?? 0) },
+    { label: "I", value: Number(map.I ?? 0) },
+    { label: "S", value: Number(map.S ?? 0) },
+    { label: "C", value: Number(map.C ?? 0) },
+  ];
+}
+
+function parseSoftSkillsScores(raw: unknown): Array<{ label: string; value: number }> {
+  if (!raw) return [];
+  let scores = raw;
+  if (typeof raw === "string") {
+    try {
+      scores = JSON.parse(raw) as unknown;
+    } catch {
+      return [];
+    }
+  }
+  if (!scores || typeof scores !== "object" || Array.isArray(scores)) return [];
+  return Object.entries(scores as Record<string, number>).map(([skill, score]) => ({
+    label: skill,
+    value: Number(score),
+  }));
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -127,6 +165,8 @@ export async function GET(request: Request) {
       experiences: [],
       diplomas: [],
       settings: null,
+      earnedOpenBadges: [],
+      idmcGlobalScore: null,
     });
   }
 
@@ -288,27 +328,32 @@ export async function GET(request: Request) {
       .then(({ data }) => data),
   ]);
 
-  const discScores = discResultats?.scores
-    ? [
-        { label: "D", value: discResultats.scores.D ?? 0 },
-        { label: "I", value: discResultats.scores.I ?? 0 },
-        { label: "S", value: discResultats.scores.S ?? 0 },
-        { label: "C", value: discResultats.scores.C ?? 0 },
-      ]
-    : [];
+  const discScores = parseDiscScoresRow(discResultats?.scores);
 
   const idmcScores = idmcResultatsRow?.scores ?? null;
   const idmcResponses = idmcResultatsRow?.responses ?? null;
   const idmcAxes = resolveIdmcAxesServer(idmcScores ?? idmcResponses);
+  const idmcGlobalScore =
+    typeof idmcResultatsRow?.global_score === "number"
+      ? idmcResultatsRow.global_score
+      : idmcAxes
+        ? Math.round(
+            (Object.values(idmcAxes) as number[]).reduce((sum, v) => sum + v, 0) /
+              Object.keys(idmcAxes).length,
+          )
+        : null;
 
   const softSkillsResult = softSkillsByLearner ?? softSkillsByProfile;
-  const softSkillsAll =
-    softSkillsResult?.scores && typeof softSkillsResult.scores === "object"
-      ? Object.entries(softSkillsResult.scores as Record<string, number>).map(([skill, score]) => ({
-          label: skill,
-          value: Number(score),
-        }))
-      : [];
+  const softSkillsAll = parseSoftSkillsScores(softSkillsResult?.scores);
+
+  let earnedOpenBadges: Awaited<ReturnType<typeof loadPublicProfileEarnedBadges>> = [];
+  if (resolvedUserId) {
+    try {
+      earnedOpenBadges = await loadPublicProfileEarnedBadges(supabase, resolvedUserId);
+    } catch (err) {
+      console.warn("[public-profile] earned badges:", err);
+    }
+  }
 
   const experiences = (experiencesData ?? []).map((exp) => ({
     start: String(exp.date_debut ?? "—"),
@@ -336,10 +381,12 @@ export async function GET(request: Request) {
     idmcScores,
     idmcResponses,
     discScoreValue: discTestResult?.score ?? null,
-    idmcScoreValue: null,
+    idmcScoreValue: idmcGlobalScore,
     softSkillsAll,
     experiences,
     diplomas,
     settings: settingsData ?? null,
+    earnedOpenBadges,
+    idmcGlobalScore,
   });
 }

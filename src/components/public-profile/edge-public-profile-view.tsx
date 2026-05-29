@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
+  Award,
   BadgeCheck,
   Download,
   ExternalLink,
@@ -11,6 +13,8 @@ import {
   Share2,
   User,
 } from "lucide-react";
+import type { PublicProfileEarnedBadge } from "@/lib/openbadges/public-profile-earned-badges";
+import { PublicProfileBadgeOverlay } from "@/components/public-profile/public-profile-badge-overlay";
 import {
   ApprenantAssessmentResults,
   type DiscScores,
@@ -69,6 +73,8 @@ type Props = {
   hardSkillEntries: HardSkillEntry[];
   stackTools: string[];
   toolLogoResolver: (label: string) => string | null;
+  earnedOpenBadges?: PublicProfileEarnedBadge[];
+  showBadges?: boolean;
 };
 
 export function EdgePublicProfileView({
@@ -94,7 +100,11 @@ export function EdgePublicProfileView({
   hardSkillEntries,
   stackTools,
   toolLogoResolver,
+  earnedOpenBadges = [],
+  showBadges = true,
 }: Props) {
+  const [selectedBadge, setSelectedBadge] = useState<PublicProfileEarnedBadge | null>(null);
+
   const nameLine =
     displayFirstName || displayLastName
       ? `${displayFirstName} ${displayLastName ? displayLastName.toUpperCase() : ""}`.trim()
@@ -246,6 +256,47 @@ export function EdgePublicProfileView({
               )}
             </motion.section>
 
+            {showBadges && earnedOpenBadges.length > 0 ? (
+              <motion.section
+                {...fadeUp}
+                className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8"
+              >
+                <div className="mb-4">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
+                    Certifications
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Open Badges obtenus</h2>
+                </div>
+                <ul className="flex flex-wrap gap-3">
+                  {earnedOpenBadges.map((badge) => (
+                    <li key={badge.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBadge(badge)}
+                        className="group flex flex-col items-center gap-2 rounded-xl border border-black/[0.08] bg-[#fafafa] p-3 transition hover:border-[#FF3B30]/35 hover:shadow-md"
+                      >
+                        {badge.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={badge.imageUrl}
+                            alt=""
+                            className="h-16 w-16 rounded-lg object-cover ring-1 ring-black/10"
+                          />
+                        ) : (
+                          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#FF3B30]/10">
+                            <Award className="h-7 w-7 text-[#FF3B30]" />
+                          </div>
+                        )}
+                        <span className="max-w-[120px] truncate text-center text-xs font-medium text-black/75 group-hover:text-[#FF3B30]">
+                          {badge.name}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </motion.section>
+            ) : null}
+
             <motion.section {...fadeUp}>
               <div className="mb-4">
                 <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
@@ -376,6 +427,10 @@ export function EdgePublicProfileView({
           </motion.aside>
         </div>
       </div>
+
+      {selectedBadge ? (
+        <PublicProfileBadgeOverlay badge={selectedBadge} onClose={() => setSelectedBadge(null)} />
+      ) : null}
     </div>
   );
 }

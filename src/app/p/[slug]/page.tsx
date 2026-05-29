@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import { EdgePublicProfileView } from "@/components/public-profile/edge-public-profile-view";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
+import type { PublicProfileEarnedBadge } from "@/lib/openbadges/public-profile-earned-badges";
 
 type ProfilePublic = {
   name: string;
@@ -188,6 +189,8 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
   const [publicUserId, setPublicUserId] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string>("");
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [earnedOpenBadges, setEarnedOpenBadges] = useState<PublicProfileEarnedBadge[]>([]);
+  const [idmcGlobalScore, setIdmcGlobalScore] = useState<number | null>(null);
 
   const profile = useMemo(() => DEFAULT_PROFILE, []);
   const publicUrl =
@@ -233,9 +236,12 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
         setSoftSkillsTop([]);
         setExperiences([]);
         setDiplomas([]);
+        setEarnedOpenBadges([]);
+        setIdmcGlobalScore(null);
         return;
       }
       if (!response.ok) {
+        setEarnedOpenBadges([]);
         return;
       }
       const data = (await response.json()) as {
@@ -252,6 +258,8 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
         softSkillsAll: Array<{ label: string; value: number }>;
         experiences: Array<{ start: string; end: string; title: string; company: string; missions: string }>;
         diplomas: Array<{ start: string; end: string; title: string; school: string; status: string }>;
+        earnedOpenBadges?: PublicProfileEarnedBadge[];
+        idmcGlobalScore?: number | null;
       };
       const resolvedId =
         data?.publicUserId ??
@@ -293,6 +301,10 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       );
       setExperiences(data.experiences);
       setDiplomas(data.diplomas);
+      setEarnedOpenBadges(Array.isArray(data.earnedOpenBadges) ? data.earnedOpenBadges : []);
+      setIdmcGlobalScore(
+        typeof data.idmcGlobalScore === "number" ? data.idmcGlobalScore : null,
+      );
       if (data.settings) {
         setSettings((prev) => ({
           ...prev,
@@ -582,6 +594,8 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       }))}
       stackTools={stackTools}
       toolLogoResolver={getToolLogoForLabel}
+      earnedOpenBadges={earnedOpenBadges}
+      showBadges={appliedSettings.show_badges}
     />
   );
 }

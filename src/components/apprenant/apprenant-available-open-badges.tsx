@@ -58,7 +58,7 @@ export function ApprenantAvailableOpenBadges({
             </div>
             {badge.eligible ? (
               <Link
-                href={badge.submitHref}
+                href={badge.presentationHref}
                 className={`${CONNECT_BTN_PRIMARY} shrink-0 text-xs uppercase tracking-[0.12em]`}
               >
                 Commencer

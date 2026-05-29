@@ -19,8 +19,11 @@ export type LearnerVisibleOpenBadge = {
   level: number | null;
   requiresEnrollment: boolean;
   eligible: boolean;
-  /** Parcours épreuve (après animation). */
+  /** Page de présentation du badge (critères, validateur, CTA épreuve). */
+  presentationHref: string;
+  /** Parcours épreuve séquentiel. */
   epreuveHref: string;
+  /** @deprecated Utiliser presentationHref */
   submitHref: string;
   awarded: boolean;
   /** Nombre de soumissions enregistrées (essais). */
@@ -148,6 +151,7 @@ export async function getLearnerVisibleOpenBadges(
       level: badge.level,
       requiresEnrollment: badge.requiresEnrollment,
       eligible,
+      presentationHref: base,
       epreuveHref: `${base}/epreuve`,
       submitHref: base,
       awarded,

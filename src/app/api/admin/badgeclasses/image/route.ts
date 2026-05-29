@@ -16,7 +16,8 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/svg+xml": "svg",
 };
 
-const STORAGE_BUCKET = "public";
+/** Buckets existants sur le projet Supabase (voir supabase/CREATE_STORAGE_BUCKETS.sql). */
+const SUPABASE_BUCKETS_TO_TRY = ["Public", "public", "avatars"] as const;
 
 function resolveExtension(contentType: string, fileName: string): string {
   const fromMime = MIME_TO_EXT[contentType];
@@ -67,27 +68,31 @@ async function uploadToSupabase(params: {
   const extension = resolveExtension(params.contentType, params.fileName);
   const storagePath = `openbadges/badgeclasses/${params.orgId}/${crypto.randomUUID()}.${extension}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(storagePath, params.buffer, {
+  let lastError: string | null = null;
+  for (const bucket of SUPABASE_BUCKETS_TO_TRY) {
+    const { error: uploadError } = await supabase.storage.from(bucket).upload(storagePath, params.buffer, {
       contentType: params.contentType,
       cacheControl: "3600",
       upsert: false,
     });
 
-  if (uploadError) {
-    throw new Error(`SUPABASE_UPLOAD_FAILED: ${uploadError.message}`);
+    if (!uploadError) {
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+      if (publicUrl) return publicUrl;
+      throw new Error("SUPABASE_NO_PUBLIC_URL");
+    }
+
+    lastError = uploadError.message;
+    const bucketMissing =
+      uploadError.message.includes("Bucket not found") || uploadError.message.includes("not found");
+    if (!bucketMissing) {
+      throw new Error(`SUPABASE_UPLOAD_FAILED: ${uploadError.message}`);
+    }
   }
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
-
-  if (!publicUrl) {
-    throw new Error("SUPABASE_NO_PUBLIC_URL");
-  }
-
-  return publicUrl;
+  throw new Error(`SUPABASE_UPLOAD_FAILED: ${lastError ?? "no bucket available"}`);
 }
 
 export async function POST(request: NextRequest) {

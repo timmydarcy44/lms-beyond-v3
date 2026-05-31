@@ -92,6 +92,12 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const onCrmUpdated = () => void load();
+    window.addEventListener("crm-updated", onCrmUpdated);
+    return () => window.removeEventListener("crm-updated", onCrmUpdated);
+  }, [load]);
+
   const runBtocSync = async () => {
     setSyncing(true);
     try {

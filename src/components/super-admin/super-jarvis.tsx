@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Bot, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,17 @@ import { cn } from "@/lib/utils";
 
 type Msg = { role: "user" | "bot"; text: string };
 
+function isCrmPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return (
+    pathname.startsWith("/super/utilisateurs") ||
+    pathname.startsWith("/super/crm") ||
+    pathname.startsWith("/super/organisations")
+  );
+}
+
 export function SuperJarvis() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,6 +65,8 @@ export function SuperJarvis() {
       setLoading(false);
     }
   };
+
+  if (isCrmPath(pathname)) return null;
 
   return (
     <>

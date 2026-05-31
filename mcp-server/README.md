@@ -2,6 +2,8 @@
 
 Serveur MCP pour lire/écrire le pipeline BTOB via l’API REST Beyond.
 
+Transport **HTTP + SSE** (compatible hébergement Render / cloud).
+
 ## Installation
 
 ```bash
@@ -16,6 +18,7 @@ Copier `.env` :
 ```
 BEYOND_API_URL=https://edgebs.fr
 BEYOND_MCP_API_KEY=votre_cle_secrete
+PORT=3001
 ```
 
 La même clé doit être définie côté Next.js : `BEYOND_MCP_API_KEY`.
@@ -26,9 +29,28 @@ La même clé doit être définie côté Next.js : `BEYOND_MCP_API_KEY`.
 npm start
 ```
 
+Le serveur écoute sur `process.env.PORT` (défaut **3001**) :
+
+| Méthode | Route | Rôle |
+|--------|-------|------|
+| GET | `/sse` | Connexion MCP (flux Server-Sent Events) |
+| POST | `/messages?sessionId=…` | Messages JSON-RPC du client |
+| GET | `/health` | Sonde de disponibilité |
+
+## Render
+
+- **Start command** : `npm start`
+- **Port** : laisser Render injecter `PORT` (ne pas forcer 3001 en dur)
+- **URL MCP** pour Claude.ai : `https://votre-service.onrender.com/sse`
+
+Variables d’environnement Render :
+
+- `BEYOND_API_URL=https://edgebs.fr`
+- `BEYOND_MCP_API_KEY=…`
+
 ## Claude.ai
 
-Settings → Connectors → Add MCP Server → commande : `node /chemin/vers/mcp-server/index.js`
+Settings → Connectors → Add MCP Server → URL SSE : `https://votre-hôte/sse`
 
 ## Outils
 

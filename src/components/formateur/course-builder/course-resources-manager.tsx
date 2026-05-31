@@ -461,7 +461,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
     <Card className="border-white/10 bg-white/5 text-white">
       <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <CardTitle className="text-lg font-semibold">Ressources & tests associés</CardTitle>
+          <CardTitle className="text-[30px] font-semibold leading-tight">Ressources & tests associés</CardTitle>
           <p className="text-sm text-white/60">
             Liez rapidement des supports complémentaires et les évaluations que vos apprenants devront réaliser.
           </p>

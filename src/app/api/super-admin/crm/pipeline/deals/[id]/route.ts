@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -33,6 +34,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const parsed = Number.parseFloat(String(body.amount).replace(",", "."));
     if (Number.isFinite(parsed)) patch.amount_cents = Math.round(parsed * 100);
   }
+
+  applyCommercialFieldsFromBody(patch, body, { partial: true });
 
   const { data, error } = await supabase
     .from("crm_pipeline_deals")

@@ -24,6 +24,18 @@ import {
 } from "@/lib/crm/pipeline-shared";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
+import {
+  isNextActionOverdue,
+  priorityBadgeClass,
+  sectorBadgeClass,
+} from "@/lib/crm/pipeline-btob-commercial-options";
+import {
+  commercialFromDeal,
+  commercialToPayload,
+  emptyBtobCommercial,
+  PipelineBtobCommercialFields,
+  type BtobCommercialFormState,
+} from "./pipeline-btob-commercial-fields";
 
 type DealForm = {
   id?: string;
@@ -56,6 +68,7 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
   const [syncing, setSyncing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<DealForm>(emptyDeal(defaultStage));
+  const [commercial, setCommercial] = useState<BtobCommercialFormState>(emptyBtobCommercial());
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
   const [stageLabelDraft, setStageLabelDraft] = useState("");
 
@@ -110,6 +123,7 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
 
   const openCreate = (stageSlug: string) => {
     setForm(emptyDeal(stageSlug));
+    setCommercial(emptyBtobCommercial());
     setDialogOpen(true);
   };
 
@@ -124,6 +138,7 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
       amount: deal.amount_cents ? String(deal.amount_cents / 100) : "",
       notes: deal.notes ?? "",
     });
+    setCommercial(commercialFromDeal(deal));
     setDialogOpen(true);
   };
 
@@ -140,6 +155,7 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
       phone: form.phone || null,
       amount: form.amount,
       notes: form.notes || null,
+      ...(!isBtoc ? commercialToPayload(commercial) : {}),
     };
 
     try {
@@ -299,6 +315,43 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
                       <p className="text-xs text-gray-500 truncate mt-1">{deal.email}</p>
                     ) : null}
                     {deal.phone ? <p className="text-xs text-gray-500">{deal.phone}</p> : null}
+                    {!isBtoc && (deal.sector || deal.priority) ? (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {deal.sector ? (
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${sectorBadgeClass(deal.sector)}`}
+                          >
+                            {deal.sector}
+                          </Badge>
+                        ) : null}
+                        {deal.priority ? (
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${priorityBadgeClass(deal.priority)}`}
+                          >
+                            {deal.priority}
+                          </Badge>
+                        ) : null}
+                        {typeof deal.engagement_score === "number" ? (
+                          <span className="text-[10px] text-gray-500" title="Score engagement">
+                            ● {deal.engagement_score}/3
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {!isBtoc && deal.next_action ? (
+                      <p
+                        className={`text-[10px] mt-1 line-clamp-2 ${
+                          isNextActionOverdue(deal.next_action_date)
+                            ? "text-red-600 font-medium"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        → {deal.next_action}
+                        {deal.next_action_date ? ` (${deal.next_action_date.slice(0, 10)})` : ""}
+                      </p>
+                    ) : null}
                     {deal.source === "auto" ? (
                       <Badge variant="secondary" className="mt-1 text-[10px]">
                         Auto
@@ -343,7 +396,7 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={isBtoc ? "max-w-md" : "max-w-2xl max-h-[90vh] overflow-y-auto"}>
           <DialogHeader>
             <DialogTitle>{form.id ? "Modifier la carte" : "Nouvelle opportunité"}</DialogTitle>
           </DialogHeader>
@@ -397,6 +450,9 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
               <Label>Notes</Label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
+            {!isBtoc ? (
+              <PipelineBtobCommercialFields value={commercial} onChange={setCommercial} />
+            ) : null}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>

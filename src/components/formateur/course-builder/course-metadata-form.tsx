@@ -231,7 +231,7 @@ function CourseMetadataFormContent() {
     <div className="space-y-6">
       <Card className="border-white/10 bg-white/5 text-white">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Informations principales</CardTitle>
+          <CardTitle className="text-[30px] font-semibold leading-tight">Informations principales</CardTitle>
           <p className="text-sm text-white/60">
             Ces informations alimentent la page de présentation apprenant. Soignez le titre, le sous-titre et les visuels.
           </p>
@@ -421,7 +421,7 @@ function CourseMetadataFormContent() {
 
       <Card className="border-white/10 bg-white/5 text-white">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Objectifs pédagogiques</CardTitle>
+          <CardTitle className="text-[30px] font-semibold leading-tight">Objectifs pédagogiques</CardTitle>
           <p className="text-sm text-white/60">Les apprenants les retrouveront dans la page de présentation.</p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -452,7 +452,7 @@ function CourseMetadataFormContent() {
 
       <Card className="border-white/10 bg-white/5 text-white">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Compétences développées</CardTitle>
+          <CardTitle className="text-[30px] font-semibold leading-tight">Compétences développées</CardTitle>
           <p className="text-sm text-white/60">Utilisées pour les badges et la preview apprenant.</p>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -153,7 +153,7 @@ export function ExperientialInterviewView({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg",
+        "flex h-[100dvh] min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg",
         className,
       )}
     >
@@ -161,7 +161,7 @@ export function ExperientialInterviewView({
         <aside className="relative hidden flex-col justify-between border-r border-violet-900/30 bg-gradient-to-br from-[#1a0a2e] via-[#2d1b4e] to-[#12081f] p-6 text-white lg:flex">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-violet-300/80">EDGE AI</p>
-            <h2 className="mt-4 text-2xl font-bold leading-tight tracking-tight text-white">
+            <h2 className="mt-4 text-[30px] font-bold leading-tight tracking-tight text-white">
               Entretien expérientiel
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-white/70">

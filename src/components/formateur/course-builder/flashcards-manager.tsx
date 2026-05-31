@@ -717,7 +717,7 @@ export function FlashcardsManager({ courseId, chapterId, scope = "chapter" }: Fl
       <CardHeader className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold">
+            <CardTitle className="text-[30px] font-semibold leading-tight">
               Flashcards{" "}
               <span className="ml-2 rounded-full bg-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-300">
                 {totalFlashcards}

@@ -1504,7 +1504,7 @@ export function LessonPlayView({
               {!testStarted ? (
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    <h3 className="text-xl font-semibold text-slate-900">Contenu du chapitre</h3>
+                    <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>
                     <p className="text-slate-600">
                       {isQuizLesson
                         ? "Ce quiz vérifie votre compréhension des notions vues dans ce module."
@@ -1586,7 +1586,7 @@ export function LessonPlayView({
                   )}
                 >
                   <div className="space-y-4">
-                    <h3 className="text-xl font-semibold text-slate-900">Contenu du chapitre</h3>
+                    <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>
                     {isHtmlContent ? (
                       <div
                         data-dyslexia-content="true"

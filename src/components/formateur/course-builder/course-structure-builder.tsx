@@ -274,7 +274,7 @@ export function CourseStructureBuilder({
       >
         <div className="space-y-4">
           <div>
-            <CardTitle className={isLight ? "text-xl font-extrabold tracking-tight text-slate-950" : "text-xl font-semibold text-white"}>
+            <CardTitle className={isLight ? "text-[30px] font-extrabold leading-tight tracking-tight text-slate-950" : "text-[30px] font-semibold leading-tight text-white"}>
               Structure, chapitres & contenus
             </CardTitle>
             <p className={isLight ? "text-sm leading-relaxed text-slate-600" : "text-sm leading-relaxed text-white/60"}>

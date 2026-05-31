@@ -83,6 +83,8 @@ export function QuizResults({
   const [remediationLoading, setRemediationLoading] = useState(false);
   const [remediationText, setRemediationText] = useState<string | null>(null);
 
+  const reviewBrief = useMemo(() => buildQuizReviewBriefForAi(reviewItems), [reviewItems]);
+
   useEffect(() => {
     let ignore = false;
     (async () => {
@@ -91,7 +93,7 @@ export function QuizResults({
         const res = await fetch("/api/ai/quiz-global-analysis", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ score, radar: radarRows }),
+          body: JSON.stringify({ score, radar: radarRows, reviewBrief }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);

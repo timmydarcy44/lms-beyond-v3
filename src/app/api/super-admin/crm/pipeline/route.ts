@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
@@ -99,20 +100,25 @@ export async function POST(req: NextRequest) {
     amount_cents = Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
   }
 
+  const insertRow: Record<string, unknown> = {
+    pipeline_type,
+    stage_slug,
+    company_name,
+    contact_first_name,
+    email: body?.email ? String(body.email).trim() : null,
+    phone: body?.phone ? String(body.phone).trim() : null,
+    amount_cents,
+    notes: body?.notes ? String(body.notes).trim() : null,
+    source: "manual",
+    sort_order: (maxOrder?.sort_order ?? -1) + 1,
+  };
+  if (pipeline_type === "btob") {
+    applyCommercialFieldsFromBody(insertRow, body);
+  }
+
   const { data, error } = await supabase
     .from("crm_pipeline_deals")
-    .insert({
-      pipeline_type,
-      stage_slug,
-      company_name,
-      contact_first_name,
-      email: body?.email ? String(body.email).trim() : null,
-      phone: body?.phone ? String(body.phone).trim() : null,
-      amount_cents,
-      notes: body?.notes ? String(body.notes).trim() : null,
-      source: "manual",
-      sort_order: (maxOrder?.sort_order ?? -1) + 1,
-    })
+    .insert(insertRow)
     .select("*")
     .single();
 

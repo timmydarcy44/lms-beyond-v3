@@ -139,7 +139,7 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
             ) : active.kind === "quiz" ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
                 <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-slate-500">{active.sectionTitle}</p>
-                <h3 className="text-2xl font-extrabold tracking-tight text-slate-950">C’est l’heure du test !</h3>
+                <h3 className="text-[30px] font-extrabold leading-tight tracking-tight text-slate-950">C’est l’heure du test !</h3>
                 <p className="max-w-xl text-sm text-slate-600">{active.title}</p>
                 <p className="text-sm text-slate-600">Lancez le quiz, puis revenez ici pour continuer.</p>
               </div>
@@ -155,7 +155,7 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
               <div className="flex h-full flex-col overflow-hidden">
                 <div className="space-y-1">
                   <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-slate-500">{active.sectionTitle}</p>
-                  <h3 className="text-xl font-extrabold tracking-tight text-slate-950">{active.title}</h3>
+                  <h3 className="text-[30px] font-extrabold leading-tight tracking-tight text-slate-950">{active.title}</h3>
                   <p className="text-xs text-slate-500">{active.chapterTitle}</p>
                 </div>
 
@@ -169,7 +169,7 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
                 <div className="mt-6 flex-1 overflow-y-auto pr-2">
                   {active.html ? (
                     <div
-                      className="prose prose-slate max-w-none prose-headings:text-slate-950 prose-p:text-slate-700 prose-strong:text-slate-900 prose-a:text-[#6633CC] prose-a:underline prose-li:text-slate-700 [&_*]:max-w-full"
+                      className="prose prose-slate max-w-none prose-h1:text-[30px] prose-h1:leading-tight prose-h2:text-[30px] prose-h2:leading-tight prose-h3:text-[30px] prose-h3:leading-tight prose-headings:text-slate-950 prose-p:text-slate-700 prose-strong:text-slate-900 prose-a:text-[#6633CC] prose-a:underline prose-li:text-slate-700 [&_*]:max-w-full"
                       dangerouslySetInnerHTML={{ __html: active.html }}
                     />
                   ) : (

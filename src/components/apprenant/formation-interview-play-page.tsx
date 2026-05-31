@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
 import { InterviewPlayClient } from "@/components/apprenant/interview-play-client";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
 import { getLearnerContentDetail } from "@/lib/queries/apprenant";
 import {
@@ -71,28 +70,16 @@ export async function FormationInterviewPlayPage({
 
   return (
     <DyslexiaModeProvider>
-      <div className="min-h-dvh bg-[#050208]">
-        <DashboardShell
-          title="Entretien expérientiel"
-          breadcrumbs={[{ label: activeLesson.title }]}
-          initialCollapsed={true}
-          forcedTheme="light"
-          hideSidebar
-          hideHeader
-          fullBleed
-          className="min-h-dvh bg-[#050208]"
-          mainClassName="!bg-[#050208] !p-0"
-        >
-          <InterviewPlayClient
-            contextText={contextText}
-            interviewObjectives={interviewObjectives || undefined}
-            chapterTitle={displayChapterTitle}
-            courseTitle={card.title}
-            lessonId={activeLesson.id}
-            returnHref={returnHref}
-            revisionItems={revisionItems}
-          />
-        </DashboardShell>
+      <div className="fixed inset-0 z-[80] flex min-h-dvh flex-col bg-[#050208] text-white">
+        <InterviewPlayClient
+          contextText={contextText}
+          interviewObjectives={interviewObjectives || undefined}
+          chapterTitle={displayChapterTitle}
+          courseTitle={card.title}
+          lessonId={activeLesson.id}
+          returnHref={returnHref}
+          revisionItems={revisionItems}
+        />
       </div>
     </DyslexiaModeProvider>
   );

@@ -64,14 +64,14 @@ export function InterviewPlayClient({
 }: InterviewPlayClientProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [flowPhase, setFlowPhase] = useState<FlowPhase>("cinematic");
+  const [flowPhase, setFlowPhase] = useState<FlowPhase>("readiness");
   const [feedback, setFeedback] = useState<InterviewFeedbackPayload | null>(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [prefetchedOpening, setPrefetchedOpening] = useState<string | null>(null);
 
   useEffect(() => {
-    setFlowPhase("cinematic");
+    setFlowPhase("readiness");
     setMessages([]);
     setFeedback(null);
     setFeedbackError(null);
@@ -187,7 +187,7 @@ export function InterviewPlayClient({
       ) : null}
 
       {flowPhase === "chat" ? (
-        <div className="flex min-h-dvh flex-col">
+        <div className="flex h-[100dvh] min-h-0 flex-col">
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-b border-white/10 bg-[#0a0612]/90 px-4 py-3 backdrop-blur-sm">
             <Button
               type="button"

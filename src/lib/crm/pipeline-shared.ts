@@ -30,7 +30,27 @@ export type PipelineStage = {
   sort_order: number;
 };
 
-export type PipelineDeal = {
+export type PipelineDealCommercial = {
+  sector?: string | null;
+  employee_count?: string | null;
+  location?: string | null;
+  priority?: string | null;
+  why_target?: string | null;
+  training_needs?: string[] | null;
+  contact_role?: string | null;
+  contact_linkedin?: string | null;
+  company_linkedin?: string | null;
+  approach_channel?: string | null;
+  decision_maker_identified?: boolean | null;
+  engagement_score?: number | null;
+  last_contact_date?: string | null;
+  next_action?: string | null;
+  next_action_date?: string | null;
+  estimated_budget?: string | null;
+  estimated_users?: number | null;
+};
+
+export type PipelineDeal = PipelineDealCommercial & {
   id: string;
   pipeline_type?: string;
   stage_slug: string;

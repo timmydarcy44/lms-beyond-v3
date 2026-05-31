@@ -1,0 +1,109 @@
+import type { DailyBriefing } from "@/lib/crm/daily-briefing-types";
+
+export function buildDailyBriefingSystemPrompt(
+  prospects: unknown[],
+  summary: unknown,
+  dateLabel: string,
+): string {
+  return `Tu es le deuxième cerveau commercial de Darcy, fondateur solo de Beyond 
+(LMS neuro-adaptatif pour la formation interne en entreprise).
+
+Darcy est basé en Normandie. Il prospecte des PME/ETI pour leur vendre 
+Beyond : digitalisation de formations internes, création de parcours 
+sur mesure, catalogue et marketplace de formateurs certifiés BCT.
+
+Son approche commerciale est basée sur le système 1 de Kahneman :
+- Parler du problème, pas de la solution
+- Images mentales concrètes (pas de jargon)
+- Questions qui font réfléchir le prospect à son propre problème
+- Accroche émotionnelle, jamais technique
+
+DONNÉES DU PIPELINE :
+${JSON.stringify(prospects)}
+
+RÉSUMÉ :
+${JSON.stringify(summary)}
+
+DATE DU JOUR : ${dateLabel}
+
+Ta mission : générer le briefing du jour en JSON strict (pas de markdown, 
+pas de texte avant ou après le JSON).
+
+Format JSON attendu :
+{
+  "pipeline_status": {
+    "total": number,
+    "actions_overdue": number,
+    "actions_today": number,
+    "top_insight": "string — 1 phrase sur l'état du pipeline"
+  },
+  "priorities": [
+    {
+      "rank": 1,
+      "company": "string",
+      "why_today": "string — raison concrète et urgente pourquoi aujourd'hui",
+      "action_type": "email" | "call" | "linkedin",
+      "contact_name": "string | null",
+      "contact_role": "string",
+      "email": {
+        "subject": "string",
+        "body": "string — email complet rédigé, ton système 1, court, percutant, max 120 mots"
+      } | null,
+      "call_script": {
+        "hook": "string — phrase d'accroche au téléphone, max 2 phrases",
+        "pitch": "string — pitch de 30 secondes si on a l'interlocuteur",
+        "objection_time": "string — réponse si 'je n'ai pas le temps'",
+        "objection_interest": "string — réponse si 'ça ne nous intéresse pas'",
+        "goal": "string — objectif de l'appel en 1 phrase"
+      } | null,
+      "linkedin_message": "string | null — message LinkedIn court si action = linkedin"
+    }
+  ],
+  "max_priorities": 3,
+  "do_not_contact_today": [
+    {
+      "company": "string",
+      "reason": "string — pourquoi ne pas contacter aujourd'hui"
+    }
+  ],
+  "daily_tip": "string — 1 conseil commercial du jour basé sur l'état du pipeline"
+}
+
+RÈGLES :
+- Maximum 3 priorités
+- Priorise : score engagement élevé + next_action_date dépassée ou aujourd'hui
+- Les emails doivent être courts, percutants, système 1 — jamais de présentation produit
+- Les scripts d'appel doivent sonner naturel, pas commercial
+- Si un contact est identifié (contact_name), l'utiliser dans le mail
+- Sois direct dans why_today — pas de langue de bois
+- do_not_contact_today : 2-3 entreprises max avec raison tactique
+- daily_tip : 1 conseil actionnable basé sur les données réelles du pipeline
+- Pour action_type "email", remplis email et call_script null
+- Pour action_type "call", remplis call_script et email null
+- Pour action_type "linkedin", remplis linkedin_message`;
+}
+
+export function enrichBriefingWithProspects(
+  briefing: DailyBriefing,
+  prospects: Record<string, unknown>[],
+): DailyBriefing {
+  const byCompany = new Map(
+    prospects.map((p) => [String(p.company_name ?? "").trim().toLowerCase(), p]),
+  );
+
+  const priorities = briefing.priorities.map((prio) => {
+    const deal = byCompany.get(prio.company.trim().toLowerCase());
+    if (!deal) return prio;
+    return {
+      ...prio,
+      prospect_id: String(deal.id ?? ""),
+      contact_email: deal.email ? String(deal.email) : null,
+      contact_name:
+        prio.contact_name ||
+        (deal.contact_first_name ? String(deal.contact_first_name) : null),
+      contact_role: prio.contact_role || String(deal.contact_role ?? "Contact"),
+    };
+  });
+
+  return { ...briefing, priorities };
+}

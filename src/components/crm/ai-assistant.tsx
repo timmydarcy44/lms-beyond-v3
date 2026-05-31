@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { AssistantHistoryMessage, AssistantResponse } from "@/lib/crm/ai-assistant-types";
 import { useAiAssistant } from "@/components/crm/ai-assistant-provider";
+import { DailyBriefingOverlay } from "@/components/crm/daily-briefing-overlay";
 
 const VOICE_REPLY_KEY = "crm-ai-voice-reply";
 const MAX_HISTORY = 10;
@@ -46,6 +47,7 @@ export function AiAssistant() {
   const [listening, setListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
   const [voiceReply, setVoiceReply] = useState(false);
+  const [showBriefing, setShowBriefing] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sendOnEndRef = useRef(false);
@@ -265,11 +267,18 @@ export function AiAssistant() {
         aria-hidden={!isOpen}
       >
         <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-[#6633CC] to-indigo-700 px-4 py-3 text-white">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            <span className="font-semibold">Assistant Beyond</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="h-5 w-5 shrink-0" />
+            <span className="font-semibold truncate">Assistant Beyond</span>
+            <button
+              type="button"
+              onClick={() => setShowBriefing(true)}
+              className="todo-btn ml-1 shrink-0 rounded-lg bg-white/20 px-2 py-1 text-xs font-semibold hover:bg-white/30"
+            >
+              ✅ Todo
+            </button>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={toggleVoiceReply}
@@ -372,6 +381,8 @@ export function AiAssistant() {
           </button>
         </div>
       </div>
+
+      <DailyBriefingOverlay open={showBriefing} onClose={() => setShowBriefing(false)} />
     </>
   );
 }

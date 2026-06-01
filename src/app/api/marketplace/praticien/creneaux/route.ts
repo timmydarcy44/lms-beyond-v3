@@ -4,7 +4,7 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const access = await assertPraticienAccess();
   if (!access.ok || !access.praticienId) {
     return NextResponse.json({ error: access.error }, { status: 403 });
@@ -15,14 +15,21 @@ export async function GET() {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
-  const from = new Date().toISOString().slice(0, 10);
-  const { data, error } = await service
+  const { searchParams } = new URL(request.url);
+  const from = searchParams.get("from") ?? new Date().toISOString().slice(0, 10);
+  const to = searchParams.get("to");
+
+  let query = service
     .from("praticien_creneaux")
     .select("*")
     .eq("praticien_id", access.praticienId)
     .gte("date", from)
     .order("date")
     .order("heure_debut");
+
+  if (to) query = query.lte("date", to);
+
+  const { data, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ creneaux: data ?? [] });

@@ -88,15 +88,18 @@ export async function assertPraticienAccess(praticienId?: string): Promise<{
     return { ok: false, userId: user.id, praticienId: null, error: "Service indisponible" };
   }
 
-  let query = service.from("praticiens_bct").select("id, user_id").eq("user_id", user.id);
-  if (praticienId) query = query.eq("id", praticienId);
-
-  const { data, error } = await query.maybeSingle();
-  if (error || !data) {
-    return { ok: false, userId: user.id, praticienId: null, error: "Profil praticien introuvable" };
+  const { ensurePraticienForUser } = await import("@/lib/marketplace/ensure-praticien");
+  const { praticien, error: ensureErr } = await ensurePraticienForUser(service, user.id);
+  if (!praticien) {
+    return { ok: false, userId: user.id, praticienId: null, error: ensureErr ?? "Profil praticien introuvable" };
   }
 
-  return { ok: true, userId: user.id, praticienId: data.id as string };
+  const resolvedId = praticien.id as string;
+  if (praticienId && praticienId !== resolvedId) {
+    return { ok: false, userId: user.id, praticienId: null, error: "Praticien non autorisé" };
+  }
+
+  return { ok: true, userId: user.id, praticienId: resolvedId };
 }
 
 export function isCollaboratorRole(role: string | null | undefined, roleType: string | null | undefined) {

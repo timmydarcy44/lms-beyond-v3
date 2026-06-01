@@ -81,8 +81,34 @@ async function resolveAuthUserId(
     .maybeSingle();
   if (existingProfile?.id) return existingProfile.id as string;
 
-  const { data: authUser } = await service.auth.admin.getUserByEmail(email);
-  return authUser?.user?.id ?? null;
+  try {
+    const { data: authUser, error } = await service.auth.admin.getUserByEmail(email);
+    if (!error && authUser?.user?.id) return authUser.user.id;
+    if (error) {
+      console.warn("[onboarding] getUserByEmail:", error.message);
+    }
+  } catch (e) {
+    console.warn("[onboarding] getUserByEmail exception:", e);
+  }
+
+  try {
+    for (let page = 1; page <= 5; page++) {
+      const { data: listData, error: listErr } = await service.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
+      if (listErr || !listData?.users?.length) break;
+      const match = listData.users.find(
+        (u) => u.email?.toLowerCase() === email.toLowerCase(),
+      );
+      if (match?.id) return match.id;
+      if (listData.users.length < 200) break;
+    }
+  } catch (e) {
+    console.warn("[onboarding] listUsers fallback:", e);
+  }
+
+  return null;
 }
 
 async function inviteDrhUser(
@@ -109,10 +135,23 @@ async function inviteDrhUser(
     return invite.user.id;
   }
 
+  if (inviteErr && inviteErr.message) {
+    console.error("[onboarding] inviteUserByEmail:", {
+      message: inviteErr.message,
+      status: inviteErr.status,
+      code: inviteErr.code,
+      email: params.email,
+    });
+  }
+
   const afterInvite = await resolveAuthUserId(service, params.email);
   if (afterInvite) return afterInvite;
 
-  throw new Error(inviteErr?.message ?? "Invitation DRH impossible");
+  throw new Error(
+    inviteErr?.message
+      ? `Invitation DRH impossible : ${inviteErr.message}`
+      : "Invitation DRH impossible (vérifiez SUPABASE_SERVICE_ROLE_KEY et les paramètres Auth)",
+  );
 }
 
 async function upsertDrhProfile(
@@ -207,59 +246,85 @@ export async function createOrganizationFromDeal(
     deal_id: string;
   },
 ) {
-  const deal = await fetchDeal(service, body.deal_id);
-  if (!deal) {
-    throw new Error("Deal introuvable");
-  }
-  if (deal.organization_id) {
-    const err = new Error("Organisation déjà créée pour ce deal") as Error & { status?: number; organization_id?: string };
-    err.status = 409;
-    err.organization_id = deal.organization_id;
-    throw err;
-  }
+  let step = "fetch_deal";
+  try {
+    const deal = await fetchDeal(service, body.deal_id);
+    if (!deal) {
+      throw new Error("Deal introuvable");
+    }
+    if (deal.organization_id) {
+      const err = new Error("Organisation déjà créée pour ce deal") as Error & {
+        status?: number;
+        organization_id?: string;
+      };
+      err.status = 409;
+      err.organization_id = deal.organization_id;
+      throw err;
+    }
 
-  const slug = generateOrgSlug(body.company_name);
-  const organisation = await insertOrganization(service, {
-    name: body.company_name,
-    slug,
-    dealId: body.deal_id,
-    estimatedUsers: body.estimated_users,
-  });
+    step = "insert_organization";
+    const slug = generateOrgSlug(body.company_name);
+    const organisation = await insertOrganization(service, {
+      name: body.company_name,
+      slug,
+      dealId: body.deal_id,
+      estimatedUsers: body.estimated_users,
+    });
 
-  const orgId = organisation.id;
-  const origin = appOrigin();
-  const activationLink = `${origin}/onboarding/${orgId}`;
+    const orgId = organisation.id;
+    const origin = appOrigin();
+    const activationLink = `${origin}/onboarding/${orgId}`;
 
-  const userId = await inviteDrhUser(service, {
-    email: body.drh_email,
-    drhName: body.drh_name,
-    orgId,
-  });
-
-  if (userId) {
-    await upsertDrhProfile(service, {
-      userId,
+    step = "invite_drh";
+    const userId = await inviteDrhUser(service, {
       email: body.drh_email,
       drhName: body.drh_name,
       orgId,
     });
-  }
 
-  await linkDealToOrganization(service, body.deal_id, orgId, body.drh_email);
+    if (userId) {
+      step = "upsert_profile";
+      await upsertDrhProfile(service, {
+        userId,
+        email: body.drh_email,
+        drhName: body.drh_name,
+        orgId,
+      });
+    }
 
-  try {
-    await sendOnboardingEmails({
-      companyName: body.company_name,
-      drhEmail: body.drh_email,
-      drhName: body.drh_name,
-      estimatedUsers: body.estimated_users,
-      dealId: body.deal_id,
-      organisationId: orgId,
-      activationLink,
-    });
+    step = "link_deal";
+    await linkDealToOrganization(service, body.deal_id, orgId, body.drh_email);
+
+    step = "send_emails";
+    try {
+      await sendOnboardingEmails({
+        companyName: body.company_name,
+        drhEmail: body.drh_email,
+        drhName: body.drh_name,
+        estimatedUsers: body.estimated_users,
+        dealId: body.deal_id,
+        organisationId: orgId,
+        activationLink,
+      });
+    } catch (e) {
+      console.error("[onboarding] emails:", e);
+    }
+
+    return { organisation, organisation_id: orgId };
   } catch (e) {
-    console.error("[onboarding] emails:", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    const wrapped = new Error(`[${step}] ${msg}`) as Error & {
+      status?: number;
+      organization_id?: string;
+      step?: string;
+    };
+    if (e instanceof Error && "status" in e) {
+      wrapped.status = (e as Error & { status?: number }).status;
+    }
+    if (e instanceof Error && "organization_id" in e) {
+      wrapped.organization_id = (e as Error & { organization_id?: string }).organization_id;
+    }
+    wrapped.step = step;
+    throw wrapped;
   }
-
-  return { organisation, organisation_id: orgId };
 }

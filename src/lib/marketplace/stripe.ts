@@ -5,7 +5,20 @@ let stripeSingleton: Stripe | null = null;
 
 export function getMarketplaceStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
-  if (!key) return null;
+  if (!key) {
+    if (process.env.NEVO_STRIPE_SECRET_KEY?.trim()) {
+      console.error(
+        "[marketplace/stripe] STRIPE_SECRET_KEY absente mais NEVO_STRIPE_SECRET_KEY est définie — utiliser STRIPE_SECRET_KEY (compte Beyond/marketplace), pas Nevo.",
+      );
+    }
+    return null;
+  }
+  if (key.startsWith("rk_")) {
+    console.error(
+      "[marketplace/stripe] STRIPE_SECRET_KEY semble être une clé restreinte (rk_). Utilisez une clé secrète standard (sk_live_ ou sk_test_).",
+    );
+    return null;
+  }
   if (!stripeSingleton) {
     stripeSingleton = new Stripe(key, { apiVersion: "2025-10-29.clover" });
   }

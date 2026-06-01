@@ -72,6 +72,69 @@ export async function assertMarketplaceAccess(): Promise<{
   return { ok: true, userId: user.id, organizationId: orgId, tier };
 }
 
+export async function assertExistingPraticienAccess(praticienId?: string): Promise<{
+  ok: boolean;
+  userId: string | null;
+  praticienId: string | null;
+  error?: string;
+  status?: 403 | 404;
+}> {
+  const { user } = await getCurrentProfileWithAccess();
+  if (!user?.id) {
+    return { ok: false, userId: null, praticienId: null, error: "Non authentifié", status: 403 };
+  }
+
+  const service = getServiceRoleClient();
+  if (!service) {
+    return { ok: false, userId: user.id, praticienId: null, error: "Service indisponible", status: 403 };
+  }
+
+  const { data: praticien, error: findErr } = await service
+    .from("praticiens_bct")
+    .select("id, user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (findErr) {
+    console.error("[marketplace/auth] praticiens_bct lookup:", findErr);
+    return {
+      ok: false,
+      userId: user.id,
+      praticienId: null,
+      error: "Impossible de charger votre fiche praticien",
+      status: 404,
+    };
+  }
+
+  if (!praticien?.id) {
+    return {
+      ok: false,
+      userId: user.id,
+      praticienId: null,
+      error:
+        "Aucune fiche praticien BCT liée à votre compte. Contactez l'administrateur Beyond pour activer votre profil.",
+      status: 404,
+    };
+  }
+
+  if (!praticien.user_id) {
+    return {
+      ok: false,
+      userId: user.id,
+      praticienId: null,
+      error: "Fiche praticien invalide (user_id manquant). Contactez le support Beyond.",
+      status: 404,
+    };
+  }
+
+  const resolvedId = praticien.id as string;
+  if (praticienId && praticienId !== resolvedId) {
+    return { ok: false, userId: user.id, praticienId: null, error: "Praticien non autorisé", status: 403 };
+  }
+
+  return { ok: true, userId: user.id, praticienId: resolvedId };
+}
+
 export async function assertPraticienAccess(praticienId?: string): Promise<{
   ok: boolean;
   userId: string | null;

@@ -21,8 +21,13 @@ export async function POST(request: NextRequest) {
 
     const service = getServiceRoleClient();
     if (!service) {
+      console.error("[onboarding/create-organisation] SUPABASE_SERVICE_ROLE_KEY manquante ou invalide");
       return NextResponse.json(
-        { error: "Service Supabase indisponible (SUPABASE_SERVICE_ROLE_KEY)" },
+        {
+          error: "Service Supabase indisponible",
+          detail: "SUPABASE_SERVICE_ROLE_KEY absente ou incorrecte sur le serveur (Vercel → Environment Variables)",
+          step: "service_client",
+        },
         { status: 503 },
       );
     }
@@ -64,15 +69,21 @@ export async function POST(request: NextRequest) {
       organisation_id: result.organisation_id,
     });
   } catch (e) {
-    const err = e as Error & { status?: number; organization_id?: string };
+    const err = e as Error & { status?: number; organization_id?: string; step?: string };
     const status = err.status ?? 500;
-    console.error("[onboarding/create-organisation]", err.message);
+    console.error("[onboarding/create-organisation] Échec:", {
+      step: err.step ?? "unknown",
+      message: err.message,
+      stack: err.stack,
+      organization_id: err.organization_id,
+    });
     return NextResponse.json(
       {
         error: err.message || "Erreur serveur",
-        hint:
+        step: err.step,
+        detail:
           status === 500
-            ? "Vérifiez la migration 20260602120000_client_onboarding_workflow.sql et SUPABASE_SERVICE_ROLE_KEY"
+            ? "Vérifiez SUPABASE_SERVICE_ROLE_KEY, la migration 20260602120000_client_onboarding_workflow.sql, et les logs inviteUserByEmail"
             : undefined,
         organization_id: err.organization_id,
       },

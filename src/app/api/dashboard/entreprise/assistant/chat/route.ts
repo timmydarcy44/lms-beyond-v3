@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const access = await resolveEntrepriseAssistantAccess();
   if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
+    return NextResponse.json(
+      { error: access.error, redirect: access.redirect },
+      { status: access.status },
+    );
   }
 
   let body: { message?: string; history?: { role: "user" | "assistant"; content: string }[] };

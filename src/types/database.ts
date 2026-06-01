@@ -55,7 +55,9 @@ export type UserRole =
   | "ecole"
   | "club"
   | "partenaire"
-  | "demo";
+  | "demo"
+  | "praticien"
+  | "expert";
 
 export interface Profile {
   id: string;

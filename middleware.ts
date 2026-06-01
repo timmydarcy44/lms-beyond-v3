@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { getTenantFromHostname, isJessicaContentinMarketingHostname } from "@/lib/tenant/config";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
+import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
 import {
   isEcoleHandicapSectionPath,
   shouldRestrictSchoolDashboardToHandicapOnly,
@@ -12,9 +13,11 @@ import { createServerClient } from "@supabase/ssr";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-/** Rôle profil (colonne `profiles.role`) pour règles Nevo — client Supabase lecture cookies requête uniquement. */
-async function fetchProfileRoleForRequest(request: NextRequest): Promise<string> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return "";
+/** Profil minimal pour redirection post-login (cookies requête). */
+async function fetchProfileForRequest(
+  request: NextRequest,
+): Promise<{ role: string | null; role_type: string | null } | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
   const cookieAdapter = NextResponse.next();
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
@@ -32,9 +35,18 @@ async function fetchProfileRoleForRequest(request: NextRequest): Promise<string>
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return "";
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  return String((profile as { role?: string } | null)?.role ?? "")
+  if (!user) return null;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, role_type")
+    .eq("id", user.id)
+    .maybeSingle();
+  return (profile as { role?: string | null; role_type?: string | null } | null) ?? null;
+}
+
+async function fetchProfileRoleForRequest(request: NextRequest): Promise<string> {
+  const profile = await fetchProfileForRequest(request);
+  return String(profile?.role ?? "")
     .trim()
     .toLowerCase();
 }
@@ -367,14 +379,29 @@ export async function middleware(request: NextRequest) {
         });
       })();
 
+  // --- Redirection /dashboard selon profiles.role ---
+  if (url.pathname === "/dashboard" && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    const profile = await fetchProfileForRequest(request);
+    const destination = resolveDestinationFromProfile(profile);
+    if (destination) {
+      return NextResponse.redirect(new URL(destination, request.url));
+    }
+  }
+
   // --- RBAC Beyond Connect (profiles.role) ---
   // Only for dashboard scopes; never uses auth.users for role.
   // Admins / super_admins are not restricted here; layouts (apprenant/student) grant universal access for those roles.
   const isDashboardEntreprise = url.pathname === "/dashboard/entreprise" || url.pathname.startsWith("/dashboard/entreprise/");
+  const isDashboardPraticien =
+    url.pathname === "/dashboard/praticien" || url.pathname.startsWith("/dashboard/praticien/");
   const isDashboardExpert = url.pathname === "/dashboard/expert" || url.pathname.startsWith("/dashboard/expert/");
   const isDashboardProfil = url.pathname === "/dashboard/profil" || url.pathname.startsWith("/dashboard/profil/");
 
-  if ((isDashboardEntreprise || isDashboardExpert || isDashboardProfil) && SUPABASE_URL && SUPABASE_ANON_KEY) {
+  if (
+    (isDashboardEntreprise || isDashboardExpert || isDashboardProfil || isDashboardPraticien) &&
+    SUPABASE_URL &&
+    SUPABASE_ANON_KEY
+  ) {
     const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       cookies: {
         get(name) {
@@ -399,12 +426,17 @@ export async function middleware(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, company_id")
+      .select("role, role_type, company_id")
       .eq("id", user.id)
       .maybeSingle();
 
-    const profileRow = profile as { role?: string | null; company_id?: string | null } | null;
+    const profileRow = profile as {
+      role?: string | null;
+      role_type?: string | null;
+      company_id?: string | null;
+    } | null;
     const role = String(profileRow?.role ?? "").trim().toLowerCase();
+    const roleType = String(profileRow?.role_type ?? "").trim().toLowerCase();
     const companyId = profileRow?.company_id ?? null;
 
     if (isUniversalAdminRole(role)) {
@@ -426,6 +458,18 @@ export async function middleware(request: NextRequest) {
 
     if (isDashboardExpert) {
       if (role !== "expert") {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
+      }
+    }
+
+    if (isDashboardPraticien) {
+      const canAccessPraticien =
+        isUniversalAdminRole(role) ||
+        role === "praticien_bct" ||
+        role === "praticien" ||
+        roleType === "praticien_bct" ||
+        roleType === "praticien";
+      if (!canAccessPraticien) {
         return NextResponse.redirect(new URL("/unauthorized", request.url));
       }
     }

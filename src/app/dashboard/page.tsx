@@ -7,6 +7,7 @@ import {
   resolveDashboardSpaces,
   type DashboardSpace,
 } from "@/lib/auth/dashboard-routing";
+import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { requireSession } from "@/lib/auth/session";
 
@@ -50,6 +51,11 @@ export default async function DashboardPage() {
   const roleKeys = collectProfileRoleKeys(profile);
   const isDemoOnly = roleKeys.length === 1 && roleKeys[0] === "demo";
 
+  const roleDestination = resolveDestinationFromProfile(profile);
+  if (!isDemoOnly && roleDestination) {
+    redirect(roleDestination);
+  }
+
   const { spaces, isDemo } = await resolveDashboardSpaces(
     service,
     session.id,
@@ -62,7 +68,12 @@ export default async function DashboardPage() {
       redirect(spaces[0].href);
     }
     if (spaces.length === 0) {
-      redirect("/dashboard/apprenant");
+      return (
+        <UnknownRoleDashboard
+          firstName={session.fullName?.trim().split(/\s+/)[0] || session.email?.split("@")[0] || "utilisateur"}
+          profileRole={profile?.role ?? profile?.role_type ?? null}
+        />
+      );
     }
   }
 
@@ -201,6 +212,32 @@ export default async function DashboardPage() {
           ))}
         </main>
       </div>
+    </div>
+  );
+}
+
+function UnknownRoleDashboard({
+  firstName,
+  profileRole,
+}: {
+  firstName: string;
+  profileRole: string | null;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#f5f5f7] px-6 text-center">
+      <p className="text-sm font-bold tracking-[0.28em] text-black">BEYOND</p>
+      <h1 className="mt-8 text-2xl font-bold text-gray-900">Bonjour {firstName}</h1>
+      <p className="mt-4 max-w-md text-gray-600">
+        Votre compte n&apos;est pas encore associé à un espace Beyond.
+        {profileRole ? (
+          <>
+            {" "}
+            (rôle en base : <code className="rounded bg-gray-200 px-1">{profileRole}</code>)
+          </>
+        ) : null}
+      </p>
+      <p className="mt-6 text-lg font-medium text-gray-900">Contactez l&apos;administrateur</p>
+      <p className="mt-2 text-sm text-gray-500">darcy@edgebs.fr</p>
     </div>
   );
 }

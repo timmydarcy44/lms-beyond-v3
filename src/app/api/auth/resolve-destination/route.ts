@@ -4,6 +4,7 @@ import {
   resolveDashboardSpaces,
   type ProfileRoutingInput,
 } from "@/lib/auth/dashboard-routing";
+import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -43,6 +44,11 @@ export async function POST(request: Request) {
     profile = rows.find((row) => String(row.id ?? "") === user.id) ?? rows[0] ?? null;
   }
 
+  const roleDestination = resolveDestinationFromProfile(profile);
+  if (roleDestination) {
+    return NextResponse.json({ destination: roleDestination });
+  }
+
   const { spaces } = await resolveDashboardSpaces(service, user.id, emailValue, profile);
 
   if (spaces.length > 1) {
@@ -53,6 +59,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ destination: spaces[0].href });
   }
 
-  const fallback = pickPrimaryDestination(spaces) ?? "/dashboard/apprenant";
-  return NextResponse.json({ destination: fallback });
+  const fallback = pickPrimaryDestination(spaces);
+  return NextResponse.json({ destination: fallback ?? "/dashboard" });
 }

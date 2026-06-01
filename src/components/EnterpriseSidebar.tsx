@@ -91,11 +91,14 @@ export default function EnterpriseSidebar() {
       </nav>
 
       <div className="relative mt-auto p-4">
-        <button
-          type="button"
+        <Link
+          href="/dashboard/entreprise/equipe-radar"
           className={cn(
-            "group w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition",
+            "group block w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition",
             "hover:border-white/15 hover:bg-white/[0.06]",
+            (pathname === "/dashboard/entreprise/equipe-radar" ||
+              pathname.startsWith("/dashboard/entreprise/radar-equipe")) &&
+              "border-violet-400/30 bg-violet-500/10",
           )}
         >
           <div className="flex items-center gap-3">
@@ -114,7 +117,7 @@ export default function EnterpriseSidebar() {
               </div>
             </div>
           </div>
-        </button>
+        </Link>
       </div>
     </aside>
   );

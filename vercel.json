@@ -6,7 +6,13 @@
   "regions": ["cdg1"],
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/radar-equipe-compute",
+      "schedule": "0 6 * * 1"
+    }
+  ]
 }
 
 

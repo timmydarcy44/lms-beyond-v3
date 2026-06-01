@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { ActionCards, ActionCardsSkeleton, type RecommendedAction } from "@/components/enterprise/ActionCards";
+import { RadarEquipeSummaryCard } from "@/components/radar-equipe/radar-equipe-summary-card";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -1102,6 +1103,10 @@ export default function DashboardRHLightFinal() {
               </div>
             </div>
           ))}
+        </section>
+
+        <section className="relative mb-10">
+          <RadarEquipeSummaryCard />
         </section>
 
         {searchParams.get("action") === "success" ? (

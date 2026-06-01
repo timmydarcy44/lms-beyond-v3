@@ -6,6 +6,8 @@ import { useSupabase } from "@/components/providers/supabase-provider";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import SidebarSalarie from "@/components/SidebarSalarie";
+import { MicroCheckinWidget } from "@/components/radar-equipe/micro-checkin-widget";
+import { ProfilPartageConsent } from "@/components/radar-equipe/profil-partage-consent";
 import { Brain, Info, Sparkles, TrendingUp } from "lucide-react";
 
 type ActionRequestRow = {
@@ -123,6 +125,7 @@ export default function SalarieDashboardPage() {
 
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requests, setRequests] = useState<ActionRequestRow[]>([]);
+  const [managerId, setManagerId] = useState<string | null>(null);
 
   // Mock visible (plein opacity) pour la section "Mon état actuel"
   const engagement = 75;
@@ -168,6 +171,18 @@ export default function SalarieDashboardPage() {
       cancelled = true;
     };
   }, [supabase]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/radar-equipe/partage");
+        const json = (await res.json()) as { managerId?: string | null };
+        if (json.managerId) setManagerId(json.managerId);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -268,6 +283,11 @@ export default function SalarieDashboardPage() {
           </h1>
           <p className="mt-3 max-w-3xl text-sm text-slate-400">{message}</p>
         </header>
+
+        <section className="mb-8 space-y-4">
+          <MicroCheckinWidget />
+          {managerId ? <ProfilPartageConsent managerId={managerId} /> : null}
+        </section>
 
         {/* Cartes Apple : tests */}
         <section className="mb-12">

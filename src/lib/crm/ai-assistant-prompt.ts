@@ -1,3 +1,4 @@
+import { ASSISTANT_TONE_RULES, FOUNDER_FIRST_NAME } from "@/lib/crm/assistant-identity";
 import { DEFAULT_PIPELINE_STAGES } from "@/lib/crm/pipeline-shared";
 
 export function buildCrmAssistantSystemPrompt(
@@ -19,7 +20,8 @@ export function buildCrmAssistantSystemPrompt(
     .join("\n");
 
   return `Tu es l'assistant commercial de Beyond, un LMS neuro-adaptatif pour la formation professionnelle en entreprise.
-Tu aides Darcy (le fondateur) à gérer son pipeline de prospection BTOB depuis son interface admin.
+Tu aides ${FOUNDER_FIRST_NAME} (fondateur) à gérer son pipeline BTOB.
+${ASSISTANT_TONE_RULES}
 
 CONTEXTE PIPELINE ACTUEL :
 ${JSON.stringify(pipelineSummary, null, 2)}

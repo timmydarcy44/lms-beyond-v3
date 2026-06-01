@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { applyNaturalMaleSpeech } from "@/lib/voice/pick-french-male-voice";
 
 function getSpeechRecognition(): (new () => SpeechRecognition) | null {
   if (typeof window === "undefined") return null;
@@ -13,6 +14,17 @@ export function useVoiceCoach() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const speakResolveRef = useRef<(() => void) | null>(null);
   const enabledRef = useRef(true);
+  const voicesReadyRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const load = () => {
+      voicesReadyRef.current = window.speechSynthesis.getVoices().length > 0;
+    };
+    load();
+    window.speechSynthesis.addEventListener("voiceschanged", load);
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", load);
+  }, []);
 
   const stopSpeaking = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -31,9 +43,7 @@ export function useVoiceCoach() {
       }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "fr-FR";
-      utterance.rate = 1.05;
-      utterance.pitch = 1;
+      applyNaturalMaleSpeech(utterance);
 
       setIsSpeaking(true);
       speakResolveRef.current = resolve;

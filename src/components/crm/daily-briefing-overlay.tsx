@@ -62,7 +62,7 @@ function buildSteps(briefing: DailyBriefing): CoachStep[] {
 function stepScript(step: CoachStep, briefing: DailyBriefing, dateLabel: string): string {
   switch (step.kind) {
     case "intro":
-      return scriptIntro(dateLabel);
+      return scriptIntro();
     case "pipeline":
       return scriptPipeline(briefing);
     case "priority": {
@@ -180,7 +180,7 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
     voice.stopSpeaking();
     if (stepIndex >= steps.length - 1) {
       setPhase("dialogue");
-      void voice.speak("On passe en mode libre. Dis-moi ce dont tu as besoin.");
+      void voice.speak("Mode libre. Parle.");
       return;
     }
     setStepIndex((i) => i + 1);
@@ -305,7 +305,7 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
       window.dispatchEvent(new CustomEvent("crm-updated"));
       toast.success("Email envoyé — CRM mis à jour");
       setEmailDraft(null);
-      await voice.speak(`C'est envoyé à ${to}. Bien joué.`);
+      await voice.speak(`Envoyé à ${to}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -362,14 +362,16 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
 
           <p className="mt-6 max-w-xl text-center text-sm text-white/70 sm:text-base">
             {loading
-              ? "J'analyse ton pipeline…"
-              : voice.isSpeaking
-                ? "Je te guide…"
-                : voice.isListening
-                  ? "Je t'écoute…"
-                  : phase === "coaching"
-                    ? `Étape ${stepIndex + 1} / ${steps.length}`
-                    : "Mode conversation — parle ou écris"}
+              ? "Chargement…"
+              : currentStep?.kind === "intro"
+                ? "Bonjour Timmy, voici tes priorités aujourd'hui"
+                : voice.isSpeaking
+                  ? "…"
+                  : voice.isListening
+                    ? "Je t'écoute"
+                    : phase === "coaching"
+                      ? `Étape ${stepIndex + 1} / ${steps.length}`
+                      : "Parle ou écris"}
           </p>
 
           {liveTranscript ? (
@@ -387,6 +389,13 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
 
           {!loading && briefing && phase === "coaching" && currentStep ? (
             <div className="mt-6 w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+              {currentStep.kind === "intro" ? (
+                <p className="text-center text-xl font-semibold text-white sm:text-2xl">
+                  Bonjour Timmy,
+                  <br />
+                  <span className="text-violet-300">voici tes priorités aujourd&apos;hui</span>
+                </p>
+              ) : null}
               {currentStep.kind === "pipeline" ? (
                 <div className="text-sm text-white/90">
                   <p className="font-semibold text-violet-200">État du pipeline</p>
@@ -490,7 +499,7 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
                   className="border-white/20 text-white hover:bg-white/10"
                   onClick={() => {
                     setEmailDraft(null);
-                    void voice.speak("D'accord, on garde le brouillon. Dis-moi si tu veux le modifier.");
+                    void voice.speak("OK, brouillon gardé.");
                   }}
                 >
                   Pas maintenant
@@ -553,7 +562,7 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
                 className="text-white/70"
                 onClick={() => {
                   setPhase("dialogue");
-                  void voice.speak("Mode conversation activé.");
+                  void voice.speak("OK, on discute.");
                 }}
               >
                 Passer au dialogue

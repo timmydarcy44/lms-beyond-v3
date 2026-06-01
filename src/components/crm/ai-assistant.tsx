@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { AssistantHistoryMessage, AssistantResponse } from "@/lib/crm/ai-assistant-types";
+import { applyNaturalMaleSpeech } from "@/lib/voice/pick-french-male-voice";
 import { useAiAssistant } from "@/components/crm/ai-assistant-provider";
 import { DailyBriefingOverlay } from "@/components/crm/daily-briefing-overlay";
 
@@ -71,9 +72,7 @@ export function AiAssistant() {
       if (!voiceReply || typeof window === "undefined") return;
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "fr-FR";
-      utterance.rate = 1.1;
-      utterance.pitch = 1;
+      applyNaturalMaleSpeech(utterance);
       window.speechSynthesis.speak(utterance);
     },
     [voiceReply],
@@ -305,8 +304,7 @@ export function AiAssistant() {
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
           {messages.length === 0 ? (
             <p className="text-center text-sm text-gray-500 px-2 py-8">
-              Posez une question sur le pipeline BTOB ou dictez une action (« Ajoute Lactalis en
-              priorité haute »).
+              Pipeline BTOB : pose une question ou dicte une action. Ex. « Ajoute Lactalis, priorité haute ».
             </p>
           ) : null}
           {messages.map((m) => (

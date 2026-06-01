@@ -272,7 +272,10 @@ export function AiAssistant() {
             <span className="font-semibold truncate">Assistant Beyond</span>
             <button
               type="button"
-              onClick={() => setShowBriefing(true)}
+              onClick={() => {
+                setIsOpen(false);
+                setShowBriefing(true);
+              }}
               className="todo-btn ml-1 shrink-0 rounded-lg bg-white/20 px-2 py-1 text-xs font-semibold hover:bg-white/30"
             >
               ✅ Todo

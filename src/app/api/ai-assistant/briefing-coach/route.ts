@@ -3,6 +3,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { buildBriefingCoachSystemPrompt } from "@/lib/crm/briefing-coach-prompt";
 import type { DailyBriefing } from "@/lib/crm/daily-briefing-types";
 import { generateChatWithAnthropic } from "@/lib/ai/anthropic-messages";
+import { prepareTextForSpeech } from "@/lib/voice/prepare-text-for-speech";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const reply = raw.replace(/<action>[\s\S]*?<\/action>/g, "").trim();
+  const reply = prepareTextForSpeech(raw.replace(/<action>[\s\S]*?<\/action>/g, "").trim());
   return NextResponse.json({ reply });
 }

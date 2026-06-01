@@ -32,6 +32,7 @@ import type {
   BriefingPriority,
   DailyBriefing,
 } from "@/lib/crm/daily-briefing-types";
+import { stripMarkdownForSpeech } from "@/lib/voice/prepare-text-for-speech";
 
 type DailyBriefingOverlayProps = {
   open: boolean;
@@ -62,7 +63,7 @@ function buildSteps(briefing: DailyBriefing): CoachStep[] {
 function stepScript(step: CoachStep, briefing: DailyBriefing, dateLabel: string): string {
   switch (step.kind) {
     case "intro":
-      return scriptIntro();
+      return scriptIntro(briefing);
     case "pipeline":
       return scriptPipeline(briefing);
     case "priority": {
@@ -101,10 +102,20 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
   const coachRunningRef = useRef(false);
   const spokenStepRef = useRef(-1);
   const briefingRef = useRef<DailyBriefing | null>(null);
+  const dialogueRef = useRef<DialogueMsg[]>([]);
+  const phaseRef = useRef<CoachPhase>("loading");
+  const openRef = useRef(open);
   const voiceCleanupRef = useRef(voice.cleanup);
   const voiceResetRef = useRef(voice.reset);
+  const voiceListenRef = useRef(voice.listenOnce);
+  const voiceSpeakRef = useRef(voice.speak);
   voiceCleanupRef.current = voice.cleanup;
   voiceResetRef.current = voice.reset;
+  voiceListenRef.current = voice.listenOnce;
+  voiceSpeakRef.current = voice.speak;
+  openRef.current = open;
+  phaseRef.current = phase;
+  dialogueRef.current = dialogue;
 
   const dateLabel = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
@@ -203,12 +214,12 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
   }, [phase, loading, briefing, coachPaused, stepIndex, steps, dateLabel, voice]);
 
   const askCoach = useCallback(
-    async (userText: string) => {
+    async (userText: string, options?: { autoListenAfter?: boolean }) => {
       const trimmed = userText.trim();
       if (!trimmed || chatLoading) return;
 
       const lower = trimmed.toLowerCase();
-      if (phase === "coaching") {
+      if (phaseRef.current === "coaching") {
         if (lower.includes("suivant") || lower.includes("passer") || lower.includes("continue")) {
           goNextStep();
           return;
@@ -217,13 +228,17 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
           spokenStepRef.current = -1;
           const step = steps[stepIndex];
           if (step && briefingRef.current) {
-            void voice.speak(stepScript(step, briefingRef.current, dateLabel));
+            await voiceSpeakRef.current(stepScript(step, briefingRef.current, dateLabel));
           }
           return;
         }
       }
 
-      setDialogue((d) => [...d, { role: "user", content: trimmed }]);
+      const historyBefore = dialogueRef.current.slice(-10);
+      const userMsg: DialogueMsg = { role: "user", content: trimmed };
+      const withUser = [...dialogueRef.current, userMsg];
+      dialogueRef.current = withUser;
+      setDialogue(withUser);
       setChatInput("");
       setLiveTranscript("");
       setChatLoading(true);
@@ -235,24 +250,41 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
           body: JSON.stringify({
             message: trimmed,
             briefing: briefingRef.current,
-            conversationHistory: dialogue.slice(-10),
+            conversationHistory: historyBefore,
           }),
         });
         const json = (await res.json()) as { reply?: string; error?: string };
         if (!res.ok) throw new Error(json.error ?? "Erreur");
 
-        const reply = json.reply ?? "…";
-        setDialogue((d) => [...d, { role: "assistant", content: reply }]);
-        await voice.speak(reply);
+        const reply = stripMarkdownForSpeech(json.reply ?? "Je n'ai pas de réponse.");
+        const withReply = [...dialogueRef.current, { role: "assistant" as const, content: reply }];
+        dialogueRef.current = withReply;
+        setDialogue(withReply);
+
+        await voiceSpeakRef.current(reply);
+
+        const shouldAutoListen =
+          options?.autoListenAfter !== false &&
+          openRef.current &&
+          phaseRef.current === "dialogue" &&
+          coachRunningRef.current;
+        if (shouldAutoListen) {
+          await new Promise((r) => setTimeout(r, 450));
+          const heard = await voiceListenRef.current();
+          if (heard.trim()) {
+            setLiveTranscript(heard);
+            await askCoach(heard, { autoListenAfter: true });
+          }
+        }
       } catch (e) {
         const err = e instanceof Error ? e.message : "Erreur";
         toast.error(err);
-        await voice.speak("Désolé, une erreur est survenue. Réessaie.");
+        await voiceSpeakRef.current("Désolé, une erreur. Réessaie.");
       } finally {
         setChatLoading(false);
       }
     },
-    [chatLoading, dialogue, phase, voice, goNextStep, steps, stepIndex, dateLabel],
+    [chatLoading, goNextStep, steps, stepIndex, dateLabel],
   );
 
   const toggleListen = async () => {
@@ -261,12 +293,13 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
       return;
     }
     if (voice.isSpeaking) voice.stopSpeaking();
+    await new Promise((r) => setTimeout(r, 200));
     const text = await voice.listenOnce();
-    if (text) {
+    if (text.trim()) {
       setLiveTranscript(text);
-      if (phase === "dialogue" || phase === "coaching") {
-        await askCoach(text);
-      }
+      await askCoach(text);
+    } else {
+      toast.message("Je n'ai rien entendu — réessaie.");
     }
   };
 
@@ -390,11 +423,24 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
           {!loading && briefing && phase === "coaching" && currentStep ? (
             <div className="mt-6 w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
               {currentStep.kind === "intro" ? (
-                <p className="text-center text-xl font-semibold text-white sm:text-2xl">
-                  Bonjour Timmy,
-                  <br />
-                  <span className="text-violet-300">voici tes priorités aujourd&apos;hui</span>
-                </p>
+                <div className="space-y-4 text-center">
+                  <p className="text-xl font-semibold text-white sm:text-2xl">
+                    Bonjour Timmy,
+                    <br />
+                    <span className="text-violet-300">voici tes priorités aujourd&apos;hui</span>
+                  </p>
+                  <ul className="space-y-2 text-left text-sm text-white/85">
+                    {briefing.priorities.map((p) => (
+                      <li
+                        key={`${p.rank}-${p.company}`}
+                        className="rounded-lg border border-violet-500/30 bg-violet-950/40 px-3 py-2"
+                      >
+                        <strong className="text-violet-200">#{p.rank}</strong> {p.company}
+                        <span className="text-white/50"> — {p.why_today}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               {currentStep.kind === "pipeline" ? (
                 <div className="text-sm text-white/90">
@@ -562,6 +608,7 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
                 className="text-white/70"
                 onClick={() => {
                   setPhase("dialogue");
+                  phaseRef.current = "dialogue";
                   void voice.speak("OK, on discute.");
                 }}
               >

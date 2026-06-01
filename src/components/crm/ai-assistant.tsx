@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { AssistantHistoryMessage, AssistantResponse } from "@/lib/crm/ai-assistant-types";
 import { applyNaturalMaleSpeech } from "@/lib/voice/pick-french-male-voice";
+import { prepareTextForSpeech, stripMarkdownForSpeech } from "@/lib/voice/prepare-text-for-speech";
 import { useAiAssistant } from "@/components/crm/ai-assistant-provider";
 import { DailyBriefingOverlay } from "@/components/crm/daily-briefing-overlay";
 
@@ -71,7 +72,7 @@ export function AiAssistant() {
     (text: string) => {
       if (!voiceReply || typeof window === "undefined") return;
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new SpeechSynthesisUtterance(prepareTextForSpeech(text));
       applyNaturalMaleSpeech(utterance);
       window.speechSynthesis.speak(utterance);
     },
@@ -134,14 +135,15 @@ export function AiAssistant() {
           window.dispatchEvent(new CustomEvent("crm-updated"));
         }
 
+        const cleanReply = stripMarkdownForSpeech(json.reply ?? "");
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: json.reply,
+          content: cleanReply,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, assistantMsg]);
-        speak(json.reply);
+        speak(cleanReply);
       } catch (e) {
         const errText =
           e instanceof Error ? e.message : "Désolé, une erreur est survenue. Réessaie.";

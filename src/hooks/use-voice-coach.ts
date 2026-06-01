@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyNaturalMaleSpeech } from "@/lib/voice/pick-french-male-voice";
+import { prepareTextForSpeech } from "@/lib/voice/prepare-text-for-speech";
 
 function getSpeechRecognition(): (new () => SpeechRecognition) | null {
   if (typeof window === "undefined") return null;
@@ -41,25 +42,38 @@ export function useVoiceCoach() {
         resolve();
         return;
       }
+
+      const spoken = prepareTextForSpeech(text);
+      if (!spoken) {
+        resolve();
+        return;
+      }
+
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      applyNaturalMaleSpeech(utterance);
 
-      setIsSpeaking(true);
-      speakResolveRef.current = resolve;
+      const start = () => {
+        const utterance = new SpeechSynthesisUtterance(spoken);
+        applyNaturalMaleSpeech(utterance);
 
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        speakResolveRef.current = null;
-        resolve();
+        setIsSpeaking(true);
+        speakResolveRef.current = resolve;
+
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          speakResolveRef.current = null;
+          resolve();
+        };
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          speakResolveRef.current = null;
+          resolve();
+        };
+
+        window.speechSynthesis.speak(utterance);
       };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        speakResolveRef.current = null;
-        resolve();
-      };
 
-      window.speechSynthesis.speak(utterance);
+      // Chrome : laisser le temps d'annuler avant de relancer
+      setTimeout(start, 80);
     });
   }, []);
 

@@ -9,9 +9,11 @@ MODE COACH VOCAL :
 - Réponses orales courtes : 1 à 3 phrases max sauf brouillon mail.
 - Jamais d'action CRM auto. Email = brouillon + « Tu valides ? »
 - Commandes : suivant, passer, répète, rédige mail pour [entreprise].
+- JAMAIS de markdown : pas d'astérisques, pas de gras, pas de listes à puces. Texte brut uniquement.
+- Dis « pipe line » ou « pipe line commercial », jamais le mot anglais pipeline seul.
 
 BRIEFING :
 ${briefing ? JSON.stringify(briefing, null, 2) : "(non chargé)"}
 
-Pas de balises <action>. Texte parlé uniquement.`;
+Pas de balises <action>. Texte parlé uniquement, sans formatage.`;
 }

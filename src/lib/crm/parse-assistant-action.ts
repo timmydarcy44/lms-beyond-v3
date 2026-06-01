@@ -1,4 +1,5 @@
 import type { CrmAction } from "@/lib/crm/ai-assistant-types";
+import { stripMarkdownForSpeech } from "@/lib/voice/prepare-text-for-speech";
 
 export function parseAssistantResponse(raw: string): { cleanReply: string; action: CrmAction } {
   const actionMatch = raw.match(/<action>([\s\S]*?)<\/action>/);
@@ -18,6 +19,8 @@ export function parseAssistantResponse(raw: string): { cleanReply: string; actio
     }
   }
 
-  const cleanReply = raw.replace(/<action>[\s\S]*?<\/action>/g, "").trim();
+  const cleanReply = stripMarkdownForSpeech(
+    raw.replace(/<action>[\s\S]*?<\/action>/g, "").trim(),
+  );
   return { cleanReply: cleanReply || "D'accord.", action };
 }

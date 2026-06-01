@@ -6,18 +6,26 @@ function actionWord(p: BriefingPriority): string {
   return "LinkedIn";
 }
 
-/** Ouverture : annonce immédiate des priorités. */
-export function scriptIntro(b: DailyBriefing): string {
+/** Accroche intro (avant révélation une par une). */
+export function scriptIntroGreeting(b: DailyBriefing): string {
   const count = b.priorities.length;
   if (count === 0) {
     return "Bonjour Timmy. Voici tes priorités aujourd'hui. Aucune priorité urgente dans le pipe line pour l'instant.";
   }
+  return `Bonjour Timmy. Voici tes priorités aujourd'hui. Tu en as ${count}.`;
+}
 
-  const list = b.priorities
-    .map((p) => `Priorité ${p.rank} : ${p.company}, ${actionWord(p)}`)
-    .join(". ");
+/** Une priorité à la fois (oral + affichage). */
+export function scriptIntroPriorityLine(p: BriefingPriority): string {
+  return `Priorité ${p.rank} : ${p.company}. ${p.why_today}. Action : ${actionWord(p)}.`;
+}
 
-  return `Bonjour Timmy. Voici tes priorités aujourd'hui. Tu en as ${count}. ${list}.`;
+/** @deprecated Utiliser scriptIntroGreeting + scriptIntroPriorityLine */
+export function scriptIntro(b: DailyBriefing): string {
+  const greeting = scriptIntroGreeting(b);
+  if (b.priorities.length === 0) return greeting;
+  const lines = b.priorities.map((p) => scriptIntroPriorityLine(p)).join(" ");
+  return `${greeting} ${lines}`;
 }
 
 export function scriptPipeline(b: DailyBriefing): string {

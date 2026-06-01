@@ -22,11 +22,13 @@ import { FluidEnergyOrb } from "@/components/crm/fluid-energy-orb";
 import { useVoiceCoach } from "@/hooks/use-voice-coach";
 import {
   scriptAvoid,
-  scriptIntro,
+  scriptIntroGreeting,
+  scriptIntroPriorityLine,
   scriptPipeline,
   scriptPriority,
   scriptTip,
 } from "@/lib/crm/briefing-coach-scripts";
+import type { ListenResult } from "@/hooks/use-voice-coach";
 import type {
   BriefingApiResponse,
   BriefingPriority,
@@ -63,7 +65,7 @@ function buildSteps(briefing: DailyBriefing): CoachStep[] {
 function stepScript(step: CoachStep, briefing: DailyBriefing, dateLabel: string): string {
   switch (step.kind) {
     case "intro":
-      return scriptIntro(briefing);
+      return "";
     case "pipeline":
       return scriptPipeline(briefing);
     case "priority": {
@@ -99,8 +101,12 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
     body: string;
   } | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [visiblePriorityCount, setVisiblePriorityCount] = useState(0);
   const coachRunningRef = useRef(false);
   const spokenStepRef = useRef(-1);
+  const introRunRef = useRef(false);
+  const voiceModeRef = useRef(false);
+  const chatLoadingRef = useRef(false);
   const briefingRef = useRef<DailyBriefing | null>(null);
   const dialogueRef = useRef<DialogueMsg[]>([]);
   const phaseRef = useRef<CoachPhase>("loading");
@@ -109,10 +115,13 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
   const voiceResetRef = useRef(voice.reset);
   const voiceListenRef = useRef(voice.listenOnce);
   const voiceSpeakRef = useRef(voice.speak);
+  const voiceWaitIdleRef = useRef(voice.waitUntilIdle);
   voiceCleanupRef.current = voice.cleanup;
   voiceResetRef.current = voice.reset;
   voiceListenRef.current = voice.listenOnce;
   voiceSpeakRef.current = voice.speak;
+  voiceWaitIdleRef.current = voice.waitUntilIdle;
+  chatLoadingRef.current = chatLoading;
   openRef.current = open;
   phaseRef.current = phase;
   dialogueRef.current = dialogue;
@@ -145,6 +154,9 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
       briefingRef.current = json.briefing;
       setSteps(buildSteps(json.briefing));
       spokenStepRef.current = -1;
+      introRunRef.current = false;
+      setVisiblePriorityCount(0);
+      voiceModeRef.current = false;
       setPhase("coaching");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
@@ -187,25 +199,64 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
     });
   }, [currentPriority?.company, currentPriority?.rank, currentStep?.kind]);
 
+  const enterDialogueMode = useCallback(() => {
+    setPhase("dialogue");
+    phaseRef.current = "dialogue";
+    voiceModeRef.current = true;
+  }, []);
+
+  const reportListenError = useCallback((result: ListenResult) => {
+    if (!result.error || result.error === "aborted") return;
+    if (result.error === "not-allowed") {
+      toast.error("Micro refusé — autorise l'accès au micro pour ce site.");
+      return;
+    }
+    if (result.error === "unsupported") {
+      toast.error("Reconnaissance vocale non supportée (Chrome recommandé).");
+      return;
+    }
+    if (result.error === "no-speech") {
+      toast.message("Je n'ai rien entendu — réessaie.");
+      return;
+    }
+    toast.message("Problème micro — réessaie.");
+  }, []);
+
+  const listenUser = useCallback(async (): Promise<string> => {
+    await voiceWaitIdleRef.current();
+    const result = await voiceListenRef.current();
+    if (result.text.trim()) return result.text.trim();
+    reportListenError(result);
+    return "";
+  }, [reportListenError]);
+
   const goNextStep = useCallback(() => {
     voice.stopSpeaking();
     if (stepIndex >= steps.length - 1) {
-      setPhase("dialogue");
-      void voice.speak("Mode libre. Parle.");
+      enterDialogueMode();
+      void (async () => {
+        await voice.speak("Mode libre. Parle-moi.");
+        if (!coachRunningRef.current) return;
+        const heard = await listenUser();
+        if (heard) await askCoachRef.current(heard);
+      })();
       return;
     }
     setStepIndex((i) => i + 1);
-  }, [stepIndex, steps.length, voice]);
+  }, [stepIndex, steps.length, voice, enterDialogueMode, listenUser]);
+
+  const askCoachRef = useRef<(text: string, opts?: { autoListenAfter?: boolean }) => Promise<void>>(
+    async () => {},
+  );
 
   useEffect(() => {
     if (phase !== "coaching" || loading || !briefing || coachPaused || !coachRunningRef.current) {
       return;
     }
+    const step = steps[stepIndex];
+    if (!step || step.kind === "intro") return;
     if (spokenStepRef.current === stepIndex) return;
     spokenStepRef.current = stepIndex;
-
-    const step = steps[stepIndex];
-    if (!step) return;
 
     void (async () => {
       const text = stepScript(step, briefing, dateLabel);
@@ -213,13 +264,38 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
     })();
   }, [phase, loading, briefing, coachPaused, stepIndex, steps, dateLabel, voice]);
 
+  useEffect(() => {
+    if (phase !== "coaching" || loading || !briefing || coachPaused || !coachRunningRef.current) {
+      return;
+    }
+    const step = steps[stepIndex];
+    if (step?.kind !== "intro" || introRunRef.current) return;
+    introRunRef.current = true;
+    spokenStepRef.current = stepIndex;
+
+    void (async () => {
+      setVisiblePriorityCount(0);
+      await voiceSpeakRef.current(scriptIntroGreeting(briefing));
+      if (!coachRunningRef.current || coachPaused) return;
+
+      for (let i = 0; i < briefing.priorities.length; i += 1) {
+        setVisiblePriorityCount(i + 1);
+        await new Promise((r) => setTimeout(r, 400));
+        if (!coachRunningRef.current || coachPaused) return;
+        await voiceSpeakRef.current(scriptIntroPriorityLine(briefing.priorities[i]));
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    })();
+  }, [phase, loading, briefing, coachPaused, stepIndex, steps]);
+
   const askCoach = useCallback(
     async (userText: string, options?: { autoListenAfter?: boolean }) => {
       const trimmed = userText.trim();
-      if (!trimmed || chatLoading) return;
+      if (!trimmed || chatLoadingRef.current) return;
 
       const lower = trimmed.toLowerCase();
-      if (phaseRef.current === "coaching") {
+      const wasCoaching = phaseRef.current === "coaching";
+      if (wasCoaching) {
         if (lower.includes("suivant") || lower.includes("passer") || lower.includes("continue")) {
           goNextStep();
           return;
@@ -234,13 +310,18 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
         }
       }
 
+      enterDialogueMode();
+      voiceModeRef.current = true;
+      setCoachPaused(true);
+
       const historyBefore = dialogueRef.current.slice(-10);
       const userMsg: DialogueMsg = { role: "user", content: trimmed };
       const withUser = [...dialogueRef.current, userMsg];
       dialogueRef.current = withUser;
       setDialogue(withUser);
       setChatInput("");
-      setLiveTranscript("");
+      setLiveTranscript(trimmed);
+      chatLoadingRef.current = true;
       setChatLoading(true);
 
       try {
@@ -266,14 +347,13 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
         const shouldAutoListen =
           options?.autoListenAfter !== false &&
           openRef.current &&
-          phaseRef.current === "dialogue" &&
+          voiceModeRef.current &&
           coachRunningRef.current;
         if (shouldAutoListen) {
-          await new Promise((r) => setTimeout(r, 450));
-          const heard = await voiceListenRef.current();
-          if (heard.trim()) {
+          const heard = await listenUser();
+          if (heard) {
             setLiveTranscript(heard);
-            await askCoach(heard, { autoListenAfter: true });
+            await askCoachRef.current(heard, { autoListenAfter: true });
           }
         }
       } catch (e) {
@@ -281,26 +361,41 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
         toast.error(err);
         await voiceSpeakRef.current("Désolé, une erreur. Réessaie.");
       } finally {
+        chatLoadingRef.current = false;
         setChatLoading(false);
       }
     },
-    [chatLoading, goNextStep, steps, stepIndex, dateLabel],
+    [goNextStep, steps, stepIndex, dateLabel, enterDialogueMode, listenUser],
   );
+
+  askCoachRef.current = askCoach;
 
   const toggleListen = async () => {
     if (voice.isListening) {
       voice.stopListening();
       return;
     }
-    if (voice.isSpeaking) voice.stopSpeaking();
-    await new Promise((r) => setTimeout(r, 200));
-    const text = await voice.listenOnce();
-    if (text.trim()) {
-      setLiveTranscript(text);
-      await askCoach(text);
-    } else {
-      toast.message("Je n'ai rien entendu — réessaie.");
+    voice.stopSpeaking();
+    setCoachPaused(true);
+    enterDialogueMode();
+    voiceModeRef.current = true;
+    const heard = await listenUser();
+    if (heard) {
+      setLiveTranscript(heard);
+      await askCoach(heard);
     }
+  };
+
+  const startDialogueFromButton = () => {
+    enterDialogueMode();
+    voiceModeRef.current = true;
+    setCoachPaused(true);
+    voice.stopSpeaking();
+    void (async () => {
+      await voice.speak("OK, on discute. Parle-moi.");
+      const heard = await listenUser();
+      if (heard) await askCoach(heard);
+    })();
   };
 
   const confirmSendEmail = async () => {
@@ -319,7 +414,12 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
       const res = await fetch("/api/resend/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: to.trim(), subject, body, from: "darcy@edgebs.fr" }),
+        body: JSON.stringify({
+          to: to.trim(),
+          subject,
+          body,
+          from: "Timmy Darcy <darcy@edgebs.fr>",
+        }),
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
@@ -430,10 +530,11 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
                     <span className="text-violet-300">voici tes priorités aujourd&apos;hui</span>
                   </p>
                   <ul className="space-y-2 text-left text-sm text-white/85">
-                    {briefing.priorities.map((p) => (
+                    {briefing.priorities.slice(0, visiblePriorityCount).map((p, i) => (
                       <li
                         key={`${p.rank}-${p.company}`}
-                        className="rounded-lg border border-violet-500/30 bg-violet-950/40 px-3 py-2"
+                        className="rounded-lg border border-violet-500/30 bg-violet-950/40 px-3 py-2 opacity-0 animate-[briefing-priority-in_0.5s_ease-out_forwards]"
+                        style={{ animationDelay: `${i * 120}ms` }}
                       >
                         <strong className="text-violet-200">#{p.rank}</strong> {p.company}
                         <span className="text-white/50"> — {p.why_today}</span>
@@ -606,11 +707,7 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
                 type="button"
                 variant="ghost"
                 className="text-white/70"
-                onClick={() => {
-                  setPhase("dialogue");
-                  phaseRef.current = "dialogue";
-                  void voice.speak("OK, on discute.");
-                }}
+                onClick={startDialogueFromButton}
               >
                 Passer au dialogue
                 <ChevronRight className="ml-1 h-4 w-4" />
@@ -618,57 +715,21 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
             ) : null}
           </div>
 
-          {dialogue.length > 0 ? (
-            <div className="mt-4 max-h-40 w-full max-w-2xl space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-black/30 p-3 lg:hidden">
-              {dialogue.slice(-6).map((m, i) => (
-                <p
-                  key={i}
-                  className={cn(
-                    "text-sm",
-                    m.role === "user" ? "text-violet-200" : "text-white/80",
-                  )}
-                >
-                  {m.role === "user" ? "Vous : " : "Coach : "}
-                  {m.content}
-                </p>
-              ))}
-            </div>
+          {!voice.speechSupported ? (
+            <p className="mt-4 text-center text-xs text-amber-200/80">
+              Micro vocal : utilise Chrome ou Edge sur HTTPS pour parler au coach.
+            </p>
           ) : null}
-
-          <div className="mt-6 flex w-full max-w-2xl gap-2">
-            <Input
-              className="border-white/20 bg-white/5 text-white placeholder:text-white/40"
-              placeholder="Parle ou écris ta question…"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              disabled={chatLoading}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void askCoach(chatInput);
-                }
-              }}
-            />
-            <Button
-              type="button"
-              size="icon"
-              className="shrink-0 bg-[#6633CC]"
-              disabled={chatLoading || !chatInput.trim()}
-              onClick={() => void askCoach(chatInput)}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
 
-        <aside className="hidden w-full shrink-0 border-t border-white/10 bg-black/20 lg:flex lg:w-80 lg:flex-col lg:border-l lg:border-t-0">
+        <aside className="flex w-full shrink-0 flex-col border-t border-white/10 bg-black/20 sm:max-h-[42vh] lg:max-h-none lg:w-80 lg:border-l lg:border-t-0">
           <p className="border-b border-white/10 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white/50">
             Conversation
           </p>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
             {dialogue.length === 0 ? (
               <p className="text-sm text-white/40">
-                L&apos;historique apparaît ici pendant le dialogue libre.
+                Parle via le micro ou écris en bas — l&apos;historique s&apos;affiche ici.
               </p>
             ) : null}
             {dialogue.map((m, i) => (
@@ -687,6 +748,51 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
             {chatLoading ? (
               <p className="text-xs text-white/40">Réflexion…</p>
             ) : null}
+          </div>
+          <div className="shrink-0 border-t border-white/10 p-3">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className={cn(
+                  "shrink-0 border-white/20",
+                  voice.isListening && "border-red-400 bg-red-600/30 animate-pulse",
+                )}
+                disabled={chatLoading || !voice.speechSupported}
+                onClick={() => void toggleListen()}
+                aria-label="Microphone"
+              >
+                {voice.isListening ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
+              <Input
+                className="border-white/20 bg-white/5 text-white placeholder:text-white/40"
+                placeholder="Parle ou écris…"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                disabled={chatLoading}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void askCoach(chatInput);
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="icon"
+                className="shrink-0 bg-[#6633CC]"
+                disabled={chatLoading || !chatInput.trim()}
+                onClick={() => void askCoach(chatInput)}
+                aria-label="Envoyer"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </aside>
       </div>

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, DollarSign } from "lucide-react";
+import Link from "next/link";
+import { Plus, Pencil, Trash2, DollarSign, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -369,6 +370,13 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
                       </p>
                     ) : null}
                     <div className="mt-2 flex gap-1">
+                      {!isBtoc ? (
+                        <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+                          <Link href={`/super/crm/pipeline-btob/${deal.id}`} title="Fiche prospect">
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </Button>
+                      ) : null}
                       <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => openEdit(deal)}>
                         <Pencil className="h-3 w-3" />
                       </Button>

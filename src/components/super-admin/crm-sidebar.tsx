@@ -12,6 +12,7 @@ import {
   UserCircle,
   UserCheck,
   ShoppingBag,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const CRM_LINKS = [
   { href: "/super/utilisateurs", label: "Contacts", icon: Users },
   { href: "/super/crm/pipeline", label: "Pipeline BTOB", icon: Kanban, match: "/super/crm/pipeline" },
   { href: "/super/crm/pipeline?type=btoc", label: "Pipeline BTOC", icon: ShoppingBag },
+  { href: "/super/crm/onboarding", label: "Onboarding clients", icon: Rocket },
   { href: "/super/crm/validators", label: "Validateurs", icon: ShieldCheck },
   { href: "/super/organisations", label: "Organisations", icon: Building2 },
   { href: "/super/utilisateurs?role=instructor", label: "Formateurs", icon: GraduationCap },

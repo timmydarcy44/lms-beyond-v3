@@ -54,6 +54,7 @@ export type PipelineDeal = PipelineDealCommercial & {
   id: string;
   pipeline_type?: string;
   stage_slug: string;
+  organization_id?: string | null;
   profile_id?: string | null;
   source?: string;
   company_name: string;

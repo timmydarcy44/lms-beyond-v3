@@ -5,6 +5,21 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+export async function GET(_req: NextRequest, ctx: Ctx) {
+  if (!(await isSuperAdmin())) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+  const { id } = await ctx.params;
+  const supabase = getServiceRoleClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+  }
+  const { data, error } = await supabase.from("crm_pipeline_deals").select("*").eq("id", id).maybeSingle();
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (!data) return NextResponse.json({ error: "Deal introuvable" }, { status: 404 });
+  return NextResponse.json({ deal: data });
+}
+
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });

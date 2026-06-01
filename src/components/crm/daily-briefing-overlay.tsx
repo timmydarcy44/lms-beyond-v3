@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { FluidEnergyOrb } from "@/components/crm/fluid-energy-orb";
 import { useVoiceCoach } from "@/hooks/use-voice-coach";
 import {
   scriptAvoid,
@@ -46,26 +47,6 @@ type CoachStep = {
 };
 
 type DialogueMsg = { role: "user" | "assistant"; content: string };
-
-function PurpleOrb({ active }: { active: boolean }) {
-  return (
-    <div className="relative flex h-40 w-40 items-center justify-center sm:h-52 sm:w-52">
-      <div
-        className={cn(
-          "absolute inset-0 rounded-full bg-violet-500/30 blur-3xl transition-opacity duration-700",
-          active ? "opacity-100 animate-pulse" : "opacity-40",
-        )}
-      />
-      <div
-        className={cn(
-          "absolute h-28 w-28 rounded-full bg-gradient-to-br from-violet-400 via-[#6633CC] to-indigo-900 shadow-[0_0_60px_rgba(102,51,204,0.8)] sm:h-36 sm:w-36",
-          active && "animate-pulse",
-        )}
-      />
-      <div className="absolute h-16 w-16 rounded-full bg-white/10 blur-md sm:h-20 sm:w-20" />
-    </div>
-  );
-}
 
 function buildSteps(briefing: DailyBriefing): CoachStep[] {
   const steps: CoachStep[] = [
@@ -120,6 +101,10 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
   const coachRunningRef = useRef(false);
   const spokenStepRef = useRef(-1);
   const briefingRef = useRef<DailyBriefing | null>(null);
+  const voiceCleanupRef = useRef(voice.cleanup);
+  const voiceResetRef = useRef(voice.reset);
+  voiceCleanupRef.current = voice.cleanup;
+  voiceResetRef.current = voice.reset;
 
   const dateLabel = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
@@ -160,13 +145,14 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
 
   useEffect(() => {
     if (!open) return;
+    voiceResetRef.current();
     coachRunningRef.current = true;
     void fetchBriefing();
     return () => {
       coachRunningRef.current = false;
-      voice.cleanup();
+      voiceCleanupRef.current();
     };
-  }, [open, fetchBriefing, voice]);
+  }, [open, fetchBriefing]);
 
   useEffect(() => {
     if (!open) return;
@@ -372,7 +358,7 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row">
         <div className="flex min-h-0 flex-1 flex-col items-center px-4 py-6 sm:px-8">
-          <PurpleOrb active={voice.isSpeaking || voice.isListening || chatLoading} />
+          <FluidEnergyOrb active={voice.isSpeaking || voice.isListening || chatLoading || loading} />
 
           <p className="mt-6 max-w-xl text-center text-sm text-white/70 sm:text-base">
             {loading

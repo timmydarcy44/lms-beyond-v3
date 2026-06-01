@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 function getSpeechRecognition(): (new () => SpeechRecognition) | null {
   if (typeof window === "undefined") return null;
@@ -23,38 +23,35 @@ export function useVoiceCoach() {
     speakResolveRef.current = null;
   }, []);
 
-  const speak = useCallback(
-    (text: string): Promise<void> => {
-      return new Promise((resolve) => {
-        if (!enabledRef.current || typeof window === "undefined" || !text.trim()) {
-          resolve();
-          return;
-        }
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "fr-FR";
-        utterance.rate = 1.05;
-        utterance.pitch = 1;
+  const speak = useCallback((text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!enabledRef.current || typeof window === "undefined" || !text.trim()) {
+        resolve();
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "fr-FR";
+      utterance.rate = 1.05;
+      utterance.pitch = 1;
 
-        setIsSpeaking(true);
-        speakResolveRef.current = resolve;
+      setIsSpeaking(true);
+      speakResolveRef.current = resolve;
 
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          speakResolveRef.current = null;
-          resolve();
-        };
-        utterance.onerror = () => {
-          setIsSpeaking(false);
-          speakResolveRef.current = null;
-          resolve();
-        };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        speakResolveRef.current = null;
+        resolve();
+      };
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        speakResolveRef.current = null;
+        resolve();
+      };
 
-        window.speechSynthesis.speak(utterance);
-      });
-    },
-    [],
-  );
+      window.speechSynthesis.speak(utterance);
+    });
+  }, []);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
@@ -70,7 +67,10 @@ export function useVoiceCoach() {
         return;
       }
 
-      stopListening();
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+
       const recognition = new Ctor();
       recognition.lang = "fr-FR";
       recognition.continuous = false;
@@ -100,22 +100,47 @@ export function useVoiceCoach() {
       setIsListening(true);
       recognition.start();
     });
-  }, [stopListening]);
+  }, []);
 
+  /** Identité stable — ne pas mettre dans les deps d'un useEffect. */
   const cleanup = useCallback(() => {
     enabledRef.current = false;
-    stopSpeaking();
-    stopListening();
-  }, [stopSpeaking, stopListening]);
+    if (typeof window !== "undefined") {
+      window.speechSynthesis.cancel();
+    }
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    speakResolveRef.current?.();
+    speakResolveRef.current = null;
+    setIsSpeaking(false);
+    setIsListening(false);
+  }, []);
 
-  return {
-    isSpeaking,
-    isListening,
-    speak,
-    listenOnce,
-    stopSpeaking,
-    stopListening,
-    cleanup,
-    speechSupported: typeof window !== "undefined" && !!getSpeechRecognition(),
-  };
+  const reset = useCallback(() => {
+    enabledRef.current = true;
+  }, []);
+
+  return useMemo(
+    () => ({
+      isSpeaking,
+      isListening,
+      speak,
+      listenOnce,
+      stopSpeaking,
+      stopListening,
+      cleanup,
+      reset,
+      speechSupported: typeof window !== "undefined" && !!getSpeechRecognition(),
+    }),
+    [
+      isSpeaking,
+      isListening,
+      speak,
+      listenOnce,
+      stopSpeaking,
+      stopListening,
+      cleanup,
+      reset,
+    ],
+  );
 }

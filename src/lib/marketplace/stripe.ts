@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { appOrigin } from "@/lib/onboarding/slug";
+import { publicAppUrl } from "@/lib/env";
 
 let stripeSingleton: Stripe | null = null;
 
@@ -13,11 +13,7 @@ export function getMarketplaceStripe(): Stripe | null {
 }
 
 export function marketplaceAppOrigin(): string {
-  return (
-    process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    appOrigin()
-  ).replace(/\/$/, "");
+  return publicAppUrl();
 }
 
 export function praticienStripeRefreshUrl(): string {

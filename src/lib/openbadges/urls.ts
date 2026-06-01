@@ -1,9 +1,7 @@
-﻿export const getBaseUrl = () => {
-  return (
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.BASE_URL ||
-    "http://localhost:3001"
-  );
+import { publicAppUrl } from "@/lib/env";
+
+export const getBaseUrl = () => {
+  return process.env.BASE_URL?.trim() || publicAppUrl();
 };
 
 /**

@@ -39,6 +39,7 @@ export function RadarEquipeClient() {
   const [aggregat, setAggregat] = useState<EquipeAggregat | null>(null);
   const [loading, setLoading] = useState(true);
   const [computing, setComputing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadEquipes = useCallback(async () => {
     const res = await fetch("/api/radar-equipe/equipes");
@@ -47,6 +48,7 @@ export function RadarEquipeClient() {
     const list = json.equipes ?? [];
     setEquipes(list);
     if (list[0]?.id) setEquipeId((prev) => prev || list[0].id);
+    else setEquipeId("");
   }, []);
 
   const loadAggregat = useCallback(async (id: string) => {
@@ -60,10 +62,13 @@ export function RadarEquipeClient() {
   useEffect(() => {
     void (async () => {
       setLoading(true);
+      setLoadError(null);
       try {
         await loadEquipes();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Chargement impossible");
+        const msg = e instanceof Error ? e.message : "Chargement impossible";
+        setLoadError(msg);
+        toast.error(msg);
       } finally {
         setLoading(false);
       }
@@ -143,6 +148,21 @@ export function RadarEquipeClient() {
 
       {loading ? (
         <div className="h-48 animate-pulse rounded-2xl bg-white/5" />
+      ) : loadError ? (
+        <div className="rounded-2xl border border-red-500/25 bg-red-500/10 p-8 text-center">
+          <p className="text-lg font-semibold text-red-100">Impossible de charger le radar</p>
+          <p className="mt-2 text-sm text-red-100/70">{loadError}</p>
+        </div>
+      ) : equipes.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+          <p className="text-lg font-semibold text-white">Aucune équipe configurée</p>
+          <p className="mt-2 text-sm text-white/60">
+            Créez des équipes et invitez au moins 5 collaborateurs avec diagnostic complété pour afficher le radar.
+          </p>
+          <Button className="mt-6" asChild>
+            <Link href="/dashboard/entreprise/salaries">Gérer les collaborateurs</Link>
+          </Button>
+        </div>
       ) : insuffisant || !aggregat ? (
         <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-8 text-center">
           <p className="text-lg font-semibold text-amber-100">
@@ -295,11 +315,8 @@ export function RadarEquipeClient() {
               <li>Atelier collectif « Gestion des priorités » (Beyond)</li>
               <li>Modules individuels sur les gaps identifiés</li>
               <li>
-                <Link href="/dashboard/entreprise/experts" className="text-violet-300 underline">
-                  Accéder à un expert BCT →{" "}
-                  <a href="/dashboard/entreprise/marketplace" className="underline">
-                    Marketplace
-                  </a>
+                <Link href="/dashboard/entreprise/marketplace" className="text-violet-300 underline">
+                  Accéder à la marketplace BCT →
                 </Link>
               </li>
             </ol>

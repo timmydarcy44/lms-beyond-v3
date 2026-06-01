@@ -1,19 +1,15 @@
-﻿/**
- * Utilitaires pour Beyond Connect
- */
+import { publicAppUrl } from "@/lib/env";
 
 /**
  * Obtient l'URL de base pour Beyond Connect
- * En production, utilise le domaine Beyond Connect, sinon utilise NEXT_PUBLIC_APP_URL
+ * En production, utilise le domaine Beyond Connect, sinon utilise NEXT_PUBLIC_URL
  */
 export function getBeyondConnectBaseUrl(): string {
-  // En production, utiliser le domaine Beyond Connect
   if (process.env.NEXT_PUBLIC_BEYOND_CONNECT_URL) {
     return process.env.NEXT_PUBLIC_BEYOND_CONNECT_URL;
   }
-  
-  // En développement, utiliser localhost avec le port approprié
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
+
+  const baseUrl = publicAppUrl();
   
   // Si on est sur localhost, s'assurer que c'est bien pour Beyond Connect
   if (baseUrl.includes("localhost")) {

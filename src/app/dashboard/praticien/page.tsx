@@ -1,5 +1,5 @@
-import { PraticienDashboardClient } from "@/components/praticien/praticien-dashboard-client";
+import { PraticienHomePage } from "@/components/praticien/pages/home-page";
 
 export default function PraticienDashboardPage() {
-  return <PraticienDashboardClient />;
+  return <PraticienHomePage />;
 }

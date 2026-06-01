@@ -29,6 +29,24 @@ if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
 /** Origine locale par défaut (voir scripts `dev` / `start` sur le port 3001). */
 export const defaultLocalOrigin = "http://localhost:3001";
 
+/**
+ * URL publique de l'app (liens dans les e-mails, redirects Stripe, etc.).
+ * Priorité : NEXT_PUBLIC_URL → APP_URL → SITE_URL → BASE_URL → localhost (dev).
+ */
+export function publicAppUrl(): string {
+  const candidates = [
+    process.env.NEXT_PUBLIC_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.NEXT_PUBLIC_BASE_URL,
+  ];
+  for (const value of candidates) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed.replace(/\/$/, "");
+  }
+  return defaultLocalOrigin;
+}
+
 export const env = {
   supabaseUrl,
   supabaseAnonKey,

@@ -59,7 +59,12 @@ export async function POST(request: NextRequest) {
         },
         business_type: "individual",
         settings: {
-          payouts: { schedule: { interval: "weekly" } },
+          payouts: {
+            schedule: {
+              interval: "weekly",
+              weekly_anchor: "friday",
+            },
+          },
         },
       });
       accountId = account.id;

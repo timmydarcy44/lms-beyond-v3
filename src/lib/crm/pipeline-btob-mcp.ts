@@ -137,6 +137,7 @@ export async function listPipelineBtobDeals(filters: {
   status?: string | null;
   limit?: number;
   next_action_before?: string | null;
+  organization_id?: string | null;
 }) {
   const supabase = getServiceRoleClient();
   if (!supabase) throw new Error("Supabase indisponible");
@@ -147,6 +148,10 @@ export async function listPipelineBtobDeals(filters: {
     .eq("pipeline_type", BTOB_PIPELINE)
     .order("sort_order", { ascending: true })
     .limit(Math.min(200, Math.max(1, filters.limit ?? 50)));
+
+  if (filters.organization_id) {
+    query = query.eq("organization_id", filters.organization_id);
+  }
 
   if (filters.priority) query = query.eq("priority", filters.priority);
   if (filters.sector) query = query.eq("sector", filters.sector);
@@ -206,8 +211,11 @@ export async function updatePipelineBtobDeal(id: string, input: McpPipelineBtobI
   return data;
 }
 
-export async function getPipelineBtobSummary() {
-  const deals = await listPipelineBtobDeals({ limit: 500 });
+export async function getPipelineBtobSummary(options?: { organization_id?: string | null }) {
+  const deals = await listPipelineBtobDeals({
+    limit: 500,
+    organization_id: options?.organization_id ?? undefined,
+  });
   const today = new Date().toISOString().slice(0, 10);
 
   const by_priority: Record<string, number> = { haute: 0, moyenne: 0, standard: 0 };

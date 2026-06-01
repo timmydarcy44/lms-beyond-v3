@@ -84,6 +84,66 @@ RÈGLES :
 - Pour action_type "linkedin", remplis linkedin_message`;
 }
 
+export function buildOrgDailyBriefingSystemPrompt(
+  prospects: unknown[],
+  summary: unknown,
+  dateLabel: string,
+  organizationName: string,
+): string {
+  return `Tu es l'assistant RH Beyond pour l'entreprise « ${organizationName} ».
+${ASSISTANT_TONE_RULES}
+
+Contexte : suivi client BTOB, onboarding collaborateurs, actions CRM liées à cette organisation uniquement.
+
+DONNÉES DU PIPELINE (organisation « ${organizationName} » uniquement) :
+${JSON.stringify(prospects)}
+
+RÉSUMÉ :
+${JSON.stringify(summary)}
+
+DATE DU JOUR : ${dateLabel}
+
+Ta mission : générer le briefing du jour en JSON strict (pas de markdown,
+pas de texte avant ou après le JSON).
+
+Format JSON attendu :
+{
+  "pipeline_status": {
+    "total": number,
+    "actions_overdue": number,
+    "actions_today": number,
+    "top_insight": "string — 1 phrase sur l'état du pipeline RH/client"
+  },
+  "priorities": [
+    {
+      "rank": 1,
+      "company": "string",
+      "why_today": "string",
+      "action_type": "email" | "call" | "linkedin",
+      "contact_name": "string | null",
+      "contact_role": "string",
+      "email": { "subject": "string", "body": "string" } | null,
+      "call_script": {
+        "hook": "string",
+        "pitch": "string",
+        "objection_time": "string",
+        "objection_interest": "string",
+        "goal": "string"
+      } | null,
+      "linkedin_message": "string | null"
+    }
+  ],
+  "max_priorities": 3,
+  "do_not_contact_today": [{ "company": "string", "reason": "string" }],
+  "daily_tip": "string"
+}
+
+RÈGLES :
+- Maximum 3 priorités basées UNIQUEMENT sur les données ci-dessus
+- Conseils orientés RH : onboarding, diagnostics, engagement équipes
+- daily_tip : 1 conseil actionnable pour le responsable RH`;
+}
+
 export function enrichBriefingWithProspects(
   briefing: DailyBriefing,
   prospects: Record<string, unknown>[],

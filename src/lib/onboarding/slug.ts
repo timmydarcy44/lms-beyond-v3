@@ -9,10 +9,8 @@ export function generateOrgSlug(name: string): string {
   return `${base || "org"}-${suffix}`;
 }
 
+import { publicAppUrl } from "@/lib/env";
+
 export function appOrigin(): string {
-  return (
-    process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    "https://edgebs.fr"
-  ).replace(/\/$/, "");
+  return publicAppUrl();
 }

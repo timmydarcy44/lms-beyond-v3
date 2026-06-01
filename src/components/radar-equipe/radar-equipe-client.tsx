@@ -296,7 +296,10 @@ export function RadarEquipeClient() {
               <li>Modules individuels sur les gaps identifiés</li>
               <li>
                 <Link href="/dashboard/entreprise/experts" className="text-violet-300 underline">
-                  Accéder à un expert BCT → Marketplace
+                  Accéder à un expert BCT →{" "}
+                  <a href="/dashboard/entreprise/marketplace" className="underline">
+                    Marketplace
+                  </a>
                 </Link>
               </li>
             </ol>

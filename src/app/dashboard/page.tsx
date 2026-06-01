@@ -2,6 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, BookOpen, BriefcaseBusiness, HeartPulse, Sparkles } from "lucide-react";
 import type { ComponentType } from "react";
+import {
+  collectProfileRoleKeys,
+  resolveDashboardSpaces,
+  type DashboardSpace,
+} from "@/lib/auth/dashboard-routing";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { requireSession } from "@/lib/auth/session";
 
@@ -9,11 +14,12 @@ type ProfileAccessRow = {
   id: string;
   email: string | null;
   school_id: string | null;
+  company_id: string | null;
+  role: string | null;
+  role_type: string | null;
   logo: string | null;
   name: string | null;
 };
-
-const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
 export default async function DashboardPage() {
   const session = await requireSession();
@@ -23,7 +29,7 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const profileSelect = "id, email, school_id, logo, name";
+  const profileSelect = "id, email, school_id, company_id, role, role_type, logo, name";
   const { data: byId } = await service
     .from("profiles")
     .select(profileSelect)
@@ -41,196 +47,32 @@ export default async function DashboardPage() {
     profile = rows.find((row) => row.id === session.id) ?? rows[0] ?? null;
   }
 
-  const sessionRole = normalize(session.role);
-  const hasSchool = Boolean(profile?.school_id);
+  const roleKeys = collectProfileRoleKeys(profile);
+  const isDemoOnly = roleKeys.length === 1 && roleKeys[0] === "demo";
 
-  if (sessionRole === "particulier" || (sessionRole === "student" && !hasSchool)) {
-    redirect("/dashboard/apprenant");
+  const { spaces, isDemo } = await resolveDashboardSpaces(
+    service,
+    session.id,
+    session.email,
+    profile,
+  );
+
+  if (!isDemoOnly) {
+    if (spaces.length === 1) {
+      redirect(spaces[0].href);
+    }
+    if (spaces.length === 0) {
+      redirect("/dashboard/apprenant");
+    }
   }
 
-  let cards: Array<{
-    key: string;
-    title: string;
-    href: string;
-    description: string;
-    image?: string;
-    category?: string;
-  }> = [];
-
-  if (sessionRole === "demo") {
-    cards = [
-      {
-        key: "club",
-        title: "Beyond Network — Club",
-        description: "Pilotez vos partenaires, votre CRM et votre communication.",
-        href: "/dashboard/club",
-        image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=80",
-        category: "RÉSEAU",
-      },
-      {
-        key: "partenaire",
-        title: "Espace Partenaire",
-        description: "L'interface qu'accèdent vos partenaires du club.",
-        href: "/dashboard/partenaire",
-        image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80",
-        category: "RÉSEAU",
-      },
-      {
-        key: "lms-formateur",
-        title: "Espace Formateur",
-        description: "Créez et gérez vos formations, parcours et contenus pédagogiques.",
-        href: "/dashboard/formateur",
-        image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&q=80",
-        category: "FORMATION",
-      },
-      {
-        key: "school",
-        title: "Espace École",
-        description: "Votre back-office : pilotez vos alternants, cursus et entreprises partenaires.",
-        href: "/dashboard/ecole",
-        image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&q=80",
-        category: "ÉCOLE",
-      },
-      {
-        key: "lms-apprenant",
-        title: "Espace Formation",
-        description: "L'interface apprenant pour accéder aux formations et suivre sa progression.",
-        href: "/dashboard/student/learning",
-        image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&q=80",
-        category: "FORMATION",
-      },
-      {
-        key: "connect",
-        title: "Espace Apprenant",
-        description: "L'interface que verront vos étudiants : profil, tests, badges et matching.",
-        href: "/dashboard/apprenant",
-        image: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80",
-        category: "APPRENANT",
-      },
-      {
-        key: "care",
-        title: "Beyond Care",
-        description: "Suivi bien-être et indicateurs d'accompagnement.",
-        href: "/dashboard/care",
-        image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80",
-        category: "CARE",
-      },
-      {
-        key: "tuteur",
-        title: "Beyond Tuteur",
-        description: "Suivi alternance, missions et évaluations.",
-        href: "/dashboard/tuteur",
-        image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&q=80",
-        category: "TUTEUR",
-      },
-      {
-        key: "team",
-        title: "Beyond Team",
-        description: "Espace entreprise et gestion des collaborateurs.",
-        href: "/dashboard/entreprise",
-        image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&q=80",
-        category: "ENTREPRISE",
-      },
-    ];
-  } else if (sessionRole === "admin" || sessionRole === "formateur") {
-    cards = [
-      {
-        key: "lms",
-        title: "Beyond LMS",
-        href: "/dashboard/formateur",
-        description: "Parcours de formation, progression et contenus pedagogiques.",
-      },
-      {
-        key: "connect",
-        title: "Beyond Connect",
-        href: "/dashboard/ecole",
-        description: "Gestion des talents, matching et opportunites.",
-      },
-      {
-        key: "care",
-        title: "Beyond Care",
-        href: "/dashboard/care",
-        description: "Suivi d accompagnement et indicateurs care.",
-      },
-    ];
-  } else if (sessionRole === "ecole") {
-    cards = [
-      {
-        key: "lms",
-        title: "Beyond LMS",
-        href: "/dashboard/formateur",
-        description: "Parcours de formation, progression et contenus pedagogiques.",
-      },
-      {
-        key: "connect",
-        title: "Beyond School",
-        href: "/dashboard/ecole",
-        description: "Gérez vos alternants et vos entreprises partenaires.",
-      },
-      {
-        key: "care",
-        title: "Beyond Care",
-        href: "/dashboard/care",
-        description: "Suivi d accompagnement et indicateurs care.",
-      },
-    ];
-  } else if (sessionRole === "entreprise") {
-    cards = [
-      {
-        key: "pro",
-        title: "Beyond Team",
-        href: "/dashboard/entreprise",
-        description: "Gestion entreprise et suivi pro.",
-      },
-      {
-        key: "lms",
-        title: "Beyond LMS",
-        href: "/dashboard/formateur",
-        description: "Parcours de formation, progression et contenus pedagogiques.",
-      },
-      {
-        key: "care",
-        title: "Beyond Care",
-        href: "/dashboard/care",
-        description: "Suivi d accompagnement et indicateurs care.",
-      },
-    ];
-  } else if (sessionRole === "tuteur") {
-    cards = [
-      {
-        key: "tuteur",
-        title: "Beyond Tuteur",
-        href: "/dashboard/tuteur",
-        description: "Suivi des missions, formulaires et activites tuteur.",
-      },
-      {
-        key: "lms",
-        title: "Beyond LMS",
-        href: "/dashboard/formateur",
-        description: "Parcours de formation, progression et contenus pedagogiques.",
-      },
-    ];
-  } else if (sessionRole === "student" && hasSchool) {
-    cards = [
-      {
-        key: "lms",
-        title: "Beyond LMS",
-        href: "/dashboard/student/learning",
-        description: "Parcours de formation, progression et contenus pedagogiques.",
-      },
-      {
-        key: "connect",
-        title: "Beyond Connect",
-        href: "/dashboard/apprenant",
-        description: "Profil, tests de personnalite et matching.",
-      },
-    ];
-  }
+  const cards: DashboardSpace[] = isDemoOnly ? buildDemoCards() : spaces;
 
   const firstName =
     session.fullName?.trim().split(/\s+/)[0] ||
     session.email?.split("@")[0] ||
     "utilisateur";
+
   const productVisuals: Record<
     string,
     { icon: ComponentType<{ className?: string }>; glow: string; ring: string }
@@ -262,6 +104,16 @@ export default async function DashboardPage() {
     },
   };
 
+  const subtitle =
+    isDemoOnly || isDemo
+      ? "Explorez l'ensemble des espaces Beyond"
+      : spaces.length > 1
+        ? "Choisir votre espace"
+        : "Accédez à vos espaces Beyond";
+
+  const title =
+    isDemoOnly || isDemo ? "Beyond Suite — Démo" : `Bonjour ${firstName}`;
+
   return (
     <div className="min-h-screen bg-[#f5f5f7] text-gray-900">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-gray-200 bg-white">
@@ -289,77 +141,141 @@ export default async function DashboardPage() {
 
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 pb-16 pt-24">
         <div className="mt-6 text-center">
-          {sessionRole === "demo" ? (
-            <>
-              <h1 className="text-5xl font-bold text-gray-900 mb-6">Beyond Suite — Démo</h1>
-              <p className="mt-2 text-lg text-gray-400">Explorez l'ensemble des espaces Beyond</p>
-            </>
-          ) : (
-            <>
-              <h1 className="text-5xl font-bold text-gray-900 mb-6">Bonjour {firstName}</h1>
-              <p className="mt-2 text-lg text-gray-400">Accédez à vos espaces Beyond</p>
-            </>
-          )}
+          <h1 className="mb-6 text-5xl font-bold text-gray-900">{title}</h1>
+          <p className="mt-2 text-lg text-gray-400">{subtitle}</p>
         </div>
 
         <main className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((card) => {
-            const category =
-              card.category ||
-              (card.key === "connect"
-                ? "Connexion"
-                : card.key === "lms"
-                  ? "Formation"
-                  : card.key === "care"
-                    ? "Suivi"
-                    : card.key === "pro"
-                      ? "Entreprise"
-                      : card.key === "school"
-                        ? "École"
-                        : "Tuteur");
-            const imageSrc =
-              card.image ||
-              (card.key === "pro"
-                ? "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80"
-                : card.key === "lms"
-                  ? "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&q=80"
-                  : card.key === "care"
-                    ? "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80"
-                    : card.key === "connect"
-                      ? "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&q=80"
-                      : "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&q=80");
-
-            return (
-              <Link
-                key={card.key}
-                href={card.href}
-                className={`group relative w-full cursor-pointer overflow-hidden rounded-3xl ${
-                  sessionRole === "demo" ? "min-h-[400px]" : "min-h-[500px]"
+          {cards.map((card) => (
+            <Link
+              key={card.key}
+              href={card.href}
+              className={`group relative flex min-h-[220px] w-full flex-col justify-between overflow-hidden rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-violet-300 hover:shadow-md ${
+                isDemoOnly ? "min-h-[400px]" : ""
+              }`}
+            >
+              {isDemoOnly && card.key === "connect" ? (
+                <>
+                  <img
+                    src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80"
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    aria-hidden
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent" />
+                </>
+              ) : null}
+              <div className={isDemoOnly ? "relative z-10" : ""}>
+                {card.category && (
+                  <p
+                    className={`text-xs uppercase tracking-widest ${
+                      isDemoOnly ? "text-white/70" : "text-gray-400"
+                    }`}
+                  >
+                    {card.category}
+                  </p>
+                )}
+                <p
+                  className={`mt-1 text-2xl font-bold leading-tight ${
+                    isDemoOnly && card.key === "connect" ? "text-white" : "text-gray-900"
+                  }`}
+                >
+                  {card.title}
+                </p>
+                <p
+                  className={`mt-2 text-sm ${
+                    isDemoOnly && card.key === "connect" ? "text-white/80" : "text-gray-600"
+                  }`}
+                >
+                  {card.description}
+                </p>
+              </div>
+              <span
+                className={`mt-4 inline-flex items-center gap-1 text-sm font-medium ${
+                  isDemoOnly ? "relative z-10 text-white" : "text-violet-700"
                 }`}
               >
-                <img
-                  src={imageSrc}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
-                  aria-hidden
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent" />
-                <div className="absolute left-0 top-0 z-10 p-7">
-                  <p className="text-xs uppercase tracking-widest text-white/70">{category}</p>
-                  <p className="mt-1 text-3xl font-bold leading-tight text-white">{card.title}</p>
-                  <p className="mt-2 text-sm text-white/80">{card.description}</p>
-                </div>
-                <span
-                  className="absolute bottom-6 right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-xl text-white backdrop-blur"
-                  aria-hidden
-                >
-                  +
-                </span>
-              </Link>
-            );
-          })}
+                Ouvrir <ArrowRight className="h-4 w-4" />
+              </span>
+            </Link>
+          ))}
         </main>
       </div>
     </div>
   );
+}
+
+function buildDemoCards(): DashboardSpace[] {
+  return [
+    {
+      key: "club",
+      title: "Beyond Network — Club",
+      description: "Pilotez vos partenaires, votre CRM et votre communication.",
+      href: "/dashboard/club",
+      category: "RÉSEAU",
+    },
+    {
+      key: "partenaire",
+      title: "Espace Partenaire",
+      description: "L'interface qu'accèdent vos partenaires du club.",
+      href: "/dashboard/partenaire",
+      category: "RÉSEAU",
+    },
+    {
+      key: "lms-formateur",
+      title: "Espace Formateur",
+      description: "Créez et gérez vos formations, parcours et contenus pédagogiques.",
+      href: "/dashboard/formateur",
+      category: "FORMATION",
+    },
+    {
+      key: "school",
+      title: "Espace École",
+      description: "Votre back-office : pilotez vos alternants, cursus et entreprises partenaires.",
+      href: "/dashboard/ecole",
+      category: "ÉCOLE",
+    },
+    {
+      key: "lms-apprenant",
+      title: "Espace Formation",
+      description: "L'interface apprenant pour accéder aux formations et suivre sa progression.",
+      href: "/dashboard/student/learning",
+      category: "FORMATION",
+    },
+    {
+      key: "connect",
+      title: "Espace Apprenant",
+      description: "L'interface que verront vos étudiants : profil, tests, badges et matching.",
+      href: "/dashboard/apprenant",
+      category: "APPRENANT",
+    },
+    {
+      key: "care",
+      title: "Beyond Care",
+      description: "Suivi bien-être et indicateurs d'accompagnement.",
+      href: "/dashboard/care",
+      category: "CARE",
+    },
+    {
+      key: "tuteur",
+      title: "Beyond Tuteur",
+      description: "Suivi alternance, missions et évaluations.",
+      href: "/dashboard/tuteur",
+      category: "TUTEUR",
+    },
+    {
+      key: "team",
+      title: "Beyond Team",
+      description: "Espace entreprise et gestion des collaborateurs.",
+      href: "/dashboard/entreprise",
+      category: "ENTREPRISE",
+    },
+    {
+      key: "praticien",
+      title: "Praticien BCT",
+      description: "Marketplace psychopédagogues certifiés.",
+      href: "/dashboard/praticien",
+      category: "PRATICIEN",
+    },
+  ];
 }

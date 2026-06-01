@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -55,10 +56,14 @@ export function CreateOrganisationModal({
       });
       const json = (await res.json()) as {
         error?: string;
+        hint?: string;
         organisation_id?: string;
         organization_id?: string;
       };
-      if (!res.ok) throw new Error(json.error ?? "Erreur");
+      if (!res.ok) {
+        const msg = [json.error, json.hint].filter(Boolean).join(" — ");
+        throw new Error(msg || "Erreur");
+      }
       const orgId = json.organisation_id ?? json.organization_id;
       toast.success("Organisation créée — invitation envoyée au DRH");
       onOpenChange(false);
@@ -76,6 +81,9 @@ export function CreateOrganisationModal({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>🚀 Créer l&apos;organisation Beyond</DialogTitle>
+          <DialogDescription>
+            Crée l&apos;espace client, envoie l&apos;invitation au DRH et lie le deal CRM.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">

@@ -13,7 +13,9 @@ export type FrontendRole =
   | "ecole"
   | "club"
   | "partenaire"
-  | "demo";
+  | "demo"
+  | "praticien"
+  | "expert";
 export type DatabaseRole =
   | "instructor"
   | "student"
@@ -27,7 +29,10 @@ export type DatabaseRole =
   | "apprenant"
   | "PARTICULIER"
   | "mentor"
-  | "demo";
+  | "demo"
+  | "praticien_bct"
+  | "expert"
+  | "manager";
 
 /**
  * Convertit un rôle du frontend vers la base de données
@@ -52,6 +57,9 @@ export function frontendToDatabaseRole(role: FrontendRole): DatabaseRole {
  * Convertit un rôle de la base de données vers le frontend
  */
 export function databaseToFrontendRole(role: DatabaseRole): FrontendRole {
+  if (role === "praticien_bct" || role === "praticien") return "praticien";
+  if (role === "expert") return "expert";
+  if (role === "manager") return "entreprise";
   if (role === "entreprise" || role === "admin_hr") return "entreprise";
   if (role === "ecole") {
     return "ecole";
@@ -85,6 +93,9 @@ export function databaseToFrontendRole(role: DatabaseRole): FrontendRole {
     demo: "demo",
     mentor: "admin",
     PARTICULIER: "apprenant",
+    praticien_bct: "praticien",
+    expert: "expert",
+    manager: "entreprise",
   };
   return mapping[role] ?? "apprenant";
 }

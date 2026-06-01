@@ -14,11 +14,13 @@ import {
   Settings,
   Users,
   Zap,
+  Brain,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard/entreprise", icon: LayoutDashboard },
   { label: "Salariés", href: "/dashboard/entreprise/salaries", icon: Users },
+  { label: "Marketplace BCT", href: "/dashboard/entreprise/marketplace", icon: Brain },
   { label: "Radar Équipe", href: "/dashboard/entreprise/equipe-radar", icon: BarChart3 },
   { label: "Talent Radar", href: "/dashboard/entreprise/talent-radar", icon: Radar },
   { label: "Mes Offres", href: "/dashboard/entreprise/offres", icon: Briefcase },

@@ -17,6 +17,7 @@ if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
 
 const brevoApiKey = process.env.BREVO_API_KEY as string | undefined;
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string | undefined;
+/** Commission marketplace BCT (défaut 0.15) — voir BEYOND_COMMISSION_RATE */
 
 // Debug: vérifier si BREVO_API_KEY est chargée (dev uniquement)
 if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {

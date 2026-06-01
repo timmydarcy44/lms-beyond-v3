@@ -172,6 +172,9 @@ export const getSession = async () => {
     if (norm === "mentor") return "mentor";
     if (norm === "entreprise") return "entreprise";
     if (norm === "admin_hr") return "admin_hr";
+    if (norm === "praticien_bct" || norm === "praticien") return "praticien_bct";
+    if (norm === "expert") return "expert";
+    if (norm === "manager") return "admin_hr";
     if (norm === "club") return "club";
     if (norm === "partenaire") return "partenaire";
     if (norm === "demo") return "demo";

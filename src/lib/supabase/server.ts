@@ -8,21 +8,16 @@ const createServerSupabaseClient = async (url: string, anonKey: string) => {
   const cookieStore = await cookies();
   return createServerClient(url, anonKey, {
     cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
-      set(name, value, options) {
+      setAll(cookiesToSet) {
         try {
-          cookieStore.set({ name, value, ...options });
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set({ name, value, ...options });
+          }
         } catch {
           /* cookie mutations not allowed in some contexts (e.g. Server Components) */
-        }
-      },
-      remove(name, options) {
-        try {
-          cookieStore.delete({ name, ...options });
-        } catch {
-          /* ignore */
         }
       },
     },

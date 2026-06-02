@@ -37,7 +37,7 @@ export function RadarEquipeSummaryCard() {
 
   return (
     <Link
-      href="/dashboard/entreprise/equipe-radar"
+      href="/dashboard/entreprise/equipe-insight"
       className="group block rounded-3xl border border-violet-500/20 bg-gradient-to-br from-violet-950/40 to-[#0b0d14] p-6 shadow-lg transition hover:border-violet-400/40"
     >
       <div className="flex items-center justify-between gap-2">

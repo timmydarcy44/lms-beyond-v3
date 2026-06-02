@@ -54,6 +54,7 @@ export function EntrepriseFloatingAssistant() {
     try {
       const res = await fetch("/api/dashboard/entreprise/assistant/chat", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, history: historyPayload }),
       });

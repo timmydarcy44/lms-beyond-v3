@@ -57,10 +57,8 @@ export function EnterpriseEmployeeCsvActions({
     first_name: "",
     last_name: "",
     email: "",
-    phone: "",
     department: "",
     job_title: "",
-    hire_date: "",
   });
 
   const deptOptions = [
@@ -148,10 +146,8 @@ export function EnterpriseEmployeeCsvActions({
         first_name: "",
         last_name: "",
         email: "",
-        phone: "",
         department: "",
         job_title: "",
-        hire_date: "",
       });
       onSuccess();
     } catch (e) {
@@ -284,15 +280,6 @@ export function EnterpriseEmployeeCsvActions({
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500">Téléphone</label>
-                <input
-                  type="tel"
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={addForm.phone}
-                  onChange={(e) => setAddForm((f) => ({ ...f, phone: e.target.value }))}
-                />
-              </div>
-              <div>
                 <label className="text-xs font-semibold text-gray-500">Département</label>
                 <input
                   list="dept-list"
@@ -312,15 +299,6 @@ export function EnterpriseEmployeeCsvActions({
                   className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   value={addForm.job_title}
                   onChange={(e) => setAddForm((f) => ({ ...f, job_title: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500">Date d&apos;entrée</label>
-                <input
-                  type="date"
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={addForm.hire_date}
-                  onChange={(e) => setAddForm((f) => ({ ...f, hire_date: e.target.value }))}
                 />
               </div>
             </div>

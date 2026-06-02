@@ -38,6 +38,15 @@ export async function GET() {
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
+  if ("superAdminPreview" in access && access.superAdminPreview) {
+    return NextResponse.json({
+      super_admin_preview: true,
+      internal_formations: [],
+      edge_catalogue: EDGE_CATALOGUE.map((c) => ({ ...c, available: false })),
+      edge_tier: 1,
+    });
+  }
+
   if ("configurationRequired" in access && access.configurationRequired) {
     return NextResponse.json({
       configuration_required: true,

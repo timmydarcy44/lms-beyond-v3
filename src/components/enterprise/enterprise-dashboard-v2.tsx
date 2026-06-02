@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/enterprise/empty-state";
 import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise-employee-csv-actions";
 import { EntrepriseQuickAccess } from "@/components/enterprise/entreprise-quick-access";
 import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
-import { cn } from "@/lib/utils";
+import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 
 type Overview = {
   configuration_required?: boolean;
@@ -170,9 +170,9 @@ export function EnterpriseDashboardV2() {
     <div className="flex min-h-screen bg-white font-sans text-gray-900">
       <EnterpriseSidebar />
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
-        <header className="mb-10">
+        <header className="mb-10 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-400">Espace Entreprise</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-900 sm:text-5xl">{greeting}</h1>
+          <h1 className={cn("mt-2", ENTREPRISE_H1_CLASS)}>{greeting}</h1>
           <p className="mt-2 text-sm text-gray-400">
             {overview?.organisation?.name ? `${overview.organisation.name} · ` : ""}
             {formatDateLongFr()}

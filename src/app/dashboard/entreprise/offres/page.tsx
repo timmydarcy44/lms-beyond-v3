@@ -1,83 +1,180 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+} from "recharts";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
+import { OffresFormationsSection } from "@/components/enterprise/offres-formations-section";
+import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
 
-type InternalFormation = {
-  id: string;
-  title: string;
-  status: string;
-  raw_status: string;
-  created_at: string | null;
-};
+const offers = [
+  {
+    id: "offer-1",
+    title: "Chef de Projet Digital",
+    contract: "Alternance",
+    status: "Active",
+    matches: 12,
+    radar: [
+      { skill: "Leadership", value: 78 },
+      { skill: "Organisation", value: 72 },
+      { skill: "Créativité", value: 70 },
+      { skill: "Collaboration", value: 80 },
+      { skill: "Adaptabilité", value: 74 },
+    ],
+  },
+  {
+    id: "offer-2",
+    title: "Analyste Data Senior",
+    contract: "CDI",
+    status: "Active",
+    matches: 5,
+    radar: [
+      { skill: "Analyse", value: 88 },
+      { skill: "Rigueur", value: 84 },
+      { skill: "Problèmes", value: 82 },
+      { skill: "Communication", value: 68 },
+      { skill: "Adaptabilité", value: 70 },
+    ],
+  },
+  {
+    id: "offer-3",
+    title: "Assistant RH",
+    contract: "Stage",
+    status: "En pause",
+    matches: 18,
+    radar: [
+      { skill: "Empathie", value: 78 },
+      { skill: "Organisation", value: 72 },
+      { skill: "Communication", value: 80 },
+      { skill: "Suivi", value: 76 },
+      { skill: "Rigueur", value: 70 },
+    ],
+  },
+];
 
-type EdgeItem = {
-  id: string;
-  title: string;
-  tier: string;
-  description: string;
-  badge: string;
-  available: boolean;
-};
+const drafts = [
+  { id: "draft-1", title: "Chargé CRM", contract: "CDI" },
+  { id: "draft-2", title: "Assistant Marketing", contract: "Alternance" },
+];
+
+function OffresEmploiSection() {
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-end">
+        <Link
+          href="/dashboard/entreprise/offres/creer"
+          className="inline-flex items-center gap-2 rounded-full bg-[#007BFF] px-4 py-2 text-xs font-semibold text-white shadow-[0_0_18px_rgba(0,123,255,0.35)]"
+        >
+          <Plus size={14} />
+          Créer une nouvelle offre
+        </Link>
+      </div>
+
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {offers.map((offer) => (
+          <div
+            key={offer.id}
+            className="rounded-[22px] border border-gray-100 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-base font-extrabold text-gray-900">{offer.title}</div>
+                <div className="mt-1 text-xs text-gray-500">
+                  {offer.status === "Active" ? "🟢 Active" : "🟡 En pause"}
+                </div>
+              </div>
+              <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700">
+                {offer.contract}
+              </span>
+            </div>
+
+            <div className="mt-4 h-[140px] rounded-2xl border border-gray-100 bg-gray-50 p-3">
+              <div className="text-xs text-gray-500">Target Radar</div>
+              <div className="mt-2 h-[100px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={offer.radar}>
+                    <PolarGrid stroke="rgba(0,0,0,0.08)" />
+                    <PolarAngleAxis dataKey="skill" tick={{ fill: "rgba(0,0,0,0.5)", fontSize: 9 }} />
+                    <PolarRadiusAxis domain={[0, 100]} tick={false} />
+                    <Radar dataKey="value" stroke="#007BFF" fill="rgba(0,123,255,0.25)" />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="mt-4 text-xs text-gray-600">
+              {offer.matches} talents correspondent à +85% dans votre vivier
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href={`/dashboard/entreprise/offres/${offer.id}/candidats`}
+                className="rounded-full bg-[#007BFF] px-3 py-2 text-xs font-semibold text-white"
+              >
+                Voir les candidats
+              </Link>
+              <button type="button" className="rounded-full border border-gray-200 px-3 py-2 text-xs text-gray-600">
+                Modifier
+              </button>
+              <button type="button" className="rounded-full border border-gray-200 px-3 py-2 text-xs text-gray-600">
+                Suspendre
+              </button>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="text-sm font-semibold text-gray-900">Brouillons</div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {drafts.map((draft) => (
+            <div
+              key={draft.id}
+              className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-xs"
+            >
+              <div>
+                <div className="font-medium text-gray-900">{draft.title}</div>
+                <div className="text-gray-500">{draft.contract}</div>
+              </div>
+              <button type="button" className="rounded-full border border-blue-200 px-3 py-1 text-xs text-blue-700">
+                Reprendre
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
 
 export default function EntrepriseOffresPage() {
-  const [tab, setTab] = useState<"internes" | "edge">("internes");
-  const [loading, setLoading] = useState(true);
-  const [internal, setInternal] = useState<InternalFormation[]>([]);
-  const [edge, setEdge] = useState<EdgeItem[]>([]);
-  const [edgeTier, setEdgeTier] = useState(1);
-  const [orgName, setOrgName] = useState("");
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch("/api/dashboard/entreprise/offres", { credentials: "include" });
-        const json = await res.json();
-        if (res.ok) {
-          setInternal(json.internal_formations ?? []);
-          setEdge(json.edge_catalogue ?? []);
-          setEdgeTier(json.edge_tier ?? 1);
-          setOrgName(json.organisation?.name ?? "");
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  const statusClass = (status: string) => {
-    if (status === "Actif") return "bg-emerald-50 text-emerald-700";
-    if (status === "Archivé") return "bg-gray-100 text-gray-500";
-    return "bg-amber-50 text-amber-700";
-  };
+  const [tab, setTab] = useState<"emploi" | "formation">("emploi");
 
   return (
     <div className="flex min-h-screen bg-white text-gray-900">
       <EnterpriseSidebar />
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
-        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Formations & Parcours</p>
-            <h1 className="mt-1 text-2xl font-black text-gray-900">Mes Offres</h1>
-            {orgName ? <p className="mt-1 text-sm text-gray-500">{orgName}</p> : null}
-          </div>
-          <Link
-            href="/dashboard/formateur/parcours/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-500"
-          >
-            <Plus size={16} />
-            Créer une formation
-          </Link>
+        <header className="mb-8">
+          <h1 className={ENTREPRISE_H1_CLASS}>Mes Offres</h1>
+          <p className="mt-2 text-center text-sm text-gray-500">
+            Offres d&apos;emploi et formations pour votre organisation
+          </p>
         </header>
 
-        <div className="mb-6 flex gap-2">
+        <div className="mb-8 flex justify-center gap-2">
           {(
             [
-              { key: "internes" as const, label: "Formations internes" },
-              { key: "edge" as const, label: "Catalogue EDGE" },
+              { key: "emploi" as const, label: "Offres d'emploi" },
+              { key: "formation" as const, label: "Offres de formation" },
             ] as const
           ).map((t) => (
             <button
@@ -85,7 +182,7 @@ export default function EntrepriseOffresPage() {
               type="button"
               onClick={() => setTab(t.key)}
               className={cn(
-                "rounded-xl px-4 py-2 text-sm font-semibold transition",
+                "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
                 tab === t.key
                   ? "bg-violet-600 text-white"
                   : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50",
@@ -96,89 +193,7 @@ export default function EntrepriseOffresPage() {
           ))}
         </div>
 
-        {loading ? (
-          <p className="text-sm text-gray-500">Chargement…</p>
-        ) : tab === "internes" ? (
-          internal.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 p-12 text-center">
-              <BookOpen className="mx-auto h-10 w-10 text-gray-300" />
-              <p className="mt-4 font-semibold text-gray-900">Aucune formation interne</p>
-              <p className="mt-2 text-sm text-gray-500">
-                Créez votre première formation pour vos collaborateurs.
-              </p>
-              <Link
-                href="/dashboard/formateur/parcours/new"
-                className="mt-6 inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
-              >
-                Créer une formation →
-              </Link>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {internal.map((f) => (
-                <div
-                  key={f.id}
-                  className="rounded-[20px] bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-bold text-gray-900">{f.title}</p>
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
-                        statusClass(f.status),
-                      )}
-                    >
-                      {f.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-gray-400">
-                    {f.updated_at
-                      ? `Mis à jour le ${new Date(f.updated_at).toLocaleDateString("fr-FR")}`
-                      : "Parcours interne"}
-                  </p>
-                  <Link
-                    href={`/dashboard/formateur/parcours/${f.id}`}
-                    className="mt-4 inline-block text-sm font-semibold text-violet-600 hover:text-violet-500"
-                  >
-                    Gérer le parcours →
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {edge.map((item) => (
-              <div
-                key={item.id}
-                className={cn(
-                  "rounded-[20px] bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
-                  !item.available && "opacity-60",
-                )}
-              >
-                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold uppercase text-blue-700">
-                  {item.badge}
-                </span>
-                <p className="mt-3 font-bold text-gray-900">{item.title}</p>
-                <p className="mt-2 text-sm text-gray-500">{item.description}</p>
-                {item.available ? (
-                  <a
-                    href="https://edgebs.fr"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 inline-block text-sm font-semibold text-violet-600 hover:text-violet-500"
-                  >
-                    Découvrir sur EDGE →
-                  </a>
-                ) : (
-                  <p className="mt-4 text-xs text-gray-400">
-                    Disponible avec Beyond {item.tier} (votre niveau : {edgeTier})
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        {tab === "emploi" ? <OffresEmploiSection /> : <OffresFormationsSection />}
       </main>
     </div>
   );

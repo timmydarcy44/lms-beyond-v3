@@ -7,6 +7,7 @@ import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise-employee-csv-actions";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
+import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
 
 const AVATAR_COLORS = [
@@ -69,8 +70,8 @@ export default function SalariesPage() {
       <EnterpriseSidebar />
       <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-gray-900">Gestion des salariés</h1>
+          <div className="w-full text-center sm:w-auto sm:text-left">
+            <h1 className={ENTREPRISE_H1_CLASS}>Gestion des salariés</h1>
             <p className="mt-1 text-sm text-gray-500">
               {loading
                 ? "Chargement…"

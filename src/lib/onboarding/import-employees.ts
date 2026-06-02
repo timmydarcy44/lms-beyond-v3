@@ -53,7 +53,7 @@ export async function bulkCreateEmployees(
         first_name: e.first_name,
         last_name: e.last_name,
         email: e.email,
-        role: e.job_title || e.department || null,
+        job_title: e.job_title || null,
         department: e.department,
       };
     });

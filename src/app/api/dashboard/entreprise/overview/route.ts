@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildEmptyEntrepriseOverviewPayload } from "@/lib/entreprise/overview-empty";
 import {
   getEntrepriseOverviewServiceClient,
   resolveEntrepriseOverviewAccess,
@@ -18,25 +19,20 @@ export async function GET() {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
+  if ("superAdminPreview" in access && access.superAdminPreview) {
+    return NextResponse.json({
+      super_admin_preview: true,
+      ...buildEmptyEntrepriseOverviewPayload(access.viewer),
+    });
+  }
+
   if ("configurationRequired" in access && access.configurationRequired) {
     return NextResponse.json({
       configuration_required: true,
       needsOnboarding: true,
       viewer: access.viewer,
       onboarding_href: "/onboarding",
-      organisation: null,
-      employees: [],
-      employees_pending: 0,
-      kpis: {
-        employees_total: 0,
-        diagnostics_completed: 0,
-        diagnostics_total: 0,
-        diagnostics_pct: 0,
-        enrollments_active: 0,
-        attention_signals: { insufficient: true, completed: 0, threshold: 5 },
-      },
-      this_week: { from: "", to: "", agenda: [], recent_activity: [] },
-      formations: { presentiel: [], elearning: [] },
+      ...buildEmptyEntrepriseOverviewPayload(access.viewer),
     });
   }
 

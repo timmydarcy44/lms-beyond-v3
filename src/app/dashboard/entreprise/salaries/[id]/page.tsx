@@ -19,7 +19,7 @@ type EmployeeRow = {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  role: string | null;
+  job_title: string | null;
   department: string | null;
 };
 
@@ -170,7 +170,7 @@ export default function SalarieDetailPage() {
 
         const byId = await supabase
           .from("employees")
-          .select("id,first_name,last_name,role,department,job_title")
+          .select("id,first_name,last_name,department,job_title")
           .eq("id", employeeId)
           .maybeSingle();
         if (byId.error) throw byId.error;
@@ -180,7 +180,7 @@ export default function SalarieDetailPage() {
           // optional columns - ignore errors if they don't exist
           const byExternal = await supabase
             .from("employees")
-            .select("id,first_name,last_name,role,department")
+            .select("id,first_name,last_name,department,job_title")
             .eq("external_id", employeeId)
             .maybeSingle();
           if (!byExternal.error) emp = (byExternal.data ?? null) as EmployeeRow | null;
@@ -189,7 +189,7 @@ export default function SalarieDetailPage() {
         if (!emp) {
           const bySlug = await supabase
             .from("employees")
-            .select("id,first_name,last_name,role,department")
+            .select("id,first_name,last_name,department,job_title")
             .eq("slug", employeeId)
             .maybeSingle();
           if (!bySlug.error) emp = (bySlug.data ?? null) as EmployeeRow | null;
@@ -355,7 +355,7 @@ export default function SalarieDetailPage() {
             </h1>
             <div className="mt-3 flex flex-wrap gap-2 text-sm text-gray-600">
               <span className="rounded-full border border-gray-200 bg-white px-3 py-1">
-                {displayEmployee.role ?? "Poste non renseigné"}
+                {displayEmployee.job_title ?? "Poste non renseigné"}
               </span>
               <span className="rounded-full border border-gray-200 bg-white px-3 py-1">
                 {displayEmployee.department ?? "Département"}

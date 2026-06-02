@@ -19,6 +19,7 @@ import { GaugeMetric } from "@/components/radar-equipe/gauge-metric";
 import { RgpdBanner } from "@/components/radar-equipe/rgpd-banner";
 import { SignauxFaibles } from "@/components/radar-equipe/signaux-faibles";
 import type { EquipeAggregat } from "@/lib/radar-equipe/types";
+import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
 
 type EquipeOption = { id: string; name: string };
@@ -113,7 +114,7 @@ export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "li
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className={cn("flex flex-wrap items-start justify-between gap-4", light && "flex-col items-center text-center")}>
         <div>
           <div className={cn("flex items-center gap-2", light ? "text-violet-600" : "text-violet-300")}>
             <Brain className="h-5 w-5" />
@@ -121,13 +122,13 @@ export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "li
           </div>
           <h1
             className={cn(
-              "mt-1 text-[28px] font-extrabold tracking-tight",
-              light ? "text-gray-900" : "text-white",
+              "mt-1",
+              light ? ENTREPRISE_H1_CLASS : "text-[28px] font-extrabold tracking-tight text-white",
             )}
           >
             🔍 Équipe Insight
           </h1>
-          <p className={cn("mt-1 text-sm", light ? "text-gray-400" : "text-white/60")}>
+          <p className={cn("mt-1 text-sm", light ? "text-center text-gray-400" : "text-white/60")}>
             Semaine du {weekLabel}
           </p>
         </div>

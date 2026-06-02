@@ -442,11 +442,6 @@ export async function middleware(request: NextRequest) {
     const isSuperAdmin =
       isUniversalAdminRole(role) || roleType === "super_admin" || role === "super_admin";
     if (isSuperAdmin) {
-      if (isDashboardEntreprise && !companyId) {
-        const superRedirect = new URL("/super", request.url);
-        superRedirect.searchParams.set("notice", "super_admin_entreprise");
-        return NextResponse.redirect(superRedirect);
-      }
       return response;
     }
 

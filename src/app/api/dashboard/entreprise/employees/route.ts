@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildEmployeeInsertRow } from "@/lib/entreprise/employees-insert";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { sendCollaboratorInviteEmail } from "@/lib/onboarding/emails";
 import { appOrigin } from "@/lib/onboarding/slug";
@@ -11,6 +12,12 @@ export async function POST(request: NextRequest) {
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
+  if ("superAdminPreview" in access && access.superAdminPreview) {
+    return NextResponse.json(
+      { error: "Mode aperçu super admin — aucune organisation liée pour créer un collaborateur" },
+      { status: 400 },
+    );
+  }
   if ("configurationRequired" in access && access.configurationRequired) {
     return NextResponse.json({ error: "Organisation non configurée", needsOnboarding: true }, { status: 400 });
   }
@@ -20,10 +27,8 @@ export async function POST(request: NextRequest) {
     first_name?: string;
     last_name?: string;
     email?: string;
-    phone?: string;
     department?: string;
     job_title?: string;
-    hire_date?: string;
   };
   try {
     body = await request.json();
@@ -36,8 +41,6 @@ export async function POST(request: NextRequest) {
   const email = String(body.email ?? "").trim().toLowerCase();
   const department = String(body.department ?? "").trim() || null;
   const job_title = String(body.job_title ?? "").trim() || null;
-  const phone = String(body.phone ?? "").trim() || null;
-  const hire_date = String(body.hire_date ?? "").trim() || null;
 
   if (!first_name || !last_name || !email || !email.includes("@")) {
     return NextResponse.json({ error: "Prénom, nom et email valides requis" }, { status: 400 });
@@ -50,40 +53,23 @@ export async function POST(request: NextRequest) {
 
   const { data: org } = await service.from("organizations").select("name").eq("id", orgId).maybeSingle();
 
-  const insertRow: Record<string, unknown> = {
+  const insertRow = buildEmployeeInsertRow({
     company_id: orgId,
     first_name,
     last_name,
     email,
     department,
     job_title,
-    role: job_title,
-  };
-  if (phone) insertRow.phone = phone;
-  if (hire_date) insertRow.hire_date = hire_date;
+  });
 
-  let employee: { id: string };
-  const { data: inserted, error: insertErr } = await service
+  const { data: employee, error: insertErr } = await service
     .from("employees")
     .insert(insertRow)
     .select("id")
     .single();
 
   if (insertErr) {
-    const fallback = { ...insertRow };
-    delete fallback.phone;
-    delete fallback.hire_date;
-    const { data: retry, error: retryErr } = await service
-      .from("employees")
-      .insert(fallback)
-      .select("id")
-      .single();
-    if (retryErr) {
-      return NextResponse.json({ error: retryErr.message }, { status: 400 });
-    }
-    employee = retry as { id: string };
-  } else {
-    employee = inserted as { id: string };
+    return NextResponse.json({ error: insertErr.message }, { status: 400 });
   }
 
   let inviteSent = false;

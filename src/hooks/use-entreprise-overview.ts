@@ -16,6 +16,7 @@ export type EntrepriseEmployee = {
 };
 
 export type EntrepriseOverviewData = {
+  super_admin_preview?: boolean;
   configuration_required?: boolean;
   needsOnboarding?: boolean;
   onboarding_href?: string;
@@ -101,13 +102,15 @@ export function useEntrepriseOverview() {
   }, [load]);
 
   const organisationId = data?.organisation?.id ?? null;
-  const configurationRequired = Boolean(data?.configuration_required);
+  const superAdminPreview = Boolean(data?.super_admin_preview);
+  const configurationRequired = Boolean(data?.configuration_required) && !superAdminPreview;
 
   return {
     loading,
     data,
     fetchError,
     organisationId,
+    superAdminPreview,
     configurationRequired,
     reload: load,
   };

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 
 const MANAGER_ROLES = new Set(["entreprise", "admin_hr", "rh", "manager", "admin"]);
 
@@ -7,6 +8,16 @@ export type EntrepriseOverviewAccess =
       ok: true;
       userId: string;
       organizationId: string;
+      viewer: {
+        email: string | null;
+        prenom: string | null;
+        nom: string | null;
+      };
+    }
+  | {
+      ok: true;
+      superAdminPreview: true;
+      userId: string;
       viewer: {
         email: string | null;
         prenom: string | null;
@@ -25,14 +36,20 @@ export type EntrepriseOverviewAccess =
     }
   | { ok: false; error: string; status: 401 | 403 };
 
+function isSuperAdminProfile(profile: { role?: string | null; role_type?: string | null }) {
+  const role = String(profile.role ?? "").toLowerCase();
+  const roleType = String(profile.role_type ?? "").toLowerCase();
+  return isUniversalAdminRole(role) || role === "super_admin" || roleType === "super_admin";
+}
+
 function canAccessEntrepriseDashboard(profile: {
   role?: string | null;
   role_type?: string | null;
   company_id?: string | null;
 }) {
+  if (isSuperAdminProfile(profile)) return true;
   const role = String(profile.role ?? "").toLowerCase();
   const roleType = String(profile.role_type ?? "").toLowerCase();
-  if (role === "super_admin" || roleType === "super_admin") return true;
   if (MANAGER_ROLES.has(role) || MANAGER_ROLES.has(roleType)) return true;
   if (roleType === "entreprise") return true;
   if (Boolean(profile.company_id?.trim())) return true;
@@ -93,6 +110,9 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
 
   const organizationId = profile.company_id?.trim() || null;
   if (!organizationId) {
+    if (isSuperAdminProfile(profile)) {
+      return { ok: true, superAdminPreview: true, userId: user.id, viewer };
+    }
     return { ok: true, configurationRequired: true, userId: user.id, viewer };
   }
 

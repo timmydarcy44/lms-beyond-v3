@@ -1,21 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Activity,
-  BookOpen,
-  Brain,
-  ChevronRight,
-  Download,
-  Upload,
-  UserPlus,
-  Users,
-  X,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Activity, BookOpen, Brain, ChevronRight, Users } from "lucide-react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { EmptyState } from "@/components/enterprise/empty-state";
+import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise-employee-csv-actions";
+import { EntrepriseQuickAccess } from "@/components/enterprise/entreprise-quick-access";
+import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
 import { cn } from "@/lib/utils";
 
 type Overview = {
@@ -151,25 +143,10 @@ function BlueProgressBar({ pct }: { pct: number }) {
 }
 
 export function EnterpriseDashboardV2() {
-  const [loading, setLoading] = useState(true);
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { loading, data, fetchError, organisationId, configurationRequired, reload } =
+    useEntrepriseOverview();
+  const overview = data as Overview | null;
   const [formationTab, setFormationTab] = useState<"presentiel" | "elearning">("presentiel");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [importPreview, setImportPreview] = useState<{
-    sample: Array<{ first_name: string; last_name: string; email: string | null }>;
-    stats: { total: number };
-  } | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [addForm, setAddForm] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    department: "",
-    job_title: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const greeting = useMemo(() => {
     const prenom = overview?.viewer?.prenom?.trim();
@@ -177,131 +154,6 @@ export function EnterpriseDashboardV2() {
     const email = overview?.viewer?.email?.trim();
     return email ? `Bonjour ${email}` : "Bonjour";
   }, [overview]);
-
-  const loadOverview = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/dashboard/entreprise/overview", { credentials: "include" });
-      const json = (await res.json()) as Overview & { error?: string };
-      if (!res.ok) throw new Error(json.error ?? `Erreur (${res.status})`);
-      setOverview(json);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadOverview();
-  }, [loadOverview]);
-
-  const handleExportCSV = () => {
-    if (!overview?.employees?.length) {
-      toast.error("Aucun collaborateur à exporter");
-      return;
-    }
-    const header = "Nom,Prénom,Email,Département,Poste,Date d'ajout,Statut diagnostic,Score IDMC";
-    const rows = overview.employees.map((e) => {
-      const diag = e.diagnostic_done ? "Complété" : "En attente";
-      const score = e.idmc_score != null ? String(Math.round(e.idmc_score)) : "";
-      const date = e.created_at ? new Date(e.created_at).toLocaleDateString("fr-FR") : "";
-      return [
-        e.last_name ?? "",
-        e.first_name ?? "",
-        e.email ?? "",
-        e.department ?? "",
-        e.job_title ?? "",
-        date,
-        diag,
-        score,
-      ]
-        .map((c) => `"${String(c).replace(/"/g, '""')}"`)
-        .join(",");
-    });
-    const csv = [header, ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `collaborateurs-${overview.organisation.name || "entreprise"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Export CSV téléchargé");
-  };
-
-  const handleImportFile = async (file: File) => {
-    if (!overview?.organisation?.id) return;
-    setPendingFile(file);
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("organisation_id", overview.organisation.id);
-    fd.append("preview", "1");
-    try {
-      const res = await fetch("/api/onboarding/import-csv", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Aperçu impossible");
-      setImportPreview({ sample: json.sample ?? [], stats: json.stats ?? { total: 0 } });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur");
-      setPendingFile(null);
-    }
-  };
-
-  const confirmImport = async () => {
-    if (!pendingFile || !overview?.organisation?.id) return;
-    setSubmitting(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", pendingFile);
-      fd.append("organisation_id", overview.organisation.id);
-      const res = await fetch("/api/onboarding/import-csv", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Import impossible");
-
-      const inviteRes = await fetch("/api/onboarding/invite-collaborators", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ organisation_id: overview.organisation.id }),
-      });
-      const inviteJson = await inviteRes.json();
-      const invited = inviteRes.ok ? Number(inviteJson.sent ?? 0) : 0;
-
-      toast.success(
-        `${json.employes_importes ?? 0} collaborateurs importés${invited > 0 ? `, ${invited} invitations envoyées` : ""}`,
-      );
-      setImportPreview(null);
-      setPendingFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      await loadOverview();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleAddEmployee = async () => {
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/dashboard/entreprise/employees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(addForm),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Erreur");
-      toast.success(json.invite_sent ? "Collaborateur ajouté — invitation envoyée" : "Collaborateur ajouté");
-      setShowAddModal(false);
-      setAddForm({ first_name: "", last_name: "", email: "", department: "", job_title: "" });
-      await loadOverview();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -311,8 +163,11 @@ export function EnterpriseDashboardV2() {
     return Array.from(set).sort();
   }, [overview?.employees]);
 
+  const kpis = overview?.kpis;
+  const attentionSignals = (overview as Overview | null)?.kpis?.attention_signals;
+
   return (
-    <div className="flex min-h-screen bg-[#fafaf8] font-sans text-gray-900">
+    <div className="flex min-h-screen bg-white font-sans text-gray-900">
       <EnterpriseSidebar />
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mb-10">
@@ -325,39 +180,70 @@ export function EnterpriseDashboardV2() {
         </header>
 
         {loading ? (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 text-sm text-gray-500">Chargement…</div>
-        ) : error ? (
-          <EmptyState icon="⚠️" title="Impossible de charger le dashboard" description={error} />
-        ) : overview?.configuration_required ? (
-          <EmptyState
-            icon="⚙️"
-            title="Votre espace Beyond est en cours de configuration"
-            description="Complétez l'onboarding pour activer votre organisation."
-            action={{ label: "Continuer l'onboarding →", href: overview.onboarding_href ?? "/onboarding" }}
-          />
-        ) : overview ? (
+          <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500">
+            Chargement de votre espace entreprise…
+          </div>
+        ) : fetchError ? (
+          <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center">
+            <p className="text-sm text-gray-600">Connexion en cours — nouvelle tentative automatique…</p>
+            <p className="mt-2 text-xs text-gray-400">{fetchError}</p>
+            <button
+              type="button"
+              onClick={() => void reload()}
+              className="mt-4 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
+            >
+              Réessayer maintenant
+            </button>
+          </div>
+        ) : configurationRequired ? (
+          <div className="space-y-8">
+            <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-8">
+              <h2 className="text-xl font-bold text-gray-900">Bienvenue sur Beyond Enterprise</h2>
+              <p className="mt-2 max-w-lg text-sm text-gray-600">
+                Importez votre liste RH pour créer vos collaborateurs et lancer les diagnostics.
+                Format : Nom, Prénom, Email, Département, Poste.
+              </p>
+              <div className="mt-6">
+                <EnterpriseEmployeeCsvActions
+                  organisationId={organisationId}
+                  employees={[]}
+                  onSuccess={() => void reload()}
+                />
+              </div>
+              <p className="mt-4 text-xs text-gray-500">
+                Votre organisation n&apos;est pas encore liée ?{" "}
+                <Link href="/onboarding" className="font-semibold text-violet-600 underline">
+                  Compléter la configuration →
+                </Link>
+              </p>
+            </div>
+            <EntrepriseQuickAccess />
+          </div>
+        ) : overview && kpis ? (
           <>
+            <EntrepriseQuickAccess />
+
             <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <LightKpiCard
                 iconBg="bg-violet-50"
                 icon={<Users className="text-violet-600" size={22} />}
                 label="Total collaborateurs"
-                value={overview.kpis.employees_total}
+                value={kpis.employees_total}
                 sub="équipe active"
               />
               <LightKpiCard
                 iconBg="bg-rose-50"
                 icon={<Brain className="text-rose-500" size={22} />}
                 label="Diagnostics"
-                value={`${overview.kpis.diagnostics_completed} / ${overview.kpis.diagnostics_total}`}
-                sub={`${overview.kpis.diagnostics_pct}% complétés`}
-                footer={<RoseProgressBar pct={overview.kpis.diagnostics_pct} />}
+                value={`${kpis.diagnostics_completed} / ${kpis.diagnostics_total}`}
+                sub={`${kpis.diagnostics_pct}% complétés`}
+                footer={<RoseProgressBar pct={kpis.diagnostics_pct} />}
               />
               <LightKpiCard
                 iconBg="bg-blue-50"
                 icon={<BookOpen className="text-blue-600" size={22} />}
                 label="Formations actives"
-                value={overview.kpis.enrollments_active}
+                value={kpis.enrollments_active}
                 sub="parcours en cours"
               />
               <LightKpiCard
@@ -365,17 +251,17 @@ export function EnterpriseDashboardV2() {
                 icon={<Activity className="text-orange-500" size={22} />}
                 label="Équipe Insight"
                 value={
-                  overview.kpis.attention_signals.insufficient ? (
+                  attentionSignals?.insufficient ? (
                     <Link href="/dashboard/entreprise/equipe-insight" className="text-lg font-black text-orange-600">
                       En attente →
                     </Link>
                   ) : (
-                    overview.kpis.attention_signals.attention
+                    (attentionSignals as { attention?: number })?.attention ?? 0
                   )
                 }
                 sub={
-                  overview.kpis.attention_signals.insufficient
-                    ? `${overview.kpis.attention_signals.completed}/${overview.kpis.attention_signals.threshold} diagnostics`
+                  attentionSignals?.insufficient
+                    ? `${(attentionSignals as { completed: number }).completed}/${(attentionSignals as { threshold: number }).threshold} diagnostics`
                     : "signaux cette semaine"
                 }
               />
@@ -390,93 +276,22 @@ export function EnterpriseDashboardV2() {
                     {overview.kpis.employees_total} membres · {overview.employees_pending} en attente
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
-                    <Upload size={15} />
-                    Importer CSV
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".csv,.xlsx"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) void handleImportFile(f);
-                      }}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleExportCSV}
-                    className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                  >
-                    <Download size={15} />
-                    Exporter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(true)}
-                    className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
-                  >
-                    <UserPlus size={15} />
-                    Ajouter
-                  </button>
-                </div>
+                <EnterpriseEmployeeCsvActions
+                  organisationId={organisationId}
+                  employees={overview.employees}
+                  organisationName={overview.organisation?.name}
+                  departments={departments}
+                  onSuccess={() => void reload()}
+                />
               </div>
-
-              {importPreview ? (
-                <div className="mb-6 rounded-2xl border border-violet-200 bg-violet-50/50 p-5">
-                  <p className="font-semibold text-gray-900">
-                    Aperçu import — {importPreview.stats.total} lignes détectées
-                  </p>
-                  <div className="mt-3 overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                    <table className="w-full text-left text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-100 text-xs uppercase text-gray-400">
-                          <th className="px-3 py-2">Prénom</th>
-                          <th className="px-3 py-2">Nom</th>
-                          <th className="px-3 py-2">Email</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {importPreview.sample.slice(0, 5).map((row, i) => (
-                          <tr key={i} className="border-b border-gray-50">
-                            <td className="px-3 py-2">{row.first_name}</td>
-                            <td className="px-3 py-2">{row.last_name}</td>
-                            <td className="px-3 py-2">{row.email ?? "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setImportPreview(null);
-                        setPendingFile(null);
-                      }}
-                      className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={() => void confirmImport()}
-                      className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
-                    >
-                      Confirmer l&apos;import
-                    </button>
-                  </div>
-                </div>
-              ) : null}
 
               {overview.employees.length === 0 ? (
                 <EmptyState
+                  variant="light"
                   icon="👥"
                   title="Aucun collaborateur"
                   description="Importez un fichier CSV ou ajoutez vos collaborateurs manuellement."
+                  onAction={() => document.getElementById("entreprise-csv-import")?.click()}
                 />
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
@@ -586,6 +401,7 @@ export function EnterpriseDashboardV2() {
               {formationTab === "presentiel" ? (
                 overview.formations.presentiel.length === 0 ? (
                   <EmptyState
+                    variant="light"
                     icon="📋"
                     title="Aucune session planifiée"
                     description="Planifiez une formation pour vos équipes."
@@ -618,6 +434,7 @@ export function EnterpriseDashboardV2() {
                 )
               ) : overview.formations.elearning.length === 0 ? (
                 <EmptyState
+                  variant="light"
                   icon="📚"
                   title="Aucun parcours eLearning"
                   description="Assignez des parcours LMS à vos collaborateurs."
@@ -682,91 +499,6 @@ export function EnterpriseDashboardV2() {
           </>
         ) : null}
       </main>
-
-      {showAddModal ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">Ajouter un collaborateur</h3>
-              <button type="button" onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500">Prénom *</label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={addForm.first_name}
-                    onChange={(e) => setAddForm((f) => ({ ...f, first_name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500">Nom *</label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={addForm.last_name}
-                    onChange={(e) => setAddForm((f) => ({ ...f, last_name: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500">Email *</label>
-                <input
-                  type="email"
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={addForm.email}
-                  onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500">Département</label>
-                <select
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={addForm.department}
-                  onChange={(e) => setAddForm((f) => ({ ...f, department: e.target.value }))}
-                >
-                  <option value="">—</option>
-                  {departments.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500">Poste</label>
-                <input
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={addForm.job_title}
-                  onChange={(e) => setAddForm((f) => ({ ...f, job_title: e.target.value }))}
-                />
-              </div>
-            </div>
-            <p className="mt-4 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-800">
-              ✉️ Un email d&apos;invitation sera envoyé automatiquement
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => void handleAddEmployee()}
-                className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
-              >
-                Ajouter →
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

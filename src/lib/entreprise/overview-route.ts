@@ -1,5 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const MANAGER_ROLES = new Set(["entreprise", "admin_hr", "rh", "manager", "admin"]);
 
@@ -57,17 +56,21 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
     return { ok: false, error: "Non authentifié", status: 401 };
   }
 
-  const { data: profileRow } = await supabase
+  const { data: profileRow, error: profileError } = await supabase
     .from("profiles")
-    .select("prenom, nom, first_name, last_name, email, company_id, role, role_type")
+    .select("first_name, last_name, full_name, email, company_id, role, role_type")
     .eq("id", user.id)
     .maybeSingle();
 
+  if (profileError) {
+    console.error("[entreprise/overview] profile", profileError);
+    return { ok: false, error: "Impossible de lire le profil", status: 401 };
+  }
+
   const profile = profileRow as {
-    prenom?: string | null;
-    nom?: string | null;
     first_name?: string | null;
     last_name?: string | null;
+    full_name?: string | null;
     email?: string | null;
     company_id?: string | null;
     role?: string | null;
@@ -84,8 +87,8 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
 
   const viewer = {
     email: user.email ?? profile.email ?? null,
-    prenom: profile.prenom ?? profile.first_name ?? null,
-    nom: profile.nom ?? profile.last_name ?? null,
+    prenom: profile.first_name ?? null,
+    nom: profile.last_name ?? null,
   };
 
   const organizationId = profile.company_id?.trim() || null;

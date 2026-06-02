@@ -2,46 +2,55 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
-import { EmptyState } from "@/components/enterprise/empty-state";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise-employee-csv-actions";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
+import { cn } from "@/lib/utils";
 
-type Employee = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  job_title: string | null;
-  department: string | null;
-  diagnostic_done: boolean;
-  idmc_score: number | null;
-  formation_active: boolean;
-};
+const AVATAR_COLORS = [
+  "bg-violet-500",
+  "bg-pink-500",
+  "bg-blue-500",
+  "bg-orange-500",
+  "bg-emerald-500",
+  "bg-rose-500",
+];
+
+function initials(first: string | null, last: string | null) {
+  const a = (first ?? "").trim().slice(0, 1).toUpperCase();
+  const b = (last ?? "").trim().slice(0, 1).toUpperCase();
+  return (a + b).trim() || "—";
+}
+
+function avatarColor(name: string) {
+  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
+}
 
 export default function SalariesPage() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [department, setDepartment] = useState<string>("ALL");
-
+  const supabase = useSupabase();
+  const { loading, data, organisationId, configurationRequired, reload } = useEntrepriseOverview();
+  const [clientOrgId, setClientOrgId] = useState<string | null>(null);
   useEffect(() => {
+    if (organisationId) return;
     void (async () => {
-      try {
-        const res = await fetch("/api/dashboard/entreprise/overview", { credentials: "include" });
-        const json = await res.json();
-        if (res.ok && json.employees) setEmployees(json.employees);
-      } finally {
-        setLoading(false);
-      }
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user?.id) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("id", userData.user.id)
+        .maybeSingle();
+      const cid = (profile as { company_id?: string | null } | null)?.company_id?.trim();
+      if (cid) setClientOrgId(cid);
     })();
-  }, []);
+  }, [organisationId, supabase]);
+
+  const effectiveOrgId = organisationId ?? clientOrgId;
+  const employees = data?.employees ?? [];
+  const kpis = data?.kpis;
+  const diagnosticsCompleted = kpis?.diagnostics_completed ?? 0;
 
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -51,108 +60,135 @@ export default function SalariesPage() {
     return Array.from(set).sort();
   }, [employees]);
 
-  const filteredEmployees = useMemo(() => {
-    return employees.filter((e) => department === "ALL" || e.department === department);
-  }, [employees, department]);
+  const triggerImport = () => {
+    document.getElementById("entreprise-csv-import")?.click();
+  };
 
   return (
-    <div className="flex min-h-screen bg-[#fafaf8] text-gray-900">
+    <div className="flex min-h-screen bg-white text-gray-900">
       <EnterpriseSidebar />
-      <main className="min-h-screen flex-1 px-8 py-10 lg:pl-[280px]">
-        <header className="mb-6">
-          <h1 className="text-2xl font-black tracking-tight">Gestion des salariés</h1>
-          <p className="mt-1 text-sm text-gray-400">Suivi RH · diagnostics · formations</p>
-        </header>
+      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-gray-900">Gestion des salariés</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              {loading
+                ? "Chargement…"
+                : `${employees.length} collaborateurs · ${diagnosticsCompleted} diagnostics complétés`}
+            </p>
+          </div>
+          {!loading ? (
+            <div>
+              <EnterpriseEmployeeCsvActions
+                organisationId={effectiveOrgId}
+                employees={employees}
+                organisationName={data?.organisation?.name}
+                departments={departments}
+                onSuccess={() => void reload()}
+              />
+            </div>
+          ) : null}
+        </div>
 
-        {departments.length > 0 ? (
-          <div className="mb-4 max-w-xs">
-            <Select value={department} onValueChange={setDepartment}>
-              <SelectTrigger className="border-gray-200 bg-white">
-                <SelectValue placeholder="Département" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Tous les départements</SelectItem>
-                {departments.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {configurationRequired && !effectiveOrgId ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            Votre organisation n&apos;est pas encore liée à votre compte.{" "}
+            <Link href="/onboarding" className="font-semibold underline">
+              Compléter la configuration →
+            </Link>
           </div>
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-gray-500">Chargement…</p>
+          <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500">
+            Chargement de vos collaborateurs…
+          </div>
         ) : employees.length === 0 ? (
-          <EmptyState
-            icon="👥"
-            title="Aucun salarié"
-            description="Importez vos collaborateurs depuis le dashboard principal."
-            action={{ label: "Retour au dashboard →", href: "/dashboard/entreprise" }}
-          />
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 px-6 py-16 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50">
+              <Users className="h-8 w-8 text-violet-600" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">Aucun collaborateur pour le moment</h2>
+            <p className="mt-2 max-w-md text-sm text-gray-500">
+              Importez votre liste RH pour commencer — CSV ou Excel (.xlsx).
+            </p>
+            <button
+              type="button"
+              onClick={triggerImport}
+              className="mt-6 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500"
+            >
+              📂 Importer mon fichier CSV →
+            </button>
+          </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Salarié</TableHead>
-                  <TableHead>Poste</TableHead>
-                  <TableHead>Département</TableHead>
-                  <TableHead>Diagnostic</TableHead>
-                  <TableHead>Formation</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEmployees.map((employee) => {
-                  const name = [employee.first_name, employee.last_name].filter(Boolean).join(" ") || "—";
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/80 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  <th className="px-4 py-3">Collaborateur</th>
+                  <th className="px-4 py-3">Poste</th>
+                  <th className="px-4 py-3">Département</th>
+                  <th className="px-4 py-3">Diagnostic</th>
+                  <th className="px-4 py-3">Formation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employees.map((employee) => {
+                  const fullName =
+                    [employee.first_name, employee.last_name].filter(Boolean).join(" ") || "—";
+                  const color = avatarColor(fullName);
                   return (
-                    <TableRow key={employee.id}>
-                      <TableCell>
+                    <tr key={employee.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                      <td className="px-4 py-3">
                         <Link
                           href={`/dashboard/entreprise/salaries/${employee.id}`}
-                          className="font-semibold text-violet-600 hover:text-violet-500"
+                          className="flex items-center gap-3"
                         >
-                          {name}
+                          <div
+                            className={cn(
+                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
+                              color,
+                            )}
+                          >
+                            {initials(employee.first_name, employee.last_name)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{fullName}</p>
+                            <p className="text-xs text-gray-400">{employee.email ?? ""}</p>
+                          </div>
                         </Link>
-                        <p className="text-xs text-gray-400">{employee.email}</p>
-                      </TableCell>
-                      <TableCell>{employee.job_title ?? "—"}</TableCell>
-                      <TableCell>{employee.department ?? "—"}</TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{employee.job_title ?? "—"}</td>
+                      <td className="px-4 py-3 text-gray-600">{employee.department ?? "—"}</td>
+                      <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
                             employee.diagnostic_done
                               ? "bg-emerald-50 text-emerald-700"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
+                              : "bg-gray-100 text-gray-500",
+                          )}
                         >
                           {employee.diagnostic_done ? "Complété" : "En attente"}
                         </span>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
                             employee.formation_active
                               ? "bg-blue-50 text-blue-700"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
+                              : "bg-gray-100 text-gray-500",
+                          )}
                         >
                           {employee.formation_active ? "En cours" : "Aucune"}
                         </span>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   );
                 })}
-                {!filteredEmployees.length && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-sm text-gray-400">
-                      Aucun salarié ne correspond au filtre.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
         )}
       </main>

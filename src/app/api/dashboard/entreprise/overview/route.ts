@@ -24,6 +24,19 @@ export async function GET() {
       needsOnboarding: true,
       viewer: access.viewer,
       onboarding_href: "/onboarding",
+      organisation: null,
+      employees: [],
+      employees_pending: 0,
+      kpis: {
+        employees_total: 0,
+        diagnostics_completed: 0,
+        diagnostics_total: 0,
+        diagnostics_pct: 0,
+        enrollments_active: 0,
+        attention_signals: { insufficient: true, completed: 0, threshold: 5 },
+      },
+      this_week: { from: "", to: "", agenda: [], recent_activity: [] },
+      formations: { presentiel: [], elearning: [] },
     });
   }
 

@@ -312,7 +312,7 @@ export default function SalarieDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#fafaf8]">
+      <div className="flex min-h-screen bg-white">
         <EnterpriseSidebar />
         <main className="flex-1 px-8 py-10 pl-[280px] text-sm text-gray-500">Chargement…</main>
       </div>
@@ -321,7 +321,7 @@ export default function SalarieDetailPage() {
 
   if (!displayEmployee) {
     return (
-      <div className="flex min-h-screen bg-[#fafaf8]">
+      <div className="flex min-h-screen bg-white">
         <EnterpriseSidebar />
         <main className="flex-1 px-8 py-10 pl-[280px]">
           <p className="text-sm text-gray-600">Collaborateur introuvable.</p>

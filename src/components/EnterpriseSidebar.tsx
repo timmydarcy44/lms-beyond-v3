@@ -13,9 +13,6 @@ import {
   Settings,
   Users,
   Zap,
-  Brain,
-  GraduationCap,
-  BookOpen,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -25,31 +22,6 @@ const NAV_ITEMS = [
   { label: "Mes Offres", href: "/dashboard/entreprise/offres", icon: Briefcase },
   { label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
   { label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
-];
-
-const QUICK_LINKS = [
-  {
-    href: "/dashboard/entreprise/marketplace?type=formateur",
-    label: "Trouver un formateur",
-    icon: GraduationCap,
-    iconClass: "text-violet-400",
-    bgClass: "bg-violet-500/20",
-  },
-  {
-    href: "/dashboard/entreprise/marketplace?type=praticien",
-    label: "Trouver un praticien",
-    icon: Brain,
-    iconClass: "text-pink-400",
-    bgClass: "bg-pink-500/20",
-  },
-  {
-    href: "https://edgebs.fr",
-    label: "eLearning by EDGE",
-    icon: BookOpen,
-    iconClass: "text-blue-400",
-    bgClass: "bg-blue-500/20",
-    external: true,
-  },
 ];
 
 function viewerInitials(prenom: string | null, nom: string | null, email: string | null) {
@@ -155,35 +127,6 @@ export default function EnterpriseSidebar() {
           );
         })}
       </nav>
-
-      <section className="mt-4 px-4">
-        <p className="mb-3 text-xs uppercase tracking-widest text-white/30">Accès rapides</p>
-        {QUICK_LINKS.map((link) => {
-          const Icon = link.icon;
-          const inner = (
-            <>
-              <div className={cn("rounded-lg p-2", link.bgClass)}>
-                <Icon size={16} className={link.iconClass} />
-              </div>
-              <span className="text-sm font-medium text-white/80">{link.label}</span>
-            </>
-          );
-          const className =
-            "mb-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/5 p-3 transition hover:bg-white/10";
-          if (link.external) {
-            return (
-              <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className={className}>
-                {inner}
-              </a>
-            );
-          }
-          return (
-            <Link key={link.href} href={link.href} className={className}>
-              {inner}
-            </Link>
-          );
-        })}
-      </section>
 
       <div className="mt-auto p-4">
         <Link

@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendOnboardingEmails } from "@/lib/onboarding/emails";
+import {
+  isEmailAlreadyRegisteredError,
+  isMissingColumnError,
+  OnboardingStepError,
+} from "@/lib/onboarding/onboarding-errors";
 import { generateOrgSlug, appOrigin } from "@/lib/onboarding/slug";
 
 function splitName(full: string) {
@@ -9,9 +14,13 @@ function splitName(full: string) {
   return { first: parts[0], last: parts.slice(1).join(" ") };
 }
 
-function isMissingColumnError(message: string | undefined) {
-  const m = (message ?? "").toLowerCase();
-  return m.includes("column") || m.includes("42703") || m.includes("schema cache");
+function stepError(
+  step: string,
+  error: string,
+  detail: string,
+  extra?: { status?: number; organization_id?: string },
+): OnboardingStepError {
+  return new OnboardingStepError({ step, error, detail, ...extra });
 }
 
 async function fetchDeal(
@@ -29,6 +38,7 @@ async function fetchDeal(
   }
 
   if (isMissingColumnError(withOrg.error?.message)) {
+    console.warn("[onboarding/fetch_deal] organization_id column missing:", withOrg.error.message);
     const basic = await service
       .from("crm_pipeline_deals")
       .select("id, company_name")
@@ -36,6 +46,10 @@ async function fetchDeal(
       .maybeSingle();
     if (basic.error || !basic.data) return null;
     return { ...(basic.data as { id: string; company_name: string }), organization_id: null };
+  }
+
+  if (withOrg.error) {
+    console.error("[onboarding/fetch_deal]", withOrg.error);
   }
 
   return null;
@@ -56,6 +70,7 @@ async function insertOrganization(
   let result = await service.from("organizations").insert(fullPayload).select("id, name, slug").single();
 
   if (result.error && isMissingColumnError(result.error.message)) {
+    console.warn("[onboarding/insert_organization] colonnes onboarding absentes, fallback minimal");
     result = await service
       .from("organizations")
       .insert({ name: params.name, slug: params.slug })
@@ -64,7 +79,14 @@ async function insertOrganization(
   }
 
   if (result.error || !result.data) {
-    throw new Error(result.error?.message ?? "Impossible de créer l'organisation");
+    const detail = result.error?.message ?? "Impossible de créer l'organisation";
+    throw stepError(
+      "insert_organization",
+      isMissingColumnError(detail)
+        ? "Migration onboarding non appliquée (organizations.onboarding_step)"
+        : "Échec création organisation",
+      detail,
+    );
   }
 
   return result.data as { id: string; name: string; slug: string };
@@ -135,22 +157,36 @@ async function inviteDrhUser(
     return invite.user.id;
   }
 
-  if (inviteErr && inviteErr.message) {
-    console.error("[onboarding] inviteUserByEmail:", {
+  if (inviteErr) {
+    console.error("[onboarding/invite_drh] inviteUserByEmail:", {
       message: inviteErr.message,
       status: inviteErr.status,
       code: inviteErr.code,
       email: params.email,
     });
+
+    if (isEmailAlreadyRegisteredError(inviteErr.message)) {
+      const existing = await resolveAuthUserId(service, params.email);
+      if (existing) {
+        console.log("[onboarding/invite_drh] email déjà en Auth, réutilisation user_id:", existing);
+        return existing;
+      }
+      throw stepError(
+        "invite_drh",
+        "Cet email est déjà enregistré dans Supabase Auth sans profil lié",
+        inviteErr.message,
+      );
+    }
   }
 
   const afterInvite = await resolveAuthUserId(service, params.email);
   if (afterInvite) return afterInvite;
 
-  throw new Error(
-    inviteErr?.message
-      ? `Invitation DRH impossible : ${inviteErr.message}`
-      : "Invitation DRH impossible (vérifiez SUPABASE_SERVICE_ROLE_KEY et les paramètres Auth)",
+  throw stepError(
+    "invite_drh",
+    "Invitation DRH impossible",
+    inviteErr?.message ??
+      "Vérifiez SUPABASE_SERVICE_ROLE_KEY et les paramètres Auth (inviteUserByEmail)",
   );
 }
 
@@ -250,16 +286,15 @@ export async function createOrganizationFromDeal(
   try {
     const deal = await fetchDeal(service, body.deal_id);
     if (!deal) {
-      throw new Error("Deal introuvable");
+      throw stepError("fetch_deal", "Deal introuvable", `Aucun deal pour id=${body.deal_id}`);
     }
     if (deal.organization_id) {
-      const err = new Error("Organisation déjà créée pour ce deal") as Error & {
-        status?: number;
-        organization_id?: string;
-      };
-      err.status = 409;
-      err.organization_id = deal.organization_id;
-      throw err;
+      throw stepError(
+        "fetch_deal",
+        "Organisation déjà créée pour ce deal",
+        `organization_id=${deal.organization_id}`,
+        { status: 409, organization_id: deal.organization_id },
+      );
     }
 
     step = "insert_organization";
@@ -312,19 +347,13 @@ export async function createOrganizationFromDeal(
 
     return { organisation, organisation_id: orgId };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    const wrapped = new Error(`[${step}] ${msg}`) as Error & {
-      status?: number;
-      organization_id?: string;
-      step?: string;
-    };
-    if (e instanceof Error && "status" in e) {
-      wrapped.status = (e as Error & { status?: number }).status;
-    }
-    if (e instanceof Error && "organization_id" in e) {
-      wrapped.organization_id = (e as Error & { organization_id?: string }).organization_id;
-    }
-    wrapped.step = step;
-    throw wrapped;
+    if (e instanceof OnboardingStepError) throw e;
+
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error(`[onboarding/createOrganizationFromDeal] step=${step}`, {
+      detail,
+      stack: e instanceof Error ? e.stack : undefined,
+    });
+    throw stepError(step, `Échec à l'étape ${step}`, detail);
   }
 }

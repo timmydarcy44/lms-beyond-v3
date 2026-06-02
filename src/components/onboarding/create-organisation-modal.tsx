@@ -56,12 +56,20 @@ export function CreateOrganisationModal({
       });
       const json = (await res.json()) as {
         error?: string;
+        step?: string;
+        detail?: string;
         hint?: string;
         organisation_id?: string;
         organization_id?: string;
       };
       if (!res.ok) {
-        const msg = [json.error, json.hint].filter(Boolean).join(" — ");
+        console.error("[create-organisation]", {
+          status: res.status,
+          step: json.step,
+          error: json.error,
+          detail: json.detail,
+        });
+        const msg = [json.error, json.step ? `(${json.step})` : "", json.detail].filter(Boolean).join(" — ");
         throw new Error(msg || "Erreur");
       }
       const orgId = json.organisation_id ?? json.organization_id;

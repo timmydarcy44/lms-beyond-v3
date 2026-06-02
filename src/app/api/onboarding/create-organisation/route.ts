@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { createOrganizationFromDeal } from "@/lib/onboarding/create-organization-server";
+import { OnboardingStepError } from "@/lib/onboarding/onboarding-errors";
+import { verifyOnboardingSchema } from "@/lib/onboarding/verify-onboarding-schema";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -13,30 +15,58 @@ type Body = {
   deal_id?: string;
 };
 
+function logEnvDiagnostics() {
+  console.log("[onboarding/create-organisation] env check", {
+    SUPABASE_SERVICE_ROLE_KEY: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
+    SUPABASE_URL: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()),
+    NEXT_PUBLIC_SUPABASE_URL: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()),
+  });
+}
+
+function errorResponse(
+  error: string,
+  step: string,
+  detail: string,
+  status: number,
+  extra?: Record<string, unknown>,
+) {
+  console.error("[onboarding/create-organisation] error response", { error, step, detail, status, ...extra });
+  return NextResponse.json({ error, step, detail, ...extra }, { status });
+}
+
 export async function POST(request: NextRequest) {
+  logEnvDiagnostics();
+
   try {
+    console.log("[onboarding/create-organisation] step=auth_super_admin");
     if (!(await isSuperAdmin())) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      return errorResponse("Accès refusé", "auth_super_admin", "Utilisateur non super-admin", 403);
     }
 
+    console.log("[onboarding/create-organisation] step=service_client");
     const service = getServiceRoleClient();
     if (!service) {
-      console.error("[onboarding/create-organisation] SUPABASE_SERVICE_ROLE_KEY manquante ou invalide");
-      return NextResponse.json(
+      return errorResponse(
+        "Service Supabase indisponible",
+        "service_client",
+        "SUPABASE_SERVICE_ROLE_KEY absente ou vide — ajoutez-la dans Vercel Environment Variables",
+        503,
         {
-          error: "Service Supabase indisponible",
-          detail: "SUPABASE_SERVICE_ROLE_KEY absente ou incorrecte sur le serveur (Vercel → Environment Variables)",
-          step: "service_client",
+          SUPABASE_SERVICE_ROLE_KEY: false,
+          hint: "Ne jamais utiliser la clé anon ; il faut la service role (eyJ…)",
         },
-        { status: 503 },
       );
     }
+
+    console.log("[onboarding/create-organisation] step=verify_schema");
+    await verifyOnboardingSchema(service);
 
     let body: Body = {};
     try {
       body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Corps invalide" }, { status: 400 });
+    } catch (parseErr) {
+      const detail = parseErr instanceof Error ? parseErr.message : "JSON invalide";
+      return errorResponse("Corps invalide", "parse_body", detail, 400);
     }
 
     const company_name = String(body.company_name ?? "").trim();
@@ -49,11 +79,19 @@ export async function POST(request: NextRequest) {
         : null;
 
     if (!company_name || !drh_email || !drh_name || !deal_id) {
-      return NextResponse.json(
-        { error: "company_name, drh_email, drh_name et deal_id sont requis" },
-        { status: 400 },
+      return errorResponse(
+        "Champs requis manquants",
+        "validate_body",
+        "company_name, drh_email, drh_name et deal_id sont requis",
+        400,
       );
     }
+
+    console.log("[onboarding/create-organisation] step=create_organization_from_deal", {
+      deal_id,
+      company_name,
+      drh_email,
+    });
 
     const result = await createOrganizationFromDeal(service, {
       company_name,
@@ -63,31 +101,37 @@ export async function POST(request: NextRequest) {
       deal_id,
     });
 
+    console.log("[onboarding/create-organisation] success", {
+      organisation_id: result.organisation_id,
+    });
+
     return NextResponse.json({
       success: true,
       organisation: result.organisation,
       organisation_id: result.organisation_id,
     });
   } catch (e) {
-    const err = e as Error & { status?: number; organization_id?: string; step?: string };
-    const status = err.status ?? 500;
-    console.error("[onboarding/create-organisation] Échec:", {
-      step: err.step ?? "unknown",
-      message: err.message,
-      stack: err.stack,
-      organization_id: err.organization_id,
+    if (e instanceof OnboardingStepError) {
+      return errorResponse(
+        e.message,
+        e.step,
+        e.detail,
+        e.status ?? 500,
+        e.organization_id ? { organization_id: e.organization_id } : undefined,
+      );
+    }
+
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error("[onboarding/create-organisation] unexpected", {
+      detail,
+      stack: e instanceof Error ? e.stack : undefined,
     });
-    return NextResponse.json(
-      {
-        error: err.message || "Erreur serveur",
-        step: err.step,
-        detail:
-          status === 500
-            ? "Vérifiez SUPABASE_SERVICE_ROLE_KEY, la migration 20260602120000_client_onboarding_workflow.sql, et les logs inviteUserByEmail"
-            : undefined,
-        organization_id: err.organization_id,
-      },
-      { status },
+
+    return errorResponse(
+      "Erreur serveur inattendue",
+      "unexpected",
+      detail,
+      500,
     );
   }
 }

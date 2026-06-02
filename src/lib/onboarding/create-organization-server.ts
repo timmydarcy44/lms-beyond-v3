@@ -212,7 +212,7 @@ async function upsertDrhProfile(
   };
 
   let err = (await service.from("profiles").upsert(base, { onConflict: "id" })).error;
-  if (err?.code === "42703" || isMissingColumnError(err.message)) {
+  if (err?.code === "42703" || isMissingColumnError(err?.message)) {
     const reduced = {
       id: params.userId,
       email: params.email,

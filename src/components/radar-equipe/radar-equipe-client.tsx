@@ -115,7 +115,7 @@ export function RadarEquipeClient() {
             <Brain className="h-5 w-5" />
             <span className="text-xs font-semibold uppercase tracking-widest">Beyond RH</span>
           </div>
-          <h1 className="mt-1 text-[28px] font-extrabold tracking-tight">Radar Équipe</h1>
+          <h1 className="mt-1 text-[28px] font-extrabold tracking-tight">Équipe Insight</h1>
           <p className="mt-1 text-sm text-white/60">Semaine du {weekLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

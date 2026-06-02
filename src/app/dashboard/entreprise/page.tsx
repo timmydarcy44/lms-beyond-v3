@@ -1,25 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  CalendarDays,
-  ChevronRight,
-  ClipboardCheck,
-  Hourglass,
-  Search,
-  User,
-  Users,
-} from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import EnterpriseSidebar from "@/components/EnterpriseSidebar";
-import { useSupabase } from "@/components/providers/supabase-provider";
-import { ActionCards, ActionCardsSkeleton, type RecommendedAction } from "@/components/enterprise/ActionCards";
-import { RadarEquipeSummaryCard } from "@/components/radar-equipe/radar-equipe-summary-card";
-import { formatDistanceToNow } from "date-fns";
-import { fr } from "date-fns/locale";
-import { toast } from "sonner";
-import type { ActionRequest } from "@/types/database";
+import { EnterpriseDashboardV2 } from "@/components/enterprise/enterprise-dashboard-v2";
 
 type ActionRequestRow = ActionRequest & {
   target_count: number | null;
@@ -475,71 +456,9 @@ type ExpertRow = {
   skills: ExpertSkillRow[] | null;
 };
 
-export default function DashboardRHLightFinal() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const supabase = useSupabase();
-
-  const [companyId, setCompanyId] = useState<string | null>(null);
-  const [profileRole, setProfileRole] = useState<string | null>(null);
-
-  const [diagLoading, setDiagLoading] = useState(true);
-  const [diagTotal, setDiagTotal] = useState(0);
-  const [diagCompleted, setDiagCompleted] = useState(0);
-  const [diagAverages, setDiagAverages] = useState<{ focus: number; stress: number; engagement: number; cohesion: number } | null>(
-    null,
-  );
-
-  const [actionsLoading, setActionsLoading] = useState(true);
-  const [actionsError, setActionsError] = useState<string | null>(null);
-  const [recommendedActions, setRecommendedActions] = useState<RecommendedAction[]>([]);
-
-  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
-  const [selectedActionMeta, setSelectedActionMeta] = useState<RecommendedAction | null>(null);
-
-  const [expertsLoading, setExpertsLoading] = useState(false);
-  const [expertsError, setExpertsError] = useState<string | null>(null);
-  const [experts, setExperts] = useState<ExpertRow[]>([]);
-  const [selectedExpertId, setSelectedExpertId] = useState<string | null>(null);
-  const [validatedExpertId, setValidatedExpertId] = useState<string | null>(null);
-
-  const [requestsLoading, setRequestsLoading] = useState(true);
-  const [requestsError, setRequestsError] = useState<string | null>(null);
-  const [actionRequests, setActionRequests] = useState<ActionRequestRow[]>([]);
-
-  const [resultsLoading, setResultsLoading] = useState(true);
-  const [completedRequests, setCompletedRequests] = useState<ActionRequestRow[]>([]);
-
-  const stats = [
-    { label: "Total Collaborateurs", value: 50, icon: <Users size={20} aria-hidden /> },
-    { label: "Diagnostics Complétés", value: "12 / 50", icon: <ClipboardCheck size={20} aria-hidden /> },
-    { label: "Alertes Care Actives", value: 2, icon: <AlertTriangle size={20} aria-hidden />, danger: true },
-  ];
-
-  const demoRecommendedActions = useMemo(
-    () => [
-      {
-        id: "demo-stress-charlie",
-        title: "Optimisation du potentiel individuel - Charlie Morel",
-        description:
-          "Axe d'amélioration identifié : efficacité sous pression. Objectif : transformer la friction en agilité opérationnelle.",
-        priority: "Haute" as const,
-        badge: "Performance",
-        href: "/dashboard/entreprise/actions/demo-stress",
-      },
-      {
-        id: "demo-engagement-tech",
-        title: "Baisse d'engagement - Équipe Tech",
-        description:
-          "Signaux faibles détectés sur l'équilibre vie pro/vie perso. Organiser un point d'équipe.",
-        priority: "Moyenne" as const,
-        badge: "Management",
-        collectiveDelta: "+3 collaborateurs concernés",
-        href: null as string | null,
-      },
-    ],
-    [],
-  );
+export default function EntrepriseDashboardPage() {
+  return <EnterpriseDashboardV2 />;
+}
 
   const fallbackPhotos = useMemo(
     () => [

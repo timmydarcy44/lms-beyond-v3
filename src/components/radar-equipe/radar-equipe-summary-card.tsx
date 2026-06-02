@@ -43,7 +43,7 @@ export function RadarEquipeSummaryCard() {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-violet-300">
           <Brain className="h-5 w-5" />
-          <span className="text-sm font-bold">Radar Équipe</span>
+          <span className="text-sm font-bold">Équipe Insight</span>
         </div>
         <span className="text-xs text-white/40">Semaine du {weekLabel}</span>
       </div>

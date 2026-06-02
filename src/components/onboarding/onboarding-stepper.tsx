@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminTeamStep } from "@/components/onboarding/admin-team-step";
 import { CsvImportStep } from "@/components/onboarding/csv-import-step";
 import { InviteCollaboratorsStep } from "@/components/onboarding/invite-collaborators-step";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
   { key: "account", label: "Compte activé" },
+  { key: "admins", label: "Équipe RH" },
   { key: "import", label: "Import équipes" },
   { key: "invite", label: "Inviter collaborateurs" },
 ] as const;
@@ -39,7 +41,7 @@ export function OnboardingStepper({ organisationId }: OnboardingStepperProps) {
         const s = json.onboarding_step ?? "";
         if (s === "teams_created" || s === "employees_imported" || s === "employees_invited") {
           setImportDone(true);
-          setStep(2);
+          setStep(3);
         } else if (s === "account_activated" || s === "invite_sent") {
           setStep(1);
         }
@@ -53,7 +55,7 @@ export function OnboardingStepper({ organisationId }: OnboardingStepperProps) {
     (stats: { total: number; departments: string[]; sansEmail: number }) => {
       setImportStats(stats);
       setImportDone(true);
-      setStep(2);
+      setStep(3);
     },
     [],
   );
@@ -100,10 +102,18 @@ export function OnboardingStepper({ organisationId }: OnboardingStepperProps) {
       ) : null}
 
       {step === 1 ? (
+        <AdminTeamStep
+          organisationId={organisationId}
+          onBack={() => setStep(0)}
+          onNext={() => setStep(2)}
+        />
+      ) : null}
+
+      {step === 2 ? (
         <CsvImportStep organisationId={organisationId} onComplete={onImportComplete} />
       ) : null}
 
-      {step === 2 && importDone ? (
+      {step === 3 && importDone ? (
         <InviteCollaboratorsStep
           organisationId={organisationId}
           companyName={orgName}

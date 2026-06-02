@@ -33,7 +33,8 @@ function stressTone(signal: string | null): "emerald" | "amber" | "rose" {
   return "rose";
 }
 
-export function RadarEquipeClient() {
+export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "light" }) {
+  const light = variant === "light";
   const [equipes, setEquipes] = useState<EquipeOption[]>([]);
   const [equipeId, setEquipeId] = useState<string>("");
   const [aggregat, setAggregat] = useState<EquipeAggregat | null>(null);
@@ -102,7 +103,10 @@ export function RadarEquipeClient() {
     }
   };
 
-  const insuffisant = aggregat?.insuffisant ?? false;
+  const insuffisant = aggregat?.insuffisant ?? true;
+  const diagCompleted = aggregat?.nb_diagnostics_completes ?? 0;
+  const diagThreshold = 5;
+  const diagPct = Math.min(100, Math.round((diagCompleted / diagThreshold) * 100));
   const weekLabel = aggregat?.periode_fin
     ? format(new Date(aggregat.periode_fin), "d MMMM yyyy", { locale: fr })
     : format(new Date(), "d MMMM yyyy", { locale: fr });
@@ -111,17 +115,31 @@ export function RadarEquipeClient() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-violet-300">
+          <div className={cn("flex items-center gap-2", light ? "text-violet-600" : "text-violet-300")}>
             <Brain className="h-5 w-5" />
             <span className="text-xs font-semibold uppercase tracking-widest">Beyond RH</span>
           </div>
-          <h1 className="mt-1 text-[28px] font-extrabold tracking-tight">Équipe Insight</h1>
-          <p className="mt-1 text-sm text-white/60">Semaine du {weekLabel}</p>
+          <h1
+            className={cn(
+              "mt-1 text-[28px] font-extrabold tracking-tight",
+              light ? "text-gray-900" : "text-white",
+            )}
+          >
+            🔍 Équipe Insight
+          </h1>
+          <p className={cn("mt-1 text-sm", light ? "text-gray-400" : "text-white/60")}>
+            Semaine du {weekLabel}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {equipes.length > 1 ? (
             <Select value={equipeId} onValueChange={setEquipeId}>
-              <SelectTrigger className="w-[200px] border-white/15 bg-white/5 text-white">
+              <SelectTrigger
+                className={cn(
+                  "w-[200px]",
+                  light ? "border-gray-200 bg-white text-gray-900" : "border-white/15 bg-white/5 text-white",
+                )}
+              >
                 <SelectValue placeholder="Choisir équipe" />
               </SelectTrigger>
               <SelectContent>
@@ -136,7 +154,11 @@ export function RadarEquipeClient() {
           <Button
             type="button"
             variant="outline"
-            className="border-white/15 bg-white/5 text-white hover:bg-white/10"
+            className={
+              light
+                ? "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                : "border-white/15 bg-white/5 text-white hover:bg-white/10"
+            }
             disabled={computing || !equipeId}
             onClick={() => void refresh()}
           >
@@ -147,34 +169,65 @@ export function RadarEquipeClient() {
       </header>
 
       {loading ? (
-        <div className="h-48 animate-pulse rounded-2xl bg-white/5" />
+        <div
+          className={cn(
+            "h-48 animate-pulse rounded-2xl",
+            light ? "bg-gray-100" : "bg-white/5",
+          )}
+        />
       ) : loadError ? (
-        <div className="rounded-2xl border border-red-500/25 bg-red-500/10 p-8 text-center">
-          <p className="text-lg font-semibold text-red-100">Impossible de charger le radar</p>
-          <p className="mt-2 text-sm text-red-100/70">{loadError}</p>
-        </div>
-      ) : equipes.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-          <p className="text-lg font-semibold text-white">Aucune équipe configurée</p>
-          <p className="mt-2 text-sm text-white/60">
-            Créez des équipes et invitez au moins 5 collaborateurs avec diagnostic complété pour afficher le radar.
+        <div
+          className={cn(
+            "rounded-2xl border p-8 text-center",
+            light ? "border-gray-100 bg-gray-50" : "border-red-500/25 bg-red-500/10",
+          )}
+        >
+          <p className={cn("text-lg font-semibold", light ? "text-gray-900" : "text-red-100")}>
+            Chargement en cours…
           </p>
-          <Button className="mt-6" asChild>
-            <Link href="/dashboard/entreprise/salaries">Gérer les collaborateurs</Link>
+          <p className={cn("mt-2 text-sm", light ? "text-gray-500" : "text-red-100/70")}>
+            {loadError}
+          </p>
+          <Button className="mt-4" variant="outline" onClick={() => void loadEquipes()}>
+            Réessayer
           </Button>
         </div>
-      ) : insuffisant || !aggregat ? (
-        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-8 text-center">
-          <p className="text-lg font-semibold text-amber-100">
-            Données insuffisantes pour protéger l&apos;anonymat
+      ) : equipes.length === 0 || insuffisant || !aggregat ? (
+        <div
+          className={cn(
+            "rounded-2xl border p-8 shadow-sm",
+            light
+              ? "border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+              : "border-amber-500/25 bg-amber-500/10",
+          )}
+        >
+          <p className="text-2xl" aria-hidden>
+            📊
           </p>
-          <p className="mt-2 text-sm text-amber-100/70">
-            Minimum 5 collaborateurs avec diagnostic complété requis (
-            {aggregat?.nb_diagnostics_completes ?? 0} / 5).
+          <p className={cn("mt-3 text-lg font-bold", light ? "text-gray-900" : "text-amber-100")}>
+            Données insuffisantes
           </p>
-          <Button className="mt-6" onClick={() => void refresh()} disabled={computing}>
-            Lancer le calcul
+          <p className={cn("mt-2 text-sm", light ? "text-gray-500" : "text-amber-100/70")}>
+            L&apos;Équipe Insight s&apos;active à partir de {diagThreshold} diagnostics complétés.
+          </p>
+          <p className={cn("mt-4 text-sm font-semibold", light ? "text-gray-700" : "text-amber-100")}>
+            {diagCompleted} / {diagThreshold} diagnostics effectués
+          </p>
+          <div className="mt-3 h-2 w-full max-w-xs overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-2 rounded-full bg-violet-500 transition-all"
+              style={{ width: `${diagPct}%` }}
+            />
+          </div>
+          <p className={cn("mt-1 text-xs", light ? "text-gray-400" : "text-amber-100/60")}>
+            {diagPct}%
+          </p>
+          <Button className="mt-6 bg-violet-600 hover:bg-violet-500" asChild>
+            <Link href="/dashboard/entreprise/salaries">Inviter mes collaborateurs →</Link>
           </Button>
+          <p className={cn("mt-6 text-xs", light ? "text-gray-400" : "text-white/50")}>
+            ℹ️ Données agrégées et anonymisées — Conforme RGPD
+          </p>
         </div>
       ) : (
         <>

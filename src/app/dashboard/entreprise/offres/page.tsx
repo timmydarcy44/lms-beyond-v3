@@ -1,159 +1,184 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { BookOpen, Plus } from "lucide-react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
-import { Plus } from "lucide-react";
-import {
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-  ResponsiveContainer,
-} from "recharts";
+import { cn } from "@/lib/utils";
 
-const offers = [
-  {
-    id: "offer-1",
-    title: "Chef de Projet Digital",
-    contract: "Alternance",
-    status: "Active",
-    matches: 12,
-    radar: [
-      { skill: "Leadership", value: 78 },
-      { skill: "Organisation", value: 72 },
-      { skill: "Créativité", value: 70 },
-      { skill: "Collaboration", value: 80 },
-      { skill: "Adaptabilité", value: 74 },
-    ],
-  },
-  {
-    id: "offer-2",
-    title: "Analyste Data Senior",
-    contract: "CDI",
-    status: "Active",
-    matches: 5,
-    radar: [
-      { skill: "Analyse", value: 88 },
-      { skill: "Rigueur", value: 84 },
-      { skill: "Problèmes", value: 82 },
-      { skill: "Communication", value: 68 },
-      { skill: "Adaptabilité", value: 70 },
-    ],
-  },
-  {
-    id: "offer-3",
-    title: "Assistant RH",
-    contract: "Stage",
-    status: "En pause",
-    matches: 18,
-    radar: [
-      { skill: "Empathie", value: 78 },
-      { skill: "Organisation", value: 72 },
-      { skill: "Communication", value: 80 },
-      { skill: "Suivi", value: 76 },
-      { skill: "Rigueur", value: 70 },
-    ],
-  },
-];
+type InternalFormation = {
+  id: string;
+  title: string;
+  status: string;
+  raw_status: string;
+  created_at: string | null;
+};
 
-const drafts = [
-  { id: "draft-1", title: "Chargé CRM", contract: "CDI" },
-  { id: "draft-2", title: "Assistant Marketing", contract: "Alternance" },
-];
+type EdgeItem = {
+  id: string;
+  title: string;
+  tier: string;
+  description: string;
+  badge: string;
+  available: boolean;
+};
 
 export default function EntrepriseOffresPage() {
+  const [tab, setTab] = useState<"internes" | "edge">("internes");
+  const [loading, setLoading] = useState(true);
+  const [internal, setInternal] = useState<InternalFormation[]>([]);
+  const [edge, setEdge] = useState<EdgeItem[]>([]);
+  const [edgeTier, setEdgeTier] = useState(1);
+  const [orgName, setOrgName] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/dashboard/entreprise/offres", { credentials: "include" });
+        const json = await res.json();
+        if (res.ok) {
+          setInternal(json.internal_formations ?? []);
+          setEdge(json.edge_catalogue ?? []);
+          setEdgeTier(json.edge_tier ?? 1);
+          setOrgName(json.organisation?.name ?? "");
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const statusClass = (status: string) => {
+    if (status === "Actif") return "bg-emerald-50 text-emerald-700";
+    if (status === "Archivé") return "bg-gray-100 text-gray-500";
+    return "bg-amber-50 text-amber-700";
+  };
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="flex min-h-screen bg-white text-gray-900">
       <EnterpriseSidebar />
-      <main className="min-h-screen px-8 py-10 pl-[260px]">
-        <div className="space-y-8">
-          <header className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h1 className="text-[26px] font-extrabold text-[#007BFF]">Gestion des Offres</h1>
-              <p className="mt-1 text-[12px] text-white/60">
-                Pilotez vos recrutements par les compétences et le potentiel d&apos;adaptabilité.
-              </p>
-            </div>
-            <button className="inline-flex items-center gap-2 rounded-full bg-[#007BFF] px-4 py-2 text-[12px] font-semibold text-black shadow-[0_0_18px_rgba(0,123,255,0.45)]">
-              <Plus size={14} />
-              Créer une nouvelle offre
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Formations & Parcours</p>
+            <h1 className="mt-1 text-2xl font-black text-gray-900">Mes Offres</h1>
+            {orgName ? <p className="mt-1 text-sm text-gray-500">{orgName}</p> : null}
+          </div>
+          <Link
+            href="/dashboard/formateur/parcours/new"
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-500"
+          >
+            <Plus size={16} />
+            Créer une formation
+          </Link>
+        </header>
+
+        <div className="mb-6 flex gap-2">
+          {(
+            [
+              { key: "internes" as const, label: "Formations internes" },
+              { key: "edge" as const, label: "Catalogue EDGE" },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "rounded-xl px-4 py-2 text-sm font-semibold transition",
+                tab === t.key
+                  ? "bg-violet-600 text-white"
+                  : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50",
+              )}
+            >
+              {t.label}
             </button>
-          </header>
+          ))}
+        </div>
 
-          <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {offers.map((offer) => (
-              <div
-                key={offer.id}
-                className="rounded-[22px] border border-white/10 bg-white/5 p-5 shadow-[0_14px_30px_rgba(0,0,0,0.4)]"
+        {loading ? (
+          <p className="text-sm text-gray-500">Chargement…</p>
+        ) : tab === "internes" ? (
+          internal.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 p-12 text-center">
+              <BookOpen className="mx-auto h-10 w-10 text-gray-300" />
+              <p className="mt-4 font-semibold text-gray-900">Aucune formation interne</p>
+              <p className="mt-2 text-sm text-gray-500">
+                Créez votre première formation pour vos collaborateurs.
+              </p>
+              <Link
+                href="/dashboard/formateur/parcours/new"
+                className="mt-6 inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-[16px] font-extrabold text-white">{offer.title}</div>
-                    <div className="mt-1 text-[11px] text-white/60">
-                      {offer.status === "Active" ? "🟢 Active" : "🟡 En pause"}
-                    </div>
-                  </div>
-                  <span className="rounded-full border border-[#007BFF]/40 bg-[#007BFF]/10 px-3 py-1 text-[11px] text-[#7FB7FF]">
-                    {offer.contract}
-                  </span>
-                </div>
-
-                <div className="mt-4 h-[140px] rounded-[16px] border border-white/10 bg-[#0B0B0B] p-3">
-                  <div className="text-[11px] text-white/60">Target Radar</div>
-                  <div className="mt-2 h-[100px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={offer.radar}>
-                        <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                        <PolarAngleAxis dataKey="skill" tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 9 }} />
-                        <PolarRadiusAxis domain={[0, 100]} tick={false} />
-                        <Radar dataKey="value" stroke="#007BFF" fill="rgba(0,123,255,0.25)" />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="mt-4 text-[12px] text-white/70">
-                  {offer.matches} talents correspondent à +85% dans votre vivier
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <a
-                    href={`/dashboard/entreprise/offres/${offer.id}/candidats`}
-                    className="rounded-full bg-[#007BFF] px-3 py-2 text-[11px] font-semibold text-black"
-                  >
-                    Voir les candidats
-                  </a>
-                  <button className="rounded-full border border-white/10 px-3 py-2 text-[11px] text-white/70">
-                    Modifier
-                  </button>
-                  <button className="rounded-full border border-white/10 px-3 py-2 text-[11px] text-white/70">
-                    Suspendre
-                  </button>
-                </div>
-              </div>
-            ))}
-          </section>
-
-          <section className="rounded-[20px] border border-white/10 bg-white/5 p-5">
-            <div className="text-[14px] font-semibold text-white">Brouillons</div>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              {drafts.map((draft) => (
+                Créer une formation →
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {internal.map((f) => (
                 <div
-                  key={draft.id}
-                  className="flex items-center justify-between rounded-[16px] border border-white/10 bg-[#0B0B0B] px-4 py-3 text-[12px]"
+                  key={f.id}
+                  className="rounded-[20px] bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]"
                 >
-                  <div>
-                    <div className="text-white">{draft.title}</div>
-                    <div className="text-white/50">{draft.contract}</div>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-bold text-gray-900">{f.title}</p>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
+                        statusClass(f.status),
+                      )}
+                    >
+                      {f.status}
+                    </span>
                   </div>
-                  <button className="rounded-full border border-[#007BFF]/40 px-3 py-1 text-[11px] text-[#7FB7FF]">
-                    Reprendre
-                  </button>
+                  <p className="mt-2 text-xs text-gray-400">
+                    {f.updated_at
+                      ? `Mis à jour le ${new Date(f.updated_at).toLocaleDateString("fr-FR")}`
+                      : "Parcours interne"}
+                  </p>
+                  <Link
+                    href={`/dashboard/formateur/parcours/${f.id}`}
+                    className="mt-4 inline-block text-sm font-semibold text-violet-600 hover:text-violet-500"
+                  >
+                    Gérer le parcours →
+                  </Link>
                 </div>
               ))}
             </div>
-          </section>
-        </div>
+          )
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {edge.map((item) => (
+              <div
+                key={item.id}
+                className={cn(
+                  "rounded-[20px] bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+                  !item.available && "opacity-60",
+                )}
+              >
+                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold uppercase text-blue-700">
+                  {item.badge}
+                </span>
+                <p className="mt-3 font-bold text-gray-900">{item.title}</p>
+                <p className="mt-2 text-sm text-gray-500">{item.description}</p>
+                {item.available ? (
+                  <a
+                    href="https://edgebs.fr"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-block text-sm font-semibold text-violet-600 hover:text-violet-500"
+                  >
+                    Découvrir sur EDGE →
+                  </a>
+                ) : (
+                  <p className="mt-4 text-xs text-gray-400">
+                    Disponible avec Beyond {item.tier} (votre niveau : {edgeTier})
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

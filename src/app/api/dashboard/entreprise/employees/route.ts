@@ -20,8 +20,10 @@ export async function POST(request: NextRequest) {
     first_name?: string;
     last_name?: string;
     email?: string;
+    phone?: string;
     department?: string;
     job_title?: string;
+    hire_date?: string;
   };
   try {
     body = await request.json();
@@ -34,6 +36,8 @@ export async function POST(request: NextRequest) {
   const email = String(body.email ?? "").trim().toLowerCase();
   const department = String(body.department ?? "").trim() || null;
   const job_title = String(body.job_title ?? "").trim() || null;
+  const phone = String(body.phone ?? "").trim() || null;
+  const hire_date = String(body.hire_date ?? "").trim() || null;
 
   if (!first_name || !last_name || !email || !email.includes("@")) {
     return NextResponse.json({ error: "Prénom, nom et email valides requis" }, { status: 400 });
@@ -46,30 +50,59 @@ export async function POST(request: NextRequest) {
 
   const { data: org } = await service.from("organizations").select("name").eq("id", orgId).maybeSingle();
 
-  const { data: employee, error: insertErr } = await service
+  const insertRow: Record<string, unknown> = {
+    company_id: orgId,
+    first_name,
+    last_name,
+    email,
+    department,
+    job_title,
+    role: job_title,
+  };
+  if (phone) insertRow.phone = phone;
+  if (hire_date) insertRow.hire_date = hire_date;
+
+  let employee: { id: string };
+  const { data: inserted, error: insertErr } = await service
     .from("employees")
-    .insert({
-      company_id: orgId,
-      first_name,
-      last_name,
-      email,
-      department,
-      job_title,
-      role: job_title,
-    })
+    .insert(insertRow)
     .select("id")
     .single();
 
   if (insertErr) {
-    return NextResponse.json({ error: insertErr.message }, { status: 400 });
+    const fallback = { ...insertRow };
+    delete fallback.phone;
+    delete fallback.hire_date;
+    const { data: retry, error: retryErr } = await service
+      .from("employees")
+      .insert(fallback)
+      .select("id")
+      .single();
+    if (retryErr) {
+      return NextResponse.json({ error: retryErr.message }, { status: 400 });
+    }
+    employee = retry as { id: string };
+  } else {
+    employee = inserted as { id: string };
   }
 
   let inviteSent = false;
   try {
     const origin = appOrigin();
+    const redirectTo =
+      process.env.NEXT_PUBLIC_URL?.trim() ||
+      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+      origin;
     const { error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
-      data: { organization_id: orgId, role: "employee", employee_id: employee.id },
-      redirectTo: `${origin}/dashboard/apprenant`,
+      data: {
+        role: "apprenant",
+        prenom: first_name,
+        nom: last_name,
+        company_id: orgId,
+        organization_id: orgId,
+        employee_id: employee.id,
+      },
+      redirectTo: `${redirectTo.replace(/\/$/, "")}/dashboard/apprenant`,
     });
     if (!inviteErr) {
       await sendCollaboratorInviteEmail({

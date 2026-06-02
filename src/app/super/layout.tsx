@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { SuperAdminEntrepriseNotice } from "@/components/super/super-admin-entreprise-notice";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { SuperAdminHeaderApple } from "@/components/super-admin/super-admin-header-apple";
 import { JessicaHeader } from "@/components/jessica-contentin/jessica-header";
@@ -38,7 +40,12 @@ export default async function SuperLayout({
     <BrandingProvider initialBranding={branding}>
       <div className={`min-h-screen ${isContentin ? "bg-[#F5F5DC]" : "bg-white"}`}>
         {isContentin ? <JessicaHeader /> : <SuperAdminHeaderApple />}
-        <CrmAreaWrapper>{children}</CrmAreaWrapper>
+        <CrmAreaWrapper>
+          <Suspense fallback={null}>
+            <SuperAdminEntrepriseNotice />
+          </Suspense>
+          {children}
+        </CrmAreaWrapper>
         {!isContentin && <SuperJarvis />}
         {isContentin && <FloatingCreateButton />}
       </div>

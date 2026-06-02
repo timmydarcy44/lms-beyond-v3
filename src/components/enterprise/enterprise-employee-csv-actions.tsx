@@ -57,8 +57,10 @@ export function EnterpriseEmployeeCsvActions({
     first_name: "",
     last_name: "",
     email: "",
+    phone: "",
     department: "",
     job_title: "",
+    hire_date: "",
   });
 
   const deptOptions = [
@@ -136,9 +138,21 @@ export function EnterpriseEmployeeCsvActions({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Erreur");
-      toast.success(json.invite_sent ? "Collaborateur ajouté — invitation envoyée" : "Collaborateur ajouté");
+      toast.success(
+        json.invite_sent
+          ? "Collaborateur ajouté — invitation envoyée par email"
+          : "Collaborateur ajouté",
+      );
       setShowAddModal(false);
-      setAddForm({ first_name: "", last_name: "", email: "", department: "", job_title: "" });
+      setAddForm({
+        first_name: "",
+        last_name: "",
+        email: "",
+        phone: "",
+        department: "",
+        job_title: "",
+        hire_date: "",
+      });
       onSuccess();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
@@ -234,8 +248,8 @@ export function EnterpriseEmployeeCsvActions({
 
       {showAddModal ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-4">
               <h3 className="text-lg font-bold text-gray-900">Ajouter un collaborateur</h3>
               <button type="button" onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
@@ -270,6 +284,15 @@ export function EnterpriseEmployeeCsvActions({
                 />
               </div>
               <div>
+                <label className="text-xs font-semibold text-gray-500">Téléphone</label>
+                <input
+                  type="tel"
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  value={addForm.phone}
+                  onChange={(e) => setAddForm((f) => ({ ...f, phone: e.target.value }))}
+                />
+              </div>
+              <div>
                 <label className="text-xs font-semibold text-gray-500">Département</label>
                 <input
                   list="dept-list"
@@ -291,11 +314,24 @@ export function EnterpriseEmployeeCsvActions({
                   onChange={(e) => setAddForm((f) => ({ ...f, job_title: e.target.value }))}
                 />
               </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500">Date d&apos;entrée</label>
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  value={addForm.hire_date}
+                  onChange={(e) => setAddForm((f) => ({ ...f, hire_date: e.target.value }))}
+                />
+              </div>
             </div>
-            <p className="mt-4 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-800">
-              ✉️ Un email d&apos;invitation sera envoyé automatiquement
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/80 px-4 py-3 text-xs text-violet-900">
+              <p>✉️ Un email d&apos;invitation sera envoyé automatiquement à</p>
+              <p className="mt-1 font-semibold">{addForm.email || "l'adresse saisie"}</p>
+              <p className="mt-2 text-violet-700">
+                → Création automatique de son espace /dashboard/apprenant
+              </p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2 border-t border-gray-100 pt-4">
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
@@ -309,7 +345,7 @@ export function EnterpriseEmployeeCsvActions({
                 onClick={() => void handleAddEmployee()}
                 className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
               >
-                Ajouter →
+                Ajouter et inviter →
               </button>
             </div>
           </div>

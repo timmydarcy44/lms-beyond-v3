@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
-import { enterpriseEmployees } from "@/lib/mocks/enterpriseEmployees";
-import { Lock } from "lucide-react";
+import { EmptyState } from "@/components/enterprise/empty-state";
 import {
   Table,
   TableBody,
@@ -13,191 +12,149 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const formatEuro = (value: number) =>
-  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
-
-const uniqueDepartments = Array.from(new Set(enterpriseEmployees.map((e) => e.department)));
+type Employee = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  job_title: string | null;
+  department: string | null;
+  diagnostic_done: boolean;
+  idmc_score: number | null;
+  formation_active: boolean;
+};
 
 export default function SalariesPage() {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
   const [department, setDepartment] = useState<string>("ALL");
-  const [rqth, setRqth] = useState<string>("ALL");
-  const [care, setCare] = useState<string>("ALL");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/dashboard/entreprise/overview", { credentials: "include" });
+        const json = await res.json();
+        if (res.ok && json.employees) setEmployees(json.employees);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of employees) {
+      if (e.department) set.add(e.department);
+    }
+    return Array.from(set).sort();
+  }, [employees]);
 
   const filteredEmployees = useMemo(() => {
-    return enterpriseEmployees.filter((employee) => {
-      const departmentOk = department === "ALL" || employee.department === department;
-      const rqthOk =
-        rqth === "ALL" || (rqth === "YES" && employee.rqth) || (rqth === "NO" && !employee.rqth);
-      const careOk =
-        care === "ALL" || (care === "YES" && employee.careAlert) || (care === "NO" && !employee.careAlert);
-      return departmentOk && rqthOk && careOk;
-    });
-  }, [department, rqth, care]);
+    return employees.filter((e) => department === "ALL" || e.department === department);
+  }, [employees, department]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="flex min-h-screen bg-[#fafaf8] text-gray-900">
       <EnterpriseSidebar />
-      <main className="min-h-screen px-8 py-10 pl-[260px]">
-        <div className="space-y-6">
-          <header>
-            <h1 className="text-[26px] font-extrabold tracking-[-0.5px]">Gestion des salariés</h1>
-            <p className="mt-1 text-[12px] text-white/60">Suivi RH · RQTH · Engagement</p>
-          </header>
+      <main className="min-h-screen flex-1 px-8 py-10 lg:pl-[280px]">
+        <header className="mb-6">
+          <h1 className="text-2xl font-black tracking-tight">Gestion des salariés</h1>
+          <p className="mt-1 text-sm text-gray-400">Suivi RH · diagnostics · formations</p>
+        </header>
 
-          <div className="flex flex-wrap gap-3 rounded-[18px] border border-blue-500/20 bg-white/5 p-4">
-            <div className="min-w-[180px]">
-              <Select value={department} onValueChange={setDepartment}>
-                <SelectTrigger className="border-blue-500/20 bg-[#0B0B0B]/70 text-white">
-                  <SelectValue placeholder="Département" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Département</SelectItem>
-                  {uniqueDepartments.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="min-w-[180px]">
-              <Select value={rqth} onValueChange={setRqth}>
-                <SelectTrigger className="border-blue-500/20 bg-[#0B0B0B]/70 text-white">
-                  <SelectValue placeholder="Statut RQTH" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Statut RQTH</SelectItem>
-                  <SelectItem value="YES">RQTH</SelectItem>
-                  <SelectItem value="NO">Non RQTH</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="min-w-[180px]">
-              <Select value={care} onValueChange={setCare}>
-                <SelectTrigger className="border-blue-500/20 bg-[#0B0B0B]/70 text-white">
-                  <SelectValue placeholder="Alerte Care" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Alerte Care</SelectItem>
-                  <SelectItem value="YES">Alerte active</SelectItem>
-                  <SelectItem value="NO">Aucune alerte</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {departments.length > 0 ? (
+          <div className="mb-4 max-w-xs">
+            <Select value={department} onValueChange={setDepartment}>
+              <SelectTrigger className="border-gray-200 bg-white">
+                <SelectValue placeholder="Département" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tous les départements</SelectItem>
+                {departments.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+        ) : null}
 
-          <div className="rounded-[20px] border border-blue-500/20 bg-white/5 p-4">
+        {loading ? (
+          <p className="text-sm text-gray-500">Chargement…</p>
+        ) : employees.length === 0 ? (
+          <EmptyState
+            icon="👥"
+            title="Aucun salarié"
+            description="Importez vos collaborateurs depuis le dashboard principal."
+            action={{ label: "Retour au dashboard →", href: "/dashboard/entreprise" }}
+          />
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/5">
+                <TableRow>
                   <TableHead>Salarié</TableHead>
                   <TableHead>Poste</TableHead>
-                  <TableHead>Contrat</TableHead>
-                  <TableHead>Rémunération</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Score Engagement</TableHead>
+                  <TableHead>Département</TableHead>
+                  <TableHead>Diagnostic</TableHead>
+                  <TableHead>Formation</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEmployees.map((employee) => (
-                  <TableRow key={employee.id} className="border-white/5">
-                    <TableCell>
-                      <Link href={`/dashboard/entreprise/salaries/${employee.id}`} className="flex items-center gap-3">
-                        <img
-                          src={employee.avatar}
-                          alt={employee.name}
-                          className="h-10 w-10 rounded-full border border-blue-500/20 object-cover"
-                        />
-                        <div>
-                          <div className="text-[14px] font-semibold text-white">{employee.name}</div>
-                          <div className="text-[11px] text-white/50">{employee.department}</div>
-                        </div>
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-white/80">{employee.role}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-                          employee.contract === "CDI"
-                            ? "bg-[#0B0B0B] text-white/80 border border-white/10"
-                            : employee.contract === "CDD"
-                              ? "bg-[#007BFF]/15 text-[#7FB7FF] border border-[#007BFF]/30"
-                              : employee.contract === "Alternance"
-                                ? "bg-[#007BFF]/15 text-[#7FB7FF] border border-[#007BFF]/30"
-                                : "bg-[#007BFF]/10 text-[#7FB7FF] border border-[#007BFF]/20"
-                        }`}
-                      >
-                        {employee.contract}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-white/80">
-                      <div
-                        className="inline-flex items-center gap-2"
-                        title="Donnée à accès restreint (Admin RH uniquement) - Conforme RGPD."
-                      >
-                        {formatEuro(employee.salary)}
-                        <Lock size={12} className="text-white/40" />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {employee.rqth ? (
-                        <div
-                          className="inline-flex items-center gap-2"
-                          title="Donnée à accès restreint (Admin RH uniquement) - Conforme RGPD."
+                {filteredEmployees.map((employee) => {
+                  const name = [employee.first_name, employee.last_name].filter(Boolean).join(" ") || "—";
+                  return (
+                    <TableRow key={employee.id}>
+                      <TableCell>
+                        <Link
+                          href={`/dashboard/entreprise/salaries/${employee.id}`}
+                          className="font-semibold text-violet-600 hover:text-violet-500"
                         >
-                          <Badge className="bg-[#007BFF]/20 text-[#5DA6FF]" variant="secondary">
-                            RQTH
-                          </Badge>
-                          <Lock size={12} className="text-white/40" />
-                        </div>
-                      ) : (
-                        <span className="text-[12px] text-white/40">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="relative h-10 w-10">
-                        <svg viewBox="0 0 48 48" className="h-10 w-10">
-                          <circle
-                            cx="24"
-                            cy="24"
-                            r="18"
-                            stroke="rgba(255,255,255,0.08)"
-                            strokeWidth="4"
-                            fill="none"
-                          />
-                          <circle
-                            cx="24"
-                            cy="24"
-                            r="18"
-                            stroke="#007BFF"
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                            fill="none"
-                            strokeDasharray={2 * Math.PI * 18}
-                            strokeDashoffset={(1 - employee.engagement / 100) * 2 * Math.PI * 18}
-                          />
-                        </svg>
-                        <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold">
-                          {employee.engagement}%
+                          {name}
+                        </Link>
+                        <p className="text-xs text-gray-400">{employee.email}</p>
+                      </TableCell>
+                      <TableCell>{employee.job_title ?? "—"}</TableCell>
+                      <TableCell>{employee.department ?? "—"}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            employee.diagnostic_done
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {employee.diagnostic_done ? "Complété" : "En attente"}
                         </span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            employee.formation_active
+                              ? "bg-blue-50 text-blue-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {employee.formation_active ? "En cours" : "Aucune"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
                 {!filteredEmployees.length && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-sm text-white/50">
-                      Aucun salarié ne correspond aux filtres.
+                    <TableCell colSpan={5} className="py-8 text-center text-sm text-gray-400">
+                      Aucun salarié ne correspond au filtre.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

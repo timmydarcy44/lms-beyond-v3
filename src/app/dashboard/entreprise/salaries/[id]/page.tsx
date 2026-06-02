@@ -23,17 +23,6 @@ type EmployeeRow = {
   department: string | null;
 };
 
-function getMockCharlieEmployee(): EmployeeRow {
-  // Force display fallback requested by user.
-  return {
-    id: "e-99",
-    first_name: "Charlie",
-    last_name: "Morel",
-    role: "UX Designer",
-    department: "Produit",
-  };
-}
-
 type DiagnosticResultsJson = Partial<
   Record<"stress" | "organisation" | "communication" | "decision" | "leadership", number>
 >;
@@ -177,40 +166,15 @@ export default function SalarieDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const isUuid =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(employeeId);
-
-        // 1) Employee : if not UUID (ex: e-01), try mocks first (fast, resilient).
         let emp: EmployeeRow | null = null;
 
-        if (employeeId === "e-01") {
-          // Force: always show Charlie Morel when hitting /salaries/e-01, even if DB empty.
-          emp = getMockCharlieEmployee();
-        } else if (!isUuid) {
-          const { enterpriseEmployees } = await import("@/lib/mocks/enterpriseEmployees");
-          const mock = enterpriseEmployees.find((e) => e.id === employeeId);
-          if (mock) {
-            const [first, ...rest] = mock.name.split(" ");
-            emp = {
-              id: mock.id,
-              first_name: first ?? mock.name,
-              last_name: rest.join(" ") || null,
-              role: mock.role,
-              department: mock.department,
-            };
-          }
-        }
-
-        // 2) UUID → DB first (or if mocks didn't match).
-        if (!emp) {
-          const byId = await supabase
-            .from("employees")
-            .select("id,first_name,last_name,role,department")
-            .eq("id", employeeId)
-            .maybeSingle();
-          if (byId.error) throw byId.error;
-          emp = (byId.data ?? null) as EmployeeRow | null;
-        }
+        const byId = await supabase
+          .from("employees")
+          .select("id,first_name,last_name,role,department,job_title")
+          .eq("id", employeeId)
+          .maybeSingle();
+        if (byId.error) throw byId.error;
+        emp = (byId.data ?? null) as EmployeeRow | null;
 
         if (!emp) {
           // optional columns - ignore errors if they don't exist
@@ -269,8 +233,7 @@ export default function SalarieDetailPage() {
     };
   }, [employeeId, supabase]);
 
-  const mockEmployee = useMemo(() => getMockCharlieEmployee(), []);
-  const displayEmployee = employee || mockEmployee;
+  const displayEmployee = employee;
 
   const latest = diagnostics[0] ?? null;
   const idmc = latest?.idmc_score ?? 0;
@@ -346,6 +309,33 @@ export default function SalarieDetailPage() {
       description: "Un accompagnement individuel est recommandé.",
     } satisfies RecommendedActionRow;
   }, [dims, recommendedAction]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-[#fafaf8]">
+        <EnterpriseSidebar />
+        <main className="flex-1 px-8 py-10 pl-[280px] text-sm text-gray-500">Chargement…</main>
+      </div>
+    );
+  }
+
+  if (!displayEmployee) {
+    return (
+      <div className="flex min-h-screen bg-[#fafaf8]">
+        <EnterpriseSidebar />
+        <main className="flex-1 px-8 py-10 pl-[280px]">
+          <p className="text-sm text-gray-600">Collaborateur introuvable.</p>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/entreprise/salaries")}
+            className="mt-4 text-sm font-semibold text-violet-600"
+          >
+            ← Retour à la liste
+          </button>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-white font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">

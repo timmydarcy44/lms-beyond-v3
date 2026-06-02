@@ -21,6 +21,7 @@ export async function GET() {
   if ("configurationRequired" in access && access.configurationRequired) {
     return NextResponse.json({
       configuration_required: true,
+      needsOnboarding: true,
       viewer: access.viewer,
       onboarding_href: "/onboarding",
     });
@@ -40,26 +41,24 @@ export async function GET() {
 
   const [
     { data: org, error: orgErr },
-    { count: employeesCount, error: empErr },
-    { count: diagTotalCount, error: diagTotalErr },
-    { count: diagCompletedCount, error: diagErr },
+    { data: allEmployees, error: empErr },
+    { data: allDiagnostics, error: diagErr },
     { data: latestAggregat, error: aggErr },
-    { data: employeesLatest, error: latestErr },
     { data: sessionsWeek, error: weekErr },
     { data: recentDiagnostics, error: recentDiagErr },
-    { data: employeeProfiles, error: profilesErr },
+    { data: orgPaths, error: pathsErr },
+    { data: orgSessions, error: sessionsErr },
   ] = await Promise.all([
     service.from("organizations").select("id, name").eq("id", orgId).maybeSingle(),
-    service.from("employees").select("id", { count: "exact", head: true }).eq("company_id", orgId),
+    service
+      .from("employees")
+      .select("id, first_name, last_name, email, job_title, department, profile_id, created_at")
+      .eq("company_id", orgId)
+      .order("created_at", { ascending: false }),
     service
       .from("collaborateur_diagnostics")
-      .select("id", { count: "exact", head: true })
+      .select("id, employee_id, collaborateur_id, completed_at, idmc_score")
       .eq("organisation_id", orgId),
-    service
-      .from("collaborateur_diagnostics")
-      .select("id", { count: "exact", head: true })
-      .eq("organisation_id", orgId)
-      .not("completed_at", "is", null),
     service
       .from("equipe_aggregats")
       .select(
@@ -70,14 +69,8 @@ export async function GET() {
       .limit(1)
       .maybeSingle(),
     service
-      .from("employees")
-      .select("id, first_name, last_name, job_title, profile_id, created_at")
-      .eq("company_id", orgId)
-      .order("created_at", { ascending: false })
-      .limit(5),
-    service
       .from("sessions_bct")
-      .select("id, date_session, heure_debut, status")
+      .select("id, date_session, heure_debut, status, praticien_id")
       .eq("organization_id", orgId)
       .gte("date_session", today)
       .lte("date_session", weekEndStr)
@@ -85,12 +78,24 @@ export async function GET() {
       .order("heure_debut"),
     service
       .from("collaborateur_diagnostics")
-      .select("id, completed_at, collaborateur_id")
+      .select("id, completed_at, collaborateur_id, employee_id")
       .eq("organisation_id", orgId)
       .not("completed_at", "is", null)
       .order("completed_at", { ascending: false })
       .limit(5),
-    service.from("employees").select("profile_id").eq("company_id", orgId).not("profile_id", "is", null),
+    service
+      .from("paths")
+      .select("id, title, status, org_id")
+      .eq("org_id", orgId)
+      .eq("status", "published")
+      .limit(20),
+    service
+      .from("sessions_bct")
+      .select("id, date_session, heure_debut, status, praticien_id, motif")
+      .eq("organization_id", orgId)
+      .gte("date_session", today)
+      .order("date_session")
+      .limit(12),
   ]);
 
   if (orgErr || !org) {
@@ -98,58 +103,110 @@ export async function GET() {
     return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 });
   }
   if (empErr) console.error("[dashboard/entreprise/overview] employees", empErr);
-  if (diagTotalErr) console.error("[dashboard/entreprise/overview] diagnostics total", diagTotalErr);
   if (diagErr) console.error("[dashboard/entreprise/overview] diagnostics", diagErr);
   if (aggErr) console.error("[dashboard/entreprise/overview] aggregat", aggErr);
-  if (latestErr) console.error("[dashboard/entreprise/overview] employeesLatest", latestErr);
   if (weekErr) console.error("[dashboard/entreprise/overview] sessionsWeek", weekErr);
   if (recentDiagErr) console.error("[dashboard/entreprise/overview] recentDiagnostics", recentDiagErr);
-  if (profilesErr) console.error("[dashboard/entreprise/overview] employeeProfiles", profilesErr);
+  if (pathsErr) console.error("[dashboard/entreprise/overview] paths", pathsErr);
+  if (sessionsErr) console.error("[dashboard/entreprise/overview] sessions", sessionsErr);
 
-  const profileIds = (employeeProfiles ?? [])
-    .map((row) => row.profile_id as string | null)
+  const employees = allEmployees ?? [];
+  const diagnostics = allDiagnostics ?? [];
+  const profileIds = employees
+    .map((e) => e.profile_id as string | null)
     .filter((id): id is string => Boolean(id));
 
-  let trainingsInProgress = 0;
-  if (profileIds.length > 0) {
-    const { count, error: pathErr } = await service
-      .from("path_enrollments")
-      .select("user_id", { count: "exact", head: true })
-      .in("user_id", profileIds);
-    if (pathErr) {
-      console.error("[dashboard/entreprise/overview] path_enrollments", pathErr);
-    } else {
-      trainingsInProgress = Number(count ?? 0);
-    }
-  }
-
-  const employeeIds = (employeesLatest ?? []).map((e) => e.id as string);
   const diagByEmployee = new Map<string, { idmc_score: number | null; completed_at: string | null }>();
-
-  if (employeeIds.length > 0) {
-    const { data: diagRows } = await service
-      .from("collaborateur_diagnostics")
-      .select("employee_id, idmc_score, completed_at")
-      .eq("organisation_id", orgId)
-      .in("employee_id", employeeIds);
-
-    for (const row of diagRows ?? []) {
-      if (row.employee_id) {
-        diagByEmployee.set(row.employee_id as string, {
-          idmc_score: row.idmc_score as number | null,
-          completed_at: row.completed_at as string | null,
-        });
-      }
+  for (const row of diagnostics) {
+    const empId = row.employee_id as string | null;
+    if (empId) {
+      diagByEmployee.set(empId, {
+        idmc_score: row.idmc_score as number | null,
+        completed_at: row.completed_at as string | null,
+      });
     }
   }
 
-  const employeesTotal = Number(employeesCount ?? 0);
-  const diagnosticsTotal = Math.max(Number(diagTotalCount ?? 0), employeesTotal);
-  const diagnosticsCompleted = Number(diagCompletedCount ?? 0);
+  let enrollmentsActive = 0;
+  const pathStats: Array<{
+    path_id: string;
+    title: string;
+    enrolled: number;
+    completion_pct: number;
+    avg_quiz_score: number | null;
+    badges_count: number;
+  }> = [];
+
+  if (profileIds.length > 0 && (orgPaths ?? []).length > 0) {
+    const pathIds = (orgPaths ?? []).map((p) => p.id as string);
+    const { data: enrollments } = await service
+      .from("path_enrollments")
+      .select("user_id, path_id")
+      .in("user_id", profileIds)
+      .in("path_id", pathIds);
+
+    const { data: progressRows } = await service
+      .from("path_progress")
+      .select("user_id, path_id, progress_percent")
+      .in("user_id", profileIds)
+      .in("path_id", pathIds);
+
+    enrollmentsActive = (enrollments ?? []).length;
+
+    for (const path of orgPaths ?? []) {
+      const pid = path.id as string;
+      const enrolled = (enrollments ?? []).filter((e) => e.path_id === pid).length;
+      const progresses = (progressRows ?? []).filter((p) => p.path_id === pid);
+      const avgProgress =
+        progresses.length > 0
+          ? Math.round(
+              progresses.reduce((s, p) => s + Number(p.progress_percent ?? 0), 0) / progresses.length,
+            )
+          : 0;
+      const completed = progresses.filter((p) => Number(p.progress_percent ?? 0) >= 100).length;
+      const completion_pct = enrolled > 0 ? Math.round((completed / enrolled) * 100) : avgProgress;
+
+      pathStats.push({
+        path_id: pid,
+        title: String(path.title ?? "Parcours"),
+        enrolled,
+        completion_pct,
+        avg_quiz_score: null,
+        badges_count: 0,
+      });
+    }
+  }
+
+  const praticienIds = Array.from(
+    new Set((orgSessions ?? []).map((s) => s.praticien_id as string).filter(Boolean)),
+  );
+  const praticienNames = new Map<string, string>();
+  if (praticienIds.length > 0) {
+    const { data: praticiens } = await service
+      .from("praticiens_bct")
+      .select("id, prenom, nom")
+      .in("id", praticienIds);
+    for (const p of praticiens ?? []) {
+      praticienNames.set(
+        p.id as string,
+        [p.prenom, p.nom].filter(Boolean).join(" ").trim() || "Formateur",
+      );
+    }
+  }
+
+  const employeesTotal = employees.length;
+  const diagnosticsCompleted = diagnostics.filter((d) => d.completed_at).length;
+  const diagnosticsTotal = Math.max(diagnostics.length, employeesTotal);
   const diagnosticsPct =
     diagnosticsTotal > 0 ? Math.round((diagnosticsCompleted / diagnosticsTotal) * 100) : 0;
 
-  const insufficient = Boolean((latestAggregat as { insuffisant?: boolean })?.insuffisant) || diagnosticsCompleted < 5;
+  const insufficient =
+    Boolean((latestAggregat as { insuffisant?: boolean })?.insuffisant) || diagnosticsCompleted < 5;
+
+  const pendingCount = employees.filter((e) => {
+    const d = diagByEmployee.get(e.id as string);
+    return !d?.completed_at;
+  }).length;
 
   const recentActivity: ActivityItem[] = (recentDiagnostics ?? []).map((d) => ({
     id: `diag-${d.id as string}`,
@@ -157,6 +214,17 @@ export async function GET() {
     at: String(d.completed_at ?? ""),
     kind: "diagnostic" as const,
   }));
+
+  const enrollmentByProfile = new Map<string, boolean>();
+  if (profileIds.length > 0) {
+    const { data: pe } = await service
+      .from("path_enrollments")
+      .select("user_id")
+      .in("user_id", profileIds);
+    for (const row of pe ?? []) {
+      enrollmentByProfile.set(row.user_id as string, true);
+    }
+  }
 
   return NextResponse.json({
     viewer: access.viewer,
@@ -169,7 +237,7 @@ export async function GET() {
       diagnostics_completed: diagnosticsCompleted,
       diagnostics_total: diagnosticsTotal,
       diagnostics_pct: diagnosticsPct,
-      trainings_in_progress: trainingsInProgress,
+      enrollments_active: enrollmentsActive,
       attention_signals: insufficient
         ? { insufficient: true, completed: diagnosticsCompleted, threshold: 5 }
         : {
@@ -199,7 +267,23 @@ export async function GET() {
       completed: diagnosticsCompleted,
       threshold: 5,
     },
-    collaborators_preview: (employeesLatest ?? []).map((e) => {
+    employees: employees.map((e) => {
+      const diag = diagByEmployee.get(e.id as string);
+      const hasEnrollment = e.profile_id ? enrollmentByProfile.has(e.profile_id as string) : false;
+      return {
+        id: e.id as string,
+        first_name: (e.first_name as string | null) ?? null,
+        last_name: (e.last_name as string | null) ?? null,
+        email: (e.email as string | null) ?? null,
+        job_title: (e.job_title as string | null) ?? null,
+        department: (e.department as string | null) ?? null,
+        created_at: (e.created_at as string | null) ?? null,
+        diagnostic_done: Boolean(diag?.completed_at),
+        idmc_score: diag?.idmc_score ?? null,
+        formation_active: hasEnrollment,
+      };
+    }),
+    collaborators_preview: employees.slice(0, 5).map((e) => {
       const diag = diagByEmployee.get(e.id as string);
       return {
         id: e.id as string,
@@ -210,6 +294,20 @@ export async function GET() {
         idmc_score: diag?.idmc_score ?? null,
       };
     }),
+    employees_pending: pendingCount,
+    formations: {
+      presentiel: (orgSessions ?? []).map((s) => ({
+        id: s.id as string,
+        title: String(s.motif ?? "Session de formation"),
+        formateur: praticienNames.get(s.praticien_id as string) ?? "—",
+        date: s.date_session as string,
+        time: String(s.heure_debut ?? "").slice(0, 5),
+        status: (s.status as string | null) ?? null,
+        confirmed: s.status === "confirmee" || s.status === "terminee" ? 1 : 0,
+        total: 1,
+      })),
+      elearning: pathStats,
+    },
     mobility: {
       enabled: diagnosticsCompleted >= 10,
       completed: diagnosticsCompleted,

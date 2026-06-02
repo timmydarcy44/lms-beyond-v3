@@ -14,16 +14,42 @@ import {
   Users,
   Zap,
   Brain,
+  GraduationCap,
+  BookOpen,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard/entreprise", icon: LayoutDashboard },
   { label: "Salariés", href: "/dashboard/entreprise/salaries", icon: Users },
-  { label: "Marketplace BCT", href: "/dashboard/entreprise/marketplace", icon: Brain },
   { label: "Équipe Insight", href: "/dashboard/entreprise/equipe-insight", icon: BarChart3 },
   { label: "Mes Offres", href: "/dashboard/entreprise/offres", icon: Briefcase },
   { label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
   { label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
+];
+
+const QUICK_LINKS = [
+  {
+    href: "/dashboard/entreprise/marketplace?type=formateur",
+    label: "Trouver un formateur",
+    icon: GraduationCap,
+    iconClass: "text-violet-400",
+    bgClass: "bg-violet-500/20",
+  },
+  {
+    href: "/dashboard/entreprise/marketplace?type=praticien",
+    label: "Trouver un praticien",
+    icon: Brain,
+    iconClass: "text-pink-400",
+    bgClass: "bg-pink-500/20",
+  },
+  {
+    href: "https://edgebs.fr",
+    label: "eLearning by EDGE",
+    icon: BookOpen,
+    iconClass: "text-blue-400",
+    bgClass: "bg-blue-500/20",
+    external: true,
+  },
 ];
 
 function viewerInitials(prenom: string | null, nom: string | null, email: string | null) {
@@ -79,73 +105,100 @@ export default function EnterpriseSidebar() {
 
   const displayName = useMemo(() => {
     const full = [viewer.prenom, viewer.nom].filter(Boolean).join(" ").trim();
-    return full || viewer.email || "Responsable RH";
+    return full || viewer.email || "—";
   }, [viewer]);
 
   const initials = viewerInitials(viewer.prenom, viewer.nom, viewer.email);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 flex h-full w-[260px] flex-col border-r border-[rgba(124,58,237,0.15)] bg-[#161428]">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -bottom-40 -left-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(124,58,237,0.28),rgba(15,14,26,0)_62%)] blur-2xl" />
-      </div>
-
-      <div className="relative border-b border-white/10 px-6 pb-6 pt-8">
-        <div className="text-[18px] font-extrabold tracking-[-0.5px] text-white">Beyond</div>
-        <div className="mt-1 text-[11px] font-medium uppercase tracking-[1.5px] text-[#9896b8]">
+    <aside
+      className="fixed inset-y-0 left-0 z-50 flex h-full w-[260px] flex-col border-r border-[rgba(124,58,237,0.15)]"
+      style={{ background: "linear-gradient(180deg, #0f0e1a 0%, #1a1535 100%)" }}
+    >
+      <div className="border-b border-white/10 px-6 pb-6 pt-8">
+        <div className="text-lg font-extrabold tracking-tight text-white">Beyond</div>
+        <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.15em] text-white/40">
           Enterprise · Admin
         </div>
         <div className="mt-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-sm font-bold text-white shadow-lg shadow-purple-900/30">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white">
             {initials}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">{displayName}</p>
-            <p className="truncate text-xs text-[#5d5b7a]">{viewer.email ?? ""}</p>
+            <p className="truncate text-xs text-white/40">{viewer.email ?? ""}</p>
           </div>
         </div>
       </div>
 
-      <nav className="relative flex flex-col gap-1 px-3 py-6" aria-label="Navigation entreprise">
+      <nav className="flex flex-col gap-1 px-3 py-4" aria-label="Navigation entreprise">
         {NAV_ITEMS.map((item) => {
           const active =
             item.href === "/dashboard/entreprise"
               ? pathname === item.href
               : pathname === item.href || pathname.startsWith(`${item.href}/`);
-
           const Icon = item.icon;
-
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2 rounded-[12px] px-3 py-2 text-[13.5px] font-semibold transition",
-                "text-[#9896b8] hover:bg-white/5 hover:text-white",
-                active && "border border-[rgba(124,58,237,0.25)] bg-[#7c3aed]/15 text-white",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] transition",
+                active
+                  ? "border border-violet-500/30 bg-violet-600/20 font-semibold text-white"
+                  : "text-white/50 hover:bg-white/5 hover:text-white/80",
               )}
             >
-              <Icon size={16} strokeWidth={1.5} className={cn("text-[#5d5b7a]", active && "text-[#a78bfa]")} />
+              <Icon size={16} strokeWidth={1.5} className={active ? "text-violet-300" : "text-white/40"} />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="relative mt-auto p-4">
+      <section className="mt-4 px-4">
+        <p className="mb-3 text-xs uppercase tracking-widest text-white/30">Accès rapides</p>
+        {QUICK_LINKS.map((link) => {
+          const Icon = link.icon;
+          const inner = (
+            <>
+              <div className={cn("rounded-lg p-2", link.bgClass)}>
+                <Icon size={16} className={link.iconClass} />
+              </div>
+              <span className="text-sm font-medium text-white/80">{link.label}</span>
+            </>
+          );
+          const className =
+            "mb-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/5 p-3 transition hover:bg-white/10";
+          if (link.external) {
+            return (
+              <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className={className}>
+                {inner}
+              </a>
+            );
+          }
+          return (
+            <Link key={link.href} href={link.href} className={className}>
+              {inner}
+            </Link>
+          );
+        })}
+      </section>
+
+      <div className="mt-auto p-4">
         <Link
           href="/dashboard/entreprise/equipe-insight"
           className={cn(
             "group block w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition",
-            "hover:border-[#7c3aed]/30 hover:bg-white/[0.06]",
+            "hover:border-violet-500/30 hover:bg-white/[0.06]",
             (pathname === "/dashboard/entreprise/equipe-insight" ||
               pathname.startsWith("/dashboard/entreprise/equipe-radar")) &&
-              "border-[#7c3aed]/40 bg-[#7c3aed]/10",
+              "border-violet-500/40 bg-violet-600/10",
           )}
         >
           <div className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#ec4899] shadow-[0_0_22px_rgba(124,58,237,0.35)]">
-              <span className="absolute inset-0 animate-ping rounded-xl bg-[#7c3aed]/30" aria-hidden />
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 shadow-[0_0_22px_rgba(124,58,237,0.35)]">
+              <span className="absolute inset-0 animate-ping rounded-xl bg-violet-600/30" aria-hidden />
               <Zap size={18} strokeWidth={1.5} className="relative text-white" aria-hidden />
             </div>
             <div className="min-w-0">
@@ -155,7 +208,7 @@ export default function EnterpriseSidebar() {
                   BETA
                 </span>
               </div>
-              <div className="mt-0.5 text-[11px] text-[#9896b8]">Insights, signaux faibles, actions prioritaires.</div>
+              <div className="mt-0.5 text-[11px] text-white/40">Insights et actions prioritaires</div>
             </div>
           </div>
         </Link>

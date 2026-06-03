@@ -9,6 +9,7 @@ import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise
 import { EntrepriseQuickAccess } from "@/components/enterprise/entreprise-quick-access";
 import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
+import { cn } from "@/lib/utils";
 
 type Overview = {
   configuration_required?: boolean;
@@ -164,7 +165,9 @@ export function EnterpriseDashboardV2() {
   }, [overview?.employees]);
 
   const kpis = overview?.kpis;
-  const attentionSignals = (overview as Overview | null)?.kpis?.attention_signals;
+  const attentionSignals = overview?.kpis?.attention_signals;
+  const formations = overview?.formations ?? { presentiel: [], elearning: [] };
+  const recentActivity = overview?.this_week?.recent_activity ?? [];
 
   return (
     <div className="flex min-h-screen bg-white font-sans text-gray-900">
@@ -273,7 +276,7 @@ export function EnterpriseDashboardV2() {
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Collaborateurs</h2>
                   <p className="text-sm text-gray-400">
-                    {overview.kpis.employees_total} membres · {overview.employees_pending} en attente
+                    {overview.kpis.employees_total} membres · {overview.employees_pending ?? 0} en attente
                   </p>
                 </div>
                 <EnterpriseEmployeeCsvActions
@@ -399,7 +402,7 @@ export function EnterpriseDashboardV2() {
               </div>
 
               {formationTab === "presentiel" ? (
-                overview.formations.presentiel.length === 0 ? (
+                formations.presentiel.length === 0 ? (
                   <EmptyState
                     variant="light"
                     icon="📋"
@@ -409,7 +412,7 @@ export function EnterpriseDashboardV2() {
                   />
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2">
-                    {overview.formations.presentiel.map((s) => {
+                    {formations.presentiel.map((s) => {
                       const pct =
                         s.total > 0 ? Math.round((s.confirmed / s.total) * 100) : 0;
                       return (
@@ -432,7 +435,7 @@ export function EnterpriseDashboardV2() {
                     })}
                   </div>
                 )
-              ) : overview.formations.elearning.length === 0 ? (
+              ) : formations.elearning.length === 0 ? (
                 <EmptyState
                   variant="light"
                   icon="📚"
@@ -442,7 +445,7 @@ export function EnterpriseDashboardV2() {
                 />
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
-                  {overview.formations.elearning.map((p) => (
+                  {formations.elearning.map((p) => (
                     <div key={p.path_id} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                       <p className="font-bold text-gray-900">📚 {p.title}</p>
                       <p className="mt-1 text-sm text-gray-500">{p.enrolled} apprenants inscrits</p>
@@ -473,11 +476,11 @@ export function EnterpriseDashboardV2() {
             {/* Activité récente */}
             <section className="mt-10 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <p className="text-sm font-bold text-gray-900">Activité récente</p>
-              {overview.this_week.recent_activity.length === 0 ? (
+              {recentActivity.length === 0 ? (
                 <p className="mt-3 text-sm text-gray-400">Aucune activité récente.</p>
               ) : (
                 <ul className="mt-4 space-y-2">
-                  {overview.this_week.recent_activity.map((x) => (
+                  {recentActivity.map((x) => (
                     <li key={x.id} className="flex items-center gap-3 rounded-xl border border-gray-50 bg-gray-50/50 p-3 text-sm">
                       <Brain className="h-4 w-4 text-violet-500" />
                       <div>

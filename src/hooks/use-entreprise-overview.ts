@@ -80,6 +80,8 @@ export function useEntrepriseOverview() {
           ...json,
           employees: json.employees ?? [],
           kpis: json.kpis ?? emptyKpis,
+          formations: json.formations ?? { presentiel: [], elearning: [] },
+          this_week: json.this_week ?? { from: "", to: "", agenda: [], recent_activity: [] },
         });
         attemptRef.current = 0;
         setLoading(false);

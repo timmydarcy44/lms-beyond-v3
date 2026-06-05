@@ -5,6 +5,11 @@ import {
   type EmployeeTestResults,
 } from "@/lib/entreprise/employee-profile-diagnostics";
 import {
+  getEnterpriseShareConsent,
+  hasAnyEnterpriseShareConsent,
+  maskTestResultsForEnterprise,
+} from "@/lib/entreprise/enterprise-share-consent";
+import {
   collectEmployeeProfileCandidates,
   resolveAndLinkEmployeeProfile,
 } from "@/lib/entreprise/resolve-employee-profile";
@@ -30,6 +35,8 @@ export type EmployeeTestStatus = {
   /** DISC + IDMC + soft skills */
   all_tests_done: boolean;
   idmc_score: number | null;
+  /** Consentement RGPD explicite pour partage entreprise */
+  share_consent: boolean;
 };
 
 function emptyTests(): EmployeeTestResults {
@@ -52,7 +59,39 @@ export function buildTestStatus(results: EmployeeTestResults, profileId: string 
     diagnostic_done: has_disc || has_idmc || has_soft_skills,
     all_tests_done: has_disc && has_idmc && has_soft_skills,
     idmc_score: results.idmc_score,
+    share_consent: true,
   };
+}
+
+async function resultsForEnterpriseView(
+  service: SupabaseClient,
+  profileId: string,
+  organisationId: string | null | undefined,
+  raw: EmployeeTestResults,
+): Promise<{ results: EmployeeTestResults; shareConsent: boolean }> {
+  if (!organisationId) return { results: raw, shareConsent: true };
+  const consent = await getEnterpriseShareConsent(service, profileId, organisationId);
+  const shareConsent = hasAnyEnterpriseShareConsent(consent);
+  return {
+    results: maskTestResultsForEnterprise(raw, consent),
+    shareConsent,
+  };
+}
+
+async function finalizeEmployeeTestStatus(
+  service: SupabaseClient,
+  employee: EmployeeRowLite,
+  profileId: string,
+  raw: EmployeeTestResults,
+): Promise<EmployeeTestStatus> {
+  const { results, shareConsent } = await resultsForEnterpriseView(
+    service,
+    profileId,
+    employee.company_id,
+    raw,
+  );
+  const status = buildTestStatus(results, profileId);
+  return { ...status, share_consent: shareConsent };
 }
 
 /** Trouve le profil avec tests et lie l'employé. */
@@ -63,10 +102,10 @@ export async function resolveEmployeeTestStatus(
   const candidates = await collectEmployeeProfileCandidates(service, employee);
 
   for (const profileId of candidates) {
-    const results = await loadEmployeeTestResults(service, profileId);
-    if (hasAnyTestResults(results)) {
+    const raw = await loadEmployeeTestResults(service, profileId);
+    if (hasAnyTestResults(raw)) {
       await resolveAndLinkEmployeeProfile(service, { ...employee, profile_id: profileId }, profileId);
-      return buildTestStatus(results, profileId);
+      return finalizeEmployeeTestStatus(service, employee, profileId, raw);
     }
   }
 
@@ -74,13 +113,13 @@ export async function resolveEmployeeTestStatus(
   if (fallbackId) {
     await resolveAndLinkEmployeeProfile(service, employee, fallbackId);
     await reclaimOrphanTestsForEmployee(service, employee, fallbackId);
-    const results = await loadEmployeeTestResults(service, fallbackId);
-    if (hasAnyTestResults(results)) {
-      return buildTestStatus(results, fallbackId);
+    const raw = await loadEmployeeTestResults(service, fallbackId);
+    if (hasAnyTestResults(raw)) {
+      return finalizeEmployeeTestStatus(service, employee, fallbackId, raw);
     }
   }
 
-  return buildTestStatus(emptyTests(), null);
+  return { ...buildTestStatus(emptyTests(), null), share_consent: false };
 }
 
 /** Assure une équipe par défaut pour l'organisation (requis par collaborateur_diagnostics). */
@@ -123,7 +162,7 @@ export async function syncCollaborateurDiagnosticFromTests(
   organisationId: string,
   status: EmployeeTestStatus,
 ): Promise<void> {
-  if (!status.profile_id || !status.diagnostic_done) return;
+  if (!status.profile_id || !status.diagnostic_done || !status.share_consent) return;
 
   const equipeId = await ensureDefaultEquipeId(service, organisationId);
   if (!equipeId) return;

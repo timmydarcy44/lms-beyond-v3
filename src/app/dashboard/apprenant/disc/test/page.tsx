@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { DISC_QUESTIONS, type DiscLabel } from "@/lib/disc/disc-questions";
+import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
 
 export default function DiscTestPage() {
   const supabase = createSupabaseBrowserClient();
@@ -81,8 +81,12 @@ export default function DiscTestPage() {
           setAnalyzing(false);
           return;
         }
+        const next = await redirectAfterAssessmentTest(
+          "disc",
+          "/dashboard/apprenant/profil?disc=done",
+        );
         window.setTimeout(() => {
-          window.location.href = "/dashboard/apprenant/profil?disc=done";
+          window.location.href = next;
         }, 900);
       } finally {
         setSubmitting(false);

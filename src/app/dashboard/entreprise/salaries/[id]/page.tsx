@@ -159,6 +159,7 @@ export default function SalarieDetailPage() {
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
   const [hasDiagnostics, setHasDiagnostics] = useState(false);
+  const [pendingShareConsent, setPendingShareConsent] = useState(false);
   const [testResults, setTestResults] = useState<{
     disc: { D: number; I: number; S: number; C: number } | null;
     idmc_score: number | null;
@@ -179,6 +180,7 @@ export default function SalarieDetailPage() {
           employee?: EmployeeRow;
           diagnostics?: DiagnosticRow[];
           has_diagnostics?: boolean;
+          pending_share_consent?: boolean;
           test_results?: {
             disc: { D: number; I: number; S: number; C: number } | null;
             idmc_score: number | null;
@@ -201,6 +203,7 @@ export default function SalarieDetailPage() {
           setEmployee(payload.employee ?? null);
           setDiagnostics(payload.diagnostics ?? []);
           setHasDiagnostics(Boolean(payload.has_diagnostics));
+          setPendingShareConsent(Boolean(payload.pending_share_consent));
           setTestResults(payload.test_results ?? null);
           setMissions(payload.missions ?? []);
           setRecommendedAction(payload.recommended_action ?? null);
@@ -360,7 +363,18 @@ export default function SalarieDetailPage() {
           </button>
         </header>
 
-        {!hasDiagnostics ? (
+        {!hasDiagnostics && pendingShareConsent ? (
+          <div className="mb-8 rounded-3xl border border-violet-200 bg-violet-50 px-6 py-5 text-sm text-violet-950">
+            <p className="font-semibold">En attente du consentement RGPD</p>
+            <p className="mt-1 text-violet-900/80">
+              Le collaborateur a passé des tests mais n&apos;a pas encore autorisé le partage avec
+              l&apos;entreprise. Les résultats restent privés tant qu&apos;il n&apos;a pas validé
+              l&apos;overlay de partage après chaque test.
+            </p>
+          </div>
+        ) : null}
+
+        {!hasDiagnostics && !pendingShareConsent ? (
           <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50 px-6 py-5 text-sm text-amber-950">
             <p className="font-semibold">Aucun diagnostic enregistré</p>
             <p className="mt-1 text-amber-900/80">

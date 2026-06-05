@@ -102,7 +102,6 @@ export async function GET() {
           company_id: employee.company_id,
         })
         .eq("id", user.id);
-    }
     } else if (metaOrgId) {
       await service
         .from("profiles")

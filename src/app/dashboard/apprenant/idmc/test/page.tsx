@@ -10,6 +10,7 @@ import {
   type IdmcLikertValue,
   type IdmcResponse,
 } from "@/lib/idmc/idmc-questions";
+import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
 
 export default function IdmcTestPage() {
   const supabase = createSupabaseBrowserClient();
@@ -86,8 +87,12 @@ export default function IdmcTestPage() {
           setAnalyzing(false);
           return;
         }
+        const next = await redirectAfterAssessmentTest(
+          "idmc",
+          "/dashboard/apprenant/profil?idmc=done",
+        );
         window.setTimeout(() => {
-          window.location.href = "/dashboard/apprenant/profil?idmc=done";
+          window.location.href = next;
         }, 900);
       } finally {
         setSubmitting(false);

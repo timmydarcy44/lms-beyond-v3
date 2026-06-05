@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills";
+import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
 
 const answersLabels = ["1", "2", "3", "4", "5"];
 
@@ -60,7 +61,8 @@ export default function SoftSkillsTestPage() {
         body: JSON.stringify({ answers }),
       });
       if (response.ok) {
-        window.location.href = "/soft-skills/resultats";
+        const next = await redirectAfterAssessmentTest("soft_skills", "/soft-skills/resultats");
+        window.location.href = next;
         return;
       }
       console.error("Erreur API submit:", await response.text());

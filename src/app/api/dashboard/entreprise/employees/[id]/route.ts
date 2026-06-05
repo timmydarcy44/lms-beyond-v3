@@ -68,7 +68,18 @@ export async function GET(
   }
 
   const testStatus = await resolveEmployeeTestStatus(service, employee);
-  await syncCollaborateurDiagnosticFromTests(service, employee, orgId, testStatus);
+  const rawForConsent =
+    testStatus.profile_id != null
+      ? await loadEmployeeTestResults(service, testStatus.profile_id)
+      : null;
+  const pendingShareConsent =
+    Boolean(testStatus.profile_id) &&
+    !testStatus.share_consent &&
+    hasAnyTestResults(rawForConsent ?? { disc: null, idmc_score: null, idmc_axes: null, soft_skills: [], updated_at: null });
+
+  if (testStatus.share_consent) {
+    await syncCollaborateurDiagnosticFromTests(service, employee, orgId, testStatus);
+  }
 
   const { data: diagRows } = await service
     .from("collaborateur_diagnostics")
@@ -122,7 +133,9 @@ export async function GET(
       has_idmc: testStatus.has_idmc,
       has_soft_skills: testStatus.has_soft_skills,
       all_tests_done: testStatus.all_tests_done,
+      share_consent: testStatus.share_consent,
     },
+    pending_share_consent: pendingShareConsent,
     has_diagnostics: hasDiagnostics,
     recommended_action: recommendedAction,
     missions: missions ?? [],

@@ -89,29 +89,19 @@ export async function loadEmployeeTestResults(
     updated_at: null,
   };
 
-  const [{ data: discRow }, { data: idmcRow }, { data: softByLearner }, { data: softByProfile }] =
-    await Promise.all([
-      service.from("disc_resultats").select("scores, updated_at").eq("profile_id", profileId).maybeSingle(),
-      service
-        .from("idmc_resultats")
-        .select("global_score, scores, responses, updated_at")
-        .eq("profile_id", profileId)
-        .maybeSingle(),
-      service
-        .from("soft_skills_resultats")
-        .select("scores, updated_at")
-        .eq("learner_id", profileId)
-        .order("updated_at", { ascending: false, nullsFirst: false })
-        .limit(1)
-        .maybeSingle(),
-      service
-        .from("soft_skills_resultats")
-        .select("scores, updated_at")
-        .eq("profile_id", profileId)
-        .order("updated_at", { ascending: false, nullsFirst: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+  const [{ data: discRow }, { data: idmcRow }, { data: softRow }] = await Promise.all([
+    service.from("disc_resultats").select("scores, updated_at").eq("profile_id", profileId).maybeSingle(),
+    service
+      .from("idmc_resultats")
+      .select("global_score, scores, responses, updated_at")
+      .eq("profile_id", profileId)
+      .maybeSingle(),
+    service
+      .from("soft_skills_resultats")
+      .select("scores, taken_at")
+      .eq("learner_id", profileId)
+      .maybeSingle(),
+  ]);
 
   const disc = parseDiscScores(discRow?.scores);
   const idmcRaw = idmcRow?.scores ?? idmcRow?.responses;
@@ -121,11 +111,10 @@ export async function loadEmployeeTestResults(
       ? Math.round(idmcRow.global_score)
       : averageAxes(idmc_axes);
 
-  const softRow = softByLearner ?? softByProfile;
   const soft_skills = parseSoftSkills(softRow?.scores);
 
   const updated_at = String(
-    idmcRow?.updated_at ?? discRow?.updated_at ?? softRow?.updated_at ?? "",
+    idmcRow?.updated_at ?? discRow?.updated_at ?? softRow?.taken_at ?? "",
   ) || null;
 
   return { disc, idmc_score, idmc_axes, soft_skills, updated_at };

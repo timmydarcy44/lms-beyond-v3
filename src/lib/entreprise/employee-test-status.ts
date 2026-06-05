@@ -8,6 +8,7 @@ import {
   collectEmployeeProfileCandidates,
   resolveAndLinkEmployeeProfile,
 } from "@/lib/entreprise/resolve-employee-profile";
+import { reclaimOrphanTestsForEmployee } from "@/lib/entreprise/transfer-orphan-test-results";
 
 export type EmployeeRowLite = {
   id: string;
@@ -72,8 +73,11 @@ export async function resolveEmployeeTestStatus(
   const fallbackId = candidates[0] ?? null;
   if (fallbackId) {
     await resolveAndLinkEmployeeProfile(service, employee, fallbackId);
+    await reclaimOrphanTestsForEmployee(service, employee, fallbackId);
     const results = await loadEmployeeTestResults(service, fallbackId);
-    return buildTestStatus(results, fallbackId);
+    if (hasAnyTestResults(results)) {
+      return buildTestStatus(results, fallbackId);
+    }
   }
 
   return buildTestStatus(emptyTests(), null);

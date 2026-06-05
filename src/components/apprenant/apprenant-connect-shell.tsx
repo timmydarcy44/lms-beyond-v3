@@ -42,6 +42,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileSnippet | null>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [authMeta, setAuthMeta] = useState<Record<string, unknown>>({});
+  const [hasOrganisation, setHasOrganisation] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [snippetVersion, setSnippetVersion] = useState(0);
   const [shareCopied, setShareCopied] = useState(false);
@@ -63,15 +64,37 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
       .eq("id", uid)
       .maybeSingle();
     setProfile((data as ProfileSnippet) ?? null);
+
+    const metaOrg =
+      (typeof userData.user?.user_metadata?.company_id === "string" &&
+        userData.user.user_metadata.company_id) ||
+      (typeof userData.user?.user_metadata?.organization_id === "string" &&
+        userData.user.user_metadata.organization_id) ||
+      null;
+
+    const localOrg = Boolean(
+      (data as ProfileSnippet | null)?.school_id ||
+        (data as ProfileSnippet | null)?.entreprise_id ||
+        (data as ProfileSnippet | null)?.company_id ||
+        metaOrg,
+    );
+    setHasOrganisation(localOrg);
+
+    try {
+      const res = await fetch("/api/dashboard/apprenant/org-context");
+      if (res.ok) {
+        const payload = (await res.json()) as { has_organisation?: boolean };
+        if (payload.has_organisation) setHasOrganisation(true);
+      }
+    } catch {
+      // ignore
+    }
   }, [supabase]);
 
   useEffect(() => {
     void loadProfile();
   }, [loadProfile, snippetVersion]);
 
-  const hasOrganisation = Boolean(
-    profile?.school_id || profile?.entreprise_id || profile?.company_id,
-  );
   const navItems = useMemo(() => buildApprenantNavItems(hasOrganisation), [hasOrganisation]);
 
   const firstName = resolveLearnerDisplayFirstName({

@@ -159,6 +159,11 @@ export default function SalarieDetailPage() {
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
   const [hasDiagnostics, setHasDiagnostics] = useState(false);
+  const [testResults, setTestResults] = useState<{
+    disc: { D: number; I: number; S: number; C: number } | null;
+    idmc_score: number | null;
+    soft_skills: Array<{ skill: string; score: number }>;
+  } | null>(null);
   const [missions, setMissions] = useState<EmployeeMission[]>([]);
   const [recommendedAction, setRecommendedAction] = useState<RecommendedActionRow | null>(null);
 
@@ -174,6 +179,11 @@ export default function SalarieDetailPage() {
           employee?: EmployeeRow;
           diagnostics?: DiagnosticRow[];
           has_diagnostics?: boolean;
+          test_results?: {
+            disc: { D: number; I: number; S: number; C: number } | null;
+            idmc_score: number | null;
+            soft_skills: Array<{ skill: string; score: number }>;
+          };
           missions?: EmployeeMission[];
           recommended_action?: RecommendedActionRow | null;
           error?: string;
@@ -191,6 +201,7 @@ export default function SalarieDetailPage() {
           setEmployee(payload.employee ?? null);
           setDiagnostics(payload.diagnostics ?? []);
           setHasDiagnostics(Boolean(payload.has_diagnostics));
+          setTestResults(payload.test_results ?? null);
           setMissions(payload.missions ?? []);
           setRecommendedAction(payload.recommended_action ?? null);
         }
@@ -209,7 +220,7 @@ export default function SalarieDetailPage() {
   const displayEmployee = employee;
 
   const latest = diagnostics[0] ?? null;
-  const idmc = latest?.idmc_score ?? 0;
+  const idmc = latest?.idmc_score ?? testResults?.idmc_score ?? 0;
   const stressScore = latest?.results?.stress ?? null;
   const vigilance = scoreToVigilance(stressScore);
 
@@ -364,6 +375,36 @@ export default function SalarieDetailPage() {
           missions={missions}
           onChange={setMissions}
         />
+
+        {hasDiagnostics && testResults ? (
+          <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+            {testResults.disc ? (
+              <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">DISC</p>
+                <p className="mt-2 text-lg font-black text-gray-950">
+                  D {Math.round(testResults.disc.D * 10)}% · I {Math.round(testResults.disc.I * 10)}% · S{" "}
+                  {Math.round(testResults.disc.S * 10)}% · C {Math.round(testResults.disc.C * 10)}%
+                </p>
+              </div>
+            ) : null}
+            {testResults.idmc_score ? (
+              <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">IDMC</p>
+                <p className="mt-2 text-3xl font-black text-gray-950">{testResults.idmc_score}</p>
+              </div>
+            ) : null}
+            {testResults.soft_skills.length > 0 ? (
+              <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Soft skills</p>
+                <ul className="mt-2 space-y-1 text-sm text-gray-700">
+                  {testResults.soft_skills.slice(0, 3).map((s) => (
+                    <li key={s.skill}>{s.skill}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {hasDiagnostics ? (
         <>

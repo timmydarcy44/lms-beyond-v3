@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   diagnosticsHaveData,
-  loadProfileIdmcDiagnostic,
+  hasAnyTestResults,
+  loadEmployeeTestResults,
+  testResultsToDiagnostic,
   type EmployeeDiagnosticPayload,
+  type EmployeeTestResults,
 } from "@/lib/entreprise/employee-profile-diagnostics";
+import { resolveAndLinkEmployeeProfile, resolveEmployeeProfileWithTests } from "@/lib/entreprise/resolve-employee-profile";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -63,6 +67,11 @@ export async function GET(
     return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
   }
 
+  const profileId = await resolveEmployeeProfileWithTests(service, employee, async (pid) => {
+    const tr = await loadEmployeeTestResults(service, pid);
+    return { hasTests: hasAnyTestResults(tr) };
+  });
+
   const { data: diagRows, error: diagErr } = await service
     .from("collaborateur_diagnostics")
     .select("id, employee_id, completed_at, created_at, idmc_score, stress_score")
@@ -79,11 +88,23 @@ export async function GET(
     mapCollaborateurDiagnostic(row as Record<string, unknown>),
   );
 
-  const profileId = employee.profile_id as string | null;
-  if (profileId && !diagnosticsHaveData(diagnostics)) {
-    const fromProfile = await loadProfileIdmcDiagnostic(service, profileId, employeeId);
-    if (fromProfile) diagnostics = [fromProfile, ...diagnostics];
+  let testResults: EmployeeTestResults = {
+    disc: null,
+    idmc_score: null,
+    idmc_axes: null,
+    soft_skills: [],
+    updated_at: null,
+  };
+
+  if (profileId) {
+    testResults = await loadEmployeeTestResults(service, profileId);
+    if (!diagnosticsHaveData(diagnostics)) {
+      const fromProfile = testResultsToDiagnostic(testResults, employeeId);
+      if (fromProfile) diagnostics = [fromProfile, ...diagnostics];
+    }
   }
+
+  const hasDiagnostics = diagnosticsHaveData(diagnostics) || hasAnyTestResults(testResults);
 
   let recommendedAction: {
     id: string;
@@ -118,9 +139,10 @@ export async function GET(
     .order("created_at", { ascending: false });
 
   return NextResponse.json({
-    employee,
+    employee: { ...employee, profile_id: profileId ?? employee.profile_id },
     diagnostics,
-    has_diagnostics: diagnosticsHaveData(diagnostics),
+    test_results: testResults,
+    has_diagnostics: hasDiagnostics,
     recommended_action: recommendedAction,
     missions: missions ?? [],
   });

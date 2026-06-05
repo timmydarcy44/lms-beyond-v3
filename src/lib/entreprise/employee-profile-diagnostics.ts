@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+const IDMC_AXIS_KEYS = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"] as const;
+type AxisKey = (typeof IDMC_AXIS_KEYS)[number];
+
 export type EmployeeDiagnosticPayload = {
   id: string;
   employee_id: string;
@@ -8,8 +11,62 @@ export type EmployeeDiagnosticPayload = {
   results: Partial<
     Record<"stress" | "organisation" | "communication" | "decision" | "leadership", number>
   > | null;
-  source?: "collaborateur_diagnostics" | "idmc_resultats";
+  source?: "collaborateur_diagnostics" | "profile_tests";
 };
+
+export type EmployeeTestResults = {
+  disc: { D: number; I: number; S: number; C: number } | null;
+  idmc_score: number | null;
+  idmc_axes: Record<string, number> | null;
+  soft_skills: Array<{ skill: string; score: number }>;
+  updated_at: string | null;
+};
+
+function resolveIdmcAxesFromRow(scores: unknown): Record<AxisKey, number> | null {
+  if (!scores || typeof scores !== "object") return null;
+  const candidate = scores as Record<string, unknown>;
+  if (candidate.axes && typeof candidate.axes === "object") {
+    return candidate.axes as Record<AxisKey, number>;
+  }
+  const hasAllAxes = IDMC_AXIS_KEYS.every((key) => typeof candidate[key] === "number");
+  if (hasAllAxes) return candidate as Record<AxisKey, number>;
+  return null;
+}
+
+function averageAxes(axes: Record<string, number> | null): number | null {
+  if (!axes) return null;
+  const values = Object.values(axes).filter((v): v is number => typeof v === "number" && v > 0);
+  if (!values.length) return null;
+  return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
+}
+
+function parseDiscScores(raw: unknown): EmployeeTestResults["disc"] {
+  if (!raw || typeof raw !== "object") return null;
+  const s = raw as Record<string, unknown>;
+  const d = Number(s.D ?? 0);
+  const i = Number(s.I ?? 0);
+  const st = Number(s.S ?? 0);
+  const c = Number(s.C ?? 0);
+  if (d + i + st + c <= 0) return null;
+  return { D: d, I: i, S: st, C: c };
+}
+
+function parseSoftSkills(raw: unknown): EmployeeTestResults["soft_skills"] {
+  if (!raw || typeof raw !== "object") return [];
+  const entries = Object.entries(raw as Record<string, unknown>)
+    .map(([skill, score]) => ({ skill, score: Number(score ?? 0) }))
+    .filter((e) => e.skill && !Number.isNaN(e.score) && e.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return entries.slice(0, 10);
+}
+
+export function hasAnyTestResults(results: EmployeeTestResults): boolean {
+  if (results.disc) return true;
+  if (results.idmc_score != null && results.idmc_score > 0) return true;
+  if (results.idmc_axes && Object.values(results.idmc_axes).some((v) => v > 0)) return true;
+  if (results.soft_skills.length > 0) return true;
+  return false;
+}
 
 export function diagnosticsHaveData(rows: EmployeeDiagnosticPayload[]): boolean {
   return rows.some((d) => {
@@ -19,52 +76,84 @@ export function diagnosticsHaveData(rows: EmployeeDiagnosticPayload[]): boolean 
   });
 }
 
-/** Charge les résultats IDMC du profil apprenant lié au collaborateur. */
-export async function loadProfileIdmcDiagnostic(
+/** Charge DISC, IDMC et soft skills depuis le profil apprenant. */
+export async function loadEmployeeTestResults(
   service: SupabaseClient,
   profileId: string,
+): Promise<EmployeeTestResults> {
+  const empty: EmployeeTestResults = {
+    disc: null,
+    idmc_score: null,
+    idmc_axes: null,
+    soft_skills: [],
+    updated_at: null,
+  };
+
+  const [{ data: discRow }, { data: idmcRow }, { data: softByLearner }, { data: softByProfile }] =
+    await Promise.all([
+      service.from("disc_resultats").select("scores, updated_at").eq("profile_id", profileId).maybeSingle(),
+      service
+        .from("idmc_resultats")
+        .select("global_score, scores, responses, updated_at")
+        .eq("profile_id", profileId)
+        .maybeSingle(),
+      service
+        .from("soft_skills_resultats")
+        .select("scores, updated_at")
+        .eq("learner_id", profileId)
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle(),
+      service
+        .from("soft_skills_resultats")
+        .select("scores, updated_at")
+        .eq("profile_id", profileId)
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  const disc = parseDiscScores(discRow?.scores);
+  const idmcRaw = idmcRow?.scores ?? idmcRow?.responses;
+  const idmc_axes = resolveIdmcAxesFromRow(idmcRaw);
+  const idmc_score =
+    typeof idmcRow?.global_score === "number" && idmcRow.global_score > 0
+      ? Math.round(idmcRow.global_score)
+      : averageAxes(idmc_axes);
+
+  const softRow = softByLearner ?? softByProfile;
+  const soft_skills = parseSoftSkills(softRow?.scores);
+
+  const updated_at = String(
+    idmcRow?.updated_at ?? discRow?.updated_at ?? softRow?.updated_at ?? "",
+  ) || null;
+
+  return { disc, idmc_score, idmc_axes, soft_skills, updated_at };
+}
+
+/** Convertit les résultats profil en entrée diagnostic pour la fiche entreprise. */
+export function testResultsToDiagnostic(
+  results: EmployeeTestResults,
   employeeId: string,
-): Promise<EmployeeDiagnosticPayload | null> {
-  const { data: idmcRow } = await service
-    .from("idmc_resultats")
-    .select("global_score, scores, responses, updated_at, created_at")
-    .eq("profile_id", profileId)
-    .order("updated_at", { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
+): EmployeeDiagnosticPayload | null {
+  if (!hasAnyTestResults(results)) return null;
 
-  if (!idmcRow) return null;
+  const axes = results.idmc_axes ?? {};
+  const idmc = results.idmc_score ?? averageAxes(results.idmc_axes) ?? 0;
 
-  const scores = (idmcRow.scores ?? idmcRow.responses) as Record<string, unknown> | null;
-  const global =
-    typeof idmcRow.global_score === "number"
-      ? idmcRow.global_score
-      : scores && typeof scores === "object"
-        ? Math.round(
-            Object.values(scores)
-              .filter((v): v is number => typeof v === "number")
-              .reduce((s, v, _, arr) => s + v / arr.length, 0),
-          )
-        : null;
-
-  if (global == null || global <= 0) return null;
-
-  const results: EmployeeDiagnosticPayload["results"] = {};
-  if (scores && typeof scores === "object") {
-    const s = scores as Record<string, number>;
-    if (typeof s.stress === "number") results.stress = s.stress;
-    if (typeof s.organisation === "number") results.organisation = s.organisation;
-    if (typeof s.communication === "number") results.communication = s.communication;
-    if (typeof s.decision === "number") results.decision = s.decision;
-    if (typeof s.leadership === "number") results.leadership = s.leadership;
-  }
+  const resultsMap: NonNullable<EmployeeDiagnosticPayload["results"]> = {};
+  if (typeof axes.A1 === "number" && axes.A1 > 0) resultsMap.stress = axes.A1;
+  if (typeof axes.A4 === "number" && axes.A4 > 0) resultsMap.organisation = axes.A4;
+  if (typeof axes.A3 === "number" && axes.A3 > 0) resultsMap.communication = axes.A3;
+  if (typeof axes.A6 === "number" && axes.A6 > 0) resultsMap.decision = axes.A6;
+  if (typeof axes.A2 === "number" && axes.A2 > 0) resultsMap.leadership = axes.A2;
 
   return {
-    id: `idmc-${profileId}`,
+    id: `profile-tests-${employeeId}`,
     employee_id: employeeId,
-    created_at: String(idmcRow.updated_at ?? idmcRow.created_at ?? new Date().toISOString()),
-    idmc_score: global,
-    results: Object.keys(results).length > 0 ? results : null,
-    source: "idmc_resultats",
+    created_at: results.updated_at ?? new Date().toISOString(),
+    idmc_score: idmc > 0 ? idmc : null,
+    results: Object.keys(resultsMap).length > 0 ? resultsMap : null,
+    source: "profile_tests",
   };
 }

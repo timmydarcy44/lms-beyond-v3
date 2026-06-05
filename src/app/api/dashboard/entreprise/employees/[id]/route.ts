@@ -4,16 +4,17 @@ import {
   hasAnyTestResults,
   loadEmployeeTestResults,
   testResultsToDiagnostic,
-  type EmployeeDiagnosticPayload,
-  type EmployeeTestResults,
 } from "@/lib/entreprise/employee-profile-diagnostics";
-import { resolveAndLinkEmployeeProfile, resolveEmployeeProfileWithTests } from "@/lib/entreprise/resolve-employee-profile";
+import {
+  resolveEmployeeTestStatus,
+  syncCollaborateurDiagnosticFromTests,
+} from "@/lib/entreprise/employee-test-status";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-function mapCollaborateurDiagnostic(row: Record<string, unknown>): EmployeeDiagnosticPayload {
+function mapCollaborateurDiagnostic(row: Record<string, unknown>) {
   const stress = row.stress_score != null ? Number(row.stress_score) : null;
   return {
     id: String(row.id),
@@ -21,7 +22,7 @@ function mapCollaborateurDiagnostic(row: Record<string, unknown>): EmployeeDiagn
     created_at: String(row.completed_at ?? row.created_at ?? new Date().toISOString()),
     idmc_score: row.idmc_score != null ? Number(row.idmc_score) : null,
     results: stress != null ? { stress } : null,
-    source: "collaborateur_diagnostics",
+    source: "collaborateur_diagnostics" as const,
   };
 }
 
@@ -60,19 +61,16 @@ export async function GET(
     .maybeSingle();
 
   if (empErr) {
-    console.error("[employees/[id]] employee", empErr);
     return NextResponse.json({ error: empErr.message }, { status: 400 });
   }
   if (!employee) {
     return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
   }
 
-  const profileId = await resolveEmployeeProfileWithTests(service, employee, async (pid) => {
-    const tr = await loadEmployeeTestResults(service, pid);
-    return { hasTests: hasAnyTestResults(tr) };
-  });
+  const testStatus = await resolveEmployeeTestStatus(service, employee);
+  await syncCollaborateurDiagnosticFromTests(service, employee, orgId, testStatus);
 
-  const { data: diagRows, error: diagErr } = await service
+  const { data: diagRows } = await service
     .from("collaborateur_diagnostics")
     .select("id, employee_id, completed_at, created_at, idmc_score, stress_score")
     .eq("employee_id", employeeId)
@@ -80,39 +78,16 @@ export async function GET(
     .order("completed_at", { ascending: false, nullsFirst: false })
     .limit(12);
 
-  if (diagErr) {
-    console.warn("[employees/[id]] collaborateur_diagnostics", diagErr.message);
+  let diagnostics = (diagRows ?? []).map((row) => mapCollaborateurDiagnostic(row as Record<string, unknown>));
+
+  if (!diagnosticsHaveData(diagnostics) && testStatus.profile_id) {
+    const fromProfile = testResultsToDiagnostic(testStatus.test_results, employeeId);
+    if (fromProfile) diagnostics = [fromProfile, ...diagnostics];
   }
 
-  let diagnostics = (diagRows ?? []).map((row) =>
-    mapCollaborateurDiagnostic(row as Record<string, unknown>),
-  );
+  const hasDiagnostics = testStatus.diagnostic_done || diagnosticsHaveData(diagnostics);
 
-  let testResults: EmployeeTestResults = {
-    disc: null,
-    idmc_score: null,
-    idmc_axes: null,
-    soft_skills: [],
-    updated_at: null,
-  };
-
-  if (profileId) {
-    testResults = await loadEmployeeTestResults(service, profileId);
-    if (!diagnosticsHaveData(diagnostics)) {
-      const fromProfile = testResultsToDiagnostic(testResults, employeeId);
-      if (fromProfile) diagnostics = [fromProfile, ...diagnostics];
-    }
-  }
-
-  const hasDiagnostics = diagnosticsHaveData(diagnostics) || hasAnyTestResults(testResults);
-
-  let recommendedAction: {
-    id: string;
-    title: string;
-    dimension_key: string;
-    description: string | null;
-  } | null = null;
-
+  let recommendedAction = null;
   const { data: linkRows } = await service
     .from("recommended_action_employees")
     .select("created_at, action:recommended_actions(id,title,dimension_key,description)")
@@ -139,9 +114,15 @@ export async function GET(
     .order("created_at", { ascending: false });
 
   return NextResponse.json({
-    employee: { ...employee, profile_id: profileId ?? employee.profile_id },
+    employee: { ...employee, profile_id: testStatus.profile_id ?? employee.profile_id },
     diagnostics,
-    test_results: testResults,
+    test_results: testStatus.test_results,
+    test_status: {
+      has_disc: testStatus.has_disc,
+      has_idmc: testStatus.has_idmc,
+      has_soft_skills: testStatus.has_soft_skills,
+      all_tests_done: testStatus.all_tests_done,
+    },
     has_diagnostics: hasDiagnostics,
     recommended_action: recommendedAction,
     missions: missions ?? [],

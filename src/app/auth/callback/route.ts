@@ -6,7 +6,10 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const nextParam = url.searchParams.get("next");
   const type = url.searchParams.get("type");
-  const fallbackPath = "/dashboard";
+  const fallbackPath = "/dashboard/apprenant";
+
+  const apprenantNext = nextParam ? decodeURIComponent(nextParam) : fallbackPath;
+  const setPasswordNext = `/auth/set-password?next=${encodeURIComponent(apprenantNext)}`;
 
   if (code) {
     const supabase = await getServerClient();
@@ -17,6 +20,9 @@ export async function GET(request: NextRequest) {
       }
       if (type === "recovery") {
         return NextResponse.redirect(new URL("/login?view=update_password", url.origin));
+      }
+      if (type === "invite" || type === "signup" || type === "magiclink") {
+        return NextResponse.redirect(new URL(setPasswordNext, url.origin));
       }
     }
   }

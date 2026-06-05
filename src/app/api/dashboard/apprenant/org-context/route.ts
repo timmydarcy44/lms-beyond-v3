@@ -85,9 +85,24 @@ export async function GET() {
       hasOrganisation = true;
       await resolveAndLinkEmployeeProfile(
         service,
-        { ...employee, profile_id: user.id },
+        {
+          ...employee,
+          profile_id: user.id,
+          first_name: employee.first_name ?? undefined,
+          last_name: employee.last_name ?? undefined,
+        },
         user.id,
       );
+      await service
+        .from("profiles")
+        .update({
+          first_name: employee.first_name,
+          last_name: employee.last_name,
+          full_name: [employee.first_name, employee.last_name].filter(Boolean).join(" "),
+          company_id: employee.company_id,
+        })
+        .eq("id", user.id);
+    }
     } else if (metaOrgId) {
       await service
         .from("profiles")

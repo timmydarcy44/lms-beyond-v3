@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { buildEmptyEntrepriseOverviewPayload } from "@/lib/entreprise/overview-empty";
 import {
+  resolveEmployeeTestStatus,
+  syncCollaborateurDiagnosticFromTests,
+} from "@/lib/entreprise/employee-test-status";
+import {
   getEntrepriseOverviewServiceClient,
   resolveEntrepriseOverviewAccess,
 } from "@/lib/entreprise/overview-route";
@@ -121,8 +125,40 @@ export async function GET() {
 
   const employees = allEmployees ?? [];
   const diagnostics = allDiagnostics ?? [];
+
+  const employeeTestStatuses = new Map<
+    string,
+    Awaited<ReturnType<typeof resolveEmployeeTestStatus>>
+  >();
+  for (const emp of employees) {
+    const status = await resolveEmployeeTestStatus(service, {
+      id: emp.id as string,
+      email: emp.email as string | null,
+      profile_id: emp.profile_id as string | null,
+      company_id: orgId,
+      first_name: emp.first_name as string | null,
+      last_name: emp.last_name as string | null,
+    });
+    employeeTestStatuses.set(emp.id as string, status);
+    if (status.diagnostic_done) {
+      await syncCollaborateurDiagnosticFromTests(
+        service,
+        {
+          id: emp.id as string,
+          email: emp.email as string | null,
+          profile_id: status.profile_id,
+          company_id: orgId,
+          first_name: emp.first_name as string | null,
+          last_name: emp.last_name as string | null,
+        },
+        orgId,
+        status,
+      );
+    }
+  }
+
   const profileIds = employees
-    .map((e) => e.profile_id as string | null)
+    .map((e) => employeeTestStatuses.get(e.id as string)?.profile_id ?? (e.profile_id as string | null))
     .filter((id): id is string => Boolean(id));
 
   const diagByEmployee = new Map<string, { idmc_score: number | null; completed_at: string | null }>();
@@ -204,18 +240,19 @@ export async function GET() {
   }
 
   const employeesTotal = employees.length;
-  const diagnosticsCompleted = diagnostics.filter((d) => d.completed_at).length;
+  const diagnosticsCompleted = employees.filter(
+    (e) => employeeTestStatuses.get(e.id as string)?.all_tests_done,
+  ).length;
   const diagnosticsTotal = Math.max(diagnostics.length, employeesTotal);
   const diagnosticsPct =
-    diagnosticsTotal > 0 ? Math.round((diagnosticsCompleted / diagnosticsTotal) * 100) : 0;
+    employeesTotal > 0 ? Math.round((diagnosticsCompleted / employeesTotal) * 100) : 0;
 
   const insufficient =
     Boolean((latestAggregat as { insuffisant?: boolean })?.insuffisant) || diagnosticsCompleted < 5;
 
-  const pendingCount = employees.filter((e) => {
-    const d = diagByEmployee.get(e.id as string);
-    return !d?.completed_at;
-  }).length;
+  const pendingCount = employees.filter(
+    (e) => !employeeTestStatuses.get(e.id as string)?.all_tests_done,
+  ).length;
 
   const recentActivity: ActivityItem[] = (recentDiagnostics ?? []).map((d) => ({
     id: `diag-${d.id as string}`,
@@ -277,8 +314,10 @@ export async function GET() {
       threshold: 5,
     },
     employees: employees.map((e) => {
+      const testStatus = employeeTestStatuses.get(e.id as string);
       const diag = diagByEmployee.get(e.id as string);
-      const hasEnrollment = e.profile_id ? enrollmentByProfile.has(e.profile_id as string) : false;
+      const pid = testStatus?.profile_id ?? (e.profile_id as string | null);
+      const hasEnrollment = pid ? enrollmentByProfile.has(pid) : false;
       return {
         id: e.id as string,
         first_name: (e.first_name as string | null) ?? null,
@@ -287,20 +326,22 @@ export async function GET() {
         job_title: (e.job_title as string | null) ?? null,
         department: (e.department as string | null) ?? null,
         created_at: (e.created_at as string | null) ?? null,
-        diagnostic_done: Boolean(diag?.completed_at),
-        idmc_score: diag?.idmc_score ?? null,
+        diagnostic_done: Boolean(testStatus?.all_tests_done ?? diag?.completed_at),
+        diagnostic_started: Boolean(testStatus?.diagnostic_done),
+        idmc_score: testStatus?.idmc_score ?? diag?.idmc_score ?? null,
         formation_active: hasEnrollment,
       };
     }),
     collaborators_preview: employees.slice(0, 5).map((e) => {
+      const testStatus = employeeTestStatuses.get(e.id as string);
       const diag = diagByEmployee.get(e.id as string);
       return {
         id: e.id as string,
         first_name: (e.first_name as string | null) ?? null,
         last_name: (e.last_name as string | null) ?? null,
         job_title: (e.job_title as string | null) ?? null,
-        diagnostic_done: Boolean(diag?.completed_at),
-        idmc_score: diag?.idmc_score ?? null,
+        diagnostic_done: Boolean(testStatus?.all_tests_done ?? diag?.completed_at),
+        idmc_score: testStatus?.idmc_score ?? diag?.idmc_score ?? null,
       };
     }),
     employees_pending: pendingCount,

@@ -15,13 +15,16 @@ async function profileIdsFromEmployeeMetadata(
   employeeId: string,
 ): Promise<string[]> {
   const ids: string[] = [];
-  const { data, error } = await service.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (error) return ids;
-  for (const user of data.users) {
-    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-    if (String(meta.employee_id ?? "") === employeeId && user.id) {
-      ids.push(user.id);
+  for (let page = 1; page <= 5; page += 1) {
+    const { data, error } = await service.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error || !data.users.length) break;
+    for (const user of data.users) {
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      if (String(meta.employee_id ?? "") === employeeId && user.id) {
+        ids.push(user.id);
+      }
     }
+    if (data.users.length < 1000) break;
   }
   return ids;
 }
@@ -51,6 +54,29 @@ export async function collectEmployeeProfileCandidates(
     ids.add(id);
   }
 
+  if (employee.first_name?.trim() && employee.last_name?.trim()) {
+    const { data: byName } = await service
+      .from("profiles")
+      .select("id")
+      .ilike("first_name", employee.first_name.trim())
+      .ilike("last_name", employee.last_name.trim())
+      .limit(5);
+    for (const row of byName ?? []) {
+      if (row.id) ids.add(String(row.id));
+    }
+  }
+
+  if (employee.company_id) {
+    const { data: byOrg } = await service
+      .from("profiles")
+      .select("id")
+      .eq("company_id", employee.company_id)
+      .limit(20);
+    for (const row of byOrg ?? []) {
+      if (row.id) ids.add(String(row.id));
+    }
+  }
+
   return Array.from(ids);
 }
 
@@ -71,7 +97,9 @@ export async function resolveAndLinkEmployeeProfile(
   if (orgId) profilePatch.company_id = orgId;
   if (employee.first_name) profilePatch.first_name = employee.first_name;
   if (employee.last_name) profilePatch.last_name = employee.last_name;
-  if (employee.email) profilePatch.email = String(employee.email).trim().toLowerCase();
+  if (employee.first_name || employee.last_name) {
+    profilePatch.full_name = [employee.first_name, employee.last_name].filter(Boolean).join(" ").trim();
+  }
 
   await service.from("profiles").upsert(profilePatch, { onConflict: "id" });
 

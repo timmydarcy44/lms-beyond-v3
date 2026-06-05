@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_URL?.trim() ||
       process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
       origin;
+    const siteBase = redirectTo.replace(/\/$/, "");
+    const callbackUrl = `${siteBase}/auth/callback?next=${encodeURIComponent("/dashboard/apprenant")}&type=invite`;
     const { data: inviteData, error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
       data: {
         role: "apprenant",
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
         organization_id: orgId,
         employee_id: employee.id,
       },
-      redirectTo: `${redirectTo.replace(/\/$/, "")}/dashboard/apprenant`,
+      redirectTo: callbackUrl,
     });
     const invitedUserId = inviteData?.user?.id ?? (await resolveAuthUserIdByEmail(service, email));
     if (invitedUserId) {
@@ -112,7 +114,7 @@ export async function POST(request: NextRequest) {
         email,
         firstName: first_name,
         companyName: String((org as { name?: string })?.name ?? "votre entreprise"),
-        inviteLink: `${origin}/dashboard/apprenant`,
+        inviteLink: callbackUrl,
       });
       inviteSent = true;
     }

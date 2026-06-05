@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function SoftSkillsIntroPage() {
+  const router = useRouter();
   const [showIntro, setShowIntro] = useState(true);
   const [fadeOutIntro, setFadeOutIntro] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     const totalDurationMs = 4200;
@@ -21,48 +21,8 @@ export default function SoftSkillsIntroPage() {
     };
   }, []);
 
-  const paymentUrl =
-    typeof process.env.NEXT_PUBLIC_SOFT_SKILLS_PAYMENT_URL === "string"
-      ? process.env.NEXT_PUBLIC_SOFT_SKILLS_PAYMENT_URL.trim()
-      : "";
-
-  const handleStartTest = async () => {
-    if (isLoading) return;
-    setCheckoutError(null);
-
-    if (!paymentUrl) {
-      window.location.href = "/dashboard/apprenant/soft-skills/paiement";
-      return;
-    }
-
-    setIsLoading(true);
-    window.location.href = paymentUrl;
-  };
-
-  const handleStripeCheckout = async () => {
-    if (isLoading) return;
-    setCheckoutError(null);
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/stripe/checkout-soft-skills", {
-        method: "POST",
-      });
-      const payload = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
-      if (!response.ok || !payload?.url) {
-        const msg =
-          payload?.error === "Stripe non configure"
-            ? "Le paiement en ligne n’est pas encore configuré sur ce serveur. Contactez l’administrateur ou configurez Stripe (STRIPE_SECRET_KEY)."
-            : payload?.error || "Impossible de démarrer le parcours pour le moment.";
-        setCheckoutError(msg);
-        setIsLoading(false);
-        return;
-      }
-      window.location.href = payload.url;
-    } catch (error) {
-      console.error(error);
-      setCheckoutError("Une erreur est survenue. Merci de réessayer.");
-      setIsLoading(false);
-    }
+  const handleStartTest = () => {
+    router.push("/soft-skills/test");
   };
 
   return (
@@ -116,12 +76,12 @@ export default function SoftSkillsIntroPage() {
         <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-16">
           <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.35em] text-white/70">
             <span className="rounded-full border border-white/25 px-3 py-1">2026</span>
-            <span className="rounded-full border border-white/25 px-3 py-1">Élite</span>
+            <span className="rounded-full border border-white/25 px-3 py-1">Gratuit</span>
             <span className="rounded-full border border-white/25 px-3 py-1">★★★★★</span>
           </div>
 
           <h1 className="mt-8 max-w-4xl text-4xl font-black uppercase tracking-wide sm:text-5xl lg:text-6xl">
-            DÉBLOQUEZ VOTRE POTENTIEL : SOFT SKILLS
+            DÉVELOPPEZ VOS SOFT SKILLS
           </h1>
           <p className="mt-6 max-w-2xl text-base text-white/70">
             Une lecture précise de votre intelligence émotionnelle et de vos
@@ -133,17 +93,11 @@ export default function SoftSkillsIntroPage() {
               <button
                 type="button"
                 onClick={handleStartTest}
-                disabled={isLoading}
-                className="rounded-full bg-[#E50914] px-8 py-3 text-sm font-black uppercase text-white shadow-[0_0_40px_rgba(229,9,20,0.45)] transition hover:shadow-[0_0_60px_rgba(229,9,20,0.75)] disabled:opacity-60"
+                className="rounded-full bg-[#E50914] px-8 py-3 text-sm font-black uppercase text-white shadow-[0_0_40px_rgba(229,9,20,0.45)] transition hover:shadow-[0_0_60px_rgba(229,9,20,0.75)]"
               >
-                {isLoading ? "Redirection..." : "COMMENCER LE TEST"}
+                COMMENCER LE TEST
               </button>
             </div>
-            {checkoutError ? (
-              <p className="max-w-xl text-sm text-amber-200/95" role="alert">
-                {checkoutError}
-              </p>
-            ) : null}
           </div>
 
           <div className="mt-12 flex flex-wrap items-center gap-4 text-sm text-white/50">

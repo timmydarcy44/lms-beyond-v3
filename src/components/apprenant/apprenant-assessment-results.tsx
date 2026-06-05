@@ -110,7 +110,9 @@ function AnalysisBlocks({ content }: { content: ReactNode }) {
                 {text}
               </h3>
             ) : (
-              <p key={line}>{text}</p>
+              <p key={line} className="text-black/75">
+                {text}
+              </p>
             );
           })}
       </div>

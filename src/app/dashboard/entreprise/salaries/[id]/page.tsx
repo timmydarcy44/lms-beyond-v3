@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
-import { useSupabase } from "@/components/providers/supabase-provider";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import {
@@ -19,6 +18,7 @@ type EmployeeRow = {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  email?: string | null;
   job_title: string | null;
   department: string | null;
 };
@@ -148,11 +148,8 @@ function SoftSkillsRadar({ data }: { data: Array<{ skill: string; score: number 
 export default function SalarieDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const supabase = useSupabase();
 
   const employeeId = params?.id;
-  // Debug 404 / routing
-  console.log("ID reçu :", employeeId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
@@ -166,62 +163,28 @@ export default function SalarieDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        let emp: EmployeeRow | null = null;
+        const res = await fetch(`/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}`);
+        const payload = (await res.json().catch(() => ({}))) as {
+          employee?: EmployeeRow;
+          diagnostics?: DiagnosticRow[];
+          recommended_action?: RecommendedActionRow | null;
+          error?: string;
+        };
 
-        const byId = await supabase
-          .from("employees")
-          .select("id,first_name,last_name,department,job_title")
-          .eq("id", employeeId)
-          .maybeSingle();
-        if (byId.error) throw byId.error;
-        emp = (byId.data ?? null) as EmployeeRow | null;
-
-        if (!emp) {
-          // optional columns - ignore errors if they don't exist
-          const byExternal = await supabase
-            .from("employees")
-            .select("id,first_name,last_name,department,job_title")
-            .eq("external_id", employeeId)
-            .maybeSingle();
-          if (!byExternal.error) emp = (byExternal.data ?? null) as EmployeeRow | null;
+        if (!res.ok) {
+          if (!cancelled) {
+            setEmployee(null);
+            setError(payload.error ?? "Impossible de charger la fiche collaborateur.");
+          }
+          return;
         }
-
-        if (!emp) {
-          const bySlug = await supabase
-            .from("employees")
-            .select("id,first_name,last_name,department,job_title")
-            .eq("slug", employeeId)
-            .maybeSingle();
-          if (!bySlug.error) emp = (bySlug.data ?? null) as EmployeeRow | null;
-        }
-
-        // 3) If still nothing, keep emp null but continue: UI must render (no notFound).
-
-        const { data: diag, error: diagErr } = await supabase
-          .from("diagnostic_results")
-          .select("id,employee_id,created_at,idmc_score,results")
-          .eq("employee_id", emp?.id ?? employeeId)
-          .order("created_at", { ascending: false })
-          .limit(12);
-        if (diagErr) throw diagErr;
-
-        // Action recommandée via table de liaison `recommended_action_employees`
-        // recommended_action_employees(employee_id, action_id, created_at) -> recommended_actions(...)
-        const { data: linkRows } = await supabase
-          .from("recommended_action_employees")
-          .select("created_at, action:recommended_actions(id,title,dimension_key,description)")
-          .eq("employee_id", emp?.id ?? employeeId)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        const linkedAction = (linkRows?.[0] as any)?.action ?? null;
 
         if (!cancelled) {
-          setEmployee((emp ?? null) as EmployeeRow | null);
-          setDiagnostics((diag ?? []) as DiagnosticRow[]);
-          setRecommendedAction((linkedAction ?? null) as RecommendedActionRow | null);
+          setEmployee(payload.employee ?? null);
+          setDiagnostics(payload.diagnostics ?? []);
+          setRecommendedAction(payload.recommended_action ?? null);
         }
-      } catch (e) {
+      } catch {
         if (!cancelled) setError("Impossible de charger la fiche collaborateur.");
       } finally {
         if (!cancelled) setLoading(false);
@@ -231,7 +194,7 @@ export default function SalarieDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [employeeId, supabase]);
+  }, [employeeId]);
 
   const displayEmployee = employee;
 

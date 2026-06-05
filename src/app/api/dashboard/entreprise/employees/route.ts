@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildEmployeeInsertRow } from "@/lib/entreprise/employees-insert";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
+import {
+  resolveAuthUserIdByEmail,
+  syncCollaboratorProfileAfterInvite,
+} from "@/lib/entreprise/sync-collaborator-profile";
 import { sendCollaboratorInviteEmail } from "@/lib/onboarding/emails";
 import { appOrigin } from "@/lib/onboarding/slug";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -79,9 +83,11 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_URL?.trim() ||
       process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
       origin;
-    const { error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
+    const { data: inviteData, error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
       data: {
         role: "apprenant",
+        first_name: first_name,
+        last_name: last_name,
         prenom: first_name,
         nom: last_name,
         company_id: orgId,
@@ -90,6 +96,17 @@ export async function POST(request: NextRequest) {
       },
       redirectTo: `${redirectTo.replace(/\/$/, "")}/dashboard/apprenant`,
     });
+    const invitedUserId = inviteData?.user?.id ?? (await resolveAuthUserIdByEmail(service, email));
+    if (invitedUserId) {
+      await syncCollaboratorProfileAfterInvite(service, {
+        userId: invitedUserId,
+        email,
+        firstName: first_name,
+        lastName: last_name,
+        organizationId: orgId,
+        employeeId: employee.id,
+      });
+    }
     if (!inviteErr) {
       await sendCollaboratorInviteEmail({
         email,

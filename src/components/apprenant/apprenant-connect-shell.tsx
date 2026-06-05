@@ -39,6 +39,8 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileSnippet | null>(null);
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [authMeta, setAuthMeta] = useState<Record<string, unknown>>({});
   const [editOpen, setEditOpen] = useState(false);
   const [snippetVersion, setSnippetVersion] = useState(0);
   const [shareCopied, setShareCopied] = useState(false);
@@ -47,6 +49,10 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
     if (!supabase) return;
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData?.user?.id;
+    if (userData?.user?.email) setAuthEmail(userData.user.email);
+    if (userData?.user?.user_metadata) {
+      setAuthMeta(userData.user.user_metadata as Record<string, unknown>);
+    }
     if (!uid) return;
     const { data } = await supabase
       .from("profiles")
@@ -67,7 +73,10 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
 
   const firstName = resolveLearnerDisplayFirstName({
     profileFirstName: profile?.first_name,
-    email: profile?.email,
+    metadataFirstName:
+      typeof authMeta.first_name === "string" ? authMeta.first_name : undefined,
+    metadataPrenom: typeof authMeta.prenom === "string" ? authMeta.prenom : undefined,
+    email: authEmail ?? profile?.email,
   });
 
   const handleSignOut = async () => {

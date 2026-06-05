@@ -30,15 +30,12 @@ export default function SoftSkillsLandingPage() {
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              className="rounded-full bg-emerald-400 px-8 py-3 text-sm font-black uppercase text-black shadow-[0_0_40px_rgba(16,185,129,0.35)]"
+            <Link
+              href="/soft-skills/test"
+              className="rounded-full bg-emerald-400 px-8 py-3 text-sm font-black uppercase text-black shadow-[0_0_40px_rgba(16,185,129,0.35)] transition hover:bg-emerald-300"
             >
-              Passer le test (29,90€)
-            </button>
-            <span className="text-xs text-white/50">
-              Paiement Stripe à connecter.
-            </span>
+              Passer le test
+            </Link>
           </div>
 
           <div className="mt-12 flex flex-wrap items-center gap-4 text-sm text-white/50">

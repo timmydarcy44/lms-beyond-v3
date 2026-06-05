@@ -47,23 +47,29 @@ export default function EnterpriseSidebar() {
         const { data: userData } = await supabase.auth.getUser();
         const user = userData.user;
         if (!user) return;
+        const authEmail = user.email ?? null;
+        const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
         const { data } = await supabase
           .from("profiles")
-          .select("prenom, nom, first_name, last_name, email")
+          .select("first_name, last_name, email")
           .eq("id", user.id)
           .maybeSingle();
         if (cancelled) return;
         const row = data as {
-          prenom?: string | null;
-          nom?: string | null;
           first_name?: string | null;
           last_name?: string | null;
           email?: string | null;
         } | null;
         setViewer({
-          prenom: row?.prenom ?? row?.first_name ?? null,
-          nom: row?.nom ?? row?.last_name ?? null,
-          email: row?.email ?? user.email ?? null,
+          prenom:
+            row?.first_name ??
+            (typeof meta.first_name === "string" ? meta.first_name : null) ??
+            (typeof meta.prenom === "string" ? meta.prenom : null),
+          nom:
+            row?.last_name ??
+            (typeof meta.last_name === "string" ? meta.last_name : null) ??
+            (typeof meta.nom === "string" ? meta.nom : null),
+          email: authEmail ?? row?.email ?? null,
         });
       } catch {
         if (!cancelled) setViewer({ prenom: null, nom: null, email: null });

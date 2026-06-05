@@ -266,10 +266,16 @@ export function ApprenantDashboardClient({
         const emailLastName = emailParts.slice(1).map(capitalize).join(" ");
         const metaFirstName = (
           typeof rawMeta.first_name === "string" ? rawMeta.first_name.trim() : ""
-        ) || metaFullName.split(" ").filter(Boolean)[0] || emailFirstName;
+        ) ||
+          (typeof rawMeta.prenom === "string" ? rawMeta.prenom.trim() : "") ||
+          metaFullName.split(" ").filter(Boolean)[0] ||
+          emailFirstName;
         const metaLastName = (
           typeof rawMeta.last_name === "string" ? rawMeta.last_name.trim() : ""
-        ) || metaFullName.split(" ").filter(Boolean).slice(1).join(" ") || emailLastName;
+        ) ||
+          (typeof rawMeta.nom === "string" ? rawMeta.nom.trim() : "") ||
+          metaFullName.split(" ").filter(Boolean).slice(1).join(" ") ||
+          emailLastName;
 
         setUser({
           id: userId,
@@ -320,12 +326,18 @@ export function ApprenantDashboardClient({
               .maybeSingle();
             profileData = created ?? null;
           } else {
+            const authEmail = userData.user.email?.trim().toLowerCase() ?? "";
+            const profileEmail = String((profileData as Record<string, unknown>).email ?? "")
+              .trim()
+              .toLowerCase();
+            const needsEmailFix = authEmail && profileEmail && authEmail !== profileEmail;
             const needsFirst = !String((profileData as Record<string, unknown>).first_name ?? "").trim();
             const needsLast = !String((profileData as Record<string, unknown>).last_name ?? "").trim();
-            if ((needsFirst && metaFirstName) || (needsLast && metaLastName)) {
+            if (needsEmailFix || (needsFirst && metaFirstName) || (needsLast && metaLastName)) {
               const { data: updated } = await supabase
                 .from("profiles")
                 .update({
+                  ...(needsEmailFix ? { email: userData.user.email ?? null } : {}),
                   first_name: needsFirst ? metaFirstName || null : (profileData as Record<string, unknown>).first_name,
                   last_name: needsLast ? metaLastName || null : (profileData as Record<string, unknown>).last_name,
                 })
@@ -613,6 +625,7 @@ export function ApprenantDashboardClient({
     const resolved = resolveLearnerDisplayFirstName({
       profileFirstName: profile?.first_name ?? cachedFirstName,
       metadataFirstName: user?.user_metadata?.first_name,
+      metadataPrenom: (user?.user_metadata as { prenom?: string } | undefined)?.prenom,
       metadataGivenName: (user?.user_metadata as { given_name?: string } | undefined)?.given_name,
       email: user?.email ?? profile?.email,
     });
@@ -1773,7 +1786,7 @@ export function ApprenantDashboardClient({
                 <div className="space-y-3">
                   {analysisBlocks.map((block, index) =>
                     block.isTitle ? (
-                      <h3 key={`${block.text}-${index}`} className="text-sm font-semibold text-white">
+                      <h3 key={`${block.text}-${index}`} className="text-sm font-semibold text-[#0a0a0a]">
                         {block.text}
                       </h3>
                     ) : (

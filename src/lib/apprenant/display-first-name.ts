@@ -6,11 +6,13 @@ export function resolveLearnerDisplayFirstName(opts: {
   profileFirstName?: string | null;
   metadataFirstName?: string | null;
   metadataGivenName?: string | null;
+  metadataPrenom?: string | null;
   email?: string | null;
 }): string {
   const direct =
     opts.profileFirstName?.trim() ||
     opts.metadataFirstName?.trim() ||
+    opts.metadataPrenom?.trim() ||
     opts.metadataGivenName?.trim();
   if (direct) return direct;
 

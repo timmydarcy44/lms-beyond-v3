@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  diagnosticsHaveData,
+  loadProfileIdmcDiagnostic,
+  type EmployeeDiagnosticPayload,
+} from "@/lib/entreprise/employee-profile-diagnostics";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type DiagnosticPayload = {
-  id: string;
-  employee_id: string;
-  created_at: string;
-  idmc_score: number | null;
-  results: Partial<
-    Record<"stress" | "organisation" | "communication" | "decision" | "leadership", number>
-  > | null;
-};
-
-function mapCollaborateurDiagnostic(row: Record<string, unknown>): DiagnosticPayload {
+function mapCollaborateurDiagnostic(row: Record<string, unknown>): EmployeeDiagnosticPayload {
   const stress = row.stress_score != null ? Number(row.stress_score) : null;
   return {
     id: String(row.id),
@@ -22,6 +17,7 @@ function mapCollaborateurDiagnostic(row: Record<string, unknown>): DiagnosticPay
     created_at: String(row.completed_at ?? row.created_at ?? new Date().toISOString()),
     idmc_score: row.idmc_score != null ? Number(row.idmc_score) : null,
     results: stress != null ? { stress } : null,
+    source: "collaborateur_diagnostics",
   };
 }
 
@@ -79,9 +75,15 @@ export async function GET(
     console.warn("[employees/[id]] collaborateur_diagnostics", diagErr.message);
   }
 
-  const diagnostics = (diagRows ?? []).map((row) =>
+  let diagnostics = (diagRows ?? []).map((row) =>
     mapCollaborateurDiagnostic(row as Record<string, unknown>),
   );
+
+  const profileId = employee.profile_id as string | null;
+  if (profileId && !diagnosticsHaveData(diagnostics)) {
+    const fromProfile = await loadProfileIdmcDiagnostic(service, profileId, employeeId);
+    if (fromProfile) diagnostics = [fromProfile, ...diagnostics];
+  }
 
   let recommendedAction: {
     id: string;
@@ -108,9 +110,18 @@ export async function GET(
     };
   }
 
+  const { data: missions } = await service
+    .from("employee_missions")
+    .select("id, title, description, due_date, status, created_at, updated_at")
+    .eq("employee_id", employeeId)
+    .eq("organization_id", orgId)
+    .order("created_at", { ascending: false });
+
   return NextResponse.json({
     employee,
     diagnostics,
+    has_diagnostics: diagnosticsHaveData(diagnostics),
     recommended_action: recommendedAction,
+    missions: missions ?? [],
   });
 }

@@ -29,6 +29,7 @@ type ProfileSnippet = {
   school_id?: string | null;
   school_class?: string | null;
   entreprise_id?: string | null;
+  company_id?: string | null;
 };
 
 export function ApprenantConnectShell({ children }: { children: ReactNode }) {
@@ -57,7 +58,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
     const { data } = await supabase
       .from("profiles")
       .select(
-        "first_name, last_name, email, phone, telephone, birth_date, city, avatar_url, school_id, school_class, entreprise_id",
+        "first_name, last_name, email, phone, telephone, birth_date, city, avatar_url, school_id, school_class, entreprise_id, company_id",
       )
       .eq("id", uid)
       .maybeSingle();
@@ -68,7 +69,9 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
     void loadProfile();
   }, [loadProfile, snippetVersion]);
 
-  const hasOrganisation = Boolean(profile?.entreprise_id || profile?.school_id);
+  const hasOrganisation = Boolean(
+    profile?.school_id || profile?.entreprise_id || profile?.company_id,
+  );
   const navItems = useMemo(() => buildApprenantNavItems(hasOrganisation), [hasOrganisation]);
 
   const firstName = resolveLearnerDisplayFirstName({

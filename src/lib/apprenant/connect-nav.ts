@@ -20,6 +20,8 @@ import {
 
   Share2,
 
+  ClipboardList,
+
 } from "lucide-react";
 
 
@@ -85,6 +87,16 @@ export function buildApprenantNavItems(hasOrganisation: boolean): ApprenantNavIt
   if (hasOrganisation) {
 
     items.splice(6, 0, {
+
+      label: "Mes missions",
+
+      href: "/dashboard/apprenant/missions",
+
+      icon: ClipboardList,
+
+    });
+
+    items.splice(7, 0, {
 
       label: "Mon entreprise",
 

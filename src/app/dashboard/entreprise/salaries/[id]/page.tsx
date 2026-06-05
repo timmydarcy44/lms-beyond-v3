@@ -3,6 +3,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
+import {
+  EnterpriseEmployeeMissions,
+  type EmployeeMission,
+} from "@/components/enterprise/enterprise-employee-missions";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import {
@@ -154,6 +158,8 @@ export default function SalarieDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
+  const [hasDiagnostics, setHasDiagnostics] = useState(false);
+  const [missions, setMissions] = useState<EmployeeMission[]>([]);
   const [recommendedAction, setRecommendedAction] = useState<RecommendedActionRow | null>(null);
 
   useEffect(() => {
@@ -167,6 +173,8 @@ export default function SalarieDetailPage() {
         const payload = (await res.json().catch(() => ({}))) as {
           employee?: EmployeeRow;
           diagnostics?: DiagnosticRow[];
+          has_diagnostics?: boolean;
+          missions?: EmployeeMission[];
           recommended_action?: RecommendedActionRow | null;
           error?: string;
         };
@@ -182,6 +190,8 @@ export default function SalarieDetailPage() {
         if (!cancelled) {
           setEmployee(payload.employee ?? null);
           setDiagnostics(payload.diagnostics ?? []);
+          setHasDiagnostics(Boolean(payload.has_diagnostics));
+          setMissions(payload.missions ?? []);
           setRecommendedAction(payload.recommended_action ?? null);
         }
       } catch {
@@ -220,7 +230,8 @@ export default function SalarieDetailPage() {
   );
 
   const strengths = useMemo(() => {
-    const top = [...dims].sort((a, b) => b.score - a.score).slice(0, 3);
+    if (!hasDiagnostics) return [];
+    const top = [...dims].filter((d) => d.score > 0).sort((a, b) => b.score - a.score).slice(0, 3);
     return top.map((t) => {
       if (t.key === "organisation") return "Travaille mieux avec des priorités claires.";
       if (t.key === "communication") return "Communique de façon fluide et constructive.";
@@ -228,21 +239,23 @@ export default function SalarieDetailPage() {
       if (t.key === "leadership") return "Prend naturellement le lead sur des sujets précis.";
       return "Garde une bonne stabilité sous pression.";
     });
-  }, [dims]);
+  }, [dims, hasDiagnostics]);
 
   const watchouts = useMemo(() => {
-    const low = [...dims].sort((a, b) => a.score - b.score).slice(0, 2);
+    if (!hasDiagnostics) return [];
+    const low = [...dims].filter((d) => d.score > 0).sort((a, b) => a.score - b.score).slice(0, 2);
     const list = low.map((t) => {
-      if (t.key === "stress") return "Risque de surcharge cognitive si le rythme s’accélère.";
+      if (t.key === "stress") return "Risque de surcharge cognitive si le rythme s'accélère.";
       if (t.key === "organisation") return "Peut se disperser sans priorités explicites.";
       if (t.key === "communication") return "Peut se fermer si les échanges deviennent flous.";
       if (t.key === "decision") return "Peut hésiter quand les objectifs ne sont pas tranchés.";
-      return "Peut se désengager si le rôle n’est pas clarifié.";
+      return "Peut se désengager si le rôle n'est pas clarifié.";
     });
     return Array.from(new Set(list));
-  }, [dims]);
+  }, [dims, hasDiagnostics]);
 
   const aiInsight = useMemo(() => {
+    if (!hasDiagnostics) return null;
     const org = dims.find((d) => d.key === "organisation")?.score ?? 0;
     const stress = dims.find((d) => d.key === "stress")?.score ?? 0;
     if (org >= 70 && stress >= 60) {
@@ -252,9 +265,10 @@ export default function SalarieDetailPage() {
       return "Gagne en efficacité quand la charge est stabilisée et que les attentes sont explicites.";
     }
     return "Progresse plus vite quand les consignes sont concrètes et les retours réguliers.";
-  }, [dims]);
+  }, [dims, hasDiagnostics]);
 
   const actionBlock = useMemo(() => {
+    if (!hasDiagnostics) return null;
     if (recommendedAction) return recommendedAction;
     const stress = dims.find((d) => d.key === "stress")?.score ?? 0;
     if (stress < 50) {
@@ -271,7 +285,7 @@ export default function SalarieDetailPage() {
       dimension_key: "organisation",
       description: "Un accompagnement individuel est recommandé.",
     } satisfies RecommendedActionRow;
-  }, [dims, recommendedAction]);
+  }, [dims, recommendedAction, hasDiagnostics]);
 
   if (loading) {
     return (
@@ -335,6 +349,24 @@ export default function SalarieDetailPage() {
           </button>
         </header>
 
+        {!hasDiagnostics ? (
+          <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50 px-6 py-5 text-sm text-amber-950">
+            <p className="font-semibold">Aucun diagnostic enregistré</p>
+            <p className="mt-1 text-amber-900/80">
+              Les scores IDMC, le profil synthétique et les recommandations apparaîtront lorsque le
+              collaborateur aura passé les tests (DISC, IDMC, soft skills) depuis son dashboard apprenant.
+            </p>
+          </div>
+        ) : null}
+
+        <EnterpriseEmployeeMissions
+          employeeId={employeeId!}
+          missions={missions}
+          onChange={setMissions}
+        />
+
+        {hasDiagnostics ? (
+        <>
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
             <div className="flex items-start justify-between gap-6">
@@ -417,26 +449,28 @@ export default function SalarieDetailPage() {
               <p className="mt-3 text-sm text-gray-700">{aiInsight}</p>
             </div>
 
-            <div className="mt-5 rounded-3xl border border-indigo-200 bg-indigo-50 p-6">
-              <div className="text-xs font-black uppercase tracking-widest text-indigo-900">Action recommandée</div>
-              <p className="mt-3 text-sm font-bold text-indigo-950">{actionBlock.title}</p>
-              <p className="mt-2 text-sm text-indigo-900/80">
-                {actionBlock.description ?? "Action concrète proposée par Beyond."}
-              </p>
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard/entreprise/actions/demo-stress")}
-                className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-gray-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-gray-900"
-              >
-                Accéder aux Experts Qualifiés <ChevronRight className="h-4 w-4" aria-hidden />
-              </button>
-              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
-                <div className="text-xs font-black uppercase tracking-widest text-emerald-800">Impact Business estimé</div>
-                <p className="mt-2 text-sm font-semibold text-emerald-950">
-                  Réduction du risque d&apos;absentéisme et gain de productivité estimé : +15% sur le trimestre.
+            {actionBlock ? (
+              <div className="mt-5 rounded-3xl border border-indigo-200 bg-indigo-50 p-6">
+                <div className="text-xs font-black uppercase tracking-widest text-indigo-900">Action recommandée</div>
+                <p className="mt-3 text-sm font-bold text-indigo-950">{actionBlock.title}</p>
+                <p className="mt-2 text-sm text-indigo-900/80">
+                  {actionBlock.description ?? "Action concrète proposée par Beyond."}
                 </p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/dashboard/entreprise/actions/demo-stress")}
+                  className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-gray-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-gray-900"
+                >
+                  Accéder aux Experts Qualifiés <ChevronRight className="h-4 w-4" aria-hidden />
+                </button>
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                  <div className="text-xs font-black uppercase tracking-widest text-emerald-800">Impact Business estimé</div>
+                  <p className="mt-2 text-sm font-semibold text-emerald-950">
+                    Réduction du risque d&apos;absentéisme et gain de productivité estimé : +15% sur le trimestre.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </section>
 
@@ -459,18 +493,20 @@ export default function SalarieDetailPage() {
           <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
             <h3 className="text-lg font-black tracking-tight text-gray-950">Accompagné</h3>
             <p className="mt-2 text-sm text-gray-600">Accès aux experts recommandés après prescription.</p>
-            <button
-              type="button"
-              onClick={() =>
-                router.push(`/dashboard/entreprise?recommendedActionId=${encodeURIComponent(actionBlock.id)}`)
-              }
-              className="mt-5 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-950 transition hover:bg-gray-50"
-            >
-              Accéder aux experts recommandés
-            </button>
+            {actionBlock ? (
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(`/dashboard/entreprise?recommendedActionId=${encodeURIComponent(actionBlock.id)}`)
+                }
+                className="mt-5 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-950 transition hover:bg-gray-50"
+              >
+                Accéder aux experts recommandés
+              </button>
+            ) : null}
             <div className="mt-4 flex items-start gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 text-sm text-gray-700">
               <AlertTriangle className="mt-0.5 h-4 w-4 text-gray-500" aria-hidden />
-              <span>Pas de marketplace : l’accès experts reste réservé au tunnel de recommandation Beyond.</span>
+              <span>Pas de marketplace : l'accès experts reste réservé au tunnel de recommandation Beyond.</span>
             </div>
           </div>
 
@@ -504,6 +540,8 @@ export default function SalarieDetailPage() {
             </div>
           </div>
         </section>
+        </>
+        ) : null}
       </main>
     </div>
   );

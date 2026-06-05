@@ -19,8 +19,8 @@ export function ApprenantWalletBadgesGrid({
 }) {
   if (badges.length === 0) {
     return (
-      <div className={`${APPRENANT_CARD_CLASS} text-center`}>
-        <p className="text-sm text-black/60">
+      <div className={`${APPRENANT_CARD_BODY} text-center`}>
+        <p className="text-sm text-white/60">
           Aucun badge obtenu pour le moment. Passez une épreuve Open Badge depuis votre dashboard
           pour la voir apparaître ici.
         </p>

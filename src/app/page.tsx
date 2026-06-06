@@ -50,9 +50,9 @@ export async function generateMetadata(): Promise<Metadata> {
   if (hostOnly === "beyondcenter.fr" && !isLocalhost) {
     return {
       metadataBase: new URL("https://beyondcenter.fr"),
-      title: "Beyond Center | Performance cognitive pour les entreprises",
+      title: "Beyond | Pilotez les compétences. Pas les intuitions.",
       description:
-        "Comprenez comment vos équipes fonctionnent. Définissez une stratégie de développement adaptée. Déployez la performance via une plateforme digitale propriétaire.",
+        "Plateforme d'intelligence des compétences pour entreprises, CFA et écoles : cartographie, écarts, parcours, Open Badges et pilotage par la donnée et l'IA.",
       alternates: {
         canonical: "https://beyondcenter.fr/",
       },
@@ -60,9 +60,9 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
-    title: "Beyond Center | Performance cognitive pour les entreprises",
+    title: "Beyond | Pilotez les compétences. Pas les intuitions.",
     description:
-      "Comprenez comment vos équipes fonctionnent. Définissez une stratégie de développement adaptée. Déployez la performance via une plateforme digitale propriétaire.",
+      "Plateforme d'intelligence des compétences pour entreprises, CFA et écoles : cartographie, écarts, parcours, Open Badges et pilotage par la donnée et l'IA.",
   };
 }
 

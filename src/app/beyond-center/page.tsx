@@ -1,5 +1,5 @@
-import { BeyondNoSchoolLanding } from "@/app/beyond-no-school/landing-client";
+import { BeyondSaasLanding } from "@/components/marketing/beyond-saas-landing";
 
 export default function BeyondCenterPage() {
-  return <BeyondNoSchoolLanding />;
+  return <BeyondSaasLanding />;
 }

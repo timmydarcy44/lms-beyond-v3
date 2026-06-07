@@ -21,7 +21,9 @@ const typeStyles: Record<string, { label: string; tone: string }> = {
   video: { label: "Vidéo", tone: "bg-sky-500/20 text-sky-100" },
   audio: { label: "Audio", tone: "bg-emerald-500/20 text-emerald-100" },
   html: { label: "HTML", tone: "bg-violet-500/20 text-violet-100" },
-};: Record<string, string> = {
+};
+
+const statusTone: Record<string, string> = {
   published: "text-emerald-200",
   draft: "text-white/60",
 };

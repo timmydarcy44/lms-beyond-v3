@@ -16,7 +16,7 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 /** Profil minimal pour redirection post-login (cookies requête). */
 async function fetchProfileForRequest(
   request: NextRequest,
-): Promise<{ role: string | null; role_type: string | null } | null> {
+): Promise<{ role: string | null; role_type: string | null; email: string | null } | null> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
   const cookieAdapter = NextResponse.next();
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -38,10 +38,10 @@ async function fetchProfileForRequest(
   if (!user) return null;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, role_type")
+    .select("role, role_type, email")
     .eq("id", user.id)
     .maybeSingle();
-  return (profile as { role?: string | null; role_type?: string | null } | null) ?? null;
+  return (profile as { role?: string | null; role_type?: string | null; email?: string | null } | null) ?? null;
 }
 
 async function fetchProfileRoleForRequest(request: NextRequest): Promise<string> {
@@ -86,6 +86,7 @@ const JESSICA_ALIAS_PREFIXES = [
   "/a-propos",
   "/specialites",
   "/programmes",
+  "/parcours-guide",
   "/orientation",
   "/ressources",
   "/blog",
@@ -298,7 +299,9 @@ export async function middleware(request: NextRequest) {
   /** Pages Next sous `/jessica-contentin/...` (ex. programmes) : ne pas réécrire en URL courte — la route réelle vit ici. */
   const isJessicaContentinAppPath =
     url.pathname === "/jessica-contentin/programmes" ||
-    url.pathname.startsWith("/jessica-contentin/programmes/");
+    url.pathname.startsWith("/jessica-contentin/programmes/") ||
+    url.pathname === "/jessica-contentin/parcours-guide" ||
+    url.pathname.startsWith("/jessica-contentin/parcours-guide/");
 
   if (isJessica && isJessicaPublicHost && url.pathname.startsWith("/jessica-contentin/") && !isJessicaContentinAppPath) {
     const cleanUrl = request.nextUrl.clone();

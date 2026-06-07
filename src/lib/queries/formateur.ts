@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 
 import { cloneCourseBuilderSnapshot } from "@/data/course-builder-fallback";
 import { getServerClient, getServiceRoleClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
-import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { getFormateurScopeForSession } from "@/lib/formateur/scope-server";
 import { CourseBuilderSnapshot } from "@/types/course-builder";
 
 export type FormateurKpis = {
@@ -632,15 +632,15 @@ export const getFormateurCourses = async (): Promise<FormateurCourseListItem[]> 
     const userId = authData?.user?.id ?? null;
     if (!userId) return [];
 
+    const scope = await getFormateurScopeForSession();
     const serviceOnly = getServiceRoleClient();
-    const superAdmin = await isSuperAdmin();
-    const fullCatalog = Boolean(serviceOnly && superAdmin);
+    const fullCatalog = Boolean(scope?.fullCatalog && serviceOnly);
     const db = fullCatalog ? serviceOnly! : supabase;
 
     let coursesData: CourseRow[] = [];
 
     if (fullCatalog) {
-      // Super admin (+ allowlist email) avec service role : toutes les formations, toutes galaxies / orgs.
+      // Super admin Beyond (Timmy) : toutes les formations.
       const { data, error } = await db
         .from("courses")
         .select("id, title, status, cover_image, updated_at, created_at, builder_snapshot, level")
@@ -648,6 +648,31 @@ export const getFormateurCourses = async (): Promise<FormateurCourseListItem[]> 
         .limit(500);
       if (error) throw error;
       coursesData = (data ?? []) as CourseRow[];
+    } else if (scope?.orgIds?.length) {
+      const ownedRes = await supabase
+        .from("courses")
+        .select("id, title, status, cover_image, updated_at, created_at, builder_snapshot, level")
+        .or(`creator_id.eq.${userId},owner_id.eq.${userId}`)
+        .order("updated_at", { ascending: false })
+        .limit(100);
+
+      const orgRes = await supabase
+        .from("courses")
+        .select("id, title, status, cover_image, updated_at, created_at, builder_snapshot, level")
+        .in("org_id", scope.orgIds)
+        .order("updated_at", { ascending: false })
+        .limit(200);
+
+      const byId = new Map<string, CourseRow>();
+      for (const row of [...(ownedRes.data ?? []), ...(orgRes.data ?? [])]) {
+        const id = row?.id != null ? String(row.id) : "";
+        if (id) byId.set(id, row as CourseRow);
+      }
+      coursesData = Array.from(byId.values()).sort((a, b) => {
+        const ta = String(a.updated_at ?? a.created_at ?? "");
+        const tb = String(b.updated_at ?? b.created_at ?? "");
+        return tb.localeCompare(ta);
+      });
     } else {
       const ownedRes = await supabase
         .from("courses")
@@ -1009,18 +1034,13 @@ export type FormateurOrganization = {
 };
 
 export const getFormateurOrganizations = async (): Promise<FormateurOrganization[]> => {
+  const scope = await getFormateurScopeForSession();
+  if (!scope) return [];
+
   const supabase = await getServerClient();
   if (!supabase) return [];
 
   try {
-    const { data: authData } = await supabase.auth.getUser();
-    if (!authData?.user?.id) return [];
-
-    const userId = authData.user.id;
-    const superAdmin = await isSuperAdmin();
-    // Ne PAS utiliser getServiceRoleClientOrFallback() pour un catalogue « tout tenant » : le fallback est le client session (RLS).
-    const serviceOnly = getServiceRoleClient();
-
     const mapOrgRows = (rows: any[] | null): FormateurOrganization[] =>
       (rows ?? []).map((o) => ({
         id: String(o.id),
@@ -1028,7 +1048,9 @@ export const getFormateurOrganizations = async (): Promise<FormateurOrganization
         slug: o.slug != null && String(o.slug).length ? String(o.slug) : null,
       }));
 
-    /** Catalogue complet via RPC Postgres (SECURITY DEFINER) si pas de clé service ou requête service en échec. */
+    const serviceOnly = getServiceRoleClient();
+    const superAdmin = await isSuperAdmin();
+
     const tryOrganizationsCatalogueRpc = async (): Promise<FormateurOrganization[] | null> => {
       if (!superAdmin) return null;
       const { data, error } = await supabase.rpc("list_organizations_catalogue_for_lms_admin");
@@ -1040,61 +1062,30 @@ export const getFormateurOrganizations = async (): Promise<FormateurOrganization
       return mapOrgRows(data as any[]);
     };
 
-    // 1) Super-admin + clé service : lecture directe (idéal).
-    if (superAdmin && serviceOnly) {
-      const { data: orgs, error: oErr } = await serviceOnly
-        .from("organizations")
-        .select("id, name, slug")
-        .order("name", { ascending: true })
-        .limit(500);
+    if (scope.fullCatalog) {
+      if (serviceOnly) {
+        const { data: orgs, error: oErr } = await serviceOnly
+          .from("organizations")
+          .select("id, name, slug")
+          .order("name", { ascending: true })
+          .limit(500);
 
-      if (!oErr && orgs?.length) {
-        return mapOrgRows(orgs as any[]);
+        if (!oErr && orgs?.length) {
+          return mapOrgRows(orgs as any[]);
+        }
       }
-      if (oErr && process.env.NODE_ENV !== "production") {
-        console.warn("[formateur] organizations service query failed, trying RPC", oErr.message);
-      }
+      const fromRpc = await tryOrganizationsCatalogueRpc();
+      if (fromRpc?.length) return fromRpc;
+      return [];
     }
 
-    // 2) Super-admin sans service, ou service en erreur : RPC (migration 20260503220000).
-    const fromRpc = await tryOrganizationsCatalogueRpc();
-    if (fromRpc?.length) {
-      return fromRpc;
-    }
+    if (!scope.orgIds?.length) return [];
 
-    const staffRoles = new Set(
-      ["admin", "instructor", "formateur", "trainer", "tutor", "staff", "owner", "super_admin"].map((r) =>
-        r.toLowerCase(),
-      ),
-    );
-
-    const { data: memberships, error: mErr } = await supabase
-      .from("org_memberships")
-      .select("org_id, role")
-      .eq("user_id", userId);
-
-    if (mErr || !memberships?.length) return [];
-
-    const normalized = (memberships as any[]).map((m) => ({
-      org_id: String(m?.org_id ?? "").trim(),
-      role: String(m?.role ?? "").toLowerCase().trim(),
-    }));
-
-    let orgIds: string[];
-    if (superAdmin && !serviceOnly) {
-      // Super-admin sans SERVICE_ROLE en env : au minimum toutes les orgs où le compte a une ligne membership (tout rôle).
-      orgIds = Array.from(new Set(normalized.map((m) => m.org_id).filter(Boolean)));
-    } else {
-      const staffIds = normalized.filter((m) => m.org_id && staffRoles.has(m.role)).map((m) => m.org_id);
-      orgIds = Array.from(new Set(staffIds.length ? staffIds : normalized.map((m) => m.org_id).filter(Boolean)));
-    }
-
-    if (orgIds.length === 0) return [];
-
-    const { data: orgs, error: oErr } = await supabase
+    const db = serviceOnly ?? supabase;
+    const { data: orgs, error: oErr } = await db
       .from("organizations")
       .select("id, name, slug")
-      .in("id", orgIds)
+      .in("id", scope.orgIds)
       .order("name", { ascending: true });
 
     if (oErr || !orgs) return [];
@@ -1127,9 +1118,9 @@ export const getFormateurLearners = async (): Promise<FormateurLearner[]> => {
     }
 
     const instructorUserId = authData.user.id;
-    const superAdmin = await isSuperAdmin();
+    const scope = await getFormateurScopeForSession();
 
-    if (superAdmin) {
+    if (scope?.fullCatalog) {
       const adminClient = getServiceRoleClient();
 
       if (!adminClient) {
@@ -1167,6 +1158,26 @@ export const getFormateurLearners = async (): Promise<FormateurLearner[]> => {
 
       console.log("[formateur] Super admin - apprenants disponibles:", uniqueLearners.length);
       return uniqueLearners;
+    }
+
+    if (scope?.orgIds?.length) {
+      const adminClient = getServiceRoleClient() ?? supabase;
+      const { data, error } = await adminClient
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("school_id", scope.orgIds)
+        .order("full_name", { ascending: true })
+        .limit(500);
+
+      if (error || !data) {
+        console.warn("[formateur] Apprenants org scopés:", error);
+      } else {
+        return data.map((profile) => ({
+          id: profile.id,
+          full_name: profile.full_name,
+          email: profile.email,
+        }));
+      }
     }
 
     console.log("[formateur] Fetching learners for instructor:", instructorUserId);
@@ -1449,62 +1460,23 @@ export const getFormateurPaths = async (): Promise<FormateurPathOverview[]> => {
   }
 
   try {
-    const [{ data: authData, error: authError }, superAdmin] = await Promise.all([
-      supabase.auth.getUser(),
-      isSuperAdmin(),
-    ]);
+    const [{ data: authData, error: authError }] = await Promise.all([supabase.auth.getUser()]);
     if (authError) throw authError;
 
     const userId = authData?.user?.id ?? null;
     if (!userId) return [];
-    // Super-admin : lire `paths` avec la vraie clé service uniquement (pas le fallback session, sinon RLS partielle).
+
+    const scope = await getFormateurScopeForSession();
     const serviceOnly = getServiceRoleClient();
-    const client = superAdmin && serviceOnly ? serviceOnly : supabase;
+    const client = scope?.fullCatalog && serviceOnly ? serviceOnly : supabase;
 
-    // Scope org: parcours d'une galaxie où le formateur est staff (sauf super-admin).
     let orgIds: string[] | null = null;
-    if (!superAdmin) {
-      try {
-        const runMemberships = async (userField: "user_id" | "profile_id") => {
-          return await supabase.from("org_memberships").select("org_id, role").eq(userField, userId);
-        };
-
-        let memberships: any[] | null = null;
-        let mErr: any | null = null;
-        {
-          const res = await runMemberships("user_id");
-          memberships = (res as any).data ?? null;
-          mErr = (res as any).error ?? null;
-        }
-        if ((mErr?.code === "PGRST204" || mErr?.code === "42703") && memberships == null) {
-          const res = await runMemberships("profile_id");
-          memberships = (res as any).data ?? null;
-          mErr = (res as any).error ?? null;
-        }
-        if (!mErr && memberships?.length) {
-          const staffRoles = new Set(["admin", "instructor", "formateur", "trainer", "super_admin", "staff", "owner"]);
-          const normalized = (memberships as any[]).map((m) => ({
-            org_id: String(m?.org_id ?? "").trim(),
-            role: String(m?.role ?? "").toLowerCase().trim(),
-          }));
-          const staffIds = normalized
-            .filter((m) => m.org_id && staffRoles.has(m.role))
-            .map((m) => m.org_id);
-          // Fallback: si on a des memberships mais aucun rôle ne match (libellés custom),
-          // on prend quand même les org_id pour éviter un dashboard vide.
-          const ids = staffIds.length ? staffIds : normalized.map((m) => m.org_id).filter(Boolean);
-          orgIds = Array.from(new Set(ids));
-        } else {
-          orgIds = [];
-        }
-      } catch {
-        // échec de résolution memberships => ne pas filtrer par org (fail-open) pour éviter un dashboard vide
-        orgIds = null;
-      }
+    if (!scope?.fullCatalog) {
+      orgIds = scope?.orgIds ?? [];
     }
 
     const runPathsQuery = async (select: string) => {
-      const cap = superAdmin ? 500 : 48;
+      const cap = scope?.fullCatalog ? 500 : 48;
       let q = client.from("paths").select(select).order("created_at", { ascending: false }).limit(cap);
       if (Array.isArray(orgIds)) {
         if (orgIds.length === 0) return { data: [], error: null } as any;

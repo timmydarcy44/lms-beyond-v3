@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getFormateurScopeForSession } from "@/lib/formateur/scope-server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { syncCatalogItem } from "@/lib/utils/sync-catalog-item";
 import { createStripeProduct, updateStripeProduct } from "@/lib/stripe/products";
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
         category: formData.get("category") as string,
         cover_image_url: formData.get("cover_image_url") as string,
         published: formData.get("published") === "true",
+        html_content: formData.get("html_content") as string | null,
       };
       pdfFile = formData.get("file") as File | null;
       console.log("[api/resources] FormData reçu, fichier PDF:", pdfFile?.name);
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest) {
       price,
       category,
       cover_image_url,
+      html_content,
     } = body as {
       resourceId?: string;
       published?: boolean;
@@ -76,6 +79,7 @@ export async function POST(request: NextRequest) {
       price?: number;
       category?: string;
       cover_image_url?: string | null;
+      html_content?: string | null;
     };
 
     // Si pas de resourceId, c'est une création
@@ -84,125 +88,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Titre de ressource requis" }, { status: 400 });
       }
 
-      // Vérifier si l'utilisateur est Super Admin
-      const { data: superAdmin } = await supabase
-        .from("super_admins")
-        .select("user_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .maybeSingle();
+      // Org du studio formateur (Jessica = org Jessica uniquement)
+      const scope = await getFormateurScopeForSession();
+      let userOrgId: string | null = scope?.primaryOrgId ?? null;
 
-      const isSuperAdmin = !!superAdmin;
-
-      // Récupérer l'org_id de l'utilisateur depuis org_memberships
-      // On prend la première organisation où l'utilisateur est instructor, admin ou tutor
-      let userOrgId: string | null = null;
-      
-      if (!isSuperAdmin) {
+      if (!userOrgId) {
         try {
           const { data: memberships } = await supabase
             .from("org_memberships")
             .select("org_id, role")
             .eq("user_id", user.id)
-            .in("role", ["instructor", "admin", "tutor"])
+            .in("role", ["instructor", "admin", "tutor", "formateur"])
             .limit(1);
 
           if (memberships && memberships.length > 0) {
             userOrgId = memberships[0].org_id;
-            console.log("[api/resources] Org ID trouvé:", userOrgId);
-          } else {
-            console.warn("[api/resources] Aucune organisation trouvée pour l'utilisateur");
-            // Si aucun membership n'est trouvé, essayer aussi avec le rôle "learner"
-            const { data: learnerMemberships } = await supabase
-              .from("org_memberships")
-              .select("org_id")
-              .eq("user_id", user.id)
-              .eq("role", "learner")
-              .limit(1);
-            
-            if (learnerMemberships && learnerMemberships.length > 0) {
-              userOrgId = learnerMemberships[0].org_id;
-              console.log("[api/resources] Org ID trouvé (learner):", userOrgId);
-            }
           }
         } catch (orgError) {
-          console.error("[api/resources] Erreur lors de la récupération de l'org_id:", orgError);
-        }
-      } else {
-        // Pour les Super Admins, récupérer leur première organisation ou créer une organisation par défaut
-        const { data: memberships } = await supabase
-          .from("org_memberships")
-          .select("org_id")
-          .eq("user_id", user.id)
-          .limit(1);
-
-        if (memberships && memberships.length > 0) {
-          userOrgId = memberships[0].org_id;
-          console.log("[api/resources] Org ID trouvé pour Super Admin:", userOrgId);
-        } else {
-          // Créer une organisation par défaut pour le Super Admin
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("email, full_name")
-            .eq("id", user.id)
-            .single();
-
-          const orgName = profile?.full_name || profile?.email || "Organisation Super Admin";
-          
-          // Utiliser le service role client pour bypasser RLS lors de la création d'organisation
-          const { getServiceRoleClient } = await import("@/lib/supabase/server");
-          const serviceClient = getServiceRoleClient();
-          
-          // Si service client disponible, l'utiliser pour bypasser RLS
-          const clientToUse = serviceClient || supabase;
-          
-          // Essayer d'abord avec description, puis sans si la colonne n'existe pas
-          let orgCreateResult = await clientToUse
-            .from("organizations")
-            .insert({
-              name: orgName,
-              description: "Organisation par défaut pour Super Admin",
-            })
-            .select()
-            .single();
-
-          // Si erreur liée à description, réessayer sans
-          if (orgCreateResult.error && (
-            orgCreateResult.error.message?.includes("description") || 
-            orgCreateResult.error.code === "42703" ||
-            orgCreateResult.error.message?.includes("Could not find")
-          )) {
-            console.log("[api/resources] Colonne description non trouvée, création sans description");
-            orgCreateResult = await clientToUse
-              .from("organizations")
-              .insert({
-                name: orgName,
-              })
-              .select()
-              .single();
-          }
-
-          const { data: newOrg, error: orgCreateError } = orgCreateResult;
-
-          if (!orgCreateError && newOrg) {
-            userOrgId = newOrg.id;
-            // Ajouter le Super Admin comme admin de cette organisation
-            await supabase
-              .from("org_memberships")
-              .insert({
-                user_id: user.id,
-                org_id: newOrg.id,
-                role: "admin",
-              });
-            console.log("[api/resources] Organisation créée pour Super Admin:", userOrgId);
-          } else {
-            console.error("[api/resources] Erreur lors de la création de l'organisation:", orgCreateError);
-          }
+          console.error("[api/resources] Erreur org_id:", orgError);
         }
       }
-      
-      // Si org_id est requis mais non trouvé, créer une organisation d'urgence
-      if (!userOrgId) {
+
+      if (!userOrgId && !scope?.fullCatalog) {
         console.warn("[api/resources] Aucun org_id trouvé, création d'organisation d'urgence");
         const { data: profile } = await supabase
           .from("profiles")
@@ -253,7 +160,7 @@ export async function POST(request: NextRequest) {
             .insert({
               user_id: user.id,
               org_id: emergencyOrg.id,
-              role: isSuperAdmin ? "admin" : "instructor",
+              role: "admin",
             });
           console.log("[api/resources] Organisation d'urgence créée:", userOrgId);
         } else {
@@ -288,8 +195,14 @@ export async function POST(request: NextRequest) {
         baseData.description = description.trim();
       }
 
-      // Ajouter prix si fourni (on essaiera, mais si la colonne n'existe pas, on continuera)
-      // Le prix sera ajouté dans toutes les tentatives, mais si la colonne n'existe pas, l'erreur sera ignorée
+      const resourceType = type || "guide";
+      if (resourceType === "html" && html_content?.trim()) {
+        baseData.html_content = html_content.trim();
+        baseData.kind = "html";
+        baseData.type = "html";
+      }
+
+      // Ajouter prix si fourni
       if (price !== undefined && price !== null) {
         baseData.price = parseFloat(String(price)) || 0;
       }
@@ -310,7 +223,7 @@ export async function POST(request: NextRequest) {
       // On essaie d'abord les combinaisons les plus probables
       const attempts = [
         // Tentative 1: Avec org_id, created_by, status et type (combinaison la plus courante)
-        { ...baseData, created_by: user.id, status: published ? "published" : "draft", type: type || "guide" },
+        { ...baseData, created_by: user.id, status: published ? "published" : "draft", type: resourceType || "guide" },
         // Tentative 2: Avec org_id, created_by et status, sans type
         { ...baseData, created_by: user.id, status: published ? "published" : "draft" },
         // Tentative 3: Avec org_id, created_by et published (boolean)

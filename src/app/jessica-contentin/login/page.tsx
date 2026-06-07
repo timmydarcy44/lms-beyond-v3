@@ -107,7 +107,19 @@ function JessicaContentinLoginContent() {
         setError(signInError.message || "Identifiants incorrects.");
         return;
       }
-      router.push(dest);
+      let destination = dest;
+      try {
+        const res = await fetch("/api/auth/resolve-destination", { method: "POST" });
+        if (res.ok) {
+          const payload = (await res.json()) as { destination?: string };
+          if (payload.destination?.startsWith("/")) {
+            destination = payload.destination;
+          }
+        }
+      } catch {
+        // fallback dest
+      }
+      router.push(destination);
       router.refresh();
     } catch {
       setError("Impossible de se connecter.");

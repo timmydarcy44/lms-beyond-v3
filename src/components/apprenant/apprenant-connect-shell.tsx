@@ -7,6 +7,10 @@ import { ArrowLeft, ChevronLeft, ChevronRight, LifeBuoy, LogOut, Menu, Sparkles,
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { buildApprenantNavItems } from "@/lib/apprenant/connect-nav";
+import {
+  getConnectShellTheme,
+  type ApprenantConnectVariant,
+} from "@/lib/apprenant/connect-theme";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import {
   buildPublicProfileUrl,
@@ -32,7 +36,14 @@ type ProfileSnippet = {
   company_id?: string | null;
 };
 
-export function ApprenantConnectShell({ children }: { children: ReactNode }) {
+export function ApprenantConnectShell({
+  children,
+  variant = "edge",
+}: {
+  children: ReactNode;
+  variant?: ApprenantConnectVariant;
+}) {
+  const theme = getConnectShellTheme(variant);
   const supabase = createSupabaseBrowserClient();
   const pathname = usePathname();
   const router = useRouter();
@@ -95,7 +106,10 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
     void loadProfile();
   }, [loadProfile, snippetVersion]);
 
-  const navItems = useMemo(() => buildApprenantNavItems(hasOrganisation), [hasOrganisation]);
+  const navItems = useMemo(
+    () => buildApprenantNavItems(hasOrganisation, variant),
+    [hasOrganisation, variant],
+  );
 
   const firstName = resolveLearnerDisplayFirstName({
     profileFirstName: profile?.first_name,
@@ -108,7 +122,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
   const handleSignOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
-    window.location.href = "/particuliers";
+    window.location.href = theme.signOutHref;
   };
 
   const scrollToProfilOrHome = useCallback(() => {
@@ -150,8 +164,9 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
     () => ({
       openEditProfile: () => setEditOpen(true),
       sharePublicProfile: () => void handleShareProfile(),
+      variant,
     }),
-    [handleShareProfile],
+    [handleShareProfile, variant],
   );
 
   const openEditProfile = shellContext.openEditProfile;
@@ -199,33 +214,43 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
 
   return (
     <ApprenantShellProvider value={shellContext}>
-      <div data-connect-shell="edge" className="relative min-h-screen bg-[#0D0D12]">
-        <ConnectCockpitBackdrop />
+      <div data-connect-shell={theme.shellAttr} className={theme.rootClass}>
+        {theme.showBackdrop ? <ConnectCockpitBackdrop /> : null}
         <style jsx global>{`
           @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
         `}</style>
         <div className="relative z-10 flex h-screen overflow-hidden font-['Inter']">
           <aside
             data-connect-sidebar
-            className={`no-dyslexia sticky left-0 top-0 z-20 hidden h-screen shrink-0 flex-col bg-[#0a0a0f] lg:flex ${
+            className={`${theme.sidebarClass} ${
               isSidebarCollapsed ? "w-[76px]" : "w-[240px]"
             }`}
           >
-            <div className="flex h-[52px] shrink-0 items-center border-b border-white/[0.06] px-2.5">
+            <div className={`flex h-[52px] shrink-0 items-center px-2.5 ${theme.sidebarHeaderBorder}`}>
               {!isSidebarCollapsed ? (
                 <div className="min-w-0 flex-1 leading-tight">
-                  <div className="text-[11px] font-semibold tracking-[0.18em] text-white">EDGE</div>
-                  <p className="text-[9px] tracking-[0.1em] text-white/20">Propulsé par Beyond</p>
+                  <div
+                    className={`text-[11px] font-semibold tracking-[0.18em] ${
+                      variant === "jessica" ? "text-[#2F2A25]" : "text-white"
+                    }`}
+                  >
+                    {theme.brandTitle}
+                  </div>
+                  <p
+                    className={`text-[9px] tracking-[0.1em] ${
+                      variant === "jessica" ? "text-[#8B4513]/55" : "text-white/20"
+                    }`}
+                  >
+                    {theme.brandSubtitle}
+                  </p>
                 </div>
               ) : (
-                <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-edge-red/10 text-xs font-semibold text-edge-red">
-                  E
-                </div>
+                <div className={theme.brandCollapsedClass}>{theme.brandCollapsedLetter}</div>
               )}
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-white/70 transition hover:border-edge-red/35 hover:bg-edge-red/10 hover:text-white"
+                className={theme.collapseBtnClass}
                 aria-label={isSidebarCollapsed ? "Développer le menu" : "Réduire le menu"}
               >
                 {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -239,14 +264,16 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
             >
               <div className="space-y-0.5">
                 {navItems.map((item) => {
-                  const isParcoursGalaxy = item.label === "Parcours";
+                  const isParcoursGalaxy = item.label === "Parcours" || item.label === "Mes parcours";
                   const isEdgeOnlineEntry = item.label === "EDGE Online";
+                  const isParcoursGuide = item.label === "Parcours guidé";
                   const isShareProfile = item.action === "share-profile";
                   const active =
                     !isShareProfile &&
                     (pathname === item.href ||
                       (isParcoursGalaxy && Boolean(pathname?.startsWith("/g/edgelab"))) ||
-                      (isEdgeOnlineEntry && Boolean(pathname?.startsWith("/edgeonline"))));
+                      (isEdgeOnlineEntry && Boolean(pathname?.startsWith("/edgeonline"))) ||
+                      (isParcoursGuide && Boolean(pathname?.includes("/parcours-guide"))));
                   const itemClass = `group relative flex w-full items-center rounded-xl text-[13px] font-medium transition ${
                     isSidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
                   } ${
@@ -266,7 +293,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                         onClick={() => void handleShareProfile()}
                         className={itemClass}
                       >
-                        <item.icon className="h-[18px] w-[18px] shrink-0 text-white/45 group-hover:text-white/70" />
+                        <item.icon className={`h-[18px] w-[18px] shrink-0 ${theme.navIconInactive}`} />
                         <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>{item.label}</span>
                       </button>
                     );
@@ -281,7 +308,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                     >
                       <item.icon
                         className={`h-[18px] w-[18px] shrink-0 ${
-                          active ? "text-[#60a5fa]" : "text-white/45 group-hover:text-white/70"
+                          active ? theme.navIconActive : theme.navIconInactive
                         }`}
                       />
                       <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>{item.label}</span>
@@ -291,35 +318,39 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
               </div>
             </nav>
 
-            <div className="shrink-0 space-y-2 border-t border-white/[0.06] bg-[#0a0a0f] p-2">
+            <div className={theme.sidebarFooterClass}>
               {!isSidebarCollapsed ? (
-                <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-2 backdrop-blur-sm">
+                <div
+                  className={`rounded-xl border p-2 backdrop-blur-sm ${
+                    variant === "jessica"
+                      ? "border-[#D2B48C]/40 bg-white/60"
+                      : "border-white/[0.08] bg-white/[0.04]"
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={scrollToProfilOrHome}
-                    className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-white/[0.04]"
+                    className={`flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition ${
+                      variant === "jessica" ? "hover:bg-[#C6A664]/10" : "hover:bg-white/[0.04]"
+                    }`}
                   >
-                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-[rgba(37,99,235,0.35)] p-[2px]">
-                      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#111110]">
+                    <div className={`h-9 w-9 shrink-0 overflow-hidden rounded-full border p-[2px] ${theme.profileBorder}`}>
+                      <div className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full ${theme.profileAvatarBg}`}>
                         {profile?.avatar_url ? (
                           <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <span className="text-xs font-semibold text-[#60a5fa]">
+                          <span className={theme.profileInitialClass}>
                             {(firstName || "?").slice(0, 1).toUpperCase()}
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-semibold text-white">{firstName}</div>
-                      <div className="truncate text-[10px] text-white/45">Apprenant</div>
+                      <div className={theme.profileNameClass}>{firstName}</div>
+                      <div className={theme.profileRoleClass}>Apprenant</div>
                     </div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditOpen(true)}
-                    className="mt-2 w-full rounded-full border border-white/20 bg-transparent py-2 text-[11px] font-medium text-white/70 transition hover:border-white/30"
-                  >
+                  <button type="button" onClick={() => setEditOpen(true)} className={theme.profileEditBtnClass}>
                     Modifier mon profil
                   </button>
                 </div>
@@ -329,7 +360,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                     type="button"
                     title="Synthèse profil"
                     onClick={scrollToProfilOrHome}
-                    className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-xs font-semibold text-[#E53935] transition hover:border-[#E53935]/40"
+                    className={theme.profileCollapsedBtnClass}
                   >
                     {(firstName || "?").slice(0, 1).toUpperCase()}
                   </button>
@@ -337,29 +368,40 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                     type="button"
                     title="Modifier mon profil"
                     onClick={() => setEditOpen(true)}
-                    className="mx-auto rounded-full border border-white/20 px-2 py-1.5 text-[10px] font-medium text-white/70"
+                    className={`mx-auto rounded-full border px-2 py-1.5 text-[10px] font-medium ${
+                      variant === "jessica"
+                        ? "border-[#C6A664]/40 text-[#8B4513]"
+                        : "border-white/20 text-white/70"
+                    }`}
                   >
                     Éditer
                   </button>
                 </div>
               )}
-              <Link
-                href="/dashboard/ressources"
-                title="Aide & ressources"
-                className={`flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.06] bg-transparent py-2 text-[11px] font-medium text-white/45 transition hover:bg-white/[0.04] hover:text-white/70 ${
-                  isSidebarCollapsed ? "px-0" : "px-2"
-                }`}
-              >
-                <LifeBuoy className="h-3.5 w-3.5 shrink-0 text-white/45" />
-                {!isSidebarCollapsed ? <span>Aide & ressources</span> : null}
-              </Link>
+              {variant === "edge" ? (
+                <Link
+                  href="/dashboard/ressources"
+                  title="Aide & ressources"
+                  className={`${theme.helpLinkClass} ${isSidebarCollapsed ? "px-0" : "px-2"}`}
+                >
+                  <LifeBuoy className="h-3.5 w-3.5 shrink-0 text-white/45" />
+                  {!isSidebarCollapsed ? <span>Aide & ressources</span> : null}
+                </Link>
+              ) : (
+                <Link
+                  href="/jessica-contentin/parcours-guide"
+                  title="Parcours guidé"
+                  className={`${theme.helpLinkClass} ${isSidebarCollapsed ? "px-0" : "px-2"}`}
+                >
+                  <LifeBuoy className="h-3.5 w-3.5 shrink-0 text-[#A0522D]/60" />
+                  {!isSidebarCollapsed ? <span>Parcours guidé</span> : null}
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={toggleDyslexiaMode}
                 title={isDyslexiaMode ? "Désactiver la neuro-adaptation" : "Neuro adaptation"}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-transparent py-2 text-[11px] font-medium text-white/55 transition hover:border-white/15 hover:bg-white/[0.03] hover:text-white/85 ${
-                  isSidebarCollapsed ? "px-0" : "px-2"
-                }`}
+                className={`${theme.neuroBtnClass} ${isSidebarCollapsed ? "px-0" : "px-2"}`}
                 data-neuro-cta
               >
                 {!isSidebarCollapsed ? (
@@ -375,9 +417,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className={`flex w-full items-center justify-center rounded-xl py-2 text-[11px] font-medium text-white/25 transition hover:bg-white/[0.04] hover:text-white/40 ${
-                  isSidebarCollapsed ? "px-0" : ""
-                }`}
+                className={`${theme.logoutBtnClass} ${isSidebarCollapsed ? "px-0" : ""}`}
                 data-neuro-logout
                 title="Se déconnecter"
               >
@@ -386,27 +426,26 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
             </div>
           </aside>
 
-          <main data-connect-main className="relative flex-1 overflow-y-auto bg-transparent text-slate-100">
+          <main data-connect-main className={theme.mainClass}>
             {/* Mobile header: burger + back */}
-            <div className="sticky top-0 z-30 border-b border-sky-500/10 bg-[#050810]/60 px-4 py-3 backdrop-blur-md lg:hidden">
+            <div className={theme.mobileHeaderClass}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                     <SheetTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/20 bg-white/[0.06] text-slate-200"
+                        className={theme.mobileMenuBtnClass}
                         aria-label="Ouvrir le menu"
                       >
                         <Menu className="h-5 w-5" />
                       </button>
                     </SheetTrigger>
-                    <SheetContent
-                      side="left"
-                      className="border-sky-500/15 bg-[#050810]/95 text-slate-100 backdrop-blur-xl"
-                    >
-                      <SheetHeader className="flex flex-row items-center justify-between border-b border-white/10 pb-4 text-left">
-                        <SheetTitle className="text-white">Navigation</SheetTitle>
+                    <SheetContent side="left" className={theme.mobileSheetClass}>
+                      <SheetHeader className={`flex flex-row items-center justify-between pb-4 text-left ${variant === "jessica" ? "border-b border-[#D2B48C]/40" : "border-b border-white/10"}`}>
+                        <SheetTitle className={variant === "jessica" ? "text-[#2F2A25]" : "text-white"}>
+                          Navigation
+                        </SheetTitle>
                         <button
                           type="button"
                           className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-slate-400"
@@ -424,9 +463,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                             !isShareProfile &&
                             (pathname === item.href || pathname?.startsWith(item.href + "/"));
                           const itemClass = `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
-                            active
-                              ? "bg-sky-500/15 text-white ring-1 ring-sky-400/30"
-                              : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
+                            active ? theme.mobileNavActive : theme.mobileNavInactive
                           }`;
 
                           if (isShareProfile) {
@@ -440,7 +477,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                                 }}
                                 className={itemClass}
                               >
-                                <item.icon className="h-[18px] w-[18px] shrink-0 text-slate-500 group-hover:text-slate-300" />
+                                <item.icon className={`h-[18px] w-[18px] shrink-0 ${theme.mobileNavIconInactive}`} />
                                 <span className="truncate">{item.label}</span>
                               </button>
                             );
@@ -455,7 +492,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                             >
                               <item.icon
                                 className={`h-[18px] w-[18px] shrink-0 ${
-                                  active ? "text-sky-400" : "text-slate-500 group-hover:text-slate-300"
+                                  active ? theme.mobileNavIconActive : theme.mobileNavIconInactive
                                 }`}
                               />
                               <span className="truncate">{item.label}</span>
@@ -464,7 +501,7 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                         })}
                       </div>
 
-                      <div className="mt-auto space-y-2 border-t border-white/10 pt-4">
+                      <div className={`mt-auto space-y-2 border-t pt-4 ${variant === "jessica" ? "border-[#D2B48C]/40" : "border-white/10"}`}>
                         <button
                           type="button"
                           onClick={() => {
@@ -504,8 +541,8 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-center text-sm font-semibold text-white">
-                    {activeNavLabel || "EDGE"}
+                  <div className={theme.mobileTitleClass}>
+                    {activeNavLabel || theme.mobileBrandFallback}
                   </div>
                 </div>
 
@@ -531,16 +568,14 @@ export function ApprenantConnectShell({ children }: { children: ReactNode }) {
             role="status"
             aria-live="polite"
           >
-            <div className="max-w-md rounded-2xl border border-sky-500/20 bg-[#0a1020] px-6 py-5 text-center shadow-2xl shadow-black/50">
-              <p className="text-lg font-semibold text-white">Lien copié !</p>
-              <p className="mt-2 text-sm text-slate-400">
+            <div className={theme.shareToastClass}>
+              <p className={`text-lg font-semibold ${variant === "jessica" ? "text-[#2F2A25]" : "text-white"}`}>
+                Lien copié !
+              </p>
+              <p className={`mt-2 text-sm ${variant === "jessica" ? "text-[#8B4513]/75" : "text-slate-400"}`}>
                 Votre page publique est prête à être partagée (profil & wallet).
               </p>
-              <button
-                type="button"
-                onClick={() => setShareCopied(false)}
-                className="mt-4 rounded-full bg-[#6C5CE7] px-5 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(108,92,231,0.5)] hover:bg-[#7B6EF6]"
-              >
+              <button type="button" onClick={() => setShareCopied(false)} className={theme.shareToastBtnClass}>
                 OK
               </button>
             </div>

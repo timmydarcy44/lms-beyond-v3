@@ -526,7 +526,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
       console.log("[ressources/[id]] ✅ User has access, fetching resource data with URLs for content_id:", catalogItem.content_id);
       const { data: resource, error: resourceError } = await supabase
         .from("resources")
-        .select("id, title, description, kind, file_url, video_url, audio_url, slug")
+        .select("id, title, description, kind, file_url, video_url, audio_url, slug, html_content")
         .eq("id", catalogItem.content_id)
         .maybeSingle();
 
@@ -600,7 +600,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
     const resourceClient = serviceClient || supabase;
     const { data: resourceWithUrls, error: resourceError } = await resourceClient
       .from("resources")
-      .select("id, title, description, kind, file_url, video_url, audio_url, slug")
+      .select("id, title, description, kind, file_url, video_url, audio_url, slug, html_content")
       .eq("id", catalogItem.content_id)
       .maybeSingle();
     
@@ -892,7 +892,7 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                         <span className="ml-2">Accéder au module</span>
                       </Link>
                     </Button>
-                  ) : resourceUrl ? (
+                  ) : resourceUrl || (resourceData as { html_content?: string | null })?.html_content ? (
                     <div className="space-y-3">
                       <Button 
                         asChild 
@@ -1023,6 +1023,27 @@ export default async function RessourceDetailPage({ params }: RessourceDetailPag
                 </div>
               </section>
             )}
+
+            {(resourceData as { html_content?: string | null })?.html_content && hasAccess ? (
+              <section
+                className="rounded-3xl border-2 p-8 md:p-10 mb-8 overflow-hidden"
+                style={{
+                  borderColor: `${primaryColor}30`,
+                  backgroundColor: surfaceColor,
+                }}
+              >
+                <h2 className="text-2xl md:text-3xl font-bold mb-6" style={{ color: textColor }}>
+                  Contenu
+                </h2>
+                <div
+                  className="prose prose-lg max-w-none rounded-2xl bg-white p-6"
+                  style={{ color: textColor }}
+                  dangerouslySetInnerHTML={{
+                    __html: String((resourceData as { html_content?: string }).html_content ?? ""),
+                  }}
+                />
+              </section>
+            ) : null}
 
             {/* Section "Ce que vous allez découvrir" - Exemple de contenu */}
             <section 

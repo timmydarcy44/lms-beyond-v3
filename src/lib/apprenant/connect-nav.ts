@@ -28,59 +28,55 @@ import {
 
 import { EDGE_LAB_ONLINE_CATALOG_HREF, EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
-
+import type { ApprenantConnectVariant } from "@/lib/apprenant/connect-theme";
 
 export type ApprenantNavItem = {
-
   label: string;
-
   href: string;
-
   icon: LucideIcon;
-
   action?: "share-profile";
-
 };
-
-
 
 const PARCOURS_HREF = "/dashboard/student/learning/parcours";
 
-
-
 const BASE: ApprenantNavItem[] = [
-
   { label: "Accueil", href: "/dashboard/apprenant", icon: LayoutDashboard },
-
   { label: "Profil", href: "/dashboard/apprenant/profil", icon: UserCircle },
-
   {
-
     label: "Partager mon profil",
-
     href: "#share-profile",
-
     icon: Share2,
-
     action: "share-profile",
-
   },
-
   { label: "EDGE Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
-
   { label: "Parcours", href: PARCOURS_HREF, icon: BookMarked },
-
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
-
   { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
-
   { label: "Mes opportunités", href: "/dashboard/apprenant/matching", icon: Briefcase },
-
 ];
 
+const JESSICA_BASE: ApprenantNavItem[] = [
+  { label: "Accueil", href: "/dashboard/apprenant", icon: LayoutDashboard },
+  { label: "Profil", href: "/dashboard/apprenant/profil", icon: UserCircle },
+  {
+    label: "Partager mon profil",
+    href: "#share-profile",
+    icon: Share2,
+    action: "share-profile",
+  },
+  { label: "Parcours guidé", href: "/jessica-contentin/parcours-guide", icon: BookMarked },
+  { label: "Mes parcours", href: PARCOURS_HREF, icon: BookMarked },
+  { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
+  { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
+];
 
-
-export function buildApprenantNavItems(hasOrganisation: boolean): ApprenantNavItem[] {
+export function buildApprenantNavItems(
+  hasOrganisation: boolean,
+  variant: ApprenantConnectVariant = "edge",
+): ApprenantNavItem[] {
+  if (variant === "jessica") {
+    return [...JESSICA_BASE];
+  }
 
   const items = [...BASE];
 

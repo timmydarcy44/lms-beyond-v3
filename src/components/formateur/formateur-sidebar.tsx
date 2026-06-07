@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   BookOpen,
   CheckSquare,
@@ -12,6 +13,9 @@ import {
   MessageCircle,
   Search,
 } from "lucide-react";
+
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 
 const sidebarItems = [
   { label: "Accueil", href: "/dashboard/formateur", icon: Home },
@@ -29,15 +33,62 @@ type FormateurSidebarProps = {
 };
 
 export function FormateurSidebar({ activeItem }: FormateurSidebarProps) {
+  const [initials, setInitials] = useState("?");
+  const [displayName, setDisplayName] = useState("Formateur");
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id || ignore) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, full_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const firstName = resolveLearnerDisplayFirstName({
+        profileFirstName: profile?.first_name,
+        email: profile?.email ?? user.email,
+      });
+      const lastName = String(profile?.last_name ?? "").trim();
+      const fullName = String(profile?.full_name ?? "").trim();
+      const name =
+        firstName ||
+        fullName.split(/\s+/)[0] ||
+        String(user.email ?? "Formateur").split("@")[0] ||
+        "Formateur";
+
+      const letterSource = firstName || lastName || fullName || user.email || "?";
+      const letters = letterSource
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("");
+
+      if (!ignore) {
+        setDisplayName(name);
+        setInitials(letters || "?");
+      }
+    };
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   return (
     <aside className="fixed left-4 top-4 bottom-4 z-50 flex w-[220px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/50 backdrop-blur-2xl">
       <div className="px-5 pt-5">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-xs font-semibold text-white">
-            TD
+            {initials}
           </div>
           <div>
-            <div className="text-sm font-semibold text-white">Timmy</div>
+            <div className="text-sm font-semibold text-white">{displayName}</div>
             <div className="text-xs text-white/60">Formateur</div>
           </div>
         </div>
@@ -72,14 +123,8 @@ export function FormateurSidebar({ activeItem }: FormateurSidebarProps) {
       </nav>
       <div className="px-5 pb-5">
         <div className="mb-4 h-px w-full bg-white/10" />
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-          Mes indicateurs
-        </div>
-        <div className="mt-3 space-y-2 text-sm text-white/80">
-          <div>🎓 8 formations actives</div>
-          <div>👥 124 apprenants</div>
-          <div>📊 73% complétion moyenne</div>
-        </div>
+        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Espace formateur</div>
+        <div className="mt-3 text-sm text-white/60">Contenus de votre organisation uniquement.</div>
       </div>
     </aside>
   );

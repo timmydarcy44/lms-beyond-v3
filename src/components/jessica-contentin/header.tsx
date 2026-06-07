@@ -155,6 +155,10 @@ export function JessicaContentinHeader() {
       submenuColumns: specialitesMegaMenu,
     },
     {
+      label: "Parcours guidé",
+      href: "/jessica-contentin/parcours-guide",
+    },
+    {
       label: "Ressources",
       href: "/jessica-contentin/ressources",
     },

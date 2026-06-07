@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { getFormateurScopeForSession } from "@/lib/formateur/scope-server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const COURSE_SELECT = "id, title, status, updated_at, created_at, cover_image, builder_snapshot";
@@ -16,9 +16,9 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
+    const scope = await getFormateurScopeForSession();
     const serviceOnly = getServiceRoleClient();
-    const superAdmin = await isSuperAdmin();
-    const fullCatalog = Boolean(serviceOnly && superAdmin);
+    const fullCatalog = Boolean(scope?.fullCatalog && serviceOnly);
     const db = fullCatalog ? serviceOnly! : supabase;
 
     let courses: unknown[] = [];
@@ -34,6 +34,32 @@ export async function GET(_request: NextRequest) {
         return NextResponse.json({ error: "Erreur lors de la récupération" }, { status: 500 });
       }
       courses = data ?? [];
+    } else if (scope?.orgIds?.length) {
+      const ownedRes = await supabase
+        .from("courses")
+        .select(COURSE_SELECT)
+        .or(`creator_id.eq.${user.id},owner_id.eq.${user.id}`)
+        .order("updated_at", { ascending: false })
+        .limit(100);
+
+      const orgRes = await supabase
+        .from("courses")
+        .select(COURSE_SELECT)
+        .in("org_id", scope.orgIds)
+        .order("updated_at", { ascending: false })
+        .limit(200);
+
+      const byId = new Map<string, Record<string, unknown>>();
+      for (const row of [...(ownedRes.data ?? []), ...(orgRes.data ?? [])]) {
+        const r = row as { id?: string | null };
+        const id = r?.id != null ? String(r.id) : "";
+        if (id) byId.set(id, row as Record<string, unknown>);
+      }
+      courses = Array.from(byId.values()).sort((a, b) => {
+        const ta = String(a.updated_at ?? a.created_at ?? "");
+        const tb = String(b.updated_at ?? b.created_at ?? "");
+        return tb.localeCompare(ta);
+      });
     } else {
       const ownedRes = await supabase
         .from("courses")
@@ -99,12 +125,3 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
-
-
-
-
-
-
-
-
-

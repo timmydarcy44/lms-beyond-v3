@@ -1,0 +1,45 @@
+/**
+ * Jessica Contentin — Espace apprenant (beige / doré)
+ */
+[data-connect-shell="jessica"] {
+  --connect-main-bg: #f8f5f0;
+  --connect-card: rgba(255, 255, 255, 0.82);
+  --connect-card-2: #f0ebe3;
+  --connect-card-border: rgba(210, 180, 140, 0.45);
+  --connect-text: #2f2a25;
+  --connect-text-muted: rgba(139, 69, 19, 0.75);
+  --connect-accent: #c6a664;
+  --connect-accent-soft: rgba(198, 166, 100, 0.35);
+}
+
+[data-connect-shell="jessica"] [data-connect-sidebar] {
+  background: #f0ebe3;
+  border-right: 1px solid rgba(210, 180, 140, 0.4);
+}
+
+[data-connect-shell="jessica"] [data-connect-main] {
+  background: var(--connect-main-bg);
+  color: var(--connect-text);
+}
+
+[data-connect-shell="jessica"] [data-connect-main] .connect-progress-track {
+  background-color: rgba(210, 180, 140, 0.35);
+}
+
+[data-connect-shell="jessica"] [data-connect-main] .connect-progress-fill {
+  background: var(--connect-accent);
+}
+
+[data-connect-shell="jessica"] [data-connect-main] [data-cockpit-card] {
+  border: 1px solid var(--connect-card-border);
+  background: var(--connect-card);
+}
+
+[data-connect-shell="jessica"] [data-connect-main] [data-cockpit-kicker] {
+  color: #b8860b;
+}
+
+[data-connect-shell="jessica"] [data-connect-main] [data-cockpit-accent-line] {
+  border-left: 2px solid var(--connect-accent);
+  background: linear-gradient(90deg, rgba(198, 166, 100, 0.15), transparent);
+}

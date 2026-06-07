@@ -3,6 +3,8 @@
  * Prioritaire sur les heuristiques multi-espaces pour les rôles métier connus.
  */
 
+import { resolveJessicaPostLoginDestination } from "@/lib/jessica-contentin/studio-config";
+
 const normalize = (value: unknown) =>
   String(value ?? "")
     .trim()
@@ -45,9 +47,15 @@ export function resolveDestinationFromProfileRole(
  * Lit `profiles.role` puis `profiles.role_type` (secours).
  */
 export function resolveDestinationFromProfile(
-  profile: { role?: string | null; role_type?: string | null } | null,
+  profile: {
+    role?: string | null;
+    role_type?: string | null;
+    email?: string | null;
+  } | null,
 ): string | null {
   if (!profile) return null;
+  const jessicaDest = resolveJessicaPostLoginDestination(profile.email);
+  if (jessicaDest) return jessicaDest;
   return (
     resolveDestinationFromProfileRole(profile.role) ??
     resolveDestinationFromProfileRole(profile.role_type)

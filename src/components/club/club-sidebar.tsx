@@ -42,12 +42,8 @@ export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {
     <aside className="fixed left-4 top-4 bottom-4 z-50 w-[220px] overflow-hidden rounded-2xl border border-[#C8102E]/30 bg-[#1B2A4A] backdrop-blur-2xl">
       <div className="flex h-full flex-col px-4 py-5 text-white">
         <div className="flex flex-col items-center text-center">
-          <img
-            src="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Beyond%20Network/Logo_SU_Dives_Cabourg_-_2024.svg"
-            alt="SU Dives Cabourg"
-            className="h-16 w-16 object-contain"
-          />
-          <div className="mt-3 text-sm font-bold text-white">{theme.nom}</div>
+          <div className="text-lg font-black tracking-tight text-white">{theme.app_name}</div>
+          <div className="mt-2 text-sm font-semibold text-white/80">{theme.nom}</div>
           <div className="text-xs text-white/50">{theme.division}</div>
         </div>
 

@@ -4,13 +4,19 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ClubLayout } from "@/components/club/club-layout";
-import { useClubGuard } from "@/components/club/use-club-guard";
 import { getClubTheme } from "@/lib/club-theme";
 import { cn } from "@/lib/utils";
 import { clubPartners } from "@/lib/mocks/club-partners";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { createPartner, getMyClubContext, getClubMatches, getClubNews, getClubPartners } from "@/lib/supabase/club-queries";
+import {
+  createPartner,
+  getMyClubContext,
+  getClubMatches,
+  getClubNews,
+  getClubPartners,
+  shouldUseClubDemoData,
+} from "@/lib/supabase/club-queries";
 
 const actions = [
   {
@@ -68,14 +74,12 @@ const activities = [
 ];
 
 export default function ClubDashboardPage() {
-  const status = useClubGuard();
-  const [club, setClub] = useState<any>(null);
-  const [partners, setPartners] = useState<any[]>([]);
+  const [club, setClub] = useState<any>(demoClub);
+  const [partners, setPartners] = useState<any[]>(clubPartners);
   const [news, setNews] = useState<any[]>([]);
-  const [matches, setMatches] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [firstName, setFirstName] = useState("responsable");
-  const [isDemo, setIsDemo] = useState(false);
+  const [matches, setMatches] = useState<any[]>(demoMatches);
+  const [firstName, setFirstName] = useState(demoClub.contact_prenom);
+  const [isDemo, setIsDemo] = useState(true);
   const [showAddPartner, setShowAddPartner] = useState(false);
   const [newPartner, setNewPartner] = useState({
     nom: "",
@@ -90,32 +94,38 @@ export default function ClubDashboardPage() {
     [club?.slug, club?.code, club?.nom_slug]
   );
   useEffect(() => {
-    async function load() {
-      const { club: clubData, role } = await getMyClubContext();
-      const isDemo = role === "demo";
-      setIsDemo(isDemo);
-      if (!clubData || isDemo) {
-        setClub(demoClub);
-        setFirstName(demoClub.contact_prenom);
-        setPartners(clubPartners);
-        setMatches(demoMatches);
-        setLoading(false);
-        return;
-      }
-      setClub(clubData);
-      setFirstName(clubData?.contact_prenom || clubData?.responsable_prenom || "responsable");
+    let cancelled = false;
 
-      const [p, n, m] = await Promise.all([
-        getClubPartners(clubData.id),
-        getClubNews(clubData.id),
-        getClubMatches(clubData.id),
-      ]);
-      setPartners(p);
-      setNews(n);
-      setMatches(m);
-      setLoading(false);
+    async function load() {
+      try {
+        const { club: clubData, role } = await getMyClubContext();
+        if (cancelled) return;
+
+        const useDemo = shouldUseClubDemoData(role, clubData);
+        if (useDemo) return;
+
+        setIsDemo(false);
+        setClub(clubData);
+        setFirstName(clubData?.contact_prenom || clubData?.responsable_prenom || "responsable");
+
+        const [p, n, m] = await Promise.all([
+          getClubPartners(clubData!.id),
+          getClubNews(clubData!.id),
+          getClubMatches(clubData!.id),
+        ]);
+        if (cancelled) return;
+        setPartners(p);
+        setNews(n);
+        setMatches(m);
+      } catch {
+        // Garde les données démo déjà affichées
+      }
     }
-    load();
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const totalValeur = partners.reduce((sum, partner) => sum + (partner.valeur || 0), 0);
@@ -211,20 +221,6 @@ export default function ClubDashboardPage() {
     toast.success("Partenaire créé ✓");
   };
 
-  if (status !== "allowed") {
-    return null;
-  }
-
-  if (loading) {
-    return (
-      <ClubLayout activeItem="Dashboard">
-        <div className="flex h-64 items-center justify-center">
-          <div className="text-white/50">Chargement...</div>
-        </div>
-      </ClubLayout>
-    );
-  }
-
   return (
     <ClubLayout activeItem="Dashboard">
       <div className="-mx-4 -my-4 min-h-screen bg-[#0d1b2e] px-4 pb-4 pt-6 text-white lg:-mx-8 lg:-my-8 lg:px-8 lg:pb-8 lg:pt-8">
@@ -233,9 +229,9 @@ export default function ClubDashboardPage() {
           <div className="absolute inset-0 flex flex-col justify-between p-6 text-white lg:flex-row lg:items-center lg:p-10">
             <div>
               <span className="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest">
-                BEYOND NETWORK
+                {theme.app_name}
               </span>
-              <div className="mt-3 text-sm text-white/60">{club?.nom ?? theme.nom}</div>
+              <div className="mt-3 text-sm font-medium text-white/80">{club?.nom ?? theme.nom}</div>
               <h1 className="mt-2 text-2xl font-black lg:text-4xl">Bienvenue, {firstName}</h1>
               <p className="mt-2 text-white/70">
                 Gérez vos partenaires et
@@ -244,11 +240,9 @@ export default function ClubDashboardPage() {
               </p>
             </div>
             <div className="text-left lg:text-right">
-              <div className="ml-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-lg font-black text-[#1B2A4A]">
-                {theme.logo_initiales}
-          </div>
+              <div className="text-xl font-black tracking-tight text-white lg:text-2xl">{theme.app_name}</div>
               <div className="mt-3 text-sm text-white/60">{club?.division ?? theme.division}</div>
-          </div>
+            </div>
         </div>
       </section>
 

@@ -20,11 +20,7 @@ export function ClubLayout({ children, activeItem, clubSlug }: ClubLayoutProps) 
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0d1b2e] text-white" style={getThemeVars(theme)}>
-      <MobileHeader
-        title="SU Dives Cabourg"
-        logo="https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Beyond%20Network/Logo_SU_Dives_Cabourg_-_2024.svg"
-        onMenuOpen={() => setDrawerOpen(true)}
-      />
+      <MobileHeader title={theme.app_name} onMenuOpen={() => setDrawerOpen(true)} />
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <ClubSidebar activeItem={activeItem} theme={theme} onClose={() => setDrawerOpen(false)} />

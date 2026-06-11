@@ -1,4 +1,6 @@
 export type ClubTheme = {
+  /** Nom de la plateforme (sans logo). */
+  app_name: string;
   nom: string;
   slug: string;
   logo_url: string | null;
@@ -13,6 +15,7 @@ export type ClubTheme = {
 
 export const CLUB_THEMES: Record<string, ClubTheme> = {
   "su-dives-cabourg": {
+    app_name: "Maladrerie OS",
     nom: "SU Dives Cabourg",
     slug: "su-dives-cabourg",
     logo_url: null,
@@ -25,6 +28,7 @@ export const CLUB_THEMES: Record<string, ClubTheme> = {
     division: "N3 — Normandie",
   },
   "hac-football": {
+    app_name: "Maladrerie OS",
     nom: "HAC Football",
     slug: "hac-football",
     logo_url: null,

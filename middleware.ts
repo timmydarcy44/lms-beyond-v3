@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 
 import { getTenantFromHostname, isJessicaContentinMarketingHostname } from "@/lib/tenant/config";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
+import { canAccessClubDashboard, isClubOnlyAccount } from "@/lib/auth/club-access";
 import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
 import {
   isEcoleHandicapSectionPath,
@@ -36,12 +38,28 @@ async function fetchProfileForRequest(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data: profile } = await supabase
+  const { data: profileById } = await supabase
     .from("profiles")
     .select("role, role_type, email")
     .eq("id", user.id)
     .maybeSingle();
-  return (profile as { role?: string | null; role_type?: string | null; email?: string | null } | null) ?? null;
+
+  if (profileById) {
+    return profileById as { role?: string | null; role_type?: string | null; email?: string | null };
+  }
+
+  const emailNorm = String(user.email ?? "").trim().toLowerCase();
+  if (!emailNorm) return null;
+
+  const { data: profileByEmail } = await supabase
+    .from("profiles")
+    .select("role, role_type, email")
+    .eq("email", emailNorm)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return (profileByEmail as { role?: string | null; role_type?: string | null; email?: string | null } | null) ?? null;
 }
 
 async function fetchProfileRoleForRequest(request: NextRequest): Promise<string> {
@@ -391,6 +409,26 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Comptes club exclusifs (role + role_type = club) → verrouillés sur /dashboard/club
+  const isClubDashboardPath =
+    url.pathname === "/dashboard/club" || url.pathname.startsWith("/dashboard/club/");
+  const isGenericDashboardPath =
+    url.pathname === "/dashboard" || url.pathname.startsWith("/dashboard/");
+  if (
+    isGenericDashboardPath &&
+    !isClubDashboardPath &&
+    SUPABASE_URL &&
+    SUPABASE_ANON_KEY
+  ) {
+    const profileClubOnly = await fetchProfileForRequest(request);
+    if (
+      profileClubOnly &&
+      isClubOnlyAccount(profileClubOnly.role, profileClubOnly.role_type, profileClubOnly.email)
+    ) {
+      return NextResponse.redirect(new URL("/dashboard/club", request.url));
+    }
+  }
+
   // --- RBAC Beyond Connect (profiles.role) ---
   // Only for dashboard scopes; never uses auth.users for role.
   // Admins / super_admins are not restricted here; layouts (apprenant/student) grant universal access for those roles.
@@ -399,9 +437,13 @@ export async function middleware(request: NextRequest) {
     url.pathname === "/dashboard/praticien" || url.pathname.startsWith("/dashboard/praticien/");
   const isDashboardExpert = url.pathname === "/dashboard/expert" || url.pathname.startsWith("/dashboard/expert/");
   const isDashboardProfil = url.pathname === "/dashboard/profil" || url.pathname.startsWith("/dashboard/profil/");
+  const isDashboardClub = url.pathname === "/dashboard/club" || url.pathname.startsWith("/dashboard/club/");
+  const isLocalDevHost =
+    process.env.NODE_ENV === "development" &&
+    (hostWithoutPort === "localhost" || hostWithoutPort === "127.0.0.1");
 
   if (
-    (isDashboardEntreprise || isDashboardExpert || isDashboardProfil || isDashboardPraticien) &&
+    (isDashboardEntreprise || isDashboardExpert || isDashboardProfil || isDashboardPraticien || isDashboardClub) &&
     SUPABASE_URL &&
     SUPABASE_ANON_KEY
   ) {
@@ -424,6 +466,9 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
+      if (isDashboardClub && isLocalDevHost) {
+        return response;
+      }
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
@@ -475,6 +520,18 @@ export async function middleware(request: NextRequest) {
         roleType === "praticien_bct" ||
         roleType === "praticien";
       if (!canAccessPraticien) {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
+      }
+    }
+
+    if (isDashboardClub) {
+      if (isLocalDevHost) {
+        return response;
+      }
+      if (isSuperAdminEmailAllowlisted(user.email)) {
+        return response;
+      }
+      if (!canAccessClubDashboard(role, roleType, user.email)) {
         return NextResponse.redirect(new URL("/unauthorized", request.url));
       }
     }

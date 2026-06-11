@@ -3,8 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { getTenantFromHostname, isJessicaContentinMarketingHostname } from "@/lib/tenant/config";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
-import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
-import { canAccessClubDashboard, isClubOnlyAccount } from "@/lib/auth/club-access";
+import { isClubOnlyAccount } from "@/lib/auth/club-access";
 import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
 import {
   isEcoleHandicapSectionPath,
@@ -437,13 +436,9 @@ export async function middleware(request: NextRequest) {
     url.pathname === "/dashboard/praticien" || url.pathname.startsWith("/dashboard/praticien/");
   const isDashboardExpert = url.pathname === "/dashboard/expert" || url.pathname.startsWith("/dashboard/expert/");
   const isDashboardProfil = url.pathname === "/dashboard/profil" || url.pathname.startsWith("/dashboard/profil/");
-  const isDashboardClub = url.pathname === "/dashboard/club" || url.pathname.startsWith("/dashboard/club/");
-  const isLocalDevHost =
-    process.env.NODE_ENV === "development" &&
-    (hostWithoutPort === "localhost" || hostWithoutPort === "127.0.0.1");
 
   if (
-    (isDashboardEntreprise || isDashboardExpert || isDashboardProfil || isDashboardPraticien || isDashboardClub) &&
+    (isDashboardEntreprise || isDashboardExpert || isDashboardProfil || isDashboardPraticien) &&
     SUPABASE_URL &&
     SUPABASE_ANON_KEY
   ) {
@@ -466,9 +461,6 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      if (isDashboardClub && isLocalDevHost) {
-        return response;
-      }
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
@@ -520,18 +512,6 @@ export async function middleware(request: NextRequest) {
         roleType === "praticien_bct" ||
         roleType === "praticien";
       if (!canAccessPraticien) {
-        return NextResponse.redirect(new URL("/unauthorized", request.url));
-      }
-    }
-
-    if (isDashboardClub) {
-      if (isLocalDevHost) {
-        return response;
-      }
-      if (isSuperAdminEmailAllowlisted(user.email)) {
-        return response;
-      }
-      if (!canAccessClubDashboard(role, roleType, user.email)) {
         return NextResponse.redirect(new URL("/unauthorized", request.url));
       }
     }

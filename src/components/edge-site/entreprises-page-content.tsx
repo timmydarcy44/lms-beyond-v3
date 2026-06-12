@@ -100,6 +100,29 @@ const ADDONS = [
   },
 ] as const;
 
+const PIPELINE = [
+  {
+    num: "01",
+    title: "Diagnostic",
+    text: "Chaque collaborateur passe le test Beyond en 12 minutes. Profil comportemental DISC, compétences, axes de progression.",
+  },
+  {
+    num: "02",
+    title: "Plan d'action",
+    text: "L'IA génère un plan de développement personnalisé par collaborateur, aligné sur les objectifs de l'entreprise.",
+  },
+  {
+    num: "03",
+    title: "Formation",
+    text: "Micro-formations en ligne, ateliers collectifs en présentiel, coaching individuel. Le bon format, au bon moment.",
+  },
+  {
+    num: "04",
+    title: "Certification",
+    text: "Chaque compétence acquise est certifiée par un Open Badge IMS Global. Reconnu. Vérifiable. Portable.",
+  },
+] as const;
+
 /** Témoignages fictifs — placeholders */
 const TESTIMONIALS = [
   {
@@ -134,6 +157,38 @@ function FadeSection({ children, className }: { children: React.ReactNode; class
     <motion.div {...fadeUp} className={className}>
       {children}
     </motion.div>
+  );
+}
+
+function PipelineArrow({ vertical }: { vertical?: boolean }) {
+  if (vertical) {
+    return (
+      <div className="flex items-center justify-center py-3 lg:hidden" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path
+            d="M10 4v12M6 12l4 4 4-4"
+            stroke={EDGE_RED}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hidden shrink-0 items-center px-3 lg:flex" aria-hidden>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M5 12h14M13 6l6 6-6 6"
+          stroke={EDGE_RED}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
   );
 }
 
@@ -265,6 +320,67 @@ export function EntreprisesPageContent() {
               </motion.article>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* POURQUOI EDGE */}
+      <section className="bg-white px-5 py-[120px] sm:px-8">
+        <div className="mx-auto max-w-6xl">
+          <FadeSection>
+            <SectionLabel>NOTRE DIFFÉRENCE</SectionLabel>
+            <h2
+              className="mt-4 max-w-[700px] text-[clamp(2rem,5vw,4rem)] font-bold leading-[1.08] tracking-[-0.03em]"
+              style={{ color: EDGE_BLACK }}
+            >
+              Un cabinet de formation vous forme.
+              <br />
+              EDGE vous transforme.
+            </h2>
+            <p className="mt-6 max-w-[560px] text-lg leading-[1.7]" style={{ color: "#666666" }}>
+              Chaque collaborateur reçoit un parcours unique, construit sur ses données réelles. Pas un programme
+              générique.
+            </p>
+          </FadeSection>
+
+          <div className="mt-16 flex flex-col lg:flex-row lg:items-stretch">
+            {PIPELINE.map((block, i) => (
+              <div key={block.num} className="contents">
+                {i > 0 ? <PipelineArrow vertical /> : null}
+                {i > 0 ? <PipelineArrow /> : null}
+                <motion.article
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className="flex-1 rounded-2xl border p-8"
+                  style={{ backgroundColor: "#F9F9F9", borderColor: "#EFEFEF" }}
+                >
+                  <p className="text-[48px] font-bold leading-none" style={{ color: EDGE_RED }}>
+                    {block.num}
+                  </p>
+                  <h3 className="mt-4 text-xl font-bold" style={{ color: EDGE_BLACK }}>
+                    {block.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed" style={{ color: "#666666" }}>
+                    {block.text}
+                  </p>
+                </motion.article>
+              </div>
+            ))}
+          </div>
+
+          <FadeSection className="pt-[60px] text-center">
+            <p className="mx-auto max-w-2xl text-2xl font-bold leading-snug" style={{ color: EDGE_BLACK }}>
+              Résultat : vous pilotez la montée en compétences de vos équipes avec des données. Pas des impressions.
+            </p>
+            <EdgeButton
+              href="#tarifs"
+              className="mt-10 !border-[#E63329] !bg-[#E63329] px-8 py-3.5 text-sm font-semibold"
+              ariaLabel="Voir comment ça marche"
+            >
+              Voir comment ça marche
+            </EdgeButton>
+          </FadeSection>
         </div>
       </section>
 

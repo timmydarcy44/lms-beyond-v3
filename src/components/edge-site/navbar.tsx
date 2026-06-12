@@ -12,7 +12,6 @@ const NAV = [
   { label: "Entreprises", href: EDGE_HREFS.entreprises },
   { label: "École", href: EDGE_HREFS.ecole },
   { label: "À propos", href: EDGE_HREFS.aPropos },
-  { label: "Tarifs", href: EDGE_HREFS.tarifs },
 ] as const;
 
 export function Navbar() {

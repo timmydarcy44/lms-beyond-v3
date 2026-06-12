@@ -13,7 +13,9 @@ const GRAY_TEXT = "#666666";
 const BORDER = "#E5E5E5";
 const CARD_SHADOW = "0 4px 24px rgba(0,0,0,0.08)";
 const CARD_SHADOW_ACTIVE = "0 8px 32px rgba(230,51,41,0.15)";
+const ADDON_CARD_SHADOW = "0 2px 12px rgba(0,0,0,0.06)";
 const TRANSITION = "transition-all duration-200 ease-out";
+const PANEL_TRANSITION = "transition-all duration-300 ease-out";
 
 type Universe = "particuliers" | "entreprises";
 type Billing = "monthly" | "annual";
@@ -375,11 +377,12 @@ function SidePanel({
   }, []);
 
   useEffect(() => {
+    if (!isMobile) return;
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [open, isMobile]);
 
   const slideFrom = isMobile ? { y: "100%" } : { x: "100%" };
   const slideTo = isMobile ? { y: 0 } : { x: 0 };
@@ -387,29 +390,20 @@ function SidePanel({
   return (
     <AnimatePresence>
       {open ? (
-        <>
-          <motion.button
-            type="button"
-            aria-label="Fermer le panneau"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/20"
-            onClick={onClose}
-          />
-          <motion.aside
-            initial={slideFrom}
-            animate={slideTo}
-            exit={slideFrom}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className={cn(
-              "fixed z-50 flex flex-col bg-white",
-              "inset-x-0 bottom-0 max-h-[88vh] rounded-t-2xl",
-              "md:inset-y-0 md:left-auto md:right-0 md:h-full md:max-h-none md:w-[380px] md:rounded-none",
-            )}
-            style={{ boxShadow: "-8px 0 32px rgba(0,0,0,0.12)" }}
-          >
+        <motion.aside
+          initial={slideFrom}
+          animate={slideTo}
+          exit={slideFrom}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className={cn(
+            "fixed z-50 flex flex-col bg-white",
+            "inset-x-0 bottom-0 max-h-[88vh] rounded-t-2xl",
+            "md:inset-y-0 md:left-auto md:right-0 md:top-12 md:h-[calc(100vh-3rem)] md:max-h-none md:w-[380px] md:rounded-none",
+          )}
+          style={{
+            boxShadow: isMobile ? "0 -8px 32px rgba(0,0,0,0.12)" : "-8px 0 32px rgba(0,0,0,0.12)",
+          }}
+        >
             <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: BORDER }}>
               <h3 className="text-lg font-bold" style={{ color: BLACK }}>
                 Votre formule
@@ -495,8 +489,7 @@ function SidePanel({
                 Demander un devis
               </Link>
             </div>
-          </motion.aside>
-        </>
+        </motion.aside>
       ) : null}
     </AnimatePresence>
   );
@@ -565,8 +558,10 @@ export function TarifsPageContent() {
     if (universe === "particuliers") setPanelOpen(false);
   }, [universe]);
 
+  const showPanel = panelOpen && universe === "entreprises";
+
   return (
-    <div className="bg-white">
+    <div className={cn("bg-white", PANEL_TRANSITION, showPanel && "md:mr-[380px]")}>
       {/* Hero */}
       <section className="px-5 pt-[160px] pb-[120px] sm:px-8">
         <div className="mx-auto max-w-[1100px]">
@@ -832,7 +827,7 @@ export function TarifsPageContent() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="bg-[#F9F9F9] px-5 py-[120px] sm:px-8"
+            className="bg-white px-5 py-[120px] sm:px-8"
           >
             <div className="mx-auto max-w-[1100px]">
               <Label>ADD-ONS</Label>
@@ -851,7 +846,7 @@ export function TarifsPageContent() {
                     <article
                       key={addon.id}
                       className="rounded-2xl border bg-white p-8"
-                      style={{ borderColor: BORDER, boxShadow: CARD_SHADOW }}
+                      style={{ border: `1px solid ${BORDER}`, boxShadow: ADDON_CARD_SHADOW }}
                     >
                       <div
                         className="flex h-11 w-11 items-center justify-center rounded-xl"
@@ -929,7 +924,7 @@ export function TarifsPageContent() {
       </section>
 
       <SidePanel
-        open={panelOpen && universe === "entreprises"}
+        open={showPanel}
         onClose={() => setPanelOpen(false)}
         planLabel={selectedPlanData.label}
         planMonthly={planMonthlyTotal}

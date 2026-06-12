@@ -11,6 +11,7 @@ export const EDGE_HREFS = {
   parcoursTarifs: (slug: string) => `${EDGE_SITE_BASE}/parcours/${slug}/tarifs`,
   edgeOnline: `${EDGE_SITE_BASE}/edge-online`,
   entreprises: `${EDGE_SITE_BASE}/entreprises`,
+  tarifs: "/tarifs",
   orientation: "/votre-orientation",
   postuler: (slug: string) => `/postuler/${slug}`,
   postulerConfirmation: (slug: string) => `/postuler/${slug}/confirmation`,

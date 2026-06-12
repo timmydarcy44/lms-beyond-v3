@@ -10,6 +10,7 @@ import { PARCOURS_BY_FAMILLE } from "@/lib/parcours";
 const NAV = [
   { label: "EDGE Online", href: EDGE_HREFS.edgeOnline },
   { label: "Entreprises", href: EDGE_HREFS.entreprises },
+  { label: "Tarifs", href: EDGE_HREFS.tarifs },
   { label: "École", href: EDGE_HREFS.ecole },
   { label: "À propos", href: EDGE_HREFS.aPropos },
 ] as const;

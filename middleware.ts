@@ -169,6 +169,7 @@ export async function middleware(request: NextRequest) {
       "/edge-online",
       "/online",
       "/entreprises",
+      "/tarifs",
       "/orientation",
       "/votre-orientation",
       "/postuler",

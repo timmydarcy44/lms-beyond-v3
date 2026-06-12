@@ -32,6 +32,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "zmcefidiiqqppowymoqb.supabase.co",
+      },
+      {
+        protocol: "https",
         hostname: "**.supabase.in",
       },
       {
@@ -70,7 +74,7 @@ const nextConfig: NextConfig = {
       },
       {
         source:
-          "/:path((?!api|super|auth|onboarding|formations|catalog|catalogue|note-app|_next|app-landing|login|dashboard|g|favicon.ico|robots.txt|sitemap.xml|programmes|specialites|jessica-contentin|consultations|a-propos|orientation|postuler|edge-lab|parcours-guide|parcours|entreprises|edge-online|online|ressources|blog|inscription|mon-compte|panier|confirmer|forgot-password|reset-password|register|prix|pricing|tarif|for-education|unauthorized|soft-skills|p|pj|badgeclasses|wallet).*)",
+          "/:path((?!api|super|auth|onboarding|formations|catalog|catalogue|note-app|_next|app-landing|login|dashboard|g|favicon.ico|robots.txt|sitemap.xml|programmes|specialites|jessica-contentin|consultations|a-propos|orientation|postuler|edge-lab|parcours-guide|parcours|entreprises|tarifs|edge-online|online|ressources|blog|inscription|mon-compte|panier|confirmer|forgot-password|reset-password|register|prix|pricing|tarif|for-education|unauthorized|soft-skills|p|pj|badgeclasses|wallet).*)",
         destination: "/app-landing/:path",
       },
     ];

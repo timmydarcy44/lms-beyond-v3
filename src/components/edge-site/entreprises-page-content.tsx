@@ -3,12 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Check, Puzzle, TrendingUp, User, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EdgeButton } from "@/components/edge-site/edge-button";
 import { EntrepriseContactForm } from "@/components/edge-site/entreprise-contact-form";
 import { SectionLabel } from "@/components/edge-site/section-label";
 
 const EDGE_RED = "#E63329";
+const EDGE_BLACK = "#0A0A0A";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -35,72 +37,95 @@ const STATS = [
   },
 ] as const;
 
-const APPROACH = [
+const STEPS = [
   {
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=900&q=80",
-    title: "On mesure avant d'agir",
-    text: "Diagnostic comportemental Beyond : profils DISC, cartographie des compétences, identification des freins réels à la performance.",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=900&q=80",
-    title: "On forme autrement",
-    text: "Pas de diaporama. Des ateliers, des mises en situation, des débats. Une pédagogie conçue pour que le cerveau retienne et applique.",
-  },
-  {
+    step: "ÉTAPE 1",
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80",
-    title: "On prouve l'impact",
-    text: "Reporting RH, évolution des scores comportementaux, certification Open Badge. Vous voyez ce qui change.",
+    title: "On audite vos compétences",
+    text: "Chaque collaborateur reçoit un accès Beyond. En 12 minutes, il passe le diagnostic comportemental et compétences. Les résultats arrivent directement sur votre dashboard RH.",
+  },
+  {
+    step: "ÉTAPE 2",
+    image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=900&q=80",
+    title: "L'IA construit votre plan d'action",
+    text: "En fonction des résultats et de vos objectifs, Beyond propose un plan de développement personnalisé par collaborateur. Formation en ligne, coaching individuel ou intervention collective.",
+  },
+  {
+    step: "ÉTAPE 3",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=900&q=80",
+    title: "Vous pilotez. Vous prouvez.",
+    text: "Dashboard RH en temps réel. Évolution des scores. Certification Open Badge. Vous avez enfin les données pour justifier vos investissements formation.",
   },
 ] as const;
 
-const OFFERS = [
+const BASE_INCLUDES = [
+  "Diagnostic comportemental DISC + compétences",
+  "Dashboard RH temps réel",
+  "Plan d'action IA personnalisé",
+  "Accès EDGE Online (80+ micro-formations)",
+] as const;
+
+const ADDONS = [
   {
+    icon: Zap,
     name: "Intervention Flash",
-    duration: "1 journée / équipe commerciale",
-    includes: "Diagnostic + atelier + restitution",
+    text: "1 journée en présentiel avec votre équipe commerciale. Diagnostic live + atelier + restitution.",
     price: "À partir de 1 500€ HT",
-    featured: false,
     cta: "Demander un devis",
+    popular: false,
   },
   {
+    icon: TrendingUp,
     name: "Parcours Performance",
-    duration: "3 mois / accompagnement complet",
-    includes: "Diagnostic + 4 sessions + reporting Beyond",
+    text: "3 mois d'accompagnement. 4 sessions collectives + suivi individuel + reporting Beyond mensuel.",
     price: "À partir de 4 500€ HT",
-    featured: true,
     cta: "Demander un devis",
+    popular: true,
   },
   {
+    icon: User,
+    name: "Coaching Individuel",
+    text: "Sessions de coaching individuel pour vos talents et managers clés. Suivi Beyond intégré.",
+    price: "150€ / session",
+    cta: "Réserver une session",
+    popular: false,
+  },
+  {
+    icon: Puzzle,
     name: "Programme Sur-Mesure",
-    duration: "Durée et format définis ensemble",
-    includes: "Multi-équipes, déploiement national",
+    text: "Multi-équipes, déploiement national, objectifs spécifiques. On construit ensemble.",
     price: "Sur devis",
-    featured: false,
     cta: "Nous contacter",
+    popular: false,
   },
 ] as const;
 
+/** Témoignages fictifs — placeholders */
 const TESTIMONIALS = [
   {
-    photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80",
-    name: "Marc Delaunay",
+    initials: "MD",
+    name: "Marc Delannoy",
     role: "Directeur Commercial",
     company: "Groupe Normandie Auto",
-    quote: "En trois mois, notre taux de transformation a bondi de 18 points. On ne forme plus pour cocher une case.",
+    quote:
+      "En trois mois, notre taux de transformation a bondi de 18 points. On ne forme plus pour cocher une case.",
+    color: EDGE_RED,
   },
   {
-    photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80",
+    initials: "SL",
     name: "Sophie Lemaire",
     role: "DRH",
-    company: "Nutriset",
-    quote: "Le diagnostic Beyond a révélé des freins qu'aucun audit interne n'avait identifiés. Le ROI est visible.",
+    company: "Cabinet Conseil Rouen",
+    quote: "Le diagnostic Beyond a révélé des freins que notre audit interne n'avait pas identifiés. Le ROI est visible.",
+    color: "#FFFFFF",
   },
   {
-    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80",
+    initials: "TG",
     name: "Thomas Girard",
     role: "CEO",
-    company: "Cabinet Dupont & Associés",
+    company: "Startup Tech Caen",
     quote: "EDGE ne vend pas des heures de formation. Ils livrent de la performance mesurable. C'est rare.",
+    color: "#888888",
   },
 ] as const;
 
@@ -116,16 +141,16 @@ export function EntreprisesPageContent() {
   return (
     <>
       {/* 1. HERO */}
-      <section className="relative flex min-h-[min(100svh,900px)] items-end overflow-hidden bg-edge-black">
+      <section className="relative flex min-h-[min(100svh,920px)] items-end overflow-hidden" style={{ backgroundColor: EDGE_BLACK }}>
         <Image
           src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1920&q=80"
-          alt="Équipe commerciale en réunion"
+          alt="Équipe en réunion de formation"
           fill
           className="object-cover"
           sizes="100vw"
           priority
         />
-        <div className="absolute inset-0 bg-black/60" aria-hidden />
+        <div className="absolute inset-0 bg-black/65" aria-hidden />
 
         <div className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-16 pt-32 sm:px-8 sm:pb-24 sm:pt-40">
           <motion.div
@@ -134,14 +159,15 @@ export function EntreprisesPageContent() {
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="max-w-4xl"
           >
-            <h1 className="text-[clamp(2.25rem,6vw,4.5rem)] font-bold leading-[1.02] tracking-[-0.03em] text-white">
+            <h1 className="text-[clamp(2.25rem,6.5vw,4.75rem)] font-bold leading-[1.02] tracking-[-0.04em] text-white">
               Vos équipes ont le potentiel.
               <br />
               Donnez-leur la méthode.
             </h1>
-            <p className="mt-6 max-w-2xl text-base leading-relaxed text-white/65 sm:text-lg sm:leading-relaxed">
-              Diagnostic comportemental, parcours sur-mesure et pilotage de la performance. Pour les entreprises qui ne
-              veulent pas faire semblant de former.
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">
+              On diagnostique avant de former. On mesure après.
+              <br />
+              Pas de formation générique. Un système.
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
               <EdgeButton
@@ -155,9 +181,9 @@ export function EntreprisesPageContent() {
                 href="#approche"
                 variant="secondary-dark"
                 className="px-8 py-3.5 text-sm font-semibold"
-                ariaLabel="Découvrir l'approche"
+                ariaLabel="Voir comment ça marche"
               >
-                Découvrir l&apos;approche
+                Voir comment ça marche
               </EdgeButton>
             </div>
           </motion.div>
@@ -165,18 +191,16 @@ export function EntreprisesPageContent() {
       </section>
 
       {/* 2. PROBLÈME */}
-      <section className="bg-white px-5 py-20 sm:px-8 sm:py-28">
+      <section className="bg-white px-5 py-24 sm:px-8 sm:py-32">
         <div className="mx-auto max-w-6xl">
           <FadeSection>
             <SectionLabel>LE CONSTAT</SectionLabel>
-            <h2 className="mt-4 max-w-3xl text-[clamp(1.75rem,4vw,3rem)] font-bold leading-[1.08] tracking-[-0.03em] text-edge-black">
-              La formation classique ne transforme pas.
-              <br />
-              Elle occupe.
+            <h2 className="mt-4 max-w-3xl text-[clamp(1.75rem,4vw,3.25rem)] font-bold leading-[1.08] tracking-[-0.03em]" style={{ color: EDGE_BLACK }}>
+              La formation classique ne transforme pas. Elle occupe.
             </h2>
           </FadeSection>
 
-          <div className="mt-16 grid gap-12 md:grid-cols-3 md:gap-8">
+          <div className="mt-20 grid gap-14 md:grid-cols-3 md:gap-10">
             {STATS.map((stat, i) => (
               <motion.div
                 key={stat.value}
@@ -185,12 +209,12 @@ export function EntreprisesPageContent() {
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.5, delay: i * 0.08 }}
               >
-                <p className="text-[clamp(2.5rem,5vw,3.5rem)] font-bold tracking-[-0.04em]" style={{ color: EDGE_RED }}>
+                <p className="text-[clamp(2.75rem,5vw,4rem)] font-bold tracking-[-0.04em]" style={{ color: EDGE_RED }}>
                   {stat.value}
                 </p>
-                <p className="mt-3 text-base leading-relaxed text-edge-black/70">{stat.text}</p>
+                <p className="mt-4 text-base leading-relaxed text-black/65">{stat.text}</p>
                 {stat.source ? (
-                  <p className="mt-2 text-xs uppercase tracking-wider text-black/35">Source : {stat.source}</p>
+                  <p className="mt-3 text-xs uppercase tracking-wider text-black/30">{stat.source}</p>
                 ) : null}
               </motion.div>
             ))}
@@ -198,39 +222,45 @@ export function EntreprisesPageContent() {
         </div>
       </section>
 
-      {/* 3. APPROCHE */}
-      <section id="approche" className="scroll-mt-20 bg-edge-black px-5 py-20 sm:px-8 sm:py-28">
+      {/* 3. COMMENT ÇA MARCHE */}
+      <section id="approche" className="scroll-mt-20 px-5 py-24 sm:px-8 sm:py-32" style={{ backgroundColor: EDGE_BLACK }}>
         <div className="mx-auto max-w-6xl">
           <FadeSection>
             <SectionLabel tone="accent">NOTRE APPROCHE</SectionLabel>
-            <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,4vw,3rem)] font-bold leading-[1.08] tracking-[-0.03em] text-white">
-              Trois étapes. Un impact mesurable.
+            <h2 className="mt-4 max-w-3xl text-[clamp(1.75rem,4vw,3.25rem)] font-bold leading-[1.08] tracking-[-0.03em] text-white">
+              Un système en 3 étapes. Pas une formation de plus.
             </h2>
           </FadeSection>
 
-          <div className="mt-16 grid gap-6 lg:grid-cols-3 lg:gap-5">
-            {APPROACH.map((card, i) => (
+          <div className="mt-20 grid gap-6 lg:grid-cols-3 lg:gap-5">
+            {STEPS.map((card, i) => (
               <motion.article
-                key={card.title}
+                key={card.step}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="group overflow-hidden rounded-2xl bg-[#141414]"
+                className="group overflow-hidden rounded-2xl border border-white/10 bg-[#141414]"
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
                   <Image
                     src={card.image}
                     alt=""
                     fill
-                    className="object-cover transition duration-700 group-hover:scale-105"
+                    className="object-cover transition duration-700 group-hover:scale-[1.03]"
                     sizes="(max-width: 1024px) 100vw, 33vw"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                  <span
+                    className="absolute left-5 top-5 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/80"
+                    style={{ color: EDGE_RED }}
+                  >
+                    {card.step}
+                  </span>
                 </div>
-                <div className="p-6 sm:p-7">
+                <div className="p-7 sm:p-8">
                   <h3 className="text-xl font-bold tracking-tight text-white">{card.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-white/55">{card.text}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-white/50">{card.text}</p>
                 </div>
               </motion.article>
             ))}
@@ -238,115 +268,136 @@ export function EntreprisesPageContent() {
         </div>
       </section>
 
-      {/* 4. BEYOND INDEX */}
-      <section id="beyond-index" className="scroll-mt-20 bg-[#F5F5F5] px-5 py-20 sm:px-8 sm:py-28">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-16">
+      {/* 4. PRICING */}
+      <section id="tarifs" className="scroll-mt-20 bg-white px-5 py-24 sm:px-8 sm:py-32">
+        <div className="mx-auto max-w-6xl">
           <FadeSection>
+            <SectionLabel>TARIFS</SectionLabel>
+            <h2 className="mt-4 text-[clamp(1.75rem,4vw,3.25rem)] font-bold leading-[1.08] tracking-[-0.03em]" style={{ color: EDGE_BLACK }}>
+              Construisez votre formule.
+            </h2>
+            <p className="mt-4 max-w-xl text-base text-black/45">
+              Une base licences. Des add-ons selon vos besoins réels.
+            </p>
+          </FadeSection>
+
+          {/* Base */}
+          <motion.article
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.55 }}
+            className="mt-16 overflow-hidden rounded-2xl border-2 p-8 sm:p-10 lg:p-12"
+            style={{ backgroundColor: EDGE_BLACK, borderColor: EDGE_RED }}
+          >
             <span
               className="inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white"
               style={{ backgroundColor: EDGE_RED }}
             >
-              POWERED BY BEYOND
+              SOCLE — BEYOND PLATFORM
             </span>
-            <h2 className="mt-5 text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold leading-[1.1] tracking-[-0.03em] text-edge-black">
-              L&apos;Index de Maturité Compétences™
-            </h2>
-            <p className="mt-5 text-base leading-relaxed text-edge-black/65 sm:text-lg">
-              Avant toute intervention, vos équipes passent le Beyond Index : un diagnostic en 12 minutes qui cartographie
-              les profils comportementaux, les gaps de compétences et les leviers de performance collectifs. Gratuit.
-              Sans engagement.
-            </p>
-            <EdgeButton
-              href="/beyond-index"
-              className="mt-8 !border-[#E63329] !bg-[#E63329] px-8 py-3.5 text-sm font-semibold"
-              ariaLabel="Faire passer le diagnostic à mon équipe"
-            >
-              Faire passer le diagnostic à mon équipe
-            </EdgeButton>
-          </FadeSection>
-
-          <motion.div
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.12 }}
-            className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-edge-black shadow-[0_32px_80px_-24px_rgba(0,0,0,0.35)]"
-          >
-            <Image
-              src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=900&q=80"
-              alt="Dashboard Beyond Index — aperçu"
-              fill
-              className="object-cover object-top"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-tr from-black/40 to-transparent" />
-          </motion.div>
-        </div>
-      </section>
-
-      {/* 5. OFFRES */}
-      <section id="offres" className="scroll-mt-20 bg-white px-5 py-20 sm:px-8 sm:py-28">
-        <div className="mx-auto max-w-6xl">
-          <FadeSection className="text-center">
-            <SectionLabel className="mx-auto">NOS FORMULES</SectionLabel>
-            <h2 className="mt-4 text-[clamp(1.75rem,4vw,3rem)] font-bold leading-[1.08] tracking-[-0.03em] text-edge-black">
-              Une offre adaptée à votre réalité.
-            </h2>
-          </FadeSection>
-
-          <div className="mt-16 grid gap-6 lg:grid-cols-3 lg:gap-5">
-            {OFFERS.map((offer, i) => (
-              <motion.article
-                key={offer.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className={cn(
-                  "flex flex-col rounded-2xl border bg-white p-8 transition-shadow",
-                  offer.featured
-                    ? "border-[#E63329] shadow-[0_0_0_1px_#E63329,0_24px_60px_-20px_rgba(230,51,41,0.25)]"
-                    : "border-black/10 hover:shadow-[0_20px_50px_-24px_rgba(0,0,0,0.12)]",
-                )}
+            <div className="mt-6 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight text-white">12€ / collaborateur / mois</p>
+                <p className="mt-2 text-sm text-white/50">3 licences RH offertes</p>
+              </div>
+              <EdgeButton
+                href="#contact"
+                className="mt-4 !border-[#E63329] !bg-[#E63329] px-8 py-3.5 text-sm font-semibold lg:mt-0"
+                ariaLabel="Demander un accès démo"
               >
-                {offer.featured ? (
-                  <span
-                    className="mb-4 inline-flex w-fit rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white"
-                    style={{ backgroundColor: EDGE_RED }}
+                Demander un accès démo
+              </EdgeButton>
+            </div>
+
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {BASE_INCLUDES.map((item) => (
+                <li key={item} className="flex gap-3 text-sm leading-snug text-white/75">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: EDGE_RED }} aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </motion.article>
+
+          {/* Add-ons */}
+          <div className="mt-24">
+            <FadeSection>
+              <h3 className="text-2xl font-bold tracking-tight" style={{ color: EDGE_BLACK }}>
+                Allez plus loin avec EDGE
+              </h3>
+              <p className="mt-2 text-base text-black/45">
+                Activez ce dont vous avez besoin, quand vous en avez besoin.
+              </p>
+            </FadeSection>
+
+            <div className="mt-12 grid gap-5 sm:grid-cols-2">
+              {ADDONS.map((addon, i) => {
+                const Icon = addon.icon;
+                return (
+                  <motion.article
+                    key={addon.name}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-40px" }}
+                    transition={{ duration: 0.5, delay: i * 0.06 }}
+                    className={cn(
+                      "flex flex-col rounded-2xl border bg-white p-8 transition-shadow",
+                      addon.popular
+                        ? "border-[#E63329] shadow-[0_0_0_1px_#E63329,0_20px_50px_-20px_rgba(230,51,41,0.2)]"
+                        : "border-black/10 hover:shadow-[0_16px_40px_-20px_rgba(0,0,0,0.1)]",
+                    )}
                   >
-                    Recommandé
-                  </span>
-                ) : (
-                  <span className="mb-4 h-6" aria-hidden />
-                )}
-                <h3 className="text-xl font-bold tracking-tight text-edge-black">{offer.name}</h3>
-                <p className="mt-2 text-sm text-edge-black/50">{offer.duration}</p>
-                <p className="mt-4 flex-1 text-sm leading-relaxed text-edge-black/70">{offer.includes}</p>
-                <p className="mt-6 text-2xl font-bold tracking-tight text-edge-black">{offer.price}</p>
-                <Link
-                  href="#contact"
-                  className={cn(
-                    "mt-6 inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90",
-                    offer.featured
-                      ? "text-white"
-                      : "border border-edge-black/15 text-edge-black hover:border-edge-black/30",
-                  )}
-                  style={offer.featured ? { backgroundColor: EDGE_RED } : undefined}
-                >
-                  {offer.cta}
-                </Link>
-              </motion.article>
-            ))}
+                    <div className="flex items-start justify-between gap-3">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-xl"
+                        style={{ backgroundColor: `${EDGE_RED}14` }}
+                      >
+                        <Icon className="h-5 w-5" style={{ color: EDGE_RED }} aria-hidden />
+                      </div>
+                      {addon.popular ? (
+                        <span
+                          className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white"
+                          style={{ backgroundColor: EDGE_RED }}
+                        >
+                          Populaire
+                        </span>
+                      ) : null}
+                    </div>
+                    <h4 className="mt-5 text-lg font-bold tracking-tight" style={{ color: EDGE_BLACK }}>
+                      {addon.name}
+                    </h4>
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-black/55">{addon.text}</p>
+                    <p className="mt-6 text-xl font-bold tracking-tight" style={{ color: EDGE_BLACK }}>
+                      {addon.price}
+                    </p>
+                    <Link
+                      href="#contact"
+                      className={cn(
+                        "mt-5 inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90",
+                        addon.popular ? "text-white" : "border border-black/15 text-black hover:border-black/30",
+                      )}
+                      style={addon.popular ? { backgroundColor: EDGE_RED } : undefined}
+                    >
+                      {addon.cta}
+                    </Link>
+                  </motion.article>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 6. TÉMOIGNAGES */}
-      <section className="bg-edge-black px-5 py-20 sm:px-8 sm:py-28">
+      {/* 5. TÉMOIGNAGES */}
+      <section className="px-5 py-24 sm:px-8 sm:py-32" style={{ backgroundColor: EDGE_BLACK }}>
         <div className="mx-auto max-w-6xl">
           <FadeSection>
             <SectionLabel tone="accent">ILS ONT CHOISI EDGE</SectionLabel>
+            <p className="sr-only">Témoignages fictifs — placeholders</p>
           </FadeSection>
 
-          <div className="mt-12 flex gap-5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-3 lg:overflow-visible">
+          <div className="mt-12 flex gap-5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:grid lg:grid-cols-3 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
             {TESTIMONIALS.map((t, i) => (
               <motion.blockquote
                 key={t.name}
@@ -354,17 +405,24 @@ export function EntreprisesPageContent() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.5, delay: i * 0.08 }}
-                className="min-w-[280px] flex-shrink-0 rounded-2xl border border-white/10 bg-[#141414] p-7 lg:min-w-0"
+                className="min-w-[280px] flex-shrink-0 rounded-2xl border border-white/10 bg-[#141414] p-8 lg:min-w-0"
               >
                 <p className="text-base font-medium leading-relaxed text-white/85">&ldquo;{t.quote}&rdquo;</p>
-                <footer className="mt-6 flex items-center gap-4">
-                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full">
-                    <Image src={t.photo} alt="" fill className="object-cover" sizes="48px" />
-                  </div>
+                <footer className="mt-7 flex items-center gap-4">
+                  <span
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                    style={{
+                      backgroundColor: t.color === EDGE_RED ? `${EDGE_RED}22` : "rgba(255,255,255,0.08)",
+                      color: t.color,
+                    }}
+                    aria-hidden
+                  >
+                    {t.initials}
+                  </span>
                   <div>
                     <cite className="not-italic text-sm font-bold text-white">{t.name}</cite>
-                    <p className="text-xs text-white/45">
-                      {t.role} · {t.company}
+                    <p className="text-xs text-white/40">
+                      {t.role}, {t.company}
                     </p>
                   </div>
                 </footer>
@@ -374,14 +432,14 @@ export function EntreprisesPageContent() {
         </div>
       </section>
 
-      {/* 7. CTA FINAL */}
-      <section id="contact" className="scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28" style={{ backgroundColor: EDGE_RED }}>
+      {/* 6. CTA FINAL */}
+      <section id="contact" className="scroll-mt-20 px-5 py-24 sm:px-8 sm:py-32" style={{ backgroundColor: EDGE_RED }}>
         <div className="mx-auto max-w-2xl">
           <FadeSection className="text-center">
             <h2 className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.03em] text-white">
               Prêt à former autrement ?
             </h2>
-            <p className="mt-4 text-base leading-relaxed text-white/85 sm:text-lg">
+            <p className="mt-4 text-base leading-relaxed text-white/90 sm:text-lg">
               Prenez 15 minutes pour nous expliquer votre contexte. On vous propose une approche sur-mesure sous 48h.
             </p>
           </FadeSection>

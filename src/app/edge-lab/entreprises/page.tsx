@@ -5,7 +5,7 @@ import { EntreprisesPageContent } from "@/components/edge-site/entreprises-page-
 export const metadata: Metadata = {
   title: "Entreprises — Former autrement | EDGE",
   description:
-    "Diagnostic comportemental, parcours sur-mesure et pilotage de la performance. Pour les entreprises qui ne veulent pas faire semblant de former.",
+    "On diagnostique avant de former. On mesure après. Diagnostic Beyond, licences plateforme et interventions sur-mesure pour vos équipes.",
 };
 
 export default function EntreprisesPage() {

@@ -52,7 +52,6 @@ function canAccessEntrepriseDashboard(profile: {
   const roleType = String(profile.role_type ?? "").toLowerCase();
   if (MANAGER_ROLES.has(role) || MANAGER_ROLES.has(roleType)) return true;
   if (roleType === "entreprise") return true;
-  if (Boolean(profile.company_id?.trim())) return true;
   return false;
 }
 
@@ -99,6 +98,25 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
   }
 
   if (!canAccessEntrepriseDashboard(profile)) {
+    const service = getServiceRoleClient();
+    if (service) {
+      const { data: membership } = await service
+        .from("org_memberships")
+        .select("org_id, role")
+        .eq("user_id", user.id)
+        .in("role", ["admin", "manager"])
+        .limit(1)
+        .maybeSingle();
+      if (!membership?.org_id) {
+        return { ok: false, error: "Accès réservé aux responsables RH entreprise", status: 403 };
+      }
+      const viewer = {
+        email: user.email ?? profile.email ?? null,
+        prenom: profile.first_name ?? null,
+        nom: profile.last_name ?? null,
+      };
+      return { ok: true, userId: user.id, organizationId: String(membership.org_id), viewer };
+    }
     return { ok: false, error: "Accès réservé aux responsables RH entreprise", status: 403 };
   }
 

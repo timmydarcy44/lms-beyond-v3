@@ -6,6 +6,7 @@ import { Loader2, Mic, RotateCcw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import type { InterviewAudience, InterviewPlayTheme } from "@/lib/apprenant/interview-audience";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -18,8 +19,10 @@ type ExperientialInterviewViewProps = {
   onMessagesChange?: (messages: ChatMessage[]) => void;
   /** When false, the AI conversation does not start until the learner confirms readiness. */
   conversationActive?: boolean;
-  /** Premier message préchargé pendant l’écran de choix (évite « Préparation… » au démarrage). */
+  /** Premier message préchargé pendant l'écran de choix (évite « Préparation… » au démarrage). */
   initialAssistantMessage?: string | null;
+  theme?: InterviewPlayTheme;
+  audience?: InterviewAudience;
 };
 
 export function ExperientialInterviewView({
@@ -31,7 +34,10 @@ export function ExperientialInterviewView({
   onMessagesChange,
   conversationActive = true,
   initialAssistantMessage,
+  theme = "edge",
+  audience = "professional",
 }: ExperientialInterviewViewProps) {
+  const isJessica = theme === "jessica";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,13 +62,14 @@ export function ExperientialInterviewView({
           interviewObjectives: interviewObjectives?.trim() || undefined,
           chapterTitle,
           courseTitle,
+          audience,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Erreur de l'assistant");
       return String(data.reply ?? "").trim();
     },
-    [contextText, interviewObjectives, chapterTitle, courseTitle],
+    [contextText, interviewObjectives, chapterTitle, courseTitle, audience],
   );
 
   const bootstrap = useCallback(async () => {
@@ -158,27 +165,79 @@ export function ExperientialInterviewView({
       )}
     >
       <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(220px,280px)_1fr]">
-        <aside className="relative hidden flex-col justify-between border-r border-violet-900/30 bg-gradient-to-br from-[#1a0a2e] via-[#2d1b4e] to-[#12081f] p-6 text-white lg:flex">
+        <aside
+          className={
+            isJessica
+              ? "relative hidden flex-col justify-between border-r border-slate-200 bg-white p-6 text-slate-900 lg:flex"
+              : "relative hidden flex-col justify-between border-r border-violet-900/30 bg-gradient-to-br from-[#1a0a2e] via-[#2d1b4e] to-[#12081f] p-6 text-white lg:flex"
+          }
+        >
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-violet-300/80">EDGE AI</p>
-            <h2 className="mt-4 text-[30px] font-bold leading-tight tracking-tight text-white">
+            <p
+              className={
+                isJessica
+                  ? "text-[10px] font-semibold uppercase tracking-[0.35em] text-[#B8860B]"
+                  : "text-[10px] font-semibold uppercase tracking-[0.35em] text-violet-300/80"
+              }
+            >
+              {isJessica ? "Entretien" : "EDGE AI"}
+            </p>
+            <h2
+              className={
+                isJessica
+                  ? "mt-4 text-[30px] font-bold leading-tight tracking-tight text-[#2F2A25]"
+                  : "mt-4 text-[30px] font-bold leading-tight tracking-tight text-white"
+              }
+            >
               Entretien expérientiel
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/70">
-              Entretien expérientiel guidé : questions courtes, réponses écrites ou à l&apos;oral pour ancrer vos
-              apprentissages.
+            <p
+              className={
+                isJessica
+                  ? "mt-3 text-sm leading-relaxed text-slate-600"
+                  : "mt-3 text-sm leading-relaxed text-white/70"
+              }
+            >
+              {isJessica
+                ? "Un échange guidé pour relier ce que vous avez appris à votre quotidien avec votre enfant."
+                : "Entretien expérientiel guidé : questions courtes, réponses écrites ou à l'oral pour ancrer vos apprentissages."}
             </p>
           </div>
-          <div className="mt-8 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs text-white/55">
-            Contexte : <span className="font-medium text-white/85">{chapterTitle}</span>
+          <div
+            className={
+              isJessica
+                ? "mt-8 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600"
+                : "mt-8 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs text-white/55"
+            }
+          >
+            Contexte :{" "}
+            <span className={isJessica ? "font-medium text-[#2F2A25]" : "font-medium text-white/85"}>
+              {chapterTitle}
+            </span>
           </div>
         </aside>
 
-        <div className="flex min-h-0 flex-col bg-slate-50">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:px-5">
+        <div className={isJessica ? "flex min-h-0 flex-col bg-[#FAFAFA]" : "flex min-h-0 flex-col bg-slate-50"}>
+          <div
+            className={
+              isJessica
+                ? "flex items-center justify-between border-b border-[#D2B48C]/40 bg-[#F0EBE3] px-4 py-3 lg:px-5"
+                : "flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:px-5"
+            }
+          >
             <div className="lg:hidden">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-violet-700">Entretien</p>
-              <p className="text-sm font-semibold text-slate-900">{chapterTitle}</p>
+              <p
+                className={
+                  isJessica
+                    ? "text-[10px] font-semibold uppercase tracking-[0.28em] text-[#B8860B]"
+                    : "text-[10px] font-semibold uppercase tracking-[0.28em] text-violet-700"
+                }
+              >
+                Entretien
+              </p>
+              <p className={isJessica ? "text-sm font-semibold text-[#2F2A25]" : "text-sm font-semibold text-slate-900"}>
+                {chapterTitle}
+              </p>
             </div>
             <Button
               type="button"
@@ -186,7 +245,7 @@ export function ExperientialInterviewView({
               size="sm"
               onClick={handleRestart}
               disabled={initializing || loading}
-              className="ml-auto gap-2 text-slate-600"
+              className={isJessica ? "ml-auto gap-2 text-slate-600" : "ml-auto gap-2 text-slate-600"}
             >
               <RotateCcw className="h-4 w-4" />
               Recommencer
@@ -195,8 +254,14 @@ export function ExperientialInterviewView({
 
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 lg:px-6">
             {initializing ? (
-              <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
-                <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+              <div
+                className={
+                  isJessica
+                    ? "flex items-center justify-center gap-2 py-16 text-sm text-slate-500"
+                    : "flex items-center justify-center gap-2 py-16 text-sm text-slate-500"
+                }
+              >
+                <Loader2 className={isJessica ? "h-5 w-5 animate-spin text-[#C6A664]" : "h-5 w-5 animate-spin text-violet-600"} />
                 Connexion à l&apos;assistant…
               </div>
             ) : (
@@ -209,8 +274,12 @@ export function ExperientialInterviewView({
                     className={cn(
                       "max-w-[min(100%,520px)] rounded-2xl px-4 py-3 text-[15px] leading-relaxed shadow-sm",
                       m.role === "user"
-                        ? "bg-white text-slate-900 ring-1 ring-slate-200"
-                        : "bg-slate-200/80 text-slate-900",
+                        ? isJessica
+                          ? "bg-white text-slate-900 ring-1 ring-slate-200"
+                          : "bg-white text-slate-900 ring-1 ring-slate-200"
+                        : isJessica
+                          ? "bg-slate-100 text-slate-900"
+                          : "bg-slate-200/80 text-slate-900",
                     )}
                   >
                     {m.content}
@@ -227,16 +296,20 @@ export function ExperientialInterviewView({
             ) : null}
           </div>
 
-          <div className="border-t border-slate-200 bg-white p-4">
+          <div className={isJessica ? "border-t border-slate-200 bg-white p-4" : "border-t border-slate-200 bg-white p-4"}>
             <div className="flex items-end gap-2">
               <Textarea
                 ref={inputRef}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Ta réponse…"
+                placeholder={isJessica ? "Votre réponse…" : "Ta réponse…"}
                 rows={2}
                 disabled={!conversationActive || initializing || loading}
-                className="min-h-[48px] resize-none rounded-2xl border-slate-200 bg-slate-50 text-slate-900"
+                className={
+                  isJessica
+                    ? "min-h-[48px] resize-none rounded-2xl border-slate-200 bg-white text-slate-900"
+                    : "min-h-[48px] resize-none rounded-2xl border-slate-200 bg-slate-50 text-slate-900"
+                }
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -259,7 +332,11 @@ export function ExperientialInterviewView({
                 size="icon"
                 disabled={!conversationActive || !draft.trim() || loading || initializing}
                 onClick={() => void handleSend()}
-                className="h-11 w-11 shrink-0 rounded-full bg-violet-600 text-white hover:bg-violet-500"
+                className={
+                  isJessica
+                    ? "h-11 w-11 shrink-0 rounded-full bg-[#C6A664] text-white hover:bg-[#B8860B]"
+                    : "h-11 w-11 shrink-0 rounded-full bg-violet-600 text-white hover:bg-violet-500"
+                }
                 aria-label="Envoyer"
               >
                 <Send className="h-5 w-5" />

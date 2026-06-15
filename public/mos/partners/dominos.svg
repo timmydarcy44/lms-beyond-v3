@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" role="img" aria-label="Domino's">
+  <rect x="4" y="10" width="28" height="28" rx="4" fill="#006491"/>
+  <circle cx="14" cy="18" r="3" fill="#fff"/>
+  <circle cx="22" cy="26" r="3" fill="#E31837"/>
+  <text x="40" y="30" fill="#006491" font-family="Arial,sans-serif" font-size="22" font-weight="700">Domino's</text>
+</svg>

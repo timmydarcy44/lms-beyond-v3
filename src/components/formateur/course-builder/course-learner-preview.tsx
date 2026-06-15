@@ -22,7 +22,7 @@ type PreviewNode = {
   mediaUrl?: string;
   sectionTitle: string;
   chapterTitle: string;
-  kind: "content" | "quiz" | "interview";
+  kind: "content" | "quiz" | "interview" | "resource";
   interviewContext?: string;
   interviewObjectives?: string;
 };
@@ -53,6 +53,8 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
               (sub.title || "").toLowerCase().startsWith("quiz") ||
               html.toLowerCase().includes("ouvrir le quiz");
             const isInterview = subKind === "experiential_interview";
+            const isResource =
+              subKind === "resource" || Boolean((sub as { resource_id?: string }).resource_id);
             const interviewContext = String((sub as { interview_context?: string }).interview_context ?? "").trim();
             const interviewObjectives = String(
               (sub as { interview_objectives?: string }).interview_objectives ?? "",
@@ -65,7 +67,7 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
               mediaUrl,
               sectionTitle: section.title || `Section ${sIdx + 1}`,
               chapterTitle: chapter.title || `Chapitre ${cIdx + 1}`,
-              kind: isQuiz ? "quiz" : isInterview ? "interview" : "content",
+              kind: isQuiz ? "quiz" : isInterview ? "interview" : isResource ? "resource" : "content",
               interviewContext:
                 interviewContext || (isInterview ? chapterPlain.slice(0, 14_000) : undefined),
               interviewObjectives: interviewObjectives || undefined,
@@ -232,7 +234,14 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
                       : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
                   )}
                 >
-                  <span className="line-clamp-2">{node.label}</span>
+                  <span className="line-clamp-2">
+                    {node.label}
+                    {node.kind === "resource" ? (
+                      <span className="ml-2 inline-flex rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-800">
+                        Ressource
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="flex items-center gap-2">
                     {isDone ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : null}
                     <ChevronRight className="mt-0.5 h-4 w-4 text-slate-400" />

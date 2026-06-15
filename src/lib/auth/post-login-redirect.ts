@@ -30,6 +30,8 @@ export const PROFILE_ROLE_DESTINATIONS: Record<string, string> = {
   expert: "/dashboard/expert",
   praticien_bct: "/dashboard/praticien",
   praticien: "/dashboard/praticien",
+  club: "/dashboard/club",
+  partenaire: "/dashboard/partenaire",
 };
 
 /**

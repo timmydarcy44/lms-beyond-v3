@@ -1751,20 +1751,9 @@ export const getFormateurContentLibrary = async (): Promise<FormateurContentLibr
       };
     }
 
-    const superAdmin = await isSuperAdmin();
+    const scope = await getFormateurScopeForSession();
     const serviceOnly = getServiceRoleClient();
-    const client = (superAdmin && serviceOnly ? serviceOnly : null) ?? supabase;
-
-    if (!client) {
-      console.warn("[formateur] Impossible d'obtenir un client Supabase pour le contenu formateur");
-      return {
-        courses: [],
-        tests: [],
-        resources: [],
-      };
-    }
-
-    const db = client;
+    const db = serviceOnly ?? supabase;
 
     // Récupérer les cours, tests et ressources du formateur
     // Note: category et duration peuvent ne pas exister, on les retire de la query
@@ -1809,14 +1798,19 @@ export const getFormateurContentLibrary = async (): Promise<FormateurContentLibr
       })(),
       // Resources : Récupérer par created_by, owner_id, creator_id, ou org_id
       (async () => {
-        // Récupérer les organisations où l'utilisateur est instructor/admin/tutor
+        const STAFF_ORG_ROLES = ["instructor", "admin", "tutor", "formateur", "trainer", "staff", "owner"];
         const { data: memberships } = await db
           .from("org_memberships")
           .select("org_id")
           .eq("user_id", userId)
-          .in("role", ["instructor", "admin", "tutor"]);
-        
-        const orgIds = memberships?.map((m) => m.org_id) ?? [];
+          .in("role", STAFF_ORG_ROLES);
+
+        const orgIds = [
+          ...new Set([
+            ...(memberships?.map((m) => m.org_id).filter(Boolean) ?? []),
+            ...(scope?.orgIds ?? []),
+          ]),
+        ];
         console.log("[formateur] Resources - Org IDs trouvés:", orgIds);
         
         // Récupérer les IDs de ressources selon plusieurs critères
@@ -1829,8 +1823,10 @@ export const getFormateurContentLibrary = async (): Promise<FormateurContentLibr
             .from("resources")
             .select("id")
             .eq("owner_id", userId),
-          // Note: creator_id n'existe pas dans resources, on ne cherche que created_by et owner_id
-          Promise.resolve({ data: [], error: null }),
+          db
+            .from("resources")
+            .select("id")
+            .eq("creator_id", userId),
           orgIds.length > 0
             ? db
                 .from("resources")
@@ -1998,25 +1994,19 @@ export const getFormateurContentLibrary = async (): Promise<FormateurContentLibr
     }));
 
     const resources = resourceRows.map((resource: any) => {
-      // Gérer published (boolean) - status n'existe pas dans votre table
-      let status: "published" | "draft" = "draft";
-      if (resource.published !== undefined && resource.published !== null) {
-        status = resource.published ? "published" : "draft";
-      }
-      
-      // Déterminer le type : kind, type, ou resource_type (selon ce qui existe)
+      const published =
+        resource.published === true || resource.status === "published";
+      const status: "published" | "draft" = published ? "published" : "draft";
       const resourceType = resource.kind || resource.type || resource.resource_type || "guide";
-      
-      // Déterminer la thumbnail : cover_url ou thumbnail_url
       const thumbnail = resource.cover_url || resource.thumbnail_url || null;
-      
+
       return {
         id: String(resource.id),
         title: resource.title || "Ressource sans titre",
         type: resourceType,
         thumbnail,
         status,
-        published: resource.published ?? false, // Utiliser published directement
+        published,
       };
     });
     

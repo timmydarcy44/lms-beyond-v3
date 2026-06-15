@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ClubLayout } from "@/components/club/club-layout";
-import { useClubGuard } from "@/components/club/use-club-guard";
+import { ClubGuardGate, useClubGuard } from "@/components/club/use-club-guard";
 import { cn } from "@/lib/utils";
 import { CheckCircle, TrendingUp, Users } from "lucide-react";
 import jsPDF from "jspdf";
@@ -1331,7 +1331,7 @@ export default function ClubTunnelPage() {
   };
 
   if (status !== "allowed") {
-    return null;
+    return <ClubGuardGate status={status}>{null}</ClubGuardGate>;
   }
 
   const totalContacts = columns.reduce((sum, col) => sum + (col.cards?.length || 0), 0);

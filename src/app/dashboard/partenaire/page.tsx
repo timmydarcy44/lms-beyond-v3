@@ -22,7 +22,7 @@ const posts = [
     category: "Résultat",
     title: "Victoire 2-1 face à Caen !",
     text:
-      "Belle performance de l'équipe première samedi soir au stade de Dives. Merci à tous nos partenaires présents en tribune !",
+      "Belle performance de l'équipe première samedi soir au stade de Caen. Merci à tous nos partenaires présents en tribune !",
     image: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800",
     mentioned: true,
     likes: 47,
@@ -34,7 +34,7 @@ const posts = [
     category: "Partenariat",
     title: "Bienvenue à notre nouveau partenaire !",
     text:
-      "Nous sommes fiers d'accueillir Normandie Énergie dans la famille SUDC. Un partenariat fort pour la saison 2025/2026.",
+      "Nous sommes fiers d'accueillir Normandie Énergie dans la famille Maladrerie OS. Un partenariat fort pour la saison 2025/2026.",
     image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800",
     mentioned: false,
     likes: 23,
@@ -123,11 +123,17 @@ export default function PartenaireDashboardPage() {
               className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-[#111827]"
             >
               <div className="flex items-center gap-3 p-4">
-                <img
-                  src={partenaireClub.logoUrl}
-                  alt={partenaireClub.name}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
+                {partenaireClub.logoUrl ? (
+                  <img
+                    src={partenaireClub.logoUrl}
+                    alt={partenaireClub.name}
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C8102E] text-xs font-bold text-white">
+                    {partenaireClub.initials}
+                  </div>
+                )}
                 <div className="text-sm font-bold text-white">{partenaireClub.name}</div>
                 <div className="text-xs text-white/40">· {post.time}</div>
                 <span className={cn("rounded-full px-2 py-0.5 text-xs", categoryStyles[post.category])}>

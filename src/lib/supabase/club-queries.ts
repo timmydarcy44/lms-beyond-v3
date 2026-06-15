@@ -1,18 +1,28 @@
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+export function shouldUseClubDemoData(role: string | null, club: unknown): boolean {
+  if (role === "demo") return true;
+  return !club;
+}
+
+async function getSessionUser(supabase: SupabaseClient): Promise<User | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user ?? null;
+}
 
 // Récupère le club de l'utilisateur connecté
 export async function getMyClub() {
   const supabase = createSupabaseBrowserClient();
   if (!supabase) return null;
-  const { data: userResult } = await supabase.auth.getUser();
-  const user = userResult?.user;
+  const user = await getSessionUser(supabase);
   if (!user) return null;
 
   const { data } = await supabase
     .from("clubs")
     .select("*")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   return data;
 }
@@ -21,8 +31,7 @@ export async function getMyClub() {
 export async function getMyClubContext() {
   const supabase = createSupabaseBrowserClient();
   if (!supabase) return { club: null, role: null };
-  const { data: userResult } = await supabase.auth.getUser();
-  const user = userResult?.user;
+  const user = await getSessionUser(supabase);
   if (!user) return { club: null, role: null };
 
   const { data: profile } = await supabase
@@ -30,15 +39,29 @@ export async function getMyClubContext() {
     .select("role, role_type")
     .eq("id", user.id)
     .maybeSingle();
-  const role = String(profile?.role_type ?? profile?.role ?? "").toLowerCase() || null;
 
-  const { data: club } = await supabase
-    .from("clubs")
-    .select("*")
-    .eq("user_id", user.id)
-    .single();
+  const roleType = String(profile?.role_type ?? "").trim().toLowerCase();
+  const role = String(profile?.role ?? "").trim().toLowerCase();
+  const effectiveRole = roleType === "club" || roleType === "demo"
+    ? roleType
+    : role === "club" || role === "demo"
+      ? role
+      : roleType || role || null;
 
-  return { club, role };
+  let club = null;
+  try {
+    const clubResult = await Promise.race([
+      supabase.from("clubs").select("*").eq("user_id", user.id).maybeSingle(),
+      new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 4000)),
+    ]);
+    if (clubResult && "data" in clubResult) {
+      club = clubResult.data;
+    }
+  } catch {
+    club = null;
+  }
+
+  return { club, role: effectiveRole };
 }
 
 // Récupère les partenaires du club
@@ -86,7 +109,7 @@ export async function getClubRoiSettings(clubId: string) {
     .from("club_roi_settings")
     .select("*")
     .eq("club_id", clubId)
-    .single();
+    .maybeSingle();
   return data;
 }
 
@@ -98,7 +121,7 @@ export async function getClubDncg(clubId: string) {
     .from("club_dncg")
     .select("*")
     .eq("club_id", clubId)
-    .single();
+    .maybeSingle();
   return data;
 }
 

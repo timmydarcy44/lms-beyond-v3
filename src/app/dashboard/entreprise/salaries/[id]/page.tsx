@@ -7,8 +7,12 @@ import {
   EnterpriseEmployeeMissions,
   type EmployeeMission,
 } from "@/components/enterprise/enterprise-employee-missions";
+import {
+  EnterpriseEmployeeHrPanel,
+  type HrDocument,
+} from "@/components/enterprise/enterprise-employee-hr-panel";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight, Trash2 } from "lucide-react";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -23,6 +27,8 @@ type EmployeeRow = {
   first_name: string | null;
   last_name: string | null;
   email?: string | null;
+  phone?: string | null;
+  hire_date?: string | null;
   job_title: string | null;
   department: string | null;
 };
@@ -166,6 +172,8 @@ export default function SalarieDetailPage() {
     soft_skills: Array<{ skill: string; score: number }>;
   } | null>(null);
   const [missions, setMissions] = useState<EmployeeMission[]>([]);
+  const [hrDocuments, setHrDocuments] = useState<HrDocument[]>([]);
+  const [deleting, setDeleting] = useState(false);
   const [recommendedAction, setRecommendedAction] = useState<RecommendedActionRow | null>(null);
 
   useEffect(() => {
@@ -187,6 +195,7 @@ export default function SalarieDetailPage() {
             soft_skills: Array<{ skill: string; score: number }>;
           };
           missions?: EmployeeMission[];
+          hr_documents?: HrDocument[];
           recommended_action?: RecommendedActionRow | null;
           error?: string;
         };
@@ -206,6 +215,7 @@ export default function SalarieDetailPage() {
           setPendingShareConsent(Boolean(payload.pending_share_consent));
           setTestResults(payload.test_results ?? null);
           setMissions(payload.missions ?? []);
+          setHrDocuments(payload.hr_documents ?? []);
           setRecommendedAction(payload.recommended_action ?? null);
         }
       } catch {
@@ -301,6 +311,27 @@ export default function SalarieDetailPage() {
     } satisfies RecommendedActionRow;
   }, [dims, recommendedAction, hasDiagnostics]);
 
+  const deleteEmployee = async () => {
+    if (!employeeId) return;
+    const name = [displayEmployee?.first_name, displayEmployee?.last_name].filter(Boolean).join(" ");
+    if (!confirm(`Supprimer définitivement ${name || "ce collaborateur"} ? Cette action est irréversible.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}`, {
+        method: "DELETE",
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Erreur");
+      router.push("/dashboard/entreprise/salaries");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Suppression impossible");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen bg-white">
@@ -354,14 +385,37 @@ export default function SalarieDetailPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard/entreprise/salaries")}
-            className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-          >
-            ← Retour
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => void deleteEmployee()}
+              className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleting ? "Suppression…" : "Supprimer"}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard/entreprise/salaries")}
+              className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+            >
+              ← Retour
+            </button>
+          </div>
         </header>
+
+        <EnterpriseEmployeeHrPanel
+          employeeId={employeeId!}
+          email={displayEmployee.email ?? null}
+          phone={displayEmployee.phone ?? null}
+          hireDate={displayEmployee.hire_date ?? null}
+          documents={hrDocuments}
+          onProfileChange={(patch) =>
+            setEmployee((prev) => (prev ? { ...prev, ...patch } : prev))
+          }
+          onDocumentsChange={setHrDocuments}
+        />
 
         {!hasDiagnostics && pendingShareConsent ? (
           <div className="mb-8 rounded-3xl border border-violet-200 bg-violet-50 px-6 py-5 text-sm text-violet-950">

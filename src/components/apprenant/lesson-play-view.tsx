@@ -12,6 +12,7 @@ import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import "katex/dist/katex.min.css";
 
+import { EmbeddedLessonResource } from "@/components/apprenant/embedded-lesson-resource";
 import { LessonSmartAssist } from "@/components/apprenant/lesson-smart-assist";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
@@ -49,6 +50,7 @@ import {
   SquareArrowOutUpRight,
   Trophy,
   MessageCircle,
+  Library,
 } from "lucide-react";
 import type {
   LearnerDetail,
@@ -273,6 +275,8 @@ type LessonPlayViewProps = {
   nextLesson?: { id: string; title: string };
   courseId: string;
   courseTitle: string;
+  /** Thème Jessica Contentin — sans impact sur Edge / catalog. */
+  theme?: "edge" | "jessica";
 };
 
 export function LessonPlayView({
@@ -287,7 +291,9 @@ export function LessonPlayView({
   nextLesson,
   courseId,
   courseTitle,
+  theme = "edge",
 }: LessonPlayViewProps) {
+  const isJessica = theme === "jessica";
   const [mounted, setMounted] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [showLearningStrategyModal, setShowLearningStrategyModal] = useState(false);
@@ -662,6 +668,16 @@ export function LessonPlayView({
     (activeLesson as any).kind === "quiz" || Boolean(linkedQuizTestId) || (activeLesson as any).type === "quiz";
   const isTestLessonKind = (activeLesson as any).kind === "test" || activeLesson.type === "test";
   const isTestFlow = (isTestLessonKind || isQuizLesson) && !isExperientialInterviewLesson;
+
+  const embeddedResourceId = useMemo(() => {
+    const id = String((activeLesson as any).resource_id ?? "").trim();
+    return id || null;
+  }, [activeLesson]);
+
+  const isResourceLesson = useMemo(
+    () => (activeLesson as any).kind === "resource" || Boolean(embeddedResourceId),
+    [activeLesson, embeddedResourceId],
+  );
   
   // Le mode focus est géré automatiquement par PomodoroFocusManager
   // On garde focusMode pour l'affichage local (masquer les flashcards, etc.)
@@ -896,6 +912,8 @@ export function LessonPlayView({
     const lessonQuizId = extractLinkedQuizTestId(moduleLesson as any);
     const isQuizOutline = moduleLesson.kind === "quiz" || Boolean(lessonQuizId) || moduleLesson.type === "quiz";
     const isInterviewOutline = isInterviewLikeLesson(moduleLesson);
+    const isResourceOutline =
+      moduleLesson.kind === "resource" || Boolean((moduleLesson as { resource_id?: string }).resource_id);
     const lessonHrefForItem = isInterviewOutline
       ? `${lessonHref(moduleLesson.id)}/entretien`
       : lessonHref(moduleLesson.id);
@@ -908,11 +926,13 @@ export function LessonPlayView({
       ? Trophy
       : isInterviewOutline
         ? MessageCircle
-        : (moduleLesson as any).kind === "test" || moduleLesson.type === "test"
-          ? ClipboardCheck
-          : hasVideoHint
-            ? PlayCircle
-            : FileText;
+        : isResourceOutline
+          ? Library
+          : (moduleLesson as any).kind === "test" || moduleLesson.type === "test"
+            ? ClipboardCheck
+            : hasVideoHint
+              ? PlayCircle
+              : FileText;
     const isTestLesson = (moduleLesson as any).kind === "test" || moduleLesson.type === "test";
 
     return (
@@ -921,11 +941,18 @@ export function LessonPlayView({
           href={lessonHrefForItem}
           prefetch={true}
           className={cn(
-            "relative block rounded-2xl border border-transparent py-3 text-sm text-white/75 transition-colors hover:text-white",
-            (isSubchapter || isQuizOutline || isInterviewOutline)
-              ? "pl-9 pr-4 before:absolute before:left-4 before:top-3 before:bottom-3 before:w-px before:bg-white/10"
+            "relative block rounded-2xl border border-transparent py-3 text-sm transition-colors",
+            isJessica ? "text-slate-600 hover:text-slate-900" : "text-white/75 hover:text-white",
+            (isSubchapter || isQuizOutline || isInterviewOutline || isResourceOutline)
+              ? cn(
+                  "pl-9 pr-4 before:absolute before:left-4 before:top-3 before:bottom-3 before:w-px",
+                  isJessica ? "before:bg-slate-200" : "before:bg-white/10",
+                )
               : "px-4",
-            isActive && "border-l-2 border-purple-500 border-white/10 bg-white/10 pl-3 text-white",
+            isActive &&
+              (isJessica
+                ? "border-l-2 border-[#C6A664] bg-slate-50 pl-3 text-slate-900"
+                : "border-l-2 border-purple-500 border-white/10 bg-white/10 pl-3 text-white"),
           )}
         >
           <div className="flex items-start gap-3">
@@ -933,16 +960,34 @@ export function LessonPlayView({
               className={cn(
                 "mt-0.5 flex flex-shrink-0 items-center justify-center rounded-lg",
                 isQuizOutline
-                  ? "h-7 w-7 bg-gradient-to-br from-blue-400 via-purple-500 to-fuchsia-500 text-white shadow-sm"
+                  ? isJessica
+                    ? "h-7 w-7 bg-[#C6A664] text-white shadow-sm"
+                    : "h-7 w-7 bg-gradient-to-br from-blue-400 via-purple-500 to-fuchsia-500 text-white shadow-sm"
                   : isInterviewOutline
-                    ? "h-7 w-7 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 text-white shadow-sm"
-                    : cn("h-4 w-4 text-white/70", isSubchapter && "text-white/45"),
-                isActive && !isQuizOutline && !isInterviewOutline && "text-white",
+                    ? isJessica
+                      ? "h-7 w-7 bg-[#B8860B] text-white shadow-sm"
+                      : "h-7 w-7 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 text-white shadow-sm"
+                    : isResourceOutline
+                      ? isJessica
+                        ? "h-7 w-7 bg-[#2A9D8F] text-white shadow-sm"
+                        : "h-7 w-7 bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-500 text-white shadow-sm"
+                      : cn(
+                          isJessica ? "h-4 w-4 text-slate-500" : "h-4 w-4 text-white/70",
+                          isSubchapter && (isJessica ? "text-slate-400" : "text-white/45"),
+                        ),
+                isActive &&
+                  !isQuizOutline &&
+                  !isInterviewOutline &&
+                  !isResourceOutline &&
+                  (isJessica ? "text-[#2F2A25]" : "text-white"),
                 isTestLesson && !isQuizOutline && "text-sky-400",
               )}
             >
               <LessonIcon
-                className={cn("h-3.5 w-3.5", (isSubchapter || isQuizOutline || isInterviewOutline) && "h-3 w-3")}
+                className={cn(
+                  "h-3.5 w-3.5",
+                  (isSubchapter || isQuizOutline || isInterviewOutline || isResourceOutline) && "h-3 w-3",
+                )}
                 aria-hidden="true"
               />
             </div>
@@ -951,31 +996,72 @@ export function LessonPlayView({
                 <span
                   className={cn(
                     "block leading-tight",
-                    (isQuizOutline || isInterviewOutline) &&
-                      "rounded-lg bg-slate-900/50 px-2 py-1 font-bold text-white ring-1 ring-white/10",
-                    !isQuizOutline && !isInterviewOutline && "font-medium text-white",
+                    (isQuizOutline || isInterviewOutline || isResourceOutline) &&
+                      (isJessica
+                        ? "rounded-lg bg-white px-2 py-1 font-bold text-slate-900 ring-1 ring-slate-200"
+                        : "rounded-lg bg-slate-900/50 px-2 py-1 font-bold text-white ring-1 ring-white/10"),
+                    !isQuizOutline && !isInterviewOutline && !isResourceOutline &&
+                      (isJessica ? "font-medium text-slate-800" : "font-medium text-white"),
                     isActive &&
                       !isQuizOutline &&
                       !isInterviewOutline &&
-                      "bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text font-bold text-transparent",
+                      !isResourceOutline &&
+                      (isJessica
+                        ? "font-bold text-[#B8860B]"
+                        : "bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text font-bold text-transparent"),
                     isActive &&
                       isQuizOutline &&
-                      "bg-gradient-to-r from-blue-400 via-purple-500 to-fuchsia-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20",
+                      (isJessica
+                        ? "font-bold text-[#B8860B] ring-1 ring-[#C6A664]/30"
+                        : "bg-gradient-to-r from-blue-400 via-purple-500 to-fuchsia-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20"),
                     isActive &&
                       isInterviewOutline &&
-                      "bg-gradient-to-r from-violet-400 via-purple-500 to-fuchsia-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20",
+                      (isJessica
+                        ? "font-bold text-[#B8860B] ring-1 ring-[#C6A664]/30"
+                        : "bg-gradient-to-r from-violet-400 via-purple-500 to-fuchsia-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20"),
+                    isActive &&
+                      isResourceOutline &&
+                      (isJessica
+                        ? "font-bold text-[#2A9D8F] ring-1 ring-[#2A9D8F]/30"
+                        : "bg-gradient-to-r from-teal-400 via-emerald-500 to-cyan-500 bg-clip-text font-bold text-transparent ring-1 ring-white/20"),
                   )}
                 >
                   {moduleLesson.title}
                 </span>
                 {isQuizOutline ? (
-                  <span className="inline-flex items-center rounded-full border border-indigo-300/40 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-100">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]",
+                      isJessica
+                        ? "border-[#C6A664]/40 bg-[#C6A664]/15 text-[#8B4513]"
+                        : "border-indigo-300/40 bg-indigo-500/10 text-indigo-100",
+                    )}
+                  >
                     Quiz
                   </span>
                 ) : null}
                 {isInterviewOutline ? (
-                  <span className="inline-flex items-center rounded-full border border-violet-300/40 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-100">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]",
+                      isJessica
+                        ? "border-[#B8860B]/40 bg-[#B8860B]/15 text-[#8B4513]"
+                        : "border-violet-300/40 bg-violet-500/10 text-violet-100",
+                    )}
+                  >
                     Entretien
+                  </span>
+                ) : null}
+                {isResourceOutline ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]",
+                      isJessica
+                        ? "border-[#2A9D8F]/40 bg-[#2A9D8F]/15 text-[#1F5F57]"
+                        : "border-teal-300/40 bg-teal-500/10 text-teal-100",
+                    )}
+                  >
+                    Ressource
                   </span>
                 ) : null}
                 {isTestLesson ? (
@@ -984,7 +1070,9 @@ export function LessonPlayView({
                   </span>
                 ) : null}
               </div>
-              <span className="text-xs text-white/55">{moduleLesson.duration}</span>
+              <span className={cn("text-xs", isJessica ? "text-slate-500" : "text-white/55")}>
+                {moduleLesson.duration}
+              </span>
             </div>
           </div>
         </Link>
@@ -993,11 +1081,20 @@ export function LessonPlayView({
   };
 
   const renderOutline = () => (
-    <div className="space-y-5 font-['SF_Pro_Display',_sans-serif] text-white">
-      <div className="text-white">
-        <p className="text-xs uppercase tracking-[0.3em]">Sommaire</p>
+    <div
+      className={cn(
+        "space-y-5 font-['SF_Pro_Display',_sans-serif]",
+        isJessica ? "text-slate-900" : "text-white",
+      )}
+    >
+      <div>
+        <p className={cn("text-xs uppercase tracking-[0.3em]", isJessica ? "text-slate-500" : "text-white/70")}>
+          Sommaire
+        </p>
         <h2 className="text-lg font-semibold md:text-2xl">{detail.title}</h2>
-        <p className="mt-1 text-xs text-white/70">Naviguez librement entre les chapitres</p>
+        <p className={cn("mt-1 text-xs", isJessica ? "text-slate-500" : "text-white/70")}>
+          Naviguez librement entre les chapitres
+        </p>
       </div>
       <div className="space-y-4">
         {modules.map((module) => {
@@ -1007,16 +1104,30 @@ export function LessonPlayView({
             <div
               key={module.id}
               className={cn(
-                "space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 backdrop-blur-md transition text-white",
-                isModuleActive && "border-white/20 shadow-sm",
+                "space-y-2 rounded-2xl border p-3 transition",
+                isJessica
+                  ? "border-slate-200 bg-white text-slate-900"
+                  : "border-white/10 bg-white/[0.03] text-white backdrop-blur-md",
+                isModuleActive && (isJessica ? "border-[#C6A664]/50 shadow-sm" : "border-white/20 shadow-sm"),
               )}
             >
               <div className="mb-4">
-                <div className="text-base font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                <div
+                  className={
+                    isJessica
+                      ? "text-base font-bold text-[#2F2A25]"
+                      : "text-base font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent"
+                  }
+                >
                   {module.title}
                 </div>
-                <div className="mt-1 flex items-center justify-between text-xs uppercase tracking-wide text-white/70">
-                  <span className="text-white/70">Chapitres</span>
+                <div
+                  className={cn(
+                    "mt-1 flex items-center justify-between text-xs uppercase tracking-wide",
+                    isJessica ? "text-slate-500" : "text-white/70",
+                  )}
+                >
+                  <span>Chapitres</span>
                   <span>{module.length}</span>
                 </div>
               </div>
@@ -1042,32 +1153,51 @@ export function LessonPlayView({
                     <div
                       key={group.key}
                       className={cn(
-                        "overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]",
-                        groupHasActive && "border-white/20",
+                        "overflow-hidden rounded-2xl border",
+                        isJessica
+                          ? "border-slate-200 bg-slate-50/80"
+                          : "border-white/10 bg-white/[0.04]",
+                        groupHasActive && (isJessica ? "border-[#C6A664]/45" : "border-white/20"),
                       )}
                     >
                       <button
                         type="button"
                         onClick={() => toggleOutlineGroup(group.key)}
-                        className="flex w-full items-center gap-2 px-3 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/[0.06]"
+                        className={cn(
+                          "flex w-full items-center gap-2 px-3 py-3 text-left text-sm font-semibold transition",
+                          isJessica
+                            ? "text-slate-900 hover:bg-slate-100"
+                            : "text-white hover:bg-white/[0.06]",
+                        )}
                         aria-expanded={isExpanded}
                       >
                         <ChevronDown
                           className={cn(
-                            "h-4 w-4 shrink-0 text-white/60 transition-transform",
+                            "h-4 w-4 shrink-0 transition-transform",
+                            isJessica ? "text-slate-500" : "text-white/60",
                             !isExpanded && "-rotate-90",
                           )}
                           aria-hidden
                         />
                         <span className="flex-1 leading-tight">{headerTitle}</span>
                         {hasChildren ? (
-                          <span className="text-[10px] font-medium uppercase tracking-wider text-white/45">
+                          <span
+                            className={cn(
+                              "text-[10px] font-medium uppercase tracking-wider",
+                              isJessica ? "text-slate-400" : "text-white/45",
+                            )}
+                          >
                             {group.items.length}
                           </span>
                         ) : null}
                       </button>
                       {isExpanded ? (
-                        <ul className="space-y-1 border-t border-white/10 px-1 pb-2 pt-1">
+                        <ul
+                          className={cn(
+                            "space-y-1 border-t px-1 pb-2 pt-1",
+                            isJessica ? "border-slate-200" : "border-white/10",
+                          )}
+                        >
                           {chapterLesson && chapterLesson.kind === "chapter"
                             ? renderOutlineLessonLink(chapterLesson)
                             : null}
@@ -1081,11 +1211,27 @@ export function LessonPlayView({
             </div>
           );
         })}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md">
+        <div
+          className={cn(
+            "rounded-2xl border p-4",
+            isJessica
+              ? "border-slate-200 bg-white"
+              : "border-white/10 bg-white/[0.03] backdrop-blur-md",
+          )}
+        >
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-white/60">Validation de la formation</p>
-              <p className="mt-1 text-sm text-white/80">Obtenez votre badge en validant la formation.</p>
+              <p
+                className={cn(
+                  "text-xs font-semibold uppercase tracking-[0.32em]",
+                  isJessica ? "text-[#8B4513]/70" : "text-white/60",
+                )}
+              >
+                Validation de la formation
+              </p>
+              <p className={cn("mt-1 text-sm", isJessica ? "text-[#2F2A25]" : "text-white/80")}>
+                Obtenez votre badge en validant la formation.
+              </p>
             </div>
             {badgeConfig?.label ? (
               <div className="flex flex-col items-end gap-1">
@@ -1104,25 +1250,32 @@ export function LessonPlayView({
     </div>
   );
 
-  const renderNeuroToggle = (variant: "light" | "glass") => (
+  const renderNeuroToggle = (variant: "light" | "glass" | "jessica") => (
     <div
       className={cn(
         "flex items-center gap-3 rounded-2xl border px-4 py-2 shadow-sm",
         variant === "glass"
           ? "border-white/20 bg-white/10 text-white backdrop-blur-md"
-          : "border-slate-200 bg-white text-slate-900",
+          : variant === "jessica"
+            ? "border-slate-200 bg-white text-slate-900"
+            : "border-slate-200 bg-white text-slate-900",
       )}
     >
       <div className="flex flex-col">
         <span
           className={cn(
             "text-xs font-semibold uppercase tracking-[0.3em]",
-            variant === "glass" ? "text-white/90" : "text-slate-500",
+            variant === "glass" ? "text-white/90" : variant === "jessica" ? "text-slate-700" : "text-slate-500",
           )}
         >
           Mode neuro-adapté
         </span>
-        <span className={cn("text-[11px]", variant === "glass" ? "text-white/65" : "text-slate-400")}>
+        <span
+          className={cn(
+            "text-[11px]",
+            variant === "glass" ? "text-white/65" : variant === "jessica" ? "text-slate-500" : "text-slate-400",
+          )}
+        >
           DYS / Accessibilité
         </span>
       </div>
@@ -1283,10 +1436,13 @@ export function LessonPlayView({
       >
         <aside
           className={cn(
-            "relative order-1 rounded-3xl border border-slate-200 bg-[#0F111A] text-white shadow-sm backdrop-blur-xl lg:order-1",
+            "relative order-1 rounded-3xl border shadow-sm lg:order-1",
+            isJessica
+              ? "border-slate-200/90 bg-white text-slate-900 shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]"
+              : "border-slate-200 bg-[#0F111A] text-white backdrop-blur-xl",
             isFocus ? "hidden" : "hidden lg:flex lg:flex-col",
-            "before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-40 before:bg-gradient-to-b before:from-red-600/30 before:via-red-600/5 before:to-transparent before:pointer-events-none",
-            "after:content-[''] after:absolute after:bottom-0 after:right-0 after:h-64 after:w-64 after:bg-red-500/10 after:blur-[80px] after:pointer-events-none",
+            !isJessica &&
+              "before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-40 before:bg-gradient-to-b before:from-red-600/30 before:via-red-600/5 before:to-transparent before:pointer-events-none after:content-[''] after:absolute after:bottom-0 after:right-0 after:h-64 after:w-64 after:bg-red-500/10 after:blur-[80px] after:pointer-events-none",
             "shrink-0 overflow-hidden transition-[width,min-width,max-width,padding,opacity] duration-300 ease-in-out",
             showDesktopOutline
               ? "p-5 opacity-100 lg:min-w-[260px] lg:max-w-[360px] lg:w-[min(360px,32vw)]"
@@ -1308,7 +1464,12 @@ export function LessonPlayView({
                   aria-expanded={showDesktopOutline}
                   aria-label={showDesktopOutline ? "Rétracter le sommaire" : "Déployer le sommaire"}
                   onClick={() => setOutlineCollapsed((v) => !v)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-sm transition hover:bg-white/18"
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition",
+                    isJessica
+                      ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border-white/20 bg-white/10 text-white hover:bg-white/18",
+                  )}
                 >
                   {showDesktopOutline ? (
                     <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -1389,7 +1550,12 @@ export function LessonPlayView({
               <Link
                 href={accessInterviewHref}
                 prefetch={true}
-                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-900 shadow-sm transition-colors hover:bg-violet-100"
+                className={cn(
+                  "inline-flex items-center justify-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] shadow-sm transition-colors",
+                  isJessica
+                    ? "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                    : "border-violet-200 bg-violet-50 text-violet-900 hover:bg-violet-100",
+                )}
               >
                 Accéder à l&apos;entretien
                 <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -1399,7 +1565,12 @@ export function LessonPlayView({
               <Link
                 href={lessonHref(nextLesson.id)}
                 prefetch={true}
-                className="inline-flex items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition-colors hover:bg-slate-800"
+                className={cn(
+                  "inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition-colors",
+                  isJessica
+                    ? "border-[#C6A664] bg-[#C6A664] hover:bg-[#B8860B]"
+                    : "border-slate-900 bg-slate-900 hover:bg-slate-800",
+                )}
               >
                 Chapitre suivant
               </Link>
@@ -1565,6 +1736,11 @@ export function LessonPlayView({
                 />
               )}
             </div>
+          ) : isResourceLesson && embeddedResourceId ? (
+            <EmbeddedLessonResource
+              resourceId={embeddedResourceId}
+              title={activeLesson.title}
+            />
           ) : hasTextContent ? (
             <LessonSmartAssist
               hideAssistantPanel={isFocus}
@@ -1692,7 +1868,12 @@ export function LessonPlayView({
               <Link
                 href={accessInterviewHref}
                 prefetch={true}
-                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-900 shadow-sm transition-colors hover:bg-violet-100"
+                className={cn(
+                  "inline-flex items-center justify-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] shadow-sm transition-colors",
+                  isJessica
+                    ? "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                    : "border-violet-200 bg-violet-50 text-violet-900 hover:bg-violet-100",
+                )}
               >
                 Accéder à l&apos;entretien
                 <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -1702,7 +1883,12 @@ export function LessonPlayView({
               <Link
                 href={lessonHref(nextLesson.id)}
                 prefetch={true}
-                className="inline-flex items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition-colors hover:bg-slate-800"
+                className={cn(
+                  "inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition-colors",
+                  isJessica
+                    ? "border-[#C6A664] bg-[#C6A664] hover:bg-[#B8860B]"
+                    : "border-slate-900 bg-slate-900 hover:bg-slate-800",
+                )}
               >
                 Chapitre suivant
               </Link>
@@ -2094,9 +2280,10 @@ export function LessonPlayView({
       <Dialog open={showMobileOutline} onOpenChange={setShowMobileOutline}>
         <DialogContent
           className={cn(
-            "max-h-[min(85vh,640px)] max-w-md overflow-y-auto rounded-3xl border border-white/20",
-            "bg-slate-950/55 text-white shadow-[0_25px_80px_-20px_rgba(0,0,0,0.85)] backdrop-blur-2xl backdrop-saturate-150",
-            "[&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:opacity-90 [&_[data-slot=dialog-close]]:hover:opacity-100 [&_[data-slot=dialog-close]]:ring-offset-slate-950",
+            "max-h-[min(85vh,640px)] max-w-md overflow-y-auto rounded-3xl border shadow-[0_25px_80px_-20px_rgba(0,0,0,0.15)]",
+            isJessica
+              ? "border-slate-200 bg-white text-slate-900 [&_[data-slot=dialog-close]]:text-slate-600 [&_[data-slot=dialog-close]]:ring-offset-white"
+              : "border-white/20 bg-slate-950/55 text-white shadow-[0_25px_80px_-20px_rgba(0,0,0,0.85)] backdrop-blur-2xl backdrop-saturate-150 [&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:opacity-90 [&_[data-slot=dialog-close]]:hover:opacity-100 [&_[data-slot=dialog-close]]:ring-offset-slate-950",
           )}
         >
           <DialogTitle className="sr-only">Consignes</DialogTitle>
@@ -2104,11 +2291,18 @@ export function LessonPlayView({
             Informations et actions liées à la leçon
           </DialogDescription>
           <DialogHeader>
-            <DialogTitle className="text-xs font-semibold uppercase tracking-[0.35em] text-white/80">
+            <DialogTitle
+              className={cn(
+                "text-xs font-semibold uppercase tracking-[0.35em]",
+                isJessica ? "text-[#B8860B]" : "text-white/80",
+              )}
+            >
               Sommaire
             </DialogTitle>
           </DialogHeader>
-          <div className="mb-4 flex justify-end">{renderNeuroToggle("glass")}</div>
+          <div className="mb-4 flex justify-end">
+            {renderNeuroToggle(isJessica ? "jessica" : "glass")}
+          </div>
           {renderOutline()}
         </DialogContent>
       </Dialog>
@@ -2157,7 +2351,12 @@ export function LessonPlayView({
                   type="button"
                   onClick={handleOpenLearningStrategy}
                   aria-label="Choisir sa stratégie d’apprentissage"
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-slate-800 bg-black/90 px-3 py-2 text-white shadow-md transition hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 rounded-full border px-3 py-2 shadow-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
+                    isJessica
+                      ? "border-[#C6A664]/45 bg-[#C6A664] text-white hover:bg-[#B8860B] focus-visible:outline-[#C6A664]"
+                      : "border-slate-800 bg-black/90 text-white hover:bg-black focus-visible:outline-white",
+                  )}
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   <span className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] sm:inline">Stratégie</span>

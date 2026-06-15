@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ClubLayout } from "@/components/club/club-layout";
-import { useClubGuard } from "@/components/club/use-club-guard";
+import { ClubGuardGate, useClubGuard } from "@/components/club/use-club-guard";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -259,7 +259,7 @@ export default function ClubNewsPage() {
   );
 
   if (status !== "allowed") {
-    return null;
+    return <ClubGuardGate status={status}>{null}</ClubGuardGate>;
   }
 
   return (

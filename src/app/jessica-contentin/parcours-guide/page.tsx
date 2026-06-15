@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
-import { PARCOURS_GUIDES, parcoursGuideHref } from "@/lib/jessica-contentin/parcours-guide-catalog";
+import { JessicaRemoteImage } from "@/components/jessica-contentin/jessica-remote-image";
+import { PARCOURS_GUIDES, jessicaParcoursGuideHref } from "@/lib/jessica-contentin/parcours-guide-catalog";
 
 export const metadata: Metadata = {
   title: "Parcours guidés | Jessica Contentin",
@@ -26,15 +26,14 @@ export default function ParcoursGuideIndexPage() {
           {PARCOURS_GUIDES.map((parcours) => (
             <Link
               key={parcours.slug}
-              href={parcoursGuideHref(parcours.slug)}
+              href={jessicaParcoursGuideHref(parcours.slug)}
               className="group relative overflow-hidden rounded-2xl bg-[#2a2218] shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
             >
               <div className="relative min-h-[280px] sm:min-h-[320px]">
-                <Image
+                <JessicaRemoteImage
                   src={parcours.imageUrl}
-                  alt=""
+                  alt={parcours.title}
                   fill
-                  sizes="(min-width: 768px) 800px, 100vw"
                   className="object-cover transition duration-700 group-hover:scale-[1.02]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1c1510]/95 via-[#3d2e24]/60 to-[#8b6914]/10" />

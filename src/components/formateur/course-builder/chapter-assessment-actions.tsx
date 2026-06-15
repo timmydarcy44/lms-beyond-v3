@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ListChecks, MessageCircle, Loader2 } from "lucide-react";
+import { ListChecks, MessageCircle, Loader2, Library } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { useCourseBuilder } from "@/hooks/use-course-builder";
 import type { CourseBuilderChapter } from "@/types/course-builder";
 import { buildChapterQuizPayload, extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
 import { CreateInterviewModal } from "./create-interview-modal";
+import { AddCourseResourceModal } from "./add-course-resource-modal";
 
 type ChapterAssessmentActionsProps = {
   courseId?: string;
@@ -30,9 +31,19 @@ export function ChapterAssessmentActions({
 }: ChapterAssessmentActionsProps) {
   const appendSubchapterBlock = useCourseBuilder((s) => s.appendSubchapterBlock);
   const generalTitle = useCourseBuilder((s) => s.snapshot.general.title);
+  const sections = useCourseBuilder((s) => s.snapshot.sections);
   const [isPending, startTransition] = useTransition();
   const [busy, setBusy] = useState<"quiz" | null>(null);
   const [interviewModalOpen, setInterviewModalOpen] = useState(false);
+  const [resourceModalOpen, setResourceModalOpen] = useState(false);
+
+  const usedResourceIds = sections.flatMap((section) =>
+    section.chapters.flatMap((ch) =>
+      ch.subchapters
+        .filter((sub) => sub.kind === "resource" && sub.resource_id)
+        .map((sub) => String(sub.resource_id)),
+    ),
+  );
 
   const plain = extractChapterPlainText(chapter);
   const canUseAi = plain.length >= 80;
@@ -152,6 +163,21 @@ export function ChapterAssessmentActions({
           <MessageCircle className="h-3.5 w-3.5" />
           Créer un entretien
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled}
+          onClick={() => setResourceModalOpen(true)}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] uppercase tracking-[0.22em]",
+            isLight
+              ? "border-teal-300 bg-teal-50 text-teal-900 hover:bg-teal-100"
+              : "border-teal-400/40 bg-teal-500/10 text-teal-100 hover:bg-teal-500/20",
+          )}
+        >
+          <Library className="h-3.5 w-3.5" />
+          Intégrer une ressource
+        </Button>
         {!canUseAi ? (
           <span className={cn("text-[11px]", isLight ? "text-slate-500" : "text-white/45")}>
             Contenu du chapitre trop court pour l’IA.
@@ -164,6 +190,11 @@ export function ChapterAssessmentActions({
         onOpenChange={setInterviewModalOpen}
         chapter={chapter}
         sectionTitle={sectionTitle}
+      />
+      <AddCourseResourceModal
+        open={resourceModalOpen}
+        onOpenChange={setResourceModalOpen}
+        usedResourceIds={usedResourceIds}
       />
     </>
   );

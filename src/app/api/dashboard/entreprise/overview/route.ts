@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { buildEmptyEntrepriseOverviewPayload } from "@/lib/entreprise/overview-empty";
 import {
+  enrichNutrisetDemoOverview,
+  shouldEnrichNutrisetDemo,
+} from "@/lib/entreprise/nutriset-demo-enrich";
+import {
   resolveEmployeeTestStatus,
   syncCollaborateurDiagnosticFromTests,
 } from "@/lib/entreprise/employee-test-status";
@@ -272,7 +276,7 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({
+  const payload = {
     viewer: access.viewer,
     organisation: {
       id: orgId,
@@ -363,5 +367,11 @@ export async function GET() {
       completed: diagnosticsCompleted,
       threshold: 10,
     },
-  });
+  };
+
+  if (shouldEnrichNutrisetDemo(orgId, access.viewer.email)) {
+    return NextResponse.json(enrichNutrisetDemoOverview(payload));
+  }
+
+  return NextResponse.json(payload);
 }

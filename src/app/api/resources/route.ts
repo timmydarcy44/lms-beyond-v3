@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFormateurScopeForSession } from "@/lib/formateur/scope-server";
+import {
+  buildResourceContentMeta,
+  insertRowWithColumnFallback,
+  slugifyResourceTitle,
+  updateRowWithColumnFallback,
+} from "@/lib/resources/resource-db-write";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { syncCatalogItem } from "@/lib/utils/sync-catalog-item";
 import { createStripeProduct, updateStripeProduct } from "@/lib/stripe/products";
@@ -172,180 +178,49 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Créer la ressource
-      // Stratégie : essayer différentes combinaisons de colonnes selon ce qui existe
-      const baseData: any = {
+      const resourceType = type || (html_content?.trim() ? "html" : "guide");
+      const contentMeta = buildResourceContentMeta({
+        published,
+        html: resourceType === "html" ? html_content : null,
+      });
+
+      const insertRow: Record<string, unknown> = {
         title: title.trim(),
+        slug: slug?.trim() || slugifyResourceTitle(title),
+        description: description?.trim() || null,
+        type: resourceType,
+        resource_type: resourceType,
+        status: published ? "published" : "draft",
+        published,
+        created_by: user.id,
+        creator_id: user.id,
+        owner_id: user.id,
+        org_id: userOrgId,
+        content: contentMeta,
+        html_content: resourceType === "html" ? html_content?.trim() : undefined,
+        price: price !== undefined && price !== null ? parseFloat(String(price)) || 0 : undefined,
+        cover_image_url: cover_image_url || undefined,
+        hero_image_url: cover_image_url || undefined,
+        cover_url: cover_image_url || undefined,
+        thumbnail_url: cover_image_url || undefined,
       };
 
-      // Ajouter org_id (doit être défini maintenant)
-      if (userOrgId) {
-        baseData.org_id = userOrgId;
-      } else {
-        // Si toujours pas d'org_id, c'est une erreur critique
-        console.error("[api/resources] Erreur critique: org_id toujours null après toutes les tentatives");
-        return NextResponse.json({ 
-          error: "Impossible de déterminer l'organisation", 
-          details: "Aucune organisation n'a pu être trouvée ou créée pour cet utilisateur"
-        }, { status: 500 });
-      }
+      const writeClient = getServiceRoleClient() ?? supabase;
+      const insertResult = await insertRowWithColumnFallback(writeClient, "resources", insertRow);
+      let data = insertResult.data;
+      let error = insertResult.error;
 
-      // Ajouter description si non vide
-      if (description?.trim()) {
-        baseData.description = description.trim();
-      }
-
-      const resourceType = type || "guide";
-      if (resourceType === "html" && html_content?.trim()) {
-        baseData.html_content = html_content.trim();
-        baseData.kind = "html";
-        baseData.type = "html";
-      }
-
-      // Ajouter prix si fourni
-      if (price !== undefined && price !== null) {
-        baseData.price = parseFloat(String(price)) || 0;
-      }
-
-      // Ajouter l'image de couverture si fournie
-      if (cover_image_url) {
-        // Essayer différentes colonnes possibles pour l'image
-        baseData.cover_image_url = cover_image_url;
-        baseData.hero_image_url = cover_image_url;
-        baseData.cover_url = cover_image_url;
-        baseData.thumbnail_url = cover_image_url;
-      }
-
-      // Note: category n'existe pas dans la table resources
-      // Elle sera gérée lors de la synchronisation avec catalog_items
-
-      // Essayer différentes combinaisons (ordre optimal)
-      // On essaie d'abord les combinaisons les plus probables
-      const attempts = [
-        // Tentative 1: Avec org_id, created_by, status et type (combinaison la plus courante)
-        { ...baseData, created_by: user.id, status: published ? "published" : "draft", type: resourceType || "guide" },
-        // Tentative 2: Avec org_id, created_by et status, sans type
-        { ...baseData, created_by: user.id, status: published ? "published" : "draft" },
-        // Tentative 3: Avec org_id, created_by et published (boolean)
-        { ...baseData, created_by: user.id, published },
-        // Tentative 4: Avec org_id, created_by seulement
-        { ...baseData, created_by: user.id },
-        // Tentative 5: Avec org_id, owner_id
-        { ...baseData, owner_id: user.id },
-        // Tentative 6: Avec org_id, creator_id
-        { ...baseData, creator_id: user.id },
-        // Tentative 7: Avec org_id, created_by, status et resource_type au lieu de type
-        { ...baseData, created_by: user.id, status: published ? "published" : "draft", resource_type: type || "guide" },
-        // Tentative 8: Avec org_id, created_by, status et kind au lieu de type
-        { ...baseData, created_by: user.id, status: published ? "published" : "draft", kind: type || "guide" },
-        // Tentative 9: Avec org_id seulement (dernier recours)
-        { ...baseData },
-      ];
-
-      let data = null;
-      let error = null;
-      let successAttempt = null;
-
-      for (let i = 0; i < attempts.length; i++) {
-        const attempt = attempts[i];
-        console.log(`[api/resources] Tentative ${i + 1}/${attempts.length} avec colonnes:`, Object.keys(attempt));
-        
-        try {
-          const result = await supabase
-            .from("resources")
-            .insert(attempt)
-            .select()
-            .single();
-          
-          if (!result.error) {
-            data = result.data;
-            error = null;
-            successAttempt = attempt;
-            console.log("[api/resources] ✓ Succès avec colonnes:", Object.keys(attempt));
-            break;
-          } else {
-            error = result.error;
-            const errorMsg = result.error.message?.toLowerCase() || "";
-            console.log(`[api/resources] ✗ Échec tentative ${i + 1}:`, result.error.message);
-            
-            // Si l'erreur est liée à la colonne price, retirer price et réessayer
-            if (errorMsg.includes("price") && result.error.code === "42703") {
-              console.log("[api/resources] Colonne price non trouvée, retrait du prix et nouvelle tentative");
-              delete attempt.price;
-              const retryResult = await supabase
-                .from("resources")
-                .insert(attempt)
-                .select()
-                .single();
-              
-              if (!retryResult.error) {
-                data = retryResult.data;
-                error = null;
-                successAttempt = attempt;
-                console.log("[api/resources] ✓ Succès après retrait du prix");
-                break;
-              }
-            }
-            
-            // Si l'erreur n'est pas liée à une colonne manquante, arrêter les tentatives
-            if (!errorMsg.includes("column") && result.error.code !== "42703" && !errorMsg.includes("null")) {
-              console.log("[api/resources] Erreur non liée à une colonne, arrêt des tentatives");
-              break;
-            }
-          }
-        } catch (e) {
-          console.error(`[api/resources] Exception lors de la tentative ${i + 1}:`, e);
-          error = e instanceof Error ? { message: e.message } : { message: "Exception inconnue" };
-          break;
-        }
-      }
-
-      // Si création réussie, essayer de mettre à jour avec les colonnes optionnelles
-      if (!error && data && data.id) {
-        const updateData: any = {};
-        let needsUpdate = false;
-        
-        // Ajouter status ou published si possible
-        try {
-          updateData.status = published ? "published" : "draft";
-          needsUpdate = true;
-        } catch {
-          try {
-            updateData.published = published;
-            needsUpdate = true;
-          } catch {}
-        }
-        
-        // Ajouter type si fourni
-        if (type) {
-          try {
-            updateData.kind = type;
-            needsUpdate = true;
-          } catch {
-            try {
-              updateData.type = type;
-              needsUpdate = true;
-            } catch {
-              try {
-                updateData.resource_type = type;
-                needsUpdate = true;
-              } catch {}
-            }
-          }
-        }
-        
-        // Mettre à jour si nécessaire (on ignore les erreurs car c'est optionnel)
-        if (needsUpdate) {
-          const updateResult = await supabase
-            .from("resources")
-            .update(updateData)
-            .eq("id", data.id)
-            .select()
-            .single();
-          
-          if (!updateResult.error && updateResult.data) {
-            data = updateResult.data;
-          }
+      if (!error && data?.id) {
+        const patchResult = await updateRowWithColumnFallback(writeClient, "resources", String(data.id), {
+          status: published ? "published" : "draft",
+          published,
+          type: resourceType,
+          resource_type: resourceType,
+          html_content: resourceType === "html" ? html_content?.trim() : undefined,
+          content: contentMeta,
+        });
+        if (!patchResult.error && patchResult.data) {
+          data = patchResult.data;
         }
 
         // Créer automatiquement un produit Stripe si un prix > 0 est défini
@@ -426,15 +301,12 @@ export async function POST(request: NextRequest) {
                 pdfUrl = publicUrl;
                 console.log("[api/resources] PDF uploadé avec succès:", pdfUrl);
 
-                // Mettre à jour la ressource avec l'URL du PDF et kind = "pdf"
-                await supabase
-                  .from("resources")
-                  .update({ 
-                    file_url: pdfUrl,
-                    kind: "pdf",
-                  })
-                  .eq("id", data.id);
-                console.log("[api/resources] Ressource mise à jour avec file_url et kind");
+                await updateRowWithColumnFallback(writeClient, "resources", String(data.id), {
+                  file_url: pdfUrl,
+                  url: pdfUrl,
+                  type: "pdf",
+                });
+                console.log("[api/resources] Ressource mise à jour avec file_url");
               }
             }
           } catch (pdfError) {
@@ -565,35 +437,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Vous n'êtes pas autorisé à modifier cette ressource" }, { status: 403 });
     }
 
-    // Mettre à jour le statut de publication
-    // La table resources utilise 'status' (text: 'draft' | 'published') selon les migrations
-    // Mais certaines structures peuvent utiliser 'published' (boolean)
-    // On essaie d'abord avec 'status', puis avec 'published' si l'erreur indique que la colonne n'existe pas
-    let updateData: any = {
+    const writeClient = getServiceRoleClient() ?? supabase;
+    const updateData: Record<string, unknown> = {
       status: published ? "published" : "draft",
+      published,
     };
-    
-    let { data, error } = await supabase
+
+    let { data, error } = await writeClient
       .from("resources")
       .update(updateData)
       .eq("id", resourceId)
       .select()
       .single();
-    
-    // Si l'erreur indique que la colonne 'status' n'existe pas, essayer avec 'published' (boolean)
+
     if (error && (error.message?.includes("column") || error.code === "42703")) {
-      console.log("[api/resources] Colonne 'status' non trouvée, essai avec 'published'");
-      updateData = {
-        published,
-      };
-      
-      const result = await supabase
+      const fallback: Record<string, unknown> = error.message?.includes("published")
+        ? { status: published ? "published" : "draft" }
+        : { published };
+      const result = await writeClient
         .from("resources")
-        .update(updateData)
+        .update(fallback)
         .eq("id", resourceId)
         .select()
         .single();
-      
       data = result.data;
       error = result.error;
     }

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
+import { DISC_QUESTIONS, type DiscLabel } from "@/lib/disc/disc-questions";
 
 export default function DiscTestPage() {
   const supabase = createSupabaseBrowserClient();

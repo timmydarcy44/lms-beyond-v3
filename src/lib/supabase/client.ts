@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+let browserClient: SupabaseClient | null = null;
+
 export const createSupabaseBrowserClient = (): SupabaseClient | null => {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     if (process.env.NODE_ENV !== "production") {
@@ -14,13 +16,17 @@ export const createSupabaseBrowserClient = (): SupabaseClient | null => {
     return null;
   }
 
-  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
+  if (!browserClient) {
+    browserClient = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
+  }
+
+  return browserClient;
 };
 
 export const createClient = createSupabaseBrowserClient;

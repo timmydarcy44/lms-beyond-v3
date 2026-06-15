@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ClubLayout } from "@/components/club/club-layout";
-import { useClubGuard } from "@/components/club/use-club-guard";
+import { ClubGuardGate, useClubGuard } from "@/components/club/use-club-guard";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,7 +89,7 @@ export default function ClubEventsPage() {
   }, [events]);
 
   if (status !== "allowed") {
-    return null;
+    return <ClubGuardGate status={status}>{null}</ClubGuardGate>;
   }
 
   return (

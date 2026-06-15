@@ -31,6 +31,7 @@ import {
   Trash2,
   Trophy,
   MessageCircle,
+  Library,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -117,10 +118,15 @@ function arborescenceNodeStatus(opts: {
   type: BuilderContentType;
   isQuiz?: boolean;
   quizId?: string | null;
+  isResource?: boolean;
+  resourceId?: string | null;
   contentValidated?: boolean;
 }): ArborescenceNodeStatus {
   if (opts.isQuiz) {
     return opts.quizId ? "complete" : "empty";
+  }
+  if (opts.isResource) {
+    return opts.resourceId ? "complete" : "empty";
   }
   if ((opts as { isInterview?: boolean }).isInterview) {
     const ctx = String((opts as { interviewContext?: string }).interviewContext ?? "").trim();
@@ -992,6 +998,8 @@ function SubchapterRow({
   const typeMeta = CONTENT_TYPE_MAP[subchapter.type];
   const isQuizBlock = (subchapter as any).kind === "quiz" || Boolean((subchapter as any).quiz_id);
   const isInterviewBlock = (subchapter as any).kind === "experiential_interview";
+  const isResourceBlock =
+    (subchapter as any).kind === "resource" || Boolean((subchapter as any).resource_id);
   const subStatus = arborescenceNodeStatus({
     content: subchapter.content,
     summary: subchapter.summary,
@@ -1000,6 +1008,10 @@ function SubchapterRow({
     isQuiz: isQuizBlock,
     quizId: (subchapter as { quiz_id?: string }).quiz_id
       ? String((subchapter as { quiz_id?: string }).quiz_id)
+      : null,
+    isResource: isResourceBlock,
+    resourceId: (subchapter as { resource_id?: string }).resource_id
+      ? String((subchapter as { resource_id?: string }).resource_id)
       : null,
     isInterview: isInterviewBlock,
     interviewContext: (subchapter as { interview_context?: string }).interview_context,
@@ -1016,14 +1028,18 @@ function SubchapterRow({
           ? "flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm transition"
           : "flex items-start gap-3 rounded-2xl border border-white/10 bg-[#222222] px-4 py-3 text-sm text-white shadow-none transition",
         isSelected && (isLight ? "border-[#6633CC]/40 shadow-md" : "border-white/20 bg-[#262626]"),
-        (isQuizBlock || isInterviewBlock) &&
+        (isQuizBlock || isInterviewBlock || isResourceBlock) &&
           (isLight
             ? isInterviewBlock
               ? "border border-violet-300/80 bg-gradient-to-r from-violet-50 via-purple-50/90 to-violet-50 shadow-[inset_0_2px_10px_rgba(91,33,182,0.08)]"
-              : "border border-slate-300/80 bg-gradient-to-r from-slate-100 via-indigo-100/80 to-slate-100 shadow-[inset_0_2px_10px_rgba(15,23,42,0.08)]"
+              : isResourceBlock
+                ? "border border-teal-300/80 bg-gradient-to-r from-teal-50 via-emerald-50/90 to-teal-50 shadow-[inset_0_2px_10px_rgba(13,148,136,0.08)]"
+                : "border border-slate-300/80 bg-gradient-to-r from-slate-100 via-indigo-100/80 to-slate-100 shadow-[inset_0_2px_10px_rgba(15,23,42,0.08)]"
             : isInterviewBlock
               ? "border border-violet-400/25 bg-gradient-to-r from-violet-950 via-purple-950 to-slate-900 shadow-[inset_0_2px_14px_rgba(91,33,182,0.35)]"
-              : "border border-white/10 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 shadow-[inset_0_2px_14px_rgba(0,0,0,0.45)]"),
+              : isResourceBlock
+                ? "border border-teal-400/25 bg-gradient-to-r from-teal-950 via-emerald-950 to-slate-900 shadow-[inset_0_2px_14px_rgba(13,148,136,0.35)]"
+                : "border border-white/10 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 shadow-[inset_0_2px_14px_rgba(0,0,0,0.45)]"),
       )}
       onClick={(event) => {
         event.stopPropagation();
@@ -1066,6 +1082,14 @@ function SubchapterRow({
                 )}
                 aria-hidden
               />
+            ) : isResourceBlock ? (
+              <Library
+                className={cn(
+                  "h-5 w-5 shrink-0 text-teal-400",
+                  isLight ? "drop-shadow-[0_0_6px_rgba(45,212,191,0.45)]" : "drop-shadow-[0_0_10px_rgba(45,212,191,0.4)]",
+                )}
+                aria-hidden
+              />
             ) : (
               <span
                 className={
@@ -1097,9 +1121,22 @@ function SubchapterRow({
             <span className={isLight ? "rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-slate-700" : "rounded-md border border-white/10 bg-white/10 px-2.5 py-1 font-medium text-white/70"}>
               {subchapter.duration || ""}
             </span>
-            <span className={isLight ? "flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-slate-700" : "flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 font-medium text-white/60"}>
-              <typeMeta.icon className="h-3 w-3" />
-              {typeMeta.label}
+            <span
+              className={cn(
+                isLight
+                  ? "flex items-center gap-1 rounded-md border px-2.5 py-1 font-semibold"
+                  : "flex items-center gap-1 rounded-md border px-2.5 py-1 font-medium",
+                isResourceBlock
+                  ? isLight
+                    ? "border-teal-200 bg-teal-50 text-teal-800"
+                    : "border-teal-400/30 bg-teal-500/10 text-teal-200"
+                  : isLight
+                    ? "border-slate-200 bg-slate-50 text-slate-700"
+                    : "border-white/10 bg-white/5 text-white/60",
+              )}
+            >
+              {isResourceBlock ? <Library className="h-3 w-3" /> : <typeMeta.icon className="h-3 w-3" />}
+              {isResourceBlock ? "Ressource" : typeMeta.label}
             </span>
           </div>
         </div>
@@ -1107,7 +1144,7 @@ function SubchapterRow({
           {subchapter.summary || "Définissez la promesse et les livrables."}
         </p>
       </div>
-      {!isQuizBlock && !isInterviewBlock ? (
+      {!isQuizBlock && !isInterviewBlock && !isResourceBlock ? (
         <button
           type="button"
           title={subchapter.content_validated ? "Retirer la validation" : "Marquer le contenu comme validé (suivi interne)"}

@@ -7,6 +7,6 @@ export default async function Page({
 }) {
   const { slug, lesson } = await params;
   return (
-    <FormationInterviewPlayPage category="formations" slug={slug} lessonId={lesson} />
+    <FormationInterviewPlayPage category="formations" slug={slug} lessonId={lesson} variant="jessica" />
   );
 }

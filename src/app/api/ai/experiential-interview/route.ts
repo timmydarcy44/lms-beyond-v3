@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getOpenAIClient } from "@/lib/ai/openai-client";
+import {
+  getInterviewOpeningPrompt,
+  getInterviewSystemPrompt,
+  type InterviewAudience,
+} from "@/lib/apprenant/interview-audience";
 import { getSession } from "@/lib/auth/session";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
-
-const SYSTEM_PROMPT = `Tu es Neo, un assistant pédagogique qui mène un entretien expérientiel en français.
-
-Objectif : aider l'apprenant à contextualiser ce qu'il vient d'apprendre (mise en pratique, exemples concrets, liens avec son métier).
-
-Règles :
-- Pose UNE seule question courte à la fois (2 phrases max).
-- Pas de markdown : pas de **, ##, listes à puces.
-- Ton bienveillant, conversationnel, jamais condescendant.
-- Après la réponse de l'apprenant : une courte reformulation ou validation, puis une nouvelle question (sauf si l'échange est terminé).
-- Si l'apprenant dit qu'il a fini ou après environ 6 échanges utiles : conclus en 2 phrases (synthèse + encouragement).
-- Reste strictement dans le cadre du contenu du chapitre fourni.
-- Si des objectifs pédagogiques du formateur sont fournis, oriente chaque question pour les faire progresser vers ces objectifs.`;
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -31,9 +23,11 @@ export async function POST(request: NextRequest) {
       interviewObjectives?: string;
       chapterTitle?: string;
       courseTitle?: string;
+      audience?: InterviewAudience;
     };
 
     const messages = Array.isArray(body.messages) ? body.messages : [];
+    const audience: InterviewAudience = body.audience === "parent" ? "parent" : "professional";
     const contextText = String(body.contextText ?? "").trim().slice(0, 12_000);
     if (!contextText) {
       return NextResponse.json({ error: "Contexte du chapitre manquant" }, { status: 400 });
@@ -53,15 +47,15 @@ Chapitre : ${chapterTitle}
 Contenu du chapitre :
 ${contextText}${objectivesBlock}`;
 
+    const systemPrompt = getInterviewSystemPrompt(audience);
     const openAiMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
-      { role: "system", content: `${SYSTEM_PROMPT}\n\n${contextBlock}` },
+      { role: "system", content: `${systemPrompt}\n\n${contextBlock}` },
     ];
 
     if (messages.length === 0) {
       openAiMessages.push({
         role: "user",
-        content:
-          "L'apprenant ouvre l'entretien. Accueille-le brièvement et pose la première question pour l'aider à relier le chapitre à sa pratique.",
+        content: getInterviewOpeningPrompt(audience),
       });
     } else {
       for (const m of messages) {

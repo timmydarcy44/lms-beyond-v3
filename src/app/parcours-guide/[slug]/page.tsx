@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ParcoursGuideDetail } from "@/components/jessica-contentin/parcours-guide-detail";
 import { getParcoursGuide, PARCOURS_GUIDES } from "@/lib/jessica-contentin/parcours-guide-catalog";
+import { getParcoursGuideAccess } from "@/lib/jessica-contentin/parcours-guide-access";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -22,7 +23,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ParcoursGuideDetailPage({ params }: Props) {
   const { slug } = await params;
-  const parcours = getParcoursGuide(decodeURIComponent(slug));
+  const decoded = decodeURIComponent(slug);
+  const parcours = getParcoursGuide(decoded);
   if (!parcours) notFound();
-  return <ParcoursGuideDetail parcours={parcours} />;
+
+  const access = await getParcoursGuideAccess(decoded);
+
+  return (
+    <ParcoursGuideDetail
+      parcours={parcours}
+      hasAccess={access.hasAccess}
+      catalogItemId={access.catalogItemId}
+      contentId={access.contentId}
+      backHref="/parcours-guide"
+    />
+  );
 }

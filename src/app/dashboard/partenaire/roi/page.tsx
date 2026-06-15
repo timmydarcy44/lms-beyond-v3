@@ -74,7 +74,7 @@ export default function PartenaireRoiPage() {
     doc.setTextColor("#FFFFFF");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
-    doc.text("Rapport ROI — SU Dives Cabourg", 14, 16);
+    doc.text(`Rapport ROI — ${partenaireClub.name}`, 14, 16);
     doc.setFontSize(10);
     doc.text("Rapport généré par Beyond Network", 14, 23);
 
@@ -99,7 +99,7 @@ export default function PartenaireRoiPage() {
 
     doc.setFontSize(10);
     doc.text("Rapport généré par Beyond Network", 14, 285);
-    doc.save("rapport-roi-sudc.pdf");
+    doc.save("rapport-roi-maladrerie-os.pdf");
   };
 
   const canalTotals = useMemo(
@@ -248,7 +248,7 @@ export default function PartenaireRoiPage() {
             <div>
               Publicité Google Ads locale — 16 000€ visibilité
               <div className="text-xs text-white/50">Coût marché : 8 000€</div>
-              <div className="text-xs text-white/50">Votre coût via SUDC : 5 000€</div>
+              <div className="text-xs text-white/50">Votre coût via Maladrerie OS : 5 000€</div>
             </div>
             <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs text-emerald-300">
               Vous économisez 3 000€

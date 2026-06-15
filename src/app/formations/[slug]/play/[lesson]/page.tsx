@@ -7,8 +7,7 @@ import {
   type LearnerFlashcard,
 } from "@/lib/queries/apprenant";
 import { getServerClient } from "@/lib/supabase/server";
-
-const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
+import { resolveJessicaCreatorId } from "@/lib/jessica-contentin/resolve-creator-id";
 
 interface FormationLessonPlayPageProps {
   params: Promise<{
@@ -20,47 +19,50 @@ interface FormationLessonPlayPageProps {
 export default async function FormationLessonPlayPage({ params }: FormationLessonPlayPageProps) {
   const { slug, lesson } = await params;
 
-  // Récupérer les détails de la formation
   const data = await getLearnerContentDetail("formations", slug);
   if (!data) {
     notFound();
   }
 
-  // Vérifier que c'est bien une formation de Jessica Contentin
+  const { card, detail } = data;
+
   const supabase = await getServerClient();
   if (!supabase) {
     notFound();
   }
 
-  // Récupérer l'ID de Jessica Contentin
-  const { data: jessicaProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("email", JESSICA_CONTENTIN_EMAIL)
-    .maybeSingle();
-
-  if (!jessicaProfile) {
-    notFound();
-  }
-
-  // Récupérer le course et vérifier le creator_id
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id, creator_id")
-    .eq("id", slug)
-    .maybeSingle();
-
-  if (!course || course.creator_id !== jessicaProfile.id) {
-    notFound();
-  }
-
-  // SÉCURITÉ: Vérifier l'accès de l'utilisateur dans catalog_access
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  // Utiliser le service role client pour contourner RLS si nécessaire
   const { getServiceRoleClient } = await import("@/lib/supabase/server");
   const serviceClient = getServiceRoleClient();
-  const catalogClient = serviceClient || supabase;
+  const readClient = serviceClient ?? supabase;
+
+  const jessicaCreatorId = await resolveJessicaCreatorId();
+
+  const courseId = card.id;
+  const { data: course } = await readClient
+    .from("courses")
+    .select("id, creator_id")
+    .eq("id", courseId)
+    .maybeSingle();
+
+  if (!course || String(course.creator_id) !== jessicaCreatorId) {
+    notFound();
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  const catalogClient = readClient;
+
+  let hasEnrollment = false;
+  if (user?.id) {
+    const enrollmentClient = serviceClient || supabase;
+    const { data: enrollment } = await enrollmentClient
+      .from("enrollments")
+      .select("course_id")
+      .eq("user_id", user.id)
+      .eq("course_id", course.id)
+      .maybeSingle();
+    hasEnrollment = Boolean(enrollment);
+  }
   
   // Trouver le catalog_item_id pour ce course
   const { data: catalogItem, error: catalogItemError } = await catalogClient
@@ -80,27 +82,22 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     catalogItemId: catalogItem?.id,
     isFree: catalogItem?.is_free,
     catalogItemExists: !!catalogItem,
+    hasEnrollment,
   });
 
-  // Si le catalog_item n'existe pas, permettre l'accès au créateur uniquement
-  // (pour les anciens cours qui n'ont pas encore de catalog_item)
+  // Pas de catalog_item : accès créateur ou apprenant inscrit (enrollment)
   if (!catalogItem) {
     console.warn("[formations/[slug]/play] Catalog item not found for course:", course.id);
-    if (user && course.creator_id === user.id) {
-      // Le créateur peut toujours accéder
-      console.log("[formations/[slug]/play] Creator access granted (no catalog_item)");
+    if (user && (course.creator_id === user.id || hasEnrollment)) {
+      console.log("[formations/[slug]/play] Access granted (creator or enrollment, no catalog_item)");
     } else {
-      // Pour les autres utilisateurs, rediriger vers le catalogue
-      console.log("[formations/[slug]/play] No catalog_item and not creator, redirecting to catalogue");
+      console.log("[formations/[slug]/play] No catalog_item and no enrollment, redirecting to catalogue");
       const { redirect } = await import("next/navigation");
       redirect(`/dashboard/catalogue`);
     }
-    // Continuer l'exécution si c'est le créateur
   } else if (user) {
-    // Vérifier si l'utilisateur est le créateur
     const isCreator = course.creator_id === user.id;
     
-    // Vérifier l'accès dans catalog_access
     const { data: userAccess } = await supabase
       .from("catalog_access")
       .select("access_status")
@@ -115,7 +112,7 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
       userAccess.access_status === "manually_granted"
     );
 
-    const hasAccess = isCreator || hasExplicitAccess || catalogItem.is_free;
+    const hasAccess = isCreator || hasExplicitAccess || hasEnrollment || catalogItem.is_free;
 
     console.log("[formations/[slug]/play] Access decision:", {
       isCreator,
@@ -138,7 +135,6 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
   }
 
-  const { card, detail } = data;
   const modules = detail.modules || [];
   const allLessons = modules.flatMap((module) => module.lessons ?? []);
   const activeLesson = allLessons.find((item) => item.id === lesson) ?? allLessons[0];
@@ -168,7 +164,7 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
 
   return (
     <DyslexiaModeProvider>
-      <div className="min-h-screen" style={{ backgroundColor: "#FFFFFF" }}>
+      <div className="min-h-screen" style={{ backgroundColor: "#F8F5F0" }}>
         <JessicaLessonPlayView
           detail={detail}
           modules={modules}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 48" role="img" aria-label="Allianz">
+  <circle cx="24" cy="24" r="20" fill="#003781"/>
+  <circle cx="24" cy="24" r="10" fill="none" stroke="#fff" stroke-width="3"/>
+  <text x="52" y="30" fill="#003781" font-family="Arial,sans-serif" font-size="24" font-weight="700">Allianz</text>
+</svg>

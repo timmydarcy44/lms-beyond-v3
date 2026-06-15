@@ -612,12 +612,29 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
       },
     })),
   removeResource: (resourceId) =>
-    set((state) => ({
-      snapshot: {
-        ...state.snapshot,
-        resources: state.snapshot.resources.filter((resource) => resource.id !== resourceId),
-      },
-    })),
+    set((state) => {
+      const target = state.snapshot.resources.find((resource) => resource.id === resourceId);
+      const linkedResourceId = target?.resource_id ? String(target.resource_id) : "";
+      const next = structuredClone(state.snapshot);
+      next.resources = next.resources.filter((resource) => resource.id !== resourceId);
+      if (linkedResourceId) {
+        next.sections = next.sections.map((section) => ({
+          ...section,
+          chapters: section.chapters.map((chapter) => ({
+            ...chapter,
+            subchapters: (chapter.subchapters ?? []).filter(
+              (sub) =>
+                !(
+                  sub.kind === "resource" &&
+                  sub.resource_id &&
+                  String(sub.resource_id) === linkedResourceId
+                ),
+            ),
+          })),
+        }));
+      }
+      return { snapshot: next };
+    }),
   addTest: () =>
     set((state) => ({
       snapshot: {

@@ -1,6 +1,6 @@
 export type BuilderContentType = "video" | "audio" | "document" | "text";
 
-export type CourseBuilderSubchapterKind = "quiz" | "experiential_interview";
+export type CourseBuilderSubchapterKind = "quiz" | "experiential_interview" | "resource";
 
 export type CourseBuilderSubchapter = {
   id: string;
@@ -15,6 +15,8 @@ export type CourseBuilderSubchapter = {
   /** Bloc pédagogique spécial (quiz, entretien expérientiel, …) */
   kind?: CourseBuilderSubchapterKind | string;
   quiz_id?: string;
+  /** Lien vers une ressource du studio (table resources). */
+  resource_id?: string;
   /** Contexte texte pour l’entretien IA (contenu du chapitre au moment de la création). */
   interview_context?: string;
   /** Objectifs pédagogiques guidant les questions de l’entretien. */
@@ -49,8 +51,12 @@ export type CourseBuilderSection = {
 export type CourseBuilderResource = {
   id: string;
   title: string;
-  type: "pdf" | "video" | "audio" | "document";
+  type: "pdf" | "video" | "audio" | "document" | "html";
   url: string;
+  /** ID en base (table resources) */
+  resource_id?: string;
+  /** Libellé de l'emplacement choisi dans le parcours */
+  placement_label?: string;
 };
 
 export type CourseBuilderTest = {

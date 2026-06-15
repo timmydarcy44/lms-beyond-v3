@@ -149,7 +149,7 @@ function PartenaireDetailContent() {
                   ⚡ {partenaire.secteur}
                 </span>
                 <span className="rounded-full bg-[#C8102E]/20 px-2 py-0.5 text-xs text-[#C8102E]">
-                  Partenaire SUDC
+                  Partenaire Maladrerie OS
                 </span>
               </div>
             </div>
@@ -205,7 +205,7 @@ function PartenaireDetailContent() {
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-4 lg:grid-cols-[1fr_300px] lg:px-8 lg:py-8">
           <div>
             <div className="border-l-4 border-[#C8102E] pl-6 text-lg font-light italic text-white/80 lg:text-2xl">
-              “Être partenaire du SUDC, c'est s'ancrer dans le tissu local...”
+              “Être partenaire de Maladrerie OS, c'est s'ancrer dans le tissu local...”
               <div className="mt-2 text-sm text-white/50">— Henri Blanc, Directeur Commercial</div>
             </div>
             <div className="mt-6 space-y-4 text-white/60 leading-relaxed">
@@ -213,8 +213,8 @@ function PartenaireDetailContent() {
                 {partenaire.description}
               </p>
               <p>
-                Notre ancrage local est au cœur de notre identité — c'est pourquoi nous avons choisi de soutenir le SU
-                Dives Cabourg, un club qui partage nos valeurs de proximité et d'engagement territorial.
+                Notre ancrage local est au cœur de notre identité — c'est pourquoi nous avons choisi de soutenir
+                Maladrerie OS, un club qui partage nos valeurs de proximité et d'engagement territorial.
               </p>
             </div>
 

@@ -216,9 +216,10 @@ export type LearnerLesson = {
   description?: string;
   videoUrl?: string;
   duration?: string;
-  kind?: "chapter" | "subchapter" | "test" | "quiz" | "experiential_interview";
+  kind?: "chapter" | "subchapter" | "test" | "quiz" | "experiential_interview" | "resource";
   parentChapterId?: string;
   quiz_id?: string;
+  resource_id?: string;
   interview_context?: string;
   interview_objectives?: string;
   /** UUID chapitre/sous-chapitre en base (pont avec flashcards `chapter_id` et cache local). */
@@ -1156,6 +1157,8 @@ export async function getLearnerContentDetail(
               if (chapter.subchapters && Array.isArray(chapter.subchapters)) {
                 chapter.subchapters.forEach((subchapter: any) => {
                   const isInterview = subchapter.kind === "experiential_interview";
+                  const isResource =
+                    subchapter.kind === "resource" || Boolean(subchapter.resource_id);
                   let interviewContext =
                     typeof subchapter.interview_context === "string"
                       ? subchapter.interview_context.trim()
@@ -1174,9 +1177,13 @@ export async function getLearnerContentDetail(
                     subchapter.videoUrl ||
                     subchapter.mediaUrl ||
                     isInterview ||
+                    isResource ||
                     hasInterviewContext
                   ) {
                     const isQuiz = subchapter.kind === "quiz" || Boolean(subchapter.quiz_id);
+                    const resourceId = subchapter.resource_id
+                      ? String(subchapter.resource_id)
+                      : undefined;
                     lessons.push({
                       id: subchapter.id || `subchapter-${subchapter.title || Date.now()}`,
                       title: subchapter.title || "Sans titre",
@@ -1184,9 +1191,16 @@ export async function getLearnerContentDetail(
                       description: isInterview ? "" : subchapter.content || subchapter.description,
                       videoUrl: subchapter.videoUrl || subchapter.mediaUrl,
                       duration: subchapter.duration || "3 min",
-                      kind: isQuiz ? "quiz" : isInterview ? "experiential_interview" : "subchapter",
+                      kind: isQuiz
+                        ? "quiz"
+                        : isInterview
+                          ? "experiential_interview"
+                          : isResource
+                            ? "resource"
+                            : "subchapter",
                       parentChapterId: chapter.id || undefined,
                       quiz_id: subchapter.quiz_id ? String(subchapter.quiz_id) : undefined,
+                      resource_id: resourceId,
                       interview_context: hasInterviewContext ? interviewContext : undefined,
                       interview_objectives: interviewObjectives || undefined,
                     });

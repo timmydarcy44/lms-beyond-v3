@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
       origin;
     const siteBase = redirectTo.replace(/\/$/, "");
-    const callbackUrl = `${siteBase}/auth/callback?next=${encodeURIComponent("/dashboard/apprenant")}&type=invite`;
+    const apprenantNext = "/dashboard/apprenant";
+    const setPasswordUrl = `${siteBase}/auth/set-password?next=${encodeURIComponent(apprenantNext)}&flow=invite`;
     const { data: inviteData, error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
       data: {
         role: "apprenant",
@@ -95,11 +96,25 @@ export async function POST(request: NextRequest) {
         company_id: orgId,
         organization_id: orgId,
         employee_id: employee.id,
+        needs_password_setup: true,
       },
-      redirectTo: callbackUrl,
+      redirectTo: setPasswordUrl,
     });
     const invitedUserId = inviteData?.user?.id ?? (await resolveAuthUserIdByEmail(service, email));
     if (invitedUserId) {
+      await service.auth.admin.updateUserById(invitedUserId, {
+        user_metadata: {
+          role: "apprenant",
+          first_name,
+          last_name,
+          prenom: first_name,
+          nom: last_name,
+          company_id: orgId,
+          organization_id: orgId,
+          employee_id: employee.id,
+          needs_password_setup: true,
+        },
+      });
       await syncCollaboratorProfileAfterInvite(service, {
         userId: invitedUserId,
         email,
@@ -114,7 +129,7 @@ export async function POST(request: NextRequest) {
         email,
         firstName: first_name,
         companyName: String((org as { name?: string })?.name ?? "votre entreprise"),
-        inviteLink: callbackUrl,
+        inviteLink: setPasswordUrl,
       });
       inviteSent = true;
     }

@@ -25,8 +25,19 @@ function SetPasswordForm() {
   useEffect(() => {
     let cancelled = false;
     async function bootstrapSession() {
+      const code = searchParams.get("code");
       const hash = typeof window !== "undefined" ? window.location.hash : "";
+
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code);
+        const clean = `${window.location.pathname}?${new URLSearchParams(
+          Array.from(searchParams.entries()).filter(([k]) => k !== "code"),
+        ).toString()}`;
+        window.history.replaceState({}, document.title, clean || window.location.pathname);
+      }
+
       if (hash.includes("access_token")) {
+        await supabase.auth.signOut();
         const hashParams = new URLSearchParams(hash.replace(/^#/, ""));
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
@@ -39,7 +50,9 @@ function SetPasswordForm() {
         }
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!cancelled) setReady(Boolean(session));
       if (!session && !cancelled) {
         toast.error("Lien invalide ou expiré. Demandez une nouvelle invitation.");
@@ -49,7 +62,7 @@ function SetPasswordForm() {
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, [supabase, searchParams]);
 
   const rules = useMemo(
     () => [
@@ -77,7 +90,10 @@ function SetPasswordForm() {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({
+        password,
+        data: { needs_password_setup: false },
+      });
       if (error) {
         toast.error(error.message);
         return;

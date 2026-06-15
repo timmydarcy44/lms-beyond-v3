@@ -18,10 +18,20 @@ export async function GET(request: NextRequest) {
       if (error) {
         return NextResponse.redirect(new URL("/login?error=auth", url.origin));
       }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+      const isInvite =
+        type === "invite" ||
+        type === "signup" ||
+        type === "magiclink" ||
+        meta.needs_password_setup === true ||
+        Boolean(user?.invited_at);
       if (type === "recovery") {
         return NextResponse.redirect(new URL("/login?view=update_password", url.origin));
       }
-      if (type === "invite" || type === "signup" || type === "magiclink") {
+      if (isInvite) {
         return NextResponse.redirect(new URL(setPasswordNext, url.origin));
       }
     }

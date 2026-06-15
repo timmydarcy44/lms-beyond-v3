@@ -39,11 +39,9 @@ export type PartnerEvent = {
 };
 
 export const partenaireClub: PartnerClub = {
-  id: "sudc",
-  name: "SU Dives Cabourg",
-  initials: "SD",
-  logoUrl:
-    "https://zmcefidiiqqppowymoxt.supabase.co/storage/v1/object/public/Beyond%20Network/Logo_SU_Dives_Cabourg_-_2024.svg",
+  id: "maladrerie-os",
+  name: "Maladrerie OS",
+  initials: "MO",
   gradientFrom: "#C8102E",
   gradientTo: "#1B2A4A",
 };

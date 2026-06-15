@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ClubLayout } from "@/components/club/club-layout";
-import { useClubGuard } from "@/components/club/use-club-guard";
+import { ClubGuardGate, useClubGuard } from "@/components/club/use-club-guard";
 import { clubPartners } from "@/lib/mocks/club-partners";
 import { cn } from "@/lib/utils";
 import { usePartnerOffers } from "@/lib/club/partner-offers-store";
@@ -24,21 +24,15 @@ export default function ClubPartnerDetailPage() {
   const [activeTab, setActiveTab] = useState<"fiche" | "offres">("fiche");
   const partnerOffers = usePartnerOffers(partner?.nom);
 
-  if (status !== "allowed") {
-    return null;
-  }
-
-  if (!partner) {
-    return (
+  return (
+    <ClubGuardGate status={status}>
+      {!partner ? (
       <ClubLayout activeItem="Partenaires">
         <div className="rounded-2xl border border-white/10 bg-[#111] p-4 text-white/70 lg:p-8">
           Partenaire introuvable.
         </div>
       </ClubLayout>
-    );
-  }
-
-  return (
+      ) : (
     <ClubLayout activeItem="Partenaires">
       <div className="p-4 lg:p-8 pt-6 lg:pt-8">
         <Link href="/dashboard/club/partenaires" className="text-sm text-white/60 hover:text-white">
@@ -224,5 +218,7 @@ export default function ClubPartnerDetailPage() {
         )}
       </div>
     </ClubLayout>
+      )}
+    </ClubGuardGate>
   );
 }

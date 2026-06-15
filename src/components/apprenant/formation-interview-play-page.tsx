@@ -12,6 +12,8 @@ type FormationInterviewPlayPageProps = {
   category: string;
   slug: string;
   lessonId: string;
+  /** Thème Jessica Contentin (parents) — sans impact sur Edge / catalog. */
+  variant?: "jessica";
 };
 
 function resolveInterviewContext(lesson: Record<string, unknown>, modules: { lessons?: unknown[] }[]) {
@@ -40,6 +42,7 @@ export async function FormationInterviewPlayPage({
   category,
   slug,
   lessonId,
+  variant,
 }: FormationInterviewPlayPageProps) {
   const data = await getLearnerContentDetail(category, slug);
   if (!data) notFound();
@@ -61,16 +64,25 @@ export async function FormationInterviewPlayPage({
   const interviewObjectives = String(
     (activeLesson as { interview_objectives?: string }).interview_objectives ?? "",
   ).trim();
+  const isJessica = variant === "jessica";
+  const playBaseHref = isJessica ? `/formations/${slug}` : card.href;
+
   const activeIndex = allLessons.findIndex((l) => l.id === lessonId);
   const nextLesson =
     activeIndex >= 0 && activeIndex < allLessons.length - 1 ? allLessons[activeIndex + 1] : null;
-  const returnHref = nextLesson ? `${card.href}/play/${nextLesson.id}` : card.href;
+  const returnHref = nextLesson ? `${playBaseHref}/play/${nextLesson.id}` : playBaseHref;
   const displayChapterTitle = resolveInterviewParentChapterTitle(allLessons, activeLesson);
-  const revisionItems = buildInterviewRevisionOutline(modules, activeLesson, `${card.href}/play`);
+  const revisionItems = buildInterviewRevisionOutline(modules, activeLesson, `${playBaseHref}/play`);
 
   return (
     <DyslexiaModeProvider>
-      <div className="fixed inset-0 z-[80] flex min-h-dvh flex-col bg-[#050208] text-white">
+      <div
+        className={
+          isJessica
+            ? "fixed inset-0 z-[80] flex min-h-dvh flex-col overflow-hidden bg-[#FAFAFA] text-slate-900"
+            : "fixed inset-0 z-[80] flex min-h-dvh flex-col overflow-hidden bg-[#050208] text-white"
+        }
+      >
         <InterviewPlayClient
           contextText={contextText}
           interviewObjectives={interviewObjectives || undefined}
@@ -79,6 +91,8 @@ export async function FormationInterviewPlayPage({
           lessonId={activeLesson.id}
           returnHref={returnHref}
           revisionItems={revisionItems}
+          theme={isJessica ? "jessica" : "edge"}
+          audience={isJessica ? "parent" : "professional"}
         />
       </div>
     </DyslexiaModeProvider>

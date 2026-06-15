@@ -65,27 +65,34 @@ export function ResourceCreateForm() {
 
     try {
       let response: Response;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60_000);
 
-      if (sourceMode === "upload" && file) {
-        const formData = new FormData();
-        formData.append("title", title.trim());
-        formData.append("description", description.trim());
-        formData.append("type", type);
-        formData.append("published", String(published));
-        formData.append("file", file);
-        response = await fetch("/api/resources", { method: "POST", body: formData });
-      } else {
-        response = await fetch("/api/resources", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: title.trim(),
-            description: description.trim() || null,
-            type: sourceMode === "html" ? "html" : type,
-            html_content: sourceMode === "html" ? htmlContent : undefined,
-            published,
-          }),
-        });
+      try {
+        if (sourceMode === "upload" && file) {
+          const formData = new FormData();
+          formData.append("title", title.trim());
+          formData.append("description", description.trim());
+          formData.append("type", type);
+          formData.append("published", String(published));
+          formData.append("file", file);
+          response = await fetch("/api/resources", { method: "POST", body: formData, signal: controller.signal });
+        } else {
+          response = await fetch("/api/resources", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify({
+              title: title.trim(),
+              description: description.trim() || null,
+              type: sourceMode === "html" ? "html" : type,
+              html_content: sourceMode === "html" ? htmlContent : undefined,
+              published,
+            }),
+          });
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
 
       if (!response.ok) {
@@ -114,9 +121,13 @@ export function ResourceCreateForm() {
       }
     } catch (error) {
       console.error("[resource-create] Erreur:", error);
-      toast.error("Erreur", {
-        description: error instanceof Error ? error.message : "Une erreur est survenue lors de la sauvegarde.",
-      });
+      const message =
+        error instanceof DOMException && error.name === "AbortError"
+          ? "La requête a expiré. Réessayez ou vérifiez votre connexion."
+          : error instanceof Error
+            ? error.message
+            : "Une erreur est survenue lors de la sauvegarde.";
+      toast.error("Erreur", { description: message });
     } finally {
       setIsSaving(false);
       setIsPublishing(false);

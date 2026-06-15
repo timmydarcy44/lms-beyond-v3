@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
+import { AddCourseResourceModal } from "./add-course-resource-modal";
 
 type GeneratedQuestion = {
   question: string;
@@ -41,14 +42,13 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   const snapshot = useCourseBuilder((state) => state.snapshot);
   const resources = useCourseBuilder((state) => state.snapshot.resources);
   const tests = useCourseBuilder((state) => state.snapshot.tests);
-  const addResource = useCourseBuilder((state) => state.addResource);
-  const updateResource = useCourseBuilder((state) => state.updateResource);
   const removeResource = useCourseBuilder((state) => state.removeResource);
   const updateTest = useCourseBuilder((state) => state.updateTest);
   const removeTest = useCourseBuilder((state) => state.removeTest);
   const hydrateFromSnapshot = useCourseBuilder((state) => state.hydrateFromSnapshot);
 
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [selectedSectionIds, setSelectedSectionIds] = useState<Record<string, boolean>>({});
   const [selectedChapterIds, setSelectedChapterIds] = useState<Record<string, boolean>>({});
   const [selectedSubchapterIds, setSelectedSubchapterIds] = useState<Record<string, boolean>>({});
@@ -64,6 +64,19 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   const [placementType, setPlacementType] = useState("end");
   const [placementId, setPlacementId] = useState("");
   const [quizTitle, setQuizTitle] = useState("");
+
+  const usedResourceIds = useMemo(
+    () =>
+      resources
+        .map((r) => r.resource_id)
+        .filter((id): id is string => Boolean(id)),
+    [resources],
+  );
+
+  const handleRemoveResource = (localId: string) => {
+    removeResource(localId);
+    toast.success("Ressource retirée de la formation.");
+  };
 
   const effectiveCourseId = useMemo(() => {
     if (courseId) return String(courseId);
@@ -468,7 +481,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
-            onClick={addResource}
+            onClick={() => setIsResourceModalOpen(true)}
             className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white hover:bg-white/20"
           >
             <Plus className="mr-2 h-3.5 w-3.5" /> Ressource
@@ -491,31 +504,21 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
             resources.map((resource) => (
               <div key={resource.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex flex-col gap-3">
-                  <Input
-                    value={resource.title}
-                    onChange={(event) => updateResource(resource.id, { title: event.target.value })}
-                    placeholder="Titre de la ressource"
-                    className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
-                  />
-                  <div className="grid gap-2 md:grid-cols-[1fr_160px]">
-                    <Input
-                      value={resource.url}
-                      onChange={(event) => updateResource(resource.id, { url: event.target.value })}
-                      placeholder="URL de la ressource"
-                      className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
-                    />
-                    <Input
-                      value={resource.type}
-                      onChange={(event) => updateResource(resource.id, { type: event.target.value as typeof resource.type })}
-                      placeholder="Type (pdf, vidéo...)"
-                      className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
-                    />
+                  <div>
+                    <p className="text-sm font-semibold text-white">{resource.title || "Ressource"}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/50">
+                      {resource.type}
+                      {resource.placement_label ? ` · ${resource.placement_label}` : ""}
+                    </p>
                   </div>
+                  {resource.url ? (
+                    <p className="truncate text-xs text-sky-200/80">{resource.url}</p>
+                  ) : null}
                   <div className="flex justify-end">
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => removeResource(resource.id)}
+                      onClick={() => handleRemoveResource(resource.id)}
                       className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 hover:border-white/40 hover:text-white"
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" /> Retirer
@@ -526,7 +529,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
             ))
           ) : (
             <p className="rounded-2xl border border-dashed border-white/15 bg-transparent px-4 py-3 text-sm text-white/50">
-              Ajoutez vos kits, PDF, replays ou supports complémentaires.
+              Intégrez une ressource de votre bibliothèque et choisissez son emplacement dans le parcours.
             </p>
           )}
         </section>
@@ -949,6 +952,12 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AddCourseResourceModal
+        open={isResourceModalOpen}
+        onOpenChange={setIsResourceModalOpen}
+        usedResourceIds={usedResourceIds}
+      />
     </Card>
   );
 }

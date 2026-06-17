@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
       last_name: lastName,
       email,
       role: "PARTICULIER",
-      objectif,
-      access_connect: true,
+      role_type: "particulier",
+      type_profil: objectif || null,
     };
 
     console.log("Données envoyées à Supabase:", payload);

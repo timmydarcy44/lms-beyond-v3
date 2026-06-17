@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 
 const IDMC_AXIS_KEYS = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"] as const;
 type AxisKey = (typeof IDMC_AXIS_KEYS)[number];
@@ -41,14 +42,10 @@ function averageAxes(axes: Record<string, number> | null): number | null {
 }
 
 function parseDiscScores(raw: unknown): EmployeeTestResults["disc"] {
-  if (!raw || typeof raw !== "object") return null;
-  const s = raw as Record<string, unknown>;
-  const d = Number(s.D ?? 0);
-  const i = Number(s.I ?? 0);
-  const st = Number(s.S ?? 0);
-  const c = Number(s.C ?? 0);
-  if (d + i + st + c <= 0) return null;
-  return { D: d, I: i, S: st, C: c };
+  const parsed = parseStoredDiscScores(raw as Record<string, unknown> | null);
+  if (!parsed) return null;
+  if (parsed.D + parsed.I + parsed.S + parsed.C <= 0) return null;
+  return parsed;
 }
 
 function parseSoftSkills(raw: unknown): EmployeeTestResults["soft_skills"] {

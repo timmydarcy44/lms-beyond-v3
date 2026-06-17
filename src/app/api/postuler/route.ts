@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { EDGE_COHORTE_LABEL } from "@/lib/edge-site/constants";
 
 function escapeHtml(value: string): string {
   return value
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
     const motivation = String(body.motivation ?? "").trim();
     const parcours =
       String(body.parcours ?? body.parcoursTitre ?? body.parcoursSlug ?? "").trim() || "Parcours EDGE";
-    const cohorte = String(body.cohorte ?? "Sept 2025").trim();
+    const cohorte = String(body.cohorte ?? EDGE_COHORTE_LABEL).trim();
     const parcoursPrix = Number(body.parcoursPrix) || 0;
     const addonsTotal = Number(body.addonsTotal) || 0;
     const totalEstime = Number(body.totalEstime) || parcoursPrix + addonsTotal;

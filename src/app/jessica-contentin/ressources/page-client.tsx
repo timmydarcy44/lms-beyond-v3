@@ -9,19 +9,33 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { CatalogItem as CatalogItemType } from "@/lib/queries/catalogue";
+import { JessicaNevoPresentation } from "@/components/jessica-contentin/jessica-nevo-presentation";
 
 type CatalogItem = CatalogItemType & {
   access_status?: string;
   stripe_checkout_url?: string | null;
 };
 
+function formatPrice(price: number | null | undefined): string {
+  if (!price || price === 0) return "Gratuit";
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(price);
+}
+
+type RessourcesViewMode = "full" | "downloads-only";
+
 type RessourcesPageClientProps = {
   initialItems: CatalogItem[];
   userFirstName: string | null;
+  viewMode?: RessourcesViewMode;
 };
 
 // Composant interne qui utilise useSearchParams (doit être enveloppé dans Suspense)
-function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstName }: RessourcesPageClientProps) {
+function RessourcesPageContent({
+  initialItems,
+  userFirstName: initialUserFirstName,
+  viewMode = "full",
+}: RessourcesPageClientProps) {
+  const isDownloadsOnly = viewMode === "downloads-only";
   const logDev = (...args: unknown[]) => {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
@@ -192,21 +206,24 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
   }, [catalogItems]);
 
   useEffect(() => {
-    // Afficher le contenu rapidement (réduire l'animation de bienvenue)
+    if (isDownloadsOnly) {
+      setShowContent(true);
+      setShowWelcome(false);
+      return;
+    }
     const timer = setTimeout(() => {
       setShowWelcome(true);
     }, 50);
 
-    // Afficher le contenu après une animation très courte
     const contentTimer = setTimeout(() => {
       setShowContent(true);
-    }, 300); // Réduit à 300ms car les données sont déjà chargées
+    }, 300);
 
     return () => {
       clearTimeout(timer);
       clearTimeout(contentTimer);
     };
-  }, []);
+  }, [isDownloadsOnly]);
 
   // Auto-play du slider hero
   useEffect(() => {
@@ -250,6 +267,9 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
   
   // Log pour debug
   logDev("[RessourcesPageClient] Featured items count:", featuredItems.length, "out of", catalogItems.length);
+
+  const freeItems = catalogItems.filter((item) => item.is_free);
+  const paidItems = catalogItems.filter((item) => !item.is_free);
 
   // Grouper les ressources par catégorie
   const itemsByCategory = catalogItems.reduce((acc, item) => {
@@ -328,7 +348,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
 
         {/* Animation effet sable */}
         <AnimatePresence>
-          {showWelcome && !showContent && (
+          {showWelcome && !showContent && !isDownloadsOnly && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -398,7 +418,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}
                 >
-                  Dans mes ressources
+                  Dans mes outils et ressources
                 </motion.p>
               </motion.div>
             </motion.div>
@@ -414,8 +434,8 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
               transition={{ duration: 0.6 }}
               className="pb-20"
             >
-              {/* Hero Section avec Slider - Au-dessus de la ligne de flottaison */}
-              {featuredItems.length > 0 && (
+              {/* Hero Section avec Slider */}
+              {!isDownloadsOnly && featuredItems.length > 0 && (
                 <section className="relative h-[60vh] min-h-[500px] max-h-[700px] overflow-hidden mx-4 mb-6 rounded-2xl shadow-lg">
                   <AnimatePresence mode="wait">
                     {featuredItems.map((item, index) => {
@@ -541,8 +561,33 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                 </section>
               )}
 
+              {/* En-tête de page */}
+              <section className="mx-4 mb-8">
+                <div className="mx-auto max-w-7xl px-6">
+                  <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45 }}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#9A7B52]">
+                      Outils et ressources
+                    </p>
+                    <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#2F2A25] md:text-4xl">
+                      {isDownloadsOnly ? "Ressources à télécharger" : "Téléchargez, explorez, progressez"}
+                    </h1>
+                    <p className="mt-4 max-w-3xl text-base leading-relaxed text-[#5C5348] md:text-lg">
+                      {isDownloadsOnly
+                        ? "Fiches, guides et outils psychopédagogiques — certains gratuits, d'autres premium."
+                        : "Fiches, guides et outils psychopédagogiques à télécharger — certains gratuits, d'autres premium. Complétez votre parcours avec l'application de performance cognitive."}
+                    </p>
+                  </motion.div>
+                </div>
+              </section>
+
+              {!isDownloadsOnly ? <JessicaNevoPresentation /> : null}
+
               {/* Section "Vous êtes" avec filtres par catégorie */}
-              <section className="py-8 mx-4 mb-6">
+              <section id="ressources-a-telecharger" className="py-8 mx-4 mb-6 scroll-mt-24">
                 <div className="mx-auto max-w-7xl px-6">
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -556,8 +601,15 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                       }}
                     >
-                      {userFirstName ? `${userFirstName}, comment je peux vous aider ?` : "Comment puis-je vous aider ?"}
+                      {userFirstName
+                        ? `${userFirstName}, trouvez votre ressource`
+                        : "Ressources à télécharger"}
                     </h2>
+                    <p className="mb-4 text-sm text-[#5C5348]">
+                      {freeItems.length > 0 && paidItems.length > 0
+                        ? `${freeItems.length} ressource${freeItems.length > 1 ? "s" : ""} gratuite${freeItems.length > 1 ? "s" : ""} · ${paidItems.length} ressource${paidItems.length > 1 ? "s" : ""} premium`
+                        : "Parcourez les contenus par thématique"}
+                    </p>
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => {
@@ -620,10 +672,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                       Aucune ressource disponible pour le moment.
                     </p>
                     <p className="text-sm text-[#2F2A25]/60">
-                      Les ressources seront bientôt disponibles.
-                    </p>
-                    <p className="text-xs text-[#2F2A25]/50 mt-2">
-                      Debug: catalogItems.length = {catalogItems.length}, initialItems.length = {initialItems.length}
+                      De nouvelles ressources seront bientôt disponibles.
                     </p>
                   </div>
                 ) : displayedCategories.length === 0 ? (
@@ -676,12 +725,22 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                                   <h3 className="text-white font-semibold text-lg mb-1 line-clamp-2">{item.title}</h3>
                                   <p className="text-white/80 text-sm line-clamp-2">{item.short_description || item.description || ""}</p>
                                 </div>
-                                <div className="absolute top-2 right-2">
+                                <div className="absolute top-2 left-2">
                                   <span className="px-2 py-1 text-xs font-semibold rounded-full bg-[#C6A664] text-white">
                                     {item.item_type === "module" ? "📚 Micro formation" :
                                      item.item_type === "test" ? "🧪 Test" :
                                      item.item_type === "ressource" ? "📄 Ressource" :
                                      "📦 Contenu"}
+                                  </span>
+                                </div>
+                                <div className="absolute top-2 right-2">
+                                  <span
+                                    className={cn(
+                                      "px-2 py-1 text-xs font-semibold rounded-full text-white",
+                                      item.is_free ? "bg-emerald-600" : "bg-[#2F2A25]/90",
+                                    )}
+                                  >
+                                    {item.is_free ? "Gratuit" : formatPrice(item.price)}
                                   </span>
                                 </div>
                               </div>
@@ -777,10 +836,14 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                                      "📦 Contenu"}
                                     </div>
                                   
-                                  {/* Badge gratuit */}
-                                  {item.is_free && (
-                                    <div className="absolute top-3 right-3 bg-[#C6A664] text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                  {/* Badge prix / gratuit */}
+                                  {item.is_free ? (
+                                    <div className="absolute top-3 right-3 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
                                       Gratuit
+                                    </div>
+                                  ) : (
+                                    <div className="absolute top-3 right-3 bg-[#2F2A25]/90 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                      {formatPrice(item.price)}
                                     </div>
                                   )}
 
@@ -825,6 +888,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
         </AnimatePresence>
 
         {/* Section titre en bas avant le footer */}
+        {!isDownloadsOnly ? (
         <section className="py-12 mx-4 mb-8">
           <div className="mx-auto max-w-7xl px-6">
             <motion.div
@@ -839,7 +903,7 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                 }}
               >
-                Ressources psychopédagogiques - Contenus et outils
+                Ressources psychopédagogiques et outils
               </h2>
               <p
                 className="text-lg md:text-xl text-[#2F2A25]/80 max-w-3xl mx-auto"
@@ -847,11 +911,13 @@ function RessourcesPageContent({ initialItems, userFirstName: initialUserFirstNa
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                 }}
               >
-                Découvrez nos ressources et outils psychopédagogiques accessibles partout en France : troubles DYS, TDA-H, gestion des émotions, confiance en soi, orientation scolaire, neuroéducation.
+                Téléchargez des fiches et guides gratuits ou premium, et découvrez l&apos;application de
+                performance cognitive pour prolonger l&apos;accompagnement au quotidien.
               </p>
             </motion.div>
           </div>
         </section>
+        ) : null}
     </div>
   );
 }

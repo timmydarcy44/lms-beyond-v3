@@ -27,7 +27,7 @@ type Props = {
   defaultStep?: number;
 };
 
-const STEPS = ["Coordonnées", "Objectif", "Profil", "Format"] as const;
+const STEPS = ["Objectif", "Profil", "Format", "Coordonnées"] as const;
 type TunnelStep = 1 | 2 | 3 | 4;
 
 const emptyContact = (): OrientationLeadContact => ({
@@ -63,8 +63,7 @@ export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
   const submitLeadAndShowResult = async () => {
     if (!format || !profil || objectifs.length === 0) return;
     if (!isValidOrientationLeadContact(contact)) {
-      setContactError("Vérifiez vos coordonnées (étape 1).");
-      setStep(1);
+      setContactError("Renseignez tous les champs obligatoires.");
       return;
     }
 
@@ -101,18 +100,15 @@ export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
   };
 
   const goNext = () => {
-    if (step === 1) {
+    if (step === 1 && objectifs.length === 0) return;
+    if (step === 2 && !profil) return;
+    if (step === 3 && !format) return;
+    if (step === 4) {
       if (!isValidOrientationLeadContact(contact)) {
         setContactError("Renseignez tous les champs obligatoires.");
         return;
       }
       setContactError(null);
-      setStep(2);
-      return;
-    }
-    if (step === 2 && objectifs.length === 0) return;
-    if (step === 3 && !profil) return;
-    if (step === 4) {
       void submitLeadAndShowResult();
       return;
     }
@@ -140,17 +136,17 @@ export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
       <ProgressBar currentStep={step} />
       <div className="mt-10 flex min-h-0 flex-1 flex-col">
         {step === 1 ? (
+          <StepObjectifs selected={objectifs} onToggle={toggleObjectif} />
+        ) : null}
+        {step === 2 ? <StepProfil selected={profil} onSelect={setProfil} /> : null}
+        {step === 3 ? <StepFormat selected={format} onSelect={setFormat} /> : null}
+        {step === 4 ? (
           <StepContact
             value={contact}
             onChange={setContact}
             error={contactError}
           />
         ) : null}
-        {step === 2 ? (
-          <StepObjectifs selected={objectifs} onToggle={toggleObjectif} />
-        ) : null}
-        {step === 3 ? <StepProfil selected={profil} onSelect={setProfil} /> : null}
-        {step === 4 ? <StepFormat selected={format} onSelect={setFormat} /> : null}
       </div>
       {submitError ? (
         <p className="mt-4 text-center text-[13px] text-edge-red">{submitError}</p>
@@ -171,8 +167,9 @@ export function OrientationTunnel({ onComplete, defaultStep = 1 }: Props) {
           onClick={goNext}
           disabled={
             isSubmitting ||
-            (step === 2 && objectifs.length === 0) ||
-            (step === 3 && !profil) ||
+            (step === 1 && objectifs.length === 0) ||
+            (step === 2 && !profil) ||
+            (step === 3 && !format) ||
             (step === 4 && !format)
           }
           className="ml-auto rounded-full bg-edge-red px-8 py-2.5 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
@@ -224,9 +221,9 @@ function StepContact({
 
   return (
     <div>
-      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Vos coordonnées</h2>
+      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Dernière étape — vos coordonnées</h2>
       <p className="mt-2 text-[15px] text-black/40">
-        Pour personnaliser vos recommandations et vous recontacter si besoin.
+        Pour recevoir vos recommandations personnalisées. Le test d&apos;orientation est terminé.
       </p>
       <div className="mt-8 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -321,9 +318,9 @@ function StepObjectifs({
   return (
     <div>
       <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">
-        Quels sont tes objectifs ?
+        Quels sont vos objectifs ?
       </h2>
-      <p className="mt-2 text-[15px] text-black/40">Tu peux en sélectionner plusieurs.</p>
+      <p className="mt-2 text-[15px] text-black/40">Test d&apos;orientation — vous pouvez en sélectionner plusieurs.</p>
       <ul className="mt-8 space-y-3">
         {ORIENTATION_OBJECTIFS.map((o) => {
           const checked = selected.includes(o.id);
@@ -364,8 +361,8 @@ function StepProfil({
 }) {
   return (
     <div>
-      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Ton profil</h2>
-      <p className="mt-2 text-[15px] text-black/40">Choisis l&apos;option qui te correspond le mieux.</p>
+      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Votre profil</h2>
+      <p className="mt-2 text-[15px] text-black/40">Choisissez l&apos;option qui vous correspond le mieux.</p>
       <ul className="mt-8 space-y-3">
         {ORIENTATION_PROFILS.map((o) => (
           <OptionRadio key={o.id} checked={selected === o.id} onSelect={() => onSelect(o.id)} label={o.label} description={o.description} />
@@ -384,8 +381,8 @@ function StepFormat({
 }) {
   return (
     <div>
-      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Ton format idéal</h2>
-      <p className="mt-2 text-[15px] text-black/40">Comment veux-tu apprendre ?</p>
+      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Votre format idéal</h2>
+      <p className="mt-2 text-[15px] text-black/40">Comment souhaitez-vous apprendre ?</p>
       <ul className="mt-8 space-y-3">
         {ORIENTATION_FORMATS.map((o) => (
           <OptionRadio key={o.id} checked={selected === o.id} onSelect={() => onSelect(o.id)} label={o.label} description={o.description} />
@@ -476,7 +473,7 @@ function ResultRythme({ primaryObjectif }: { primaryObjectif: ObjectifId }) {
         ))}
       </div>
       <p className="mt-8 text-center text-[14px] text-black/40">
-        Tu peux upgrader vers un parcours certifiant à tout moment.
+        Vous pouvez upgrader vers un parcours certifiant à tout moment.
       </p>
       <p className="mt-4 text-center">
         <Link href={EDGE_HREFS.parcours} className="text-[13px] font-medium text-edge-red transition-opacity hover:opacity-80">
@@ -515,8 +512,8 @@ function ResultEntreprise() {
 function ResultBootcamp({ parcours }: { parcours: import("@/lib/parcours").Parcours[] }) {
   return (
     <div className="mt-8 space-y-4">
-      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Tes parcours recommandés</h2>
-      <p className="text-[15px] text-black/40">Sélectionnés selon ton objectif principal.</p>
+      <h2 className="text-2xl font-medium tracking-[-0.02em] text-edge-black">Vos parcours recommandés</h2>
+      <p className="text-[15px] text-black/40">Sélectionnés selon votre objectif principal.</p>
       <ul className="mt-6 space-y-4">
         {parcours.map((p) => (
           <li key={p.slug} className="border border-black/[0.08] bg-[#f8f8f6] p-6">

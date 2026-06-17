@@ -12,6 +12,8 @@ export function programmePresentationHref(slug: string): string {
 export type ProgrammeDefinition = {
   slug: string;
   headline: string;
+  /** Balise Title SEO */
+  seoTitle: string;
   tag: string;
   heroImageUrl: string;
   specialitySlug: string;
@@ -32,8 +34,9 @@ const VIDEO_APAISER_MENTAL =
 export const PROGRAMMES: ProgrammeDefinition[] = [
   {
     slug: "declic-etudes",
-    headline: "Déclic études",
-    tag: "Retrouver confiance et progresser efficacement",
+    headline: "APPRENDRE, S'ORIENTER ET RÉUSSIR",
+    seoTitle: "Déclic Études : Programme de Neuroéducation pour réussir",
+    tag: "Développer des stratégies adaptées à son fonctionnement et construire un projet d'avenir cohérent.",
     heroImageUrl:
       "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1600&q=85",
     specialitySlug: "strategie-apprentissage",
@@ -43,8 +46,9 @@ export const PROGRAMMES: ProgrammeDefinition[] = [
   },
   {
     slug: "comprendre-pour-apaiser",
-    headline: "Comprendre pour apaiser",
-    tag: "Accompagner son enfant sans conflit",
+    headline: "TDAH, TSA, TROUBLES DYS ET HAUT POTENTIEL",
+    seoTitle: "Neuroéducation : Programme pour comprendre et apaiser l'enfant",
+    tag: "Comprendre son fonctionnement et développer des stratégies adaptées.",
     heroImageUrl:
       "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1600&q=85",
     specialitySlug: "guidance-parentale",
@@ -54,26 +58,28 @@ export const PROGRAMMES: ProgrammeDefinition[] = [
   },
   {
     slug: "apaiser-le-mental",
-    headline: "Apaiser le mental",
-    tag: "Sortir du stress et retrouver de la sérénité",
+    headline: "COMPRENDRE SON FONCTIONNEMENT",
+    seoTitle: "Équilibre mental & Neuroéducation : Programme d'accompagnement",
+    tag: "Identifier ses besoins cognitifs, émotionnels et comportementaux pour retrouver un meilleur équilibre.",
     heroImageUrl:
       "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1600&q=85",
     specialitySlug: "gestion-stress",
     intro:
       "Identifier les déclencheurs, apaiser le corps et les pensées, et réinstaller des rythmes de vie plus soutenables — à votre rythme.",
     heroKicker: "Programme",
-    promoVideoUrl: VIDEO_APAISER_MENTAL,
   },
   {
     slug: "trouver-sa-voie",
-    headline: "Trouver sa voie",
-    tag: "Clarifier son avenir et faire les bons choix",
+    headline: "ÉMOTIONS, STRESS ET ADAPTATION",
+    seoTitle: "Trouver sa voie : Coaching d'orientation & Neuroéducation",
+    tag: "Comprendre les mécanismes du stress afin de développer des stratégies de régulation émotionnelle efficaces.",
     heroImageUrl:
       "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1600&q=85",
     specialitySlug: "orientation-professionnelle",
     intro:
       "Exploration des intérêts et des compétences, mise en cohérence avec les filières et les projets — pour avancer avec plus de clarté.",
     heroKicker: "Programme",
+    promoVideoUrl: VIDEO_APAISER_MENTAL,
   },
 ];
 

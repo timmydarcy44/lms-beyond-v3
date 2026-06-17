@@ -67,7 +67,22 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
+    const jessicaHosts = ["jessicacontentin.fr", "www.jessicacontentin.fr", "jessica-contentin.fr"] as const;
+    const jessicaSeoRewrites = jessicaHosts.flatMap((host) => [
+      {
+        source: "/sitemap.xml",
+        destination: "/jessica-contentin/sitemap.xml",
+        has: [{ type: "host" as const, value: host }],
+      },
+      {
+        source: "/robots.txt",
+        destination: "/jessica-contentin/robots.txt",
+        has: [{ type: "host" as const, value: host }],
+      },
+    ]);
+
     return [
+      ...jessicaSeoRewrites,
       {
         source: "/",
         destination: "/app-landing",

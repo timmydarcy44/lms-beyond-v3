@@ -44,31 +44,32 @@ export type ConnectShellTheme = {
 
 const EDGE_THEME: ConnectShellTheme = {
   shellAttr: "edge",
-  rootClass: "relative min-h-screen bg-[#0D0D12]",
+  rootClass: "relative min-h-screen",
   showBackdrop: true,
   brandTitle: "EDGE",
   brandSubtitle: "Propulsé par Beyond",
   brandCollapsedLetter: "E",
-  brandCollapsedClass: "mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-edge-red/10 text-xs font-semibold text-edge-red",
-  sidebarClass: "no-dyslexia sticky left-0 top-0 z-20 hidden h-screen shrink-0 flex-col bg-[#0a0a0f] lg:flex",
+  brandCollapsedClass: "mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-[#3D7BFF]/15 text-xs font-semibold text-[#3D7BFF]",
+  sidebarClass:
+    "no-dyslexia sticky left-0 top-0 z-20 hidden h-screen shrink-0 flex-col border-r border-white/[0.08] bg-transparent backdrop-blur-[20px] backdrop-saturate-[140%] lg:flex",
   sidebarHeaderBorder: "border-b border-white/[0.06]",
-  sidebarFooterClass: "shrink-0 space-y-2 border-t border-white/[0.06] bg-[#0a0a0f] p-2",
+  sidebarFooterClass: "shrink-0 space-y-2 border-t border-white/[0.06] p-2",
   collapseBtnClass:
-    "ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-white/70 transition hover:border-edge-red/35 hover:bg-edge-red/10 hover:text-white",
-  navActiveClass: "bg-[rgba(37,99,235,0.15)] text-white",
-  navActiveCollapsedClass: "bg-[rgba(37,99,235,0.15)] text-white ring-1 ring-[rgba(37,99,235,0.25)]",
+    "ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-white/70 transition hover:border-[#3D7BFF]/35 hover:bg-[#3D7BFF]/10 hover:text-white",
+  navActiveClass: "bg-[rgba(61,123,255,0.15)] text-white",
+  navActiveCollapsedClass: "bg-[rgba(61,123,255,0.15)] text-white ring-1 ring-[rgba(61,123,255,0.25)]",
   navInactiveClass: "text-white/45 hover:bg-white/[0.04] hover:text-white",
-  navIconActive: "text-[#60a5fa]",
+  navIconActive: "text-[#3D7BFF]",
   navIconInactive: "text-white/45 group-hover:text-white/70",
-  profileBorder: "border-[rgba(37,99,235,0.35)]",
-  profileInitialClass: "text-xs font-semibold text-[#60a5fa]",
-  profileAvatarBg: "bg-[#111110]",
+  profileBorder: "border-[rgba(61,123,255,0.35)]",
+  profileInitialClass: "text-xs font-semibold text-[#3D7BFF]",
+  profileAvatarBg: "bg-[#111118]",
   profileNameClass: "truncate text-xs font-semibold text-white",
   profileRoleClass: "truncate text-[10px] text-white/45",
   profileEditBtnClass:
     "mt-2 w-full rounded-full border border-white/20 bg-transparent py-2 text-[11px] font-medium text-white/70 transition hover:border-white/30",
   profileCollapsedBtnClass:
-    "mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-xs font-semibold text-[#E53935] transition hover:border-[#E53935]/40",
+    "mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-xs font-semibold text-[#3D7BFF] transition hover:border-[#3D7BFF]/40",
   helpLinkClass:
     "flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.06] bg-transparent py-2 text-[11px] font-medium text-white/45 transition hover:bg-white/[0.04] hover:text-white/70",
   neuroBtnClass:
@@ -76,16 +77,16 @@ const EDGE_THEME: ConnectShellTheme = {
   logoutBtnClass:
     "flex w-full items-center justify-center rounded-xl py-2 text-[11px] font-medium text-white/25 transition hover:bg-white/[0.04] hover:text-white/40",
   mainClass: "relative flex-1 overflow-y-auto bg-transparent text-slate-100",
-  mobileHeaderClass: "sticky top-0 z-30 border-b border-sky-500/10 bg-[#050810]/60 px-4 py-3 backdrop-blur-md lg:hidden",
+  mobileHeaderClass: "sticky top-0 z-30 border-b border-[#3D7BFF]/10 bg-[#0a0a0d]/80 px-4 py-3 backdrop-blur-md lg:hidden",
   mobileTitleClass: "truncate text-center text-sm font-semibold text-white",
   mobileMenuBtnClass:
-    "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/20 bg-white/[0.06] text-slate-200",
-  mobileSheetClass: "border-sky-500/15 bg-[#050810]/95 text-slate-100 backdrop-blur-xl",
-  mobileNavActive: "bg-sky-500/15 text-white ring-1 ring-sky-400/30",
+    "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#3D7BFF]/20 bg-white/[0.06] text-slate-200",
+  mobileSheetClass: "border-[#3D7BFF]/15 bg-[#0a0a0d]/95 text-slate-100 backdrop-blur-xl",
+  mobileNavActive: "bg-[#3D7BFF]/15 text-white ring-1 ring-[#3D7BFF]/30",
   mobileNavInactive: "text-slate-400 hover:bg-white/[0.04] hover:text-white",
-  mobileNavIconActive: "text-sky-400",
+  mobileNavIconActive: "text-[#3D7BFF]",
   mobileNavIconInactive: "text-slate-500 group-hover:text-slate-300",
-  shareToastClass: "max-w-md rounded-2xl border border-sky-500/20 bg-[#0a1020] px-6 py-5 text-center shadow-2xl shadow-black/50",
+  shareToastClass: "max-w-md rounded-2xl border border-[#3D7BFF]/20 bg-[#0a0a0d] px-6 py-5 text-center shadow-2xl shadow-black/50",
   shareToastBtnClass:
     "mt-4 rounded-full bg-[#6C5CE7] px-5 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(108,92,231,0.5)] hover:bg-[#7B6EF6]",
   signOutHref: "/particuliers",
@@ -173,7 +174,7 @@ export type ApprenantPageTokens = {
 
 const EDGE_PAGE_TOKENS: ApprenantPageTokens = {
   pageShell: "relative space-y-6 md:space-y-8",
-  pageKicker: "text-[10px] font-semibold uppercase tracking-[0.12em] text-[#60a5fa]",
+  pageKicker: "text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3D7BFF]",
   pageTitle:
     "text-[clamp(1.45rem,2.5vw,1.85rem)] font-extrabold tracking-[-0.02em] text-white md:text-[clamp(1.95rem,3vw,2.4rem)]",
   pageLead: "max-w-2xl text-[13px] text-white/40",
@@ -181,17 +182,17 @@ const EDGE_PAGE_TOKENS: ApprenantPageTokens = {
   cardBody: "rounded-2xl border border-white/[0.06] bg-[#17171F] flex flex-col gap-3 px-[20px] py-[18px] text-white",
   heroClass: "flex flex-col gap-4 rounded-2xl border border-white/[0.06] px-[20px] py-[18px] text-white",
   cardInteractive:
-    "rounded-2xl border border-white/[0.06] bg-[#17171F] flex flex-col gap-3 px-[20px] py-[18px] text-white transition hover:border-sky-400/30 group",
-  cardKicker: "text-[10px] font-semibold uppercase tracking-[0.12em] text-[#60a5fa]",
+    "rounded-2xl border border-white/[0.06] bg-[#17171F] flex flex-col gap-3 px-[20px] py-[18px] text-white transition hover:-translate-y-0.5 hover:border-[#3D7BFF]/30 hover:shadow-[0_12px_40px_-12px_rgba(61,123,255,0.25)] group",
+  cardKicker: "text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3D7BFF]",
   cardTitle: "text-[15px] font-extrabold tracking-[-0.02em] text-white",
   cardMuted: "text-[13px] text-white/40",
   cardNote: "rounded-2xl border border-white/[0.06] bg-[#1C1C28] px-[20px] py-[18px] text-[13px] text-white/40",
   btnPrimary:
-    "inline-flex items-center justify-center rounded-[10px] bg-[#2563EB] px-5 py-[11px] text-[13px] font-bold text-white transition hover:bg-[#1D4ED8]",
+    "inline-flex items-center justify-center rounded-[10px] bg-[#3D7BFF] px-5 py-[11px] text-[13px] font-bold text-white transition hover:bg-[#2f6ae8] shadow-[0_8px_24px_-8px_rgba(61,123,255,0.55)]",
   btnSecondary:
     "inline-flex items-center justify-center rounded-[10px] border border-white/[0.08] bg-transparent px-5 py-[11px] text-[13px] font-semibold text-white/45 transition hover:bg-white/[0.05] hover:text-white/70",
   progressTrack: "h-[3px] overflow-hidden rounded-full bg-white/[0.07]",
-  progressFill: "h-full rounded-full bg-[#2563EB] transition-all",
+  progressFill: "h-full rounded-full bg-[#3D7BFF] transition-all",
   progressLabel: "text-[13px] text-white/40",
   progressPct: "text-[13px] font-semibold text-white",
 };

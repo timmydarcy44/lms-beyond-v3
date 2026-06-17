@@ -25,6 +25,7 @@ import { useApprenantShell } from "@/components/apprenant/apprenant-shell-contex
 import { EDGE_LAB_ONLINE_CATALOG_HREF } from "@/lib/galaxy-branding";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import { getProfileSituationLabel } from "@/lib/apprenant/profile-situation";
+import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 import {
   APPRENANT_CARD_BODY,
   APPRENANT_CARD_KICKER,
@@ -93,6 +94,7 @@ export function ApprenantDashboardClient({
 }) {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
+  const appShell = useApprenantShell();
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<{
     id?: string;
@@ -202,7 +204,6 @@ export function ApprenantDashboardClient({
   const learnerIdentifier = user?.id
     ? `APP-${user.id.replace(/-/g, "").slice(0, 8).toUpperCase()}`
     : "—";
-  const appShell = useApprenantShell();
   const [educationPreview, setEducationPreview] = useState<Array<Record<string, unknown>>>([]);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [aiAnalysisUpdatedAt, setAiAnalysisUpdatedAt] = useState<string | null>(null);
@@ -472,13 +473,8 @@ export function ApprenantDashboardClient({
           }
 
           if (discResult?.scores && typeof discResult.scores === "object") {
-            const scores = discResult.scores as Record<string, unknown>;
-            setDiscScores({
-              D: Number(scores.D || 0),
-              I: Number(scores.I || 0),
-              S: Number(scores.S || 0),
-              C: Number(scores.C || 0),
-            });
+            const parsed = parseStoredDiscScores(discResult.scores as Record<string, unknown>);
+            setDiscScores(parsed);
           } else {
             setDiscScores(null);
           }
@@ -1673,13 +1669,11 @@ export function ApprenantDashboardClient({
               </div>
               <div id="section-mon-profil" className="scroll-mt-28 mt-2 space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#FF3B30]">
-                    Fiche détaillée
-                  </div>
+                  <div className={APPRENANT_CARD_KICKER}>Fiche détaillée</div>
                   <button
                     type="button"
                     onClick={() => appShell?.openEditProfile()}
-                    className="rounded-full border border-edge-red/40 bg-edge-red/10 px-4 py-2 text-xs font-medium text-edge-red transition hover:bg-edge-red/15"
+                    className={CONNECT_BTN_SECONDARY}
                   >
                     Modifier mon profil
                   </button>
@@ -1756,7 +1750,7 @@ export function ApprenantDashboardClient({
               </div>
               <div className="mt-3 h-2 w-full rounded-full bg-white/10">
                 <div
-                  className="h-2 rounded-full bg-[#E53935] transition-all"
+                  className="h-2 rounded-full bg-[#3D7BFF] transition-all"
                   style={{ width: `${profileCompletion.score}%` }}
                 />
               </div>
@@ -1765,7 +1759,7 @@ export function ApprenantDashboardClient({
                   {profileCompletion.checklist.map((item) => (
                     <div key={item.key} className="flex items-center justify-between gap-3">
                       <span>{item.label}</span>
-                      <span className={item.done ? "text-edge-red" : "text-white/40"}>
+                      <span className={item.done ? "text-[#3D7BFF]" : "text-white/40"}>
                         {item.done ? `+${item.weight}` : "0"}
                       </span>
                     </div>

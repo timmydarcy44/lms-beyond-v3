@@ -54,10 +54,13 @@ export function JessicaParcoursProgramCards({
       <div className="mx-auto max-w-[1400px]">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-[#9A7B52]">Parcours</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-[#9A7B52]">Parcours proposés</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#2F2A25] sm:text-3xl md:text-4xl">
-              Choisissez votre accompagnement
+              Parcours proposés
             </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#5C5348] sm:text-base">
+              Découvrez les parcours d&apos;accompagnement et choisissez celui qui correspond à votre situation.
+            </p>
           </div>
           <Link
             href={SPECIALITES_HREF}
@@ -104,15 +107,12 @@ export function JessicaParcoursProgramCards({
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1c1510]/95 via-[#3d2e24]/65 to-transparent" />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#4a3628]/40 via-transparent to-[#8b6914]/08" />
 
-              <div className="absolute inset-x-0 bottom-0 flex flex-col items-center px-4 pb-9 pt-24 text-center sm:pb-10 sm:pt-28">
-                <p className="text-[10px] font-medium uppercase tracking-[0.38em] text-[#F0E4D4]">
-                  Jessica Contentin
-                </p>
-                <h3 className="mt-4 max-w-[15rem] text-xl font-bold uppercase leading-tight tracking-[0.06em] text-white drop-shadow-sm sm:text-2xl">
+              <div className="absolute inset-x-0 bottom-0 flex flex-col items-start px-6 pb-9 pt-24 text-left sm:px-7 sm:pb-10 sm:pt-28">
+                <h3 className="pr-2 text-lg font-bold uppercase leading-snug tracking-[0.04em] text-white drop-shadow-sm sm:text-xl">
                   {card.headline}
                 </h3>
-                <p className="mt-4 max-w-[16rem] text-sm leading-relaxed text-[#FAF0E6]/95 sm:text-[15px]">{card.tag}</p>
-                <span className="mt-6 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#E8D5B5] underline-offset-4 group-hover:underline">
+                <p className="mt-3 pr-2 text-sm leading-relaxed text-[#FAF0E6]/95 sm:mt-4 sm:text-[15px]">{card.tag}</p>
+                <span className="mt-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#E8D5B5] underline-offset-4 group-hover:underline sm:mt-6">
                   Découvrir le parcours
                 </span>
               </div>

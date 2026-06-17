@@ -4,7 +4,7 @@ import { JessicaRemoteImage } from "@/components/jessica-contentin/jessica-remot
 import { PARCOURS_GUIDES, parcoursGuideHref } from "@/lib/jessica-contentin/parcours-guide-catalog";
 
 export const metadata: Metadata = {
-  title: "Parcours guidés | Jessica Contentin",
+  title: "Parcours guidés en Neuroéducation : Accompagnement structuré",
   description:
     "Parcours parentaux digitalisés : repères clairs, outils concrets et accompagnement personnalisé.",
 };

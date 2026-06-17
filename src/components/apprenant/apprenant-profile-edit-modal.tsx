@@ -41,7 +41,7 @@ type Props = {
 };
 
 const inputClass =
-  "mt-2 w-full rounded-xl border border-black/[0.06] bg-[#f5f5f3] px-3 py-2 text-sm text-[#0a0a0a] outline-none focus:border-edge-red/50";
+  "mt-2 w-full rounded-xl border border-black/[0.06] bg-[#f5f5f3] px-3 py-2 text-sm text-[#0a0a0a] outline-none focus:border-[#3D7BFF]/50";
 
 export function ApprenantProfileEditModal({
   open,
@@ -214,7 +214,7 @@ export function ApprenantProfileEditModal({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               disabled={uploading}
-              className="mt-2 block w-full text-xs text-black/70 file:mr-2 file:rounded-lg file:border-0 file:bg-edge-red file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
+              className="mt-2 block w-full text-xs text-black/70 file:mr-2 file:rounded-lg file:border-0 file:bg-[#3D7BFF] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-[#2f6ae8]"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) void persistAvatar(f);

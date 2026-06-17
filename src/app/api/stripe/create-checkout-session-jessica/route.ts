@@ -6,7 +6,8 @@ import Stripe from "stripe";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { catalogItemId, contentId } = body;
+    const { catalogItemId, contentId, quantity: rawQuantity } = body;
+    const quantity = Math.min(10, Math.max(1, Number(rawQuantity) || 1));
 
     if (!catalogItemId && !contentId) {
       return NextResponse.json(
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
               },
               unit_amount: Math.round((catalogItem.price || 0) * 100), // Stripe utilise les centimes
             },
-            quantity: 1,
+            quantity,
           },
         ],
         mode: "payment",

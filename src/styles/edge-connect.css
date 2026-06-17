@@ -1,50 +1,52 @@
 /**
  * Beyond Connect — EDGE Dashboard (Finance Premium)
- * Dark mode intégral · accent unique #2563EB
+ * Dark mode intégral · accent unique #3D7BFF
  */
 [data-connect-shell="edge"] {
-  --connect-main-bg: #0d0d12;
+  --connect-main-bg: transparent;
   --connect-card: #17171f;
   --connect-card-2: #1c1c28;
   --connect-card-border: rgba(255, 255, 255, 0.06);
   --connect-text: #f1f5f9;
   --connect-text-muted: rgba(255, 255, 255, 0.4);
-  --connect-accent: #2563eb;
-  --connect-accent-soft: rgba(37, 99, 235, 0.4);
+  --connect-accent: #3d7bff;
+  --connect-accent-soft: rgba(61, 123, 255, 0.4);
 }
 
-[data-connect-sidebar] {
-  background: #0a0a0f;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+[data-connect-shell="edge"] [data-connect-sidebar] {
+  background: transparent;
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-[data-connect-main] {
+[data-connect-shell="edge"] [data-connect-main] {
   position: relative;
-  background: var(--connect-main-bg);
+  background: transparent;
   color: var(--connect-text);
 }
 
-[data-connect-main] .connect-progress-track {
+[data-connect-shell="edge"] [data-connect-main] .connect-progress-track {
   background-color: rgba(255, 255, 255, 0.07);
   border-radius: 100px;
 }
 
-[data-connect-main] .connect-progress-fill {
+[data-connect-shell="edge"] [data-connect-main] .connect-progress-fill {
   background: var(--connect-accent);
   border-radius: 100px;
 }
 
 /* Cartes dashboard */
-[data-connect-main] [data-cockpit-card] {
+[data-connect-shell="edge"] [data-connect-main] [data-cockpit-card] {
   border: 1px solid var(--connect-card-border);
   background: var(--connect-card);
 }
 
-[data-connect-main] [data-cockpit-card]:hover {
+[data-connect-shell="edge"] [data-connect-main] [data-cockpit-card]:hover {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-[data-connect-main] [data-cockpit-kicker] {
+[data-connect-shell="edge"] [data-connect-main] [data-cockpit-kicker] {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -52,7 +54,7 @@
   color: #60a5fa;
 }
 
-[data-connect-main] [data-cockpit-accent-line] {
+[data-connect-shell="edge"] [data-connect-main] [data-cockpit-accent-line] {
   border-left: 2px solid var(--connect-accent);
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.12), transparent);
+  background: linear-gradient(90deg, rgba(61, 123, 255, 0.12), transparent);
 }

@@ -1,8 +1,21 @@
 import type { Metadata } from "next";
+import { Fraunces, Inter } from "next/font/google";
 import { JessicaContentinHeader } from "@/components/jessica-contentin/header";
 import { JessicaContentinFooter } from "@/components/jessica-contentin/footer";
 import { FloatingCartBadge } from "@/components/jessica-contentin/floating-cart-badge";
-import { generateSEOMetadata, STRUCTURED_DATA } from "@/lib/seo/jessica-contentin-seo";
+import { generateSEOMetadata } from "@/lib/seo/jessica-contentin-seo";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 // Métadonnées par défaut (seront surchargées par chaque page)
 export const metadata: Metadata = {
@@ -27,7 +40,7 @@ export function JessicaContentinLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="jessica-contentin-site min-h-screen bg-[#F8F5F0]">
+    <div className={`jessica-contentin-site min-h-screen bg-[#F8F5F0] ${fraunces.variable} ${inter.variable}`}>
       <JessicaContentinHeader/>
       <main className="pt-0">{children}</main>
       <JessicaContentinFooter />

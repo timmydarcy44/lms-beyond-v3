@@ -226,7 +226,7 @@ export const CONNECT_PROFILE_CIRCLE_CAPTION = "max-w-xs text-center text-xs text
 
 /** Violet type Revolut — CTA principaux */
 export const CONNECT_BTN_PRIMARY =
-  "inline-flex items-center justify-center rounded-[10px] bg-[#2563EB] px-5 py-[11px] text-[13px] font-bold text-white transition hover:bg-[#1D4ED8]";
+  "inline-flex items-center justify-center rounded-[10px] bg-[#3D7BFF] px-5 py-[11px] text-[13px] font-bold text-white transition hover:bg-[#2f6ae8] shadow-[0_8px_24px_-8px_rgba(61,123,255,0.45)]";
 
 
 

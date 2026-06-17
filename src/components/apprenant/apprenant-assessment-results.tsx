@@ -11,10 +11,12 @@ import {
   buildIdmcObservation,
   buildSoftSkillsObservation,
 } from "@/lib/apprenant/assessment-observations";
+import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 import { ProfileAnalysisOverlay } from "@/components/apprenant/profile-analysis-overlay";
 import {
   APPRENANT_CARD_BODY,
   APPRENANT_CARD_KICKER,
+  CONNECT_BTN_PRIMARY,
   CONNECT_BTN_SECONDARY,
 } from "@/lib/apprenant/connect-nav";
 
@@ -34,18 +36,21 @@ const DISC_COLORS: Record<keyof DiscScores, string> = {
   C: "#3B82F6",
 };
 
+const COCKPIT_ACCENT = "#3D7BFF";
+const COCKPIT_ACCENT_BG = "rgba(61,123,255,0.1)";
+const COCKPIT_ACCENT_BORDER = "rgba(61,123,255,0.3)";
+
 const RESULT_CARD_LIGHT =
   "rounded-2xl border border-black/[0.08] bg-[#f5f5f3] p-5 text-[#0a0a0a] shadow-sm sm:p-6";
 
 const RESULTS_SECTION_LIGHT = "rounded-2xl border border-black/[0.06] bg-white p-5 sm:p-6";
 
 function discDominant(scores: DiscScores): keyof DiscScores {
-  const entries = Object.entries(scores) as Array<[keyof DiscScores, number]>;
-  return entries.sort((a, b) => b[1] - a[1])[0]?.[0] ?? "S";
+  return resolveDiscProfile(scores).dominant;
 }
 
 function discPercent(score: number): number {
-  return Math.min(Math.round(score * 10), 100);
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 function DiscHistogram({
@@ -196,7 +201,13 @@ export function ApprenantAssessmentResults({
         {idmcAxes ? (
           <div className="mt-4 space-y-3">
             {idmcLevel ? (
-              <span className="inline-flex rounded-full bg-[#FF3B30]/10 px-2.5 py-1 text-[11px] font-semibold text-[#FF3B30]">
+              <span
+                className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{
+                  backgroundColor: cockpit ? COCKPIT_ACCENT_BG : "rgba(255,59,48,0.1)",
+                  color: cockpit ? COCKPIT_ACCENT : "#FF3B30",
+                }}
+              >
                 {idmcLevel}
               </span>
             ) : null}
@@ -206,7 +217,11 @@ export function ApprenantAssessmentResults({
               <button
                 type="button"
                 onClick={() => setAnalysisOpen(true)}
-                className="inline-flex w-full items-center justify-center rounded-full border border-[#FF3B30]/30 bg-[#FF3B30]/[0.06] px-4 py-2.5 text-sm font-semibold text-[#FF3B30] transition hover:bg-[#FF3B30]/10"
+                className={
+                  cockpit
+                    ? `${CONNECT_BTN_SECONDARY} w-full`
+                    : "inline-flex w-full items-center justify-center rounded-full border border-[#FF3B30]/30 bg-[#FF3B30]/[0.06] px-4 py-2.5 text-sm font-semibold text-[#FF3B30] transition hover:bg-[#FF3B30]/10"
+                }
               >
                 Lire l&apos;analyse
               </button>
@@ -238,7 +253,13 @@ export function ApprenantAssessmentResults({
             <ul className="space-y-2.5">
               {topSoft.map((item, index) => (
                 <li key={item.skill} className="flex items-center gap-3 text-sm">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF3B30]/10 text-[11px] font-semibold text-[#FF3B30]">
+                  <span
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={{
+                      backgroundColor: cockpit ? COCKPIT_ACCENT_BG : "rgba(255,59,48,0.1)",
+                      color: cockpit ? COCKPIT_ACCENT : "#FF3B30",
+                    }}
+                  >
                     {index + 1}
                   </span>
                   <span className={`min-w-0 flex-1 truncate ${cockpit ? "text-white/80" : "text-black/80"}`}>
@@ -248,9 +269,10 @@ export function ApprenantAssessmentResults({
                     className={`hidden h-1.5 w-16 overflow-hidden rounded-full sm:block ${cockpit ? "bg-white/10" : "bg-black/10"}`}
                   >
                     <div
-                      className="h-full rounded-full bg-[#FF3B30]"
+                      className="h-full rounded-full"
                       style={{
                         width: `${softMax ? (item.score / softMax) * 100 : 0}%`,
+                        backgroundColor: cockpit ? COCKPIT_ACCENT : "#FF3B30",
                       }}
                     />
                   </div>
@@ -267,7 +289,7 @@ export function ApprenantAssessmentResults({
             {!publicMode ? (
               <Link
                 href="/dashboard/apprenant/soft-skills-intro"
-                className="inline-flex rounded-full border border-black/15 bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] hover:border-[#FF3B30]/40"
+                className={cockpit ? CONNECT_BTN_PRIMARY : "inline-flex rounded-full border border-black/15 bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] hover:border-[#FF3B30]/40"}
               >
                 Passer le test soft skills
               </Link>
@@ -286,7 +308,7 @@ export function ApprenantAssessmentResults({
             <h3 className="text-sm font-medium text-white">Mes résultats</h3>
             <Link
               href="/dashboard/apprenant/profil"
-              className="text-xs font-medium text-edge-red/90 hover:underline"
+              className="text-xs font-medium text-[#3D7BFF]/90 hover:underline"
             >
               Voir tout sur mon profil →
             </Link>

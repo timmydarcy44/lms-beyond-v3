@@ -5,12 +5,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   computeIdmcResultFromResponses,
+  IDMC_AXES_LABELS,
   IDMC_LIKERT_OPTIONS,
   IDMC_QUESTIONS,
   type IdmcLikertValue,
   type IdmcResponse,
 } from "@/lib/idmc/idmc-questions";
 import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
+import {
+  EdgeAssessmentOption,
+  EdgeAssessmentQuestionShell,
+} from "@/components/edge/edge-assessment-question-shell";
 
 export default function IdmcTestPage() {
   const supabase = createSupabaseBrowserClient();
@@ -21,7 +26,6 @@ export default function IdmcTestPage() {
   const [responses, setResponses] = useState<IdmcResponse[]>([]);
 
   const current = IDMC_QUESTIONS[index];
-  const progress = Math.round(((index + 1) / IDMC_QUESTIONS.length) * 100);
 
   const handleSelect = (value: IdmcLikertValue) => {
     if (selectedValue !== null || submitting || analyzing) return;
@@ -101,65 +105,38 @@ export default function IdmcTestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#0a0a0a]">
-      <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-6 py-12">
-        <div className="mb-8">
-          <div className="h-1.5 w-full rounded-full bg-black/[0.08]">
-            <div
-              className="h-1.5 rounded-full bg-[#FF3B30] transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-3 text-xs font-medium uppercase tracking-wide text-black/45">
-            Question {index + 1} sur {IDMC_QUESTIONS.length}
-          </p>
-        </div>
-
-        <h1 className="text-2xl font-semibold tracking-tight text-[#0a0a0a] sm:text-3xl">
-          Test IDMC
-        </h1>
-        <p className="mt-4 text-sm leading-relaxed text-black/70">{current.text}</p>
-
-        <div className="mt-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22 }}
-              className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+    <EdgeAssessmentQuestionShell
+      categoryTag={IDMC_AXES_LABELS[current.axis]}
+      categoryMention="test IDMC"
+      questionText={current.text}
+      questionIndex={index}
+      totalQuestions={IDMC_QUESTIONS.length}
+      analyzing={analyzing}
+      analyzingLabel="Analyse de votre profil IDMC en cours…"
+      animateKey={index}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          {IDMC_LIKERT_OPTIONS.map((option) => (
+            <EdgeAssessmentOption
+              key={option.label}
+              selected={selectedValue === option.value}
+              disabled={submitting || analyzing}
+              onClick={() => handleSelect(option.value)}
+              className="px-3 py-4 text-center text-xs sm:text-sm"
             >
-              {IDMC_LIKERT_OPTIONS.map((option) => {
-                const selected = selectedValue === option.value;
-                return (
-                  <motion.button
-                    key={option.label}
-                    type="button"
-                    onClick={() => handleSelect(option.value)}
-                    whileHover={{ scale: 1.02 }}
-                    disabled={submitting || analyzing}
-                    className={`rounded-xl border px-3 py-4 text-center text-xs font-medium transition sm:text-sm ${
-                      selected
-                        ? "border-[#FF3B30] bg-[rgba(255,59,48,0.06)] text-[#0a0a0a] shadow-[0_0_0_1px_rgba(255,59,48,0.2)]"
-                        : "border-black/10 bg-[#f8f8f6] text-[#0a0a0a] hover:border-[#FF3B30]/40"
-                    }`}
-                  >
-                    {option.label}
-                  </motion.button>
-                );
-              })}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {analyzing ? (
-          <div className="mt-8 flex items-center gap-2 text-sm text-black/55">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/15 border-t-[#FF3B30]" />
-            Analyse de votre profil IDMC en cours…
-          </div>
-        ) : null}
-      </div>
-    </div>
+              {option.label}
+            </EdgeAssessmentOption>
+          ))}
+        </motion.div>
+      </AnimatePresence>
+    </EdgeAssessmentQuestionShell>
   );
 }

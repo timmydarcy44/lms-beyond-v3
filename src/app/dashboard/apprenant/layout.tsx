@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -24,6 +25,20 @@ function resolveApprenantVariant(
   return "edge";
 }
 
+function ApprenantShellWithSuspense({
+  variant,
+  children,
+}: {
+  variant: ApprenantConnectVariant;
+  children: ReactNode;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <ApprenantConnectShell variant={variant}>{children}</ApprenantConnectShell>
+    </Suspense>
+  );
+}
+
 export default async function ApprenantSuiteLayout({ children }: { children: ReactNode }) {
   const headerStore = await headers();
   const hostname = headerStore.get("host");
@@ -31,7 +46,7 @@ export default async function ApprenantSuiteLayout({ children }: { children: Rea
   const session = await getSession();
   if (session?.role === "demo") {
     const variant = resolveApprenantVariant(hostname, null);
-    return <ApprenantConnectShell variant={variant}>{children}</ApprenantConnectShell>;
+    return <ApprenantShellWithSuspense variant={variant}>{children}</ApprenantShellWithSuspense>;
   }
 
   const { user, profile } = await getCurrentProfileWithAccess();
@@ -47,12 +62,12 @@ export default async function ApprenantSuiteLayout({ children }: { children: Rea
   const variant = resolveApprenantVariant(hostname, profile);
 
   if (isUniversalAdminRole(profile?.role)) {
-    return <ApprenantConnectShell variant={variant}>{children}</ApprenantConnectShell>;
+    return <ApprenantShellWithSuspense variant={variant}>{children}</ApprenantShellWithSuspense>;
   }
 
   if (profile?.access_connect === false) {
     return <PaywallConnect />;
   }
 
-  return <ApprenantConnectShell variant={variant}>{children}</ApprenantConnectShell>;
+  return <ApprenantShellWithSuspense variant={variant}>{children}</ApprenantShellWithSuspense>;
 }

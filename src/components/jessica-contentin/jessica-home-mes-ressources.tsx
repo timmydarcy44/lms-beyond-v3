@@ -35,9 +35,10 @@ export function JessicaHomeMesRessources() {
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 md:grid-cols-2 md:gap-16 md:px-8">
         <div className="space-y-8 text-[#2F2A25]">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Mes ressources</h2>
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Outils et ressources</h2>
             <p className="mt-3 max-w-xl text-base leading-relaxed text-[#5C5348] md:text-lg">
-              Découvrez des ressources, des tests ou encore des accompagnements digitalisés pour continuer à avancer.
+              Découvrez des ressources à télécharger, des tests et des accompagnements digitalisés — gratuits ou
+              premium — pour continuer à avancer.
             </p>
           </div>
 
@@ -63,7 +64,7 @@ export function JessicaHomeMesRessources() {
             className="rounded-full bg-[#C6A664] px-8 py-6 text-base font-semibold text-white hover:bg-[#B88A44]"
           >
             <Link href="/jessica-contentin/ressources">
-              Accéder aux ressources <span aria-hidden>→</span>
+              Accéder aux outils et ressources <span aria-hidden>→</span>
             </Link>
           </Button>
         </div>

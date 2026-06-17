@@ -15,9 +15,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = getParcoursGuide(decodeURIComponent(slug));
   if (!p) return { title: "Parcours guidé" };
   return {
-    title: `${p.title} | Jessica Contentin`,
+    title: p.seoTitle,
     description: p.subtitle,
-    openGraph: { title: p.title, description: p.subtitle, images: [{ url: p.imageUrl }] },
+    openGraph: { title: p.seoTitle, description: p.subtitle, images: [{ url: p.imageUrl }] },
   };
 }
 

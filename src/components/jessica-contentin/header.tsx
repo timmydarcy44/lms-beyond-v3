@@ -22,6 +22,9 @@ import {
   Users,
   Puzzle,
   type LucideIcon,
+  Smartphone,
+  Moon,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -73,6 +76,27 @@ const specialitesMegaMenu: {
       { label: "Harcèlement — que faire ?", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
       { label: "Stratégies éducatives", href: "/jessica-contentin/specialites/guidance-parentale", icon: BookOpen },
     ],
+  },
+];
+
+const outilsMegaMenu: { label: string; href: string; icon: LucideIcon; description: string }[] = [
+  {
+    label: "Application",
+    href: "/jessica-contentin/ressources/application-neuro-adaptee",
+    icon: Smartphone,
+    description: "Performance cognitive au quotidien",
+  },
+  {
+    label: "Cartes — Rituel du sommeil",
+    href: "/jessica-contentin/ressources/cartes-rituel-sommeil",
+    icon: Moon,
+    description: "Un jeu de cartes pour des soirées apaisées",
+  },
+  {
+    label: "Ressources à télécharger",
+    href: "/jessica-contentin/ressources/telecharger",
+    icon: Download,
+    description: "Fiches et guides psychopédagogiques",
   },
 ];
 
@@ -159,8 +183,9 @@ export function JessicaContentinHeader() {
       href: "/jessica-contentin/parcours-guide",
     },
     {
-      label: "Ressources",
+      label: "Outils et ressources",
       href: "/jessica-contentin/ressources",
+      submenuItems: outilsMegaMenu,
     },
     {
       label: "Blog",
@@ -193,8 +218,7 @@ export function JessicaContentinHeader() {
                 key={item.href}
                 className="relative group"
                 onMouseEnter={() => {
-                  if (item.submenuColumns) {
-                    // Annuler le timeout de fermeture s'il existe
+                  if (item.submenuColumns || item.submenuItems) {
                     if (dropdownTimeoutRef.current) {
                       clearTimeout(dropdownTimeoutRef.current);
                       dropdownTimeoutRef.current = null;
@@ -218,10 +242,49 @@ export function JessicaContentinHeader() {
                 >
                   {item.label}
                   {item.submenuColumns && <ChevronDown className="h-4 w-4" />}
+                  {item.submenuItems && <ChevronDown className="h-4 w-4" />}
                 </Link>
 
                 {/* Dropdown Menu avec icônes et colonnes */}
                 <AnimatePresence>
+                  {item.submenuItems && activeDropdown === item.href && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="absolute left-1/2 top-full mt-3 w-[min(380px,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-[#E6D9C6] bg-[#F8F5F0] py-4 shadow-xl z-50"
+                      onMouseEnter={() => {
+                        if (dropdownTimeoutRef.current) {
+                          clearTimeout(dropdownTimeoutRef.current);
+                          dropdownTimeoutRef.current = null;
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        dropdownTimeoutRef.current = setTimeout(() => {
+                          setActiveDropdown(null);
+                        }, 300);
+                      }}
+                    >
+                      <div className="space-y-1 px-3">
+                        {item.submenuItems.map((subItem) => (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className="flex items-start gap-3 rounded-xl px-3 py-3 text-[#2F2A25] hover:bg-[#E6D9C6]/40 transition-colors"
+                          >
+                            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-[#E6D9C6]">
+                              <subItem.icon className="h-4 w-4 text-[#8B6F47]" />
+                            </span>
+                            <span>
+                              <span className="block text-sm font-medium leading-snug">{subItem.label}</span>
+                              <span className="mt-0.5 block text-xs text-[#5C5348]">{subItem.description}</span>
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
                   {item.submenuColumns && activeDropdown === item.href && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -344,11 +407,25 @@ export function JessicaContentinHeader() {
                   <Link
                     href={item.href}
                     className="block px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
-                    onClick={() => !item.submenuColumns && setMobileMenuOpen(false)}
+                    onClick={() => !item.submenuColumns && !item.submenuItems && setMobileMenuOpen(false)}
                   >
                     {item.label}
                   </Link>
-                  {item.submenuColumns && (
+                  {item.submenuItems ? (
+                    <div className="pl-4 mt-2 space-y-1">
+                      {item.submenuItems.map((subItem) => (
+                        <Link
+                          key={subItem.href}
+                          href={subItem.href}
+                          className="block px-4 py-2 text-sm text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {subItem.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                  {item.submenuColumns ? (
                     <div className="pl-6 mt-3 space-y-4">
                       {item.submenuColumns.map((column) => (
                         <div key={column.title} className="space-y-2">
@@ -370,7 +447,7 @@ export function JessicaContentinHeader() {
                         </div>
                       ))}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ))}
               <div className="mt-4 flex flex-col gap-3">

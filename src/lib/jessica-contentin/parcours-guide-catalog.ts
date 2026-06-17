@@ -39,6 +39,8 @@ export type ParcoursGuide = {
   slug: string;
   kicker: string;
   title: string;
+  /** Balise Title SEO */
+  seoTitle: string;
   subtitle: string;
   cardTag: string;
   imageUrl: string;
@@ -68,6 +70,7 @@ export const PARCOURS_GUIDES: ParcoursGuide[] = [
     slug: "enfant-tsa",
     kicker: "Parcours parental digitalisé",
     title: "Avoir un enfant avec un TSA : comprendre, accompagner, ajuster",
+    seoTitle: "Enfant TSA : Accompagnement et Neuroéducation pour comprendre",
     subtitle:
       "Un parcours pour les parents d'un enfant présentant un trouble du spectre de l'autisme ou des particularités compatibles.",
     cardTag: "Parents · TSA · Guidance parentale",
@@ -234,6 +237,7 @@ export const PARCOURS_GUIDES: ParcoursGuide[] = [
     slug: "enfant-tdah",
     kicker: "Parcours parental TDAH",
     title: "Avoir un enfant avec un TDAH : comprendre, accompagner, ajuster",
+    seoTitle: "Enfant TDAH : Neuroéducation et stratégies d'ajustement",
     subtitle:
       "Un parcours pour les parents d'un enfant présentant un trouble du déficit de l'attention avec ou sans hyperactivité.",
     cardTag: "Parents · TDAH · Guidance parentale",

@@ -3,7 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { EdgeSetPasswordForm } from "@/components/edge-site/edge-set-password-form";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { bootstrapSessionFromUrl } from "@/lib/auth/bootstrap-session-from-url";
 import { toast } from "sonner";
 
 function requirementMet(password: string, re: RegExp) {
@@ -18,51 +20,56 @@ function SetPasswordForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
 
   const nextPath = searchParams.get("next") || "/dashboard/apprenant";
+  const flow = searchParams.get("flow");
+  const isEdgeParticulier = flow === "particulier";
+  const authQueryKey = searchParams.toString();
 
   useEffect(() => {
     let cancelled = false;
+    const failTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        setBootState((current) => (current === "loading" ? "error" : current));
+      }
+    }, 10000);
+
     async function bootstrapSession() {
-      const code = searchParams.get("code");
-      const hash = typeof window !== "undefined" ? window.location.hash : "";
+      try {
+        const code = searchParams.get("code");
+        const { session, error } = await bootstrapSessionFromUrl(supabase, code);
 
-      if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
-        const clean = `${window.location.pathname}?${new URLSearchParams(
-          Array.from(searchParams.entries()).filter(([k]) => k !== "code"),
-        ).toString()}`;
-        window.history.replaceState({}, document.title, clean || window.location.pathname);
-      }
+        if (cancelled) return;
 
-      if (hash.includes("access_token")) {
-        await supabase.auth.signOut();
-        const hashParams = new URLSearchParams(hash.replace(/^#/, ""));
-        const accessToken = hashParams.get("access_token");
-        const refreshToken = hashParams.get("refresh_token");
-        if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        if (session) {
+          setBootState("ready");
+          return;
         }
-      }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!cancelled) setReady(Boolean(session));
-      if (!session && !cancelled) {
-        toast.error("Lien invalide ou expiré. Demandez une nouvelle invitation.");
+        setBootState("error");
+        if (error) console.error("[set-password] session bootstrap:", error);
+        toast.error(
+          isEdgeParticulier
+            ? "Lien expiré ou invalide. Réinscrivez-vous sur la page EDGE pour recevoir un nouvel email."
+            : "Lien invalide ou expiré. Demandez une nouvelle invitation.",
+        );
+      } catch (error) {
+        if (!cancelled) {
+          console.error("[set-password] bootstrap error:", error);
+          setBootState("error");
+        }
+      } finally {
+        window.clearTimeout(failTimer);
       }
     }
+
     void bootstrapSession();
     return () => {
       cancelled = true;
+      window.clearTimeout(failTimer);
     };
-  }, [supabase, searchParams]);
+  }, [supabase, authQueryKey, isEdgeParticulier]);
 
   const rules = useMemo(
     () => [
@@ -98,7 +105,7 @@ function SetPasswordForm() {
         toast.error(error.message);
         return;
       }
-      toast.success("Mot de passe créé. Bienvenue sur Beyond !");
+      toast.success(isEdgeParticulier ? "Mot de passe créé. Bienvenue sur EDGE !" : "Mot de passe créé. Bienvenue sur Beyond !");
       router.replace(nextPath);
     } catch {
       toast.error("Une erreur est survenue.");
@@ -107,12 +114,92 @@ function SetPasswordForm() {
     }
   };
 
-  if (!ready) {
+  const handleEdgeSubmit = async (pwd: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: pwd,
+        data: { needs_password_setup: false },
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Bienvenue sur EDGE — votre cockpit est prêt.");
+      router.replace(nextPath);
+    } catch {
+      toast.error("Une erreur est survenue.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (bootState === "loading" && isEdgeParticulier) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+      <div className="flex min-h-dvh items-center justify-center bg-[#0a0a0a]">
+        <Loader2 className="h-8 w-8 animate-spin text-white/60" />
       </div>
     );
+  }
+
+  if (bootState === "loading") {
+    return (
+      <div className={`flex min-h-screen items-center justify-center ${isEdgeParticulier ? "bg-[#f5f5f5]" : "bg-white"}`}>
+        <Loader2 className={`h-8 w-8 animate-spin ${isEdgeParticulier ? "text-edge-black" : "text-violet-600"}`} />
+      </div>
+    );
+  }
+
+  if (bootState === "error" && isEdgeParticulier) {
+    return (
+      <div
+        className="flex min-h-dvh items-center justify-center px-6 text-white"
+        style={{
+          background:
+            "radial-gradient(120% 60% at 50% 0%, rgba(255,59,48,0.45) 0%, transparent 55%), linear-gradient(180deg, #160706 0%, #0a0a0a 100%)",
+        }}
+      >
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-semibold">Lien expiré</h1>
+          <p className="mt-3 text-sm text-white/55">
+            Ce lien n&apos;est plus valable. Réinscrivez-vous pour recevoir un nouvel email.
+          </p>
+          <a
+            href="/particuliers#signup"
+            className="mt-8 inline-flex rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-[#0a0a0a]"
+          >
+            Réinscription EDGE
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (bootState === "error") {
+    return (
+      <div className={`flex min-h-screen items-center justify-center px-6 ${isEdgeParticulier ? "bg-[#f5f5f5]" : "bg-white"}`}>
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-semibold text-gray-950">Lien expiré ou invalide</h1>
+          <p className="mt-3 text-sm text-gray-600">
+            {isEdgeParticulier
+              ? "Ce lien de confirmation n'est plus valable. Réinscrivez-vous pour recevoir un nouvel email."
+              : "Ce lien d'invitation n'est plus valable. Demandez une nouvelle invitation à votre administrateur."}
+          </p>
+          {isEdgeParticulier ? (
+            <a
+              href="/particuliers#signup"
+              className="mt-6 inline-flex rounded-full bg-edge-black px-6 py-3 text-sm font-medium text-white"
+            >
+              Réinscription EDGE
+            </a>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (isEdgeParticulier) {
+    return <EdgeSetPasswordForm isLoading={isLoading} onSubmit={(pwd) => void handleEdgeSubmit(pwd)} />;
   }
 
   return (

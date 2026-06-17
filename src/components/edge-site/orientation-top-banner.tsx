@@ -22,7 +22,7 @@ export function OrientationTopBanner() {
   return (
     <div className="relative z-[60] flex h-9 shrink-0 items-center justify-center bg-edge-black px-10 text-center text-[12px] text-white/70">
       <p>
-        Pas sûr de ton parcours ? Trouve le tien en 2 minutes{" "}
+        Pas sûr de votre parcours ? Test d&apos;orientation en 2 minutes{" "}
         <Link href={EDGE_HREFS.orientation} className="font-medium text-edge-red transition-opacity hover:opacity-80">
           → Faire le test
         </Link>

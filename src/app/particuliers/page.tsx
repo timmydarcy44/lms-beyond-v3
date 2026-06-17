@@ -1,39 +1,163 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Compass, Link as LinkIcon, ShieldCheck } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, BadgeCheck, BarChart3, Link2, Shield } from "lucide-react";
+import { EdgeButton } from "@/components/edge-site/edge-button";
+import { ParticuliersSignupOverlay } from "@/components/edge-site/particuliers-signup-overlay";
+import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
 
-type PlanType = "free" | "pro";
+const PHONE_SLIDES = [
+  {
+    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/tel%20home%202.png",
+    alt: "Résultats DISC et IDMC sur mobile",
+  },
+  {
+    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/Tel%20home.png",
+    alt: "Accueil espace profil EDGE",
+  },
+  {
+    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/tel%20home%203%20(2).png",
+    alt: "Open Badge EDGE sur mobile",
+  },
+] as const;
+
+const INCLUDED = [
+  "Test comportemental DISC complet",
+  "Bilan IDMC et soft skills",
+  "Profil public partageable",
+  "Open Badges et certifications",
+  "Matching opportunités",
+] as const;
+
+type FormState = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+  objectif: string;
+};
+
+function SignupForm({
+  formState,
+  onChange,
+  onSubmit,
+  isLoading,
+  errorMessage,
+  compact,
+}: {
+  formState: FormState;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  onSubmit: () => void;
+  isLoading: boolean;
+  errorMessage: string | null;
+  compact?: boolean;
+}) {
+  const objectiveOptions = [
+    { value: "alternance", label: "Alternance" },
+    { value: "freelance", label: "Freelance" },
+    { value: "emploi", label: "Emploi" },
+    { value: "reconversion", label: "Reconversion" },
+    { value: "autre", label: "Autre" },
+  ];
+
+  return (
+    <div className={compact ? "" : "rounded-3xl border border-black/[0.06] bg-white p-6 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.12)] sm:p-8"}>
+      <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <input
+            type="text"
+            name="first_name"
+            required
+            value={formState.first_name}
+            onChange={onChange}
+            placeholder="Prénom"
+            className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] outline-none transition focus:border-edge-black/30"
+          />
+          <input
+            type="text"
+            name="last_name"
+            required
+            value={formState.last_name}
+            onChange={onChange}
+            placeholder="Nom"
+            className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] outline-none transition focus:border-edge-black/30"
+          />
+        </div>
+        <input
+          type="email"
+          name="email"
+          required
+          value={formState.email}
+          onChange={onChange}
+          placeholder="Email"
+          className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] outline-none transition focus:border-edge-black/30"
+        />
+        <select
+          name="objectif"
+          required
+          value={formState.objectif}
+          onChange={onChange}
+          className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] text-black/80 outline-none transition focus:border-edge-black/30"
+        >
+          <option value="">Votre objectif</option>
+          {objectiveOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={isLoading}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-edge-black px-6 py-3.5 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {isLoading ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Préparation de votre espace…
+            </>
+          ) : (
+            <>
+              Créer mon espace gratuitement
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </>
+          )}
+        </button>
+      </div>
+      <p className="mt-4 text-[12px] leading-relaxed text-black/40">
+        Inscription 100&nbsp;% gratuite · sans carte bancaire · sans engagement
+      </p>
+      <p className="mt-2 text-[12px] text-black/40">
+        Déjà un compte ?{" "}
+        <Link href="/particuliers/login" className="font-medium text-edge-black underline-offset-2 hover:underline">
+          Se connecter
+        </Link>
+      </p>
+      {errorMessage ? (
+        <div className="mt-4 rounded-xl border border-black/10 bg-black/[0.03] px-4 py-3 text-[13px] text-edge-black">
+          {errorMessage}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function ParticuliersPage() {
-  const supabase = createSupabaseBrowserClient();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [plan, setPlan] = useState<PlanType>("free");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const [isPreparing, setIsPreparing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [formState, setFormState] = useState({
+  const [formState, setFormState] = useState<FormState>({
     first_name: "",
     last_name: "",
     email: "",
     role: "PARTICULIER",
     objectif: "",
   });
-  const [message, setMessage] = useState<string | null>(null);
-
-  const objectiveOptions = useMemo(
-    () => [
-      { value: "alternance", label: "Alternance" },
-      { value: "freelance", label: "Freelance" },
-      { value: "emploi", label: "Emploi" },
-      { value: "reconversion", label: "Reconversion" },
-      { value: "autre", label: "Autre" },
-    ],
-    []
-  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSignupOverlay, setShowSignupOverlay] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState("");
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 6);
@@ -43,16 +167,21 @@ export default function ParticuliersPage() {
   }, []);
 
   useEffect(() => {
-    const applyHashPlan = () => {
-      if (window.location.hash === "#signup-pro") {
-        setPlan("pro");
-      } else {
-        setPlan("free");
-      }
-    };
-    applyHashPlan();
-    window.addEventListener("hashchange", applyHashPlan);
-    return () => window.removeEventListener("hashchange", applyHashPlan);
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get("auth_error");
+    if (!authError) return;
+
+    const label =
+      authError === "otp_expired"
+        ? "Ce lien de confirmation a expiré (valable 24 h). Réinscrivez-vous ci-dessous pour recevoir un nouvel email."
+        : "Le lien de confirmation est invalide ou a déjà été utilisé. Réinscrivez-vous pour recevoir un nouvel email.";
+
+    setErrorMessage(label);
+    setShowSignupOverlay(false);
+    window.history.replaceState({}, "", "/particuliers#signup");
+    requestAnimationFrame(() => {
+      document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }, []);
 
   useEffect(() => {
@@ -69,16 +198,14 @@ export default function ParticuliersPage() {
           }
         });
       },
-      { threshold: 0.18 }
+      { threshold: 0.15 },
     );
 
     items.forEach((item) => observer.observe(item));
     return () => observer.disconnect();
   }, []);
 
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
@@ -86,747 +213,349 @@ export default function ParticuliersPage() {
   const handleSubmit = async (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
     event?.stopPropagation();
-    setIsSubmitting(true);
-    setIsPreparing(true);
     setIsLoading(true);
+    setErrorMessage(null);
+    setShowSignupOverlay(false);
 
     try {
-      const safeFirstName = formState.first_name?.trim();
-      const safeLastName = formState.last_name?.trim();
-      const safeEmail = formState.email?.trim();
-      if (!safeFirstName || !safeLastName || !safeEmail) {
-        throw new Error("Prénom, nom et email sont requis.");
-      }
-
-      if (!supabase) {
-        throw new Error("Supabase n'est pas configuré.");
-      }
-
-      const emailRedirectTo = "https://www.nevo-app.fr/note-app";
-      const { data: authData, error: signUpError } = await supabase.auth.signInWithOtp({
-        email: safeEmail,
-        options: {
-          emailRedirectTo,
-          data: {
-            origin: "nevo",
-          },
-        },
+      const response = await fetch("/api/particuliers/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: formState.first_name,
+          last_name: formState.last_name,
+          email: formState.email,
+          objectif: formState.objectif,
+        }),
       });
 
-      if (signUpError) {
-        console.error("[particuliers][signUp] error:", signUpError);
-        const lower = signUpError.message.toLowerCase();
-        if (lower.includes("already registered") || lower.includes("already exists")) {
-          throw new Error("Ce compte existe déjà. Connecte-toi ou utilise un autre email.");
-        }
-        throw new Error(signUpError.message);
-      }
-
-      if (!authData?.user?.id) {
-        setMessage("Lien envoyé ! Vérifie ta boîte mail pour accéder à Nevo.");
-        return;
-      }
-
-      try {
-        await supabase.from("profiles").upsert(
-          {
-            id: authData.user.id,
-            email: safeEmail,
-            first_name: safeFirstName,
-            last_name: safeLastName,
-            type_profil: formState.objectif || null,
-          },
-          { onConflict: "id" }
-        );
-      } catch (profileError) {
-        console.error("[particuliers][profile] upsert error:", profileError);
-      }
-
-      const waitForSession = async () => {
-        for (let attempt = 0; attempt < 5; attempt += 1) {
-          const { data } = await supabase.auth.getSession();
-          if (data?.session?.user?.id) return data.session.user.id;
-          await new Promise<void>((resolve) => setTimeout(resolve, 300));
-        }
-        return null;
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+        success?: boolean;
+        warning?: boolean;
       };
 
-      const fallbackProfileId = authData.user.id;
-      try {
-        sessionStorage.setItem("particulierProfileId", fallbackProfileId);
-      } catch {
-        // ignore
+      if (!response.ok) {
+        throw new Error(data.error || "Une erreur est survenue. Réessayez.");
       }
 
-      const sessionUserId = await waitForSession();
-      const targetProfileId = sessionUserId ?? fallbackProfileId;
-
-      setIsRedirecting(true);
-      window.location.href = "/dashboard/apprenant/test-comportemental-intro";
+      setSubmittedEmail(formState.email);
+      setShowSignupOverlay(true);
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Une erreur est survenue. Réessaie."
-      );
+      setErrorMessage(error instanceof Error ? error.message : "Une erreur est survenue. Réessayez.");
     } finally {
-      setIsSubmitting(false);
-      setIsRedirecting(false);
-      setIsPreparing(false);
       setIsLoading(false);
     }
   };
 
+  const features = useMemo(
+    () => [
+      {
+        icon: BarChart3,
+        title: "Tests & diagnostics",
+        desc: "DISC, IDMC et soft skills — comprenez votre profil en quelques minutes.",
+      },
+      {
+        icon: Link2,
+        title: "Un lien, partout",
+        desc: "Un profil public à partager sur LinkedIn, vos candidatures et votre CV.",
+      },
+      {
+        icon: BadgeCheck,
+        title: "Compétences prouvées",
+        desc: "Open Badges et certifications rattachés à votre espace.",
+      },
+      {
+        icon: Shield,
+        title: "Gratuit, pour toujours",
+        desc: "Votre espace est gratuit et le restera. Sans carte bancaire.",
+      },
+    ],
+    [],
+  );
+
   return (
-    <div className="bg-white text-black">
+    <div className="bg-white font-sans text-edge-black antialiased">
+      {showSignupOverlay ? (
+        <ParticuliersSignupOverlay
+          email={submittedEmail}
+          firstName={formState.first_name}
+          onClose={() => setShowSignupOverlay(false)}
+        />
+      ) : null}
       <header
-        className={`sticky top-0 z-50 w-full border-b border-black/5 bg-white transition-shadow ${
-          isScrolled ? "shadow-sm" : "shadow-none"
+        className={`sticky top-0 z-50 border-b border-black/[0.06] bg-white/90 backdrop-blur-md transition-shadow ${
+          isScrolled ? "shadow-sm" : ""
         }`}
       >
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <div className="text-[14px] font-black tracking-[0.3em] text-black">
-            BEYOND
-          </div>
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+          <Link href="/edge-lab" className="text-[15px] font-semibold tracking-[-0.02em] text-edge-black">
+            EDGE
+          </Link>
           <a
             href="#signup"
-            className="rounded-full bg-[#F97316] px-5 py-2 text-[12px] font-black uppercase text-black shadow-sm"
+            className="rounded-full bg-edge-red px-5 py-2 text-[12px] font-medium text-white transition hover:opacity-90"
           >
-            Créer mon profil gratuit
+            Créer mon espace
           </a>
         </div>
       </header>
 
-      <style jsx>{`
-        .hero {
-          display: grid;
-          grid-template-columns: 50% 50%;
-          height: 100vh;
-        }
-        .hero-image {
-          background-image: url("/images/road.jpg");
-          background-size: cover;
-          background-position: center;
-          position: relative;
-        }
-        .hero-image::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.6);
-        }
-        .hero-image__content {
-          position: relative;
-          z-index: 1;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          padding: 48px;
-        }
-        .hero-form {
-          background: white;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          padding: 48px;
-        }
-        @media (max-width: 768px) {
-          .hero {
-            grid-template-columns: 1fr;
-            height: auto;
-          }
-          .hero-image {
-            height: 40vh;
-          }
-          .hero-image::after {
-            background: rgba(0, 0, 0, 0.7);
-          }
-          .hero-image__content {
-            padding: 24px;
-          }
-          .hero-form {
-            height: auto;
-            padding: 48px 24px;
-          }
-        }
-      `}</style>
-
-      <section className="hero">
-        <div className="hero-image">
-          <div className="hero-image__content">
-            <div className="text-white">
-              <h1 className="text-5xl font-black uppercase leading-tight sm:text-6xl">
-                150 CVs.
-                <br />
-                1 POSTE.
-                <br />
-                COMMENT TU TE
-                <br />
-                DÉMARQUES ?
-              </h1>
-              <p className="mt-6 text-lg text-white/80">
-                Crée ton profil comportemental gratuit en 15 minutes. Un lien.
-                Une certification. Une différence.
-              </p>
-              <p className="mt-3 text-sm text-white/70">
-                Gratuit pour toujours. Sans CB. Sans engagement.
-              </p>
-            </div>
-          </div>
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0">
+          <Image
+            src={EDGE_HERO_IMAGE_URL}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="100vw"
+            priority
+          />
+          <div className="absolute inset-0 bg-edge-black/75" aria-hidden />
         </div>
 
-        <div className="hero-form">
-          <div className="w-full max-w-xl">
-            <div className="text-[12px] uppercase tracking-[0.4em] text-black/60">
-              Particuliers
-            </div>
-            <h2 className="mt-4 text-3xl font-bold text-black">
-              Crée ton profil Beyond
-            </h2>
-            <p className="mt-2 text-sm text-black/60">
-              15 minutes. Gratuit. Pour toujours.
+        <div className="relative mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[1fr_420px] lg:items-center lg:gap-16 lg:py-28">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-[10px] font-normal uppercase tracking-[0.2em] text-white/70">
+              EDGE Powered Beyond
             </p>
+            <h1 className="mt-8 text-[clamp(2.25rem,5vw,3.5rem)] font-medium leading-[1.05] tracking-[-0.03em] text-white">
+              Votre espace
+              <br />
+              compétences.
+            </h1>
+            <p className="mt-6 max-w-md text-[16px] leading-[1.7] text-white/50">
+              Créez gratuitement un espace dédié pour valoriser vos compétences, passer vos tests et partager vos
+              résultats.
+            </p>
+            <ul className="mt-10 space-y-3">
+              {["Inscription 100 % gratuite", "Tests DISC, IDMC & soft skills", "Profil public & Open Badges"].map(
+                (item) => (
+                  <li key={item} className="flex items-center gap-3 text-[14px] text-white/70">
+                    <span className="h-1 w-1 rounded-full bg-edge-red" aria-hidden />
+                    {item}
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
 
-            <div className="mt-6 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <input
-                  type="text"
-                  name="first_name"
-                  required
-                  value={formState.first_name}
-                  onChange={handleChange}
-                  placeholder="Prénom"
-                  className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-                />
-                <input
-                  type="text"
-                  name="last_name"
-                  required
-                  value={formState.last_name}
-                  onChange={handleChange}
-                  placeholder="Nom"
-                  className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-                />
-              </div>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formState.email}
-                onChange={handleChange}
-                placeholder="Email pro ou perso"
-                className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-              />
-              <select
-                name="objectif"
-                required
-                value={formState.objectif}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-              >
-                <option value="">Tu cherches :</option>
-                {objectiveOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => void handleSubmit()}
-                disabled={isLoading}
-                className="w-full rounded-full bg-black px-6 py-3 text-sm font-black uppercase text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:bg-black/40"
-              >
-                <span className="inline-flex items-center justify-center gap-2">
-                  {isLoading && (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  )}
-                  {isLoading
-                    ? "Préparation de votre espace en cours..."
-                    : "CRÉER MON PROFIL & LANCER LE TEST"}
-                </span>
-              </button>
-              {isLoading ? (
-                <p className="mt-3 text-xs text-black/60">
-                  Préparation de votre espace en cours...
-                </p>
-              ) : null}
-            </div>
-
-            <div className="mt-4 text-xs text-black/50">
-              🔒 Données protégées. Jamais revendues. Jamais de spam.
-            </div>
-            <div className="mt-2 text-xs text-black/50">
-              Déjà un compte ?{" "}
-              <Link href="/particuliers/login" className="font-semibold text-black">
-                Connecte-toi →
-              </Link>
-            </div>
-            <div className="mt-6 text-xs font-semibold text-black/70">
-              ★★★★★ +1 200 profils créés · Certifié Beyond
-            </div>
-
-            {message && (
-              <div className="mt-4 rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-xs text-black">
-                {message}
-              </div>
-            )}
+          <div id="signup" className="scroll-mt-24">
+            <SignupForm
+              formState={formState}
+              onChange={handleChange}
+              onSubmit={() => void handleSubmit()}
+              isLoading={isLoading}
+              errorMessage={errorMessage}
+            />
           </div>
         </div>
       </section>
 
-      <section className="bg-[#0B0B0B] px-6 py-16 text-white" id="social-proof">
+      {/* Phone showcase */}
+      <section className="border-b border-black/[0.06] bg-edge-grey px-5 py-16 sm:px-8 sm:py-20">
         <div
           data-animate
-          className="mx-auto w-full max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
+          className="mx-auto max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
         >
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              { stat: "15 min", desc: "Pour passer le test complet" },
-              { stat: "100% gratuit", desc: "Pour toujours, sans CB" },
-              { stat: "1 lien", desc: "à partager partout" },
-            ].map((item) => (
-              <div
-                key={item.stat}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6"
-              >
-                <div className="text-4xl font-black text-white">{item.stat}</div>
-                <div className="mt-2 text-sm text-white/60">{item.desc}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {[
-              {
-                quote: "Le recruteur m'a appelée le lendemain.",
-                name: "Jade L., 22 ans · Alternance marketing ★★★★★",
-                initials: "JL",
-                badge: "bg-[#F97316]",
-              },
-              {
-                quote: "J'ai enfin compris pourquoi je déteste les open spaces.",
-                name: "Thomas R., 28 ans · Reconversion dev ★★★★★",
-                initials: "TR",
-                badge: "bg-[#1E293B]",
-              },
-              {
-                quote: "Mon CFA connaissait mon profil avant même que j'arrive.",
-                name: "Camille D., 20 ans · BTS Commerce ★★★★★",
-                initials: "CD",
-                badge: "bg-[#14532D]",
-              },
-            ].map((item) => (
-              <div
-                key={item.name}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={
-                      "flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white " +
-                      (item.badge ?? "")
-                    }
-                  >
-                    {item.initials}
-                  </div>
-                  <div className="text-sm font-semibold text-white">
-                    Profil vérifié Beyond ✓
-                  </div>
-                </div>
-                <p className="mt-4 text-sm text-white/70">"{item.quote}"</p>
-                <p className="mt-4 text-xs text-white/50">— {item.name}</p>
-                <p className="mt-2 text-xs text-white/50">Profil vérifié Beyond ✓</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white px-6 py-20">
-        <div
-          data-animate
-          className="mx-auto w-full max-w-5xl text-center opacity-0 translate-y-6 transition-all duration-700"
-        >
-          <h2 className="text-4xl font-black">
-            Les recruteurs reçoivent 150 candidatures.
+          <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">Votre espace</p>
+          <h2 className="mt-3 max-w-lg text-[clamp(1.5rem,3vw,2rem)] font-medium tracking-[-0.02em] text-edge-black">
+            Tout votre profil, dans votre poche.
           </h2>
-          <p className="mt-4 text-base text-black/70">
-            Ils passent 6 secondes sur un CV. Beyond te donne ce qu'un CV ne peut
-            pas : la preuve de qui tu es vraiment.
-          </p>
-          <a
-            href="#signup"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-[#F97316] px-8 py-3 text-sm font-black uppercase text-black shadow-[0_0_30px_rgba(249,115,22,0.45)]"
+          <div
+            className="mt-10 flex gap-5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            style={{ scrollSnapType: "x mandatory" }}
           >
-            Je veux me démarquer →
-          </a>
+            {PHONE_SLIDES.map((slide) => (
+              <div
+                key={slide.src}
+                className="w-[min(72%,280px)] shrink-0 sm:w-[240px]"
+                style={{ scrollSnapAlign: "start" }}
+              >
+                <div className="relative aspect-[9/19.5] overflow-hidden rounded-[28px] shadow-[0_32px_80px_-24px_rgba(0,0,0,0.25)]">
+                  <Image src={slide.src} alt={slide.alt} fill className="object-cover" sizes="280px" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="bg-white px-6 py-20">
+      {/* Stats */}
+      <section className="bg-edge-black px-5 py-16 text-white sm:px-8 sm:py-20">
+        <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-3">
+          {[
+            { stat: "15 min", desc: "Pour compléter vos premiers tests" },
+            { stat: "0 €", desc: "Inscription gratuite, pour toujours" },
+            { stat: "1 lien", desc: "À partager partout" },
+          ].map((item) => (
+            <div key={item.stat} className="border-t border-white/10 pt-6">
+              <p className="text-[clamp(2rem,4vw,2.75rem)] font-medium tracking-[-0.03em]">{item.stat}</p>
+              <p className="mt-2 text-[14px] text-white/45">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="px-5 py-20 sm:px-8 sm:py-28">
         <div
           data-animate
-          className="mx-auto w-full max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
+          className="mx-auto max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
         >
-          <h2 className="text-3xl font-bold text-black">
-            Ce que tu reçois. Gratuitement.
+          <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">Inclus</p>
+          <h2 className="mt-3 max-w-xl text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.02em]">
+            Tout ce dont vous avez besoin. Gratuitement.
           </h2>
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {[
-              {
-                icon: <Compass className="h-6 w-6" />,
-                title: "Ton test comportemental complet",
-                desc: "Dominant · Influent · Stable · Consciencieux.",
-              },
-              {
-                icon: <LinkIcon className="h-6 w-6" />,
-                title: "Un lien public certifié",
-                desc: "Une page à ton nom. Certifiée Beyond.",
-              },
-              {
-                icon: <ShieldCheck className="h-6 w-6" />,
-                title: "Ton badge certifié",
-                desc: "Pas un test trouvé sur Google. Un vrai badge.",
-              },
-            ].map((item) => (
+          <div className="mt-14 grid gap-6 sm:grid-cols-2">
+            {features.map((item) => (
               <div
                 key={item.title}
-                className="rounded-3xl border border-black/10 bg-white p-8"
+                className="rounded-2xl border border-black/[0.06] p-8 transition hover:border-black/10"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F97316]/10 text-[#F97316]">
-                  {item.icon}
-                </div>
-                <h3 className="mt-6 text-xl font-semibold text-black">
-                  {item.title}
-                </h3>
-                <p className="mt-3 text-sm text-black/70">{item.desc}</p>
+                <item.icon className="h-5 w-5 text-edge-red" strokeWidth={1.75} aria-hidden />
+                <h3 className="mt-5 text-[17px] font-medium tracking-[-0.01em]">{item.title}</h3>
+                <p className="mt-2 text-[14px] leading-relaxed text-black/45">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-white px-6 py-20">
+      {/* Steps */}
+      <section className="border-t border-black/[0.06] bg-edge-grey px-5 py-20 sm:px-8 sm:py-28">
         <div
           data-animate
-          className="mx-auto w-full max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
+          className="mx-auto max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
         >
-          <h2 className="text-3xl font-bold text-black">
-            3 étapes. 15 minutes. Un profil pour ta carrière.
+          <h2 className="text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.02em]">
+            Trois étapes. Quinze minutes.
           </h2>
-          <div className="mt-10 grid gap-8 md:grid-cols-3">
+          <ol className="mt-14 grid gap-10 md:grid-cols-3">
             {[
               {
-                step: "1",
-                title: "Tu passes le test comportemental",
-                desc: "Gratuit. Depuis ton téléphone. 15 minutes.",
+                step: "01",
+                title: "Créez votre espace",
+                desc: "Inscription gratuite en moins d'une minute.",
               },
               {
-                step: "2",
-                title: "Tu reçois ton profil public",
-                desc: "getbeyond.fr/p/ton-prenom-nom · Certifié Beyond.",
+                step: "02",
+                title: "Passez vos tests",
+                desc: "DISC, IDMC et soft skills depuis votre téléphone.",
               },
               {
-                step: "3",
-                title: "Tu partages ton lien",
-                desc: "CV, LinkedIn, candidature. Une preuve unique.",
+                step: "03",
+                title: "Partagez votre profil",
+                desc: "Un lien unique pour vos candidatures et LinkedIn.",
               },
             ].map((item) => (
-              <div key={item.step} className="rounded-3xl border border-black/10 bg-white p-6">
-                <div className="text-4xl font-black text-[#F97316]">
-                  {item.step}
-                </div>
-                <h3 className="mt-4 text-lg font-semibold text-black">{item.title}</h3>
-                <p className="mt-2 text-sm text-black/60">{item.desc}</p>
-              </div>
+              <li key={item.step}>
+                <span className="text-[13px] font-medium text-edge-red">{item.step}</span>
+                <h3 className="mt-3 text-[17px] font-medium tracking-[-0.01em]">{item.title}</h3>
+                <p className="mt-2 text-[14px] leading-relaxed text-black/45">{item.desc}</p>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
-      <section className="bg-black px-6 py-20 text-white">
-        <div
-          data-animate
-          className="mx-auto w-full max-w-5xl text-center opacity-0 translate-y-6 transition-all duration-700"
-        >
-          <h2 className="text-4xl font-black">Tu veux aller encore plus loin ?</h2>
-          <p className="mt-3 text-sm text-white/70">
-            Optionnel. Seulement quand tu es prêt.
-          </p>
-        </div>
-
-        <div className="mx-auto mt-12 grid w-full max-w-5xl gap-8 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/15 bg-transparent p-8">
-            <h3 className="text-xl font-semibold text-white">Gratuit — 0€</h3>
-            <ul className="mt-6 space-y-2 text-sm text-white/70">
-              <li>✓ Test comportemental complet</li>
-              <li>✓ Profil public</li>
-              <li>✓ Badge certifié</li>
-              <li>✗ Soft skills (12 compétences)</li>
-              <li>✗ IDMC</li>
-              <li>✗ Pré-diagnostic DYS</li>
-              <li>✗ Recommandations métiers</li>
-              <li>✗ Export PDF certifié</li>
-            </ul>
-            <a
-              href="#signup"
-              className="mt-6 inline-flex rounded-full border border-white/40 px-5 py-2 text-xs font-semibold text-white"
-            >
-              Continuer en gratuit
-            </a>
-          </div>
-          <div className="rounded-3xl border border-[#F97316] bg-white/5 p-8">
-            <div className="inline-flex items-center rounded-full bg-[#F97316] px-3 py-1 text-[11px] font-black uppercase text-black">
-              ⚡ Offre de lancement
-            </div>
-            <h3 className="mt-4 text-xl font-semibold text-white">
-              Beyond Pro — <span className="line-through text-white/60">49€</span> 19€
-            </h3>
-            <p className="mt-2 text-sm text-white/70">
-              Paiement unique. Accès à vie.
-            </p>
-            <ul className="mt-6 space-y-2 text-sm text-white/70">
-              <li>✓ Tout du gratuit</li>
-              <li>✓ Soft skills détaillées (12 compétences)</li>
-              <li>✓ IDMC</li>
-              <li>✓ Pré-diagnostic DYS</li>
-              <li>✓ Recommandations métiers personnalisées</li>
-              <li>✓ Export PDF certifié pour candidatures</li>
-            </ul>
-            <a
-              href="#signup-pro"
-              className="mt-6 inline-flex rounded-full bg-[#F97316] px-6 py-2 text-xs font-black uppercase text-black"
-            >
-              Débloquer Beyond Pro — 19€
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white px-6 py-20">
-        <div
-          data-animate
-          className="mx-auto w-full max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
-        >
-          <h2 className="text-3xl font-bold text-black">
-            Ils ont créé leur profil. Voilà ce que ça a changé.
-          </h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {[
-              {
-                quote:
-                  "J'ai collé mon lien Beyond dans mon email de candidature. Le recruteur m'a appelée le lendemain.",
-                name: "Jade L., 22 ans · Alternance marketing ★★★★★",
-                initials: "JL",
-                badge: "bg-[#F97316]",
-              },
-              {
-                quote:
-                  "Je savais pas pourquoi je me sentais mal dans les open spaces. Mon test comportemental l'a expliqué en 3 lignes.",
-                name: "Thomas R., 28 ans · Reconversion dev ★★★★★",
-                initials: "TR",
-                badge: "bg-[#1E293B]",
-              },
-              {
-                quote:
-                  "Mon CFA utilisait Beyond. J'avais déjà mon profil quand je suis arrivé en formation.",
-                name: "Camille D., 20 ans · BTS Commerce ★★★★★",
-                initials: "CD",
-                badge: "bg-[#14532D]",
-              },
-            ].map((item) => (
-              <div
-                key={item.name}
-                className="rounded-3xl border border-black/10 bg-white p-6"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={
-                      "flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white " +
-                      (item.badge ?? "")
-                    }
-                  >
-                    {item.initials}
-                  </div>
-                  <div className="text-sm font-semibold text-black">
-                    Profil vérifié Beyond ✓
-                  </div>
-                </div>
-                <p className="mt-4 text-sm text-black/70">"{item.quote}"</p>
-                <p className="mt-4 text-xs text-black/50">— {item.name}</p>
-                <p className="mt-2 text-xs text-black/50">Profil vérifié Beyond ✓</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#F97316] px-6 py-20 text-black" id="signup">
-        <div className="mx-auto w-full max-w-5xl">
-          <div className="text-center">
-            <h2 className="text-4xl font-black text-white">
-              Ton profil t'attend.
+      {/* Included list */}
+      <section className="px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
+          <div>
+            <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">EDGE Powered Beyond</p>
+            <h2 className="mt-3 text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.02em]">
+              Un espace complet.
+              <br />
+              Sans frais cachés.
             </h2>
-            <p className="mt-3 text-sm text-white/80">
-              15 minutes. Gratuit. Pour toujours.
+            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-black/45">
+              La technologie Beyond au service de votre employabilité — portée par EDGE.
             </p>
           </div>
-
-          <div
-            id="signup-pro"
-            className="mt-10 rounded-3xl bg-white p-8 shadow-[0_25px_80px_rgba(0,0,0,0.25)]"
-          >
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <input
-                  type="text"
-                  name="first_name"
-                  required
-                  value={formState.first_name}
-                  onChange={handleChange}
-                  placeholder="Prénom *"
-                  className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-                />
-                <input
-                  type="text"
-                  name="last_name"
-                  required
-                  value={formState.last_name}
-                  onChange={handleChange}
-                  placeholder="Nom *"
-                  className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-                />
-              </div>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formState.email}
-                onChange={handleChange}
-                placeholder="Email *"
-                className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-              />
-              <select
-                name="objectif"
-                required
-                value={formState.objectif}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm"
-              >
-                <option value="">Tu cherches :</option>
-                {objectiveOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => void handleSubmit()}
-                disabled={isSubmitting || isRedirecting}
-                className="w-full rounded-full bg-black px-6 py-3 text-sm font-black uppercase text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:bg-black/40"
-              >
-                {isSubmitting || isRedirecting
-                  ? "Création..."
-                  : "CRÉER MON PROFIL & LANCER LE TEST"}
-              </button>
-              {message && (
-                <div className="rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-xs text-black">
-                  {message}
-                </div>
-              )}
-            </div>
-          </div>
+          <ul className="space-y-4">
+            {INCLUDED.map((item) => (
+              <li key={item} className="flex items-center gap-3 border-b border-black/[0.06] pb-4 text-[15px]">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-edge-red/10 text-edge-red">
+                  ✓
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
-      <section className="bg-white px-6 py-16">
-        <div
-          data-animate
-          className="mx-auto w-full max-w-4xl opacity-0 translate-y-6 transition-all duration-700"
-        >
-          <h2 className="text-3xl font-bold text-black">FAQ</h2>
-          <div className="mt-6 space-y-3">
+      {/* FAQ */}
+      <section className="border-t border-black/[0.06] bg-edge-grey px-5 py-20 sm:px-8">
+        <div className="mx-auto max-w-2xl">
+          <h2 className="text-[clamp(1.5rem,3vw,2rem)] font-medium tracking-[-0.02em]">Questions fréquentes</h2>
+          <div className="mt-8 space-y-3">
             {[
               {
-                question: "C'est quoi le test comportemental ?",
-                answer:
-                  "Le test comportemental mesure 4 dimensions : Dominance, Influence, Stabilité, Conformité. Validé scientifiquement. 15 minutes.",
+                q: "C'est quoi le test comportemental ?",
+                a: "Il mesure quatre dimensions — Dominance, Influence, Stabilité, Conformité — en environ 15 minutes.",
               },
               {
-                question: "Mon employeur peut voir mon profil ?",
-                answer:
-                  "Uniquement si tu partages ton lien. Tu contrôles qui voit quoi.",
+                q: "Mon employeur peut voir mon profil ?",
+                a: "Uniquement si vous partagez votre lien. Vous contrôlez qui voit quoi.",
               },
               {
-                question: "C'est vraiment gratuit ?",
-                answer:
-                  "Oui. La version gratuite est illimitée. Beyond Pro est optionnel.",
+                q: "C'est vraiment gratuit ?",
+                a: "Oui. L'inscription et votre espace sont 100 % gratuits, sans limite de durée et sans carte bancaire.",
               },
               {
-                question: "Quelle différence avec un test gratuit sur Google ?",
-                answer:
-                  "Beyond certifie ton profil et le rend partageable avec un lien reconnu par les CFA et entreprises partenaires.",
+                q: "Qu'est-ce que EDGE Powered Beyond ?",
+                a: "C'est votre espace personnel propulsé par la technologie Beyond : tests, profil et badges, au sein de l'écosystème EDGE.",
               },
             ].map((item) => (
-              <details
-                key={item.question}
-                className="rounded-2xl border border-black/10 bg-white p-4"
-              >
-                <summary className="cursor-pointer text-sm font-semibold text-black">
-                  {item.question}
+              <details key={item.q} className="group rounded-2xl border border-black/[0.06] bg-white px-5 py-4">
+                <summary className="cursor-pointer list-none text-[14px] font-medium [&::-webkit-details-marker]:hidden">
+                  {item.q}
                 </summary>
-                <p className="mt-2 text-sm text-black/70">{item.answer}</p>
+                <p className="mt-3 text-[14px] leading-relaxed text-black/50">{item.a}</p>
               </details>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-black px-6 py-20 text-white">
-        <div
-          data-animate
-          className="mx-auto w-full max-w-4xl text-center opacity-0 translate-y-6 transition-all duration-700"
-        >
-          <h2 className="text-4xl font-black">Arrête de ressembler aux autres.</h2>
-          <p className="mt-4 text-sm text-white/70">
-            Crée ton profil Beyond. Gratuit. Maintenant.
-          </p>
-          <a
-            href="#signup"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-[#F97316] px-10 py-4 text-sm font-black uppercase text-black"
-          >
-            CRÉER MON PROFIL GRATUIT →
-          </a>
+      {/* Final CTA */}
+      <section className="bg-edge-black px-5 py-20 text-white sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-xl text-center">
+          <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-white/40">EDGE Powered Beyond</p>
+          <h2 className="mt-4 text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.02em]">
+            Votre espace vous attend.
+          </h2>
+          <p className="mt-4 text-[15px] text-white/45">Gratuit. Pour toujours.</p>
+          <div className="mt-10">
+            <EdgeButton href="#signup" variant="primary" ariaLabel="Créer mon espace gratuitement">
+              Créer mon espace gratuitement
+            </EdgeButton>
+          </div>
         </div>
       </section>
 
-      <footer className="bg-black px-6 py-8 text-center text-xs text-white/60">
-        © Beyond 2026
+      <footer className="border-t border-white/10 bg-edge-black px-5 py-8 text-center text-[12px] text-white/35">
+        <p>© EDGE 2026 · EDGE Powered Beyond</p>
+        <p className="mt-1">
+          <Link href="/edge-lab" className="hover:text-white/60">
+            Retour à edgebs.fr
+          </Link>
+        </p>
       </footer>
 
       <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4 md:hidden">
         <a
           href="#signup"
-          className="flex w-full max-w-sm items-center justify-center rounded-full bg-[#F97316] px-6 py-3 text-sm font-black uppercase text-black shadow-lg"
+          className="flex w-full max-w-sm items-center justify-center rounded-full bg-edge-red px-6 py-3.5 text-[13px] font-medium text-white shadow-lg"
         >
-          CRÉER MON PROFIL GRATUIT →
+          Créer mon espace gratuitement
         </a>
       </div>
 
-      {isPreparing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6">
-          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/10 p-6 text-center text-white backdrop-blur-xl">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            <p className="text-sm font-semibold">
-              Préparation de votre espace personnalisé en cours...
-            </p>
-            <p className="mt-2 text-xs text-white/70">
-              Cela peut prendre quelques secondes.
-            </p>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

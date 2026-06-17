@@ -1,176 +1,118 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import Link from "next/link";
-import Image from "next/image";
+import type { Metadata } from "next";
+import { JESSICA_BLOG_POSTS } from "@/lib/jessica-contentin/jessica-blog-catalog";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 
-type BlogPost = {
-  id: string;
-  title: string;
-  excerpt: string | null;
-  content: string | null;
-  cover_image_url: string | null;
-  published_at: string | null;
-  author: string | null;
-  reading_time: number | null;
-  slug: string;
+export const metadata: Metadata = {
+  title: "Blog Neuroéducation : Conseils psychopédagogiques & actualités",
+  description:
+    "Articles sur la neuroéducation, le TSA, l'orientation et l'accompagnement des enfants, adolescents et familles près de Caen.",
 };
 
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString("fr-FR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export default function JessicaBlogPage() {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    void loadPosts();
-  }, []);
-
-  const loadPosts = async () => {
-    try {
-      const response = await fetch("/api/blog");
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(data.posts || []);
-      } else {
-        console.error("[JessicaBlogPage] Error loading posts");
-      }
-    } catch (error) {
-      console.error("[JessicaBlogPage] Erreur:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  const [featured, ...rest] = JESSICA_BLOG_POSTS;
 
   return (
     <div className="min-h-screen bg-[#F8F5F0]">
-      <section className="bg-gradient-to-br from-[#E6D9C6]/20 to-[#F8F5F0] py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-12 text-center"
-          >
-            <h1
-              className="mb-6 text-4xl font-bold text-[#2F2A25] md:text-5xl lg:text-6xl"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              }}
-            >
-              Blog
-            </h1>
-            <p
-              className="mx-auto max-w-3xl text-xl leading-relaxed text-[#2F2A25]/80 md:text-2xl"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              }}
-            >
-              Decouvrez mes articles sur la psychopedagogie, la neuroeducation et l'accompagnement des jeunes
-            </p>
-          </motion.div>
+      <section className="border-b border-[#E6D9C6]/50 bg-gradient-to-b from-[#FFFCF9] to-[#F8F5F0] py-14 md:py-20">
+        <div className="mx-auto max-w-5xl px-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#9A7B52]">Blog</p>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-[#2F2A25] md:text-5xl">
+            Neuroéducation &amp; accompagnement
+          </h1>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#5C5348] md:text-xl">
+            Analyses, décryptages et conseils pratiques pour les parents, enseignants et professionnels — rédigés par
+            Jessica Contentin, psychopédagogue à Bretteville-sur-Odon.
+          </p>
         </div>
       </section>
 
-      <section className="py-16">
-        <div className="mx-auto max-w-7xl px-6">
-          {loading ? (
-            <div className="py-12 text-center">
-              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-[#C6A664]"></div>
-            </div>
-          ) : posts.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="py-12 text-center"
-            >
-              <p
-                className="mb-4 text-lg text-[#2F2A25]/70"
-                style={{
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                }}
-              >
-                Aucun article disponible pour le moment.
-              </p>
-            </motion.div>
-          ) : (
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {posts.map((post, index) => (
-                <motion.div
-                  key={post.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                >
-                  <Link href={`/jessica-contentin/blog/${post.slug}`}>
-                    <Card className="h-full cursor-pointer border-[#E6D9C6] bg-white transition-shadow hover:shadow-xl">
-                      {post.cover_image_url && (
-                        <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                          <Image
-                            src={post.cover_image_url}
-                            alt={post.title}
-                            fill
-                            className="object-cover transition-transform duration-300 group-hover:scale-110"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          />
-                        </div>
-                      )}
-                      <CardContent className="p-6">
-                        <div className="mb-3 flex items-center gap-4 text-sm text-[#2F2A25]/60">
-                          {post.published_at && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>{formatDate(post.published_at)}</span>
-                            </div>
-                          )}
-                          {post.reading_time && (
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              <span>{post.reading_time} min</span>
-                            </div>
-                          )}
-                        </div>
-                        <h2
-                          className="mb-3 line-clamp-2 text-xl font-bold text-[#2F2A25] transition-colors group-hover:text-[#C6A664]"
-                          style={{
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                          }}
-                        >
-                          {post.title}
-                        </h2>
-                        {post.excerpt && (
-                          <p
-                            className="mb-4 line-clamp-3 text-[#2F2A25]/70"
-                            style={{
-                              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                            }}
-                          >
-                            {post.excerpt}
-                          </p>
-                        )}
-                        <div className="flex items-center font-medium text-[#C6A664] transition-all group-hover:gap-2">
-                          <span>Lire l'article</span>
-                          <ArrowRight className="ml-1 h-4 w-4" />
-                        </div>
-                      </CardContent>
-                    </Card>
+      <section className="py-12 md:py-16">
+        <div className="mx-auto max-w-5xl space-y-10 px-6">
+          {featured ? (
+            <article className="overflow-hidden rounded-3xl border border-[#E6D9C6] bg-white shadow-[0_20px_60px_-28px_rgba(47,42,37,0.15)]">
+              <div className="grid md:grid-cols-5">
+                <div className="flex flex-col justify-center p-8 md:col-span-3 md:p-10">
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-[#C6A664]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#8B6914]">
+                      À la une
+                    </span>
+                    <span className="rounded-full border border-[#E6D9C6] px-3 py-1 text-xs text-[#5C5348]">
+                      {featured.category}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold leading-snug text-[#2F2A25] md:text-3xl">
+                    <Link
+                      href={`/jessica-contentin/blog/${featured.slug}`}
+                      className="transition hover:text-[#8B6914]"
+                    >
+                      {featured.title}
+                    </Link>
+                  </h2>
+                  <p className="mt-4 line-clamp-3 text-base leading-relaxed text-[#5C5348] md:text-lg">
+                    {featured.excerpt}
+                  </p>
+                  <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-[#7A6F62]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4" aria-hidden />
+                      {formatDate(featured.publishedAt)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock className="h-4 w-4" aria-hidden />
+                      {featured.readingTimeMinutes} min
+                    </span>
+                  </div>
+                  <Link
+                    href={`/jessica-contentin/blog/${featured.slug}`}
+                    className="mt-6 inline-flex items-center gap-2 font-semibold text-[#8B6914] transition hover:gap-3 hover:text-[#C6A664]"
+                  >
+                    Lire l&apos;article
+                    <ArrowRight className="h-4 w-4" aria-hidden />
                   </Link>
-                </motion.div>
+                </div>
+                <div className="flex min-h-[220px] items-center justify-center bg-gradient-to-br from-[#F3E8D8] via-[#E6D9C6]/40 to-[#C6A664]/20 p-8 md:col-span-2 md:min-h-0">
+                  <div className="text-center">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#9A7B52]">HAS 2026</p>
+                    <p className="mt-2 text-3xl font-bold text-[#2F2A25]">TSA</p>
+                    <p className="mt-2 text-sm text-[#5C5348]">Recommandations officielles</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ) : null}
+
+          {rest.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {rest.map((post) => (
+                <article
+                  key={post.slug}
+                  className="flex h-full flex-col rounded-2xl border border-[#E6D9C6] bg-white p-6 transition hover:border-[#C6A664]/50 hover:shadow-lg"
+                >
+                  <span className="mb-3 inline-block w-fit rounded-full bg-[#F3E8D8] px-3 py-1 text-xs font-medium text-[#8B6914]">
+                    {post.category}
+                  </span>
+                  <h2 className="text-xl font-bold text-[#2F2A25]">
+                    <Link href={`/jessica-contentin/blog/${post.slug}`} className="hover:text-[#8B6914]">
+                      {post.title}
+                    </Link>
+                  </h2>
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-[#5C5348]">{post.excerpt}</p>
+                  <div className="mt-5 flex items-center justify-between text-xs text-[#7A6F62]">
+                    <span>{formatDate(post.publishedAt)}</span>
+                    <span>{post.readingTimeMinutes} min</span>
+                  </div>
+                </article>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
       </section>
     </div>

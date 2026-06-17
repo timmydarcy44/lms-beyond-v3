@@ -123,35 +123,6 @@ const PIPELINE = [
   },
 ] as const;
 
-/** Témoignages fictifs — placeholders */
-const TESTIMONIALS = [
-  {
-    initials: "MD",
-    name: "Marc Delannoy",
-    role: "Directeur Commercial",
-    company: "Groupe Normandie Auto",
-    quote:
-      "En trois mois, notre taux de transformation a bondi de 18 points. On ne forme plus pour cocher une case.",
-    color: EDGE_RED,
-  },
-  {
-    initials: "SL",
-    name: "Sophie Lemaire",
-    role: "DRH",
-    company: "Cabinet Conseil Rouen",
-    quote: "Le diagnostic Beyond a révélé des freins que notre audit interne n'avait pas identifiés. Le ROI est visible.",
-    color: "#FFFFFF",
-  },
-  {
-    initials: "TG",
-    name: "Thomas Girard",
-    role: "CEO",
-    company: "Startup Tech Caen",
-    quote: "EDGE ne vend pas des heures de formation. Ils livrent de la performance mesurable. C'est rare.",
-    color: "#888888",
-  },
-] as const;
-
 function FadeSection({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <motion.div {...fadeUp} className={className}>
@@ -505,46 +476,18 @@ export function EntreprisesPageContent() {
         </div>
       </section>
 
-      {/* 5. TÉMOIGNAGES */}
-      <section className="px-5 py-24 sm:px-8 sm:py-32" style={{ backgroundColor: EDGE_BLACK }}>
-        <div className="mx-auto max-w-6xl">
+      {/* 5. RETOURS CLIENTS — en attente de vrais témoignages */}
+      <section id="temoignages" className="px-5 py-24 sm:px-8 sm:py-32" style={{ backgroundColor: EDGE_BLACK }}>
+        <div className="mx-auto max-w-3xl text-center">
           <FadeSection>
-            <SectionLabel tone="accent">ILS ONT CHOISI EDGE</SectionLabel>
-            <p className="sr-only">Témoignages fictifs — placeholders</p>
+            <SectionLabel tone="accent">ENTREPRISES PARTENAIRES</SectionLabel>
+            <h2 className="mt-4 text-[clamp(1.75rem,4vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.03em] text-white">
+              Les premiers retours arrivent.
+            </h2>
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/50">
+              La première cohorte entreprise est en cours. Revenez dans quelques semaines pour découvrir les résultats.
+            </p>
           </FadeSection>
-
-          <div className="mt-12 flex gap-5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:grid lg:grid-cols-3 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
-            {TESTIMONIALS.map((t, i) => (
-              <motion.blockquote
-                key={t.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className="min-w-[280px] flex-shrink-0 rounded-2xl border border-white/10 bg-[#141414] p-8 lg:min-w-0"
-              >
-                <p className="text-base font-medium leading-relaxed text-white/85">&ldquo;{t.quote}&rdquo;</p>
-                <footer className="mt-7 flex items-center gap-4">
-                  <span
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-                    style={{
-                      backgroundColor: t.color === EDGE_RED ? `${EDGE_RED}22` : "rgba(255,255,255,0.08)",
-                      color: t.color,
-                    }}
-                    aria-hidden
-                  >
-                    {t.initials}
-                  </span>
-                  <div>
-                    <cite className="not-italic text-sm font-bold text-white">{t.name}</cite>
-                    <p className="text-xs text-white/40">
-                      {t.role}, {t.company}
-                    </p>
-                  </div>
-                </footer>
-              </motion.blockquote>
-            ))}
-          </div>
         </div>
       </section>
 

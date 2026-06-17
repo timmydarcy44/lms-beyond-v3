@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ChevronRight, Share2 } from "lucide-react";
+import { Bell, BookOpen, Briefcase, ChevronRight, Share2, Star } from "lucide-react";
 
 import type { ApprenantPrimaryParcours } from "@/components/apprenant/apprenant-dashboard-client";
 import {
@@ -15,6 +15,8 @@ import {
 } from "@/components/apprenant/apprenant-shell-context";
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
 import { ApprenantOpenBadgesSection } from "@/components/apprenant/apprenant-open-badges-section";
+import { EdgeDashboardActionCard } from "@/components/edge/edge-dashboard-action-card";
+import { EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
 import type {
   LearnerEarnedOpenBadge,
   LearnerVisibleOpenBadge,
@@ -85,14 +87,14 @@ export function ApprenantConnectOverview({
   const notifyBtn = isJessica
     ? "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#C6A664]/35 bg-white/70 text-[#8B4513]/70 transition hover:bg-white hover:text-[#654321]"
     : "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/45 transition hover:bg-white/[0.05] hover:text-white";
-  const notifyBadge = isJessica ? "bg-[#C6A664]" : "bg-[#2563EB]";
+  const notifyBadge = isJessica ? "bg-[#C6A664]" : "bg-[#3D7BFF]";
 
   const heroStyle = isJessica
     ? {
         background: "linear-gradient(135deg, #F8F5F0 0%, #F0EBE3 40%, #E8DCC8 100%)",
       }
     : {
-        background: "linear-gradient(135deg, #0f1f4a 0%, #1a3a7a 30%, #0d1b3e 60%, #0D0D12 100%)",
+        background: EDGE_GRADIENTS.dashboardHero,
       };
 
   const heroOverlay = isJessica
@@ -100,7 +102,7 @@ export function ApprenantConnectOverview({
         background: "radial-gradient(ellipse at 80% 50%, rgba(198,166,100,0.25) 0%, transparent 60%)",
       }
     : {
-        background: "radial-gradient(ellipse at 80% 50%, rgba(37,99,235,0.18) 0%, transparent 60%)",
+        background: "radial-gradient(ellipse at 85% 20%, rgba(110,150,255,0.35) 0%, transparent 65%)",
       };
 
   const heroPctClass = isJessica
@@ -218,49 +220,72 @@ export function ApprenantConnectOverview({
       <ApprenantEdgeWalletSection badges={earnedOpenBadges} />
 
       <section className={`grid gap-4 md:grid-cols-2 ${isJessica ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
-        <button
-          type="button"
-          onClick={() => void appShell?.sharePublicProfile()}
-          className={`${t.cardInteractive} text-left`}
-        >
-          <p className={t.cardKicker}>Profil public</p>
-          <p className={t.cardTitle}>Partager ma page</p>
-          <span className={t.cardMuted}>
-            <Share2 className="mr-1 inline h-3.5 w-3.5" />
-            Copier le lien /p/…
-          </span>
-        </button>
         {isJessica ? (
-          <Link href="/jessica-contentin/parcours-guide" className={t.cardInteractive}>
-            <p className={t.cardKicker}>Guidance</p>
-            <p className={t.cardTitle}>Parcours guidé</p>
-            <span className={t.cardMuted}>TSA & accompagnement parental</span>
-          </Link>
+          <>
+            <button
+              type="button"
+              onClick={() => void appShell?.sharePublicProfile()}
+              className={`${t.cardInteractive} text-left`}
+            >
+              <p className={t.cardKicker}>Profil public</p>
+              <p className={t.cardTitle}>Partager ma page</p>
+              <span className={t.cardMuted}>
+                <Share2 className="mr-1 inline h-3.5 w-3.5" />
+                Copier le lien /p/…
+              </span>
+            </button>
+            <Link href="/jessica-contentin/parcours-guide" className={t.cardInteractive}>
+              <p className={t.cardKicker}>Guidance</p>
+              <p className={t.cardTitle}>Parcours guidé</p>
+              <span className={t.cardMuted}>TSA & accompagnement parental</span>
+            </Link>
+            <Link href={badgesHref} className={t.cardInteractive}>
+              <p className={t.cardKicker}>Wallet</p>
+              <p className={t.cardTitle}>Mes badges</p>
+              <span className={t.cardMuted}>Certifications & attestations</span>
+            </Link>
+            <Link href={resultsHref} className={t.cardInteractive}>
+              <p className={t.cardKicker}>Suivi</p>
+              <p className={t.cardTitle}>Mes résultats</p>
+              <span className={t.cardMuted}>Tests & validations</span>
+            </Link>
+          </>
         ) : (
-          <Link href={catalogHref} className={t.cardInteractive}>
-            <p className={t.cardKicker}>Parcours</p>
-            <p className={t.cardTitle}>EDGE Online</p>
-            <span className={t.cardMuted}>Ouvrir le catalogue</span>
-          </Link>
+          <>
+            <EdgeDashboardActionCard
+              accent="blue"
+              icon={Share2}
+              eyebrow="Profil public"
+              title="Partager ma page"
+              subtitle="Copier le lien /p/…"
+              onClick={() => void appShell?.sharePublicProfile()}
+            />
+            <EdgeDashboardActionCard
+              accent="red"
+              icon={BookOpen}
+              eyebrow="Parcours"
+              title="EDGE Online"
+              subtitle="Ouvrir le catalogue"
+              href={catalogHref}
+            />
+            <EdgeDashboardActionCard
+              accent="green"
+              icon={Briefcase}
+              eyebrow="Matching"
+              title="Opportunités"
+              subtitle="Entreprises & offres"
+              href={matchingHref}
+            />
+            <EdgeDashboardActionCard
+              accent="violet"
+              icon={Star}
+              eyebrow="Suivi"
+              title="Mes résultats"
+              subtitle="Tests & validations"
+              href={resultsHref}
+            />
+          </>
         )}
-        {!isJessica ? (
-          <Link href={matchingHref} className={t.cardInteractive}>
-            <p className={t.cardKicker}>Matching</p>
-            <p className={t.cardTitle}>Opportunités</p>
-            <span className={t.cardMuted}>Entreprises & offres</span>
-          </Link>
-        ) : (
-          <Link href={badgesHref} className={t.cardInteractive}>
-            <p className={t.cardKicker}>Wallet</p>
-            <p className={t.cardTitle}>Mes badges</p>
-            <span className={t.cardMuted}>Certifications & attestations</span>
-          </Link>
-        )}
-        <Link href={resultsHref} className={t.cardInteractive}>
-          <p className={t.cardKicker}>Suivi</p>
-          <p className={t.cardTitle}>Mes résultats</p>
-          <span className={t.cardMuted}>Tests & validations</span>
-        </Link>
       </section>
 
       <ApprenantOpenBadgesSection badges={visibleOpenBadges} />

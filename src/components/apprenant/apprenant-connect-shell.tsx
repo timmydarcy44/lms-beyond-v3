@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight, LifeBuoy, LogOut, Menu, Sparkles, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
@@ -47,6 +47,8 @@ export function ApprenantConnectShell({
   const supabase = createSupabaseBrowserClient();
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const openedPostDiscProfileRef = useRef(false);
   const { isDyslexiaMode, toggleDyslexiaMode } = useDyslexiaMode();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -105,6 +107,17 @@ export function ApprenantConnectShell({
   useEffect(() => {
     void loadProfile();
   }, [loadProfile, snippetVersion]);
+
+  useEffect(() => {
+    if (openedPostDiscProfileRef.current) return;
+    if (searchParams.get("disc") !== "done") return;
+    openedPostDiscProfileRef.current = true;
+    const timer = window.setTimeout(() => {
+      setEditOpen(true);
+      router.replace("/dashboard/apprenant/profil", { scroll: false });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [router, searchParams]);
 
   const navItems = useMemo(
     () => buildApprenantNavItems(hasOrganisation, variant),
@@ -171,7 +184,15 @@ export function ApprenantConnectShell({
 
   const openEditProfile = shellContext.openEditProfile;
 
+  const isAssessmentImmersive = Boolean(
+    pathname?.includes("/dashboard/apprenant/disc/test") ||
+      pathname?.includes("/dashboard/apprenant/idmc/test") ||
+      pathname?.includes("/dashboard/apprenant/test-comportemental-intro") ||
+      pathname?.includes("/soft-skills/test"),
+  );
+  const isDiscImmersive = isAssessmentImmersive;
   const isOpenBadgeImmersive = Boolean(pathname?.includes("/dashboard/apprenant/open-badges"));
+  const isImmersiveRoute = isOpenBadgeImmersive || isDiscImmersive;
   const isHomeRoute = pathname === "/dashboard/apprenant";
   const showMobileBack = Boolean(pathname) && !isHomeRoute;
 
@@ -195,10 +216,13 @@ export function ApprenantConnectShell({
     setMobileOpen(false);
   }, []);
 
-  if (isOpenBadgeImmersive) {
+  if (isImmersiveRoute) {
     return (
       <ApprenantShellProvider value={shellContext}>
-        <div data-connect-shell="open-badge-immersive" className="min-h-screen bg-[#030303] text-white">
+        <div
+          data-connect-shell={isDiscImmersive ? "disc-immersive" : "open-badge-immersive"}
+          className={`min-h-screen ${isDiscImmersive ? "bg-white text-[#0a0a0a]" : "bg-[#030303] text-white"}`}
+        >
           {children}
         </div>
         <ApprenantProfileEditModal

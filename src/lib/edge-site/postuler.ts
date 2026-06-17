@@ -1,4 +1,7 @@
 import type { ParcoursAddon } from "@/lib/parcours";
+import { EDGE_COHORTE_LABEL } from "@/lib/edge-site/constants";
+
+export { EDGE_COHORTE_LABEL };
 
 export type PostulerAddonSelection = {
   id: string;
@@ -42,8 +45,6 @@ export const POSTULER_OBJECTIFS = [
   "Former ou développer mes équipes",
   "Créer mon activité",
 ] as const;
-
-export const EDGE_COHORTE_LABEL = "Sept 2025";
 
 export const emptyPostulerForm = (): PostulerFormData => ({
   prenom: "",

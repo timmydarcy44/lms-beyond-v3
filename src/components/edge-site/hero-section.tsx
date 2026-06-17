@@ -1,7 +1,7 @@
 import { EdgeButton } from "@/components/edge-site/edge-button";
 import { ImagePlaceholder } from "@/components/edge-site/image-placeholder";
 import { EdgeHeroFaqBar } from "@/components/edge-lab/edge-hero-faq-bar";
-import { EDGE_HERO_IMAGE_URL, EDGE_HREFS } from "@/lib/edge-site/constants";
+import { EDGE_COHORTE_HERO_BADGE, EDGE_HERO_IMAGE_URL, EDGE_HREFS } from "@/lib/edge-site/constants";
 
 export function HeroSection() {
   return (
@@ -21,10 +21,10 @@ export function HeroSection() {
           <div className="mx-auto max-w-3xl">
             <p className="inline-flex items-center gap-2 rounded-full border border-edge-red/20 bg-edge-red/[0.08] px-4 py-1.5 text-[10px] font-normal uppercase tracking-[0.2em] text-white/70">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-edge-red" aria-hidden />
-              Normandie · Cohorte Sept 2025 ouverte
+              {EDGE_COHORTE_HERO_BADGE}
             </p>
             <h1 className="mt-8 text-[clamp(2.5rem,5vw,3.5rem)] font-medium leading-[1.05] tracking-[-0.02em] text-white">
-              Forme-toi comme les meilleurs <span className="text-edge-red">performent.</span>
+              Formez-vous aux méthodes des <span className="text-edge-red">meilleurs.</span>
             </h1>
             <p className="mx-auto mt-6 max-w-[440px] text-[15px] leading-[1.7] text-white/45">
               Parcours certifiants, livrables terrain et Open Badge IMS Global. Une école normande qui forme aux

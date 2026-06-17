@@ -4,15 +4,18 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills";
 import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
+import {
+  EdgeAssessmentOption,
+  EdgeAssessmentQuestionShell,
+} from "@/components/edge/edge-assessment-question-shell";
+import { EDGE_COLORS } from "@/lib/edge/edge-brand";
 
-const answersLabels = ["1", "2", "3", "4", "5"];
-
-const focusImages = [
-  "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1400&q=80",
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80",
+const SCALE_LABELS = [
+  { value: 1, label: "1 — Pas du tout" },
+  { value: 2, label: "2" },
+  { value: 3, label: "3 — Moyennement" },
+  { value: 4, label: "4" },
+  { value: 5, label: "5 — Tout à fait" },
 ];
 
 export default function SoftSkillsTestPage() {
@@ -21,35 +24,14 @@ export default function SoftSkillsTestPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const currentQuestion = SOFT_SKILLS_QUESTIONS[currentIndex];
-  const progress = Math.round(((currentIndex + 1) / SOFT_SKILLS_QUESTIONS.length) * 100);
-  const canGoPrev = currentIndex > 0;
-  const canGoNext = currentIndex < SOFT_SKILLS_QUESTIONS.length - 1;
-  const imageIndex = Math.floor(currentIndex / 5) % focusImages.length;
+  const selectedValue = answers[currentQuestion.id] ?? null;
 
   const handleAnswer = (value: number) => {
-    const key = currentQuestion.id;
-    setAnswers((prev) => ({ ...prev, [key]: value }));
-    if (canGoNext) {
-      setTimeout(() => setCurrentIndex((prev) => prev + 1), 200);
+    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
+    if (currentIndex < SOFT_SKILLS_QUESTIONS.length - 1) {
+      window.setTimeout(() => setCurrentIndex((prev) => prev + 1), 220);
     }
   };
-
-  const handleKey = (event: KeyboardEvent) => {
-    if (["1", "2", "3", "4", "5"].includes(event.key)) {
-      handleAnswer(Number(event.key));
-    }
-    if (event.key === "ArrowUp" && canGoPrev) {
-      setCurrentIndex((prev) => prev - 1);
-    }
-    if (event.key === "ArrowDown" && canGoNext) {
-      setCurrentIndex((prev) => prev + 1);
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  });
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -73,111 +55,73 @@ export default function SoftSkillsTestPage() {
     }
   };
 
-  const progressLabel = useMemo(
-    () => `Question ${currentIndex + 1} sur ${SOFT_SKILLS_QUESTIONS.length}`,
-    [currentIndex],
-  );
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (["1", "2", "3", "4", "5"].includes(event.key)) {
+        handleAnswer(Number(event.key));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  const footer = useMemo(() => {
+    if (!selectedValue) return null;
+    if (currentIndex < SOFT_SKILLS_QUESTIONS.length - 1) {
+      return (
+        <button
+          type="button"
+          onClick={() => setCurrentIndex((prev) => prev + 1)}
+          className="w-full rounded-xl py-3.5 text-sm font-semibold text-white transition hover:opacity-90"
+          style={{ backgroundColor: EDGE_COLORS.blueAccent }}
+        >
+          Question suivante
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => void handleSubmit()}
+        disabled={submitting}
+        className="w-full rounded-xl py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+        style={{ backgroundColor: EDGE_COLORS.blueAccent }}
+      >
+        {submitting ? "Enregistrement…" : "Voir mes résultats"}
+      </button>
+    );
+  }, [currentIndex, selectedValue, submitting]);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] font-['Inter'] text-white">
-      <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
-      `}</style>
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        <div className="relative hidden items-center justify-center bg-black lg:flex">
-          <motion.div
-            key={focusImages[imageIndex]}
-            initial={{ opacity: 0.5, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="h-[78%] w-[78%] overflow-hidden rounded-[32px] border border-white/10 shadow-[0_0_60px_rgba(245,158,11,0.15)]"
-          >
-            <img
-              src={focusImages[imageIndex]}
-              alt="Focus"
-              className="h-full w-full object-cover"
-            />
-          </motion.div>
-        </div>
-
-        <div className="flex min-h-screen flex-col justify-between px-4 py-8 sm:px-8 sm:py-12 lg:px-10">
-          <div>
-            <div className="h-1 w-full rounded-full bg-white/10">
-              <div className="h-1 rounded-full bg-[#F59E0B]" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="mt-3 flex items-center justify-between text-[12px] text-[#9CA3AF]">
-              <span>{progressLabel}</span>
-              <span>{progress}%</span>
-            </div>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentQuestion.id}
-                initial={{ opacity: 0, x: 32 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -32 }}
-                transition={{ duration: 0.35 }}
-                className="mt-8 space-y-4 sm:mt-12"
-              >
-                <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#F59E0B] sm:text-[12px]">
-                  {currentQuestion.skill}
-                </div>
-                <h1 className="text-xl font-semibold leading-snug text-white sm:text-2xl md:text-[28px]">
-                  {currentQuestion.text}
-                </h1>
-              </motion.div>
-            </AnimatePresence>
-
-            <div className="mt-12 flex flex-wrap items-center gap-4">
-              {answersLabels.map((label, index) => {
-                const value = index + 1;
-                const active = answers[currentQuestion.id] === value;
-                return (
-                  <button
-                    key={label}
-                    onClick={() => handleAnswer(value)}
-                    className={`flex h-14 w-14 items-center justify-center rounded-full border text-[16px] font-semibold transition ${
-                      active
-                        ? "border-[#F59E0B] bg-[#F59E0B] text-[#111827] shadow-[0_0_20px_rgba(245,158,11,0.6)]"
-                        : "border-white/15 text-white hover:border-[#F59E0B] hover:text-[#F59E0B] hover:shadow-[0_0_18px_rgba(245,158,11,0.4)]"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end">
-            {answers[currentQuestion.id] ? (
-              currentIndex === SOFT_SKILLS_QUESTIONS.length - 1 ? (
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="rounded-full bg-[#F59E0B] px-6 py-3 text-[14px] font-semibold text-[#111827]"
-                >
-                  {submitting ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#111827]/40 border-t-[#111827]" />
-                      Enregistrement...
-                    </span>
-                  ) : (
-                    "Voir mes résultats"
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={() => setCurrentIndex((prev) => prev + 1)}
-                  className="rounded-full bg-[#F59E0B] px-6 py-3 text-[14px] font-semibold text-[#111827]"
-                >
-                  Suivant
-                </button>
-              )
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
+    <EdgeAssessmentQuestionShell
+      categoryTag={currentQuestion.skill}
+      categoryMention="soft skills"
+      questionText={currentQuestion.text}
+      questionIndex={currentIndex}
+      totalQuestions={SOFT_SKILLS_QUESTIONS.length}
+      footer={footer}
+      animateKey={currentQuestion.id}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentQuestion.id}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-3"
+        >
+          {SCALE_LABELS.map((option) => (
+            <EdgeAssessmentOption
+              key={option.value}
+              selected={selectedValue === option.value}
+              onClick={() => handleAnswer(option.value)}
+            >
+              {option.label}
+            </EdgeAssessmentOption>
+          ))}
+        </motion.div>
+      </AnimatePresence>
+    </EdgeAssessmentQuestionShell>
   );
 }

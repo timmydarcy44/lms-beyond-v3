@@ -9,7 +9,7 @@ import { profileRolesIndicateSchoolDashboard } from "@/lib/auth/school-access";
 const ADMIN_FALLBACK_EMAIL = "timmydarcy44@gmail.com";
 
 const PROFILE_SERVICE_SELECT =
-  "id, email, full_name, avatar_url, role, role_type, company_id, school_id, access_lms, access_connect, access_care";
+  "id, email, full_name, role, role_type, company_id, school_id, first_name, last_name";
 
 function isRoleEmpty(value: string | null | undefined) {
   const s = String(value ?? "").trim().toLowerCase();

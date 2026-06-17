@@ -71,7 +71,7 @@ export const LONG_TAIL_KEYWORDS = [
 // Configuration SEO par page
 export const PAGE_SEO_CONFIG = {
   home: {
-    title: "Jessica Contentin | Psychopédagogue & Neuroéducation à Caen",
+    title: "Psychopédagogie & Neuroéducation à Caen",
     description: "Psychopédagogue certifiée à Bretteville sur Odon (Caen). Accompagnement expert pour troubles DYS, TDAH et gestion des émotions. Prenez rendez-vous au cabinet.",
     keywords: [
       "psychopédagogue Bretteville sur Odon",
@@ -89,7 +89,7 @@ export const PAGE_SEO_CONFIG = {
     canonical: "https://jessicacontentin.fr",
   },
   "a-propos": {
-    title: "À propos - Jessica CONTENTIN | Psychopédagogue certifiée neuroéducation | Caen",
+    title: "Qui est Jessica Contentin ?",
     description: "Découvrez le parcours et l'expertise de Jessica CONTENTIN, psychopédagogue certifiée en neuroéducation à Bretteville sur Odon. Master IAE Caen, Master MEEF INSPE, professeure certifiée depuis 2015. Spécialisée en troubles DYS, TDA-H, harcèlement et phobie scolaire.",
     keywords: [
       "psychopédagogue Caen parcours",
@@ -102,7 +102,7 @@ export const PAGE_SEO_CONFIG = {
     canonical: "https://jessicacontentin.fr/a-propos",
   },
   specialites: {
-    title: "Spécialités - Psychopédagogie | Troubles DYS, TDA-H, Harcèlement scolaire | Caen",
+    title: "Spécialités en Neuroéducation & Psychopédagogie à Caen",
     description: "Découvrez toutes les spécialités de Jessica CONTENTIN : accompagnement TND (troubles DYS, TDA-H), harcèlement scolaire, phobie scolaire, gestion des émotions, confiance en soi, orientation scolaire, neuroéducation. Cabinet à Bretteville sur Odon, Caen.",
     keywords: [
       "spécialités psychopédagogue Caen",
@@ -159,7 +159,7 @@ export const PAGE_SEO_CONFIG = {
     canonical: "https://jessicacontentin.fr/specialites/harcelement",
   },
   consultations: {
-    title: "Consultations | Tarifs et Modalités | Psychopédagogue Bretteville sur Odon (Caen)",
+    title: "Consultations Neuroéducation : Tarifs et Accompagnement à Caen",
     description: "Consultations psychopédagogiques à Bretteville sur Odon (Caen). Tarifs : première consultation 90€, suivi 75€. Bilans selon les besoins. Cabinet chaleureux avec espace enfant. Prenez rendez-vous en ligne.",
     keywords: [
       "consultation psychopédagogue Caen",
@@ -173,7 +173,7 @@ export const PAGE_SEO_CONFIG = {
     canonical: "https://jessicacontentin.fr/consultations",
   },
   orientation: {
-    title: "Orientation Scolaire & Bilan Soft Skills à Caen | J. Contentin",
+    title: "Orientation scolaire & Bilan Neuroéducatif à Caen",
     description: "Réussissez votre orientation avec notre test de Soft Skills propriétaire. Aide Parcoursup, CV et projet professionnel à Caen. Révélez votre vrai potentiel.",
     keywords: [
       "orientation scolaire Caen",
@@ -188,19 +188,21 @@ export const PAGE_SEO_CONFIG = {
     canonical: "https://jessicacontentin.fr/orientation",
   },
   ressources: {
-    title: "Ressources Psychopédagogiques | Articles et Outils | Jessica CONTENTIN",
-    description: "Ressources et outils psychopédagogiques pour parents, enfants et professionnels. Articles sur troubles DYS, TDA-H, gestion émotions, confiance en soi, orientation scolaire. Contenus accessibles partout en France.",
+    title: "Outils de Neuroéducation : Ressources et Fichiers à télécharger",
+    description:
+      "Outils et ressources psychopédagogiques à télécharger — gratuites et premium. Stratégies d'apprentissage, neuroéducation et accompagnement numérique.",
     keywords: [
+      "outils psychopédagogie",
       "ressources psychopédagogie",
-      "articles troubles DYS",
-      "outils apprentissage",
+      "téléchargements gratuits",
+      "nevo application",
+      "performance cognitive",
+      "stratégies apprentissage",
       "ressources parents TND",
-      "guides psychopédagogie",
+      "neuroéducation outils",
       "ressources psychopédagogie France",
-      "contenus TND en ligne",
-      "formations psychopédagogie",
     ],
-    h1: "Ressources Psychopédagogiques",
+    h1: "Outils et ressources",
     canonical: "https://jessicacontentin.fr/ressources",
     // Note: Rayonnement national pour les ressources (pas de géolocalisation)
   },

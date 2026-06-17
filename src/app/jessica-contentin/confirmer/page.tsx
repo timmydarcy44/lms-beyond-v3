@@ -3,8 +3,9 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Confirmation d'inscription - Jessica Contentin",
+  title: "Confirmation inscription",
   description: "Confirmez votre adresse email pour finaliser votre inscription",
+  robots: { index: false, follow: false },
 };
 
 export default async function JessicaContentinConfirmationPage({

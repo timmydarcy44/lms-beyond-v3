@@ -317,7 +317,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   }[];
 }> = {
   "tnd": {
-    title: "Troubles DYS & TDA-H à Caen | Accompagnement Psychopédagogique",
+    title: "Neuroéducation & TND (TDAH, DYS, TSA) : Accompagnement Caen",
     description: "Spécialiste TND à Caen : stratégies pour DYS, TDA-H et HPI. Expertise reconnue (CRA & MDPH) pour aider votre enfant à réussir. Consultez au cabinet.",
     h1: "Accompagnement des Troubles du Neurodéveloppement (TND)",
     keywords: [
@@ -347,7 +347,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "harcelement": {
-    title: "Harcèlement Scolaire | Accompagnement et Soutien | Psychopédagogue Caen | Jessica CONTENTIN",
+    title: "Harcèlement scolaire & Neuroéducation : Solutions à Caen",
     description: "Accompagnement bienveillant pour enfants et adolescents victimes de harcèlement scolaire à Caen. Écoute, soutien psychologique, stratégies de protection. Collaboration école et famille. Cabinet Bretteville sur Odon.",
     h1: "Accompagnement face au Harcèlement Scolaire - Soutien et Protection",
     keywords: [
@@ -373,7 +373,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "confiance-en-soi": {
-    title: "Confiance en Soi | Estime de Soi | Psychopédagogue Caen | Jessica CONTENTIN",
+    title: "Confiance en soi & Neuroéducation : Estime de soi à Caen",
     description: "Accompagnement pour développer la confiance en soi et l'estime de soi à Caen. Techniques de valorisation, renforcement assertivité. Pour enfants, adolescents et adultes. Cabinet Bretteville sur Odon.",
     h1: "Gestion de la Confiance en Soi - Développement de l'Estime de Soi",
     keywords: [
@@ -398,7 +398,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "gestion-stress": {
-    title: "Gestion du Stress | Techniques de Relaxation | Psychopédagogue Caen | Jessica CONTENTIN",
+    title: "Gestion du stress & Neuroéducation : Apaiser le mental à Caen",
     description: "Accompagnement pour mieux gérer le stress au quotidien à Caen. Techniques de relaxation, gestion du temps, stratégies d'adaptation. Pour enfants, adolescents et adultes. Cabinet Bretteville sur Odon.",
     h1: "Gestion du Stress - Techniques et Stratégies d'Adaptation",
     keywords: [
@@ -423,7 +423,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "guidance-parentale": {
-    title: "Guidance Parentale | Accompagnement Parents | Psychopédagogue Caen | Jessica CONTENTIN",
+    title: "Guidance parentale & Neuroéducation : Comprendre pour apaiser",
     description: "Soutien et conseils pour les parents dans leur rôle éducatif à Caen. Stratégies éducatives adaptées, gestion conflits familiaux, renforcement lien parent-enfant. Cabinet Bretteville sur Odon.",
     h1: "Guidance Parentale - Accompagnement et Soutien pour les Parents",
     keywords: [
@@ -448,7 +448,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "tests": {
-    title: "Tests de Connaissance de Soi | Bilans Psychopédagogiques | Psychopédagogue Caen | Jessica CONTENTIN",
+    title: "Bilan de compétences & Tests Neuroéducatifs : Profil d'apprentissage",
     description: "Bilans psychopédagogiques approfondis à Caen pour mieux se connaître et identifier ses forces. Évaluations, recommandations personnalisées. Cabinet Bretteville sur Odon.",
     h1: "Tests de Connaissance de Soi - Bilans Psychopédagogiques",
     keywords: [
@@ -473,7 +473,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "therapie": {
-    title: "Accompagnement Psycho-émotionnel | Gestion des Émotions | Psychopédagogue Caen | Jessica CONTENTIN",
+    title: "Accompagnement psycho-émotionnel & Neuroéducation à Caen",
     description: "Accompagnement pour la gestion des émotions à Caen. Techniques de régulation émotionnelle, gestion anxiété, travail sur traumatismes. Cabinet Bretteville sur Odon.",
     h1: "Accompagnement Psycho-émotionnel - Gestion des Émotions et Résilience",
     keywords: [
@@ -498,7 +498,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "neuroeducation": {
-    title: "Neuroéducation à Caen | Optimiser l'Apprentissage par la Science",
+    title: "La Neuroéducation à Caen : Optimiser l'apprentissage par la science",
     description: "Découvrez comment le cerveau apprend. Expertise en neurosciences pour étudiants et professionnels à Caen. Boostez vos capacités cognitives et votre mémoire.",
     h1: "Apprendre à apprendre grâce à la Neuroéducation",
     keywords: [
@@ -523,7 +523,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "strategie-apprentissage": {
-    title: "Stratégies d'Apprentissage | Méthodes Personnalisées | Psychopédagogue Caen | Jessica CONTENTIN",
+    title: "Stratégies d'apprentissage & Neuroéducation : Méthodes personnalisées",
     description: "Développement de méthodes et techniques d'apprentissage personnalisées à Caen. Organisation du travail, mémorisation, concentration, gestion du temps. Cabinet Bretteville sur Odon.",
     h1: "Stratégies d'Apprentissage - Méthodes Personnalisées pour la Réussite",
     keywords: [
@@ -547,8 +547,8 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
       },
     ],
   },
-  "orientation": {
-    title: "Orientation Scolaire et Professionnelle | Parcoursup | Psychopédagogue Caen | Jessica CONTENTIN",
+  "orientation-professionnelle": {
+    title: "Bilan d'orientation & Neuroéducation : Projets d'avenir à Caen",
     description: "Accompagnement à l'orientation scolaire et professionnelle à Caen. Test soft skills, exploration métiers, aide Parcoursup, CV et lettre de motivation. Cabinet Bretteville sur Odon.",
     h1: "Orientation Scolaire et Professionnelle - Accompagnement Complet",
     keywords: [

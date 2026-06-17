@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DISC_QUESTION_COUNT } from "@/lib/disc/disc-questions";
+import { EDGE_COLORS, EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
 
 export default function TestComportementalIntroPage() {
   const router = useRouter();
@@ -41,13 +42,13 @@ export default function TestComportementalIntroPage() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[200] flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#030303] px-6 text-center text-white">
+    <div
+      className="fixed inset-0 z-[200] flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 text-center text-white"
+      style={{ backgroundColor: EDGE_COLORS.bgDeep }}
+    >
       <div
         className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 55% at 50% 35%, rgba(255,59,48,0.38) 0%, transparent 58%)",
-        }}
+        style={{ background: EDGE_GRADIENTS.introHalo }}
       />
       <motion.div
         className="absolute inset-0 bg-[length:220%_220%] opacity-20"
@@ -73,17 +74,19 @@ export default function TestComportementalIntroPage() {
           Bienvenue {firstName}
         </motion.p>
 
-        <motion.h1
-          className="text-2xl font-semibold leading-snug sm:text-3xl"
+        <motion.div
+          className="space-y-2"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: phase === "ready" ? 1 : 0, y: phase === "ready" ? 0 : 12 }}
           transition={{ delay: 0.15, duration: 0.6 }}
         >
-          Vous vous apprêtez à passer le test DISC
-        </motion.h1>
+          <h1 className="text-2xl font-semibold leading-snug sm:text-3xl">Profil comportemental</h1>
+          <p className="text-sm text-white/45">(test DISC)</p>
+        </motion.div>
 
         <motion.p
-          className="text-lg text-[#FF3B30] font-medium"
+          className="text-lg font-medium"
+          style={{ color: EDGE_COLORS.blueAccent }}
           initial={{ opacity: 0 }}
           animate={{ opacity: phase === "ready" ? 1 : 0 }}
           transition={{ delay: 0.35, duration: 0.5 }}
@@ -100,7 +103,8 @@ export default function TestComportementalIntroPage() {
           <button
             type="button"
             onClick={() => router.push("/dashboard/apprenant/disc/test")}
-            className="rounded-full bg-[#FF3B30] px-10 py-3.5 text-sm font-bold uppercase tracking-wide text-white shadow-[0_0_40px_rgba(255,59,48,0.45)] transition hover:bg-[#e6352b]"
+            className="rounded-full px-10 py-3.5 text-sm font-bold uppercase tracking-wide text-white shadow-[0_0_40px_rgba(61,123,255,0.35)] transition hover:opacity-90"
+            style={{ backgroundColor: EDGE_COLORS.blueAccent }}
           >
             Commencer le test
           </button>

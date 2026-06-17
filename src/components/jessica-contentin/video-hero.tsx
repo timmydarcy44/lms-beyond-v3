@@ -20,9 +20,7 @@ export function VideoHero() {
     const el = videoRef.current;
     if (!el) return;
     try {
-      // Certains navigateurs n’autorisent pas l’autoplay même muted.
       await el.play();
-      // Si la vidéo reste en pause malgré play(), on propose un bouton de lancement.
       setNeedsPlay(el.paused);
     } catch {
       setNeedsPlay(true);
@@ -92,7 +90,7 @@ export function VideoHero() {
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
             }}
           >
-            Jessica Contentin
+            JESSICA CONTENTIN
           </p>
           <p
             className="mt-2 text-base font-medium text-[#5C5348] md:text-lg"
@@ -100,15 +98,7 @@ export function VideoHero() {
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
             }}
           >
-            Professeure en santé et psychopédagogue certifiée
-          </p>
-          <p
-            className="mt-1 text-lg font-medium text-[#5C5348] md:text-xl"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-            }}
-          >
-            Spécialiste en neuroéducation
+            Professeure en santé • Psychopédagogue • Certifiée en neuroéducation
           </p>
           <h1
             className="mt-5 text-2xl font-light leading-tight text-[#2F2A25] md:text-4xl md:leading-[1.14]"
@@ -116,7 +106,7 @@ export function VideoHero() {
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
             }}
           >
-            Approche spécialisée du fonctionnement cognitif et émotionnel
+            Une approche globale centrée sur les apprentissages, les émotions et le fonctionnement cognitif.
           </h1>
 
           <motion.p
@@ -129,8 +119,8 @@ export function VideoHero() {
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
             }}
           >
-            J’accompagne les enfants, adolescents et parents à dépasser les blocages, comprendre leur fonctionnement et
-            avancer sereinement.
+            J&apos;accompagne les enfants, adolescents, étudiants et familles afin de mieux comprendre leur fonctionnement
+            et de développer des stratégies adaptées à leurs besoins.
           </motion.p>
 
           <motion.div
@@ -195,4 +185,3 @@ export function VideoHero() {
     </motion.section>
   );
 }
-

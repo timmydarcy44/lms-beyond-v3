@@ -4,7 +4,7 @@ import { EDGE_HREFS } from "@/lib/edge-site/constants";
 
 export const metadata: Metadata = {
   title: "Votre orientation — EDGE",
-  description: "Trouvez le parcours ou le format EDGE adapté à votre profil en quelques minutes.",
+  description: "Test d'orientation EDGE : trouvez le parcours ou le format adapté à votre profil en 2 minutes.",
 };
 
 export default function VotreOrientationLayout({ children }: { children: React.ReactNode }) {

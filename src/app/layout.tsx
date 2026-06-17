@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import PageViewTracker from "@/components/analytics/page-view-tracker";
 import { PomodoroProvider } from "@/components/apprenant/pomodoro-provider";
+import { AuthHashRedirect } from "@/components/auth/auth-hash-redirect";
 import { SupabaseProvider } from "@/components/providers/supabase-provider";
 import { headers } from "next/headers";
 import { getServerClient } from "@/lib/supabase/server";
@@ -54,6 +55,7 @@ export default async function RootLayout({
         }
       >
         <SupabaseProvider>
+          <AuthHashRedirect />
           <PomodoroProvider>
             <Suspense fallback={null}>
               <PageViewTracker />

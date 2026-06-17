@@ -21,7 +21,7 @@ type AuthUser = {
 };
 
 const PROFILE_SELECT =
-  "id, email, full_name, avatar_url, role, role_type, company_id, school_id, access_lms, access_connect, access_care";
+  "id, email, full_name, role, role_type, company_id, school_id, first_name, last_name";
 
 const pickProfileByEmail = (rows: ProfileWithAccess[] | null, userId: string) => {
   if (!rows || rows.length === 0) return null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { EdgeSetPasswordForm } from "@/components/edge-site/edge-set-password-form";
 import { useSupabase } from "@/components/providers/supabase-provider";
@@ -14,13 +14,13 @@ function requirementMet(password: string, re: RegExp) {
 }
 
 function SetPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useSupabase();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
 
   const flow = searchParams.get("flow");
@@ -79,24 +79,40 @@ function SetPasswordForm() {
     };
   }, [supabase, authQueryKey, isEdgeParticulier, isEdgeEntreprise, isInviteFlow]);
 
-  const redirectAfterPassword = async () => {
-    if (isInviteFlow) {
-      router.replace(COLLABORATOR_DASHBOARD_PATH);
-      return;
-    }
-    try {
-      const res = await fetch("/api/auth/resolve-destination", { method: "POST" });
-      if (res.ok) {
-        const data = (await res.json()) as { destination?: string };
-        if (data.destination) {
-          router.replace(data.destination);
-          return;
-        }
+  const ensureActiveSession = async () => {
+    const code = searchParams.get("code");
+    const boot = await bootstrapSessionFromUrl(supabase, code);
+    if (boot.session) return boot.session;
+    const { data } = await supabase.auth.getSession();
+    return data.session;
+  };
+
+  const completePasswordSetup = async (pwd: string): Promise<{ ok: true; destination: string } | { ok: false; message: string }> => {
+    const session = await ensureActiveSession();
+    if (session) {
+      const { error } = await supabase.auth.updateUser({
+        password: pwd,
+        data: { needs_password_setup: false },
+      });
+      if (!error) {
+        const destination = isInviteFlow ? COLLABORATOR_DASHBOARD_PATH : nextPath;
+        return { ok: true, destination };
       }
-    } catch {
-      /* fallback nextPath */
+      if (!/session|jwt|token|auth/i.test(error.message)) {
+        return { ok: false, message: error.message };
+      }
     }
-    router.replace(nextPath);
+
+    const res = await fetch("/api/auth/complete-password-setup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string; destination?: string };
+    if (!res.ok) {
+      return { ok: false, message: data.error ?? "Impossible de créer le mot de passe." };
+    }
+    return { ok: true, destination: data.destination ?? (isInviteFlow ? COLLABORATOR_DASHBOARD_PATH : nextPath) };
   };
 
   const rules = useMemo(
@@ -123,14 +139,13 @@ function SetPasswordForm() {
       return;
     }
 
+    setSubmitError(null);
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password,
-        data: { needs_password_setup: false },
-      });
-      if (error) {
-        toast.error(error.message);
+      const result = await completePasswordSetup(password);
+      if (!result.ok) {
+        setSubmitError(result.message);
+        toast.error(result.message);
         return;
       }
       toast.success(
@@ -142,23 +157,24 @@ function SetPasswordForm() {
               ? "Mot de passe créé. Bienvenue sur votre espace collaborateur !"
               : "Mot de passe créé. Bienvenue sur Beyond !",
       );
-      await redirectAfterPassword();
-    } catch {
-      toast.error("Une erreur est survenue.");
+      window.location.assign(result.destination);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Une erreur est survenue.";
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleEdgeSubmit = async (pwd: string) => {
+    setSubmitError(null);
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: pwd,
-        data: { needs_password_setup: false },
-      });
-      if (error) {
-        toast.error(error.message);
+      const result = await completePasswordSetup(pwd);
+      if (!result.ok) {
+        setSubmitError(result.message);
+        toast.error(result.message);
         return;
       }
       toast.success(
@@ -168,9 +184,11 @@ function SetPasswordForm() {
             ? "Bienvenue — votre espace collaborateur est prêt."
             : "Bienvenue sur EDGE — votre cockpit est prêt.",
       );
-      await redirectAfterPassword();
-    } catch {
-      toast.error("Une erreur est survenue.");
+      window.location.assign(result.destination);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Une erreur est survenue.";
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -247,6 +265,7 @@ function SetPasswordForm() {
       <EdgeSetPasswordForm
         variant={isEdgeEntreprise ? "entreprise" : isInviteFlow ? "salarie" : "particulier"}
         isLoading={isLoading}
+        errorMessage={submitError}
         onSubmit={(pwd) => void handleEdgeSubmit(pwd)}
       />
     );

@@ -5,6 +5,7 @@ import PageViewTracker from "@/components/analytics/page-view-tracker";
 import { PomodoroProvider } from "@/components/apprenant/pomodoro-provider";
 import { AuthHashRedirect } from "@/components/auth/auth-hash-redirect";
 import { SupabaseProvider } from "@/components/providers/supabase-provider";
+import { Toaster } from "sonner";
 import { headers } from "next/headers";
 import { getServerClient } from "@/lib/supabase/server";
 
@@ -62,6 +63,7 @@ export default async function RootLayout({
             </Suspense>
             {children}
           </PomodoroProvider>
+          <Toaster richColors position="top-center" />
         </SupabaseProvider>
       </body>
     </html>

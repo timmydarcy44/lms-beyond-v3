@@ -18,9 +18,15 @@ type EdgeSetPasswordFormProps = {
   isLoading: boolean;
   onSubmit: (password: string) => void;
   variant?: "particulier" | "entreprise" | "salarie";
+  errorMessage?: string | null;
 };
 
-export function EdgeSetPasswordForm({ isLoading, onSubmit, variant = "particulier" }: EdgeSetPasswordFormProps) {
+export function EdgeSetPasswordForm({
+  isLoading,
+  onSubmit,
+  variant = "particulier",
+  errorMessage,
+}: EdgeSetPasswordFormProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -166,6 +172,12 @@ export function EdgeSetPasswordForm({ isLoading, onSubmit, variant = "particulie
         </div>
 
         <div className="min-h-6 flex-1" />
+
+        {errorMessage ? (
+          <p className="mb-3 rounded-xl border border-[#FF3B30]/35 bg-[#FF3B30]/10 px-4 py-3 text-sm text-[#FF6B5E]">
+            {errorMessage}
+          </p>
+        ) : null}
 
         <button
           type="submit"

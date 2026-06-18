@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Download, Upload, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
+import { CollaboratorInviteSuccessOverlay } from "@/components/enterprise/collaborator-invite-success-overlay";
 import type { EntrepriseEmployee } from "@/hooks/use-entreprise-overview";
 
 type Props = {
@@ -52,6 +53,8 @@ export function EnterpriseEmployeeCsvActions({
   } | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [inviteSuccessOpen, setInviteSuccessOpen] = useState(false);
+  const [invitedCollaboratorName, setInvitedCollaboratorName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [addForm, setAddForm] = useState({
     first_name: "",
@@ -136,11 +139,7 @@ export function EnterpriseEmployeeCsvActions({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Erreur");
-      toast.success(
-        json.invite_sent
-          ? "Collaborateur ajouté — invitation envoyée par email"
-          : "Collaborateur ajouté",
-      );
+      const displayName = [addForm.first_name, addForm.last_name].filter(Boolean).join(" ").trim();
       setShowAddModal(false);
       setAddForm({
         first_name: "",
@@ -150,6 +149,12 @@ export function EnterpriseEmployeeCsvActions({
         job_title: "",
       });
       onSuccess();
+      if (json.invite_sent) {
+        setInvitedCollaboratorName(displayName);
+        setInviteSuccessOpen(true);
+      } else {
+        toast.success("Collaborateur ajouté");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -306,7 +311,7 @@ export function EnterpriseEmployeeCsvActions({
               <p>✉️ Un email d&apos;invitation sera envoyé automatiquement à</p>
               <p className="mt-1 font-semibold">{addForm.email || "l'adresse saisie"}</p>
               <p className="mt-2 text-violet-700">
-                → Création automatique de son espace /dashboard/apprenant
+                → Création automatique de son espace salarié
               </p>
             </div>
             <div className="mt-5 flex justify-end gap-2 border-t border-gray-100 pt-4">
@@ -329,6 +334,12 @@ export function EnterpriseEmployeeCsvActions({
           </div>
         </div>
       ) : null}
+
+      <CollaboratorInviteSuccessOverlay
+        open={inviteSuccessOpen}
+        collaboratorName={invitedCollaboratorName}
+        onClose={() => setInviteSuccessOpen(false)}
+      />
     </>
   );
 }

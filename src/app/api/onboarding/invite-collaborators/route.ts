@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
+import {
+  buildCollaboratorInviteMetadata,
+  buildCollaboratorSetPasswordUrl,
+} from "@/lib/entreprise/collaborator-invite";
+import { syncCollaboratorProfileAfterInvite } from "@/lib/entreprise/sync-collaborator-profile";
 import { sendCollaboratorInviteEmail } from "@/lib/onboarding/emails";
 import { appOrigin } from "@/lib/onboarding/slug";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -56,24 +61,38 @@ export async function POST(request: NextRequest) {
 
   for (const emp of withEmail) {
     const email = String(emp.email).trim().toLowerCase();
+    const firstName = String(emp.first_name ?? "").trim();
     try {
-      const { error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
-        data: {
-          organization_id: organisationId,
-          role: "employee",
-          employee_id: emp.id,
-        },
-        redirectTo: `${origin}/dashboard/salarie`,
+      const setPasswordUrl = buildCollaboratorSetPasswordUrl(origin);
+      const inviteMetadata = buildCollaboratorInviteMetadata({
+        firstName,
+        organizationId: organisationId,
+        employeeId: emp.id,
+      });
+      const { data: inviteData, error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
+        data: inviteMetadata,
+        redirectTo: setPasswordUrl,
       });
       if (inviteErr) {
         failures.push(`${email}: ${inviteErr.message}`);
         continue;
       }
+      const invitedUserId = inviteData?.user?.id;
+      if (invitedUserId) {
+        await syncCollaboratorProfileAfterInvite(service, {
+          userId: invitedUserId,
+          email,
+          firstName,
+          lastName: "",
+          organizationId: organisationId,
+          employeeId: emp.id,
+        });
+      }
       await sendCollaboratorInviteEmail({
         email,
-        firstName: String(emp.first_name ?? ""),
+        firstName,
         companyName: String(org.name),
-        inviteLink: `${origin}/dashboard/salarie`,
+        inviteLink: setPasswordUrl,
       });
       sent += 1;
     } catch (e) {

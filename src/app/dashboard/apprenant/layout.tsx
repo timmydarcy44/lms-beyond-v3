@@ -58,6 +58,13 @@ export default async function ApprenantSuiteLayout({ children }: { children: Rea
   if (meta.needs_password_setup === true) {
     const role = String(profile?.role ?? "").toLowerCase();
     const roleType = String(profile?.role_type ?? "").toLowerCase();
+    const isCollaborator =
+      Boolean(meta.employee_id) ||
+      ["employee", "salarie", "collaborateur", "collaborator"].includes(role) ||
+      ["employee", "salarie", "collaborateur", "collaborator"].includes(roleType);
+    if (isCollaborator) {
+      redirect(`/auth/set-password?next=${encodeURIComponent("/dashboard/salarie")}&flow=invite`);
+    }
     const isEntreprise =
       role === "entreprise" ||
       roleType === "entreprise" ||

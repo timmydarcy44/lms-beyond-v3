@@ -24,6 +24,10 @@ export const PROFILE_ROLE_DESTINATIONS: Record<string, string> = {
   student: "/dashboard/apprenant",
   learner: "/dashboard/apprenant",
   particulier: "/dashboard/apprenant",
+  salarie: "/dashboard/salarie",
+  collaborateur: "/dashboard/salarie",
+  employee: "/dashboard/salarie",
+  collaborator: "/dashboard/salarie",
   formateur: "/dashboard/formateur",
   instructor: "/dashboard/formateur",
   mentor: "/dashboard/formateur",
@@ -53,15 +57,24 @@ export function resolveDestinationFromProfile(
     role?: string | null;
     role_type?: string | null;
     email?: string | null;
+    company_id?: string | null;
   } | null,
 ): string | null {
   if (!profile) return null;
   const jessicaDest = resolveJessicaPostLoginDestination(profile.email);
   if (jessicaDest) return jessicaDest;
-  return (
-    resolveDestinationFromProfileRole(profile.role) ??
-    resolveDestinationFromProfileRole(profile.role_type)
-  );
+
+  const roleDest = resolveDestinationFromProfileRole(profile.role);
+  const roleTypeDest = resolveDestinationFromProfileRole(profile.role_type);
+  const genericLearnerRole =
+    roleDest === "/dashboard/apprenant" &&
+    ["learner", "student", "apprenant"].includes(normalize(profile.role));
+
+  if (roleTypeDest === "/dashboard/salarie" && genericLearnerRole && profile.company_id) {
+    return roleTypeDest;
+  }
+
+  return roleDest ?? roleTypeDest;
 }
 
 export function isKnownProfileRole(role: string | null | undefined): boolean {

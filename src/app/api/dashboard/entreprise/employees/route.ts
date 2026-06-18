@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildEmployeeInsertRow } from "@/lib/entreprise/employees-insert";
+import {
+  buildCollaboratorInviteMetadata,
+  buildCollaboratorSetPasswordUrl,
+} from "@/lib/entreprise/collaborator-invite";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import {
   resolveAuthUserIdByEmail,
@@ -84,36 +88,21 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
       origin;
     const siteBase = redirectTo.replace(/\/$/, "");
-    const apprenantNext = "/dashboard/apprenant";
-    const setPasswordUrl = `${siteBase}/auth/set-password?next=${encodeURIComponent(apprenantNext)}&flow=invite`;
+    const setPasswordUrl = buildCollaboratorSetPasswordUrl(siteBase);
+    const inviteMetadata = buildCollaboratorInviteMetadata({
+      firstName: first_name,
+      lastName: last_name,
+      organizationId: orgId,
+      employeeId: employee.id,
+    });
     const { data: inviteData, error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
-      data: {
-        role: "apprenant",
-        first_name: first_name,
-        last_name: last_name,
-        prenom: first_name,
-        nom: last_name,
-        company_id: orgId,
-        organization_id: orgId,
-        employee_id: employee.id,
-        needs_password_setup: true,
-      },
+      data: inviteMetadata,
       redirectTo: setPasswordUrl,
     });
     const invitedUserId = inviteData?.user?.id ?? (await resolveAuthUserIdByEmail(service, email));
     if (invitedUserId) {
       await service.auth.admin.updateUserById(invitedUserId, {
-        user_metadata: {
-          role: "apprenant",
-          first_name,
-          last_name,
-          prenom: first_name,
-          nom: last_name,
-          company_id: orgId,
-          organization_id: orgId,
-          employee_id: employee.id,
-          needs_password_setup: true,
-        },
+        user_metadata: inviteMetadata,
       });
       await syncCollaboratorProfileAfterInvite(service, {
         userId: invitedUserId,

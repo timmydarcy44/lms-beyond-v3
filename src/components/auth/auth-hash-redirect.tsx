@@ -4,8 +4,13 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
   buildEdgeSetPasswordPath,
+  decodeJwtPayload,
   resolveEdgeSignupFlowFromAccessToken,
 } from "@/lib/auth/edge-signup-flow";
+import {
+  buildCollaboratorSetPasswordPath,
+  isCollaboratorInviteMetadata,
+} from "@/lib/entreprise/collaborator-invite";
 
 /**
  * Supabase renvoie parfois les tokens (#access_token) sur la home si redirect_to
@@ -36,6 +41,12 @@ export function AuthHashRedirect() {
 
     const accessToken = hashParams.get("access_token");
     if (accessToken) {
+      const payload = decodeJwtPayload(accessToken);
+      const meta = (payload?.user_metadata ?? payload?.app_metadata) as Record<string, unknown> | undefined;
+      if (isCollaboratorInviteMetadata(meta ?? null)) {
+        window.location.replace(buildCollaboratorSetPasswordPath(hash));
+        return;
+      }
       const flow = resolveEdgeSignupFlowFromAccessToken(accessToken);
       window.location.replace(buildEdgeSetPasswordPath({ flow, hash }));
     }

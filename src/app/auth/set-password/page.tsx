@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { EdgeSetPasswordForm } from "@/components/edge-site/edge-set-password-form";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { bootstrapSessionFromUrl } from "@/lib/auth/bootstrap-session-from-url";
+import { COLLABORATOR_DASHBOARD_PATH } from "@/lib/entreprise/collaborator-invite";
 import { toast } from "sonner";
 
 function requirementMet(password: string, re: RegExp) {
@@ -22,11 +23,12 @@ function SetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
 
-  const nextPath = searchParams.get("next") || "/dashboard/apprenant";
   const flow = searchParams.get("flow");
+  const nextPath = searchParams.get("next") || (flow === "invite" ? COLLABORATOR_DASHBOARD_PATH : "/dashboard/apprenant");
   const isEdgeParticulier = flow === "particulier";
   const isEdgeEntreprise = flow === "entreprise";
-  const isEdgeMarketingFlow = isEdgeParticulier || isEdgeEntreprise;
+  const isInviteFlow = flow === "invite";
+  const isEdgeMarketingFlow = isEdgeParticulier || isEdgeEntreprise || isInviteFlow;
   const authQueryKey = searchParams.toString();
 
   useEffect(() => {
@@ -56,7 +58,9 @@ function SetPasswordForm() {
             ? "Lien expiré ou invalide. Réinscrivez-vous sur la page entreprise EDGE pour recevoir un nouvel email."
             : isEdgeParticulier
               ? "Lien expiré ou invalide. Réinscrivez-vous sur la page EDGE pour recevoir un nouvel email."
-              : "Lien invalide ou expiré. Demandez une nouvelle invitation.",
+              : isInviteFlow
+                ? "Lien expiré ou invalide. Demandez une nouvelle invitation à votre responsable RH."
+                : "Lien invalide ou expiré. Demandez une nouvelle invitation.",
         );
       } catch (error) {
         if (!cancelled) {
@@ -73,7 +77,27 @@ function SetPasswordForm() {
       cancelled = true;
       window.clearTimeout(failTimer);
     };
-  }, [supabase, authQueryKey, isEdgeParticulier, isEdgeEntreprise]);
+  }, [supabase, authQueryKey, isEdgeParticulier, isEdgeEntreprise, isInviteFlow]);
+
+  const redirectAfterPassword = async () => {
+    if (isInviteFlow) {
+      router.replace(COLLABORATOR_DASHBOARD_PATH);
+      return;
+    }
+    try {
+      const res = await fetch("/api/auth/resolve-destination", { method: "POST" });
+      if (res.ok) {
+        const data = (await res.json()) as { destination?: string };
+        if (data.destination) {
+          router.replace(data.destination);
+          return;
+        }
+      }
+    } catch {
+      /* fallback nextPath */
+    }
+    router.replace(nextPath);
+  };
 
   const rules = useMemo(
     () => [
@@ -114,9 +138,11 @@ function SetPasswordForm() {
           ? "Mot de passe créé. Bienvenue sur votre espace entreprise EDGE !"
           : isEdgeParticulier
             ? "Mot de passe créé. Bienvenue sur EDGE !"
-            : "Mot de passe créé. Bienvenue sur Beyond !",
+            : isInviteFlow
+              ? "Mot de passe créé. Bienvenue sur votre espace collaborateur !"
+              : "Mot de passe créé. Bienvenue sur Beyond !",
       );
-      router.replace(nextPath);
+      await redirectAfterPassword();
     } catch {
       toast.error("Une erreur est survenue.");
     } finally {
@@ -138,9 +164,11 @@ function SetPasswordForm() {
       toast.success(
         isEdgeEntreprise
           ? "Bienvenue — votre espace entreprise EDGE est prêt."
-          : "Bienvenue sur EDGE — votre cockpit est prêt.",
+          : isInviteFlow
+            ? "Bienvenue — votre espace collaborateur est prêt."
+            : "Bienvenue sur EDGE — votre cockpit est prêt.",
       );
-      router.replace(nextPath);
+      await redirectAfterPassword();
     } catch {
       toast.error("Une erreur est survenue.");
     } finally {
@@ -217,7 +245,7 @@ function SetPasswordForm() {
   if (isEdgeMarketingFlow) {
     return (
       <EdgeSetPasswordForm
-        variant={isEdgeEntreprise ? "entreprise" : "particulier"}
+        variant={isEdgeEntreprise ? "entreprise" : isInviteFlow ? "salarie" : "particulier"}
         isLoading={isLoading}
         onSubmit={(pwd) => void handleEdgeSubmit(pwd)}
       />

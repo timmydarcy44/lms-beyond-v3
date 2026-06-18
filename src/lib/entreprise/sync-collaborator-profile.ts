@@ -21,8 +21,8 @@ export async function syncCollaboratorProfileAfterInvite(
     first_name: params.firstName,
     last_name: params.lastName,
     full_name: fullName || params.email,
-    role: "apprenant",
-    role_type: "apprenant",
+    role: "learner",
+    role_type: "salarie",
     company_id: params.organizationId,
   };
 
@@ -34,7 +34,7 @@ export async function syncCollaboratorProfileAfterInvite(
           id: params.userId,
           email: params.email.trim().toLowerCase(),
           full_name: fullName || params.email,
-          role: "apprenant",
+          role: "learner",
         },
         { onConflict: "id" },
       )

@@ -5,6 +5,11 @@ import {
   resolveEdgeFlowFromNextPath,
   resolveEdgeSignupFlowFromMetadata,
 } from "@/lib/auth/edge-signup-flow";
+import {
+  COLLABORATOR_DASHBOARD_PATH,
+  COLLABORATOR_INVITE_FLOW,
+  isCollaboratorInviteMetadata,
+} from "@/lib/entreprise/collaborator-invite";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -37,9 +42,14 @@ export async function GET(request: NextRequest) {
       const flowFromParam = flowParam === "entreprise" || flowParam === "particulier" ? flowParam : null;
       const flowFromNext = resolveEdgeFlowFromNextPath(decodedNext);
       const flowFromMeta = resolveEdgeSignupFlowFromMetadata(meta);
-      const flow = flowFromParam ?? flowFromNext ?? flowFromMeta;
+      const isCollaboratorInvite = isCollaboratorInviteMetadata(meta);
+      const flow = isCollaboratorInvite
+        ? COLLABORATOR_INVITE_FLOW
+        : (flowFromParam ?? flowFromNext ?? flowFromMeta);
 
-      const targetNext = decodedNext ?? defaultNextPathForEdgeFlow(flow);
+      const targetNext = isCollaboratorInvite
+        ? COLLABORATOR_DASHBOARD_PATH
+        : (decodedNext ?? defaultNextPathForEdgeFlow(flowFromParam ?? flowFromNext ?? flowFromMeta));
 
       if (type === "recovery") {
         return NextResponse.redirect(new URL("/login?view=update_password", url.origin));

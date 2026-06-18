@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 type CollaboratorInviteSuccessOverlayProps = {
   open: boolean;
   collaboratorName?: string;
+  inviteSent?: boolean;
   onClose: () => void;
   autoCloseMs?: number;
 };
@@ -13,6 +14,7 @@ type CollaboratorInviteSuccessOverlayProps = {
 export function CollaboratorInviteSuccessOverlay({
   open,
   collaboratorName,
+  inviteSent = true,
   onClose,
   autoCloseMs = 2800,
 }: CollaboratorInviteSuccessOverlayProps) {
@@ -41,14 +43,20 @@ export function CollaboratorInviteSuccessOverlay({
           <Check className="h-7 w-7" strokeWidth={2.5} aria-hidden />
         </div>
         <p className="mt-5 text-[1.05rem] font-semibold leading-snug tracking-tight text-gray-950">
-          {collaboratorName
-            ? `${collaboratorName} vient de recevoir une invitation`
-            : "Votre salarié(e) vient de recevoir une invitation"}
+          {inviteSent
+            ? collaboratorName
+              ? `${collaboratorName} vient de recevoir une invitation`
+              : "Votre salarié(e) vient de recevoir une invitation"
+            : collaboratorName
+              ? `${collaboratorName} a été ajouté(e) à votre équipe`
+              : "Collaborateur ajouté à votre équipe"}
         </p>
         <p className="mt-2 text-sm leading-relaxed text-gray-500">
-          {collaboratorName
-            ? "Un email lui permet de créer son mot de passe et accéder à son espace salarié."
-            : "Un email permet de créer le mot de passe et d'accéder à l'espace salarié."}
+          {inviteSent
+            ? collaboratorName
+              ? "Un email lui permet de créer son mot de passe et accéder à son espace salarié."
+              : "Un email permet de créer le mot de passe et d'accéder à l'espace salarié."
+            : "L'invitation par email n'a pas pu être envoyée automatiquement. Vous pourrez la renvoyer depuis la fiche collaborateur."}
         </p>
       </div>
     </div>

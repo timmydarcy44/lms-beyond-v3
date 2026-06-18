@@ -55,6 +55,7 @@ export function EnterpriseEmployeeCsvActions({
   const [showAddModal, setShowAddModal] = useState(false);
   const [inviteSuccessOpen, setInviteSuccessOpen] = useState(false);
   const [invitedCollaboratorName, setInvitedCollaboratorName] = useState("");
+  const [lastInviteSent, setLastInviteSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [addForm, setAddForm] = useState({
     first_name: "",
@@ -149,12 +150,9 @@ export function EnterpriseEmployeeCsvActions({
         job_title: "",
       });
       onSuccess();
-      if (json.invite_sent) {
-        setInvitedCollaboratorName(displayName);
-        setInviteSuccessOpen(true);
-      } else {
-        toast.success("Collaborateur ajouté");
-      }
+      setInvitedCollaboratorName(displayName);
+      setLastInviteSent(Boolean(json.invite_sent));
+      setInviteSuccessOpen(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -338,6 +336,7 @@ export function EnterpriseEmployeeCsvActions({
       <CollaboratorInviteSuccessOverlay
         open={inviteSuccessOpen}
         collaboratorName={invitedCollaboratorName}
+        inviteSent={lastInviteSent}
         onClose={() => setInviteSuccessOpen(false)}
       />
     </>

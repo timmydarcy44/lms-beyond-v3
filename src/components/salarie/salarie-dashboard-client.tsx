@@ -67,12 +67,38 @@ export function SalarieDashboardClient() {
           .eq("id", user.id)
           .maybeSingle();
 
+        let employeeFirstName: string | null = null;
+        const { data: employeeRow } = await supabase
+          .from("employees")
+          .select("first_name, last_name")
+          .eq("profile_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        employeeFirstName = employeeRow?.first_name ?? null;
+
+        if (!employeeFirstName && user.email) {
+          const { data: employeeByEmail } = await supabase
+            .from("employees")
+            .select("first_name, last_name")
+            .eq("email", user.email.trim().toLowerCase())
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          employeeFirstName = employeeByEmail?.first_name ?? null;
+        }
+
         if (!cancelled) {
           const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
           setFirstName(
             resolveLearnerDisplayFirstName({
-              profileFirstName: profile?.first_name,
-              metadataFirstName: typeof meta.first_name === "string" ? meta.first_name : null,
+              profileFirstName: profile?.first_name ?? employeeFirstName,
+              metadataFirstName:
+                typeof meta.first_name === "string"
+                  ? meta.first_name
+                  : typeof meta.prenom === "string"
+                    ? meta.prenom
+                    : null,
               metadataPrenom: typeof meta.prenom === "string" ? meta.prenom : null,
               metadataGivenName: typeof meta.given_name === "string" ? meta.given_name : null,
               email: profile?.email ?? user.email,

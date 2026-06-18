@@ -197,8 +197,16 @@ export function EntreprisesPageContent() {
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
               <EdgeButton
-                href="#contact"
+                href="/entreprises/connexion"
                 className="!border-[#E63329] !bg-[#E63329] px-8 py-3.5 text-sm font-semibold"
+                ariaLabel="Essai gratuit 30 jours"
+              >
+                Essai gratuit 30 jours
+              </EdgeButton>
+              <EdgeButton
+                href="#contact"
+                variant="secondary-dark"
+                className="px-8 py-3.5 text-sm font-semibold"
                 ariaLabel="Demander un devis"
               >
                 Demander un devis
@@ -206,7 +214,7 @@ export function EntreprisesPageContent() {
               <EdgeButton
                 href="#approche"
                 variant="secondary-dark"
-                className="px-8 py-3.5 text-sm font-semibold"
+                className="px-8 py-3.5 text-sm font-semibold sm:ml-0"
                 ariaLabel="Voir comment ça marche"
               >
                 Voir comment ça marche
@@ -389,11 +397,11 @@ export function EntreprisesPageContent() {
                 <p className="mt-2 text-sm text-white/50">3 licences RH offertes</p>
               </div>
               <EdgeButton
-                href="#contact"
+                href="/entreprises/connexion"
                 className="mt-4 !border-[#E63329] !bg-[#E63329] px-8 py-3.5 text-sm font-semibold lg:mt-0"
-                ariaLabel="Demander un accès démo"
+                ariaLabel="Démarrer l'essai gratuit 30 jours"
               >
-                Demander un accès démo
+                Essai gratuit 30 jours
               </EdgeButton>
             </div>
 

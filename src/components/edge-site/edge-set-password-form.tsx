@@ -17,9 +17,10 @@ function scorePassword(value: string): number {
 type EdgeSetPasswordFormProps = {
   isLoading: boolean;
   onSubmit: (password: string) => void;
+  variant?: "particulier" | "entreprise";
 };
 
-export function EdgeSetPasswordForm({ isLoading, onSubmit }: EdgeSetPasswordFormProps) {
+export function EdgeSetPasswordForm({ isLoading, onSubmit, variant = "particulier" }: EdgeSetPasswordFormProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -61,11 +62,13 @@ export function EdgeSetPasswordForm({ isLoading, onSubmit }: EdgeSetPasswordForm
 
       <form onSubmit={handleSubmit} className="mx-auto flex w-full max-w-[360px] flex-1 flex-col px-6 pb-7 pt-2">
         <p className="mb-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
-          EDGE · Espace compétences
+          {variant === "entreprise" ? "EDGE · Espace entreprise" : "EDGE · Espace compétences"}
         </p>
         <h1 className="text-[30px] font-bold leading-[1.15] tracking-[-0.01em]">Dernière étape</h1>
         <p className="mb-9 mt-2 max-w-[320px] text-[14.5px] leading-relaxed text-white/55">
-          Votre cockpit DISC, IDMC et soft skills vous attend.
+          {variant === "entreprise"
+            ? "Votre dashboard RH Beyond et vos diagnostics équipe vous attendent."
+            : "Votre cockpit DISC, IDMC et soft skills vous attend."}
         </p>
 
         <div className="mb-[18px]">
@@ -174,7 +177,9 @@ export function EdgeSetPasswordForm({ isLoading, onSubmit }: EdgeSetPasswordForm
             "Accéder à mon espace"
           )}
         </button>
-        <p className="mt-[18px] text-center text-xs text-white/32">Inscription gratuite · sans engagement</p>
+        <p className="mt-[18px] text-center text-xs text-white/32">
+          {variant === "entreprise" ? "Essai 30 jours · sans engagement" : "Inscription gratuite · sans engagement"}
+        </p>
       </form>
 
       <div className="mx-auto mb-2 h-[5px] w-[134px] rounded-sm bg-white/40" aria-hidden />

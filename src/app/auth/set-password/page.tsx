@@ -25,6 +25,8 @@ function SetPasswordForm() {
   const nextPath = searchParams.get("next") || "/dashboard/apprenant";
   const flow = searchParams.get("flow");
   const isEdgeParticulier = flow === "particulier";
+  const isEdgeEntreprise = flow === "entreprise";
+  const isEdgeMarketingFlow = isEdgeParticulier || isEdgeEntreprise;
   const authQueryKey = searchParams.toString();
 
   useEffect(() => {
@@ -50,9 +52,11 @@ function SetPasswordForm() {
         setBootState("error");
         if (error) console.error("[set-password] session bootstrap:", error);
         toast.error(
-          isEdgeParticulier
-            ? "Lien expiré ou invalide. Réinscrivez-vous sur la page EDGE pour recevoir un nouvel email."
-            : "Lien invalide ou expiré. Demandez une nouvelle invitation.",
+          isEdgeEntreprise
+            ? "Lien expiré ou invalide. Réinscrivez-vous sur la page entreprise EDGE pour recevoir un nouvel email."
+            : isEdgeParticulier
+              ? "Lien expiré ou invalide. Réinscrivez-vous sur la page EDGE pour recevoir un nouvel email."
+              : "Lien invalide ou expiré. Demandez une nouvelle invitation.",
         );
       } catch (error) {
         if (!cancelled) {
@@ -69,7 +73,7 @@ function SetPasswordForm() {
       cancelled = true;
       window.clearTimeout(failTimer);
     };
-  }, [supabase, authQueryKey, isEdgeParticulier]);
+  }, [supabase, authQueryKey, isEdgeParticulier, isEdgeEntreprise]);
 
   const rules = useMemo(
     () => [
@@ -105,7 +109,13 @@ function SetPasswordForm() {
         toast.error(error.message);
         return;
       }
-      toast.success(isEdgeParticulier ? "Mot de passe créé. Bienvenue sur EDGE !" : "Mot de passe créé. Bienvenue sur Beyond !");
+      toast.success(
+        isEdgeEntreprise
+          ? "Mot de passe créé. Bienvenue sur votre espace entreprise EDGE !"
+          : isEdgeParticulier
+            ? "Mot de passe créé. Bienvenue sur EDGE !"
+            : "Mot de passe créé. Bienvenue sur Beyond !",
+      );
       router.replace(nextPath);
     } catch {
       toast.error("Une erreur est survenue.");
@@ -125,7 +135,11 @@ function SetPasswordForm() {
         toast.error(error.message);
         return;
       }
-      toast.success("Bienvenue sur EDGE — votre cockpit est prêt.");
+      toast.success(
+        isEdgeEntreprise
+          ? "Bienvenue — votre espace entreprise EDGE est prêt."
+          : "Bienvenue sur EDGE — votre cockpit est prêt.",
+      );
       router.replace(nextPath);
     } catch {
       toast.error("Une erreur est survenue.");
@@ -134,7 +148,7 @@ function SetPasswordForm() {
     }
   };
 
-  if (bootState === "loading" && isEdgeParticulier) {
+  if (bootState === "loading" && isEdgeMarketingFlow) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[#0a0a0a]">
         <Loader2 className="h-8 w-8 animate-spin text-white/60" />
@@ -144,13 +158,15 @@ function SetPasswordForm() {
 
   if (bootState === "loading") {
     return (
-      <div className={`flex min-h-screen items-center justify-center ${isEdgeParticulier ? "bg-[#f5f5f5]" : "bg-white"}`}>
-        <Loader2 className={`h-8 w-8 animate-spin ${isEdgeParticulier ? "text-edge-black" : "text-violet-600"}`} />
+      <div className={`flex min-h-screen items-center justify-center ${isEdgeMarketingFlow ? "bg-[#f5f5f5]" : "bg-white"}`}>
+        <Loader2 className={`h-8 w-8 animate-spin ${isEdgeMarketingFlow ? "text-edge-black" : "text-violet-600"}`} />
       </div>
     );
   }
 
-  if (bootState === "error" && isEdgeParticulier) {
+  if (bootState === "error" && isEdgeMarketingFlow) {
+    const retryHref = isEdgeEntreprise ? "/entreprises/connexion" : "/particuliers#signup";
+    const retryLabel = isEdgeEntreprise ? "Réinscription entreprise" : "Réinscription EDGE";
     return (
       <div
         className="flex min-h-dvh items-center justify-center px-6 text-white"
@@ -165,10 +181,10 @@ function SetPasswordForm() {
             Ce lien n&apos;est plus valable. Réinscrivez-vous pour recevoir un nouvel email.
           </p>
           <a
-            href="/particuliers#signup"
+            href={retryHref}
             className="mt-8 inline-flex rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-[#0a0a0a]"
           >
-            Réinscription EDGE
+            {retryLabel}
           </a>
         </div>
       </div>
@@ -177,20 +193,20 @@ function SetPasswordForm() {
 
   if (bootState === "error") {
     return (
-      <div className={`flex min-h-screen items-center justify-center px-6 ${isEdgeParticulier ? "bg-[#f5f5f5]" : "bg-white"}`}>
+      <div className={`flex min-h-screen items-center justify-center px-6 ${isEdgeMarketingFlow ? "bg-[#f5f5f5]" : "bg-white"}`}>
         <div className="max-w-md text-center">
           <h1 className="text-xl font-semibold text-gray-950">Lien expiré ou invalide</h1>
           <p className="mt-3 text-sm text-gray-600">
-            {isEdgeParticulier
+            {isEdgeMarketingFlow
               ? "Ce lien de confirmation n'est plus valable. Réinscrivez-vous pour recevoir un nouvel email."
               : "Ce lien d'invitation n'est plus valable. Demandez une nouvelle invitation à votre administrateur."}
           </p>
-          {isEdgeParticulier ? (
+          {isEdgeMarketingFlow ? (
             <a
-              href="/particuliers#signup"
+              href={isEdgeEntreprise ? "/entreprises/connexion" : "/particuliers#signup"}
               className="mt-6 inline-flex rounded-full bg-edge-black px-6 py-3 text-sm font-medium text-white"
             >
-              Réinscription EDGE
+              {isEdgeEntreprise ? "Réinscription entreprise" : "Réinscription EDGE"}
             </a>
           ) : null}
         </div>
@@ -198,8 +214,14 @@ function SetPasswordForm() {
     );
   }
 
-  if (isEdgeParticulier) {
-    return <EdgeSetPasswordForm isLoading={isLoading} onSubmit={(pwd) => void handleEdgeSubmit(pwd)} />;
+  if (isEdgeMarketingFlow) {
+    return (
+      <EdgeSetPasswordForm
+        variant={isEdgeEntreprise ? "entreprise" : "particulier"}
+        isLoading={isLoading}
+        onSubmit={(pwd) => void handleEdgeSubmit(pwd)}
+      />
+    );
   }
 
   return (

@@ -30,6 +30,8 @@ export const EDGE_HREFS = {
   login: "/login",
   /** Inscription gratuite — espace profil & tests (page edgebs.fr/particuliers) */
   employabilitySignup: "/particuliers",
+  /** Inscription entreprise — essai 30 jours (edgebs.fr/entreprises/connexion) */
+  entrepriseSignup: "/entreprises/connexion",
   candidater: "/postuler/commercial-ia",
   ecole: "#ecole",
   aPropos: "#a-propos",

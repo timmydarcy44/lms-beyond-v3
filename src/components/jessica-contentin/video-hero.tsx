@@ -100,15 +100,6 @@ export function VideoHero() {
           >
             Professeure en santé • Psychopédagogue • Certifiée en neuroéducation
           </p>
-          <h1
-            className="mt-5 text-2xl font-light leading-tight text-[#2F2A25] md:text-4xl md:leading-[1.14]"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-            }}
-          >
-            Une approche globale centrée sur les apprentissages, les émotions et le fonctionnement cognitif.
-          </h1>
-
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}

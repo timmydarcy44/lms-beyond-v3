@@ -10,7 +10,8 @@ export function EdgeLabShell({ children }: { children: React.ReactNode }) {
   const isMinimalShell =
     pathname?.includes("/votre-orientation") ||
     pathname?.includes("/orientation") ||
-    pathname?.includes("/postuler");
+    pathname?.includes("/postuler") ||
+    pathname?.includes("/entreprises/connexion");
 
   if (isMinimalShell) {
     return <>{children}</>;

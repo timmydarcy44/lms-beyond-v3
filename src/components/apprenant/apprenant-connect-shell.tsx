@@ -187,6 +187,7 @@ export function ApprenantConnectShell({
   const isAssessmentImmersive = Boolean(
     pathname?.includes("/dashboard/apprenant/disc/test") ||
       pathname?.includes("/dashboard/apprenant/idmc/test") ||
+      pathname?.includes("/dashboard/apprenant/idmc-intro") ||
       pathname?.includes("/dashboard/apprenant/test-comportemental-intro") ||
       pathname?.includes("/soft-skills/test"),
   );

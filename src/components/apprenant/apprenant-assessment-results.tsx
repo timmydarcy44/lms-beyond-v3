@@ -194,7 +194,13 @@ export function ApprenantAssessmentResults({
       </article>
 
       <article className={resultCard}>
-        <p className={cockpit ? APPRENANT_CARD_KICKER : "text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]"}>
+        <p
+          className={
+            cockpit
+              ? APPRENANT_CARD_KICKER
+              : "text-[10px] font-medium uppercase tracking-[0.25em] text-[#3D7BFF]"
+          }
+        >
           Motivation
         </p>
         <h3 className={`mt-1 text-base font-semibold ${cockpit ? "text-white" : "text-[#0a0a0a]"}`}>IDMC</h3>
@@ -204,8 +210,8 @@ export function ApprenantAssessmentResults({
               <span
                 className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold"
                 style={{
-                  backgroundColor: cockpit ? COCKPIT_ACCENT_BG : "rgba(255,59,48,0.1)",
-                  color: cockpit ? COCKPIT_ACCENT : "#FF3B30",
+                  backgroundColor: COCKPIT_ACCENT_BG,
+                  color: COCKPIT_ACCENT,
                 }}
               >
                 {idmcLevel}
@@ -220,7 +226,7 @@ export function ApprenantAssessmentResults({
                 className={
                   cockpit
                     ? `${CONNECT_BTN_SECONDARY} w-full`
-                    : "inline-flex w-full items-center justify-center rounded-full border border-[#FF3B30]/30 bg-[#FF3B30]/[0.06] px-4 py-2.5 text-sm font-semibold text-[#FF3B30] transition hover:bg-[#FF3B30]/10"
+                    : "inline-flex w-full items-center justify-center rounded-full border border-[rgba(61,123,255,0.35)] bg-[rgba(61,123,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#3D7BFF] transition hover:bg-[rgba(61,123,255,0.12)]"
                 }
               >
                 Lire l&apos;analyse
@@ -320,11 +326,13 @@ export function ApprenantAssessmentResults({
       ) : (
         <section className="space-y-6">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#FF3B30]">
+            <p className={cockpit ? APPRENANT_CARD_KICKER : "text-[10px] font-medium uppercase tracking-[0.2em] text-[#FF3B30]"}>
               Bilans
             </p>
-            <h2 className="mt-1 text-lg font-medium text-[#0a0a0a]">Mes résultats de tests</h2>
-            <p className="mt-1 text-sm text-black/55">
+            <h2 className={`mt-1 text-lg font-medium ${cockpit ? "text-white" : "text-[#0a0a0a]"}`}>
+              Mes résultats de tests
+            </h2>
+            <p className={`mt-1 text-sm ${cockpit ? "text-white/55" : "text-black/55"}`}>
               DISC, IDMC et soft skills — croisés pour votre profil EDGE.
             </p>
           </div>

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
-import { SOFT_SKILLS, SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills";
+import {
+  buildSoftSkillsPayload,
+  saveSoftSkillsResultats,
+  validateSoftSkillsAnswers,
+} from "@/lib/soft-skills/save-soft-skills";
 
 type AnswerPayload = {
   learner_id?: string;
@@ -25,84 +29,25 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as AnswerPayload;
     const answers = body.answers;
 
-    const expectedKeys = new Set(SOFT_SKILLS_QUESTIONS.map((q) => q.id));
-    const answerKeys = answers ? Object.keys(answers) : [];
-
-    if (!answers || answerKeys.length !== SOFT_SKILLS_QUESTIONS.length) {
-      return NextResponse.json({ error: "Réponses invalides" }, { status: 400 });
+    const validationError = validateSoftSkillsAnswers(answers ?? {});
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    for (const key of answerKeys) {
-      const value = answers[key];
-      if (!expectedKeys.has(key) || typeof value !== "number" || value < 1 || value > 5) {
-        return NextResponse.json({ error: "Réponses invalides" }, { status: 400 });
-      }
-    }
+    const payload = buildSoftSkillsPayload(user.id, answers);
+    const { scores, total_score: totalScore } = payload;
 
-    const scores: Record<string, number> = {};
-    for (let compId = 1; compId <= SOFT_SKILLS.length; compId += 1) {
-      const skill = SOFT_SKILLS[compId - 1];
-      const total =
-        (answers[`${compId}_1`] || 0) + (answers[`${compId}_2`] || 0) + (answers[`${compId}_3`] || 0);
-      scores[skill.titre] = total;
-    }
-
-    const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
-
-    const payload = {
-      learner_id: user.id,
-      answers,
-      scores,
-      total_score: totalScore,
-      taken_at: new Date().toISOString(),
-    };
-
-    let data: { id?: string | null } & typeof payload | null = null;
-    const upsertResult = await supabase
-      .from("soft_skills_resultats")
-      .upsert(payload, { onConflict: "learner_id" })
-      .select()
-      .maybeSingle();
-
+    const upsertResult = await saveSoftSkillsResultats(supabase, user.id, answers);
     if (upsertResult.error) {
-      const message = upsertResult.error.message || "";
       console.error("[soft-skills/submit]", upsertResult.error);
-
-      if (message.includes("unique") || message.includes("constraint")) {
-        const { error: deleteError } = await supabase
-          .from("soft_skills_resultats")
-          .delete()
-          .eq("learner_id", user.id);
-        if (deleteError) {
-          console.error("[soft-skills/submit-delete]", deleteError);
-        }
-        const fallbackInsert = await supabase
-          .from("soft_skills_resultats")
-          .insert(payload)
-          .select()
-          .maybeSingle();
-        if (fallbackInsert.error) {
-          console.error("[soft-skills/submit-fallback]", fallbackInsert.error);
-          return NextResponse.json(
-            { error: "Erreur lors de l'enregistrement", details: fallbackInsert.error.message },
-            { status: 500 },
-          );
-        }
-        data = fallbackInsert.data;
-      } else {
-        return NextResponse.json(
-          { error: "Erreur lors de l'enregistrement", details: upsertResult.error.message },
-          { status: 500 },
-        );
-      }
-    } else {
-      data = upsertResult.data;
+      return NextResponse.json(
+        { error: "Erreur lors de l'enregistrement", details: upsertResult.error.message },
+        { status: 500 },
+      );
     }
-
-    const resultId = (data as { id?: string | null } | null)?.id ?? null;
 
     return NextResponse.json({
-      result_id: resultId,
+      result_id: null,
       learner_id: user.id,
       total_score: totalScore,
       scores,

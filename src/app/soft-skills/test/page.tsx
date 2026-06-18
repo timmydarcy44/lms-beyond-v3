@@ -9,6 +9,8 @@ import {
   EdgeAssessmentQuestionShell,
 } from "@/components/edge/edge-assessment-question-shell";
 import { EDGE_COLORS } from "@/lib/edge/edge-brand";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { saveSoftSkillsResultats, validateSoftSkillsAnswers } from "@/lib/soft-skills/save-soft-skills";
 
 const SCALE_LABELS = [
   { value: 1, label: "1 — Pas du tout" },
@@ -19,44 +21,78 @@ const SCALE_LABELS = [
 ];
 
 export default function SoftSkillsTestPage() {
+  const supabase = createSupabaseBrowserClient();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const currentQuestion = SOFT_SKILLS_QUESTIONS[currentIndex];
   const selectedValue = answers[currentQuestion.id] ?? null;
 
-  const handleAnswer = (value: number) => {
-    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
-    if (currentIndex < SOFT_SKILLS_QUESTIONS.length - 1) {
-      window.setTimeout(() => setCurrentIndex((prev) => prev + 1), 220);
+  const handleSubmit = async (answersPayload: Record<string, number>) => {
+    const validationError = validateSoftSkillsAnswers(answersPayload);
+    if (validationError) {
+      window.alert(validationError);
+      return;
     }
-  };
 
-  const handleSubmit = async () => {
     setSubmitting(true);
+    setAnalyzing(true);
     try {
-      const response = await fetch("/api/soft-skills/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ answers }),
-      });
-      if (response.ok) {
-        const next = await redirectAfterAssessmentTest("soft_skills", "/soft-skills/resultats");
-        window.location.href = next;
+      if (!supabase) {
+        window.alert("Connexion indisponible. Rechargez la page.");
         return;
       }
-      console.error("Erreur API submit:", await response.text());
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user?.id) {
+        window.alert("Session introuvable. Reconnectez-vous depuis votre espace apprenant.");
+        return;
+      }
+
+      const { error } = await saveSoftSkillsResultats(supabase, userData.user.id, answersPayload);
+      if (error) {
+        console.error("[soft-skills] save error:", error);
+        window.alert(
+          "Impossible d'enregistrer vos réponses soft skills. Réessayez ou contactez le support.",
+        );
+        setAnalyzing(false);
+        return;
+      }
+
+      const next = await redirectAfterAssessmentTest("soft_skills", "/soft-skills/resultats");
+      window.setTimeout(() => {
+        window.location.href = next;
+      }, 600);
     } catch (error) {
-      console.error("Erreur submit:", error);
+      console.error("Erreur submit soft skills:", error);
+      window.alert("Une erreur inattendue est survenue lors de l'enregistrement.");
+      setAnalyzing(false);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleAnswer = (value: number) => {
+    if (submitting || analyzing) return;
+
+    const nextAnswers = { ...answers, [currentQuestion.id]: value };
+    setAnswers(nextAnswers);
+
+    if (currentIndex < SOFT_SKILLS_QUESTIONS.length - 1) {
+      window.setTimeout(() => setCurrentIndex((prev) => prev + 1), 220);
+      return;
+    }
+
+    window.setTimeout(() => {
+      void handleSubmit(nextAnswers);
+    }, 280);
+  };
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (submitting || analyzing) return;
       if (["1", "2", "3", "4", "5"].includes(event.key)) {
         handleAnswer(Number(event.key));
       }
@@ -66,7 +102,7 @@ export default function SoftSkillsTestPage() {
   });
 
   const footer = useMemo(() => {
-    if (!selectedValue) return null;
+    if (!selectedValue || analyzing) return null;
     if (currentIndex < SOFT_SKILLS_QUESTIONS.length - 1) {
       return (
         <button
@@ -82,7 +118,7 @@ export default function SoftSkillsTestPage() {
     return (
       <button
         type="button"
-        onClick={() => void handleSubmit()}
+        onClick={() => void handleSubmit(answers)}
         disabled={submitting}
         className="w-full rounded-xl py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
         style={{ backgroundColor: EDGE_COLORS.blueAccent }}
@@ -90,7 +126,7 @@ export default function SoftSkillsTestPage() {
         {submitting ? "Enregistrement…" : "Voir mes résultats"}
       </button>
     );
-  }, [currentIndex, selectedValue, submitting]);
+  }, [analyzing, answers, currentIndex, selectedValue, submitting]);
 
   return (
     <EdgeAssessmentQuestionShell
@@ -100,6 +136,8 @@ export default function SoftSkillsTestPage() {
       questionIndex={currentIndex}
       totalQuestions={SOFT_SKILLS_QUESTIONS.length}
       footer={footer}
+      analyzing={analyzing}
+      analyzingLabel="Enregistrement de vos réponses soft skills…"
       animateKey={currentQuestion.id}
     >
       <AnimatePresence mode="wait">
@@ -115,6 +153,7 @@ export default function SoftSkillsTestPage() {
             <EdgeAssessmentOption
               key={option.value}
               selected={selectedValue === option.value}
+              disabled={submitting || analyzing}
               onClick={() => handleAnswer(option.value)}
             >
               {option.label}

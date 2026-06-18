@@ -1,51 +1,136 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { IDMC_QUESTIONS } from "@/lib/idmc/idmc-questions";
+import { EDGE_COLORS, EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
 
 export default function IdmcIntroPage() {
+  const router = useRouter();
+  const [firstName, setFirstName] = useState("Apprenant");
+  const [phase, setPhase] = useState<"welcome" | "ready">("welcome");
+
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) return;
+      const { data } = await supabase.auth.getUser();
+      const meta = data.user?.user_metadata as { first_name?: string; firstName?: string } | undefined;
+      const fromMeta = meta?.first_name ?? meta?.firstName;
+      if (fromMeta?.trim()) {
+        setFirstName(fromMeta.trim());
+        return;
+      }
+      if (data.user?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (profile?.first_name?.trim()) setFirstName(profile.first_name.trim());
+      }
+    };
+    void load();
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setPhase("ready"), 2200);
+    return () => window.clearTimeout(t);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white text-[#0a0a0a]">
-      <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-16">
-        <div className="flex flex-wrap items-center gap-2 text-[10px] font-medium uppercase tracking-[0.2em] text-[#FF3B30]">
-          <span className="rounded-full border border-black/10 px-3 py-1">10 min</span>
-          <span className="rounded-full border border-black/10 px-3 py-1">
-            {IDMC_QUESTIONS.length} questions
-          </span>
-        </div>
+    <div
+      className="fixed inset-0 z-[200] flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 text-center text-white"
+      style={{ backgroundColor: EDGE_COLORS.bgDeep }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: EDGE_GRADIENTS.introHalo }}
+      />
+      <motion.div
+        className="absolute inset-0 bg-[length:220%_220%] opacity-20"
+        style={{
+          backgroundImage:
+            "linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.14) 50%, transparent 58%)",
+        }}
+        animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
+        transition={{ duration: 2.8, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
+      />
 
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
-          Votre cartographie IDMC
-        </h1>
-        <p className="mt-4 max-w-xl text-sm leading-relaxed text-black/60">
-          Identifiez vos moteurs de motivation profonds et vos stratégies d&apos;apprentissage pour
-          aligner votre parcours EDGE.
-        </p>
+      <motion.div
+        className="relative z-10 mx-auto flex max-w-lg flex-col items-center gap-6"
+        initial={{ opacity: 0, y: 24, filter: "blur(12px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <motion.p
+          className="text-sm font-medium tracking-wide text-white/70"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0.6 }}
+        >
+          Bienvenue {firstName}
+        </motion.p>
 
-        <div className="mt-10 flex flex-wrap items-center gap-4">
-          <Link
-            href="/dashboard/apprenant/idmc/test"
-            className="rounded-full bg-[#FF3B30] px-8 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+        <motion.div
+          className="space-y-2"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0, y: phase === "ready" ? 0 : 12 }}
+          transition={{ delay: 0.15, duration: 0.6 }}
+        >
+          <h1 className="text-2xl font-semibold leading-snug sm:text-3xl">Cartographie IDMC</h1>
+          <p className="text-sm text-white/45">Motivation &amp; stratégies d&apos;apprentissage</p>
+        </motion.div>
+
+        <motion.p
+          className="max-w-md text-sm leading-relaxed text-white/55"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0 }}
+          transition={{ delay: 0.28, duration: 0.5 }}
+        >
+          Identifiez vos moteurs de motivation profonds pour aligner votre parcours EDGE.
+        </motion.p>
+
+        <motion.p
+          className="text-lg font-medium"
+          style={{ color: EDGE_COLORS.blueAccent }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+        >
+          {IDMC_QUESTIONS.length} questions · ~10 min
+        </motion.p>
+
+        <motion.div
+          className="mt-4 flex flex-col items-center gap-4"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0, scale: phase === "ready" ? 1 : 0.95 }}
+          transition={{ delay: 0.55, duration: 0.45 }}
+        >
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/apprenant/idmc/test")}
+            className="rounded-full px-10 py-3.5 text-sm font-bold uppercase tracking-wide text-white shadow-[0_0_40px_rgba(61,123,255,0.35)] transition hover:opacity-90"
+            style={{ backgroundColor: EDGE_COLORS.blueAccent }}
           >
             Démarrer l&apos;analyse IDMC
-          </Link>
+          </button>
           <Link
             href="/dashboard/apprenant/profil"
-            className="rounded-full border border-black/15 px-6 py-3 text-sm font-medium text-black/70 hover:text-[#0a0a0a]"
+            className="text-xs uppercase tracking-[0.2em] text-white/40 hover:text-white/70"
           >
             Voir mon profil
           </Link>
-        </div>
-
-        <div className="mt-12">
           <Link
             href="/dashboard/apprenant"
-            className="text-xs font-medium text-black/45 hover:text-[#0a0a0a]"
+            className="text-xs uppercase tracking-[0.2em] text-white/40 hover:text-white/70"
           >
-            Retour à l&apos;accueil
+            Retour au dashboard
           </Link>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

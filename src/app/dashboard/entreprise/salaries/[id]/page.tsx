@@ -450,8 +450,8 @@ export default function SalarieDetailPage() {
               <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-widest text-gray-500">DISC</p>
                 <p className="mt-2 text-lg font-black text-gray-950">
-                  D {Math.round(testResults.disc.D * 10)}% · I {Math.round(testResults.disc.I * 10)}% · S{" "}
-                  {Math.round(testResults.disc.S * 10)}% · C {Math.round(testResults.disc.C * 10)}%
+                  D {Math.round(testResults.disc.D)}% · I {Math.round(testResults.disc.I)}% · S{" "}
+                  {Math.round(testResults.disc.S)}% · C {Math.round(testResults.disc.C)}%
                 </p>
               </div>
             ) : null}

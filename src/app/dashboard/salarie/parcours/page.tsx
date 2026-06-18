@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { ArrowRight, Award, BookOpen, Users } from "lucide-react";
 import {
   hasLearnerTestData,
   LearnerTestsUnlockSection,
 } from "@/components/learner/learner-tests-unlock-section";
-import { usePersonalizedActionPlanFromSnapshot } from "@/components/learner/learner-snapshot-provider";
+import {
+  useLearnerSnapshot,
+  usePersonalizedActionPlanFromSnapshot,
+} from "@/components/learner/learner-snapshot-provider";
 import { buildEdgeParcoursBlocksFromPlan } from "@/lib/learner/edge-catalog-preview";
 import {
   SALARIE_CARD,
@@ -18,9 +21,14 @@ import {
 } from "@/lib/salarie/connect-nav";
 
 export default function SalarieParcoursPage() {
+  const { refresh } = useLearnerSnapshot();
   const { loading, plan, snapshot } = usePersonalizedActionPlanFromSnapshot("salarie");
   const hasTests = hasLearnerTestData(snapshot);
   const blocks = useMemo(() => buildEdgeParcoursBlocksFromPlan(plan), [plan]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   return (
     <div className={SALARIE_PAGE_SHELL}>
@@ -35,7 +43,7 @@ export default function SalarieParcoursPage() {
 
       {loading ? (
         <p className="text-sm text-white/50">Analyse de votre profil…</p>
-      ) : !hasTests || !blocks ? (
+      ) : !hasTests || !plan ? (
         <LearnerTestsUnlockSection />
       ) : (
         <>

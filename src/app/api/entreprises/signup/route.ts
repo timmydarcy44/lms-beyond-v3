@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         last_name: lastName,
         full_name: `${firstName} ${lastName}`.trim(),
         company_name: companyName,
-        role_type: "admin_hr",
+        role_type: "entreprise",
         account_type: "entreprise",
         signup_source: "edge_entreprises",
         trial_ends_at: trialEndsAt.toISOString(),

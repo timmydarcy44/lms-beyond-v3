@@ -56,8 +56,8 @@ export async function provisionEntrepriseSignup(
     first_name: input.firstName,
     last_name: input.lastName,
     full_name: fullName,
-    role: "admin",
-    role_type: "admin_hr",
+    role: "entreprise",
+    role_type: "entreprise",
     company_id: organizationId,
   };
 
@@ -68,7 +68,7 @@ export async function provisionEntrepriseSignup(
       id: input.userId,
       email: input.email,
       full_name: fullName,
-      role: "admin",
+      role: "entreprise",
     };
     const { error: reducedError } = await supabase.from("profiles").upsert(reduced, { onConflict: "id" });
     if (reducedError) {
@@ -77,9 +77,19 @@ export async function provisionEntrepriseSignup(
 
     await supabase
       .from("profiles")
-      .update({ role_type: "admin_hr", company_id: organizationId, first_name: input.firstName, last_name: input.lastName })
+      .update({
+        role_type: "entreprise",
+        company_id: organizationId,
+        first_name: input.firstName,
+        last_name: input.lastName,
+      })
       .eq("id", input.userId);
   }
+
+  await supabase
+    .from("organizations")
+    .update({ edge_profile_completed: false })
+    .eq("id", organizationId);
 
   const membership = await supabase.from("org_memberships").upsert(
     { org_id: organizationId, user_id: input.userId, role: "admin" },

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "organisation_id requis" }, { status: 400 });
   }
 
-  if (profile?.company_id !== organisationId && profile?.role !== "admin") {
+  if (profile?.company_id !== organisationId && !["admin", "entreprise"].includes(String(profile?.role ?? "").toLowerCase())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { EntrepriseFloatingAssistant } from "@/components/enterprise/entreprise-floating-assistant";
+import { EnterpriseSignupProfileGate } from "@/components/enterprise/enterprise-signup-profile-overlay";
 
 async function isSuperAdminPreviewMode() {
   try {
@@ -37,7 +38,7 @@ export default async function EntrepriseDashboardLayout({ children }: { children
           Mode aperçu — Vous êtes connecté en tant que super admin
         </div>
       ) : null}
-      {children}
+      <EnterpriseSignupProfileGate>{children}</EnterpriseSignupProfileGate>
       <EntrepriseFloatingAssistant />
     </>
   );

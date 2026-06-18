@@ -2,12 +2,14 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-
-const DEFAULT_PARTICULIER_NEXT = "/dashboard/apprenant/test-comportemental-intro";
+import {
+  buildEdgeSetPasswordPath,
+  resolveEdgeSignupFlowFromAccessToken,
+} from "@/lib/auth/edge-signup-flow";
 
 /**
- * Supabase renvoie parfois les tokens (#access_token) ou erreurs (#error=…) sur la home
- * si l'URL de redirection n'est pas autorisée. On redirige vers le bon écran.
+ * Supabase renvoie parfois les tokens (#access_token) sur la home si redirect_to
+ * n'est pas autorisé. Route vers set-password avec le bon flow EDGE (entreprise vs particulier).
  */
 export function AuthHashRedirect() {
   const pathname = usePathname();
@@ -19,16 +21,23 @@ export function AuthHashRedirect() {
     if (pathname?.startsWith("/auth/")) return;
 
     const hashParams = new URLSearchParams(hash.replace(/^#/, ""));
-    const next = encodeURIComponent(DEFAULT_PARTICULIER_NEXT);
 
     if (hashParams.get("error")) {
       const code = hashParams.get("error_code") || hashParams.get("error") || "auth";
-      window.location.replace(`/particuliers?auth_error=${encodeURIComponent(code)}`);
+      const accessToken = hashParams.get("access_token");
+      const flow = accessToken ? resolveEdgeSignupFlowFromAccessToken(accessToken) : "particulier";
+      const landing =
+        flow === "entreprise"
+          ? `/entreprises/connexion?auth_error=${encodeURIComponent(code)}`
+          : `/particuliers?auth_error=${encodeURIComponent(code)}`;
+      window.location.replace(landing);
       return;
     }
 
-    if (hashParams.get("access_token")) {
-      window.location.replace(`/auth/set-password?next=${next}&flow=particulier${hash}`);
+    const accessToken = hashParams.get("access_token");
+    if (accessToken) {
+      const flow = resolveEdgeSignupFlowFromAccessToken(accessToken);
+      window.location.replace(buildEdgeSetPasswordPath({ flow, hash }));
     }
   }, [pathname]);
 

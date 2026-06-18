@@ -126,9 +126,30 @@ function AnalysisBlocks({ content }: { content: ReactNode }) {
   return <div className="space-y-3">{content}</div>;
 }
 
+type AssessmentTestSurface = "apprenant" | "salarie";
+
+const TEST_PATHS: Record<
+  AssessmentTestSurface,
+  { disc: string; idmc: string; soft_skills: string; profil: string }
+> = {
+  apprenant: {
+    disc: "/dashboard/apprenant/test-comportemental-intro",
+    idmc: "/dashboard/apprenant/idmc-intro",
+    soft_skills: "/dashboard/apprenant/soft-skills-intro",
+    profil: "/dashboard/apprenant/profil",
+  },
+  salarie: {
+    disc: "/dashboard/salarie/test-disc",
+    idmc: "/dashboard/salarie/test-idmc",
+    soft_skills: "/dashboard/salarie/test-soft-skills",
+    profil: "/dashboard/salarie",
+  },
+};
+
 type Props = {
   variant?: "compact" | "full";
   publicMode?: boolean;
+  testSurface?: AssessmentTestSurface;
   firstName?: string;
   discScores: DiscScores | null;
   idmcAxes: Record<AxisKey, number> | null;
@@ -140,6 +161,7 @@ type Props = {
 export function ApprenantAssessmentResults({
   variant = "full",
   publicMode = false,
+  testSurface = "apprenant",
   firstName,
   discScores,
   idmcAxes,
@@ -149,6 +171,7 @@ export function ApprenantAssessmentResults({
 }: Props) {
   const compact = variant === "compact";
   const cockpit = !publicMode;
+  const paths = TEST_PATHS[testSurface];
   const resultCard = cockpit ? APPRENANT_CARD_BODY : RESULT_CARD_LIGHT;
   const resultsSection = cockpit ? APPRENANT_CARD_BODY : RESULTS_SECTION_LIGHT;
   const [analysisOpen, setAnalysisOpen] = useState(false);
@@ -185,7 +208,7 @@ export function ApprenantAssessmentResults({
               {publicMode ? "Test DISC non renseigné." : "Aucun résultat enregistré."}
             </p>
             {!publicMode ? (
-              <Link href="/dashboard/apprenant/test-comportemental-intro" className={CONNECT_BTN_SECONDARY}>
+              <Link href={paths.disc} className={CONNECT_BTN_SECONDARY}>
                 Passer le test DISC
               </Link>
             ) : null}
@@ -239,7 +262,7 @@ export function ApprenantAssessmentResults({
               {publicMode ? "Test IDMC non renseigné." : "Aucun score IDMC disponible."}
             </p>
             {!publicMode ? (
-              <Link href="/dashboard/apprenant/idmc-intro" className={CONNECT_BTN_SECONDARY}>
+              <Link href={paths.idmc} className={CONNECT_BTN_SECONDARY}>
                 Passer le test IDMC
               </Link>
             ) : null}
@@ -294,7 +317,7 @@ export function ApprenantAssessmentResults({
             </p>
             {!publicMode ? (
               <Link
-                href="/dashboard/apprenant/soft-skills-intro"
+                href={paths.soft_skills}
                 className={cockpit ? CONNECT_BTN_PRIMARY : "inline-flex rounded-full border border-black/15 bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] hover:border-[#FF3B30]/40"}
               >
                 Passer le test soft skills
@@ -313,7 +336,7 @@ export function ApprenantAssessmentResults({
           <div className="flex flex-wrap items-end justify-between gap-2">
             <h3 className="text-sm font-medium text-white">Mes résultats</h3>
             <Link
-              href="/dashboard/apprenant/profil"
+              href={paths.profil}
               className="text-xs font-medium text-[#3D7BFF]/90 hover:underline"
             >
               Voir tout sur mon profil →

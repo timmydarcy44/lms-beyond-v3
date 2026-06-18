@@ -7,6 +7,7 @@ import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { EmptyState } from "@/components/enterprise/empty-state";
 import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise-employee-csv-actions";
 import { EntrepriseQuickAccess } from "@/components/enterprise/entreprise-quick-access";
+import { EnterpriseLoadingOverlay } from "@/components/enterprise/enterprise-loading-overlay";
 import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
@@ -170,7 +171,8 @@ export function EnterpriseDashboardV2() {
   const recentActivity = overview?.this_week?.recent_activity ?? [];
 
   return (
-    <div className="flex min-h-screen bg-white font-sans text-gray-900">
+    <div className="relative flex min-h-screen bg-white font-sans text-gray-900">
+      {loading ? <EnterpriseLoadingOverlay /> : null}
       <EnterpriseSidebar />
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mb-10 text-center">
@@ -182,11 +184,7 @@ export function EnterpriseDashboardV2() {
           </p>
         </header>
 
-        {loading ? (
-          <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500">
-            Chargement de votre espace entreprise…
-          </div>
-        ) : fetchError ? (
+        {loading ? null : fetchError ? (
           <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center">
             <p className="text-sm text-gray-600">Connexion en cours — nouvelle tentative automatique…</p>
             <p className="mt-2 text-xs text-gray-400">{fetchError}</p>

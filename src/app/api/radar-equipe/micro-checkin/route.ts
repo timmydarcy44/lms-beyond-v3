@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
+import { ensureDefaultEquipeId } from "@/lib/entreprise/employee-test-status";
 import {
   getIsoWeekId,
   getQuestionOfWeek,
@@ -66,14 +67,21 @@ export async function POST(request: NextRequest) {
   }
 
   let equipeId = body.equipeId;
-  if (!equipeId && profile?.company_id && service) {
-    const { data: eq } = await service
-      .from("equipes")
-      .select("id")
-      .eq("organisation_id", profile.company_id)
+  let organisationId = profile?.company_id?.trim() || null;
+
+  if (!organisationId && service && user.email) {
+    const { data: employee } = await service
+      .from("employees")
+      .select("company_id")
+      .eq("email", user.email.trim().toLowerCase())
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    equipeId = eq?.id as string | undefined;
+    organisationId = (employee?.company_id as string | null) ?? null;
+  }
+
+  if (!equipeId && organisationId && service) {
+    equipeId = (await ensureDefaultEquipeId(service, organisationId)) ?? undefined;
   }
 
   if (!equipeId) {

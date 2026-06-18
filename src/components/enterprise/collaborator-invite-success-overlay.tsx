@@ -24,10 +24,6 @@ export function CollaboratorInviteSuccessOverlay({
 
   if (!open) return null;
 
-  const subtitle = collaboratorName
-    ? `${collaboratorName} va pouvoir créer son mot de passe et accéder à son espace salarié.`
-    : "Il ou elle va pouvoir créer son mot de passe et accéder à son espace salarié.";
-
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-6"
@@ -45,9 +41,15 @@ export function CollaboratorInviteSuccessOverlay({
           <Check className="h-7 w-7" strokeWidth={2.5} aria-hidden />
         </div>
         <p className="mt-5 text-[1.05rem] font-semibold leading-snug tracking-tight text-gray-950">
-          Votre collaborateur vient de recevoir un email
+          {collaboratorName
+            ? `${collaboratorName} vient de recevoir une invitation`
+            : "Votre salarié(e) vient de recevoir une invitation"}
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-gray-500">{subtitle}</p>
+        <p className="mt-2 text-sm leading-relaxed text-gray-500">
+          {collaboratorName
+            ? "Un email lui permet de créer son mot de passe et accéder à son espace salarié."
+            : "Un email permet de créer le mot de passe et d'accéder à l'espace salarié."}
+        </p>
       </div>
     </div>
   );

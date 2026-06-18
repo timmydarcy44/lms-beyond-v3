@@ -1,121 +1,144 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills";
+import { EDGE_COLORS, EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
 
 export default function SoftSkillsIntroPage() {
   const router = useRouter();
-  const [showIntro, setShowIntro] = useState(true);
-  const [fadeOutIntro, setFadeOutIntro] = useState(false);
+  const [firstName, setFirstName] = useState("Apprenant");
+  const [phase, setPhase] = useState<"welcome" | "ready">("welcome");
 
   useEffect(() => {
-    const totalDurationMs = 4200;
-    const fadeDurationMs = 500;
-    const fadeTimer = setTimeout(() => setFadeOutIntro(true), totalDurationMs - fadeDurationMs);
-    const endTimer = setTimeout(() => setShowIntro(false), totalDurationMs);
-
-    return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(endTimer);
+    const load = async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) return;
+      const { data } = await supabase.auth.getUser();
+      const meta = data.user?.user_metadata as { first_name?: string; firstName?: string } | undefined;
+      const fromMeta = meta?.first_name ?? meta?.firstName;
+      if (fromMeta?.trim()) {
+        setFirstName(fromMeta.trim());
+        return;
+      }
+      if (data.user?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (profile?.first_name?.trim()) setFirstName(profile.first_name.trim());
+      }
     };
+    void load();
   }, []);
 
-  const handleStartTest = () => {
-    router.push("/soft-skills/test");
-  };
+  useEffect(() => {
+    const t = window.setTimeout(() => setPhase("ready"), 2200);
+    return () => window.clearTimeout(t);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {showIntro && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-white text-black transition-opacity duration-500 ${
-            fadeOutIntro ? "opacity-0" : "opacity-100"
-          }`}
-          aria-live="polite"
+    <div
+      className="fixed inset-0 z-[200] flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 text-center text-white"
+      style={{ backgroundColor: EDGE_COLORS.bgDeep }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: EDGE_GRADIENTS.introHalo }}
+      />
+      <motion.div
+        className="absolute inset-0 bg-[length:220%_220%] opacity-20"
+        style={{
+          backgroundImage:
+            "linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.14) 50%, transparent 58%)",
+        }}
+        animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
+        transition={{ duration: 2.8, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
+      />
+
+      <motion.div
+        className="relative z-10 mx-auto flex max-w-lg flex-col items-center gap-6"
+        initial={{ opacity: 0, y: 24, filter: "blur(12px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <motion.p
+          className="text-sm font-medium tracking-wide text-white/70"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0.6 }}
         >
-          <div className="flex items-center gap-4">
-            <span className="h-2.5 w-2.5 rounded-full bg-black animate-bounce" aria-hidden />
-            <div className="text-lg font-semibold tracking-wide">
-              <span className="softskills-intro-word softskills-intro-word-1">Prêt</span>
-              <span className="softskills-intro-word softskills-intro-word-2"> pour développer</span>
-              <span className="softskills-intro-word softskills-intro-word-3"> vos soft skills.</span>
-            </div>
-          </div>
-          <style
-            dangerouslySetInnerHTML={{
-              __html: `
-            .softskills-intro-word {
-              opacity: 0;
-              display: inline-block;
-              animation: softskills-intro-fade 1.2s ease-in-out forwards;
-            }
-            .softskills-intro-word-1 { animation-delay: 0s; }
-            .softskills-intro-word-2 { animation-delay: 1.2s; }
-            .softskills-intro-word-3 { animation-delay: 2.4s; }
-            @keyframes softskills-intro-fade {
-              0% { opacity: 0; transform: translateY(6px); }
-              20% { opacity: 1; transform: translateY(0); }
-              60% { opacity: 1; transform: translateY(0); }
-              100% { opacity: 0; transform: translateY(-4px); }
-            }
-          `,
-            }}
-          />
-        </div>
-      )}
-      <div className="relative min-h-screen overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(17,24,39,0.95),_rgba(3,7,18,0.98)_55%,_rgba(0,0,0,1))]" />
-        <div className="absolute inset-0 opacity-20">
-          <div
-            className="h-full w-full bg-[url('/edge-lab/hero-ambient.png')] bg-cover bg-center"
-            aria-hidden
-          />
-        </div>
+          Bienvenue {firstName}
+        </motion.p>
 
-        <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-16">
-          <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.35em] text-white/70">
-            <span className="rounded-full border border-white/25 px-3 py-1">2026</span>
-            <span className="rounded-full border border-white/25 px-3 py-1">Gratuit</span>
-            <span className="rounded-full border border-white/25 px-3 py-1">★★★★★</span>
-          </div>
+        <motion.div
+          className="space-y-2"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0, y: phase === "ready" ? 0 : 12 }}
+          transition={{ delay: 0.15, duration: 0.6 }}
+        >
+          <h1 className="text-2xl font-semibold leading-snug sm:text-3xl">Soft skills</h1>
+          <p className="text-sm text-white/45">Intelligence relationnelle &amp; compétences clés</p>
+        </motion.div>
 
-          <h1 className="mt-8 max-w-4xl text-4xl font-black uppercase tracking-wide sm:text-5xl lg:text-6xl">
-            DÉVELOPPEZ VOS SOFT SKILLS
-          </h1>
-          <p className="mt-6 max-w-2xl text-base text-white/70">
-            Une lecture précise de votre intelligence émotionnelle et de vos
-            compétences relationnelles. Résultats clairs, actionnables et certifiants.
-          </p>
+        <motion.p
+          className="max-w-md text-sm leading-relaxed text-white/55"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0 }}
+          transition={{ delay: 0.28, duration: 0.5 }}
+        >
+          Une lecture précise de vos compétences relationnelles. Résultats clairs, actionnables et
+          certifiants.
+        </motion.p>
 
-          <div className="mt-10 flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-4">
-              <button
-                type="button"
-                onClick={handleStartTest}
-                className="rounded-full bg-[#E50914] px-8 py-3 text-sm font-black uppercase text-white shadow-[0_0_40px_rgba(229,9,20,0.45)] transition hover:shadow-[0_0_60px_rgba(229,9,20,0.75)]"
-              >
-                COMMENCER LE TEST
-              </button>
-            </div>
-          </div>
+        <motion.p
+          className="text-lg font-medium"
+          style={{ color: EDGE_COLORS.blueAccent }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+        >
+          {SOFT_SKILLS_QUESTIONS.length} questions · ~15 min
+        </motion.p>
 
-          <div className="mt-12 flex flex-wrap items-center gap-4 text-sm text-white/50">
-            <span>✔ Certification Beyond</span>
-            <span>✔ Analyse IA avancée</span>
-            <span>✔ Top 5 compétences clés</span>
-          </div>
+        <motion.div
+          className="mt-2 flex flex-wrap items-center justify-center gap-3 text-[11px] text-white/45"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0 }}
+          transition={{ delay: 0.42, duration: 0.45 }}
+        >
+          <span>Certification Beyond</span>
+          <span aria-hidden>·</span>
+          <span>Analyse IA</span>
+          <span aria-hidden>·</span>
+          <span>Top 5 compétences</span>
+        </motion.div>
 
-          <div className="mt-16">
-            <Link
-              href="/dashboard/apprenant"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50 hover:text-white"
-            >
-              Retour au dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
+        <motion.div
+          className="mt-4 flex flex-col items-center gap-4"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: phase === "ready" ? 1 : 0, scale: phase === "ready" ? 1 : 0.95 }}
+          transition={{ delay: 0.55, duration: 0.45 }}
+        >
+          <button
+            type="button"
+            onClick={() => router.push("/soft-skills/test")}
+            className="rounded-full px-10 py-3.5 text-sm font-bold uppercase tracking-wide text-white shadow-[0_0_40px_rgba(61,123,255,0.35)] transition hover:opacity-90"
+            style={{ backgroundColor: EDGE_COLORS.blueAccent }}
+          >
+            Commencer le test
+          </button>
+          <Link
+            href="/dashboard/apprenant"
+            className="text-xs uppercase tracking-[0.2em] text-white/40 hover:text-white/70"
+          >
+            Retour au dashboard
+          </Link>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

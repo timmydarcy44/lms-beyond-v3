@@ -188,8 +188,10 @@ export function ApprenantConnectShell({
     pathname?.includes("/dashboard/apprenant/disc/test") ||
       pathname?.includes("/dashboard/apprenant/idmc/test") ||
       pathname?.includes("/dashboard/apprenant/idmc-intro") ||
+      pathname?.includes("/dashboard/apprenant/soft-skills-intro") ||
       pathname?.includes("/dashboard/apprenant/test-comportemental-intro") ||
-      pathname?.includes("/soft-skills/test"),
+      pathname?.includes("/soft-skills/test") ||
+      pathname?.includes("/soft-skills/resultats"),
   );
   const isDiscImmersive = isAssessmentImmersive;
   const isOpenBadgeImmersive = Boolean(pathname?.includes("/dashboard/apprenant/open-badges"));

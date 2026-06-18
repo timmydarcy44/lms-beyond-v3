@@ -7,6 +7,9 @@ import { Linkedin } from "lucide-react";
 import { motion } from "framer-motion";
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip } from "recharts";
 import { SOFT_SKILLS } from "@/lib/soft-skills";
+import { EDGE_COLORS, EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
+import { SimpleMarkdownAnalysis } from "@/lib/markdown/render-simple-markdown";
+import { APPRENANT_CARD_BODY } from "@/lib/apprenant/connect-nav";
 
 type ResultPayload = {
   exists: boolean;
@@ -15,6 +18,9 @@ type ResultPayload = {
     scores?: Record<string, number> | null;
   } | null;
 };
+
+const RADAR_BLUE = EDGE_COLORS.blueAccent;
+const RADAR_FILL = "rgba(61,123,255,0.22)";
 
 export default function SoftSkillsResultsPage() {
   const router = useRouter();
@@ -52,7 +58,7 @@ export default function SoftSkillsResultsPage() {
       }
 
       sessionStorage.setItem("softSkillsError", "Aucun résultat soft skills trouvé.");
-      router.replace("/soft-skills");
+      router.replace("/dashboard/apprenant/soft-skills-intro");
     };
     load();
   }, [router]);
@@ -128,7 +134,7 @@ export default function SoftSkillsResultsPage() {
       return {
         title: "Bâtisseur",
         text:
-          "Ton profil révèle un Tempérament de Bâtisseur, orienté vers l'action et l'impact collectif. " +
+          "Ton profil révèle un tempérament de Bâtisseur, orienté vers l'action et l'impact collectif. " +
           "Tu mobilises l'énergie du groupe et avances avec clarté vers des objectifs ambitieux.",
       };
     }
@@ -140,12 +146,6 @@ export default function SoftSkillsResultsPage() {
         "Tu sais écouter, ajuster et progresser avec constance dans des environnements exigeants.",
     };
   }, [topTwo]);
-
-  const aiArchetype = useMemo(() => {
-    if (!aiAnalysis) return null;
-    const match = aiAnalysis.match(/Archétype[^:]*:\s*(.+)/i);
-    return match?.[1]?.trim() || null;
-  }, [aiAnalysis]);
 
   const handleLinkedInShare = async () => {
     try {
@@ -161,125 +161,152 @@ export default function SoftSkillsResultsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black font-['Inter'] text-white">
-      <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
-      `}</style>
-      <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-12 sm:px-6 sm:py-20">
+    <div
+      className="min-h-screen text-white"
+      style={{ background: EDGE_GRADIENTS.dashboardPageBg }}
+    >
+      <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-12 sm:px-6 sm:py-16">
         <div className="w-full max-w-full space-y-8 sm:space-y-10">
           <div className="text-center">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-              <span className="bg-gradient-to-r from-white via-[#E5E7EB] to-[#9CA3AF] bg-clip-text text-transparent">
-                Voici ton empreinte.
-              </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">
+              Résultats soft skills
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              Voici ton empreinte
             </h1>
-            <p className="mt-3 text-sm text-[#9CA3AF] sm:mt-4 sm:text-[15px]">Ton potentiel n&apos;est plus invisible.</p>
+            <p className="mt-3 text-sm text-white/55 sm:text-base">
+              Ton potentiel relationnel, cartographié et certifié.
+            </p>
           </div>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="mx-auto h-[280px] w-full max-w-4xl sm:h-[360px] lg:h-[420px]"
+            transition={{ duration: 0.5 }}
+            className={`relative mx-auto w-full max-w-4xl overflow-hidden rounded-[24px] p-6 sm:p-8 ${APPRENANT_CARD_BODY}`}
+            style={{ background: EDGE_GRADIENTS.hero }}
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="rgba(255,255,255,0.12)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: "#E5E7EB", fontSize: 10 }} />
-                <Radar dataKey="score" stroke="#FF9900" fill="rgba(255,153,0,0.2)" />
-                <Tooltip
-                  contentStyle={{ background: "#0F0F0F", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{ background: EDGE_GRADIENTS.heroHalo }}
+              aria-hidden
+            />
+            <div className="relative mx-auto h-[260px] w-full sm:h-[340px] lg:h-[380px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="rgba(255,255,255,0.15)" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#E5E7EB", fontSize: 10 }} />
+                  <Radar dataKey="score" stroke={RADAR_BLUE} fill={RADAR_FILL} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0f1a3d",
+                      border: "1px solid rgba(61,123,255,0.35)",
+                      borderRadius: 12,
+                      color: "#fff",
+                    }}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
           </motion.div>
 
           <div className="flex items-center justify-center">
             <button
+              type="button"
               onClick={handleLinkedInShare}
-              className="inline-flex w-full max-w-md items-center justify-center gap-2 rounded-full border border-white/20 px-6 py-3 text-[13px] font-semibold text-white hover:border-[#FF9900] hover:text-[#FF9900]"
+              className="inline-flex w-full max-w-md items-center justify-center gap-2 rounded-full border border-[rgba(61,123,255,0.35)] bg-[rgba(61,123,255,0.08)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[rgba(61,123,255,0.14)]"
             >
               <Linkedin className="h-4 w-4" />
               Diffuser mon profil sur LinkedIn
             </button>
           </div>
 
-          <section className="space-y-4">
-            <h3 className="text-[16px] font-semibold text-white">Ton ADN en détails</h3>
+          <section className={`space-y-4 ${APPRENANT_CARD_BODY}`}>
+            <h3 className="text-sm font-semibold text-white">Ton ADN en détails</h3>
             <div className="space-y-3">
               {ranking.map((skill, index) => (
                 <div
                   key={skill.label}
-                  className="flex flex-col gap-2 text-[12px] sm:flex-row sm:items-center sm:gap-4"
+                  className="flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:gap-4 sm:text-sm"
                 >
-                  <span className="min-w-0 shrink-0 text-[#9CA3AF] sm:w-40">{skill.label}</span>
+                  <span className="min-w-0 shrink-0 text-white/55 sm:w-44">{skill.label}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="h-1 rounded-full bg-white/10">
+                    <div className="h-1.5 rounded-full bg-white/10">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${(skill.value / 15) * 100}%` }}
                         transition={{ duration: 0.8, delay: index * 0.03 }}
-                        className="h-full rounded-full bg-[#FF9900]"
+                        className="h-full rounded-full"
+                        style={{ background: EDGE_GRADIENTS.progress }}
                       />
                     </div>
                   </div>
-                  <span className="shrink-0 text-right text-white sm:w-12">{skill.value}/15</span>
+                  <span className="shrink-0 text-right font-medium text-white sm:w-12">
+                    {skill.value}/15
+                  </span>
                 </div>
               ))}
             </div>
           </section>
 
-          <section className="rounded-[20px] border border-white/10 bg-[#1C1C1E] p-6">
-            <div className="text-[12px] uppercase tracking-[0.2em] text-[#9CA3AF]">L'Analyse de Beyond</div>
+          <section className={APPRENANT_CARD_BODY}>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">
+              L&apos;analyse de Beyond
+            </div>
             {aiLoading ? (
-              <div className="mt-4 text-[15px] text-white/60">
+              <div className="mt-4 text-sm text-white/60">
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
-                  L&apos;IA analyse votre empreinte cognitive...
+                  <span
+                    className="h-4 w-4 animate-spin rounded-full border-2 border-white/20"
+                    style={{ borderTopColor: EDGE_COLORS.blueAccent }}
+                  />
+                  L&apos;IA analyse votre empreinte cognitive…
                 </span>
               </div>
+            ) : aiAnalysis ? (
+              <div className="mt-4">
+                <SimpleMarkdownAnalysis content={aiAnalysis} />
+              </div>
             ) : (
-              <motion.p
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="mt-4 text-[16px] leading-relaxed"
-              >
-                {aiArchetype ? (
-                  <span className="bg-gradient-to-r from-white via-[#E5E7EB] to-[#9CA3AF] bg-clip-text text-transparent font-semibold">
-                    {aiArchetype}
-                  </span>
-                ) : (
-                  <span className="text-white">{manifesto.title}</span>
-                )}
-                <span className="text-white/60"> — {aiAnalysis || manifesto.text}</span>
-              </motion.p>
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-semibold text-white">{manifesto.title}</p>
+                <p className="text-sm leading-relaxed text-white/70">{manifesto.text}</p>
+              </div>
             )}
           </section>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <div className="rounded-[20px] border border-white/10 bg-[#1C1C1E] p-6">
-              <div className="text-[12px] uppercase tracking-[0.2em] text-[#9CA3AF]">Top 1</div>
-              <div className="mt-3 text-[16px] font-semibold text-white">
+            <div className={APPRENANT_CARD_BODY}>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">
+                Top 1
+              </div>
+              <div className="mt-3 text-sm font-semibold text-white">
                 Ta plus grande force : {topOne}
               </div>
             </div>
-            <div className="rounded-[20px] border border-white/10 bg-[#1C1C1E] p-6">
-              <div className="text-[12px] uppercase tracking-[0.2em] text-[#9CA3AF]">Conseil</div>
-              <div className="mt-3 text-[14px] text-white">
+            <div className={APPRENANT_CARD_BODY}>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">
+                Conseil
+              </div>
+              <div className="mt-3 text-sm text-white/80">
                 {lowest
                   ? `À renforcer : ${lowest.label}. Planifie un objectif simple cette semaine pour progresser.`
                   : "Poursuis sur ta dynamique actuelle pour renforcer tes acquis."}
               </div>
             </div>
-            <div className="rounded-[20px] border border-white/10 bg-[#1C1C1E] p-6">
-              <div className="text-[12px] uppercase tracking-[0.2em] text-[#9CA3AF]">Score certifié</div>
-              <div className="mt-3 text-[20px] font-semibold text-white">{totalScore}/300</div>
+            <div className={APPRENANT_CARD_BODY}>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">
+                Score certifié
+              </div>
+              <div className="mt-3 text-xl font-semibold text-white">{totalScore}/300</div>
             </div>
           </div>
 
           <div className="text-center">
-            <Link href="/dashboard/apprenant" className="text-[12px] text-[#6B7280] hover:text-white">
+            <Link
+              href="/dashboard/apprenant"
+              className="text-xs uppercase tracking-[0.2em] text-white/45 hover:text-white/70"
+            >
               Retour au dashboard
             </Link>
           </div>

@@ -12,7 +12,16 @@ import {
   resolveToolLogo,
 } from "@/lib/profile/competency-referential";
 import { PaywallConnect } from "@/components/paywalls/paywall-connect";
+import dynamic from "next/dynamic";
 import { ApprenantConnectOverview } from "@/components/apprenant/apprenant-connect-overview";
+
+const PersonalizedActionPlanSection = dynamic(
+  () =>
+    import("@/components/learner/personalized-action-plan-section").then((m) => ({
+      default: m.PersonalizedActionPlanSection,
+    })),
+  { ssr: false },
+);
 import {
   ApprenantAssessmentResults,
   type DiscScores,
@@ -24,6 +33,7 @@ import type {
 import { useApprenantShell } from "@/components/apprenant/apprenant-shell-context";
 import { EDGE_LAB_ONLINE_CATALOG_HREF } from "@/lib/galaxy-branding";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
+import { buildPersonalizedActionPlan } from "@/lib/learner/personalized-action-plan";
 import { getProfileSituationLabel } from "@/lib/apprenant/profile-situation";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 import {
@@ -90,11 +100,13 @@ export function ApprenantDashboardClient({
   primaryParcours = null,
   visibleOpenBadges = [],
   earnedOpenBadges = [],
+  homeHref = "/dashboard/apprenant",
 }: {
   initialView: "home" | "profil";
   primaryParcours?: ApprenantPrimaryParcours | null;
   visibleOpenBadges?: LearnerVisibleOpenBadge[];
   earnedOpenBadges?: LearnerEarnedOpenBadge[];
+  homeHref?: string;
 }) {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -630,6 +642,17 @@ export function ApprenantDashboardClient({
     return "Bonjour";
   }, []);
   const greetingTagline = "Prêt à avancer aujourd'hui ?";
+  const personalizedPlan = useMemo(
+    () =>
+      buildPersonalizedActionPlan({
+        firstName,
+        discScores,
+        idmcAxes,
+        softSkills: softSkillsRadar,
+        surface: "apprenant",
+      }),
+    [discScores, firstName, idmcAxes, softSkillsRadar],
+  );
   const hasAnyTest = Boolean(
     discScores || idmcAxes || softSkillsRadar.length > 0,
   );
@@ -1614,6 +1637,12 @@ export function ApprenantDashboardClient({
             onOpenEditProfile={() => appShell?.openEditProfile()}
           />
 
+              <PersonalizedActionPlanSection
+                plan={personalizedPlan}
+                parcoursHref="/dashboard/apprenant/parcours"
+                className="mt-8"
+              />
+
               <div className="mt-6 space-y-6">
 
                 {profile?.school_id ? (
@@ -1654,7 +1683,7 @@ export function ApprenantDashboardClient({
                   <p className={APPRENANT_PAGE_KICKER}>Profil</p>
                   <h1 className={APPRENANT_PAGE_TITLE}>Mon profil</h1>
                 </div>
-                <Link href="/dashboard/apprenant" className={CONNECT_BTN_SECONDARY}>
+                <Link href={homeHref} className={CONNECT_BTN_SECONDARY}>
                   Retour à l&apos;accueil
                 </Link>
               </div>

@@ -3,16 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { BookOpen, Brain, Home, Sparkles, Users, Zap } from "lucide-react";
-
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard/salarie", icon: Home },
-  { label: "Mes Formations", href: "/dashboard/salarie/formations", icon: BookOpen },
-  { label: "Mes Coachings", href: "/dashboard/salarie/coachings", icon: Users },
-  { label: "Test DISC", href: "/dashboard/salarie/test-disc", icon: Zap },
-  { label: "Test IDMC", href: "/dashboard/salarie/test-idmc", icon: Brain },
-  { label: "Test Soft Skills", href: "/dashboard/salarie/test-soft-skills", icon: Sparkles },
-] as const;
+import { SALARIE_NAV_ITEMS } from "@/lib/salarie/connect-nav";
 
 export default function SidebarSalarie() {
   const pathname = usePathname();
@@ -27,7 +18,7 @@ export default function SidebarSalarie() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-3 py-6" aria-label="Navigation salarié">
-        {NAV_ITEMS.map((item) => {
+        {SALARIE_NAV_ITEMS.map((item) => {
           const active =
             item.href === "/dashboard/salarie"
               ? pathname === item.href

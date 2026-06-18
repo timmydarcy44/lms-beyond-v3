@@ -37,7 +37,7 @@ export type ApprenantNavItem = {
   action?: "share-profile";
 };
 
-const PARCOURS_HREF = "/dashboard/student/learning/parcours";
+const PARCOURS_HREF = "/dashboard/apprenant/parcours";
 
 const BASE: ApprenantNavItem[] = [
   { label: "Accueil", href: "/dashboard/apprenant", icon: LayoutDashboard },

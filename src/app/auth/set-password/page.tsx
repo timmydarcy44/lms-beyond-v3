@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { EdgeSetPasswordForm } from "@/components/edge-site/edge-set-password-form";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { bootstrapInviteSessionFromUrl } from "@/lib/auth/bootstrap-invite-session-from-url";
 import { bootstrapSessionFromUrl } from "@/lib/auth/bootstrap-session-from-url";
 import { COLLABORATOR_DASHBOARD_PATH } from "@/lib/entreprise/collaborator-invite";
 import { toast } from "sonner";
@@ -42,7 +43,12 @@ function SetPasswordForm() {
     async function bootstrapSession() {
       try {
         const code = searchParams.get("code");
-        const { session, error } = await bootstrapSessionFromUrl(supabase, code);
+        const bootstrap = isInviteFlow
+          ? bootstrapInviteSessionFromUrl
+          : isEdgeMarketingFlow
+            ? bootstrapInviteSessionFromUrl
+            : bootstrapSessionFromUrl;
+        const { session, error } = await bootstrap(supabase, code);
 
         if (cancelled) return;
 
@@ -81,26 +87,30 @@ function SetPasswordForm() {
 
   const ensureActiveSession = async () => {
     const code = searchParams.get("code");
-    const boot = await bootstrapSessionFromUrl(supabase, code);
+    const bootstrap = isInviteFlow || isEdgeMarketingFlow ? bootstrapInviteSessionFromUrl : bootstrapSessionFromUrl;
+    const boot = await bootstrap(supabase, code);
     if (boot.session) return boot.session;
-    const { data } = await supabase.auth.getSession();
-    return data.session;
+    return null;
   };
 
   const completePasswordSetup = async (pwd: string): Promise<{ ok: true; destination: string } | { ok: false; message: string }> => {
     const session = await ensureActiveSession();
-    if (session) {
-      const { error } = await supabase.auth.updateUser({
-        password: pwd,
-        data: { needs_password_setup: false },
-      });
-      if (!error) {
-        const destination = isInviteFlow ? COLLABORATOR_DASHBOARD_PATH : nextPath;
-        return { ok: true, destination };
-      }
-      if (!/session|jwt|token|auth/i.test(error.message)) {
-        return { ok: false, message: error.message };
-      }
+    if (!session) {
+      return {
+        ok: false,
+        message: "Lien expiré ou session incorrecte. Rouvrez le lien reçu par email (navigation privée recommandée).",
+      };
+    }
+    const { error } = await supabase.auth.updateUser({
+      password: pwd,
+      data: { needs_password_setup: false },
+    });
+    if (!error) {
+      const destination = isInviteFlow ? COLLABORATOR_DASHBOARD_PATH : nextPath;
+      return { ok: true, destination };
+    }
+    if (!/session|jwt|token|auth/i.test(error.message)) {
+      return { ok: false, message: error.message };
     }
 
     const res = await fetch("/api/auth/complete-password-setup", {

@@ -424,8 +424,8 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "guidance-parentale": {
     title: "Guidance parentale & Neuroéducation : Comprendre pour apaiser",
-    description: "Soutien et conseils pour les parents dans leur rôle éducatif à Caen. Stratégies éducatives adaptées, gestion conflits familiaux, renforcement lien parent-enfant. Cabinet Bretteville sur Odon.",
-    h1: "Guidance Parentale - Accompagnement et Soutien pour les Parents",
+    description: "Guidance parentale à Caen : comprendre son enfant, stratégies éducatives adaptées, gestion des émotions et du quotidien familial. Cabinet Bretteville sur Odon.",
+    h1: "Guidance parentale — Comprendre son enfant pour mieux l'accompagner",
     keywords: [
       "guidance parentale Caen",
       "accompagnement parents Caen",
@@ -436,14 +436,34 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
     contentSections: [
       {
-        title: "Pourquoi la guidance parentale ?",
-        content: "Être parent est un rôle complexe qui peut être source de questionnements, de doutes et de difficultés. Chaque enfant est unique et nécessite une approche adaptée. La guidance parentale offre un espace d'écoute et de conseils pour accompagner les parents dans leur rôle éducatif, les aider à comprendre les besoins de leur enfant et à développer des stratégies éducatives adaptées.",
-        keywords: ["guidance parentale", "parents", "éducation"],
+        title: "Un espace d'écoute, de réflexion et de soutien",
+        content: "Être parent peut parfois susciter des questionnements, un sentiment d'épuisement ou l'impression de ne plus savoir comment réagir face à certaines situations.\n\nLa guidance parentale permet de prendre du recul, d'analyser les difficultés rencontrées et de construire ensemble des réponses adaptées au fonctionnement de l'enfant et aux réalités du quotidien familial.",
+        keywords: ["guidance parentale", "écoute", "soutien"],
       },
       {
-        title: "Mon approche de la guidance parentale",
-        content: "Mon accompagnement en guidance parentale s'articule autour de plusieurs axes : l'écoute et la compréhension des difficultés rencontrées, le développement de stratégies éducatives adaptées, la gestion des conflits familiaux, le renforcement du lien parent-enfant et la valorisation des compétences parentales. L'objectif est de créer un environnement familial épanouissant pour tous.",
-        keywords: ["stratégies", "conflits", "lien parent-enfant"],
+        title: "Une approche fondée sur la compréhension du fonctionnement de l'enfant",
+        content: "Chaque enfant possède son propre mode de fonctionnement, ses besoins, ses forces et ses fragilités.\n\nMon accompagnement s'appuie sur les connaissances actuelles issues des neurosciences, de la psychopédagogie et de la neuroéducation afin d'aider les parents à mieux comprendre les comportements de leur enfant et à développer des stratégies éducatives cohérentes, bienveillantes et efficaces.",
+        keywords: ["neurosciences", "psychopédagogie", "neuroéducation"],
+      },
+      {
+        title: "Les situations fréquemment accompagnées",
+        content: "<strong>Difficultés émotionnelles</strong> — Colères, hypersensibilité, anxiété, frustration, gestion des émotions.<br/><br/><strong>Oppositions et conflits</strong> — Refus, négociation permanente, difficultés à respecter les consignes ou les limites.<br/><br/><strong>Troubles du neurodéveloppement</strong> — TDAH, TSA, troubles DYS, Haut Potentiel, difficultés attentionnelles ou exécutives.<br/><br/><strong>Difficultés scolaires</strong> — Organisation, devoirs, motivation, méthodologie, confiance en soi.<br/><br/><strong>Relations familiales</strong> — Tensions parent-enfant, conflits répétés, difficultés de communication.<br/><br/><strong>Épuisement parental</strong> — Sentiment d'impuissance, fatigue éducative, perte de repères.",
+        keywords: ["TDAH", "TSA", "conflits", "émotions"],
+      },
+      {
+        title: "Ce que nous travaillons ensemble",
+        content: "<strong>Comprendre les comportements</strong> — Identifier les facteurs qui influencent les réactions de l'enfant et leurs fonctions.<br/><br/><strong>Adapter les réponses éducatives</strong> — Mettre en place des stratégies concrètes adaptées à l'âge, au profil et aux besoins de l'enfant.<br/><br/><strong>Poser un cadre sécurisant</strong> — Développer des repères clairs, cohérents et rassurants.<br/><br/><strong>Favoriser la coopération</strong> — Renforcer la communication et la relation parent-enfant.<br/><br/><strong>Soutenir l'autonomie</strong> — Accompagner progressivement l'enfant vers davantage d'indépendance et de responsabilité.<br/><br/><strong>Préserver l'équilibre familial</strong> — Retrouver davantage de sérénité dans le quotidien.",
+        keywords: ["stratégies éducatives", "cadre", "autonomie"],
+      },
+      {
+        title: "Une approche individualisée",
+        content: "Chaque famille est unique.\n\nLes conseils proposés tiennent compte de votre contexte familial, de vos valeurs éducatives, du fonctionnement de votre enfant et des difficultés rencontrées.\n\nL'objectif n'est pas d'appliquer une méthode toute faite mais de co-construire des stratégies adaptées à votre réalité quotidienne.",
+        keywords: ["individualisé", "famille"],
+      },
+      {
+        title: "Les objectifs de la guidance parentale",
+        content: "✓ Mieux comprendre son enfant<br/>✓ Retrouver des repères éducatifs clairs<br/>✓ Réduire les conflits du quotidien<br/>✓ Développer des stratégies adaptées<br/>✓ Favoriser l'autonomie de l'enfant<br/>✓ Retrouver davantage de sérénité familiale",
+        keywords: ["objectifs", "sérénité"],
       },
     ],
   },
@@ -549,8 +569,8 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   },
   "orientation-professionnelle": {
     title: "Bilan d'orientation & Neuroéducation : Projets d'avenir à Caen",
-    description: "Accompagnement à l'orientation scolaire et professionnelle à Caen. Test soft skills, exploration métiers, aide Parcoursup, CV et lettre de motivation. Cabinet Bretteville sur Odon.",
-    h1: "Orientation Scolaire et Professionnelle - Accompagnement Complet",
+    description: "Accompagnement à l'orientation scolaire et professionnelle à Caen. Analyse du profil, exploration métiers, Parcoursup, CV et lettre de motivation. Cabinet Bretteville sur Odon.",
+    h1: "Orientation professionnelle — Clarifier son projet",
     keywords: [
       "orientation scolaire Caen",
       "orientation professionnelle Caen",
@@ -562,13 +582,18 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     contentSections: [
       {
         title: "Pourquoi un accompagnement à l'orientation ?",
-        content: "L'orientation scolaire et professionnelle est un moment clé qui peut être source de stress et de questionnements. Un accompagnement personnalisé permet d'identifier ses intérêts, ses compétences et ses aspirations, d'explorer les métiers et les formations, et de faire des choix éclairés. L'objectif est de construire un projet d'avenir qui correspond à la personne.",
-        keywords: ["orientation", "choix", "projet"],
+        content: "L'orientation scolaire et professionnelle constitue une étape importante du parcours d'un jeune ou d'un étudiant. Face à la diversité des formations, des métiers et des possibilités d'évolution, il peut être difficile d'identifier une voie cohérente avec ses compétences, ses aspirations et son fonctionnement.\n\nMon accompagnement vise à favoriser une meilleure connaissance de soi, à clarifier les perspectives d'avenir et à construire un projet réaliste, motivant et durable.",
+        keywords: ["orientation", "projet", "connaissance de soi"],
       },
       {
-        title: "Mon processus d'accompagnement orientation",
-        content: "Mon accompagnement à l'orientation s'articule en plusieurs étapes : bilan d'orientation avec test de soft skills, exploration des métiers et des formations, travail sur les perspectives métiers, rédaction du projet d'orientation, aide à la rédaction du CV et de la lettre de motivation, et accompagnement dans les démarches (Parcoursup, candidatures, etc.).",
-        keywords: ["bilan", "soft skills", "Parcoursup"],
+        title: "Mon accompagnement à l'orientation",
+        content: "Mon accompagnement repose sur une démarche structurée et individualisée permettant d'explorer les centres d'intérêt, les compétences, les aptitudes, les valeurs et les aspirations de chacun.\n\nSelon les besoins, il peut inclure :<br/><br/>• l'analyse du profil et du fonctionnement personnel ;<br/>• l'identification des compétences et des ressources ;<br/>• l'exploration des métiers, secteurs et formations ;<br/>• la construction d'un projet d'orientation cohérent ;<br/>• l'accompagnement Parcoursup et aux candidatures ;<br/>• l'aide à la rédaction du CV, de la lettre de motivation et des dossiers de sélection ;<br/>• l'accompagnement à la prise de décision.\n\nL'objectif est de permettre à chacun d'avancer avec davantage de clarté, de confiance et de sérénité dans ses choix d'orientation.",
+        keywords: ["Parcoursup", "CV", "projet"],
+      },
+      {
+        title: "Les étapes de l'accompagnement",
+        content: "<strong>Analyse du profil, des motivations et des centres d'intérêt</strong><br/><br/><strong>Identification des compétences, ressources et points d'appui</strong><br/><br/><strong>Exploration des métiers et des environnements professionnels adaptés</strong><br/><br/><strong>Construction d'un projet d'orientation cohérent et individualisé</strong><br/><br/><strong>Accompagnement Parcoursup et stratégie de candidature</strong><br/><br/><strong>Valorisation du parcours, du CV et des candidatures</strong><br/><br/><strong>Analyse des formations et des débouchés</strong><br/><br/><strong>Prise de décision et sécurisation du projet</strong>",
+        keywords: ["étapes", "méthodologie"],
       },
     ],
   },

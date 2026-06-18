@@ -248,16 +248,12 @@ const specialitesContent: Record<string, {
   },
   "guidance-parentale": {
     title: "Guidance parentale",
-    subtitle: "Soutien et conseils pour les parents dans leur rôle éducatif",
-    description: "Un espace d'écoute et de conseils pour vous accompagner dans votre rôle de parent.",
+    subtitle: "Comprendre son enfant pour mieux l'accompagner au quotidien",
+    description: "Un accompagnement destiné aux parents souhaitant mieux comprendre les besoins de leur enfant et mettre en place des stratégies éducatives adaptées à leur situation familiale.",
     whatIs: {
-      title: "Qu'est-ce que la guidance parentale ?",
-      description: "Un accompagnement pour vous aider dans votre rôle de parent.",
-      details: [
-        "Stratégies éducatives adaptées",
-        "Gestion des conflits familiaux",
-        "Renforcement du lien parent-enfant",
-      ],
+      title: "Guidance parentale",
+      description: "Un accompagnement destiné aux parents souhaitant mieux comprendre les besoins de leur enfant et mettre en place des stratégies éducatives adaptées à leur situation familiale.",
+      details: [],
     },
     programBreakdown: [],
     testimonials: [],
@@ -305,20 +301,20 @@ const specialitesContent: Record<string, {
   },
   "orientation-professionnelle": {
     title: "Orientation professionnelle",
-    subtitle: "Accompagnement personnalisé pour révéler votre potentiel et faire les bons choix",
-    description: "Un accompagnement complet pour vous aider à identifier vos aspirations, vos compétences et à construire un projet d'orientation professionnelle épanouissant. Mon expertise en tant que professeure certifiée et ma connaissance approfondie du système éducatif français me permettent de vous guider dans cette étape cruciale de votre parcours.",
+    subtitle: "Clarifier son projet et construire un parcours cohérent",
+    description: "Grâce à une approche individualisée, cet accompagnement permet d'explorer ses centres d'intérêt, ses compétences, ses valeurs et ses aspirations afin de prendre des décisions éclairées concernant son orientation scolaire ou professionnelle.",
     whatIs: {
-      title: "Qu'est-ce que l'orientation professionnelle ?",
-      description: "L'orientation professionnelle est un accompagnement personnalisé qui vous aide à faire les bons choix pour votre avenir. En tant que professeure certifiée, j'ai développé une solide expérience dans l'accompagnement des jeunes dans le choix de leur orientation, notamment pour l'orientation post-bac et la plateforme Parcoursup. Mon approche combine une écoute attentive, une analyse approfondie de votre profil et une méthodologie structurée pour vous guider vers des choix éclairés et épanouissants.",
+      title: "L'orientation, bien plus qu'un choix de formation",
+      description: "L'orientation ne se limite pas au choix d'une formation ou d'un métier. Elle consiste à mieux comprendre son fonctionnement, ses compétences, ses motivations et ses aspirations afin de construire un projet cohérent, réaliste et durable. Professeure certifiée et spécialisée dans l'accompagnement des adolescents, étudiants et jeunes adultes, je vous accompagne dans cette réflexion grâce à une approche structurée associant connaissance du système éducatif, analyse du profil et méthodologie de décision.",
       details: [
-        "Premier rendez-vous pour comprendre vos questionnements et vos aspirations",
-        "Test des soft skills pour identifier vos forces et vos talents naturels",
-        "Travail sur les perspectives métiers en lien avec votre profil",
-        "Rédaction d'un projet d'orientation structuré et personnalisé",
-        "Mise en place de Parcoursup avec stratégie d'inscription optimisée",
-        "Travail sur la lettre de motivation et le CV pour valoriser vos compétences",
-        "Exploration des métiers et formations",
-        "Aide à la décision",
+        "Analyse du profil, des motivations et des centres d'intérêt",
+        "Identification des compétences, ressources et points d'appui",
+        "Exploration des métiers et des environnements professionnels adaptés",
+        "Construction d'un projet d'orientation cohérent et individualisé",
+        "Accompagnement Parcoursup et stratégie de candidature",
+        "Valorisation du parcours, du CV et des candidatures",
+        "Analyse des formations et des débouchés",
+        "Prise de décision et sécurisation du projet",
       ],
     },
     programBreakdown: [],
@@ -814,7 +810,13 @@ export default function SpecialiteDetailPage({
                 {content.whatIs.description}
               </p>
               {content.whatIs.details.length > 0 && (
-                <div className="grid md:grid-cols-3 gap-6 mt-12">
+                <div
+                  className={`grid gap-6 mt-12 ${
+                    content.whatIs.details.length > 4
+                      ? "md:grid-cols-2"
+                      : "md:grid-cols-3"
+                  }`}
+                >
                   {content.whatIs.details.map((detail, index) => (
                     <motion.div
                       key={index}
@@ -868,6 +870,24 @@ export default function SpecialiteDetailPage({
                 </Card>
               </motion.div>
             ))}
+            {slug === "guidance-parentale" && (
+              <div className="text-center mt-8">
+                <Button
+                  size="lg"
+                  className="rounded-full px-8 py-6 text-lg font-semibold shadow-xl"
+                  style={{
+                    backgroundColor: primaryColor,
+                    color: "#FFFFFF",
+                  }}
+                  asChild
+                >
+                  <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                    Prendre rendez-vous
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </a>
+                </Button>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -906,7 +926,7 @@ export default function SpecialiteDetailPage({
               asChild
             >
               <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                Planifier mon appel
+                Prendre rendez-vous
                 <ArrowRight className="ml-2 h-5 w-5" />
               </a>
             </Button>

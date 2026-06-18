@@ -221,7 +221,7 @@ export function CartesRituelSommeilPage({ product }: Props) {
       <section className="border-t border-[#E6D9C6] bg-white px-5 py-14 lg:px-10">
         <div className="mx-auto max-w-[1280px]">
           <h2 className="text-center text-xl font-semibold text-[#2F2A25]">Pourquoi ce jeu ?</h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
             {[
               {
                 title: "Un rituel apaisant",
@@ -230,10 +230,6 @@ export function CartesRituelSommeilPage({ product }: Props) {
               {
                 title: "Du lien, pas des écrans",
                 text: "Des activités concrètes pour un moment privilégié entre parent et enfant.",
-              },
-              {
-                title: "Conçu par une experte",
-                text: "Créé par Jessica Contentin, psychopédagogue, pour les familles au quotidien.",
               },
             ].map((item) => (
               <div

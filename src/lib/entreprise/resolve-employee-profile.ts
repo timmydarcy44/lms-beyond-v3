@@ -66,17 +66,6 @@ export async function collectEmployeeProfileCandidates(
     }
   }
 
-  if (employee.company_id) {
-    const { data: byOrg } = await service
-      .from("profiles")
-      .select("id")
-      .eq("company_id", employee.company_id)
-      .limit(20);
-    for (const row of byOrg ?? []) {
-      if (row.id) ids.add(String(row.id));
-    }
-  }
-
   return Array.from(ids);
 }
 

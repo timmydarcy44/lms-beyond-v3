@@ -5,7 +5,6 @@ import { JessicaHomePresentation } from "@/components/jessica-contentin/jessica-
 import { JessicaParcoursProgramCards, type ParcoursProgramCard } from "@/components/jessica-contentin/jessica-parcours-program-cards";
 import { PROGRAMMES, programmePresentationHref } from "@/lib/jessica-contentin/programmes-catalog";
 import { GoogleReviewsSlider } from "@/components/jessica-contentin/google-reviews-slider";
-import { ObjectivesAccordion, type ObjectiveItem } from "@/components/jessica-contentin/objectives-accordion";
 import { JessicaHomeAccompagnementSection } from "@/components/jessica-contentin/jessica-home-accompagnement-section";
 import { motion } from "framer-motion";
 import Script from "next/script";
@@ -14,40 +13,6 @@ const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-
 
 const VIDEO_SOUS_PARCOURS =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Design%20sans%20titre.mp4";
-
-const KEYWORD_OBJECTIVES: ObjectiveItem[] = [
-  {
-    id: "apprendre",
-    title: "APPRENDRE",
-    imageUrl: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    id: "comprendre",
-    title: "COMPRENDRE",
-    imageUrl:
-      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/levee%20de%20soleil.mp4",
-  },
-  {
-    id: "reguler",
-    title: "SE RÉGULER",
-    imageUrl: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    id: "structurer",
-    title: "S'ORGANISER",
-    imageUrl: "https://images.unsplash.com/photo-1504151932400-72d4384f04b3?w=1600&q=80",
-  },
-  {
-    id: "developper",
-    title: "PROGRESSER",
-    imageUrl: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1600&q=80",
-  },
-  {
-    id: "epanouir",
-    title: "S'ÉPANOUIR",
-    imageUrl: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1600&q=80",
-  },
-];
 
 const PARCOURS_CARDS: ParcoursProgramCard[] = PROGRAMMES.map((p) => {
   const base: ParcoursProgramCard = {
@@ -74,14 +39,6 @@ export default function JessicaContentinHomePage() {
         cards={PARCOURS_CARDS}
         featuredVideoUrl={VIDEO_SOUS_PARCOURS}
         featuredVideoTitle="Un accompagnement personnalisé pour comprendre, ajuster et progresser."
-        belowProgramCards={
-          <ObjectivesAccordion
-            embedded
-            title="Objectifs des programmes"
-            subtitle="Sélectionnez un axe pour voir le visuel associé."
-            objectives={KEYWORD_OBJECTIVES}
-          />
-        }
       />
 
       <JessicaHomeAccompagnementSection />

@@ -71,10 +71,6 @@ const specialitesMegaMenu: {
     title: "PARENTS",
     items: [
       { label: "Guidance parentale", href: "/jessica-contentin/specialites/guidance-parentale", icon: Users },
-      { label: "Comprendre le TND de mon enfant", href: "/jessica-contentin/specialites/tnd", icon: Puzzle },
-      { label: "Accompagnement parental TND", href: "/jessica-contentin/specialites/tnd", icon: Heart },
-      { label: "Harcèlement — que faire ?", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
-      { label: "Stratégies éducatives", href: "/jessica-contentin/specialites/guidance-parentale", icon: BookOpen },
     ],
   },
 ];

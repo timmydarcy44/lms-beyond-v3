@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
-import { useSupabase } from "@/components/providers/supabase-provider";
+import { useOptionalEnterpriseOverviewContext } from "@/components/enterprise/enterprise-overview-provider";
 import {
   LayoutDashboard,
   BarChart3,
@@ -24,6 +24,15 @@ const NAV_ITEMS = [
   { label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
 ];
 
+type ViewerState = {
+  prenom: string | null;
+  nom: string | null;
+  email: string | null;
+};
+
+let cachedViewer: ViewerState | null = null;
+let viewerInflight: Promise<ViewerState | null> | null = null;
+
 function viewerInitials(prenom: string | null, nom: string | null, email: string | null) {
   const a = (prenom ?? "").trim().slice(0, 1).toUpperCase();
   const b = (nom ?? "").trim().slice(0, 1).toUpperCase();
@@ -31,55 +40,48 @@ function viewerInitials(prenom: string | null, nom: string | null, email: string
   return (email ?? "?").slice(0, 2).toUpperCase();
 }
 
+async function fetchViewer(): Promise<ViewerState | null> {
+  if (cachedViewer) return cachedViewer;
+  if (viewerInflight) return viewerInflight;
+  viewerInflight = fetch("/api/dashboard/entreprise/viewer", { credentials: "include" })
+    .then(async (res) => {
+      if (!res.ok) return null;
+      const json = (await res.json()) as ViewerState;
+      cachedViewer = json;
+      return json;
+    })
+    .finally(() => {
+      viewerInflight = null;
+    });
+  return viewerInflight;
+}
+
 export default function EnterpriseSidebar() {
   const pathname = usePathname();
-  const supabase = useSupabase();
-  const [viewer, setViewer] = useState<{ prenom: string | null; nom: string | null; email: string | null }>({
-    prenom: null,
-    nom: null,
-    email: null,
-  });
+  const overviewCtx = useOptionalEnterpriseOverviewContext();
+  const overviewData = overviewCtx?.data;
+  const [viewer, setViewer] = useState<ViewerState>(
+    cachedViewer ?? { prenom: null, nom: null, email: null },
+  );
 
   useEffect(() => {
-    let cancelled = false;
-    async function loadViewer() {
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        const user = userData.user;
-        if (!user) return;
-        const authEmail = user.email ?? null;
-        const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-        const { data } = await supabase
-          .from("profiles")
-          .select("first_name, last_name, email")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (cancelled) return;
-        const row = data as {
-          first_name?: string | null;
-          last_name?: string | null;
-          email?: string | null;
-        } | null;
-        setViewer({
-          prenom:
-            row?.first_name ??
-            (typeof meta.first_name === "string" ? meta.first_name : null) ??
-            (typeof meta.prenom === "string" ? meta.prenom : null),
-          nom:
-            row?.last_name ??
-            (typeof meta.last_name === "string" ? meta.last_name : null) ??
-            (typeof meta.nom === "string" ? meta.nom : null),
-          email: authEmail ?? row?.email ?? null,
-        });
-      } catch {
-        if (!cancelled) setViewer({ prenom: null, nom: null, email: null });
-      }
+    if (overviewData?.viewer) {
+      setViewer({
+        prenom: overviewData.viewer.prenom,
+        nom: overviewData.viewer.nom,
+        email: overviewData.viewer.email,
+      });
+      cachedViewer = {
+        prenom: overviewData.viewer.prenom,
+        nom: overviewData.viewer.nom,
+        email: overviewData.viewer.email,
+      };
+      return;
     }
-    void loadViewer();
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
+    void fetchViewer().then((v) => {
+      if (v) setViewer(v);
+    });
+  }, [overviewData?.viewer]);
 
   const displayName = useMemo(() => {
     const full = [viewer.prenom, viewer.nom].filter(Boolean).join(" ").trim();
@@ -118,49 +120,34 @@ export default function EnterpriseSidebar() {
           const Icon = item.icon;
           return (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
+              prefetch
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] transition",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
                 active
-                  ? "border border-violet-500/30 bg-violet-600/20 font-semibold text-white"
-                  : "text-white/50 hover:bg-white/5 hover:text-white/80",
+                  ? "bg-violet-600/20 text-violet-200"
+                  : "text-white/55 hover:bg-white/5 hover:text-white",
               )}
             >
-              <Icon size={16} strokeWidth={1.5} className={active ? "text-violet-300" : "text-white/40"} />
+              <Icon size={18} strokeWidth={1.75} />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-auto p-4">
-        <Link
-          href="/dashboard/entreprise/equipe-insight"
-          className={cn(
-            "group block w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition",
-            "hover:border-violet-500/30 hover:bg-white/[0.06]",
-            (pathname === "/dashboard/entreprise/equipe-insight" ||
-              pathname.startsWith("/dashboard/entreprise/equipe-radar")) &&
-              "border-violet-500/40 bg-violet-600/10",
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 shadow-[0_0_22px_rgba(124,58,237,0.35)]">
-              <span className="absolute inset-0 animate-ping rounded-xl bg-violet-600/30" aria-hidden />
-              <Zap size={18} strokeWidth={1.5} className="relative text-white" aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-[13px] font-semibold text-white">Beyond IA</span>
-                <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/80">
-                  BETA
-                </span>
-              </div>
-              <div className="mt-0.5 text-[11px] text-white/40">Insights et actions prioritaires</div>
-            </div>
+      <div className="mt-auto border-t border-white/10 p-4">
+        <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-violet-200">
+            <Zap size={14} />
+            Beyond IA
+            <span className="rounded bg-violet-500/30 px-1.5 py-0.5 text-[10px] uppercase">Beta</span>
           </div>
-        </Link>
+          <p className="mt-1 text-[11px] leading-relaxed text-white/45">
+            Assistant RH intégré — posez vos questions depuis l&apos;icône en bas à droite.
+          </p>
+        </div>
       </div>
     </aside>
   );

@@ -1,5 +1,11 @@
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
+import { matchParcoursForKeywords } from "@/lib/learner/edge-catalog-preview";
+import {
+  pickPractitionerForNeed,
+  SALARIE_PRACTITIONERS_FALLBACK,
+  type SalariePractitioner,
+} from "@/lib/learner/practitioners";
 import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 import { getParcours } from "@/lib/parcours";
 
@@ -46,6 +52,7 @@ type BuildPlanInput = {
   idmcAxes?: Record<AxisKey, number> | null;
   softSkills?: Array<{ skill: string; score: number }>;
   surface?: "apprenant" | "salarie";
+  practitioners?: SalariePractitioner[];
 };
 
 const SOFT_SKILL_THRESHOLDS = 55;
@@ -58,8 +65,8 @@ const SKILL_COACHING_MAP: Record<string, { coaching: string; formation: string; 
   },
   "Gestion du stress": {
     coaching: "Gestion du stress et charge mentale",
-    formation: "Micro-formation : techniques de respiration et récupération",
-    slug: "gestion-stress",
+    formation: "Parcours Coach & Facilitateur — posture et régulation",
+    slug: "coach-facilitateur",
   },
   "Gestion des conflits": {
     coaching: "Médiation et communication assertive",
@@ -67,8 +74,8 @@ const SKILL_COACHING_MAP: Record<string, { coaching: string; formation: string; 
   },
   Leadership: {
     coaching: "Leadership situationnel",
-    formation: "Parcours Leadership — piloter une équipe avec impact",
-    slug: "sales-operations-manager",
+    formation: "Parcours Leader de la Transformation",
+    slug: "leader-transformation",
   },
   "Communication interpersonnelle": {
     coaching: "Communication claire et posture professionnelle",
@@ -103,6 +110,7 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
     idmcAxes,
     softSkills = [],
     surface = "apprenant",
+    practitioners = SALARIE_PRACTITIONERS_FALLBACK,
   } = input;
 
   const hasData = Boolean(discScores || idmcAxes || softSkills.length);
@@ -121,23 +129,27 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
     const mapping = SKILL_COACHING_MAP[skill.skill];
     if (!mapping) continue;
     needs.push(mapping.coaching);
+    const parcoursHref = mapping.slug
+      ? `/edge-lab/parcours/${mapping.slug}`
+      : `${root}/formations?focus=${encodeURIComponent(skill.skill)}`;
+    const parcours = mapping.slug ? getParcours(mapping.slug) : null;
     items.push({
       id: `formation-${skill.skill}`,
-      kind: "formation",
-      title: mapping.formation,
-      description: `Score actuel : ${skill.score} % — priorité identifiée via vos soft skills.`,
-      href: `${root}/formations?focus=${encodeURIComponent(skill.skill)}`,
+      kind: parcours ? "formation" : "micro_formation",
+      title: parcours?.titre ?? mapping.formation,
+      description: parcours
+        ? `${parcours.description.slice(0, 120)}… Score actuel : ${skill.score} %.`
+        : `Score actuel : ${skill.score} % — priorité identifiée via vos soft skills.`,
+      href: parcoursHref,
       reason: `Axe à renforcer : ${skill.skill}`,
       priority: 100 - skill.score,
     });
-    coachings.push({
-      id: `coach-${skill.skill}`,
-      name: pickCoachForSkill(skill.skill).name,
-      title: pickCoachForSkill(skill.skill).title,
-      specialites: pickCoachForSkill(skill.skill).specialites,
-      reason: mapping.coaching,
-      photoUrl: pickCoachForSkill(skill.skill).photoUrl,
-    });
+    const coach = practitionerToRecommendation(
+      pickPractitionerForNeed(practitioners, mapping.coaching),
+      mapping.coaching,
+      skill.skill,
+    );
+    if (coach) coachings.push(coach);
   }
 
   if (idmcAxes) {
@@ -148,15 +160,25 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
     if (weakest && weakest[1] < 50) {
       const need = IDMC_AXIS_NEEDS[weakest[0]] ?? "Consolider votre profil IDMC";
       if (!needs.includes(need)) needs.push(need);
+      const matched = matchParcoursForKeywords([need]);
+      const formation = matched[0];
       items.push({
         id: `idmc-${weakest[0]}`,
-        kind: "micro_formation",
-        title: "Micro-formation IDMC ciblée",
-        description: `${need} (axe ${weakest[0]} : ${weakest[1]} %).`,
-        href: `${root}/formations?focus=idmc`,
+        kind: formation ? "formation" : "micro_formation",
+        title: formation?.title ?? "Micro-formation IDMC ciblée",
+        description: formation
+          ? `${formation.description} (axe ${weakest[0]} : ${weakest[1]} %).`
+          : `${need} (axe ${weakest[0]} : ${weakest[1]} %).`,
+        href: formation?.href ?? `${root}/formations?focus=idmc`,
         reason: need,
         priority: 100 - weakest[1],
       });
+      const coach = practitionerToRecommendation(
+        pickPractitionerForNeed(practitioners, need),
+        need,
+        `idmc-${weakest[0]}`,
+      );
+      if (coach) coachings.push(coach);
     }
   }
 
@@ -230,6 +252,22 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
   };
 }
 
+function practitionerToRecommendation(
+  p: SalariePractitioner | null,
+  reason: string,
+  idSuffix: string,
+): CoachingRecommendation | null {
+  if (!p) return null;
+  return {
+    id: `coach-${idSuffix}`,
+    name: p.name,
+    title: p.title,
+    specialites: p.specialites,
+    reason,
+    photoUrl: p.photoUrl,
+  };
+}
+
 function dedupeCoachings(items: CoachingRecommendation[]) {
   const seen = new Set<string>();
   return items.filter((c) => {
@@ -239,41 +277,10 @@ function dedupeCoachings(items: CoachingRecommendation[]) {
   });
 }
 
-function pickCoachForSkill(skill: string) {
-  if (/émotion|stress|empathie/i.test(skill)) {
-    return SALARIE_PRACTITIONERS.jessica;
-  }
-  if (/leadership|conflit|communication/i.test(skill)) {
-    return SALARIE_PRACTITIONERS.jerome;
-  }
-  return SALARIE_PRACTITIONERS.timmy;
-}
-
 export const SALARIE_PRACTITIONERS = {
-  jessica: {
-    id: "jessica-contentin",
-    name: "Jessica Contentin",
-    title: "Psychopédagogue — neuroéducation",
-    specialites: ["Gestion des émotions", "TDA-H", "Confiance en soi", "Phobie scolaire"],
-    photoUrl: "/jessica-contentin/jessica-portrait.jpg",
-    bio: "Psychopédagogue certifiée, spécialisée en gestion des émotions et accompagnement TND.",
-  },
-  timmy: {
-    id: "timmy-darcy",
-    name: "Timmy Darcy",
-    title: "Coach professionnel — performance",
-    specialites: ["Leadership", "Communication", "Orientation carrière", "Soft skills"],
-    photoUrl: null,
-    bio: "Coach certifié EDGE, accompagnement des parcours professionnels et montée en compétences.",
-  },
-  jerome: {
-    id: "jerome-picot",
-    name: "Jérôme Picot",
-    title: "Consultant management & transformation",
-    specialites: ["Management", "Conflits", "Performance d'équipe", "Pilotage"],
-    photoUrl: null,
-    bio: "Expert management et conduite du changement pour managers et collaborateurs.",
-  },
+  jessica: SALARIE_PRACTITIONERS_FALLBACK[0],
+  timmy: SALARIE_PRACTITIONERS_FALLBACK[1],
+  jerome: SALARIE_PRACTITIONERS_FALLBACK[2],
 } as const;
 
-export const SALARIE_PRACTITIONERS_LIST = Object.values(SALARIE_PRACTITIONERS);
+export const SALARIE_PRACTITIONERS_LIST = SALARIE_PRACTITIONERS_FALLBACK;

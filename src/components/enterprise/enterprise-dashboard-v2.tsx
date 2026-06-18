@@ -170,9 +170,11 @@ export function EnterpriseDashboardV2() {
   const formations = overview?.formations ?? { presentiel: [], elearning: [] };
   const recentActivity = overview?.this_week?.recent_activity ?? [];
 
+  const showBlockingOverlay = loading && !overview;
+
   return (
     <div className="relative flex min-h-screen bg-white font-sans text-gray-900">
-      {loading ? <EnterpriseLoadingOverlay /> : null}
+      {showBlockingOverlay ? <EnterpriseLoadingOverlay /> : null}
       <EnterpriseSidebar />
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mb-10 text-center">

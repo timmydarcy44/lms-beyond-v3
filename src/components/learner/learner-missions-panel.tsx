@@ -27,6 +27,13 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Annulée",
 };
 
+const STATUS_PROGRESS: Record<string, number> = {
+  pending: 0,
+  in_progress: 55,
+  completed: 100,
+  cancelled: 0,
+};
+
 export function LearnerMissionsPanel({ kicker = "Organisation" }: { kicker?: string }) {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +64,12 @@ export function LearnerMissionsPanel({ kicker = "Organisation" }: { kicker?: str
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const onFocus = () => void load();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [load]);
 
   const updateStatus = async (id: string, status: string) => {
@@ -108,6 +121,18 @@ export function LearnerMissionsPanel({ kicker = "Organisation" }: { kicker?: str
                   {mission.description ? (
                     <p className="mt-1 text-sm text-white/55">{mission.description}</p>
                   ) : null}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[11px] text-white/40">
+                      <span>Avancement</span>
+                      <span>{STATUS_PROGRESS[mission.status] ?? 0} %</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-violet-500 transition-all"
+                        style={{ width: `${STATUS_PROGRESS[mission.status] ?? 0}%` }}
+                      />
+                    </div>
+                  </div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-white/40">
                     <span>{STATUS_LABEL[mission.status] ?? mission.status}</span>
                     {mission.due_date ? (

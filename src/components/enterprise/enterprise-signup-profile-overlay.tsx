@@ -22,6 +22,33 @@ type SignupStatusResponse = {
   prefill?: Prefill;
 };
 
+const SIGNUP_CACHE_KEY = "entreprise_signup_status_v1";
+const SIGNUP_CACHE_MS = 5 * 60 * 1000;
+
+function readCachedSignupStatus(): SignupStatusResponse | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SIGNUP_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at: number; status: SignupStatusResponse };
+    if (Date.now() - parsed.at > SIGNUP_CACHE_MS) return null;
+    return parsed.status;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedSignupStatus(status: SignupStatusResponse) {
+  try {
+    sessionStorage.setItem(
+      SIGNUP_CACHE_KEY,
+      JSON.stringify({ at: Date.now(), status }),
+    );
+  } catch {
+    /* ignore quota */
+  }
+}
+
 export function EnterpriseSignupProfileOverlay({
   organizationId,
   prefill,
@@ -233,8 +260,9 @@ export function EnterpriseSignupProfileOverlay({
 
 export function EnterpriseSignupProfileGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<SignupStatusResponse | null>(null);
+  const cachedOnMount = readCachedSignupStatus();
+  const [loading, setLoading] = useState(() => cachedOnMount === null);
+  const [status, setStatus] = useState<SignupStatusResponse | null>(cachedOnMount);
 
   useEffect(() => {
     let cancelled = false;
@@ -242,9 +270,16 @@ export function EnterpriseSignupProfileGate({ children }: { children: React.Reac
       try {
         const res = await fetch("/api/entreprises/signup-status", { cache: "no-store" });
         const json = (await res.json()) as SignupStatusResponse;
-        if (!cancelled) setStatus(json);
+        if (!cancelled) {
+          setStatus(json);
+          writeCachedSignupStatus(json);
+        }
       } catch {
-        if (!cancelled) setStatus({ needs_profile_completion: false });
+        if (!cancelled) {
+          const fallback = { needs_profile_completion: false };
+          setStatus(fallback);
+          writeCachedSignupStatus(fallback);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -254,7 +289,7 @@ export function EnterpriseSignupProfileGate({ children }: { children: React.Reac
     };
   }, []);
 
-  if (loading) {
+  if (loading && !status) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-violet-600" />

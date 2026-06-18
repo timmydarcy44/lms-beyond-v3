@@ -1,5 +1,6 @@
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
+import { resolveEnterpriseViewerDisplay } from "@/lib/entreprise/resolve-viewer-display";
 
 const MANAGER_ROLES = new Set(["entreprise", "admin_hr", "rh", "manager", "admin"]);
 
@@ -72,7 +73,8 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
     return { ok: false, error: "Non authentifié", status: 401 };
   }
 
-  const { data: profileRow, error: profileError } = await supabase
+  const db = getServiceRoleClient() ?? supabase;
+  const { data: profileRow, error: profileError } = await db
     .from("profiles")
     .select("first_name, last_name, full_name, email, company_id, role, role_type")
     .eq("id", user.id)
@@ -110,20 +112,30 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
       if (!membership?.org_id) {
         return { ok: false, error: "Accès réservé aux responsables RH entreprise", status: 403 };
       }
+      const viewerResolved = resolveEnterpriseViewerDisplay(
+        profile,
+        user.email,
+        user.user_metadata as Record<string, unknown>,
+      );
       const viewer = {
-        email: user.email ?? profile.email ?? null,
-        prenom: profile.first_name ?? null,
-        nom: profile.last_name ?? null,
+        email: viewerResolved.email,
+        prenom: viewerResolved.prenom,
+        nom: viewerResolved.nom,
       };
       return { ok: true, userId: user.id, organizationId: String(membership.org_id), viewer };
     }
     return { ok: false, error: "Accès réservé aux responsables RH entreprise", status: 403 };
   }
 
+  const viewerResolved = resolveEnterpriseViewerDisplay(
+    profile,
+    user.email,
+    user.user_metadata as Record<string, unknown>,
+  );
   const viewer = {
-    email: user.email ?? profile.email ?? null,
-    prenom: profile.first_name ?? null,
-    nom: profile.last_name ?? null,
+    email: viewerResolved.email,
+    prenom: viewerResolved.prenom,
+    nom: viewerResolved.nom,
   };
 
   const organizationId = profile.company_id?.trim() || null;

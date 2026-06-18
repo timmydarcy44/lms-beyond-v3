@@ -14,6 +14,7 @@ import {
   type IdmcResponse,
   type IdmcVariant,
 } from "@/lib/idmc/idmc-questions";
+import { redirectAfterSalarieAssessmentTest } from "@/lib/salarie/post-test-redirect";
 
 const IDMC_VARIANT: IdmcVariant = "employee";
 const QUESTIONS = IDMC_QUESTIONS[IDMC_VARIANT];
@@ -112,7 +113,8 @@ function TestInner() {
       const { error: dbError } = await supabase.from("idmc_resultats").upsert(payload, { onConflict: "profile_id" });
       if (dbError) throw dbError;
 
-      router.push("/dashboard/salarie");
+      const next = await redirectAfterSalarieAssessmentTest("idmc", "/dashboard/salarie");
+      router.push(next);
     } catch (e: unknown) {
       setSavedMessage(e instanceof Error ? e.message : "Erreur lors de l'enregistrement.");
     } finally {

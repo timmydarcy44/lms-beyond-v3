@@ -71,15 +71,22 @@ export function maskTestResultsForEnterprise<T extends {
   };
 }
 
+export type EnterpriseConsentSurface = "apprenant" | "salarie";
+
 export function buildPostTestRedirectUrl(
   test: EnterpriseTestKind,
   defaultNext: string,
   hasOrganisation: boolean,
+  surface: EnterpriseConsentSurface = "apprenant",
 ): string {
   if (!hasOrganisation) return defaultNext;
   const params = new URLSearchParams({
     test,
     next: defaultNext,
   });
-  return `/dashboard/apprenant/partage-entreprise?${params.toString()}`;
+  const base =
+    surface === "salarie"
+      ? "/dashboard/salarie/partage-entreprise"
+      : "/dashboard/apprenant/partage-entreprise";
+  return `${base}?${params.toString()}`;
 }

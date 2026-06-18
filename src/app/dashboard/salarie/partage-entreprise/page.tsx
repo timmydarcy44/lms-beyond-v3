@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { EntrepriseShareConsentForm } from "@/components/entreprise/entreprise-share-consent-form";
 
-export default function PartageEntreprisePage() {
+export default function SalariePartageEntreprisePage() {
   return (
     <Suspense
       fallback={
@@ -14,9 +14,9 @@ export default function PartageEntreprisePage() {
       }
     >
       <EntrepriseShareConsentForm
-        defaultNext="/dashboard/apprenant/profil"
-        variant="apprenant"
-        revokeHint="Vous pourrez retirer ce consentement à tout moment depuis votre espace apprenant. Sans accord, vos résultats restent visibles uniquement par vous."
+        defaultNext="/dashboard/salarie"
+        variant="salarie"
+        revokeHint="Vous pourrez retirer ce consentement à tout moment depuis votre espace salarié. Sans accord, vos résultats restent visibles uniquement par vous."
       />
     </Suspense>
   );

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills";
+import { redirectAfterSalarieAssessmentTest } from "@/lib/salarie/post-test-redirect";
 import { cn } from "@/lib/utils";
 
 const answersLabels = ["1", "2", "3", "4", "5"];
@@ -62,7 +63,8 @@ export default function SalarieSoftSkillsTestPage() {
         body: JSON.stringify({ answers }),
       });
       if (response.ok) {
-        router.push("/dashboard/salarie");
+        const next = await redirectAfterSalarieAssessmentTest("soft_skills", "/dashboard/salarie");
+        router.push(next);
         return;
       }
       console.error("Erreur API submit:", await response.text());

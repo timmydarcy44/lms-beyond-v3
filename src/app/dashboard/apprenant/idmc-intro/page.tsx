@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { IDMC_QUESTIONS } from "@/lib/idmc/idmc-questions";
+import { IDMC_QUESTION_COUNT } from "@/lib/idmc/idmc-questions";
 import { EDGE_COLORS, EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
 
 export default function IdmcIntroPage() {
@@ -100,7 +100,7 @@ export default function IdmcIntroPage() {
           animate={{ opacity: phase === "ready" ? 1 : 0 }}
           transition={{ delay: 0.35, duration: 0.5 }}
         >
-          {IDMC_QUESTIONS.length} questions · ~10 min
+          {IDMC_QUESTION_COUNT} questions · ~10 min
         </motion.p>
 
         <motion.div

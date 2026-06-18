@@ -10,7 +10,11 @@ import {
   IDMC_QUESTIONS,
   type IdmcLikertValue,
   type IdmcResponse,
+  type IdmcVariant,
 } from "@/lib/idmc/idmc-questions";
+
+const IDMC_VARIANT: IdmcVariant = "learner";
+const QUESTIONS = IDMC_QUESTIONS[IDMC_VARIANT];
 import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
 import {
   EdgeAssessmentOption,
@@ -25,7 +29,7 @@ export default function IdmcTestPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [responses, setResponses] = useState<IdmcResponse[]>([]);
 
-  const current = IDMC_QUESTIONS[index];
+  const current = QUESTIONS[index];
 
   const handleSelect = (value: IdmcLikertValue) => {
     if (selectedValue !== null || submitting || analyzing) return;
@@ -46,7 +50,7 @@ export default function IdmcTestPage() {
     setResponses(finalResponses);
 
     window.setTimeout(async () => {
-      if (index < IDMC_QUESTIONS.length - 1) {
+      if (index < QUESTIONS.length - 1) {
         setIndex((prev) => prev + 1);
         setSelectedValue(null);
         return;
@@ -74,6 +78,7 @@ export default function IdmcTestPage() {
             points: axisPoints,
             global_score: Number(globalScore.toFixed(2)),
             level,
+            variant: IDMC_VARIANT,
           },
           global_score: Number(globalScore.toFixed(2)),
           level,
@@ -110,7 +115,7 @@ export default function IdmcTestPage() {
       categoryMention="test IDMC"
       questionText={current.text}
       questionIndex={index}
-      totalQuestions={IDMC_QUESTIONS.length}
+      totalQuestions={QUESTIONS.length}
       analyzing={analyzing}
       analyzingLabel="Analyse de votre profil IDMC en cours…"
       animateKey={index}

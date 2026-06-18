@@ -27,6 +27,10 @@ import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-na
 import { getProfileSituationLabel } from "@/lib/apprenant/profile-situation";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 import {
+  fetchLatestSoftSkillsResult,
+  parseSoftSkillsScoreEntries,
+} from "@/lib/soft-skills/resolve-soft-skills-result";
+import {
   APPRENANT_CARD_BODY,
   APPRENANT_CARD_KICKER,
   APPRENANT_PAGE_KICKER,
@@ -519,17 +523,7 @@ export function ApprenantDashboardClient({
           if (!userId) return;
           let latestSoftSkills: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
-            const { data, error } = await supabase
-              .from("soft_skills_resultats")
-              .select("*")
-              .eq("learner_id", candidateId)
-              .maybeSingle();
-            if (error) {
-              if (!isBenignOptionalTableError(error)) {
-                console.warn("[soft-skills]", error);
-              }
-              continue;
-            }
+            const data = await fetchLatestSoftSkillsResult(supabase, candidateId);
             if (data) {
               latestSoftSkills = data as Record<string, unknown>;
               break;
@@ -540,13 +534,10 @@ export function ApprenantDashboardClient({
 
           const rawScores = latestSoftSkills?.scores;
           if (rawScores && typeof rawScores === "object" && !Array.isArray(rawScores)) {
-            const mapped = Object.entries(rawScores as Record<string, number>)
-              .map(([skill, score]) => ({ skill, score: Number(score) }))
-              .sort((a, b) => b.score - a.score);
-            setSoftSkillsRadar(mapped);
+            setSoftSkillsRadar(parseSoftSkillsScoreEntries(rawScores));
           } else if (Array.isArray(rawScores)) {
             const sorted = (rawScores as Array<{ skill: string; score: number }>).sort(
-              (a, b) => Number(b.score) - Number(a.score)
+              (a, b) => Number(b.score) - Number(a.score),
             );
             setSoftSkillsRadar(sorted);
           } else {

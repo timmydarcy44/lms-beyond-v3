@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
 import { getOpenAIClient } from "@/lib/ai/openai-client";
+import {
+  fetchLatestSoftSkillsResultWithSource,
+  SOFT_SKILLS_TABLE_BY_SOURCE,
+} from "@/lib/soft-skills/resolve-soft-skills-result";
+import { getServerClient } from "@/lib/supabase/server";
 
 type AnalyzePayload = {
   scores: Record<string, number>;
 };
+
+const ANALYZE_SYSTEM_PROMPT =
+  "Tu es un expert en psychométrie et en évaluation des compétences. Analyse les scores fournis sur 20 compétences (notées sur 15). Ton objectif est de fournir une synthèse technique du profil.\n\nStructure imposée (sans fioritures) :\n\nProfil Dominant : Nomme le profil de manière technique (ex: Profil Stratège-Innovateur).\n\nAnalyse des leviers : Explique comment les scores les plus hauts interagissent entre eux pour créer une valeur ajoutée professionnelle. Sois précis sur les corrélations.\n\nPoints de vigilance et optimisation : Identifie les scores les plus bas et explique concrètement l'impact sur la performance au travail. Propose des axes d'amélioration opérationnels.\n\nInterdiction stricte : Ne pas utiliser de mots comme 'flamboyant', 'extraordinaire', 'alchimiste', 'horizon', 'magnifique'. Reste concentré sur l'efficacité, la gestion et la structure.";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,14 +31,14 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as AnalyzePayload;
     const scores = body?.scores ?? {};
 
-    const { data: latest } = await supabase
-      .from("soft_skills_resultats")
-      .select("learner_id, ai_analysis")
-      .eq("learner_id", user.id)
-      .maybeSingle();
+    const resolved = await fetchLatestSoftSkillsResultWithSource(
+      supabase,
+      user.id,
+      "learner_id, ai_analysis, taken_at",
+    );
 
-    if (latest?.ai_analysis) {
-      return NextResponse.json({ analysis: latest.ai_analysis, cached: true });
+    if (resolved?.row.ai_analysis) {
+      return NextResponse.json({ analysis: resolved.row.ai_analysis, cached: true });
     }
 
     const openai = getOpenAIClient();
@@ -42,11 +49,7 @@ export async function POST(request: NextRequest) {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        {
-          role: "system",
-          content:
-            "Tu es un expert en psychométrie et en évaluation des compétences. Analyse les scores fournis sur 20 compétences (notées sur 15). Ton objectif est de fournir une synthèse technique du profil.\n\nStructure imposée (sans fioritures) :\n\nProfil Dominant : Nomme le profil de manière technique (ex: Profil Stratège-Innovateur).\n\nAnalyse des leviers : Explique comment les scores les plus hauts interagissent entre eux pour créer une valeur ajoutée professionnelle. Sois précis sur les corrélations.\n\nPoints de vigilance et optimisation : Identifie les scores les plus bas et explique concrètement l'impact sur la performance au travail. Propose des axes d'amélioration opérationnels.\n\nInterdiction stricte : Ne pas utiliser de mots comme 'flamboyant', 'extraordinaire', 'alchimiste', 'horizon', 'magnifique'. Reste concentré sur l'efficacité, la gestion et la structure.",
-        },
+        { role: "system", content: ANALYZE_SYSTEM_PROMPT },
         {
           role: "user",
           content: `Scores (sur 15) : ${JSON.stringify(scores)}`,
@@ -57,13 +60,14 @@ export async function POST(request: NextRequest) {
 
     const analysis = response.choices[0]?.message?.content?.trim() || "";
 
-    if (analysis) {
+    if (analysis && resolved) {
+      const table = SOFT_SKILLS_TABLE_BY_SOURCE[resolved.source];
       const { error: updateError } = await supabase
-        .from("soft_skills_resultats")
+        .from(table)
         .update({ ai_analysis: analysis })
         .eq("learner_id", user.id);
       if (updateError) {
-        console.error("[soft-skills/analyze] update error", updateError);
+        console.error(`[soft-skills/analyze] update error (${table})`, updateError);
       }
     }
 

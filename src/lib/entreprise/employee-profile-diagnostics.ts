@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
+import {
+  fetchLatestSoftSkillsResult,
+  parseSoftSkillsScoreEntries,
+} from "@/lib/soft-skills/resolve-soft-skills-result";
 
 const IDMC_AXIS_KEYS = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"] as const;
 type AxisKey = (typeof IDMC_AXIS_KEYS)[number];
@@ -49,12 +53,7 @@ function parseDiscScores(raw: unknown): EmployeeTestResults["disc"] {
 }
 
 function parseSoftSkills(raw: unknown): EmployeeTestResults["soft_skills"] {
-  if (!raw || typeof raw !== "object") return [];
-  const entries = Object.entries(raw as Record<string, unknown>)
-    .map(([skill, score]) => ({ skill, score: Number(score ?? 0) }))
-    .filter((e) => e.skill && !Number.isNaN(e.score) && e.score > 0)
-    .sort((a, b) => b.score - a.score);
-  return entries.slice(0, 10);
+  return parseSoftSkillsScoreEntries(raw).slice(0, 10);
 }
 
 export function hasAnyTestResults(results: EmployeeTestResults): boolean {
@@ -86,18 +85,14 @@ export async function loadEmployeeTestResults(
     updated_at: null,
   };
 
-  const [{ data: discRow }, { data: idmcRow }, { data: softRow }] = await Promise.all([
+  const [{ data: discRow }, { data: idmcRow }, softRow] = await Promise.all([
     service.from("disc_resultats").select("scores, updated_at").eq("profile_id", profileId).maybeSingle(),
     service
       .from("idmc_resultats")
       .select("global_score, scores, responses, updated_at")
       .eq("profile_id", profileId)
       .maybeSingle(),
-    service
-      .from("soft_skills_resultats")
-      .select("scores, taken_at")
-      .eq("learner_id", profileId)
-      .maybeSingle(),
+    fetchLatestSoftSkillsResult(service, profileId, "scores, taken_at"),
   ]);
 
   const disc = parseDiscScores(discRow?.scores);

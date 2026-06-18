@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchLatestSoftSkillsResult } from "@/lib/soft-skills/resolve-soft-skills-result";
 import { getServerClient } from "@/lib/supabase/server";
 
 export async function GET() {
@@ -16,18 +17,7 @@ export async function GET() {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
-      .from("soft_skills_resultats")
-      .select("*")
-      .eq("learner_id", user.id)
-      .order("taken_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error("[soft-skills/results]", error);
-      return NextResponse.json({ error: "Erreur lors du chargement" }, { status: 500 });
-    }
+    const data = await fetchLatestSoftSkillsResult(supabase, user.id);
 
     return NextResponse.json({ exists: !!data, result: data || null });
   } catch (error) {

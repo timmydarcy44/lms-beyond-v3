@@ -31,6 +31,10 @@ export async function GET() {
 
   const profileIds = await collectLearnerProfileCandidates(db, userId, email);
 
+  if (!profileIds.length) {
+    console.warn("[learner-snapshot] no profile candidates", { userId, email });
+  }
+
   const [profilesResult, employeeResult, discScores, idmcAxes, softSkillsRadar] = await Promise.all([
     profileIds.length
       ? db
@@ -78,6 +82,14 @@ export async function GET() {
     metadataGivenName: typeof meta.given_name === "string" ? meta.given_name : null,
     email: profileRow?.email ?? user.email,
   });
+
+  if (!discScores && !idmcAxes && profileIds.length > 0) {
+    console.warn("[learner-snapshot] no test scores for candidates", {
+      userId,
+      email,
+      profileIds,
+    });
+  }
 
   return NextResponse.json({
     userId,

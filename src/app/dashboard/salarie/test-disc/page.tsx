@@ -7,6 +7,7 @@ import { saveDiscResultats } from "@/lib/disc/disc-save";
 import type { DiscIpsativeResponse } from "@/lib/disc/disc-questions";
 import type { DiscRawScores } from "@/lib/disc/disc-scoring";
 import { redirectAfterSalarieAssessmentTest } from "@/lib/salarie/post-test-redirect";
+import { invalidateLearnerSnapshotCache } from "@/hooks/use-personalized-action-plan";
 
 export default function SalarieDiscTestPage() {
   const supabase = createSupabaseBrowserClient();
@@ -35,6 +36,8 @@ export default function SalarieDiscTestPage() {
         window.alert("Impossible d'enregistrer vos résultats DISC. Réessayez ou contactez le support.");
         return;
       }
+
+      invalidateLearnerSnapshotCache();
 
       const redirectPath = await redirectAfterSalarieAssessmentTest("disc", "/dashboard/salarie");
       window.setTimeout(() => {

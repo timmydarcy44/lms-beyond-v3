@@ -5,10 +5,6 @@ import {
   shouldEnrichNutrisetDemo,
 } from "@/lib/entreprise/nutriset-demo-enrich";
 import {
-  resolveEmployeeTestStatus,
-  syncCollaborateurDiagnosticFromTests,
-} from "@/lib/entreprise/employee-test-status";
-import {
   getEntrepriseOverviewServiceClient,
   resolveEntrepriseOverviewAccess,
 } from "@/lib/entreprise/overview-route";
@@ -20,6 +16,36 @@ function isoDate(d: Date) {
 }
 
 type ActivityItem = { id: string; title: string; at: string; kind: "badge" | "course" | "diagnostic" };
+
+type OverviewEmployeeStatus = {
+  profile_id: string | null;
+  diagnostic_done: boolean;
+  all_tests_done: boolean;
+  idmc_score: number | null;
+};
+
+type DiagnosticRow = {
+  employee_id: string | null;
+  collaborateur_id: string | null;
+  completed_at: string | null;
+  idmc_score: number | null;
+};
+
+/** Statut léger depuis collaborateur_diagnostics + profile_id employé (pas de listUsers). */
+function buildOverviewEmployeeStatus(
+  profileId: string | null,
+  diag: { completed_at: string | null; idmc_score: number | null } | undefined,
+): OverviewEmployeeStatus {
+  const allTestsDone = Boolean(diag?.completed_at);
+  const diagnosticStarted =
+    allTestsDone || (diag?.idmc_score != null && diag.idmc_score > 0) || Boolean(diag);
+  return {
+    profile_id: profileId,
+    diagnostic_done: diagnosticStarted,
+    all_tests_done: allTestsDone,
+    idmc_score: diag?.idmc_score ?? null,
+  };
+}
 
 export async function GET() {
   const access = await resolveEntrepriseOverviewAccess();
@@ -130,51 +156,35 @@ export async function GET() {
   const employees = allEmployees ?? [];
   const diagnostics = allDiagnostics ?? [];
 
-  const employeeTestStatuses = new Map<
-    string,
-    Awaited<ReturnType<typeof resolveEmployeeTestStatus>>
-  >();
-  for (const emp of employees) {
-    const status = await resolveEmployeeTestStatus(service, {
-      id: emp.id as string,
-      email: emp.email as string | null,
-      profile_id: emp.profile_id as string | null,
-      company_id: orgId,
-      first_name: emp.first_name as string | null,
-      last_name: emp.last_name as string | null,
-    });
-    employeeTestStatuses.set(emp.id as string, status);
-    if (status.diagnostic_done) {
-      await syncCollaborateurDiagnosticFromTests(
-        service,
-        {
-          id: emp.id as string,
-          email: emp.email as string | null,
-          profile_id: status.profile_id,
-          company_id: orgId,
-          first_name: emp.first_name as string | null,
-          last_name: emp.last_name as string | null,
-        },
-        orgId,
-        status,
-      );
-    }
-  }
-
-  const profileIds = employees
-    .map((e) => employeeTestStatuses.get(e.id as string)?.profile_id ?? (e.profile_id as string | null))
-    .filter((id): id is string => Boolean(id));
-
-  const diagByEmployee = new Map<string, { idmc_score: number | null; completed_at: string | null }>();
+  const diagByEmployee = new Map<string, DiagnosticRow>();
   for (const row of diagnostics) {
     const empId = row.employee_id as string | null;
     if (empId) {
       diagByEmployee.set(empId, {
-        idmc_score: row.idmc_score as number | null,
+        employee_id: empId,
+        collaborateur_id: row.collaborateur_id as string | null,
         completed_at: row.completed_at as string | null,
+        idmc_score: row.idmc_score as number | null,
       });
     }
   }
+
+  const employeeTestStatuses = new Map<string, OverviewEmployeeStatus>();
+  for (const emp of employees) {
+    const empId = emp.id as string;
+    const diag = diagByEmployee.get(empId);
+    const profileId =
+      (emp.profile_id as string | null) ?? diag?.collaborateur_id ?? null;
+    employeeTestStatuses.set(empId, buildOverviewEmployeeStatus(profileId, diag));
+  }
+
+  const profileIds = employees
+    .map(
+      (e) =>
+        employeeTestStatuses.get(e.id as string)?.profile_id ??
+        (e.profile_id as string | null),
+    )
+    .filter((id): id is string => Boolean(id));
 
   let enrollmentsActive = 0;
   const pathStats: Array<{

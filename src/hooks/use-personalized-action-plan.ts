@@ -5,6 +5,7 @@ import type { DiscScores } from "@/components/apprenant/apprenant-assessment-res
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
 import { buildPersonalizedActionPlan } from "@/lib/learner/personalized-action-plan";
 import type { LearnerSnapshot } from "@/components/learner/learner-snapshot-provider";
+import { invalidateLearnerSnapshotProviderCache } from "@/components/learner/learner-snapshot-provider";
 
 type Surface = "apprenant" | "salarie";
 
@@ -77,4 +78,5 @@ export function usePersonalizedActionPlan(surface: Surface = "apprenant") {
 export function invalidateLearnerSnapshotCache() {
   cachedSnapshot = null;
   inflight = null;
+  invalidateLearnerSnapshotProviderCache();
 }

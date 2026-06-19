@@ -33,13 +33,30 @@ const LearnerSnapshotContext = createContext<LearnerSnapshotContextValue | null>
 
 let sharedSnapshotPromise: Promise<LearnerSnapshot | null> | null = null;
 
+export function invalidateLearnerSnapshotProviderCache() {
+  sharedSnapshotPromise = null;
+}
+
 async function fetchSnapshot(): Promise<LearnerSnapshot | null> {
   const res = await fetch("/api/dashboard/learner-snapshot", {
     credentials: "include",
     cache: "no-store",
   });
-  if (!res.ok) return null;
-  return (await res.json()) as LearnerSnapshot;
+  const raw = await res.text();
+  if (!res.ok) {
+    console.error("[learner-snapshot] fetch failed", res.status, raw.slice(0, 300));
+    return null;
+  }
+  if (!raw.trim()) {
+    console.error("[learner-snapshot] empty response body");
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as LearnerSnapshot;
+  } catch {
+    console.error("[learner-snapshot] invalid JSON", raw.slice(0, 300));
+    return null;
+  }
 }
 
 export function LearnerSnapshotProvider({ children }: { children: ReactNode }) {

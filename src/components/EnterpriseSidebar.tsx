@@ -30,8 +30,12 @@ type ViewerState = {
   email: string | null;
 };
 
-let cachedViewer: ViewerState | null = null;
 let viewerInflight: Promise<ViewerState | null> | null = null;
+
+/** Purge le cache sidebar (ex. après correction profil RH en base). */
+export function invalidateEnterpriseViewerCache() {
+  viewerInflight = null;
+}
 
 function viewerInitials(prenom: string | null, nom: string | null, email: string | null) {
   const a = (prenom ?? "").trim().slice(0, 1).toUpperCase();
@@ -41,14 +45,11 @@ function viewerInitials(prenom: string | null, nom: string | null, email: string
 }
 
 async function fetchViewer(): Promise<ViewerState | null> {
-  if (cachedViewer) return cachedViewer;
   if (viewerInflight) return viewerInflight;
   viewerInflight = fetch("/api/dashboard/entreprise/viewer", { credentials: "include" })
     .then(async (res) => {
       if (!res.ok) return null;
-      const json = (await res.json()) as ViewerState;
-      cachedViewer = json;
-      return json;
+      return (await res.json()) as ViewerState;
     })
     .finally(() => {
       viewerInflight = null;
@@ -60,22 +61,16 @@ export default function EnterpriseSidebar() {
   const pathname = usePathname();
   const overviewCtx = useOptionalEnterpriseOverviewContext();
   const overviewData = overviewCtx?.data;
-  const [viewer, setViewer] = useState<ViewerState>(
-    cachedViewer ?? { prenom: null, nom: null, email: null },
-  );
+  const [viewer, setViewer] = useState<ViewerState>({ prenom: null, nom: null, email: null });
 
   useEffect(() => {
+    invalidateEnterpriseViewerCache();
     if (overviewData?.viewer) {
       setViewer({
         prenom: overviewData.viewer.prenom,
         nom: overviewData.viewer.nom,
         email: overviewData.viewer.email,
       });
-      cachedViewer = {
-        prenom: overviewData.viewer.prenom,
-        nom: overviewData.viewer.nom,
-        email: overviewData.viewer.email,
-      };
       return;
     }
     void fetchViewer().then((v) => {

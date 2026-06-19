@@ -34,7 +34,20 @@ async function fetchOverview(): Promise<EntrepriseOverviewData | null> {
     credentials: "include",
     cache: "no-store",
   });
-  const json = (await res.json()) as EntrepriseOverviewData & { error?: string };
+  const raw = await res.text();
+  if (!raw.trim()) {
+    throw new Error(
+      res.status === 504 || res.status === 502
+        ? "Le serveur met trop de temps à répondre. Réessayez dans un instant."
+        : "Réponse serveur vide — rechargement impossible.",
+    );
+  }
+  let json: EntrepriseOverviewData & { error?: string };
+  try {
+    json = JSON.parse(raw) as EntrepriseOverviewData & { error?: string };
+  } catch {
+    throw new Error(`Réponse serveur invalide (${res.status})`);
+  }
   if (!res.ok) throw new Error(json.error ?? `Erreur serveur (${res.status})`);
   return {
     ...json,

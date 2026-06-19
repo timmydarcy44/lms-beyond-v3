@@ -188,7 +188,7 @@ export function EnterpriseDashboardV2() {
 
         {loading ? null : fetchError ? (
           <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center">
-            <p className="text-sm text-gray-600">Connexion en cours — nouvelle tentative automatique…</p>
+            <p className="text-sm text-gray-600">Impossible de charger le tableau de bord.</p>
             <p className="mt-2 text-xs text-gray-400">{fetchError}</p>
             <button
               type="button"

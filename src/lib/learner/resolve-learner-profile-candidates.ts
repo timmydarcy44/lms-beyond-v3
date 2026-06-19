@@ -55,36 +55,67 @@ export async function collectLearnerProfileCandidates(
   return Array.from(ids);
 }
 
-/** DISC le plus récent parmi les profils candidats. */
+/** DISC le plus récent parmi les profils candidats (boucle par profil, comme le dashboard Profil). */
 export async function fetchDiscScoresForCandidates(
   db: SupabaseClient,
   profileIds: string[],
 ): Promise<ReturnType<typeof parseStoredDiscScores>> {
   if (!profileIds.length) return null;
-  const { data } = await db
-    .from("disc_resultats")
-    .select("scores, updated_at")
-    .in("profile_id", profileIds)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return parseStoredDiscScores((data?.scores as Record<string, unknown> | null) ?? null);
+
+  let bestScores: unknown = null;
+  let bestTime = 0;
+
+  for (const profileId of profileIds) {
+    const { data, error } = await db
+      .from("disc_resultats")
+      .select("scores, updated_at")
+      .eq("profile_id", profileId)
+      .maybeSingle();
+    if (error) {
+      console.warn("[fetchDiscScoresForCandidates]", profileId, error.message);
+      continue;
+    }
+    if (!data?.scores) continue;
+    const updatedAt = Date.parse(String(data.updated_at ?? "")) || 0;
+    if (!bestScores || updatedAt >= bestTime) {
+      bestScores = data.scores;
+      bestTime = updatedAt;
+    }
+  }
+
+  return parseStoredDiscScores((bestScores as Record<string, unknown> | null) ?? null);
 }
 
-/** IDMC le plus récent parmi les profils candidats. */
+/** IDMC le plus récent parmi les profils candidats (boucle par profil). */
 export async function fetchIdmcAxesForCandidates(
   db: SupabaseClient,
   profileIds: string[],
 ): Promise<ReturnType<typeof resolveIdmcAxes>> {
   if (!profileIds.length) return null;
-  const { data } = await db
-    .from("idmc_resultats")
-    .select("scores, responses, updated_at")
-    .in("profile_id", profileIds)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return resolveIdmcAxes(data?.scores ?? data?.responses);
+
+  let bestRow: { scores: unknown; responses: unknown; updated_at: string | null } | null = null;
+  let bestTime = 0;
+
+  for (const profileId of profileIds) {
+    const { data, error } = await db
+      .from("idmc_resultats")
+      .select("scores, responses, updated_at")
+      .eq("profile_id", profileId)
+      .maybeSingle();
+    if (error) {
+      console.warn("[fetchIdmcAxesForCandidates]", profileId, error.message);
+      continue;
+    }
+    if (!data) continue;
+    const updatedAt = Date.parse(String(data.updated_at ?? "")) || 0;
+    if (!bestRow || updatedAt >= bestTime) {
+      bestRow = data;
+      bestTime = updatedAt;
+    }
+  }
+
+  if (!bestRow) return null;
+  return resolveIdmcAxes(bestRow.scores ?? bestRow.responses);
 }
 
 /** Soft skills le plus récent parmi les profils candidats (apprenant + salarié). */

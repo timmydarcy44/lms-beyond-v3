@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import "server-only";
 
 import { sendEmail } from "@/lib/email/resend-client";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
@@ -273,24 +274,4 @@ export async function maybeTriggerCrossProfileCompletion(
   }
 
   return { status: "completed", badgeId };
-}
-
-/** Appel isomorphe après save test : service role direct ou API en fallback navigateur. */
-export async function notifyCrossProfileCompletion(userId: string): Promise<void> {
-  const uid = userId.trim();
-  if (!uid) return;
-
-  if (typeof window === "undefined") {
-    void maybeTriggerCrossProfileCompletion(uid).catch((err) => {
-      console.warn("[cross-profile] trigger:", err);
-    });
-    return;
-  }
-
-  void fetch("/api/learner/cross-profile/trigger", {
-    method: "POST",
-    credentials: "include",
-  }).catch((err) => {
-    console.warn("[cross-profile] trigger fetch:", err);
-  });
 }

@@ -7,7 +7,7 @@ import {
 } from "@/lib/disc/disc-questions";
 import { DISC_PROFILE_LABELS } from "@/lib/disc/disc-constants";
 import { computeDiscResult, type DiscRawScores } from "@/lib/disc/disc-scoring";
-import { notifyCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
+import { notifyCrossProfileCompletion } from "@/lib/learner/cross-profile-notify";
 
 export function buildDiscResultsPayload(
   profileId: string,

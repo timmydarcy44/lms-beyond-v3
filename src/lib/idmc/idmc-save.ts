@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { notifyCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
+import { notifyCrossProfileCompletion } from "@/lib/learner/cross-profile-notify";
 
 export type IdmcResultatsPayload = {
   profile_id: string;

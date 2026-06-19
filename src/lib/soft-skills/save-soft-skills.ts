@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SOFT_SKILLS, SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills/questions";
-import { notifyCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
+import { notifyCrossProfileCompletion } from "@/lib/learner/cross-profile-notify";
 
 export function computeSoftSkillsScores(answers: Record<string, number>) {
   const scores: Record<string, number> = {};

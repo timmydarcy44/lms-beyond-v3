@@ -46,7 +46,7 @@ const specialitesMegaMenu: {
   {
     title: "ÉTUDIANTS",
     items: [
-      { label: "Orientation & projet de vie", href: "/jessica-contentin/specialites/orientation-professionnelle", icon: Compass },
+      { label: "Orientation", href: "/jessica-contentin/specialites/orientation-professionnelle", icon: Compass },
       { label: "Stratégie d'apprentissage", href: "/jessica-contentin/specialites/strategie-apprentissage", icon: Target },
       { label: "Gestion du stress examens", href: "/jessica-contentin/specialites/gestion-stress", icon: Activity },
       { label: "Neuroéducation", href: "/jessica-contentin/specialites/neuroeducation", icon: Brain },
@@ -56,9 +56,8 @@ const specialitesMegaMenu: {
   {
     title: "ADULTES",
     items: [
-      { label: "Gestion des émotions", href: "/jessica-contentin/specialites/therapie", icon: Heart },
+      { label: "Régulation émotionnelle", href: "/jessica-contentin/specialites/regulation-emotionnelle", icon: Heart },
       { label: "Confiance en soi", href: "/jessica-contentin/specialites/confiance-en-soi", icon: Sparkles },
-      { label: "Gestion du stress", href: "/jessica-contentin/specialites/gestion-stress", icon: Activity },
     ],
   },
   {

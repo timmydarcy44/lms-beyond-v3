@@ -48,6 +48,7 @@ const specialitesContent: Record<string, {
   subtitle: string;
   description: string;
   heroImage?: string;
+  stats?: { value: string; label: string }[];
   whatIs: {
     title: string;
     description: string;
@@ -76,135 +77,67 @@ const specialitesContent: Record<string, {
   forWho: string[];
 }> = {
   "confiance-en-soi": {
-    title: "Gestion de la confiance en soi",
-    subtitle: "Renforcez votre estime de vous et développez votre confiance personnelle",
-    description: "La confiance en soi est un pilier essentiel de l'épanouissement personnel et professionnel. Mon accompagnement vous aide à identifier vos forces, surmonter vos doutes et développer une image positive de vous-même.",
+    title: "Renforcer la confiance en soi et l'estime de soi",
+    subtitle: "Mieux se connaître, renforcer sa confiance et mobiliser ses ressources.",
+    description: "Cet accompagnement vise à renforcer progressivement les compétences essentielles à la confiance en soi : compréhension de soi, régulation émotionnelle, affirmation de soi, valorisation des ressources personnelles et autonomie.",
     heroImage: getSupabaseStorageUrl(BUCKET_NAME, "Confiance_en_soi.jpg") || "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80",
+    stats: [
+      { value: "10+ ans", label: "d'expérience dans l'éducation et l'accompagnement" },
+      { value: "100+", label: "jeunes accompagnés" },
+      { value: "1:1", label: "Accompagnement individualisé" },
+      { value: "Bretteville-sur-Odon", label: "Cabinet près de Caen" },
+    ],
     whatIs: {
-      title: "Qu'est-ce que l'accompagnement en gestion de la confiance en soi ?",
-      description: "Au cours de cet accompagnement personnalisé de six mois, vous et votre famille recevrez un suivi psychopédagogique approfondi dans chacune des six compétences fondamentales de la confiance en soi. Chaque mois, je vous accompagnerai dans l'exploration de ces six domaines clés : la maîtrise émotionnelle, l'identification et la valorisation de vos forces, le développement de l'assertivité, l'amélioration de votre image de soi, la gestion des pensées limitantes et la consolidation de votre autonomie.",
+      title: "",
+      description: "",
       details: [
-        "L'accompagnement est facilité par une psychopédagogue certifiée en neuroéducation, ayant suivi une formation intensive pour être certifiée comme accompagnatrice.",
-        "Vous pouvez choisir de recevoir l'accompagnement en présentiel dans mon cabinet ou en ligne, selon votre convenance.",
-        "En tant que participant, vous serez équipé des outils nécessaires pour mettre en pratique les enseignements et maximiser votre investissement grâce à six mois de suivi personnalisé.",
+        "Chaque étape est adaptée aux besoins, au rythme et aux objectifs de la personne accompagnée.",
+        "Accompagnement assuré par une professeure en santé et psychopédagogue certifiée en neuroéducation.",
+        "Présentiel ou visioconférence — Un accompagnement accessible partout en France, avec le même niveau de suivi et de personnalisation.",
       ],
     },
-    programBreakdown: [
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [
       {
-        month: 1,
-        title: "Maîtrisez vos émotions",
-        description: "La maîtrise de vos émotions est la clé pour être un leader efficace dans votre propre vie. Au cours du premier mois, vous apprendrez trois étapes essentielles à la maîtrise émotionnelle et pourquoi cela compte.",
-        icon: Heart,
-      },
-      {
-        month: 2,
-        title: "Identifiez et valorisez vos forces",
-        description: "Découvrez ce qu'il faut pour créer une image positive de vous-même au cours du deuxième mois, avec une évaluation approfondie de votre personnalité pour améliorer votre connaissance de soi.",
-        icon: Award,
-      },
-      {
-        month: 3,
-        title: "Développez votre assertivité",
-        description: "Une fois votre état d'esprit établi, je vous aiderai à développer votre capacité à exprimer vos besoins et à défendre vos opinions de manière respectueuse et efficace au cours du troisième mois.",
-        icon: TrendingUp,
-      },
-      {
-        month: 4,
-        title: "Améliorez votre image de soi",
-        description: "La méthode d'amélioration de l'image de soi modifie entièrement votre approche de la façon dont vous vous percevez. Au cours du quatrième mois, vous découvrirez le pouvoir d'une image de soi positive.",
-        icon: Sparkles,
-      },
-      {
-        month: 5,
-        title: "Gérez vos pensées limitantes",
-        description: "Développer et transformer vos pensées limitantes est essentiel pour libérer votre potentiel. Identifiez votre processus de pensée pour éliminer les blocages internes au cours du cinquième mois.",
+        title: "Comprendre son fonctionnement",
+        description: "Identifier les mécanismes qui influencent l'image de soi, les émotions et les comportements du quotidien.",
         icon: Brain,
       },
       {
-        month: 6,
-        title: "Consolidez votre autonomie",
-        description: "La résolution des conflits internes, les compétences en communication et l'autonomisation de vous-même sont tous inclus dans les 7 étapes maîtresses pour une confiance en soi durable.",
-        icon: Target,
-      },
-    ],
-    testimonials: [
-      {
-        quote: "Cette année, j'ai constaté une augmentation de 18% de ma confiance en moi - cela en valait vraiment la peine ! Le processus consiste à briser nos murs intérieurs et à changer notre culture personnelle - je suis absolument ravi des résultats.",
-        author: "Marie D.",
-        role: "Étudiante en reconversion",
+        title: "Renforcer l'estime de soi",
+        description: "Développer une perception plus juste de ses capacités, de ses qualités et de ses ressources personnelles.",
+        icon: Sparkles,
       },
       {
-        quote: "C'était l'un des meilleurs jours de ma vie... l'énergie était incroyable ! Ma confiance en moi a augmenté de 21%... ils dépassent les attentes à chaque fois.",
-        author: "Thomas L.",
-        role: "Professionnel en évolution",
-      },
-      {
-        quote: "L'accompagnement en gestion de la confiance en soi a donné à mon enfant, à ma famille et à moi-même une façon unifiée d'avancer vers un objectif de regarder la vie de manière plus saine. Apprendre des choses qui aident non seulement dans la vie professionnelle, mais aussi dans la vie familiale. Cette partie a été vraiment gratifiante.",
-        author: "Sophie M.",
-        role: "Mère de famille",
-      },
-      {
-        quote: "J'étais en colère contre moi-même de ne pas avoir fait cela plus tôt... avoir un accompagnement pour traverser ma propre prise de décision, mes compétences, ma psychologie... a été inestimable.",
-        author: "Pierre R.",
-        role: "Entrepreneur",
-      },
-    ],
-    benefits: [
-      {
-        title: "Augmentez votre confiance en vous",
-        description: "Transformez l'état d'esprit de votre équipe et donnez-lui les outils nécessaires pour créer une croissance massive dans votre estime de vous-même.",
+        title: "Développer la confiance en soi",
+        description: "Oser agir malgré les doutes, prendre sa place et gagner en assurance dans les situations du quotidien.",
         icon: TrendingUp,
       },
       {
-        title: "Améliorez votre image de vous",
-        description: "Construisez une culture personnelle qui favorise la responsabilisation, la camaraderie et le travail d'équipe - et crée des fans enthousiastes de vous-même.",
-        icon: Heart,
-      },
-      {
-        title: "Maximisez votre productivité",
-        description: "Supprimez les obstacles, mettez en place des systèmes efficaces et obtenez le meilleur de vous-même pour augmenter considérablement la productivité et la qualité de votre vie.",
-        icon: Target,
-      },
-      {
-        title: "Maîtrisez les compétences d'influence",
-        description: "Développez votre capacité à influencer positivement votre environnement et à créer des changements durables dans votre vie.",
+        title: "Apprendre à s'affirmer",
+        description: "Exprimer ses besoins, poser ses limites et communiquer avec davantage de sérénité.",
         icon: Award,
       },
       {
-        title: "Unissez-vous en tant qu'équipe",
-        description: "Renforcez les liens familiaux et professionnels en développant une confiance mutuelle et une communication efficace.",
-        icon: Users,
+        title: "Réguler ses émotions",
+        description: "Mieux comprendre ses réactions émotionnelles et développer des stratégies adaptées face au stress et aux difficultés.",
+        icon: Heart,
       },
       {
-        title: "Passez au niveau supérieur",
-        description: "Prenez votre vie personnelle et professionnelle au niveau supérieur en libérant votre plein potentiel.",
-        icon: Sparkles,
+        title: "Développer son autonomie",
+        description: "Renforcer sa capacité à prendre des décisions, à faire des choix et à avancer avec davantage de confiance.",
+        icon: Target,
       },
     ],
-    faqs: [
-      {
-        question: "Comment l'accompagnement de Jessica Contentin m'aidera-t-il à atteindre mes objectifs de confiance en soi ?",
-        answer: "Mon accompagnement vous fournit des outils concrets et des stratégies personnalisées pour développer votre confiance en vous. Grâce à un suivi régulier sur six mois, vous apprendrez à identifier vos forces, gérer vos émotions et développer une image positive de vous-même. Chaque séance est adaptée à vos besoins spécifiques pour garantir des résultats durables.",
-      },
-      {
-        question: "Comment l'accompagnement en gestion de la confiance en soi m'aidera-t-il à améliorer ma culture personnelle ?",
-        answer: "L'accompagnement se concentre sur la transformation de votre état d'esprit et de vos croyances limitantes. En travaillant sur votre image de soi, votre assertivité et votre autonomie, vous développez une culture personnelle plus positive et constructive. Cela se reflète dans tous les aspects de votre vie, créant un cercle vertueux de confiance et de réussite.",
-      },
-      {
-        question: "En quoi l'accompagnement en gestion de la confiance en soi est-il différent des autres programmes de développement personnel ?",
-        answer: "Mon approche est basée sur la neuroéducation et la psychopédagogie, combinant une compréhension scientifique du fonctionnement du cerveau avec des techniques pratiques et personnalisées. Contrairement aux programmes génériques, chaque accompagnement est adapté à votre profil unique, avec un suivi régulier et des ajustements en fonction de vos progrès. L'accent est mis sur la durabilité et l'autonomie à long terme.",
-      },
-      {
-        question: "Comment l'accompagnement en gestion de la confiance en soi m'aidera-t-il à mieux gérer mon temps ?",
-        answer: "En développant votre confiance en vous, vous apprenez à mieux prioriser vos activités, à dire non quand c'est nécessaire et à prendre des décisions plus rapidement. L'amélioration de votre image de soi et de votre assertivité vous permet également de mieux gérer votre temps en étant plus efficace dans vos interactions et en évitant les situations qui drainent votre énergie.",
-      },
-    ],
+    faqs: [],
     forWho: [
-      "Enfants et adolescents en manque de confiance",
-      "Adultes souhaitant développer leur assertivité",
-      "Personnes confrontées à des situations de doute ou d'incertitude",
-      "Étudiants préparant des examens ou concours",
-      "Professionnels en reconversion ou en recherche d'évolution",
+      "Vous manquez de confiance en vous.",
+      "Vous avez peur du regard des autres.",
+      "Vous doutez régulièrement de vos capacités.",
+      "Vous avez du mal à prendre votre place.",
+      "Vous manquez d'assurance dans votre scolarité ou vos études.",
+      "Vous avez tendance à vous comparer aux autres.",
     ],
   },
   // Contenu par défaut pour les autres spécialités
@@ -334,6 +267,21 @@ const specialitesContent: Record<string, {
     faqs: [],
     forWho: [],
   },
+  "regulation-emotionnelle": {
+    title: "Régulation émotionnelle",
+    subtitle: "Mieux comprendre et réguler ses émotions au quotidien",
+    description: "Un accompagnement psychopédagogique pour comprendre les mécanismes émotionnels, apaiser le stress et développer des stratégies de régulation adaptées à votre fonctionnement.",
+    whatIs: {
+      title: "",
+      description: "",
+      details: [],
+    },
+    programBreakdown: [],
+    testimonials: [],
+    benefits: [],
+    faqs: [],
+    forWho: [],
+  },
   "neuroeducation": {
     title: "Apprendre à apprendre grâce à la neuroéducation",
     subtitle: "Une approche scientifique au service des apprentissages",
@@ -456,6 +404,14 @@ export default function SpecialiteDetailPage({
                   >
                     {content.subtitle}
                   </p>
+                  <p
+                    className="text-lg md:text-xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed"
+                    style={{
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+                    }}
+                  >
+                    {content.description}
+                  </p>
                   <Button
                     size="lg"
                     className="rounded-full px-8 py-6 text-lg font-semibold shadow-xl"
@@ -466,7 +422,7 @@ export default function SpecialiteDetailPage({
                     asChild
                   >
                     <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                      Commencer maintenant
+                      Prendre rendez-vous
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </a>
                   </Button>
@@ -476,7 +432,8 @@ export default function SpecialiteDetailPage({
           </div>
         </section>
 
-        {/* What is Section */}
+        {/* Intro cards */}
+        {content.whatIs.details.length > 0 && (
         <section className="py-20 px-4 md:px-8">
           <div className="max-w-6xl mx-auto">
             <motion.div
@@ -485,19 +442,7 @@ export default function SpecialiteDetailPage({
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <h2
-                className="text-2xl md:text-3xl font-bold mb-6 text-center"
-                style={{ color: textColor }}
-              >
-                {content.whatIs.title}
-              </h2>
-              <p
-                className="text-lg md:text-xl mb-8 text-center max-w-4xl mx-auto leading-relaxed"
-                style={{ color: `${textColor}80` }}
-              >
-                {content.whatIs.description}
-              </p>
-              <div className="grid md:grid-cols-3 gap-6 mt-12">
+              <div className="grid md:grid-cols-3 gap-6">
                 {content.whatIs.details.map((detail, index) => (
                   <motion.div
                     key={index}
@@ -514,132 +459,68 @@ export default function SpecialiteDetailPage({
             </motion.div>
           </div>
         </section>
+        )}
 
-        {/* Testimonials Section */}
-        <section className="py-20 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
+        {/* Stats */}
+        {content.stats && content.stats.length > 0 && (
+        <section className="py-16 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
           <div className="max-w-6xl mx-auto">
-            <h2
-              className="text-2xl md:text-3xl font-bold mb-12 text-center"
-              style={{ color: textColor }}
-            >
-              Témoignages
-            </h2>
-            <div className="grid md:grid-cols-2 gap-8">
-              {content.testimonials.map((testimonial, index) => (
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+              {content.stats.map((stat, index) => (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="bg-white rounded-2xl p-8 shadow-lg border border-[#E6D9C6]"
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="rounded-2xl border border-[#E6D9C6] bg-white p-6 text-center shadow-lg"
                 >
-                  <blockquote className="text-lg mb-6" style={{ color: textColor }}>
-                    "{testimonial.quote}"
-                  </blockquote>
-                  <div>
-                    <p className="font-semibold" style={{ color: primaryColor }}>
-                      {testimonial.author}
-                    </p>
-                    <p className="text-sm" style={{ color: `${textColor}60` }}>
-                      {testimonial.role}
-                    </p>
-                  </div>
+                  <p className="text-2xl font-bold md:text-3xl" style={{ color: primaryColor }}>
+                    {stat.value}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed md:text-base" style={{ color: `${textColor}80` }}>
+                    {stat.label}
+                  </p>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
+        )}
 
-        {/* Program Breakdown */}
+        {/* Pertinent si */}
+        {content.forWho.length > 0 && (
         <section className="py-20 px-4 md:px-8">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <h2
-              className="text-2xl md:text-3xl font-bold mb-4 text-center"
+              className="text-2xl md:text-3xl font-bold mb-8 text-center"
               style={{ color: textColor }}
             >
-              Déroulement du programme
+              Cet accompagnement peut être pertinent si :
             </h2>
-            <p
-              className="text-lg md:text-xl mb-12 text-center max-w-3xl mx-auto"
-              style={{ color: `${textColor}80` }}
-            >
-              Au cours de six mois, vous et votre famille vous concentrerez sur ces six domaines qui feront décoller votre productivité, vos performances et votre croissance :
-            </p>
-            <div className="space-y-6">
-              {content.programBreakdown.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -30 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className="bg-white rounded-2xl p-8 shadow-lg border border-[#E6D9C6]"
-                  >
-                    <div className="flex items-start gap-6">
-                      <div className="flex-shrink-0">
-                        <div
-                          className="w-16 h-16 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: `${primaryColor}20` }}
-                        >
-                          <Icon className="h-8 w-8" style={{ color: primaryColor }} />
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4 mb-3">
-                          <span
-                            className="text-2xl font-bold"
-                            style={{ color: primaryColor }}
-                          >
-                            Mois {item.month}
-                          </span>
-                          <h3
-                            className="text-2xl font-bold"
-                            style={{ color: textColor }}
-                          >
-                            {item.title}
-                          </h3>
-                        </div>
-                        <p
-                          className="text-lg leading-relaxed"
-                          style={{ color: `${textColor}80` }}
-                        >
-                          {item.description}
-                        </p>
-                        <div className="mt-4">
-                          <span
-                            className="text-sm font-semibold"
-                            style={{ color: accentColor }}
-                          >
-                            * Séance de coaching incluse *
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+            <ul className="space-y-4">
+              {content.forWho.map((item, index) => (
+                <motion.li
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="flex items-start gap-3 rounded-xl border border-[#E6D9C6] bg-white p-4 shadow-sm"
+                >
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0" style={{ color: primaryColor }} />
+                  <span style={{ color: textColor }}>{item}</span>
+                </motion.li>
+              ))}
+            </ul>
           </div>
         </section>
+        )}
 
-        {/* Benefits Section */}
+        {/* Axes de l'accompagnement */}
+        {content.benefits.length > 0 && (
         <section className="py-20 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
           <div className="max-w-6xl mx-auto">
-            <h2
-              className="text-2xl md:text-3xl font-bold mb-4 text-center"
-              style={{ color: textColor }}
-            >
-              Comment allez-vous développer votre confiance en vous cette année ?
-            </h2>
-            <p
-              className="text-lg md:text-xl mb-12 text-center max-w-3xl mx-auto"
-              style={{ color: `${textColor}80` }}
-            >
-              La qualité de votre vie est directement proportionnelle à la qualité de votre confiance en vous. Lorsque votre confiance est élevée, vous vous sentez incroyable. Lorsque votre confiance souffre, vous aussi.
-            </p>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {content.benefits.map((benefit, index) => {
                 const Icon = benefit.icon;
@@ -668,26 +549,10 @@ export default function SpecialiteDetailPage({
             </div>
           </div>
         </section>
-
-        {/* FAQs Section */}
-        <section className="py-20 px-4 md:px-8">
-          <div className="max-w-4xl mx-auto">
-            <h2
-              className="text-2xl md:text-3xl font-bold mb-12 text-center"
-              style={{ color: textColor }}
-            >
-              Questions fréquemment posées
-            </h2>
-            <div className="bg-white rounded-2xl shadow-lg border border-[#E6D9C6] overflow-hidden">
-              {content.faqs.map((faq, index) => (
-                <FAQItem key={index} question={faq.question} answer={faq.answer} />
-              ))}
-            </div>
-          </div>
-        </section>
+        )}
 
         {/* Final CTA */}
-        <section className="py-20 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
+        <section className="py-20 px-4 md:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -699,13 +564,13 @@ export default function SpecialiteDetailPage({
                 className="text-2xl md:text-3xl font-bold mb-6"
                 style={{ color: textColor }}
               >
-                Prêt à développer votre confiance en vous ?
+                Prêt à renforcer votre confiance en vous ?
               </h2>
               <p
                 className="text-lg md:text-xl mb-8 max-w-2xl mx-auto"
                 style={{ color: `${textColor}80` }}
               >
-                Planifiez votre consultation gratuite de 30 minutes avec Jessica Contentin dès aujourd'hui pour en savoir plus sur toutes les façons dont nous pouvons vous aider à atteindre une croissance géométrique et une équipe plus heureuse et plus productive.
+                Contactez-moi pour un premier échange et définir ensemble un accompagnement adapté à vos besoins.
               </p>
               <Button
                 size="lg"
@@ -717,7 +582,7 @@ export default function SpecialiteDetailPage({
                 asChild
               >
                 <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                  Planifier mon appel
+                  Prendre rendez-vous
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </a>
               </Button>
@@ -858,7 +723,7 @@ export default function SpecialiteDetailPage({
                 </Card>
               </motion.div>
             ))}
-            {["guidance-parentale", "tnd", "harcelement", "neuroeducation"].includes(slug) && (
+            {["guidance-parentale", "tnd", "harcelement", "neuroeducation", "regulation-emotionnelle"].includes(slug) && (
               <div className="text-center mt-8">
                 <Button
                   size="lg"

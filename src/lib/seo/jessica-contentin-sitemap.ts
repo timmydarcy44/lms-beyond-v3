@@ -8,6 +8,7 @@ export const JESSICA_SITEMAP_BASE_URL = "https://jessicacontentin.fr";
 /** Slugs publics des fiches spécialités (alignés sur `specialites/[slug]/page.tsx`). */
 export const JESSICA_SPECIALITE_SLUGS = [
   "confiance-en-soi",
+  "regulation-emotionnelle",
   "gestion-stress",
   "tnd",
   "guidance-parentale",

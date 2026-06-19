@@ -11,14 +11,11 @@ import {
   Heart,
   Brain,
   BookOpen,
-  BrainCircuit,
   Shield,
   Sparkles,
   Compass,
   Target,
   Activity,
-  Briefcase,
-  Lightbulb,
   Users,
   Puzzle,
   type LucideIcon,
@@ -44,7 +41,6 @@ const specialitesMegaMenu: {
       { label: "Accompagnement TND", href: "/jessica-contentin/specialites/tnd", icon: Puzzle },
       { label: "Harcèlement scolaire", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
       { label: "Gestion des émotions", href: "/jessica-contentin/specialites/therapie", icon: Heart },
-      { label: "Neuroéducation", href: "/jessica-contentin/specialites/neuroeducation", icon: BrainCircuit },
     ],
   },
   {
@@ -60,11 +56,9 @@ const specialitesMegaMenu: {
   {
     title: "ADULTES",
     items: [
-      { label: "Orientation professionnelle", href: "/jessica-contentin/specialites/orientation-professionnelle", icon: Briefcase },
       { label: "Gestion des émotions", href: "/jessica-contentin/specialites/therapie", icon: Heart },
       { label: "Confiance en soi", href: "/jessica-contentin/specialites/confiance-en-soi", icon: Sparkles },
       { label: "Gestion du stress", href: "/jessica-contentin/specialites/gestion-stress", icon: Activity },
-      { label: "Soft skills & reconversion", href: "/jessica-contentin/orientation", icon: Lightbulb },
     ],
   },
   {

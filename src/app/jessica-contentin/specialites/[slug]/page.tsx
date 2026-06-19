@@ -228,17 +228,13 @@ const specialitesContent: Record<string, {
     forWho: [],
   },
   "tnd": {
-    title: "Accompagnement TND",
-    subtitle: "Accompagnement spécialisé pour les troubles du neurodéveloppement",
-    description: "Un accompagnement adapté aux besoins spécifiques des enfants et adolescents présentant des troubles DYS ou TDA-H.",
+    title: "TDAH, TSA, troubles DYS et Haut Potentiel",
+    subtitle: "Accompagnement spécialisé des troubles du neurodéveloppement",
+    description: "Comprendre le fonctionnement de l'enfant afin de mettre en place des stratégies adaptées à ses besoins à l'école, à la maison et dans son quotidien.",
     whatIs: {
-      title: "Qu'est-ce que l'accompagnement TND ?",
-      description: "Un accompagnement spécialisé pour les troubles du neurodéveloppement (DYS, TDA-H).",
-      details: [
-        "Stratégies d'apprentissage personnalisées",
-        "Soutien à l'inclusion scolaire",
-        "Collaboration avec les équipes éducatives",
-      ],
+      title: "",
+      description: "",
+      details: [],
     },
     programBreakdown: [],
     testimonials: [],
@@ -281,17 +277,13 @@ const specialitesContent: Record<string, {
     forWho: [],
   },
   "harcelement": {
-    title: "Harcèlement Scolaire",
-    subtitle: "Accompagnement et soutien face au harcèlement scolaire",
-    description: "Un accompagnement bienveillant et sécurisant pour les enfants et adolescents confrontés au harcèlement.",
+    title: "Harcèlement scolaire",
+    subtitle: "Accompagner, protéger et reconstruire",
+    description: "Un accompagnement destiné aux enfants, adolescents et familles confrontés à une situation de harcèlement scolaire, de cyberharcèlement ou d'exclusion.",
     whatIs: {
-      title: "Qu'est-ce que l'accompagnement face au harcèlement scolaire ?",
-      description: "Un accompagnement pour aider les enfants et adolescents confrontés au harcèlement.",
-      details: [
-        "Écoute et soutien psychologique",
-        "Stratégies de protection",
-        "Collaboration avec l'école et la famille",
-      ],
+      title: "",
+      description: "",
+      details: [],
     },
     programBreakdown: [],
     testimonials: [],
@@ -343,17 +335,13 @@ const specialitesContent: Record<string, {
     forWho: [],
   },
   "neuroeducation": {
-    title: "Neuroéducation",
-    subtitle: "Approche basée sur les neurosciences pour optimiser les apprentissages",
-    description: "Une approche innovante qui s'appuie sur les dernières découvertes en neurosciences.",
+    title: "Apprendre à apprendre grâce à la neuroéducation",
+    subtitle: "Une approche scientifique au service des apprentissages",
+    description: "Comprendre comment le cerveau apprend afin de développer des stratégies efficaces, adaptées à son fonctionnement et à ses objectifs.",
     whatIs: {
-      title: "Qu'est-ce que la neuroéducation ?",
-      description: "Une approche basée sur les neurosciences pour optimiser les apprentissages.",
-      details: [
-        "Compréhension du fonctionnement du cerveau",
-        "Stratégies d'apprentissage efficaces",
-        "Approche adaptée à chacun",
-      ],
+      title: "",
+      description: "",
+      details: [],
     },
     programBreakdown: [],
     testimonials: [],
@@ -453,7 +441,7 @@ export default function SpecialiteDetailPage({
                   className="text-center"
                 >
                   <h1
-                    className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6"
+                    className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6"
                     style={{
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                     }}
@@ -498,7 +486,7 @@ export default function SpecialiteDetailPage({
               transition={{ duration: 0.6 }}
             >
               <h2
-                className="text-4xl md:text-5xl font-bold mb-6 text-center"
+                className="text-2xl md:text-3xl font-bold mb-6 text-center"
                 style={{ color: textColor }}
               >
                 {content.whatIs.title}
@@ -531,7 +519,7 @@ export default function SpecialiteDetailPage({
         <section className="py-20 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
           <div className="max-w-6xl mx-auto">
             <h2
-              className="text-4xl md:text-5xl font-bold mb-12 text-center"
+              className="text-2xl md:text-3xl font-bold mb-12 text-center"
               style={{ color: textColor }}
             >
               Témoignages
@@ -567,7 +555,7 @@ export default function SpecialiteDetailPage({
         <section className="py-20 px-4 md:px-8">
           <div className="max-w-6xl mx-auto">
             <h2
-              className="text-4xl md:text-5xl font-bold mb-4 text-center"
+              className="text-2xl md:text-3xl font-bold mb-4 text-center"
               style={{ color: textColor }}
             >
               Déroulement du programme
@@ -641,7 +629,7 @@ export default function SpecialiteDetailPage({
         <section className="py-20 px-4 md:px-8" style={{ backgroundColor: surfaceColor }}>
           <div className="max-w-6xl mx-auto">
             <h2
-              className="text-4xl md:text-5xl font-bold mb-4 text-center"
+              className="text-2xl md:text-3xl font-bold mb-4 text-center"
               style={{ color: textColor }}
             >
               Comment allez-vous développer votre confiance en vous cette année ?
@@ -685,7 +673,7 @@ export default function SpecialiteDetailPage({
         <section className="py-20 px-4 md:px-8">
           <div className="max-w-4xl mx-auto">
             <h2
-              className="text-4xl md:text-5xl font-bold mb-12 text-center"
+              className="text-2xl md:text-3xl font-bold mb-12 text-center"
               style={{ color: textColor }}
             >
               Questions fréquemment posées
@@ -708,7 +696,7 @@ export default function SpecialiteDetailPage({
               transition={{ duration: 0.6 }}
             >
               <h2
-                className="text-4xl md:text-5xl font-bold mb-6"
+                className="text-2xl md:text-3xl font-bold mb-6"
                 style={{ color: textColor }}
               >
                 Prêt à développer votre confiance en vous ?
@@ -752,7 +740,7 @@ export default function SpecialiteDetailPage({
             transition={{ duration: 0.8 }}
           >
             <h1
-              className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6"
+              className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
               style={{ color: textColor }}
             >
               {SPECIALITY_SEO_CONFIG[slug]?.h1 || content.title}
@@ -788,7 +776,7 @@ export default function SpecialiteDetailPage({
       </section>
 
       {/* What is Section */}
-      {content.whatIs && (
+      {content.whatIs?.title && (
         <section className="py-20 px-4 md:px-8">
           <div className="max-w-6xl mx-auto">
             <motion.div
@@ -798,7 +786,7 @@ export default function SpecialiteDetailPage({
               transition={{ duration: 0.6 }}
             >
               <h2
-                className="text-4xl md:text-5xl font-bold mb-6 text-center"
+                className="text-2xl md:text-3xl font-bold mb-6 text-center"
                 style={{ color: textColor }}
               >
                 {content.whatIs.title}
@@ -852,7 +840,7 @@ export default function SpecialiteDetailPage({
                 <Card className="border-[#E6D9C6] bg-white shadow-lg">
                   <CardContent className="p-8">
                     <h2
-                      className="text-3xl font-bold text-[#2F2A25] mb-6"
+                      className="text-xl md:text-2xl font-bold text-[#2F2A25] mb-6"
                       style={{
                         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                       }}
@@ -870,7 +858,7 @@ export default function SpecialiteDetailPage({
                 </Card>
               </motion.div>
             ))}
-            {slug === "guidance-parentale" && (
+            {["guidance-parentale", "tnd", "harcelement", "neuroeducation"].includes(slug) && (
               <div className="text-center mt-8">
                 <Button
                   size="lg"
@@ -905,7 +893,7 @@ export default function SpecialiteDetailPage({
             transition={{ duration: 0.6 }}
           >
             <h2
-              className="text-4xl md:text-5xl font-bold mb-6"
+              className="text-2xl md:text-3xl font-bold mb-6"
               style={{ color: textColor }}
             >
               Prêt à commencer votre accompagnement ?

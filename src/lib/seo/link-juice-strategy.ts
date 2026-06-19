@@ -317,9 +317,9 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   }[];
 }> = {
   "tnd": {
-    title: "Neuroéducation & TND (TDAH, DYS, TSA) : Accompagnement Caen",
-    description: "Spécialiste TND à Caen : stratégies pour DYS, TDA-H et HPI. Expertise reconnue (CRA & MDPH) pour aider votre enfant à réussir. Consultez au cabinet.",
-    h1: "Accompagnement des Troubles du Neurodéveloppement (TND)",
+    title: "TDAH, TSA, Troubles DYS et Haut Potentiel — Accompagnement Caen",
+    description: "Accompagnement spécialisé des troubles du neurodéveloppement à Caen : TDAH, TSA, DYS, HPI. Stratégies adaptées à l'école, à la maison et au quotidien.",
+    h1: "TDAH, TSA, troubles DYS et Haut Potentiel",
     keywords: [
       "accompagnement TND Caen",
       "troubles DYS Caen",
@@ -332,43 +332,79 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
       "psychopédagogue TND",
       "CRA Basse-Normandie",
       "MDPH Calvados",
+      "haut potentiel Caen",
     ],
     contentSections: [
       {
-        title: "Qu'est-ce que l'accompagnement TND ?",
-        content: "L'accompagnement des Troubles du Neurodéveloppement (TND) concerne les enfants et adolescents présentant des troubles DYS (dyslexie, dyspraxie, dyscalculie, dysorthographie), un TDA-H (Trouble Déficit de l'Attention avec ou sans Hyperactivité), un TSA (Trouble du Spectre de l'Autisme), un HPI (Haut Potentiel Intellectuel) ou un TOP (Trouble Oppositionnel avec Provocation). Mon expérience de 2 ans au CRA de Basse-Normandie et à la MDPH du Calvados m'a permis de développer une expertise approfondie dans la compréhension des diagnostics TND et l'accompagnement des familles.",
-        keywords: ["TND", "troubles DYS", "TDA-H", "diagnostic"],
+        title: "Une approche globale centrée sur le fonctionnement de l'enfant",
+        content: "Les troubles du neurodéveloppement (TDAH, TSA, troubles DYS, Haut Potentiel, TOP...) peuvent avoir un impact sur les apprentissages, l'organisation, l'attention, la gestion des émotions, les interactions sociales ou encore l'autonomie au quotidien.\n\nChaque enfant présente un profil unique. Mon accompagnement vise à mieux comprendre son fonctionnement cognitif, émotionnel et comportemental afin d'identifier les leviers les plus adaptés à ses besoins.",
+        keywords: ["TND", "neurodéveloppement", "fonctionnement"],
       },
       {
-        title: "Pourquoi choisir un accompagnement spécialisé TND ?",
-        content: "Les troubles du neurodéveloppement nécessitent une approche adaptée et personnalisée. Chaque enfant est unique et nécessite des stratégies d'apprentissage spécifiques. Mon accompagnement intègre les dimensions cognitive, émotionnelle et comportementale, en collaboration étroite avec les équipes éducatives pour favoriser l'inclusion scolaire et la réussite de chaque jeune.",
-        keywords: ["accompagnement spécialisé", "stratégies d'apprentissage", "inclusion scolaire"],
+        title: "Mon expertise",
+        content: "Professeure certifiée dans le domaine de la santé, psychopédagogue certifiée en neuroéducation et titulaire de deux Masters universitaires, j'ai développé une expertise spécifique dans la compréhension des troubles du neurodéveloppement.\n\nMon parcours au sein du Centre Ressources Autisme (CRA) de Basse-Normandie, complété par mon expérience à la Maison Départementale des Personnes Handicapées (MDPH) du Calvados ainsi que par mes travaux de recherche consacrés aux troubles du spectre de l'autisme, m'a permis d'acquérir une connaissance approfondie des parcours diagnostiques, des dispositifs d'accompagnement et des besoins spécifiques des enfants, adolescents et familles concernés.",
+        keywords: ["expertise", "CRA", "MDPH"],
+      },
+      {
+        title: "J'interviens notamment pour",
+        content: "<strong>Comprendre son fonctionnement</strong> — Identifier les forces, les fragilités et les besoins spécifiques de l'enfant.<br/><br/><strong>Développer des stratégies adaptées</strong> — Mettre en place des outils concrets favorisant les apprentissages, l'organisation et l'autonomie.<br/><br/><strong>Favoriser son épanouissement scolaire et quotidien</strong> — Renforcer la confiance en soi, la motivation et le bien-être dans les différents environnements de vie.<br/><br/><strong>Soutenir l'inclusion scolaire</strong> — Faciliter la mise en place d'aménagements adaptés lorsque cela est nécessaire.<br/><br/><strong>Accompagner les familles</strong> — Apporter des repères concrets et des stratégies adaptées au quotidien.<br/><br/><strong>Collaborer avec les professionnels</strong> — Favoriser la coordination avec les équipes éducatives et les professionnels intervenant auprès de l'enfant.",
+        keywords: ["stratégies", "inclusion scolaire", "familles"],
+      },
+      {
+        title: "Un accompagnement complémentaire aux professionnels de santé",
+        content: "Mon accompagnement ne se substitue pas aux bilans ou aux prises en charge réalisés par les professionnels de santé.\n\nIl s'inscrit dans une démarche complémentaire visant à aider l'enfant, sa famille et son environnement à mieux comprendre son fonctionnement et à mettre en place des stratégies favorisant les apprentissages, l'autonomie et le bien-être au quotidien.",
+        keywords: ["complémentaire", "professionnels de santé"],
+      },
+      {
+        title: "Pour quels profils ?",
+        content: "• TDAH (avec ou sans hyperactivité)<br/>• Troubles DYS (dyslexie, dysorthographie, dyscalculie, dyspraxie...)<br/>• TSA (Trouble du Spectre de l'Autisme)<br/>• Haut Potentiel Intellectuel (HPI)<br/>• Difficultés attentionnelles et exécutives<br/>• Difficultés d'organisation et de planification<br/>• Difficultés émotionnelles associées<br/>• Estime de soi fragilisée<br/>• Difficultés scolaires liées au fonctionnement cognitif",
+        keywords: ["TDAH", "DYS", "TSA", "HPI"],
+      },
+      {
+        title: "Objectifs de l'accompagnement",
+        content: "✓ Mieux comprendre son fonctionnement<br/>✓ Développer des stratégies adaptées<br/>✓ Renforcer son autonomie<br/>✓ Favoriser les apprentissages<br/>✓ Améliorer le bien-être au quotidien<br/>✓ Soutenir la réussite scolaire",
+        keywords: ["objectifs", "autonomie", "réussite scolaire"],
       },
     ],
   },
   "harcelement": {
-    title: "Harcèlement scolaire & Neuroéducation : Solutions à Caen",
-    description: "Accompagnement bienveillant pour enfants et adolescents victimes de harcèlement scolaire à Caen. Écoute, soutien psychologique, stratégies de protection. Collaboration école et famille. Cabinet Bretteville sur Odon.",
-    h1: "Accompagnement face au Harcèlement Scolaire - Soutien et Protection",
+    title: "Harcèlement scolaire — Accompagnement Caen",
+    description: "Accompagnement pour enfants et adolescents victimes de harcèlement scolaire ou de cyberharcèlement à Caen. Protection, reconstruction et soutien aux familles.",
+    h1: "Harcèlement scolaire",
     keywords: [
       "harcèlement scolaire Caen",
       "accompagnement harcèlement scolaire",
       "victime harcèlement scolaire",
       "soutien harcèlement enfant",
-      "prévention harcèlement scolaire",
+      "cyberharcèlement",
       "psychopédagogue harcèlement",
-      "traumatisme harcèlement",
+      "phobie scolaire",
     ],
     contentSections: [
       {
-        title: "Comprendre le harcèlement scolaire",
-        content: "Le harcèlement scolaire est un phénomène répandu qui touche de nombreux enfants et adolescents. Il peut prendre différentes formes : verbale, physique, psychologique ou numérique (cyberharcèlement). Les conséquences peuvent être graves : perte de confiance en soi, troubles anxieux, dépression, phobie scolaire, voire décrochage scolaire. Un accompagnement précoce et adapté est essentiel pour aider la victime à se reconstruire.",
-        keywords: ["harcèlement scolaire", "cyberharcèlement", "victime"],
+        title: "Une approche centrée sur la protection et la reconstruction",
+        content: "Le harcèlement scolaire peut avoir des conséquences importantes sur le bien-être émotionnel, la confiance en soi, les apprentissages et la scolarité.\n\nMon accompagnement vise à offrir un espace sécurisant permettant à l'enfant ou à l'adolescent d'exprimer ce qu'il vit, de retrouver progressivement confiance en lui et de développer des stratégies adaptées pour faire face à la situation.",
+        keywords: ["protection", "reconstruction", "bien-être"],
       },
       {
-        title: "Mon approche face au harcèlement",
-        content: "Mon accompagnement face au harcèlement scolaire est basé sur l'écoute, la bienveillance et la sécurité. Je travaille en collaboration étroite avec l'école, la famille et les professionnels de santé pour mettre en place des stratégies de protection et de reconstruction. L'objectif est de redonner confiance à l'enfant, de l'aider à exprimer ses émotions et de développer des outils pour faire face à cette situation difficile.",
-        keywords: ["accompagnement", "reconstruction", "confiance en soi"],
+        title: "Mon rôle dans l'accompagnement",
+        content: "<strong>Comprendre la situation</strong> — Identifier les mécanismes du harcèlement, leurs impacts et les facteurs de vulnérabilité éventuels.<br/><br/><strong>Renforcer les ressources de l'enfant</strong> — Travailler la confiance en soi, l'affirmation de soi et le sentiment de sécurité.<br/><br/><strong>Construire des stratégies de protection</strong> — Développer des outils concrets pour faire face aux situations difficiles et retrouver un sentiment de contrôle.<br/><br/><strong>Accompagner les familles</strong> — Apporter des repères et des conseils pour soutenir efficacement leur enfant.<br/><br/><strong>Favoriser le dialogue avec l'école</strong> — Lorsque cela est pertinent, contribuer à une meilleure compréhension de la situation avec les différents acteurs éducatifs.<br/><br/><strong>Prévenir les conséquences sur la scolarité</strong> — Limiter l'impact du harcèlement sur les apprentissages, la motivation et l'engagement scolaire.",
+        keywords: ["stratégies", "familles", "école"],
+      },
+      {
+        title: "Comprendre le harcèlement scolaire",
+        content: "Le harcèlement scolaire désigne des comportements répétés visant à isoler, humilier, intimider ou fragiliser une personne. Il peut prendre différentes formes :\n\n• harcèlement verbal ;<br/>• harcèlement psychologique ;<br/>• harcèlement physique ;<br/>• harcèlement relationnel ;<br/>• cyberharcèlement.\n\nSes conséquences peuvent être importantes : anxiété, perte de confiance en soi, isolement, difficultés scolaires, phobie scolaire ou décrochage.\n\nUne prise en charge précoce permet souvent de limiter ces conséquences et d'aider l'enfant à retrouver progressivement un équilibre.",
+        keywords: ["cyberharcèlement", "phobie scolaire", "conséquences"],
+      },
+      {
+        title: "Pour quels besoins ?",
+        content: "✓ Harcèlement scolaire<br/>✓ Cyberharcèlement<br/>✓ Isolement social<br/>✓ Difficultés relationnelles<br/>✓ Perte de confiance en soi<br/>✓ Anxiété liée à l'école<br/>✓ Refus ou phobie scolaire<br/>✓ Reconstruction après une situation de harcèlement",
+        keywords: ["besoins", "cyberharcèlement", "reconstruction"],
+      },
+      {
+        title: "Une démarche complémentaire",
+        content: "Mon accompagnement ne se substitue pas à l'intervention des établissements scolaires, des professionnels de santé ou des dispositifs spécialisés.\n\nIl s'inscrit dans une démarche complémentaire visant à soutenir l'enfant, sa famille et son environnement afin de favoriser sa reconstruction émotionnelle, son bien-être et la poursuite de sa scolarité dans les meilleures conditions possibles.",
+        keywords: ["complémentaire", "reconstruction émotionnelle"],
       },
     ],
   },
@@ -518,8 +554,8 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
     ],
   },
   "neuroeducation": {
-    title: "La Neuroéducation à Caen : Optimiser l'apprentissage par la science",
-    description: "Découvrez comment le cerveau apprend. Expertise en neurosciences pour étudiants et professionnels à Caen. Boostez vos capacités cognitives et votre mémoire.",
+    title: "Neuroéducation à Caen — Apprendre à apprendre",
+    description: "Neuroéducation à Caen : comprendre comment le cerveau apprend pour développer des méthodes efficaces, renforcer l'autonomie et retrouver confiance dans ses apprentissages.",
     h1: "Apprendre à apprendre grâce à la Neuroéducation",
     keywords: [
       "neuroéducation Caen",
@@ -528,17 +564,38 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
       "stratégies apprentissage",
       "psychopédagogue neuroéducation",
       "sciences cognitives",
+      "méthodes de travail",
     ],
     contentSections: [
       {
         title: "Qu'est-ce que la neuroéducation ?",
-        content: "La neuroéducation est une approche qui s'appuie sur les dernières découvertes en neurosciences pour comprendre comment fonctionne le cerveau et optimiser les processus d'apprentissage. Elle permet de développer des stratégies d'apprentissage efficaces et adaptées à chacun, en tenant compte des mécanismes cérébraux impliqués dans l'apprentissage, la mémorisation et la compréhension.",
+        content: "La neuroéducation est une discipline qui s'appuie sur les connaissances issues des neurosciences, de la psychologie cognitive et des sciences de l'éducation afin de mieux comprendre les mécanismes impliqués dans les apprentissages.\n\nSon objectif n'est pas d'apprendre davantage, mais d'apprendre plus efficacement en tenant compte du fonctionnement du cerveau, de l'attention, de la mémoire, de la motivation et des émotions.",
         keywords: ["neuroéducation", "neurosciences", "apprentissage"],
       },
       {
-        title: "Applications de la neuroéducation",
-        content: "La neuroéducation permet de mieux comprendre les difficultés d'apprentissage, de développer des méthodes d'apprentissage adaptées, d'optimiser la mémorisation et la compréhension, et de favoriser la réussite scolaire. Mon accompagnement intègre ces connaissances pour proposer des stratégies d'apprentissage personnalisées et efficaces.",
-        keywords: ["méthodes", "mémorisation", "réussite"],
+        title: "Une approche centrée sur le fonctionnement de l'apprenant",
+        content: "Chaque élève possède son propre profil cognitif, ses habitudes d'apprentissage, ses points forts et ses difficultés.\n\nMon accompagnement vise à identifier les stratégies les plus adaptées afin de permettre à chacun de développer des méthodes de travail efficaces, durables et transférables dans son quotidien scolaire.",
+        keywords: ["profil cognitif", "méthodes de travail"],
+      },
+      {
+        title: "Ce que nous travaillons ensemble",
+        content: "<strong>Comprendre comment le cerveau apprend</strong> — Découvrir les mécanismes de l'attention, de la mémoire, de la motivation et de la consolidation des connaissances.<br/><br/><strong>Développer des méthodes efficaces</strong> — Mettre en place des stratégies adaptées pour apprendre, mémoriser et réviser plus efficacement.<br/><br/><strong>Renforcer les fonctions exécutives</strong> — Travailler l'organisation, la planification, l'inhibition, la flexibilité cognitive et la gestion du temps.<br/><br/><strong>Optimiser la mémorisation</strong> — Utiliser des techniques validées scientifiquement pour favoriser l'ancrage durable des connaissances.<br/><br/><strong>Développer son autonomie</strong> — Apprendre à devenir acteur de ses apprentissages et à construire sa propre méthode de travail.<br/><br/><strong>Retrouver confiance dans ses capacités</strong> — Mieux comprendre son fonctionnement pour retrouver un sentiment d'efficacité et de réussite.",
+        keywords: ["mémorisation", "fonctions exécutives", "autonomie"],
+      },
+      {
+        title: "Pour quels profils ?",
+        content: "• Élèves rencontrant des difficultés d'apprentissage<br/>• Collégiens et lycéens souhaitant améliorer leurs méthodes de travail<br/>• Étudiants préparant des examens ou concours<br/>• Jeunes présentant des difficultés attentionnelles<br/>• TDAH, troubles DYS, HPI ou TSA<br/>• Élèves ayant le sentiment de beaucoup travailler sans obtenir les résultats attendus",
+        keywords: ["élèves", "étudiants", "TDAH"],
+      },
+      {
+        title: "Pourquoi la neuroéducation ?",
+        content: "Parce qu'il ne suffit pas toujours de travailler davantage.\n\nComprendre comment fonctionne son cerveau permet souvent de gagner en efficacité, de réduire la charge mentale liée aux apprentissages et de retrouver davantage de confiance dans ses capacités.\n\nLa neuroéducation offre des repères concrets, fondés sur les connaissances scientifiques actuelles, pour apprendre de manière plus sereine et plus efficace.",
+        keywords: ["efficacité", "confiance", "apprentissages"],
+      },
+      {
+        title: "Les objectifs de l'accompagnement",
+        content: "✓ Mieux comprendre son fonctionnement cognitif<br/>✓ Développer des méthodes de travail adaptées<br/>✓ Renforcer les capacités attentionnelles<br/>✓ Améliorer la mémorisation<br/>✓ Développer son autonomie<br/>✓ Retrouver confiance dans ses apprentissages",
+        keywords: ["objectifs", "mémorisation", "autonomie"],
       },
     ],
   },

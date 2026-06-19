@@ -1,5 +1,6 @@
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
+import { AXES_LABELS } from "@/components/idmc/IdmcRadarChart";
 import { formatDiscProfileSentence } from "@/lib/disc/disc-profile-label";
 import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 
@@ -8,13 +9,6 @@ const DISC_OBS: Record<keyof DiscScores, string> = {
   I: "Vous misez sur la communication, l'enthousiasme et la mobilisation des autres.",
   S: "Vous recherchez la stabilité, l'écoute et un rythme de travail régulier.",
   C: "Vous valorisez la rigueur, la qualité et le respect des procédures.",
-};
-
-const IDMC_AXIS_HINTS: Partial<Record<AxisKey, string>> = {
-  A1: "connaissance de soi",
-  A2: "méthodes d'apprentissage",
-  A4: "organisation",
-  A6: "gestion des difficultés",
 };
 
 export function buildDiscObservation(scores: DiscScores): string {
@@ -35,9 +29,9 @@ export function buildIdmcObservation(axes: Record<AxisKey, number>): string {
   if (!top) {
     return "Votre profil IDMC met en avant vos leviers motivationnels et vos stratégies d'apprentissage.";
   }
-  const topHint = IDMC_AXIS_HINTS[top[0]] ?? "cette dimension";
-  const lowHint = low ? IDMC_AXIS_HINTS[low[0]] ?? "certains axes" : "d'autres axes";
-  return `Votre point fort IDMC est la ${topHint} (${top[1]} %). À renforcer : ${lowHint} (${low?.[1] ?? 0} %). Ces scores guident vos priorités de progression EDGE.`;
+  const topLabel = AXES_LABELS[top[0]] ?? top[0];
+  const lowLabel = low ? AXES_LABELS[low[0]] ?? "certains axes" : "d'autres axes";
+  return `Votre point fort IDMC est ${topLabel} (${top[1]} %). À renforcer : ${lowLabel} (${low?.[1] ?? 0} %). Ces scores guident vos priorités de progression EDGE.`;
 }
 
 export function buildSoftSkillsObservation(

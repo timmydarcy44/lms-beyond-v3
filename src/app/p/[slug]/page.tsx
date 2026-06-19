@@ -289,8 +289,10 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
           rawResponses = null;
         }
       }
-      let axes: Record<AxisKey, number> | null = null;
-      axes = extractIdmcAxes(rawScores) || extractIdmcAxes(rawResponses);
+      let axes: Record<AxisKey, number> | null = data.idmcAxes ?? null;
+      if (!axes) {
+        axes = extractIdmcAxes(rawScores) || extractIdmcAxes(rawResponses);
+      }
       if (!axes) {
         axes = resolveIdmcAxes(rawScores ?? rawResponses);
       }

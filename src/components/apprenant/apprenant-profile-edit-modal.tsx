@@ -168,7 +168,6 @@ export function ApprenantProfileEditModal({
         last_name: lastName.trim(),
         phone: phone.trim() || null,
       };
-      if (email.trim()) body.email = email.trim().toLowerCase();
       if (birthDate.trim()) body.birth_date = birthDate.trim();
       if (city.trim()) body.city = city.trim();
       if (effectiveProfile?.school_id && schoolClass.trim()) {
@@ -234,7 +233,13 @@ export function ApprenantProfileEditModal({
           </div>
           <label className="text-xs text-black/60">
             E-mail
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+            <input
+              type="email"
+              value={email}
+              readOnly
+              disabled
+              className={`${inputClass} cursor-not-allowed opacity-60`}
+            />
           </label>
           <label className="text-xs text-black/60">
             Téléphone

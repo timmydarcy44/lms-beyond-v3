@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Award, BookOpen, Sparkles, Users } from "lucide-react";
 import { PersonalizedActionPlanSection } from "@/components/learner/personalized-action-plan-section";
-import { usePersonalizedActionPlan } from "@/hooks/use-personalized-action-plan";
+import { usePersonalizedActionPlanFromSnapshot } from "@/components/learner/learner-snapshot-provider";
 import {
   APPRENANT_CARD_BODY,
   APPRENANT_PAGE_KICKER,
@@ -20,7 +20,7 @@ const STEP_ICON = {
 } as const;
 
 export default function ApprenantParcoursPage() {
-  const { loading, plan, parcoursHref } = usePersonalizedActionPlan("apprenant");
+  const { loading, plan, parcoursHref } = usePersonalizedActionPlanFromSnapshot("apprenant");
 
   return (
     <div className={APPRENANT_PAGE_SHELL}>

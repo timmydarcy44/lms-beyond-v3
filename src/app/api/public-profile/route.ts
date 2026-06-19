@@ -1,4 +1,11 @@
 import { NextResponse } from "next/server";
+import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
+import {
+  collectLearnerProfileCandidates,
+  fetchDiscScoresForCandidates,
+  fetchIdmcAxesForCandidates,
+  fetchSoftSkillsRadarForCandidates,
+} from "@/lib/learner/resolve-learner-profile-candidates";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { loadPublicProfileEarnedBadges } from "@/lib/openbadges/public-profile-earned-badges";
 
@@ -39,41 +46,57 @@ const resolveIdmcAxesServer = (scores: unknown): Record<AxisKey, number> | null 
   return null;
 };
 
-function parseDiscScoresRow(raw: unknown): Array<{ label: string; value: number }> {
-  if (!raw) return [];
-  let scores = raw;
-  if (typeof raw === "string") {
-    try {
-      scores = JSON.parse(raw) as unknown;
-    } catch {
-      return [];
-    }
-  }
-  if (!scores || typeof scores !== "object" || Array.isArray(scores)) return [];
-  const map = scores as Record<string, unknown>;
+function discScoresToChartRows(scores: DiscScores | null): Array<{ label: string; value: number }> {
+  if (!scores) return [];
   return [
-    { label: "D", value: Number(map.D ?? 0) },
-    { label: "I", value: Number(map.I ?? 0) },
-    { label: "S", value: Number(map.S ?? 0) },
-    { label: "C", value: Number(map.C ?? 0) },
+    { label: "D", value: Number(scores.D ?? 0) },
+    { label: "I", value: Number(scores.I ?? 0) },
+    { label: "S", value: Number(scores.S ?? 0) },
+    { label: "C", value: Number(scores.C ?? 0) },
   ];
 }
 
-function parseSoftSkillsScores(raw: unknown): Array<{ label: string; value: number }> {
-  if (!raw) return [];
-  let scores = raw;
-  if (typeof raw === "string") {
-    try {
-      scores = JSON.parse(raw) as unknown;
-    } catch {
-      return [];
+async function fetchLatestIdmcRowForCandidates(
+  db: Awaited<ReturnType<typeof getServiceRoleClientOrFallback>>,
+  profileIds: string[],
+): Promise<{
+  scores: unknown;
+  responses: unknown;
+  global_score: number | null;
+  level: string | null;
+} | null> {
+  if (!db || !profileIds.length) return null;
+
+  let bestRow: {
+    scores: unknown;
+    responses: unknown;
+    global_score: number | null;
+    level: string | null;
+    updated_at: string | null;
+  } | null = null;
+  let bestTime = 0;
+
+  for (const profileId of profileIds) {
+    const { data, error } = await db
+      .from("idmc_resultats")
+      .select("scores, responses, global_score, level, updated_at")
+      .eq("profile_id", profileId)
+      .maybeSingle();
+    if (error || !data) continue;
+    const updatedAt = Date.parse(String(data.updated_at ?? "")) || 0;
+    if (!bestRow || updatedAt >= bestTime) {
+      bestRow = data;
+      bestTime = updatedAt;
     }
   }
-  if (!scores || typeof scores !== "object" || Array.isArray(scores)) return [];
-  return Object.entries(scores as Record<string, number>).map(([skill, score]) => ({
-    label: skill,
-    value: Number(score),
-  }));
+
+  if (!bestRow) return null;
+  return {
+    scores: bestRow.scores,
+    responses: bestRow.responses,
+    global_score: typeof bestRow.global_score === "number" ? bestRow.global_score : null,
+    level: typeof bestRow.level === "string" ? bestRow.level : null,
+  };
 }
 
 export async function GET(request: Request) {
@@ -233,106 +256,71 @@ export async function GET(request: Request) {
     }
   }
 
-  const { data: discTest } = await supabase
-    .from("tests")
-    .select("id,title")
-    .ilike("title", "%disc%")
-    .limit(1)
-    .maybeSingle();
-
-  const profileIdsToQuery = new Set<string>();
-  if (resolvedUserId) profileIdsToQuery.add(resolvedUserId);
-  const profileIdFromRow =
-    profileRow && typeof (profileRow as { id?: unknown }).id === "string"
-      ? String((profileRow as { id?: string }).id)
-      : null;
-  if (profileIdFromRow) profileIdsToQuery.add(profileIdFromRow);
   const profileEmail =
     profileRow && typeof (profileRow as { email?: unknown }).email === "string"
       ? String((profileRow as { email?: string }).email).trim()
       : "";
-  if (profileEmail) {
-    const { data: siblingProfiles } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", profileEmail);
-    (siblingProfiles ?? []).forEach((row) => {
-      if (row?.id) profileIdsToQuery.add(String(row.id));
-    });
-  }
-  const profileIds = Array.from(profileIdsToQuery);
+
+  const profileIds = resolvedUserId
+    ? await collectLearnerProfileCandidates(supabase, resolvedUserId, profileEmail)
+    : [];
 
   const [
-    discResultats,
-    discTestResult,
+    discScoresParsed,
     idmcResultatsRow,
-    softSkillsByLearner,
-    softSkillsByProfile,
+    idmcAxesFetched,
+    softSkillsRadar,
+    discTestResult,
     experiencesData,
     diplomeData,
   ] = await Promise.all([
+    fetchDiscScoresForCandidates(supabase, profileIds),
+    fetchLatestIdmcRowForCandidates(supabase, profileIds),
+    fetchIdmcAxesForCandidates(supabase, profileIds),
+    fetchSoftSkillsRadarForCandidates(supabase, profileIds),
     supabase
-      .from("disc_resultats")
-      .select("scores")
-      .in("profile_id", profileIds)
-      .order("created_at", { ascending: false })
+      .from("tests")
+      .select("id,title")
+      .ilike("title", "%disc%")
       .limit(1)
       .maybeSingle()
-      .then(({ data }) => data),
-    discTest?.id
-      ? supabase
+      .then(async ({ data: discTest }) => {
+        if (!discTest?.id || !resolvedUserId) return null;
+        const { data } = await supabase
           .from("test_results")
           .select("score")
           .eq("user_id", resolvedUserId)
           .eq("test_id", discTest.id)
           .order("created_at", { ascending: false })
           .limit(1)
-          .maybeSingle()
-          .then(({ data }) => data)
-      : Promise.resolve(null),
-    supabase
-      .from("idmc_resultats")
-      .select("responses, scores, global_score, level, updated_at")
-      .in("profile_id", profileIds)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => data),
-    supabase
-      .from("soft_skills_resultats")
-      .select("scores")
-      .in("learner_id", profileIds)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => data),
-    supabase
-      .from("soft_skills_resultats")
-      .select("scores")
-      .in("profile_id", profileIds)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => data),
-    supabase
-      .from("experiences_pro")
-      .select("*")
-      .in("learner_id", profileIds)
-      .order("date_debut", { ascending: false })
-      .then(({ data }) => data),
-    supabase
-      .from("diplomes")
-      .select("*")
-      .in("learner_id", profileIds)
-      .order("annee_obtention", { ascending: false })
-      .then(({ data }) => data),
+          .maybeSingle();
+        return data;
+      }),
+    profileIds.length
+      ? supabase
+          .from("experiences_pro")
+          .select("*")
+          .in("learner_id", profileIds)
+          .order("date_debut", { ascending: false })
+          .then(({ data }) => data ?? [])
+      : Promise.resolve([]),
+    profileIds.length
+      ? supabase
+          .from("diplomes")
+          .select("*")
+          .in("learner_id", profileIds)
+          .order("annee_obtention", { ascending: false })
+          .then(({ data }) => data ?? [])
+      : Promise.resolve([]),
   ]);
 
-  const discScores = parseDiscScoresRow(discResultats?.scores);
+  const discScores = discScoresToChartRows(discScoresParsed);
 
   const idmcScores = idmcResultatsRow?.scores ?? null;
   const idmcResponses = idmcResultatsRow?.responses ?? null;
-  const idmcAxes = resolveIdmcAxesServer(idmcScores ?? idmcResponses);
+  const idmcAxes =
+    idmcAxesFetched ??
+    resolveIdmcAxesServer(idmcScores ?? idmcResponses);
   const idmcGlobalScore =
     typeof idmcResultatsRow?.global_score === "number"
       ? idmcResultatsRow.global_score
@@ -343,8 +331,10 @@ export async function GET(request: Request) {
           )
         : null;
 
-  const softSkillsResult = softSkillsByLearner ?? softSkillsByProfile;
-  const softSkillsAll = parseSoftSkillsScores(softSkillsResult?.scores);
+  const softSkillsAll = softSkillsRadar.map(({ skill, score }) => ({
+    label: skill,
+    value: score,
+  }));
 
   let earnedOpenBadges: Awaited<ReturnType<typeof loadPublicProfileEarnedBadges>> = [];
   if (resolvedUserId) {

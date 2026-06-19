@@ -19,6 +19,7 @@ import {
 import { ApprenantProfileEditModal } from "@/components/apprenant/apprenant-profile-edit-modal";
 import { ConnectCockpitBackdrop } from "@/components/apprenant/connect-cockpit-backdrop";
 import { ApprenantShellProvider } from "@/components/apprenant/apprenant-shell-context";
+import { LearnerSnapshotProvider } from "@/components/learner/learner-snapshot-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 type ProfileSnippet = {
@@ -221,7 +222,8 @@ export function ApprenantConnectShell({
 
   if (isImmersiveRoute) {
     return (
-      <ApprenantShellProvider value={shellContext}>
+      <LearnerSnapshotProvider>
+        <ApprenantShellProvider value={shellContext}>
         <div
           data-connect-shell={isDiscImmersive ? "disc-immersive" : "open-badge-immersive"}
           className={`min-h-screen ${isDiscImmersive ? "bg-white text-[#0a0a0a]" : "bg-[#030303] text-white"}`}
@@ -235,12 +237,14 @@ export function ApprenantConnectShell({
           refreshToken={snippetVersion}
           onSaved={() => setSnippetVersion((v) => v + 1)}
         />
-      </ApprenantShellProvider>
+        </ApprenantShellProvider>
+      </LearnerSnapshotProvider>
     );
   }
 
   return (
-    <ApprenantShellProvider value={shellContext}>
+    <LearnerSnapshotProvider>
+      <ApprenantShellProvider value={shellContext}>
       <div data-connect-shell={theme.shellAttr} className={theme.rootClass}>
         {theme.showBackdrop ? <ConnectCockpitBackdrop /> : null}
         <style jsx global>{`
@@ -610,5 +614,6 @@ export function ApprenantConnectShell({
         ) : null}
       </div>
     </ApprenantShellProvider>
+    </LearnerSnapshotProvider>
   );
 }

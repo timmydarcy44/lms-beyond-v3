@@ -15,6 +15,7 @@ import {
   type IdmcResponse,
   type IdmcVariant,
 } from "@/lib/idmc/idmc-questions";
+import { saveIdmcResultats } from "@/lib/idmc/idmc-save";
 
 const ResultChart = ({
   scores,
@@ -194,11 +195,7 @@ function ParticuliersIdmcTestInner() {
         return;
       }
 
-      const { error: dbError } = await supabase
-        .from("idmc_resultats")
-        .upsert(payload, {
-          onConflict: "profile_id",
-        });
+      const { error: dbError } = await saveIdmcResultats(supabase, payload);
 
       if (dbError) {
         console.error("[idmc] idmc_resultats error:", dbError);

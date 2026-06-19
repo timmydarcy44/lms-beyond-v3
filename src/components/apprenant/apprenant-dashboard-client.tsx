@@ -14,6 +14,7 @@ import {
 import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import dynamic from "next/dynamic";
 import { ApprenantConnectOverview } from "@/components/apprenant/apprenant-connect-overview";
+import { CrossProfileBadgeCelebration } from "@/components/apprenant/cross-profile-badge-celebration";
 
 const PersonalizedActionPlanSection = dynamic(
   () =>
@@ -125,6 +126,11 @@ export function ApprenantDashboardClient({
     !learnerSnapshotCtx.loading &&
     snapshotHasTests;
   const [isLoading, setIsLoading] = useState(true);
+  const [badgeCelebration, setBadgeCelebration] = useState<{
+    badgeName: string;
+    badgeImageUrl: string | null;
+    walletHref: string;
+  } | null>(null);
   const [user, setUser] = useState<{
     id?: string;
     email?: string;
@@ -681,6 +687,53 @@ export function ApprenantDashboardClient({
       window.removeEventListener("apprenant-profile-updated", handler as EventListener);
     };
   }, [supabase]);
+
+  useEffect(() => {
+    if (isSalarieSurface) return;
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const res = await fetch("/api/dashboard/cross-profile-badge-celebration", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as {
+          pending?: boolean;
+          badgeName?: string;
+          badgeImageUrl?: string | null;
+          walletHref?: string;
+        };
+        if (json.pending && json.badgeName) {
+          setBadgeCelebration({
+            badgeName: json.badgeName,
+            badgeImageUrl: json.badgeImageUrl ?? null,
+            walletHref: json.walletHref ?? "/dashboard/apprenant/badges",
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSalarieSurface]);
+
+  const dismissBadgeCelebration = useCallback(async () => {
+    setBadgeCelebration(null);
+    try {
+      await fetch("/api/dashboard/cross-profile-badge-celebration", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const firstName = useMemo(() => {
     const resolved = resolveLearnerDisplayFirstName({
@@ -2384,6 +2437,14 @@ export function ApprenantDashboardClient({
           </section>
             </>
           )}
+      {badgeCelebration ? (
+        <CrossProfileBadgeCelebration
+          badgeName={badgeCelebration.badgeName}
+          badgeImageUrl={badgeCelebration.badgeImageUrl}
+          walletHref={badgeCelebration.walletHref}
+          onDismiss={() => void dismissBadgeCelebration()}
+        />
+      ) : null}
     </>
   );
 }

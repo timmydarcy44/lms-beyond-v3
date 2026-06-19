@@ -12,6 +12,7 @@ import {
   type IdmcResponse,
   type IdmcVariant,
 } from "@/lib/idmc/idmc-questions";
+import { saveIdmcResultats } from "@/lib/idmc/idmc-save";
 
 const IDMC_VARIANT: IdmcVariant = "learner";
 const QUESTIONS = IDMC_QUESTIONS[IDMC_VARIANT];
@@ -85,9 +86,7 @@ export default function IdmcTestPage() {
           updated_at: new Date().toISOString(),
         };
 
-        const { error } = await supabase.from("idmc_resultats").upsert(payload, {
-          onConflict: "profile_id",
-        });
+        const { error } = await saveIdmcResultats(supabase, payload);
         if (error) {
           console.error("[idmc] idmc_resultats error:", error);
           window.alert(

@@ -1006,7 +1006,7 @@ export async function getApprenantDashboardData(
         badgeOrgIds[0] ?? null,
         badgeOrgIds,
       );
-      earnedOpenBadges = await getLearnerEarnedOpenBadges(user.id, badgeOrgIds);
+      earnedOpenBadges = await getLearnerEarnedOpenBadges(user.id);
     } catch (badgeErr) {
       console.warn("[apprenant] visible open badges:", badgeErr);
     }

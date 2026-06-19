@@ -3,7 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { EdgeAuthLinkErrorPanel } from "@/components/edge-site/edge-auth-link-error-panel";
 import { EdgeSetPasswordForm } from "@/components/edge-site/edge-set-password-form";
+import { decodeJwtPayload } from "@/lib/auth/edge-signup-flow";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { bootstrapInviteSessionFromUrl } from "@/lib/auth/bootstrap-invite-session-from-url";
 import { bootstrapSessionFromUrl } from "@/lib/auth/bootstrap-session-from-url";
@@ -31,6 +33,19 @@ function SetPasswordForm() {
   const isInviteFlow = flow === "invite";
   const isEdgeMarketingFlow = isEdgeParticulier || isEdgeEntreprise || isInviteFlow;
   const authQueryKey = searchParams.toString();
+
+  const hintEmail = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const fromQuery = searchParams.get("email")?.trim();
+    if (fromQuery) return fromQuery;
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash.includes("access_token")) return "";
+    const accessToken = new URLSearchParams(hash).get("access_token");
+    if (!accessToken) return "";
+    const payload = decodeJwtPayload(accessToken);
+    const email = payload?.email;
+    return typeof email === "string" ? email : "";
+  }, [authQueryKey, searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -221,8 +236,14 @@ function SetPasswordForm() {
   }
 
   if (bootState === "error" && isEdgeMarketingFlow) {
-    const retryHref = isEdgeEntreprise ? "/entreprises/connexion" : "/particuliers#signup";
-    const retryLabel = isEdgeEntreprise ? "Réinscription entreprise" : "Réinscription EDGE";
+    const panelVariant = isEdgeEntreprise ? "entreprise" : isInviteFlow ? "invite" : "particulier";
+    const retryHref = isEdgeEntreprise ? "/entreprises/connexion" : isInviteFlow ? "/login" : "/particuliers#signup";
+    const retryLabel = isEdgeEntreprise
+      ? "Réinscription entreprise"
+      : isInviteFlow
+        ? "Page de connexion"
+        : "Créer un nouveau compte";
+
     return (
       <div
         className="flex min-h-dvh items-center justify-center px-6 text-white"
@@ -231,18 +252,12 @@ function SetPasswordForm() {
             "radial-gradient(120% 60% at 50% 0%, rgba(255,59,48,0.45) 0%, transparent 55%), linear-gradient(180deg, #160706 0%, #0a0a0a 100%)",
         }}
       >
-        <div className="max-w-md text-center">
-          <h1 className="text-xl font-semibold">Lien expiré</h1>
-          <p className="mt-3 text-sm text-white/55">
-            Ce lien n&apos;est plus valable. Réinscrivez-vous pour recevoir un nouvel email.
-          </p>
-          <a
-            href={retryHref}
-            className="mt-8 inline-flex rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-[#0a0a0a]"
-          >
-            {retryLabel}
-          </a>
-        </div>
+        <EdgeAuthLinkErrorPanel
+          variant={panelVariant}
+          signupHref={retryHref}
+          signupLabel={retryLabel}
+          initialEmail={hintEmail}
+        />
       </div>
     );
   }
@@ -253,18 +268,8 @@ function SetPasswordForm() {
         <div className="max-w-md text-center">
           <h1 className="text-xl font-semibold text-gray-950">Lien expiré ou invalide</h1>
           <p className="mt-3 text-sm text-gray-600">
-            {isEdgeMarketingFlow
-              ? "Ce lien de confirmation n'est plus valable. Réinscrivez-vous pour recevoir un nouvel email."
-              : "Ce lien d'invitation n'est plus valable. Demandez une nouvelle invitation à votre administrateur."}
+            Ce lien d&apos;invitation n&apos;est plus valable. Demandez une nouvelle invitation à votre administrateur.
           </p>
-          {isEdgeMarketingFlow ? (
-            <a
-              href={isEdgeEntreprise ? "/entreprises/connexion" : "/particuliers#signup"}
-              className="mt-6 inline-flex rounded-full bg-edge-black px-6 py-3 text-sm font-medium text-white"
-            >
-              {isEdgeEntreprise ? "Réinscription entreprise" : "Réinscription EDGE"}
-            </a>
-          ) : null}
         </div>
       </div>
     );

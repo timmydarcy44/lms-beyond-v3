@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getParticulierSignupConfirmationEmail } from "@/lib/emails/templates/particulier-signup-confirmation";
-import { sendEmail } from "@/lib/email/resend-client";
-import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
-import {
-  particulierSetPasswordUrl,
-  resolveParticulierAppOrigin,
-} from "@/lib/particuliers/signup-redirect";
+import { sendParticulierConfirmationLink } from "@/lib/particuliers/send-confirmation-link";
 import { upsertParticulierProfile } from "@/lib/particuliers/upsert-particulier-profile";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -95,8 +89,6 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authData.user.id;
-    const origin = resolveParticulierAppOrigin(request);
-    const redirectTo = particulierSetPasswordUrl(origin);
 
     const profileResult = await upsertParticulierProfile(supabase, {
       userId,
@@ -116,46 +108,24 @@ export async function POST(request: NextRequest) {
       .from("user_profile_settings")
       .upsert({ user_id: userId, public_slug: publicSlug }, { onConflict: "user_id" });
 
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: "signup",
-      email,
-      options: { redirectTo },
-    });
+    const emailResult = await sendParticulierConfirmationLink(supabase, request, email);
 
-    if (linkError || !linkData?.properties?.action_link) {
-      console.error("[particuliers/signup] generateLink error:", linkError);
-      return NextResponse.json(
-        { error: "Compte créé, mais le lien de confirmation n'a pas pu être généré. Contactez le support." },
-        { status: 500 },
-      );
-    }
-
-    const confirmationLink = linkData.properties.action_link;
-    const template = getParticulierSignupConfirmationEmail({
-      firstName,
-      confirmationLink,
-    });
-
-    const emailResult = await sendEmail({
-      to: email,
-      subject: template.subject,
-      html: template.html,
-      from: EDGE_COCKPIT_FROM,
-    });
-
-    if (!emailResult.success) {
-      console.error("[particuliers/signup] resend error:", emailResult.error);
-      return NextResponse.json(
-        {
-          success: true,
-          warning: true,
-          userId,
-          message:
-            "Votre compte a été créé, mais l'email de confirmation n'a pas pu être envoyé. Contactez le support.",
-          emailError: emailResult.error,
-        },
-        { status: 200 },
-      );
+    if (!emailResult.ok) {
+      console.error("[particuliers/signup] confirmation email error:", emailResult.error);
+      if (emailResult.status >= 500) {
+        return NextResponse.json(
+          {
+            success: true,
+            warning: true,
+            userId,
+            message:
+              "Votre compte a été créé, mais l'email de confirmation n'a pas pu être envoyé. Contactez le support.",
+            emailError: emailResult.error,
+          },
+          { status: 200 },
+        );
+      }
+      return NextResponse.json({ error: emailResult.error }, { status: emailResult.status });
     }
 
     return NextResponse.json({

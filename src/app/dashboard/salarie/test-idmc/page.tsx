@@ -15,6 +15,7 @@ import {
   type IdmcVariant,
 } from "@/lib/idmc/idmc-questions";
 import { redirectAfterSalarieAssessmentTest } from "@/lib/salarie/post-test-redirect";
+import { saveIdmcResultats } from "@/lib/idmc/idmc-save";
 import { invalidateLearnerSnapshotCache } from "@/hooks/use-personalized-action-plan";
 
 const IDMC_VARIANT: IdmcVariant = "employee";
@@ -111,7 +112,7 @@ function TestInner() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error: dbError } = await supabase.from("idmc_resultats").upsert(payload, { onConflict: "profile_id" });
+      const { error: dbError } = await saveIdmcResultats(supabase, payload);
       if (dbError) throw dbError;
 
       invalidateLearnerSnapshotCache();

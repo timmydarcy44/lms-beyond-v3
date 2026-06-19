@@ -61,17 +61,7 @@ export async function loadPublicProfileEarnedBadges(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<PublicProfileEarnedBadge[]> {
-  const { data: memberships } = await supabase
-    .from("org_memberships")
-    .select("org_id")
-    .eq("user_id", userId);
-
-  const orgIds = Array.from(
-    new Set((memberships ?? []).map((row) => String(row.org_id ?? "")).filter(Boolean)),
-  );
-  if (orgIds.length === 0) return [];
-
-  const earned = await getLearnerEarnedOpenBadges(userId, orgIds);
+  const earned = await getLearnerEarnedOpenBadges(userId);
   if (earned.length === 0) return [];
 
   const badgeIds = earned.map((b) => b.id);

@@ -7,6 +7,7 @@ import {
 } from "@/lib/disc/disc-questions";
 import { DISC_PROFILE_LABELS } from "@/lib/disc/disc-constants";
 import { computeDiscResult, type DiscRawScores } from "@/lib/disc/disc-scoring";
+import { notifyCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
 
 export function buildDiscResultsPayload(
   profileId: string,
@@ -59,6 +60,9 @@ export async function saveDiscResultats(
     },
     { onConflict: "profile_id" },
   );
+  if (!error) {
+    await notifyCrossProfileCompletion(profileId);
+  }
   return { error, payload };
 }
 

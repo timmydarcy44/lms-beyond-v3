@@ -42,7 +42,7 @@ export type DiscProfileResolution = {
   finalProfile: string;
 };
 
-function rankNormalizedScores(
+export function rankNormalizedScores(
   normalized: DiscNormalizedScores,
   raw?: DiscRawScores,
 ): Array<[DiscLabel, number]> {

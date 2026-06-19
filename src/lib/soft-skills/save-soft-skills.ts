@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SOFT_SKILLS, SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills/questions";
+import { notifyCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
 
 export function computeSoftSkillsScores(answers: Record<string, number>) {
   const scores: Record<string, number> = {};
@@ -57,6 +58,10 @@ export async function saveSoftSkillsResultats(
   const { error } = await supabase.from("soft_skills_resultats").upsert(payload, {
     onConflict: "learner_id",
   });
+
+  if (!error) {
+    await notifyCrossProfileCompletion(learnerId);
+  }
 
   return { error, payload };
 }

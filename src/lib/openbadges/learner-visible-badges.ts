@@ -57,6 +57,63 @@ async function loadEvaluationConfigByBadgeIds(
   return map;
 }
 
+function parseLevelFromEvaluationConfig(config: unknown): number | null {
+  if (!config || typeof config !== "object" || Array.isArray(config)) return null;
+  const levelRaw = (config as Record<string, unknown>).level;
+  if (typeof levelRaw === "number" && Number.isFinite(levelRaw)) return levelRaw;
+  if (typeof levelRaw === "string" && levelRaw.trim()) {
+    const parsed = Number.parseInt(levelRaw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+/** Badges où evaluation_config.learnerAwards[userId] existe — sans filtre org. */
+async function listOpenBadgeRowsWithAwardForUser(userId: string): Promise<
+  Array<{
+    id: string;
+    name: string;
+    imageUrl: string | null;
+    level: number | null;
+    evaluationConfig: unknown;
+  }>
+> {
+  const uid = userId.trim();
+  if (!uid) return [];
+
+  const supabase = getServiceRoleClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("open_badges")
+    .select("id, name, title, image_url, evaluation_config")
+    .contains("evaluation_config", { learnerAwards: { [uid]: {} } })
+    .limit(100);
+
+  if (error) {
+    console.warn("[learner-visible-badges] earned user scan:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => {
+    const r = row as {
+      id: string;
+      name?: string | null;
+      title?: string | null;
+      image_url?: string | null;
+      evaluation_config?: unknown;
+    };
+    const config = r.evaluation_config;
+    return {
+      id: String(r.id),
+      name: String(r.name ?? r.title ?? "").trim() || "Badge",
+      imageUrl: r.image_url ?? null,
+      level: parseLevelFromEvaluationConfig(config),
+      evaluationConfig: config,
+    };
+  });
+}
+
 export async function getLearnerVisibleOpenBadges(
   userId: string,
   orgId: string | null,
@@ -164,53 +221,41 @@ export async function getLearnerVisibleOpenBadges(
 
 export async function getLearnerEarnedOpenBadges(
   userId: string,
-  orgIds: string[],
 ): Promise<LearnerEarnedOpenBadge[]> {
-  const resolvedOrgIds = Array.from(
-    new Set(orgIds.map((id) => id.trim()).filter(Boolean)),
-  );
-  if (resolvedOrgIds.length === 0) return [];
+  const uid = userId.trim();
+  if (!uid) return [];
 
   let rows: Array<{
     id: string;
     name: string;
     imageUrl: string | null;
     level: number | null;
+    evaluationConfig: unknown;
   }> = [];
 
   if (canUseOpenBadgesSupabaseRepo()) {
-    try {
-      const listed = await listLearnerVisibleBadgesViaSupabase(resolvedOrgIds);
-      rows = listed.map((b) => ({
-        id: b.id,
-        name: b.name,
-        imageUrl: b.imageUrl,
-        level: b.level,
-      }));
-    } catch {
-      /* ignore */
-    }
+    rows = await listOpenBadgeRowsWithAwardForUser(uid);
   }
 
   if (rows.length === 0) return [];
 
-  const configById = await loadEvaluationConfigByBadgeIds(rows.map((b) => b.id));
   const earned: LearnerEarnedOpenBadge[] = [];
 
   for (const badge of rows) {
-    const award = getLearnerOpenBadgeAward(configById.get(badge.id), userId);
+    const award = getLearnerOpenBadgeAward(badge.evaluationConfig, uid);
     if (!award) continue;
+    const name = award.badgeName ?? badge.name;
     const shareUrl = getBadgeCriteriaUrl(badge.id);
     earned.push({
       id: badge.id,
-      name: badge.name,
+      name,
       imageUrl: badge.imageUrl ?? award.imageUrl ?? null,
       level: badge.level,
       awardedAt: award.awardedAt,
       shareUrl,
       linkedInShareUrl: buildOpenBadgeLinkedInShareUrl({
         shareUrl,
-        badgeName: badge.name,
+        badgeName: name,
         level: badge.level,
       }),
     });

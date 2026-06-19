@@ -175,6 +175,16 @@ export default function SalarieDetailPage() {
   const [hrDocuments, setHrDocuments] = useState<HrDocument[]>([]);
   const [deleting, setDeleting] = useState(false);
   const [recommendedAction, setRecommendedAction] = useState<RecommendedActionRow | null>(null);
+  const [shareConsent, setShareConsent] = useState(false);
+  const [profileAnalysisLoading, setProfileAnalysisLoading] = useState(false);
+  const [profileAnalysisError, setProfileAnalysisError] = useState<string | null>(null);
+  const [profileAnalysis, setProfileAnalysis] = useState<{
+    strengths: string[];
+    improvements: string[];
+    summary: string | null;
+    updatedAt: string | null;
+    cached: boolean;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,6 +204,7 @@ export default function SalarieDetailPage() {
             idmc_score: number | null;
             soft_skills: Array<{ skill: string; score: number }>;
           };
+          test_status?: { share_consent?: boolean };
           missions?: EmployeeMission[];
           hr_documents?: HrDocument[];
           recommended_action?: RecommendedActionRow | null;
@@ -213,7 +224,10 @@ export default function SalarieDetailPage() {
           setDiagnostics(payload.diagnostics ?? []);
           setHasDiagnostics(Boolean(payload.has_diagnostics));
           setPendingShareConsent(Boolean(payload.pending_share_consent));
+          setShareConsent(Boolean(payload.test_status?.share_consent));
           setTestResults(payload.test_results ?? null);
+          setProfileAnalysis(null);
+          setProfileAnalysisError(null);
           setMissions(payload.missions ?? []);
           setHrDocuments(payload.hr_documents ?? []);
           setRecommendedAction(payload.recommended_action ?? null);
@@ -229,6 +243,62 @@ export default function SalarieDetailPage() {
       cancelled = true;
     };
   }, [employeeId]);
+
+  useEffect(() => {
+    if (!employeeId || !shareConsent || !hasDiagnostics) return;
+
+    let cancelled = false;
+    async function loadProfileAnalysis() {
+      setProfileAnalysisLoading(true);
+      setProfileAnalysisError(null);
+      try {
+        const res = await fetch(
+          `/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId!)}/profile-analysis`,
+        );
+        const payload = (await res.json().catch(() => ({}))) as {
+          sections?: { strengths?: string[]; improvements?: string[]; summary?: string | null };
+          updatedAt?: string;
+          cached?: boolean;
+          error?: string;
+          code?: string;
+        };
+
+        if (!res.ok) {
+          if (!cancelled) {
+            setProfileAnalysis(null);
+            setProfileAnalysisError(
+              payload.code === "consent_required"
+                ? "Le collaborateur n'a pas autorisé le partage de ses résultats."
+                : payload.error ?? "Analyse indisponible.",
+            );
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setProfileAnalysis({
+            strengths: payload.sections?.strengths ?? [],
+            improvements: payload.sections?.improvements ?? [],
+            summary: payload.sections?.summary ?? null,
+            updatedAt: payload.updatedAt ?? null,
+            cached: Boolean(payload.cached),
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setProfileAnalysis(null);
+          setProfileAnalysisError("Impossible de charger l'analyse croisée.");
+        }
+      } finally {
+        if (!cancelled) setProfileAnalysisLoading(false);
+      }
+    }
+
+    void loadProfileAnalysis();
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId, shareConsent, hasDiagnostics]);
 
   const displayEmployee = employee;
 
@@ -252,31 +322,6 @@ export default function SalarieDetailPage() {
     () => dims.map((d) => ({ skill: d.label, score: Math.round(d.score) })),
     [dims],
   );
-
-  const strengths = useMemo(() => {
-    if (!hasDiagnostics) return [];
-    const top = [...dims].filter((d) => d.score > 0).sort((a, b) => b.score - a.score).slice(0, 3);
-    return top.map((t) => {
-      if (t.key === "organisation") return "Travaille mieux avec des priorités claires.";
-      if (t.key === "communication") return "Communique de façon fluide et constructive.";
-      if (t.key === "decision") return "Décide plus facilement quand le cadre est posé.";
-      if (t.key === "leadership") return "Prend naturellement le lead sur des sujets précis.";
-      return "Garde une bonne stabilité sous pression.";
-    });
-  }, [dims, hasDiagnostics]);
-
-  const watchouts = useMemo(() => {
-    if (!hasDiagnostics) return [];
-    const low = [...dims].filter((d) => d.score > 0).sort((a, b) => a.score - b.score).slice(0, 2);
-    const list = low.map((t) => {
-      if (t.key === "stress") return "Risque de surcharge cognitive si le rythme s'accélère.";
-      if (t.key === "organisation") return "Peut se disperser sans priorités explicites.";
-      if (t.key === "communication") return "Peut se fermer si les échanges deviennent flous.";
-      if (t.key === "decision") return "Peut hésiter quand les objectifs ne sont pas tranchés.";
-      return "Peut se désengager si le rôle n'est pas clarifié.";
-    });
-    return Array.from(new Set(list));
-  }, [dims, hasDiagnostics]);
 
   const aiInsight = useMemo(() => {
     if (!hasDiagnostics) return null;
@@ -508,32 +553,72 @@ export default function SalarieDetailPage() {
 
           <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm lg:col-span-2">
             <h2 className="text-xl font-black tracking-tight text-gray-950">Profil synthétique</h2>
-            <p className="mt-2 text-sm text-gray-600">Fonctionnement du collaborateur, en langage simple.</p>
+            <p className="mt-2 text-sm text-gray-600">
+              Analyse croisée DISC · IDMC · Soft Skills — même moteur que le dashboard salarié.
+            </p>
 
-            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="rounded-3xl border border-emerald-200 bg-emerald-50/40 p-6">
-                <div className="text-xs font-black uppercase tracking-widest text-emerald-700">Forces</div>
-                <ul className="mt-4 space-y-3 text-sm text-emerald-900">
-                  {strengths.slice(0, 3).map((s) => (
-                    <li key={s} className="flex items-start gap-3">
-                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden />
-                      <span>{s}</span>
-                    </li>
-                  ))}
-                </ul>
+            {!shareConsent ? (
+              <p className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm text-violet-950">
+                Le collaborateur n&apos;a pas encore autorisé le partage entreprise. Cette synthèse
+                apparaîtra après validation du consentement RGPD.
+              </p>
+            ) : profileAnalysisLoading ? (
+              <div className="mt-6 space-y-4">
+                <div className="h-24 animate-pulse rounded-2xl bg-gray-100" />
+                <div className="h-24 animate-pulse rounded-2xl bg-gray-100" />
+                <p className="text-sm text-gray-500">Génération de l&apos;analyse croisée…</p>
               </div>
-              <div className="rounded-3xl border border-amber-200 bg-amber-50/40 p-6">
-                <div className="text-xs font-black uppercase tracking-widest text-amber-800">Points de vigilance</div>
-                <ul className="mt-4 space-y-3 text-sm text-amber-900">
-                  {watchouts.slice(0, 3).map((s) => (
-                    <li key={s} className="flex items-start gap-3">
-                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden />
-                      <span>{s}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            ) : profileAnalysisError ? (
+              <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                {profileAnalysisError}
+              </p>
+            ) : profileAnalysis ? (
+              <>
+                {profileAnalysis.summary ? (
+                  <p className="mt-4 text-sm leading-relaxed text-gray-700">{profileAnalysis.summary}</p>
+                ) : null}
+                <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div className="rounded-3xl border border-emerald-200 bg-emerald-50/40 p-6">
+                    <div className="text-xs font-black uppercase tracking-widest text-emerald-700">
+                      Forces majeures
+                    </div>
+                    <ul className="mt-4 space-y-3 text-sm text-emerald-900">
+                      {(profileAnalysis.strengths.length > 0
+                        ? profileAnalysis.strengths
+                        : ["Analyse en cours de structuration."]
+                      ).map((s) => (
+                        <li key={s} className="flex items-start gap-3">
+                          <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-3xl border border-amber-200 bg-amber-50/40 p-6">
+                    <div className="text-xs font-black uppercase tracking-widest text-amber-800">
+                      Axes d&apos;amélioration
+                    </div>
+                    <ul className="mt-4 space-y-3 text-sm text-amber-900">
+                      {(profileAnalysis.improvements.length > 0
+                        ? profileAnalysis.improvements
+                        : ["Aucun axe prioritaire identifié pour le moment."]
+                      ).map((s) => (
+                        <li key={s} className="flex items-start gap-3">
+                          <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                {profileAnalysis.updatedAt ? (
+                  <p className="mt-4 text-xs text-gray-400">
+                    {profileAnalysis.cached ? "Analyse réutilisée depuis le profil salarié" : "Analyse générée"} ·{" "}
+                    {new Date(profileAnalysis.updatedAt).toLocaleDateString("fr-FR")}
+                  </p>
+                ) : null}
+              </>
+            ) : null}
           </div>
         </section>
 

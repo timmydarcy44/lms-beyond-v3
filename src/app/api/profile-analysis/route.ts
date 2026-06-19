@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  buildProfileAnalysisTestsSignature,
+  generateProfileAnalysisText,
+  saveProfileAnalysisToDb,
+} from "@/lib/learner/profile-analysis";
 import { getServerClient } from "@/lib/supabase/server";
-import { getOpenAIClient } from "@/lib/ai/openai-client";
 
 type AnalysisPayload = {
   firstName: string;
@@ -32,61 +36,41 @@ export async function POST(request: NextRequest) {
     const discScores = body?.discScores ?? {};
     const idmcScores = body?.idmcScores ?? {};
 
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json({ error: "OpenAI non configuré." }, { status: 500 });
-    }
-
-    const softSkills = (body?.softSkillsTop ?? []).map((item) => ({
+    const softSkillsTop = (body?.softSkillsTop ?? []).map((item) => ({
       skill: item.skill ?? item.label ?? "",
-      score: item.score ?? item.value ?? 0,
+      score: Number(item.score ?? item.value ?? 0),
     }));
 
-    const prompt = `Tu es expert en analyse comportementale et motivationnelle. Réalise une synthèse croisée pour ${firstName} en reliant DISC, IDMC et soft skills (ne les traite pas isolément).
+    const testsSignature =
+      body?.testsSignature ??
+      buildProfileAnalysisTestsSignature({
+        discScores,
+        idmcScores,
+        softSkills: softSkillsTop,
+      });
 
-Scores DISC : ${JSON.stringify(discScores)}
-Scores IDMC (axes A1–A8, 0–100) : ${JSON.stringify(idmcScores)}
-Top soft skills : ${JSON.stringify(softSkills)}
-
-Structure la réponse en français avec ces titres :
-## Forces majeures
-## Axes d'amélioration
-## Synthèse EDGE
-
-Ton : professionnel, encourageant, factuel (style Apple : direct et inspirant). 180 à 280 mots au total.`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: "Tu es un expert en analyse comportementale." },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.6,
+    const analysis = await generateProfileAnalysisText({
+      firstName,
+      discScores,
+      idmcScores,
+      softSkillsTop,
     });
 
-    const analysis = response.choices[0]?.message?.content?.trim() || "";
-    const updatedAt = new Date().toISOString();
-
-    if (analysis) {
-      const analysisPayload = JSON.stringify({
-        text: analysis,
-        updated_at: updatedAt,
-        tests_signature: body?.testsSignature ?? null,
-        disc_updated_at: body?.discUpdatedAt ?? null,
-        idmc_updated_at: body?.idmcUpdatedAt ?? null,
-      });
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ ai_analysis: analysisPayload })
-        .eq("id", user.id);
-      if (updateError) {
-        console.error("[profile-analysis] update error", updateError);
-      }
+    if (!analysis) {
+      return NextResponse.json({ error: "Analyse vide." }, { status: 500 });
     }
+
+    const updatedAt = await saveProfileAnalysisToDb(supabase, user.id, analysis, {
+      testsSignature,
+      discUpdatedAt: body?.discUpdatedAt ?? null,
+      idmcUpdatedAt: body?.idmcUpdatedAt ?? null,
+    });
 
     return NextResponse.json({ analysis, updatedAt });
   } catch (error) {
     console.error("[profile-analysis]", error);
-    return NextResponse.json({ error: "Erreur inattendue" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Erreur inattendue";
+    const status = message.includes("OpenAI") ? 503 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

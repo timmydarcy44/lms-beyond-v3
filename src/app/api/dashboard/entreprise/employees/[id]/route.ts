@@ -39,35 +39,55 @@ export async function GET(
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
-  if ("superAdminPreview" in access && access.superAdminPreview) {
-    return NextResponse.json({ error: "Mode aperçu super admin" }, { status: 400 });
-  }
-  if ("configurationRequired" in access && access.configurationRequired) {
-    return NextResponse.json({ error: "Organisation non configurée" }, { status: 400 });
-  }
 
   const service = getServiceRoleClient();
   if (!service) {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
-  const orgId = access.organizationId;
-
-  const { data: employee, error: empErr } = await service
+  const { data: employeeRow, error: empLookupErr } = await service
     .from("employees")
     .select(
       "id, first_name, last_name, email, job_title, department, profile_id, company_id, created_at",
     )
     .eq("id", employeeId)
-    .eq("company_id", orgId)
     .maybeSingle();
 
-  if (empErr) {
-    return NextResponse.json({ error: empErr.message }, { status: 400 });
+  if (empLookupErr) {
+    return NextResponse.json({ error: empLookupErr.message }, { status: 400 });
   }
-  if (!employee) {
+  if (!employeeRow) {
     return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
   }
+
+  const employeeCompanyId = String(employeeRow.company_id ?? "").trim();
+  let orgId: string | null = null;
+
+  if ("organizationId" in access && access.organizationId) {
+    orgId = access.organizationId;
+  } else if ("superAdminPreview" in access && access.superAdminPreview) {
+    orgId = employeeCompanyId || null;
+  } else if ("configurationRequired" in access && access.configurationRequired) {
+    orgId = employeeCompanyId || null;
+  }
+
+  if (!orgId) {
+    return NextResponse.json(
+      { error: "Organisation non configurée pour consulter cette fiche" },
+      { status: 400 },
+    );
+  }
+
+  if (
+    "organizationId" in access &&
+    access.organizationId &&
+    employeeCompanyId &&
+    employeeCompanyId !== access.organizationId
+  ) {
+    return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
+  }
+
+  const employee = employeeRow;
 
   const testStatus = await resolveEmployeeTestStatus(service, employee);
   const rawForConsent =
@@ -133,13 +153,18 @@ export async function GET(
     .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
 
-  const { data: hrDocuments } = await service
+  const { data: hrDocumentsRows, error: hrDocumentsErr } = await service
     .from("employee_hr_documents")
     .select("id, document_type, title, document_date, notes, file_url, file_name, created_at")
     .eq("employee_id", employeeId)
     .eq("organization_id", orgId)
     .order("document_date", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
+
+  const hrDocuments =
+    hrDocumentsErr && /employee_hr_documents|schema cache/i.test(hrDocumentsErr.message)
+      ? []
+      : (hrDocumentsRows ?? []);
 
   return NextResponse.json({
     employee: { ...employee, profile_id: testStatus.profile_id ?? employee.profile_id },
@@ -156,7 +181,7 @@ export async function GET(
     has_diagnostics: hasDiagnostics,
     recommended_action: recommendedAction,
     missions: missions ?? [],
-    hr_documents: hrDocuments ?? [],
+    hr_documents: hrDocuments,
   });
 }
 

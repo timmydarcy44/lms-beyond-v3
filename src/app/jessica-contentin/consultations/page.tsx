@@ -59,7 +59,7 @@ export default function ConsultationsPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Consultations Psychopédagogiques - Tarifs et Modalités
+              Consultations individuelles — Tarifs et modalités
             </motion.p>
             <motion.p
               initial={{ opacity: 0, y: 20 }}

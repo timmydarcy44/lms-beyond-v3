@@ -269,8 +269,8 @@ const specialitesContent: Record<string, {
   },
   "regulation-emotionnelle": {
     title: "Régulation émotionnelle",
-    subtitle: "Mieux comprendre et réguler ses émotions au quotidien",
-    description: "Un accompagnement psychopédagogique pour comprendre les mécanismes émotionnels, apaiser le stress et développer des stratégies de régulation adaptées à votre fonctionnement.",
+    subtitle: "Mieux comprendre ses émotions",
+    description: "Les émotions jouent un rôle essentiel dans notre quotidien. Pourtant, lorsqu'elles deviennent envahissantes, difficiles à comprendre ou à réguler, elles peuvent avoir un impact important sur le bien-être, les relations personnelles, la vie familiale ou professionnelle.\n\nL'accompagnement proposé s'adresse aux adultes souhaitant mieux comprendre leur fonctionnement émotionnel, prendre du recul face aux situations difficiles et développer des stratégies concrètes pour retrouver davantage de sérénité au quotidien.",
     whatIs: {
       title: "",
       description: "",
@@ -617,7 +617,7 @@ export default function SpecialiteDetailPage({
               {content.subtitle}
             </p>
             <p
-              className="text-lg mb-8 max-w-2xl mx-auto leading-relaxed"
+              className="text-lg mb-8 max-w-2xl mx-auto leading-relaxed whitespace-pre-line"
               style={{ color: `${textColor}80` }}
             >
               {content.description}

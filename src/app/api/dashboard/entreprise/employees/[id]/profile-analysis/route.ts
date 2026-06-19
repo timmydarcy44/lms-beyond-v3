@@ -22,29 +22,47 @@ export async function GET(
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
-  if ("superAdminPreview" in access && access.superAdminPreview) {
-    return NextResponse.json({ error: "Mode aperçu super admin" }, { status: 400 });
-  }
-  if ("configurationRequired" in access && access.configurationRequired) {
-    return NextResponse.json({ error: "Organisation non configurée" }, { status: 400 });
-  }
 
   const service = getServiceRoleClient();
   if (!service) {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
-  const orgId = access.organizationId;
-
-  const { data: employee, error: empErr } = await service
+  const { data: employeeRow, error: empLookupErr } = await service
     .from("employees")
     .select("id, first_name, last_name, job_title, profile_id, company_id")
     .eq("id", employeeId)
-    .eq("company_id", orgId)
     .maybeSingle();
 
-  if (empErr) return NextResponse.json({ error: empErr.message }, { status: 400 });
-  if (!employee) return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
+  if (empLookupErr) return NextResponse.json({ error: empLookupErr.message }, { status: 400 });
+  if (!employeeRow) return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
+
+  const employeeCompanyId = String(employeeRow.company_id ?? "").trim();
+  let orgId: string | null = null;
+
+  if ("organizationId" in access && access.organizationId) {
+    orgId = access.organizationId;
+  } else if (
+    ("superAdminPreview" in access && access.superAdminPreview) ||
+    ("configurationRequired" in access && access.configurationRequired)
+  ) {
+    orgId = employeeCompanyId || null;
+  }
+
+  if (!orgId) {
+    return NextResponse.json({ error: "Organisation non configurée" }, { status: 400 });
+  }
+
+  if (
+    "organizationId" in access &&
+    access.organizationId &&
+    employeeCompanyId &&
+    employeeCompanyId !== access.organizationId
+  ) {
+    return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
+  }
+
+  const employee = employeeRow;
 
   const testStatus = await resolveEmployeeTestStatus(service, employee);
 

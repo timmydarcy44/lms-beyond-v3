@@ -169,7 +169,7 @@ export const PAGE_SEO_CONFIG = {
       "consultation enfant Caen",
       "consultation adolescent Caen",
     ],
-    h1: "Consultations Psychopédagogiques",
+    h1: "Consultations individuelles",
     canonical: "https://jessicacontentin.fr/consultations",
   },
   orientation: {

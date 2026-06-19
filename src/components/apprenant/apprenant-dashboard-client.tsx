@@ -114,7 +114,16 @@ export function ApprenantDashboardClient({
   const appShell = useApprenantShell();
   const learnerSnapshotCtx = useOptionalLearnerSnapshotContext();
   const isSalarieSurface = homeHref.startsWith("/dashboard/salarie");
-  const useSnapshotTests = isSalarieSurface && Boolean(learnerSnapshotCtx);
+  const snapshotHasTests = Boolean(
+    learnerSnapshotCtx?.snapshot?.discScores ||
+      learnerSnapshotCtx?.snapshot?.idmcAxes ||
+      (learnerSnapshotCtx?.snapshot?.softSkillsRadar?.length ?? 0) > 0,
+  );
+  const useSnapshotTests =
+    isSalarieSurface &&
+    Boolean(learnerSnapshotCtx) &&
+    !learnerSnapshotCtx.loading &&
+    snapshotHasTests;
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<{
     id?: string;
@@ -264,11 +273,20 @@ export function ApprenantDashboardClient({
   }, [learnerSnapshotCtx, useSnapshotTests]);
 
   useEffect(() => {
+    if (!isSalarieSurface || !learnerSnapshotCtx || learnerSnapshotCtx.loading) return;
+    if (snapshotHasTests) return;
+    void learnerSnapshotCtx.refresh();
+  }, [isSalarieSurface, learnerSnapshotCtx, learnerSnapshotCtx?.loading, snapshotHasTests]);
+
+  useEffect(() => {
     if (!useSnapshotTests || !learnerSnapshotCtx?.snapshot) return;
     const s = learnerSnapshotCtx.snapshot;
     if (s.discScores) setDiscScores(s.discScores);
     if (s.idmcAxes) setIdmcAxes(s.idmcAxes);
     setSoftSkillsRadar(s.softSkillsRadar ?? []);
+    if (s.softSkillsRadar?.length) {
+      setSoftSkillsData(Object.fromEntries(s.softSkillsRadar.map(({ skill, score }) => [skill, score])));
+    }
     if (s.firstName?.trim()) {
       setCachedFirstName(s.firstName.trim());
     }

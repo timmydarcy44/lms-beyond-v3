@@ -61,7 +61,7 @@ export async function saveDiscResultats(
     { onConflict: "profile_id" },
   );
   if (!error) {
-    await notifyCrossProfileCompletion(profileId);
+    notifyCrossProfileCompletion(profileId);
   }
   return { error, payload };
 }

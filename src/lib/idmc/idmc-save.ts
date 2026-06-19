@@ -20,7 +20,7 @@ export async function saveIdmcResultats(
   });
 
   if (!error) {
-    await notifyCrossProfileCompletion(payload.profile_id);
+    notifyCrossProfileCompletion(payload.profile_id);
   }
 
   return { error };

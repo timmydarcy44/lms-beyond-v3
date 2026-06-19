@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { maybeTriggerCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
 import { getServerClient } from "@/lib/supabase/server";
 import {
   buildSoftSkillsPayload,
@@ -45,6 +46,10 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
+
+    void maybeTriggerCrossProfileCompletion(user.id).catch((err) => {
+      console.warn("[soft-skills/submit] cross-profile trigger:", err);
+    });
 
     return NextResponse.json({
       result_id: null,

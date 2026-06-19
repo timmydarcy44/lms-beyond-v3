@@ -60,7 +60,7 @@ export async function saveSoftSkillsResultats(
   });
 
   if (!error) {
-    await notifyCrossProfileCompletion(learnerId);
+    notifyCrossProfileCompletion(learnerId);
   }
 
   return { error, payload };

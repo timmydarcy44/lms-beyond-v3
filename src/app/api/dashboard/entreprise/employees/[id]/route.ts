@@ -93,9 +93,16 @@ export async function GET(
 
   let diagnostics = (diagRows ?? []).map((row) => mapCollaborateurDiagnostic(row as Record<string, unknown>));
 
-  if (!diagnosticsHaveData(diagnostics) && testStatus.profile_id) {
-    const fromProfile = testResultsToDiagnostic(testStatus.test_results, employeeId);
-    if (fromProfile) diagnostics = [fromProfile, ...diagnostics];
+  const fromProfile =
+    testStatus.share_consent && hasAnyTestResults(testStatus.test_results)
+      ? testResultsToDiagnostic(testStatus.test_results, employeeId)
+      : null;
+
+  if (fromProfile) {
+    diagnostics = [fromProfile, ...diagnostics.filter((d) => d.source !== "profile_tests")];
+  } else if (!diagnosticsHaveData(diagnostics) && testStatus.profile_id) {
+    const fallback = testResultsToDiagnostic(testStatus.test_results, employeeId);
+    if (fallback) diagnostics = [fallback, ...diagnostics];
   }
 
   const hasDiagnostics = testStatus.diagnostic_done || diagnosticsHaveData(diagnostics);

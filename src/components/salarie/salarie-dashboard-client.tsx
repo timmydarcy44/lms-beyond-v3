@@ -42,16 +42,20 @@ function statusLabel(status: string | null) {
 
 export function SalarieDashboardClient() {
   const supabase = useSupabase();
-  const { loading: snapshotLoading, snapshot } = useLearnerSnapshot();
+  const { loading: snapshotLoading, snapshot, refresh } = useLearnerSnapshot();
   const [managerId, setManagerId] = useState<string | null>(null);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requests, setRequests] = useState<ActionRequestRow[]>([]);
   const [showPlan, setShowPlan] = useState(false);
 
-  const firstName = snapshot?.firstName ?? "Vous";
+  const firstName = snapshot?.firstName?.trim() || "Apprenant";
   const discScores = snapshot?.discScores ?? null;
   const idmcAxes = snapshot?.idmcAxes ?? null;
   const softSkillsRadar = snapshot?.softSkillsRadar ?? [];
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowPlan(true), 0);

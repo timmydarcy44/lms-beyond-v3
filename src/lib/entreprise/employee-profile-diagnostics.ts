@@ -1,12 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 import {
   fetchLatestSoftSkillsResult,
   parseSoftSkillsScoreEntries,
 } from "@/lib/soft-skills/resolve-soft-skills-result";
-
-const IDMC_AXIS_KEYS = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"] as const;
-type AxisKey = (typeof IDMC_AXIS_KEYS)[number];
 
 export type EmployeeDiagnosticPayload = {
   id: string;
@@ -27,15 +25,8 @@ export type EmployeeTestResults = {
   updated_at: string | null;
 };
 
-function resolveIdmcAxesFromRow(scores: unknown): Record<AxisKey, number> | null {
-  if (!scores || typeof scores !== "object") return null;
-  const candidate = scores as Record<string, unknown>;
-  if (candidate.axes && typeof candidate.axes === "object") {
-    return candidate.axes as Record<AxisKey, number>;
-  }
-  const hasAllAxes = IDMC_AXIS_KEYS.every((key) => typeof candidate[key] === "number");
-  if (hasAllAxes) return candidate as Record<AxisKey, number>;
-  return null;
+function resolveIdmcAxesFromRow(scores: unknown): Record<string, number> | null {
+  return resolveIdmcAxes(scores);
 }
 
 function averageAxes(axes: Record<string, number> | null): number | null {

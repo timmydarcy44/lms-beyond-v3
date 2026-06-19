@@ -34,7 +34,10 @@ const LearnerSnapshotContext = createContext<LearnerSnapshotContextValue | null>
 let sharedSnapshotPromise: Promise<LearnerSnapshot | null> | null = null;
 
 async function fetchSnapshot(): Promise<LearnerSnapshot | null> {
-  const res = await fetch("/api/dashboard/learner-snapshot", { credentials: "include" });
+  const res = await fetch("/api/dashboard/learner-snapshot", {
+    credentials: "include",
+    cache: "no-store",
+  });
   if (!res.ok) return null;
   return (await res.json()) as LearnerSnapshot;
 }
@@ -64,6 +67,16 @@ export function LearnerSnapshotProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshRef = useRef<(force?: boolean) => Promise<void>>(async () => {});
+  refreshRef.current = (force = true) => {
+    if (force) sharedSnapshotPromise = null;
+    return load(force);
+  };
+
+  const refresh = useCallback(async () => {
+    await refreshRef.current(true);
+  }, []);
+
   useEffect(() => {
     mounted.current = true;
     void load();
@@ -76,12 +89,9 @@ export function LearnerSnapshotProvider({ children }: { children: ReactNode }) {
     () => ({
       loading,
       snapshot,
-      refresh: async () => {
-        sharedSnapshotPromise = null;
-        await load(true);
-      },
+      refresh,
     }),
-    [load, loading, snapshot],
+    [loading, snapshot, refresh],
   );
 
   return (

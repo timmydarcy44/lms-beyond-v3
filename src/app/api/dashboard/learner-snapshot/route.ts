@@ -31,16 +31,17 @@ export async function GET() {
 
   const profileIds = await collectLearnerProfileCandidates(db, userId, email);
 
-  const [profileRow, employeeRow, discScores, idmcAxes, softSkillsRadar] = await Promise.all([
-    db
-      .from("profiles")
-      .select("first_name, last_name, email, poste_actuel")
-      .eq("id", userId)
-      .maybeSingle(),
+  const [profilesResult, employeeResult, discScores, idmcAxes, softSkillsRadar] = await Promise.all([
+    profileIds.length
+      ? db
+          .from("profiles")
+          .select("id, first_name, last_name, email, poste_actuel")
+          .in("id", profileIds)
+      : Promise.resolve({ data: [] }),
     email
       ? db
           .from("employees")
-          .select("first_name, job_title")
+          .select("first_name, last_name, job_title")
           .or(`profile_id.eq.${userId},email.eq.${email}`)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -51,8 +52,22 @@ export async function GET() {
     fetchSoftSkillsRadarForCandidates(db, profileIds),
   ]);
 
+  const profileRows = (profilesResult.data ?? []) as Array<{
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+    poste_actuel?: string | null;
+  }>;
+  const profileRow =
+    profileRows.find((p) => p.id === userId) ??
+    profileRows.find((p) => String(p.first_name ?? "").trim()) ??
+    profileRows[0] ??
+    null;
+  const employee = employeeResult.data;
+
   const firstName = resolveLearnerDisplayFirstName({
-    profileFirstName: profileRow.data?.first_name ?? employeeRow.data?.first_name,
+    profileFirstName: profileRow?.first_name ?? employee?.first_name,
     metadataFirstName:
       typeof meta.first_name === "string"
         ? meta.first_name
@@ -61,16 +76,13 @@ export async function GET() {
           : null,
     metadataPrenom: typeof meta.prenom === "string" ? meta.prenom : null,
     metadataGivenName: typeof meta.given_name === "string" ? meta.given_name : null,
-    email: profileRow.data?.email ?? user.email,
+    email: profileRow?.email ?? user.email,
   });
 
   return NextResponse.json({
     userId,
     firstName,
-    jobTitle:
-      (employeeRow.data?.job_title as string | null) ??
-      (profileRow.data?.poste_actuel as string | null) ??
-      null,
+    jobTitle: employee?.job_title ?? profileRow?.poste_actuel ?? null,
     discScores,
     idmcAxes,
     softSkillsRadar,

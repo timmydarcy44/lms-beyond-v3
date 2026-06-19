@@ -338,6 +338,19 @@ export function ApprenantDashboardClient({
           email: userData.user.email ?? undefined,
           user_metadata: rawMeta as { first_name?: string | null; last_name?: string | null },
         });
+        if (isSalarieSurface && emailValue) {
+          const { data: employeeLink } = await supabase
+            .from("employees")
+            .select("profile_id")
+            .or(`profile_id.eq.${userId},email.eq.${emailValue}`)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const linkedProfileId = String(employeeLink?.profile_id ?? "").trim();
+          if (linkedProfileId && !profileIdsToQuery.includes(linkedProfileId)) {
+            profileIdsToQuery.push(linkedProfileId);
+          }
+        }
         const { data: profileRole } = await supabase
           .from("profiles")
           .select("role")
@@ -645,7 +658,7 @@ export function ApprenantDashboardClient({
       }
     };
     load();
-  }, [supabase, useSnapshotTests]);
+  }, [supabase, useSnapshotTests, isSalarieSurface]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

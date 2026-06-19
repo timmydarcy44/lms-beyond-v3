@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { ExternalLink } from "lucide-react";
 import {
   hasLearnerTestData,
@@ -58,8 +58,12 @@ function FormationCard({
 }
 
 export default function SalarieFormationsPageClient() {
-  const { loading, plan, snapshot } = usePersonalizedActionPlanFromSnapshot("salarie");
+  const { loading, plan, snapshot, refresh } = usePersonalizedActionPlanFromSnapshot("salarie");
   const hasTests = hasLearnerTestData(snapshot);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const recommended = useMemo(() => {
     if (!plan) return [];
@@ -85,26 +89,36 @@ export default function SalarieFormationsPageClient() {
 
       {loading ? (
         <p className="text-sm text-white/50">Chargement…</p>
-      ) : hasTests && recommended.length > 0 ? (
+      ) : hasTests ? (
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-white">Recommandées pour vous</h2>
           {plan ? (
             <p className="text-sm text-white/55">{plan.headline}</p>
-          ) : null}
-          <ul className="grid gap-4 lg:grid-cols-2">
-            {recommended.map((f) => (
-              <li key={f.slug}>
-                <FormationCard
-                  title={f.title}
-                  description={f.description}
-                  famille={f.famille}
-                  duree={f.duree}
-                  href={f.href}
-                  badge={f.badge}
-                />
-              </li>
-            ))}
-          </ul>
+          ) : (
+            <p className="text-sm text-white/55">
+              Vos diagnostics sont enregistrés — sélection des formations en cours.
+            </p>
+          )}
+          {recommended.length > 0 ? (
+            <ul className="grid gap-4 lg:grid-cols-2">
+              {recommended.map((f) => (
+                <li key={f.slug}>
+                  <FormationCard
+                    title={f.title}
+                    description={f.description}
+                    famille={f.famille}
+                    duree={f.duree}
+                    href={f.href}
+                    badge={f.badge}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-white/50">
+              Aucune formation catalogue identifiée pour le moment — explorez EDGE Online ci-dessous.
+            </p>
+          )}
         </section>
       ) : (
         <>

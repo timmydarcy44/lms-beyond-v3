@@ -34,6 +34,7 @@ import { useApprenantShell } from "@/components/apprenant/apprenant-shell-contex
 import { EDGE_LAB_ONLINE_CATALOG_HREF } from "@/lib/galaxy-branding";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import { buildPersonalizedActionPlan } from "@/lib/learner/personalized-action-plan";
+import { useOptionalLearnerSnapshotContext } from "@/components/learner/learner-snapshot-provider";
 import { getProfileSituationLabel } from "@/lib/apprenant/profile-situation";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 import {
@@ -111,6 +112,9 @@ export function ApprenantDashboardClient({
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const appShell = useApprenantShell();
+  const learnerSnapshotCtx = useOptionalLearnerSnapshotContext();
+  const isSalarieSurface = homeHref.startsWith("/dashboard/salarie");
+  const useSnapshotTests = isSalarieSurface && Boolean(learnerSnapshotCtx);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<{
     id?: string;
@@ -252,6 +256,23 @@ export function ApprenantDashboardClient({
       setCachedFirstName("");
     }
   }, []);
+
+  useEffect(() => {
+    if (useSnapshotTests && learnerSnapshotCtx) {
+      void learnerSnapshotCtx.refresh();
+    }
+  }, [learnerSnapshotCtx, useSnapshotTests]);
+
+  useEffect(() => {
+    if (!useSnapshotTests || !learnerSnapshotCtx?.snapshot) return;
+    const s = learnerSnapshotCtx.snapshot;
+    if (s.discScores) setDiscScores(s.discScores);
+    if (s.idmcAxes) setIdmcAxes(s.idmcAxes);
+    setSoftSkillsRadar(s.softSkillsRadar ?? []);
+    if (s.firstName?.trim()) {
+      setCachedFirstName(s.firstName.trim());
+    }
+  }, [learnerSnapshotCtx?.snapshot, useSnapshotTests]);
 
   useEffect(() => {
     const load = async () => {
@@ -469,6 +490,7 @@ export function ApprenantDashboardClient({
         }
 
         try {
+          if (!useSnapshotTests) {
           let discResult: { scores?: Record<string, unknown> | null } | null = null;
           for (const candidateId of profileIdsToQuery) {
             const { data, error } = await supabase
@@ -494,11 +516,13 @@ export function ApprenantDashboardClient({
           } else {
             setDiscScores(null);
           }
+          }
         } catch {
-          setDiscScores(null);
+          if (!useSnapshotTests) setDiscScores(null);
         }
 
         try {
+          if (!useSnapshotTests) {
           let idmcResult: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
             const { data, error } = await supabase
@@ -526,12 +550,16 @@ export function ApprenantDashboardClient({
           setIdmcUpdatedAt(
             String((idmcResult as { updated_at?: string | null } | null)?.updated_at ?? "") || null,
           );
+          }
         } catch {
-          setIdmcData(null);
-          setIdmcAxes(null);
+          if (!useSnapshotTests) {
+            setIdmcData(null);
+            setIdmcAxes(null);
+          }
         }
 
         try {
+          if (!useSnapshotTests) {
           if (!userId) return;
           let latestSoftSkills: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
@@ -555,9 +583,12 @@ export function ApprenantDashboardClient({
           } else {
             setSoftSkillsRadar([]);
           }
+          }
         } catch {
-          setSoftSkillsData(null);
-          setSoftSkillsRadar([]);
+          if (!useSnapshotTests) {
+            setSoftSkillsData(null);
+            setSoftSkillsRadar([]);
+          }
         }
 
         try {
@@ -596,7 +627,7 @@ export function ApprenantDashboardClient({
       }
     };
     load();
-  }, [supabase]);
+  }, [supabase, useSnapshotTests]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

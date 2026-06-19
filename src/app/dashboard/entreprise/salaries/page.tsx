@@ -7,6 +7,7 @@ import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise-employee-csv-actions";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
+import { filterRealEntrepriseEmployees } from "@/lib/entreprise/demo-employee-id";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +50,10 @@ export default function SalariesPage() {
   }, [organisationId, supabase]);
 
   const effectiveOrgId = organisationId ?? clientOrgId;
-  const employees = data?.employees ?? [];
+  const employees = useMemo(
+    () => filterRealEntrepriseEmployees(data?.employees ?? []),
+    [data?.employees],
+  );
   const kpis = data?.kpis;
   const diagnosticsCompleted = kpis?.diagnostics_completed ?? 0;
 

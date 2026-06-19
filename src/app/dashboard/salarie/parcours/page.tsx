@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { ArrowRight, Award, BookOpen, Users } from "lucide-react";
 import {
   hasLearnerTestData,
@@ -18,9 +18,15 @@ import {
 } from "@/lib/salarie/connect-nav";
 
 export default function SalarieParcoursPage() {
-  const { loading, plan, snapshot } = usePersonalizedActionPlanFromSnapshot("salarie");
+  const { loading, plan, snapshot, refresh } = usePersonalizedActionPlanFromSnapshot("salarie");
   const hasTests = hasLearnerTestData(snapshot);
   const blocks = useMemo(() => buildEdgeParcoursBlocksFromPlan(plan), [plan]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const showUnlock = !loading && !hasTests;
 
   return (
     <div className={SALARIE_PAGE_SHELL}>
@@ -35,7 +41,7 @@ export default function SalarieParcoursPage() {
 
       {loading ? (
         <p className="text-sm text-white/50">Analyse de votre profil…</p>
-      ) : !hasTests || !plan ? (
+      ) : showUnlock ? (
         <LearnerTestsUnlockSection />
       ) : (
         <>
@@ -43,9 +49,14 @@ export default function SalarieParcoursPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200/80">
               Votre parcours sur mesure
             </p>
-            <h2 className="mt-3 text-xl font-bold text-white sm:text-2xl">{plan?.headline}</h2>
-            <p className="mt-3 max-w-3xl text-sm text-white/70">{plan?.summary}</p>
-            {plan?.needs.length ? (
+            <h2 className="mt-3 text-xl font-bold text-white sm:text-2xl">
+              {plan?.headline ?? "Votre parcours personnalisé"}
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm text-white/70">
+              {plan?.summary ??
+                "Vos diagnostics sont enregistrés — les recommandations détaillées se construisent à partir de vos résultats."}
+            </p>
+            {plan?.needs?.length ? (
               <ul className="mt-4 flex flex-wrap gap-2">
                 {plan.needs.map((need) => (
                   <li
@@ -66,7 +77,7 @@ export default function SalarieParcoursPage() {
                 <Users className="h-5 w-5" />
                 <h2 className="text-sm font-semibold uppercase tracking-wider">Coaching recommandé</h2>
               </div>
-              {blocks.coaching ? (
+              {blocks?.coaching ? (
                 <>
                   <p className="mt-4 text-lg font-bold text-white">{blocks.coaching.name}</p>
                   <p className="text-sm text-white/55">{blocks.coaching.title}</p>
@@ -104,7 +115,7 @@ export default function SalarieParcoursPage() {
                   Micro-formations recommandées
                 </h2>
               </div>
-              {blocks.microFormations.length > 0 ? (
+              {blocks?.microFormations?.length ? (
                 <ul className="mt-4 space-y-4">
                   {blocks.microFormations.map((f) => (
                     <li key={f.slug}>
@@ -131,7 +142,7 @@ export default function SalarieParcoursPage() {
                 <Award className="h-5 w-5" />
                 <h2 className="text-sm font-semibold uppercase tracking-wider">Open Badge suggéré</h2>
               </div>
-              {blocks.badge ? (
+              {blocks?.badge ? (
                 <>
                   <p className="mt-4 text-lg font-bold text-white">{blocks.badge.title}</p>
                   <p className="mt-2 text-sm text-white/55">{blocks.badge.description}</p>

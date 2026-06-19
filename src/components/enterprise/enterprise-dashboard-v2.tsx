@@ -9,6 +9,7 @@ import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise
 import { EntrepriseQuickAccess } from "@/components/enterprise/entreprise-quick-access";
 import { EnterpriseLoadingOverlay } from "@/components/enterprise/enterprise-loading-overlay";
 import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
+import { filterRealEntrepriseEmployees } from "@/lib/entreprise/demo-employee-id";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
 
@@ -165,6 +166,11 @@ export function EnterpriseDashboardV2() {
     return Array.from(set).sort();
   }, [overview?.employees]);
 
+  const realEmployees = useMemo(
+    () => filterRealEntrepriseEmployees(overview?.employees ?? []),
+    [overview?.employees],
+  );
+
   const kpis = overview?.kpis;
   const attentionSignals = overview?.kpis?.attention_signals;
   const formations = overview?.formations ?? { presentiel: [], elearning: [] };
@@ -281,14 +287,14 @@ export function EnterpriseDashboardV2() {
                 </div>
                 <EnterpriseEmployeeCsvActions
                   organisationId={organisationId}
-                  employees={overview.employees}
+                  employees={realEmployees}
                   organisationName={overview.organisation?.name}
                   departments={departments}
                   onSuccess={() => void reload()}
                 />
               </div>
 
-              {overview.employees.length === 0 ? (
+              {realEmployees.length === 0 ? (
                 <EmptyState
                   variant="light"
                   icon="👥"
@@ -309,7 +315,7 @@ export function EnterpriseDashboardV2() {
                       </tr>
                     </thead>
                     <tbody>
-                      {overview.employees.map((c) => {
+                      {realEmployees.map((c) => {
                         const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ") || "—";
                         const color = avatarColor(fullName);
                         return (

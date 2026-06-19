@@ -124,6 +124,10 @@ export function useLearnerSnapshot() {
   return ctx;
 }
 
+export function useOptionalLearnerSnapshotContext() {
+  return useContext(LearnerSnapshotContext);
+}
+
 export function usePersonalizedActionPlanFromSnapshot(surface: "apprenant" | "salarie" = "salarie") {
   const { loading, snapshot } = useLearnerSnapshot();
 

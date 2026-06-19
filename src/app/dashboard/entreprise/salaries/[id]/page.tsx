@@ -391,7 +391,14 @@ export default function SalarieDetailPage() {
       <div className="flex min-h-screen bg-white">
         <EnterpriseSidebar />
         <main className="flex-1 px-8 py-10 pl-[280px]">
-          <p className="text-sm text-gray-600">Collaborateur introuvable.</p>
+          <p className="text-sm font-semibold text-gray-900">
+            {error ?? "Collaborateur introuvable."}
+          </p>
+          {error ? (
+            <p className="mt-2 text-xs text-gray-500">
+              Identifiant demandé : <span className="font-mono">{employeeId}</span>
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={() => router.push("/dashboard/entreprise/salaries")}

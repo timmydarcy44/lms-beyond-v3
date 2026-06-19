@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { PROGRAMME_SLUG_REDIRECTS } from "./src/lib/jessica-contentin/programmes-catalog";
 
 // next-pwa (CommonJS) — en dev, service worker désactivé pour éviter le cache agressif
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -53,7 +54,21 @@ const nextConfig: NextConfig = {
     qualities: [75, 80, 85],
   },
   async redirects() {
+    const programmeRedirects = Object.entries(PROGRAMME_SLUG_REDIRECTS).flatMap(([oldSlug, newSlug]) => [
+      {
+        source: `/programmes/${oldSlug}`,
+        destination: `/programmes/${newSlug}`,
+        permanent: true,
+      },
+      {
+        source: `/jessica-contentin/programmes/${oldSlug}`,
+        destination: `/programmes/${newSlug}`,
+        permanent: true,
+      },
+    ]);
+
     return [
+      ...programmeRedirects,
       {
         source: "/app-landing/:path*",
         destination: "/:path*",

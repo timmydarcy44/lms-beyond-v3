@@ -146,7 +146,7 @@ export function AutismeHas2026Article() {
         et appelle à un soutien renforcé des familles (formation, guidance parentale). Pour aller plus loin dans la
         gestion du quotidien, vous pouvez découvrir des clés concrètes pour{" "}
         <Link
-          href={programmePresentationHref("comprendre-pour-apaiser")}
+          href={programmePresentationHref("tdah-tsa-troubles-dys-haut-potentiel")}
           className="font-medium text-[#8B6914] underline underline-offset-4 transition hover:text-[#C6A664]"
         >
           comprendre et apaiser les tensions sans conflit à la maison
@@ -264,7 +264,7 @@ export function AutismeHas2026Article() {
         émotionnelle, nous lui donnons des clés concrètes pour s&apos;épanouir à l&apos;école. Si vous ressentez le
         besoin de soulager la charge cognitive de votre adolescent, vous pouvez consulter nos outils pour{" "}
         <Link
-          href={programmePresentationHref("apaiser-le-mental")}
+          href={programmePresentationHref("comprendre-son-fonctionnement")}
           className="font-medium text-[#8B6914] underline underline-offset-4 not-italic transition hover:text-[#C6A664]"
         >
           apaiser le mental et surmonter les blocages

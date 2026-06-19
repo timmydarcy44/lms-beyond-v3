@@ -35,8 +35,8 @@ export type ProgrammeLandingContent = {
 };
 
 export const PROGRAMME_LANDING_BY_SLUG: Record<string, ProgrammeLandingContent> = {
-  "comprendre-pour-apaiser": {
-    slug: "comprendre-pour-apaiser",
+  "tdah-tsa-troubles-dys-haut-potentiel": {
+    slug: "tdah-tsa-troubles-dys-haut-potentiel",
     eyebrow: "Parcours d'accompagnement",
     heroTitle: "Comprendre le fonctionnement de votre enfant pour l'aider à s'apaiser",
     heroSubtitle:
@@ -84,8 +84,8 @@ export const PROGRAMME_LANDING_BY_SLUG: Record<string, ProgrammeLandingContent> 
     ctaTitle: "Un échange suffit souvent pour voir si ce parcours est adapté",
     ctaSubtitle: "Pas d'engagement, pas de pression. Juste un premier pas pour mieux comprendre.",
   },
-  "declic-etudes": {
-    slug: "declic-etudes",
+  "apprendre-s-orienter-et-reussir": {
+    slug: "apprendre-s-orienter-et-reussir",
     eyebrow: "Parcours d'accompagnement",
     heroTitle: "Apprendre, s'orienter et réussir — à sa manière",
     heroSubtitle:
@@ -133,8 +133,8 @@ export const PROGRAMME_LANDING_BY_SLUG: Record<string, ProgrammeLandingContent> 
     ctaTitle: "Un premier échange pour clarifier la situation",
     ctaSubtitle: "Sans engagement — pour voir si ce parcours correspond à vos besoins.",
   },
-  "apaiser-le-mental": {
-    slug: "apaiser-le-mental",
+  "comprendre-son-fonctionnement": {
+    slug: "comprendre-son-fonctionnement",
     eyebrow: "Parcours d'accompagnement",
     heroTitle: "Comprendre son fonctionnement pour retrouver un meilleur équilibre",
     heroSubtitle:
@@ -182,8 +182,8 @@ export const PROGRAMME_LANDING_BY_SLUG: Record<string, ProgrammeLandingContent> 
     ctaTitle: "Un premier pas vers plus de clarté",
     ctaSubtitle: "Un échange suffit souvent pour voir si cet accompagnement est fait pour vous.",
   },
-  "trouver-sa-voie": {
-    slug: "trouver-sa-voie",
+  "emotions-stress-et-adaptation": {
+    slug: "emotions-stress-et-adaptation",
     eyebrow: "Parcours d'accompagnement",
     heroTitle: "Émotions, stress et adaptation — pour avancer sereinement",
     heroSubtitle:

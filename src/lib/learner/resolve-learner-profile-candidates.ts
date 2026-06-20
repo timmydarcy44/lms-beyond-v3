@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
-import { resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
+import { normalizeIdmcAxesRecord } from "@/lib/idmc/idmc-display";
 import {
   fetchLatestSoftSkillsResult,
   parseSoftSkillsScoreEntries,
@@ -90,7 +90,7 @@ export async function fetchDiscScoresForCandidates(
 export async function fetchIdmcAxesForCandidates(
   db: SupabaseClient,
   profileIds: string[],
-): Promise<ReturnType<typeof resolveIdmcAxes>> {
+): Promise<ReturnType<typeof normalizeIdmcAxesRecord>> {
   if (!profileIds.length) return null;
 
   let bestRow: { scores: unknown; responses: unknown; updated_at: string | null } | null = null;
@@ -115,7 +115,7 @@ export async function fetchIdmcAxesForCandidates(
   }
 
   if (!bestRow) return null;
-  return resolveIdmcAxes(bestRow.scores ?? bestRow.responses);
+  return normalizeIdmcAxesRecord(bestRow.scores ?? bestRow.responses);
 }
 
 /** Soft skills le plus récent parmi les profils candidats (apprenant + salarié). */

@@ -9,41 +9,10 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { AXES_LABELS, resolveIdmcAxes, type AxisKey } from "@/lib/idmc/idmc-display";
 
-export type AxisKey = "A1" | "A2" | "A3" | "A4" | "A5" | "A6" | "A7" | "A8";
-
-export const AXES_LABELS: Record<AxisKey, string> = {
-  A1: "Connaissance de soi",
-  A2: "Maîtrise des méthodes",
-  A3: "Adaptation au contexte",
-  A4: "Organisation et anticipation",
-  A5: "Traitement de l'information",
-  A6: "Résolution de difficultés",
-  A7: "Suivi de progression",
-  A8: "Auto-évaluation finale",
-};
-
-export const resolveIdmcAxes = (scores: unknown): Record<AxisKey, number> | null => {
-  if (!scores || typeof scores !== "object") return null;
-  const candidate = scores as Record<string, unknown>;
-  if (candidate.axes && typeof candidate.axes === "object") {
-    return candidate.axes as Record<AxisKey, number>;
-  }
-  if (candidate.points && typeof candidate.points === "object") {
-    const points = candidate.points as Record<AxisKey, number>;
-    const axes = {} as Record<AxisKey, number>;
-    (Object.keys(AXES_LABELS) as AxisKey[]).forEach((key) => {
-      const value = typeof points[key] === "number" ? points[key] : 0;
-      axes[key] = Math.round((value / 15) * 100);
-    });
-    return axes;
-  }
-  const hasAllAxes = (Object.keys(AXES_LABELS) as AxisKey[]).every(
-    (key) => typeof candidate[key] === "number",
-  );
-  if (hasAllAxes) return candidate as Record<AxisKey, number>;
-  return null;
-};
+export type { AxisKey };
+export { AXES_LABELS, resolveIdmcAxes };
 
 export function IdmcRadarChart({
   scores,

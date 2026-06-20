@@ -10,12 +10,15 @@ export function slugifyPublicProfile(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function buildPublicProfilePath(slug: string): string {
+export function buildPublicProfilePath(slug: string, userId?: string | null): string {
   const clean = slugifyPublicProfile(slug);
-  return clean ? `/p/${clean}` : "/p/profil";
+  const path = clean ? `/p/${clean}` : "/p/profil";
+  const uid = userId?.trim();
+  if (!uid) return path;
+  return `${path}?userId=${encodeURIComponent(uid)}`;
 }
 
-export function buildPublicProfileUrl(slug: string): string {
+export function buildPublicProfileUrl(slug: string, userId?: string | null): string {
   const base = getPublicShareBaseUrl().replace(/\/$/, "");
-  return `${base}${buildPublicProfilePath(slug)}`;
+  return `${base}${buildPublicProfilePath(slug, userId)}`;
 }

@@ -164,7 +164,7 @@ export function ApprenantConnectShell({
       // ignore
     }
 
-    const shareUrl = buildPublicProfileUrl(publicSlug);
+    const shareUrl = buildPublicProfileUrl(publicSlug, uid);
     try {
       await navigator.clipboard.writeText(shareUrl);
     } catch {

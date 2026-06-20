@@ -1,6 +1,5 @@
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
-import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
-import { AXES_LABELS } from "@/components/idmc/IdmcRadarChart";
+import { AXES_LABELS, type AxisKey } from "@/lib/idmc/idmc-display";
 import { formatDiscProfileSentence } from "@/lib/disc/disc-profile-label";
 import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 

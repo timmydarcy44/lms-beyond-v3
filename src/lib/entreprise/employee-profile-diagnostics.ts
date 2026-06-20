@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
+import { resolveIdmcAxes } from "@/lib/idmc/idmc-display";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 import {
   fetchLatestSoftSkillsResult,

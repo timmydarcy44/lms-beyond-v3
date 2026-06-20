@@ -6,7 +6,7 @@ import {
   fetchIdmcAxesForCandidates,
   fetchSoftSkillsRadarForCandidates,
 } from "@/lib/learner/resolve-learner-profile-candidates";
-import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 import { loadPublicProfileEarnedBadges } from "@/lib/openbadges/public-profile-earned-badges";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +57,7 @@ function discScoresToChartRows(scores: DiscScores | null): Array<{ label: string
 }
 
 async function fetchLatestIdmcRowForCandidates(
-  db: Awaited<ReturnType<typeof getServiceRoleClientOrFallback>>,
+  db: NonNullable<ReturnType<typeof getServiceRoleClient>>,
   profileIds: string[],
 ): Promise<{
   scores: unknown;
@@ -107,8 +107,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing slug" }, { status: 400 });
   }
 
-  const supabase = await getServiceRoleClientOrFallback();
+  const supabase = getServiceRoleClient();
   if (!supabase) {
+    console.error("[public-profile] SUPABASE_SERVICE_ROLE_KEY manquant — lecture publique impossible");
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
   }
 

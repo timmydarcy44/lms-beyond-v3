@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills";
+import { SOFT_SKILLS_QUESTIONS, SOFT_SKILLS_FREQUENCY_OPTIONS } from "@/lib/soft-skills";
 import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
 import {
   EdgeAssessmentOption,
@@ -12,13 +12,7 @@ import { EDGE_COLORS } from "@/lib/edge/edge-brand";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { saveSoftSkillsResultats, validateSoftSkillsAnswers } from "@/lib/soft-skills/save-soft-skills";
 
-const SCALE_LABELS = [
-  { value: 1, label: "1 — Pas du tout" },
-  { value: 2, label: "2" },
-  { value: 3, label: "3 — Moyennement" },
-  { value: 4, label: "4" },
-  { value: 5, label: "5 — Tout à fait" },
-];
+const SCALE_LABELS = SOFT_SKILLS_FREQUENCY_OPTIONS;
 
 export default function SoftSkillsTestPage() {
   const supabase = createSupabaseBrowserClient();
@@ -147,7 +141,7 @@ export default function SoftSkillsTestPage() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2 }}
-          className="space-y-3"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3"
         >
           {SCALE_LABELS.map((option) => (
             <EdgeAssessmentOption
@@ -155,8 +149,12 @@ export default function SoftSkillsTestPage() {
               selected={selectedValue === option.value}
               disabled={submitting || analyzing}
               onClick={() => handleAnswer(option.value)}
+              className="h-full px-2 py-3 text-center hover:translate-x-0 sm:px-3"
             >
-              {option.label}
+              <span className="block text-base font-semibold">{option.shortLabel}</span>
+              <span className="mt-1 block text-[11px] font-normal leading-snug text-black/60">
+                {option.label}
+              </span>
             </EdgeAssessmentOption>
           ))}
         </motion.div>

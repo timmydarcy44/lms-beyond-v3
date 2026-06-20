@@ -1,3 +1,13 @@
+export type ReferentialItem = string | { name: string; subtitle: string };
+
+export function referentialItemName(item: ReferentialItem): string {
+  return typeof item === "string" ? item : item.name;
+}
+
+export function referentialItemSubtitle(item: ReferentialItem): string | undefined {
+  return typeof item === "string" ? undefined : item.subtitle;
+}
+
 export const GLOBAL_STACK_REFERENTIAL = [
   {
     category: "Frontend",
@@ -51,14 +61,14 @@ export const GLOBAL_STACK_REFERENTIAL = [
   },
 ] as const;
 
-export const GLOBAL_SKILL_REFERENTIAL = [
+export const GLOBAL_SKILL_REFERENTIAL: Array<{ category: string; items: ReferentialItem[] }> = [
   {
     category: "Vente & Négociation",
     items: [
-      "Empathie Tactique",
-      "Étiquetage Émotionnel (Labeling)",
-      "Miroir (Mirroring)",
-      "Questions Calibrées",
+      { name: "Empathie Tactique", subtitle: "Comprendre les motivations cachées de l'interlocuteur" },
+      { name: "Étiquetage Émotionnel (Labeling)", subtitle: "Nommer l'émotion ressentie pour apaiser la tension" },
+      { name: "Miroir (Mirroring)", subtitle: "Reprendre les mots de l'interlocuteur pour créer du lien" },
+      { name: "Questions Calibrées", subtitle: "Poser des questions ouvertes qui invitent à réfléchir" },
       "Ancrage de Prix",
       "Gestion du Silence",
       "Détection du Mensonge",
@@ -66,13 +76,50 @@ export const GLOBAL_SKILL_REFERENTIAL = [
       "Biais Cognitifs",
       "Preuve Sociale",
       "Réciprocité",
-      "Gestion de l'Urgence (FOMO)",
+      { name: "Gestion de l'Urgence (FOMO)", subtitle: "Créer un sentiment d'urgence sans manipulation" },
       "Vente de Valeur (Value-Based)",
-      "SPIN Selling",
-      "Traitement des objections complexes (PANT)",
-      "Closing Assomptif",
+      { name: "SPIN Selling", subtitle: "Questionnement Situation → Problème → Implication → Besoin" },
+      {
+        name: "Traitement des objections complexes (PANT)",
+        subtitle: "Problème, Amplification, Nécessité, Transfert de solution",
+      },
+      { name: "Closing Assomptif", subtitle: "Conclure en partant du principe que l'accord est acquis" },
       "Négociation de Contrat (Legal/Procurement)",
       "Gestion du Cycle de Vente Long",
+    ],
+  },
+  {
+    category: "Business Development & Prospection",
+    items: [
+      { name: "Account-Based Marketing (ABM)", subtitle: "Cibler des comptes clés avec une approche sur mesure" },
+      "Cold Calling",
+      "Cold Emailing (Délivrabilité)",
+      "Social Selling (LinkedIn)",
+      {
+        name: "Multi-Channel Sequencing",
+        subtitle: "Enchaîner mail, téléphone et LinkedIn dans une même prospection",
+      },
+      "Vente Émotionnelle",
+      "Scripts de Vente Directe",
+      "Closing Téléphonique",
+      "Gestion de Volume de Leads",
+      { name: "Lead Scoring", subtitle: "Classer les prospects selon leur potentiel de conversion" },
+      "Hygiène CRM (Salesforce/HubSpot)",
+      "Automatisation de Pipeline",
+      "Reporting & KPIs",
+    ],
+  },
+  {
+    category: "Management & Soft Skills",
+    items: [
+      "Management de transition",
+      "Recrutement de Talents",
+      "Culture d'Entreprise",
+      "Mentorat",
+      { name: "Méthode OKR", subtitle: "Fixer des objectifs clairs et des résultats mesurables" },
+      { name: "GTD (Getting Things Done)", subtitle: "Organiser ses tâches pour libérer l'esprit" },
+      { name: "Deep Work", subtitle: "Travailler en profondeur sans distraction" },
+      "Communication Asynchrone",
     ],
   },
   {
@@ -102,7 +149,10 @@ export const GLOBAL_SKILL_REFERENTIAL = [
       "Analyse des Parcours d'Achat",
       "Biais de Décision",
       "Psychologie des Prix",
-      "Étude des Motivations Profondes (Jobs-to-be-Done)",
+      {
+        name: "Étude des Motivations Profondes (Jobs-to-be-Done)",
+        subtitle: "Comprendre le vrai besoin derrière la demande du client",
+      },
       "Analyse Comportementale (Profilage)",
       "Lecture des Micro-expressions",
       "Analyse de la Voix (Tonalité & Stress)",
@@ -115,73 +165,27 @@ export const GLOBAL_SKILL_REFERENTIAL = [
     ],
   },
   {
-    category: "Business Development & Prospection",
-    items: [
-      "Account-Based Marketing (ABM)",
-      "Cold Calling",
-      "Cold Emailing (Délivrabilité)",
-      "Social Selling (LinkedIn)",
-      "Multi-Channel Sequencing",
-      "Vente Émotionnelle",
-      "Scripts de Vente Directe",
-      "Closing Téléphonique",
-      "Gestion de Volume de Leads",
-      "Lead Scoring",
-      "Hygiène CRM (Salesforce/HubSpot)",
-      "Automatisation de Pipeline",
-      "Reporting & KPIs",
-    ],
-  },
-  {
     category: "Marketing (Inbound, Growth & Content)",
     items: [
-      "Lead Nurturing",
+      { name: "Lead Nurturing", subtitle: "Entretenir la relation avec un prospect pas encore prêt" },
       "SEO sémantique (Bottom of Funnel)",
       "Stratégie de Content Marketing",
       "Lead Magnets",
-      "Framework AARRR",
+      {
+        name: "Framework AARRR",
+        subtitle: "Acquisition, Activation, Rétention, Revenu, Recommandation",
+      },
       "A/B Testing",
       "Scraping (Phantombuster)",
       "Automatisation (Make/Zapier)",
       "Analyse de Churn",
-      "Frameworks AIDA/PAS",
+      {
+        name: "Frameworks AIDA/PAS",
+        subtitle: "Formules de rédaction publicitaire pour capter l'attention et convertir",
+      },
       "Storytelling de Marque",
       "Micro-copy de Conversion (CTA)",
       "Ghostwriting LinkedIn",
-    ],
-  },
-  {
-    category: "Développement Technique",
-    items: [
-      "React.js",
-      "Next.js (App Router)",
-      "Tailwind CSS",
-      "TypeScript",
-      "Framer Motion",
-      "Web Accessibility (a11y)",
-      "Node.js",
-      "Python (FastAPI)",
-      "Serverless Functions",
-      "Edge Computing",
-      "Docker",
-      "Kubernetes",
-      "PostgreSQL",
-      "Supabase",
-      "Redis (Cache)",
-      "Pinecone/Chroma",
-    ],
-  },
-  {
-    category: "Intelligence Artificielle",
-    items: [
-      "Prompt Engineering avancé",
-      "Intégration APIs OpenAI",
-      "Intégration APIs Anthropic",
-      "RAG (Retrieval-Augmented Generation)",
-      "LangChain",
-      "Vercel AI SDK",
-      "Fine-tuning de modèles",
-      "Automatisation IA (n8n)",
     ],
   },
   {
@@ -198,19 +202,43 @@ export const GLOBAL_SKILL_REFERENTIAL = [
     ],
   },
   {
-    category: "Management & Soft Skills",
+    category: "Développement Technique",
     items: [
-      "Management de transition",
-      "Recrutement de Talents",
-      "Culture d'Entreprise",
-      "Mentorat",
-      "Méthode OKR",
-      "GTD (Getting Things Done)",
-      "Deep Work",
-      "Communication Asynchrone",
+      "React.js",
+      { name: "Next.js (App Router)", subtitle: "Framework web moderne pour sites et applications" },
+      "Tailwind CSS",
+      "TypeScript",
+      "Framer Motion",
+      { name: "Web Accessibility (a11y)", subtitle: "Rendre un site utilisable par tous, y compris en situation de handicap" },
+      "Node.js",
+      { name: "Python (FastAPI)", subtitle: "Langage et framework pour APIs et scripts backend" },
+      "Serverless Functions",
+      "Edge Computing",
+      "Docker",
+      "Kubernetes",
+      "PostgreSQL",
+      "Supabase",
+      "Redis (Cache)",
+      { name: "Pinecone/Chroma", subtitle: "Bases de données vectorielles pour recherche sémantique" },
     ],
   },
-] as const;
+  {
+    category: "Intelligence Artificielle",
+    items: [
+      { name: "Prompt Engineering avancé", subtitle: "Formuler des consignes efficaces pour l'IA" },
+      "Intégration APIs OpenAI",
+      "Intégration APIs Anthropic",
+      {
+        name: "RAG (Retrieval-Augmented Generation)",
+        subtitle: "Enrichir l'IA avec vos propres documents et données",
+      },
+      { name: "LangChain", subtitle: "Relier modèles IA, outils et sources de données" },
+      { name: "Vercel AI SDK", subtitle: "Intégrer l'IA dans une application web Next.js" },
+      { name: "Fine-tuning de modèles", subtitle: "Adapter un modèle IA à votre contexte métier" },
+      "Automatisation IA (n8n)",
+    ],
+  },
+];
 
 export const TOOL_LOGOS: Record<string, string> = {
   notion: "https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png",

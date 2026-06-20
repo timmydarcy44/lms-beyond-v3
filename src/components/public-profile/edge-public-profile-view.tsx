@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { PublicProfileEarnedBadge } from "@/lib/openbadges/public-profile-earned-badges";
 import { PublicProfileBadgeOverlay } from "@/components/public-profile/public-profile-badge-overlay";
+import { ProfileSectionTabs } from "@/components/profile/profile-section-tabs";
 import {
   ApprenantAssessmentResults,
   type DiscScores,
@@ -315,83 +316,105 @@ export function EdgePublicProfileView({
               />
             </motion.section>
 
-            {(experiences.length > 0 || diplomas.length > 0) && (
+            {(hardSkillEntries.length > 0 ||
+              stackTools.length > 0 ||
+              experiences.length > 0 ||
+              diplomas.length > 0) && (
               <motion.section
                 {...fadeUp}
                 className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8"
               >
-                <h2 className="text-lg font-semibold text-[#0a0a0a]">Parcours & expérience</h2>
-                <div className="mt-5 space-y-4">
-                  {experiences.map((exp) => (
-                    <div
-                      key={`${exp.title}-${exp.company}`}
-                      className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
-                    >
-                      <p className="text-xs text-black/45">
-                        {exp.start} — {exp.end}
-                      </p>
-                      <p className="mt-1 font-medium text-[#0a0a0a]">{exp.title}</p>
-                      <p className="text-sm text-black/55">{exp.company}</p>
-                      {exp.missions ? (
-                        <p className="mt-2 text-sm text-black/60">{exp.missions}</p>
-                      ) : null}
-                    </div>
-                  ))}
-                  {diplomas.map((dip) => (
-                    <div
-                      key={`${dip.title}-${dip.school}`}
-                      className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
-                    >
-                      <p className="text-xs text-black/45">{dip.start}</p>
-                      <p className="mt-1 font-medium text-[#0a0a0a]">{dip.title}</p>
-                      <p className="text-sm text-black/55">{dip.school}</p>
-                    </div>
-                  ))}
-                </div>
-              </motion.section>
-            )}
-
-            {(hardSkillEntries.length > 0 || stackTools.length > 0) && (
-              <motion.section
-                {...fadeUp}
-                className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8"
-              >
-                <h2 className="text-lg font-semibold text-[#0a0a0a]">Hard skills & stack</h2>
-                {stackTools.length ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {stackTools.map((tool) => (
-                      <span
-                        key={tool}
-                        className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-[#fafafa] px-3 py-1.5 text-xs font-medium"
-                      >
-                        {toolLogoResolver(tool) ? (
-                          <img
-                            src={toolLogoResolver(tool)!}
-                            alt=""
-                            className="h-4 w-4 object-contain"
-                          />
+                <h2 className="text-lg font-semibold text-[#0a0a0a]">Profil professionnel</h2>
+                <ProfileSectionTabs
+                  variant="public"
+                  className="mt-5"
+                  competences={
+                    stackTools.length === 0 && hardSkillEntries.length === 0 ? (
+                      <p className="text-sm text-black/50">Aucune compétence renseignée.</p>
+                    ) : (
+                      <>
+                        {stackTools.length ? (
+                          <div className="flex flex-wrap gap-2">
+                            {stackTools.map((tool) => (
+                              <span
+                                key={tool}
+                                className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-[#fafafa] px-3 py-1.5 text-xs font-medium"
+                              >
+                                {toolLogoResolver(tool) ? (
+                                  <img
+                                    src={toolLogoResolver(tool)!}
+                                    alt=""
+                                    className="h-4 w-4 object-contain"
+                                  />
+                                ) : null}
+                                {tool}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-black/50">Stack technique non renseignée.</p>
+                        )}
+                        {hardSkillEntries.length ? (
+                          <div className={`flex flex-wrap gap-2 ${stackTools.length ? "mt-4" : ""}`}>
+                            {hardSkillEntries.map((skill) => (
+                              <span
+                                key={skill.name}
+                                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                                  skill.validated
+                                    ? "border border-[#FF3B30]/25 bg-[#FF3B30]/10 text-[#FF3B30]"
+                                    : "border border-black/10 bg-[#fafafa] text-black/65"
+                                }`}
+                              >
+                                {skill.name} · {skill.level}
+                              </span>
+                            ))}
+                          </div>
                         ) : null}
-                        {tool}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                {hardSkillEntries.length ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {hardSkillEntries.map((skill) => (
-                      <span
-                        key={skill.name}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                          skill.validated
-                            ? "border border-[#FF3B30]/25 bg-[#FF3B30]/10 text-[#FF3B30]"
-                            : "border border-black/10 bg-[#fafafa] text-black/65"
-                        }`}
-                      >
-                        {skill.name} · {skill.level}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+                      </>
+                    )
+                  }
+                  experiences={
+                    experiences.length ? (
+                      <div className="space-y-4">
+                        {experiences.map((exp) => (
+                          <div
+                            key={`${exp.title}-${exp.company}`}
+                            className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
+                          >
+                            <p className="text-xs text-black/45">
+                              {exp.start} — {exp.end}
+                            </p>
+                            <p className="mt-1 font-medium text-[#0a0a0a]">{exp.title}</p>
+                            <p className="text-sm text-black/55">{exp.company}</p>
+                            {exp.missions ? (
+                              <p className="mt-2 text-sm text-black/60">{exp.missions}</p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-black/50">Aucune expérience renseignée.</p>
+                    )
+                  }
+                  diplomes={
+                    diplomas.length ? (
+                      <div className="space-y-4">
+                        {diplomas.map((dip) => (
+                          <div
+                            key={`${dip.title}-${dip.school}`}
+                            className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
+                          >
+                            <p className="text-xs text-black/45">{dip.start}</p>
+                            <p className="mt-1 font-medium text-[#0a0a0a]">{dip.title}</p>
+                            <p className="text-sm text-black/55">{dip.school}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-black/50">Aucun diplôme renseigné.</p>
+                    )
+                  }
+                />
               </motion.section>
             )}
           </div>

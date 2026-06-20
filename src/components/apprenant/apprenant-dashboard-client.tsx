@@ -9,8 +9,11 @@ import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import {
   GLOBAL_SKILL_REFERENTIAL,
   GLOBAL_STACK_REFERENTIAL,
+  referentialItemName,
+  referentialItemSubtitle,
   resolveToolLogo,
 } from "@/lib/profile/competency-referential";
+import { ProfileSectionTabs } from "@/components/profile/profile-section-tabs";
 import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import dynamic from "next/dynamic";
 import { ApprenantConnectOverview } from "@/components/apprenant/apprenant-connect-overview";
@@ -977,7 +980,11 @@ export function ApprenantDashboardClient({
   };
   const HARD_SKILL_LIBRARY = GLOBAL_SKILL_REFERENTIAL;
   const filteredHardSkills = HARD_SKILL_LIBRARY.flatMap((group) =>
-    group.items.map((item) => ({ name: item, category: group.category }))
+    group.items.map((item) => ({
+      name: referentialItemName(item),
+      subtitle: referentialItemSubtitle(item),
+      category: group.category,
+    })),
   ).filter((item) => item.name.toLowerCase().includes(skillSearch.toLowerCase()));
   const onboardingSelectedStacks = useMemo(
     () =>
@@ -1995,11 +2002,16 @@ export function ApprenantDashboardClient({
                   <div className="p-4">
                     <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
                       {(skillSearch
-                        ? [...filteredHardSkills].map((item) => item.name)
+                        ? filteredHardSkills
                         : HARD_SKILL_LIBRARY.filter((group) => group.category === activeCategory).flatMap(
-                            (group) => group.items
+                            (group) =>
+                              group.items.map((item) => ({
+                                name: referentialItemName(item),
+                                subtitle: referentialItemSubtitle(item),
+                              })),
                           )
-                      ).map((skill) => {
+                      ).map((entry) => {
+                        const skill = entry.name;
                         const logo = resolveToolLogo(skill);
                         return (
                           <button
@@ -2011,15 +2023,20 @@ export function ApprenantDashboardClient({
                             }}
                             className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left hover:bg-white/[0.07]"
                           >
-                            <span className="flex items-center gap-3">
+                            <span className="flex min-w-0 items-center gap-3">
                               {logo ? (
-                                <img src={logo} alt={skill} className="h-5 w-5 rounded-sm object-contain" />
+                                <img src={logo} alt={skill} className="h-5 w-5 shrink-0 rounded-sm object-contain" />
                               ) : (
-                                <span className="h-5 w-5 rounded-sm bg-white/10" />
+                                <span className="h-5 w-5 shrink-0 rounded-sm bg-white/10" />
                               )}
-                              <span className="text-sm text-white/85">{skill}</span>
+                              <span className="min-w-0">
+                                <span className="block text-sm text-white/85">{skill}</span>
+                                {entry.subtitle ? (
+                                  <span className="block text-[11px] leading-snug text-white/45">{entry.subtitle}</span>
+                                ) : null}
+                              </span>
                             </span>
-                            <span className="text-xs text-white/55">Configurer</span>
+                            <span className="shrink-0 text-xs text-white/55">Configurer</span>
                           </button>
                         );
                       })}
@@ -2140,304 +2157,300 @@ export function ApprenantDashboardClient({
           ) : null}
 
           <section className={`mt-10 ${APPRENANT_CARD_BODY}`}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
-                  Mes Compétences
-                </div>
-                <div className="mt-2 text-lg font-semibold text-white">
-                  Hard Skills & Stack Technique
-                </div>
+            <div>
+              <div className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
+                Mon profil professionnel
               </div>
-              <button
-                type="button"
-                onClick={() => setShowSkillModal(true)}
-                className={CONNECT_BTN_SECONDARY}
-              >
-                + Ajouter une compétence
-              </button>
+              <div className="mt-2 text-lg font-semibold text-white">
+                Compétences, expériences & diplômes
+              </div>
             </div>
 
-            {parsedTools.length ? (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                {parsedTools.map((tool) => (
-                  <div
-                    key={tool}
-                    className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/80"
-                  >
-                    {resolveToolLogo(tool) ? (
-                      <img
-                        src={resolveToolLogo(tool) ?? ""}
-                        alt={tool}
-                        className="h-4 w-4 rounded-sm object-contain shadow-[0_0_6px_rgba(255,255,255,0.25)]"
-                      />
-                    ) : (
-                      <span className="h-4 w-4 rounded-sm bg-black/10" />
-                    )}
-                    {tool}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-4 text-sm text-black/55">Stack technique non renseignée.</div>
-            )}
-
-            <div className="mt-6 space-y-3">
-              {hardSkillItems.length ? (
-                hardSkillItems.map((skill) => {
-                  const meta = skillsMetadata[skill];
-                  const isValidated = meta?.validated;
-                  const level = meta?.level ? ` (${meta.level})` : "";
-                  return (
-                    <div
-                      key={skill}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
+            <ProfileSectionTabs
+              variant="dashboard"
+              className="mt-6"
+              competences={
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm font-medium text-white/80">Hard skills & stack technique</div>
+                    <button
+                      type="button"
+                      onClick={() => setShowSkillModal(true)}
+                      className={CONNECT_BTN_SECONDARY}
                     >
-                      <div className="flex items-center gap-2">
-                        {!isValidated ? (
-                          <>
-                            <AlertTriangle className="h-4 w-4 text-amber-400" />
-                            <span title="Non validé par Beyond">{skill}{level}</span>
-                            <span className="text-xs text-amber-400">⚠️ Non validé par Beyond</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-edge-red">✅</span>
-                            <span>{skill}{level}</span>
-                          </>
-                        )}
-                      </div>
-                      {!isValidated ? (
-                        <Link
-                          href="/dashboard/apprenant/badges"
-                          className="text-xs font-semibold text-white hover:underline"
+                      + Ajouter une compétence
+                    </button>
+                  </div>
+
+                  {parsedTools.length ? (
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      {parsedTools.map((tool) => (
+                        <div
+                          key={tool}
+                          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/80"
                         >
-                          Passer le badge
-                        </Link>
-                      ) : (
-                        <span className="text-xs text-edge-red">Certifié Beyond</span>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-sm text-black/55">Aucune compétence ajoutée.</div>
-              )}
-            </div>
-          </section>
-
-          <section className="mt-10 grid gap-6 lg:grid-cols-2">
-            <div className={APPRENANT_CARD_BODY}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
-                    Parcours professionnel
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-white">
-                    Expériences
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowExperienceForm((prev) => !prev)}
-                  className={CONNECT_BTN_SECONDARY}
-                >
-                  Ajouter une expérience
-                </button>
-              </div>
-
-              {showExperienceForm ? (
-                <div className="mt-6 grid gap-4">
-                  <input
-                    value={experienceForm.employeur}
-                    onChange={(event) =>
-                      setExperienceForm((prev) => ({ ...prev, employeur: event.target.value }))
-                    }
-                    placeholder="Employeur"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                  />
-                  <select
-                    value={experienceForm.type_contrat}
-                    onChange={(event) =>
-                      setExperienceForm((prev) => ({ ...prev, type_contrat: event.target.value }))
-                    }
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                  >
-                    {["CDI", "CDD", "Interim", "Alternance", "Freelance"].map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <input
-                      type="date"
-                      value={experienceForm.date_debut}
-                      onChange={(event) =>
-                        setExperienceForm((prev) => ({ ...prev, date_debut: event.target.value }))
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                    />
-                    <input
-                      type="date"
-                      value={experienceForm.date_fin}
-                      onChange={(event) =>
-                        setExperienceForm((prev) => ({ ...prev, date_fin: event.target.value }))
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                    />
-                  </div>
-                  <textarea
-                    value={experienceForm.missions}
-                    onChange={(event) =>
-                      setExperienceForm((prev) => ({ ...prev, missions: event.target.value }))
-                    }
-                    placeholder="Missions"
-                    className="min-h-[90px] w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                  />
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={handleSaveExperience}
-                      disabled={isSavingExperience}
-                      className={CONNECT_BTN_SECONDARY}
-                    >
-                      {isSavingExperience ? "Enregistrement..." : "Enregistrer"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowExperienceForm(false)}
-                      className="rounded-full border border-black/15 px-5 py-2 text-xs font-semibold text-black/60"
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="mt-6 space-y-3">
-                {experiencesPro.length === 0 ? (
-                  <div className="text-sm text-black/55">Aucune expérience ajoutée.</div>
-                ) : (
-                  experiencesPro.map((exp) => (
-                    <div
-                      key={exp.id ?? `${exp.employeur}-${exp.date_debut}`}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
-                    >
-                      <div className="font-semibold text-white">
-                        {exp.employeur || "Employeur"}
-                      </div>
-                      <div className="text-xs text-black/50">
-                        {exp.type_contrat || "Contrat"} · {exp.date_debut || "—"} →{" "}
-                        {exp.date_fin || "—"}
-                      </div>
-                      {exp.missions ? <div className="mt-2">{exp.missions}</div> : null}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className={APPRENANT_CARD_BODY}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
-                    Diplômes & formations
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-white">
-                    Diplômes
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowDiplomeForm((prev) => !prev)}
-                  className={CONNECT_BTN_SECONDARY}
-                >
-                  Ajouter un diplôme
-                </button>
-              </div>
-
-              {showDiplomeForm ? (
-                <div className="mt-6 grid gap-4">
-                  <input
-                    value={diplomeForm.intitule}
-                    onChange={(event) =>
-                      setDiplomeForm((prev) => ({ ...prev, intitule: event.target.value }))
-                    }
-                    placeholder="Intitulé"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                  />
-                  <input
-                    value={diplomeForm.ecole}
-                    onChange={(event) =>
-                      setDiplomeForm((prev) => ({ ...prev, ecole: event.target.value }))
-                    }
-                    placeholder="École"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                  />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <input
-                      type="date"
-                      value={diplomeForm.annee_obtention}
-                      onChange={(event) =>
-                        setDiplomeForm((prev) => ({ ...prev, annee_obtention: event.target.value }))
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                    />
-                    <select
-                      value={diplomeForm.mode}
-                      onChange={(event) =>
-                        setDiplomeForm((prev) => ({ ...prev, mode: event.target.value }))
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                    >
-                      {["Alternance", "Initial"].map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
+                          {resolveToolLogo(tool) ? (
+                            <img
+                              src={resolveToolLogo(tool) ?? ""}
+                              alt={tool}
+                              className="h-4 w-4 rounded-sm object-contain shadow-[0_0_6px_rgba(255,255,255,0.25)]"
+                            />
+                          ) : (
+                            <span className="h-4 w-4 rounded-sm bg-black/10" />
+                          )}
+                          {tool}
+                        </div>
                       ))}
-                    </select>
+                    </div>
+                  ) : (
+                    <div className="mt-4 text-sm text-black/55">Stack technique non renseignée.</div>
+                  )}
+
+                  <div className="mt-6 space-y-3">
+                    {hardSkillItems.length ? (
+                      hardSkillItems.map((skill) => {
+                        const meta = skillsMetadata[skill];
+                        const isValidated = meta?.validated;
+                        const level = meta?.level ? ` (${meta.level})` : "";
+                        return (
+                          <div
+                            key={skill}
+                            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
+                          >
+                            <div className="flex items-center gap-2">
+                              {!isValidated ? (
+                                <>
+                                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+                                  <span title="Non validé par Beyond">{skill}{level}</span>
+                                  <span className="text-xs text-amber-400">⚠️ Non validé par Beyond</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-edge-red">✅</span>
+                                  <span>{skill}{level}</span>
+                                </>
+                              )}
+                            </div>
+                            {!isValidated ? (
+                              <Link
+                                href="/dashboard/apprenant/badges"
+                                className="text-xs font-semibold text-white hover:underline"
+                              >
+                                Passer le badge
+                              </Link>
+                            ) : (
+                              <span className="text-xs text-edge-red">Certifié Beyond</span>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-sm text-black/55">Aucune compétence ajoutée.</div>
+                    )}
                   </div>
-                  <div className="flex gap-3">
+                </>
+              }
+              experiences={
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-white/80">Expériences professionnelles</div>
                     <button
                       type="button"
-                      onClick={handleSaveDiplome}
-                      disabled={isSavingDiplome}
+                      onClick={() => setShowExperienceForm((prev) => !prev)}
                       className={CONNECT_BTN_SECONDARY}
                     >
-                      {isSavingDiplome ? "Enregistrement..." : "Enregistrer"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowDiplomeForm(false)}
-                      className="rounded-full border border-black/15 px-5 py-2 text-xs font-semibold text-black/60"
-                    >
-                      Annuler
+                      Ajouter une expérience
                     </button>
                   </div>
-                </div>
-              ) : null}
 
-              <div className="mt-6 space-y-3">
-                {diplomes.length === 0 ? (
-                  <div className="text-sm text-black/55">Aucun diplôme ajouté.</div>
-                ) : (
-                  diplomes.map((dip) => (
-                    <div
-                      key={dip.id ?? `${dip.intitule}-${dip.ecole}-${dip.annee_obtention}`}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
-                    >
-                      <div className="font-semibold text-white">
-                        {dip.intitule || "Diplôme"}
+                  {showExperienceForm ? (
+                    <div className="mt-6 grid gap-4">
+                      <input
+                        value={experienceForm.employeur}
+                        onChange={(event) =>
+                          setExperienceForm((prev) => ({ ...prev, employeur: event.target.value }))
+                        }
+                        placeholder="Employeur"
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                      />
+                      <select
+                        value={experienceForm.type_contrat}
+                        onChange={(event) =>
+                          setExperienceForm((prev) => ({ ...prev, type_contrat: event.target.value }))
+                        }
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                      >
+                        {["CDI", "CDD", "Interim", "Alternance", "Freelance"].map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <input
+                          type="date"
+                          value={experienceForm.date_debut}
+                          onChange={(event) =>
+                            setExperienceForm((prev) => ({ ...prev, date_debut: event.target.value }))
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                        />
+                        <input
+                          type="date"
+                          value={experienceForm.date_fin}
+                          onChange={(event) =>
+                            setExperienceForm((prev) => ({ ...prev, date_fin: event.target.value }))
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                        />
                       </div>
-                      <div className="text-xs text-black/50">
-                        {dip.ecole || "École"} · {dip.annee_obtention ?? "—"} · {dip.mode || "—"}
+                      <textarea
+                        value={experienceForm.missions}
+                        onChange={(event) =>
+                          setExperienceForm((prev) => ({ ...prev, missions: event.target.value }))
+                        }
+                        placeholder="Missions"
+                        className="min-h-[90px] w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                      />
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={handleSaveExperience}
+                          disabled={isSavingExperience}
+                          className={CONNECT_BTN_SECONDARY}
+                        >
+                          {isSavingExperience ? "Enregistrement..." : "Enregistrer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowExperienceForm(false)}
+                          className="rounded-full border border-black/15 px-5 py-2 text-xs font-semibold text-black/60"
+                        >
+                          Annuler
+                        </button>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
+                  ) : null}
+
+                  <div className="mt-6 space-y-3">
+                    {experiencesPro.length === 0 ? (
+                      <div className="text-sm text-black/55">Aucune expérience ajoutée.</div>
+                    ) : (
+                      experiencesPro.map((exp) => (
+                        <div
+                          key={exp.id ?? `${exp.employeur}-${exp.date_debut}`}
+                          className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
+                        >
+                          <div className="font-semibold text-white">
+                            {exp.employeur || "Employeur"}
+                          </div>
+                          <div className="text-xs text-black/50">
+                            {exp.type_contrat || "Contrat"} · {exp.date_debut || "—"} →{" "}
+                            {exp.date_fin || "—"}
+                          </div>
+                          {exp.missions ? <div className="mt-2">{exp.missions}</div> : null}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              }
+              diplomes={
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-white/80">Diplômes & formations</div>
+                    <button
+                      type="button"
+                      onClick={() => setShowDiplomeForm((prev) => !prev)}
+                      className={CONNECT_BTN_SECONDARY}
+                    >
+                      Ajouter un diplôme
+                    </button>
+                  </div>
+
+                  {showDiplomeForm ? (
+                    <div className="mt-6 grid gap-4">
+                      <input
+                        value={diplomeForm.intitule}
+                        onChange={(event) =>
+                          setDiplomeForm((prev) => ({ ...prev, intitule: event.target.value }))
+                        }
+                        placeholder="Intitulé"
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                      />
+                      <input
+                        value={diplomeForm.ecole}
+                        onChange={(event) =>
+                          setDiplomeForm((prev) => ({ ...prev, ecole: event.target.value }))
+                        }
+                        placeholder="École"
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                      />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <input
+                          type="date"
+                          value={diplomeForm.annee_obtention}
+                          onChange={(event) =>
+                            setDiplomeForm((prev) => ({ ...prev, annee_obtention: event.target.value }))
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                        />
+                        <select
+                          value={diplomeForm.mode}
+                          onChange={(event) =>
+                            setDiplomeForm((prev) => ({ ...prev, mode: event.target.value }))
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                        >
+                          {["Alternance", "Initial"].map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={handleSaveDiplome}
+                          disabled={isSavingDiplome}
+                          className={CONNECT_BTN_SECONDARY}
+                        >
+                          {isSavingDiplome ? "Enregistrement..." : "Enregistrer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowDiplomeForm(false)}
+                          className="rounded-full border border-black/15 px-5 py-2 text-xs font-semibold text-black/60"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="mt-6 space-y-3">
+                    {diplomes.length === 0 ? (
+                      <div className="text-sm text-black/55">Aucun diplôme ajouté.</div>
+                    ) : (
+                      diplomes.map((dip) => (
+                        <div
+                          key={dip.id ?? `${dip.intitule}-${dip.ecole}-${dip.annee_obtention}`}
+                          className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/80"
+                        >
+                          <div className="font-semibold text-white">
+                            {dip.intitule || "Diplôme"}
+                          </div>
+                          <div className="text-xs text-black/50">
+                            {dip.ecole || "École"} · {dip.annee_obtention ?? "—"} · {dip.mode || "—"}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              }
+            />
           </section>
             </>
           )}

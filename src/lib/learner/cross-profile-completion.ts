@@ -17,6 +17,7 @@ import {
   parseStoredCrossProfileOpening,
   resolveCrossProfileOpeningParagraph,
 } from "@/lib/learner/cross-profile-opening";
+import { maybeRefreshProfileAnalysisIfStale } from "@/lib/learner/profile-analysis";
 import {
   DIAGNOSTIC_COMMERCIAL_BADGE_NAME,
   resolveDiagnosticCommercialBadgeId,
@@ -130,6 +131,9 @@ export async function maybeTriggerCrossProfileCompletion(
 
   const existingCompletion = parseCrossProfileCompletion(profile.cross_profile_completion);
   if (existingCompletion?.badge_awarded_at) {
+    void maybeRefreshProfileAnalysisIfStale(service, uid).catch((err) => {
+      console.warn("[cross-profile] profile analysis refresh:", err);
+    });
     return {
       status: "completed",
       badgeId: existingCompletion.badge_id,
@@ -272,6 +276,10 @@ export async function maybeTriggerCrossProfileCompletion(
     console.error("[cross-profile] profile update:", updateError.message);
     return { status: "error", message: "profile_update_failed" };
   }
+
+  void maybeRefreshProfileAnalysisIfStale(service, uid).catch((err) => {
+    console.warn("[cross-profile] profile analysis refresh:", err);
+  });
 
   return { status: "completed", badgeId };
 }

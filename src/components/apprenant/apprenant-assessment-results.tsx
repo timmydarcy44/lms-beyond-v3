@@ -294,6 +294,11 @@ export function ApprenantAssessmentResults({
                   <span className={`min-w-0 flex-1 truncate ${cockpit ? "text-white/80" : "text-black/80"}`}>
                     {item.skill}
                   </span>
+                  <span
+                    className={`shrink-0 text-xs font-semibold tabular-nums ${cockpit ? "text-white/70" : "text-black/60"}`}
+                  >
+                    {item.score}/15
+                  </span>
                   <div
                     className={`hidden h-1.5 w-16 overflow-hidden rounded-full sm:block ${cockpit ? "bg-white/10" : "bg-black/10"}`}
                   >

@@ -35,10 +35,10 @@ export function CrossProfileBadgeCelebration({
             <img
               src={badgeImageUrl}
               alt=""
-              className="h-28 w-28 rounded-2xl object-cover shadow-[0_0_60px_rgba(255,59,48,0.35)] ring-2 ring-[#FF3B30]/40"
+              className="h-28 w-28 rounded-2xl object-cover ring-2 ring-white/15"
             />
           ) : (
-            <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-[#FF3B30]/15 ring-2 ring-[#FF3B30]/40">
+            <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-white/15">
               <Award className="h-14 w-14 text-[#FF3B30]" strokeWidth={1.75} />
             </div>
           )}

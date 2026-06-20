@@ -243,6 +243,12 @@ export async function GET(request: Request) {
   const hardSkills = Array.isArray((profileRow as Record<string, unknown> | null)?.hard_skills)
     ? ((profileRow as Record<string, unknown>).hard_skills as string[])
     : [];
+  const hardSkillsMerged = Array.from(
+    new Set([
+      ...hardSkills,
+      ...Object.keys(skillsMetadata).filter(Boolean),
+    ]),
+  );
   const stackRaw = (profileRow as Record<string, unknown> | null)?.stack_technique;
   let stackTools: string[] = [];
   if (typeof stackRaw === "string" && stackRaw.trim()) {
@@ -365,7 +371,7 @@ export async function GET(request: Request) {
     publicUserId: resolvedUserId,
     profileRow,
     skillsMetadata,
-    hardSkills,
+    hardSkills: hardSkillsMerged,
     stackTools,
     discScores,
     idmcAxes,

@@ -15,7 +15,6 @@ import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import dynamic from "next/dynamic";
 import { ApprenantConnectOverview } from "@/components/apprenant/apprenant-connect-overview";
 import { CrossProfileBadgeCelebration } from "@/components/apprenant/cross-profile-badge-celebration";
-
 const PersonalizedActionPlanSection = dynamic(
   () =>
     import("@/components/learner/personalized-action-plan-section").then((m) => ({
@@ -781,8 +780,7 @@ export function ApprenantDashboardClient({
     [discScores, idmcAxes, softSkillsRadar],
   );
   const discAnalysisText = String(
-    (profile as Record<string, unknown> | null)?.bio_ai ??
-      aiAnalysis ??
+    aiAnalysis ??
       (hasAnyTest
         ? "Analyse automatique en préparation."
         : "Passez les tests pour obtenir votre analyse personnalisée."),
@@ -798,8 +796,12 @@ export function ApprenantDashboardClient({
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        const isTitle = /^#{2,3}\s+/.test(line);
-        const text = line.replace(/^#{1,6}\s+/, "").trim();
+        const isTitle =
+          /^#{2,3}\s+/.test(line) || /^\*\*[^*]+\*\*\s*$/.test(line);
+        const text = line
+          .replace(/^#{1,6}\s+/, "")
+          .replace(/^\*\*([^*]+)\*\*\s*$/, "$1")
+          .trim();
         return { isTitle, text };
       });
   }, [discAnalysisText]);
@@ -1052,7 +1054,9 @@ export function ApprenantDashboardClient({
       ? `— (${profileAge} ans)`
       : "—";
   const profileCity = String(profile?.city ?? "").trim();
-  const profileBio = String(profile?.bio ?? "").trim();
+  const profileBio =
+    String(profile?.bio ?? "").trim() ||
+    String((profile as Record<string, unknown> | null)?.bio_ai ?? "").trim();
   const profileEmail = emailValue || String(profile?.email ?? user?.email ?? "").trim();
   const profilePhone = String(profile?.telephone ?? "").trim();
   const displayFirstName = profileFirstName;

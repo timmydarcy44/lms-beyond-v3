@@ -275,7 +275,7 @@ export default function SoftSkillsResultsPage() {
             )}
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-2">
             <div className={APPRENANT_CARD_BODY}>
               <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">
                 Top 1
@@ -293,12 +293,6 @@ export default function SoftSkillsResultsPage() {
                   ? `À renforcer : ${lowest.label}. Planifie un objectif simple cette semaine pour progresser.`
                   : "Poursuis sur ta dynamique actuelle pour renforcer tes acquis."}
               </div>
-            </div>
-            <div className={APPRENANT_CARD_BODY}>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">
-                Score certifié
-              </div>
-              <div className="mt-3 text-xl font-semibold text-white">{totalScore}/300</div>
             </div>
           </div>
 

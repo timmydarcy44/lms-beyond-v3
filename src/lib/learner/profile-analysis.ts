@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getOpenAIClient } from "@/lib/ai/openai-client";
+import {
+  collectLearnerProfileCandidates,
+  fetchDiscScoresForCandidates,
+  fetchIdmcAxesForCandidates,
+  fetchSoftSkillsRadarForCandidates,
+} from "@/lib/learner/resolve-learner-profile-candidates";
 
 export type ProfileAnalysisInput = {
   firstName: string;
@@ -66,18 +72,32 @@ function bodyToBulletItems(body: string): string[] {
   return [paragraph];
 }
 
-/** Extrait Forces majeures / Axes d'amélioration / Synthèse EDGE du markdown GPT. */
+/** Extrait Forces majeures / Axes d'amélioration / Synthèse EDGE (markdown ## ou libellés **…**). */
 export function parseProfileAnalysisSections(markdown: string): ParsedProfileAnalysisSections {
   const sections: Record<string, string> = {};
-  const parts = markdown.split(/^##\s+/m).filter(Boolean);
+  const normalized = markdown.replace(/\r\n/g, "\n").trim();
 
-  for (const part of parts) {
-    const newline = part.indexOf("\n");
-    const title = (newline >= 0 ? part.slice(0, newline) : part).trim().toLowerCase();
-    const body = (newline >= 0 ? part.slice(newline + 1) : "").trim();
-    if (title.includes("forces")) sections.strengths = body;
-    else if (title.includes("axes") || title.includes("amélioration")) sections.improvements = body;
-    else if (title.includes("synthèse")) sections.summary = body;
+  const boldParts = normalized.split(/\n(?=\*\*[^*]+\*\*\s*$)/m).filter(Boolean);
+  if (boldParts.length > 1 || /^\*\*[^*]+\*\*/m.test(normalized)) {
+    for (const part of boldParts) {
+      const match = part.match(/^\*\*([^*]+)\*\*\s*\n?([\s\S]*)$/);
+      if (!match) continue;
+      const title = match[1].trim().toLowerCase();
+      const body = match[2].trim();
+      if (title.includes("forces")) sections.strengths = body;
+      else if (title.includes("axes") || title.includes("amélioration")) sections.improvements = body;
+      else if (title.includes("synthèse")) sections.summary = body;
+    }
+  } else {
+    const parts = normalized.split(/^##\s+/m).filter(Boolean);
+    for (const part of parts) {
+      const newline = part.indexOf("\n");
+      const title = (newline >= 0 ? part.slice(0, newline) : part).trim().toLowerCase();
+      const body = (newline >= 0 ? part.slice(newline + 1) : "").trim();
+      if (title.includes("forces")) sections.strengths = body;
+      else if (title.includes("axes") || title.includes("amélioration")) sections.improvements = body;
+      else if (title.includes("synthèse")) sections.summary = body;
+    }
   }
 
   return {
@@ -92,7 +112,7 @@ export function isProfileAnalysisCacheValid(
   currentSignature: string,
 ): boolean {
   if (!cached?.text?.trim()) return false;
-  if (!cached.testsSignature) return true;
+  if (!cached.testsSignature) return false;
   return cached.testsSignature === currentSignature;
 }
 
@@ -106,26 +126,41 @@ export async function generateProfileAnalysisText(input: ProfileAnalysisInput): 
     ? ` Poste : ${input.jobTitle.trim()}.`
     : "";
 
-  const prompt = `Tu es expert en analyse comportementale et motivationnelle. Réalise une synthèse croisée pour ${input.firstName}${jobContext} en reliant DISC, IDMC et soft skills (ne les traite pas isolément).
+  const prompt = `Tu rédiges une synthèse croisée pour ${input.firstName}${jobContext}, en reliant DISC, IDMC et soft skills (ne les traite pas isolément).
 
 Scores DISC : ${JSON.stringify(input.discScores)}
 Scores IDMC (axes A1–A8, 0–100) : ${JSON.stringify(input.idmcScores)}
 Top soft skills : ${JSON.stringify(input.softSkillsTop)}
 
-Structure la réponse en français avec ces titres :
-## Forces majeures
-## Axes d'amélioration
-## Synthèse EDGE
+Structure la réponse en français avec exactement ces 3 parties, chacune introduite par un libellé en gras sur sa propre ligne (syntaxe **Libellé**, pas de ##) :
 
-Ton : professionnel, encourageant, factuel (style Apple : direct et inspirant). 180 à 280 mots au total.`;
+**Forces majeures**
+(liste à puces, 2 à 4 points factuels)
+
+**Axes d'amélioration**
+(liste à puces, 2 à 4 points factuels)
+
+**Synthèse EDGE**
+(1 paragraphe court)
+
+Contraintes strictes :
+- Ton EDGE : direct, sobre, factuel — jamais sensationnaliste
+- Interdits : remarquable, extraordinaire, unique, sommets, professionnel équilibré, coach de vie, parcours exceptionnel
+- Pas de point d'exclamation
+- 180 à 260 mots au total
+- Vouvoiement`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
-      { role: "system", content: "Tu es un expert en analyse comportementale." },
+      {
+        role: "system",
+        content:
+          "Tu es un analyste EDGE. Tu écris en français, de façon factuelle et sobre, sans formules creuses ni emphase.",
+      },
       { role: "user", content: prompt },
     ],
-    temperature: 0.6,
+    temperature: 0.4,
   });
 
   return response.choices[0]?.message?.content?.trim() || "";
@@ -195,4 +230,60 @@ export async function resolveProfileAnalysisForProfile(
     cached: false,
     sections: parseProfileAnalysisSections(analysis),
   };
+}
+
+/** Régénère profiles.ai_analysis si la signature tests a changé (ou si force). */
+export async function maybeRefreshProfileAnalysisIfStale(
+  service: SupabaseClient,
+  userId: string,
+  options?: { forceRegenerate?: boolean },
+): Promise<{ refreshed: boolean; reason: string }> {
+  const uid = userId.trim();
+  if (!uid) return { refreshed: false, reason: "missing_user_id" };
+
+  const { data: profile } = await service
+    .from("profiles")
+    .select("first_name, email, poste_actuel")
+    .eq("id", uid)
+    .maybeSingle();
+  if (!profile) return { refreshed: false, reason: "profile_not_found" };
+
+  const email = String(profile.email ?? "").trim();
+  const profileIds = await collectLearnerProfileCandidates(service, uid, email);
+
+  const [discScores, idmcAxes, softSkillsRadar] = await Promise.all([
+    fetchDiscScoresForCandidates(service, profileIds),
+    fetchIdmcAxesForCandidates(service, profileIds),
+    fetchSoftSkillsRadarForCandidates(service, profileIds),
+  ]);
+
+  if (!discScores && !idmcAxes && softSkillsRadar.length === 0) {
+    return { refreshed: false, reason: "no_tests" };
+  }
+
+  const signature = buildProfileAnalysisTestsSignature({
+    discScores: discScores ?? {},
+    idmcScores: idmcAxes ?? {},
+    softSkills: softSkillsRadar.slice(0, 5),
+  });
+
+  const cached = await loadProfileAnalysisFromDb(service, uid);
+  if (!options?.forceRegenerate && isProfileAnalysisCacheValid(cached, signature)) {
+    return { refreshed: false, reason: "cache_valid" };
+  }
+
+  await resolveProfileAnalysisForProfile(
+    service,
+    uid,
+    {
+      firstName: String(profile.first_name ?? "Apprenant").trim() || "Apprenant",
+      jobTitle: profile.poste_actuel,
+      discScores: discScores ?? { D: 0, I: 0, S: 0, C: 0 },
+      idmcScores: idmcAxes ?? {},
+      softSkillsTop: softSkillsRadar.slice(0, 5),
+    },
+    { forceRegenerate: true },
+  );
+
+  return { refreshed: true, reason: "regenerated" };
 }

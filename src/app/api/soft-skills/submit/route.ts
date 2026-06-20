@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { maybeTriggerCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
-import { getServerClient } from "@/lib/supabase/server";
+import { maybeRefreshProfileAnalysisIfStale } from "@/lib/learner/profile-analysis";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import {
   buildSoftSkillsPayload,
   saveSoftSkillsResultats,
@@ -50,6 +51,13 @@ export async function POST(request: NextRequest) {
     void maybeTriggerCrossProfileCompletion(user.id).catch((err) => {
       console.warn("[soft-skills/submit] cross-profile trigger:", err);
     });
+
+    const serviceRole = getServiceRoleClient();
+    if (serviceRole) {
+      void maybeRefreshProfileAnalysisIfStale(serviceRole, user.id).catch((err) => {
+        console.warn("[soft-skills/submit] profile analysis refresh:", err);
+      });
+    }
 
     return NextResponse.json({
       result_id: null,

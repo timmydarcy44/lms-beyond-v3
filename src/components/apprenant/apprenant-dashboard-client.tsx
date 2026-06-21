@@ -203,6 +203,7 @@ export function ApprenantDashboardClient({
     "Débutant"
   );
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
   const [isSavingOnboarding, setIsSavingOnboarding] = useState(false);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [isProfileGaugeExpanded, setIsProfileGaugeExpanded] = useState(true);
@@ -1091,6 +1092,22 @@ export function ApprenantDashboardClient({
     return profile?.onboarding_completed === false;
   }, [profile, user?.id]);
 
+  const isParticulierUser = useMemo(() => {
+    const role = String(
+      profile?.role_type ?? (profile as { role?: string } | null)?.role ?? userRole ?? "",
+    )
+      .trim()
+      .toLowerCase();
+    return role === "particulier" || role === "learner";
+  }, [profile, userRole]);
+
+  const needsCareerGoal = useMemo(() => {
+    if (!user?.id || !profile || !isParticulierUser) return false;
+    if (profile.school_id || profile.entreprise_id) return false;
+    if (needsOnboarding) return false;
+    return !String(profile.career_goal ?? "").trim();
+  }, [isParticulierUser, needsOnboarding, profile, user?.id]);
+
   useEffect(() => {
     if (isLoading) return;
     if (needsOnboarding) {
@@ -1099,6 +1116,11 @@ export function ApprenantDashboardClient({
       setShowOnboardingModal(false);
     }
   }, [isLoading, needsOnboarding]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    setShowCareerGoalModal(needsCareerGoal);
+  }, [isLoading, needsCareerGoal]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1364,6 +1386,15 @@ export function ApprenantDashboardClient({
 
   return (
     <>
+          <CareerGoalStepModal
+            open={showCareerGoalModal}
+            onSaved={async () => {
+              setShowCareerGoalModal(false);
+              if (!supabase || !user?.id) return;
+              const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+              if (data) setProfile(data as typeof profile);
+            }}
+          />
           {showOnboardingModal ? (
             <div className="fixed inset-0 z-[10005] flex items-center justify-center bg-black/60 px-4">
               <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-950 p-6 shadow-2xl">

@@ -69,6 +69,8 @@ export async function PATCH(request: NextRequest) {
       employment_type,
       avatar_url,
       type_profil,
+      career_goal,
+      career_goal_other,
     } = body;
 
     // Mettre à jour le profil
@@ -104,6 +106,16 @@ export async function PATCH(request: NextRequest) {
     if (type_profil !== undefined) {
       const normalized = String(type_profil ?? "").trim().toLowerCase();
       updateData.type_profil = normalized || null;
+    }
+    if (career_goal !== undefined) {
+      updateData.career_goal =
+        career_goal === null || career_goal === "" ? null : String(career_goal).trim();
+    }
+    if (career_goal_other !== undefined) {
+      updateData.career_goal_other =
+        career_goal_other === null || career_goal_other === ""
+          ? null
+          : String(career_goal_other).trim();
     }
 
     // Mettre à jour full_name si first_name ou last_name changent

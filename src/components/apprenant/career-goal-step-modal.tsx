@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function CareerGoalStepModal({ open, onSaved }: Props) {
-  const [step, setStep] = useState<"question" | "jobs">("question");
+  const [step, setStep] = useState<"question" | "jobs" | "needs_help_info">("question");
   const [selectedJob, setSelectedJob] = useState<CareerGoalValue | "">("");
   const [otherJob, setOtherJob] = useState("");
   const [saving, setSaving] = useState(false);
@@ -46,6 +46,24 @@ export function CareerGoalStepModal({ open, onSaved }: Props) {
 
   const handleYes = () => setStep("jobs");
 
+  const handleNeedsHelp = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/beyond-connect/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ career_goal: CAREER_GOAL_NEEDS_HELP_VALUE, career_goal_other: null }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(data?.error || "Enregistrement impossible");
+      setStep("needs_help_info");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erreur");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveJob = async () => {
     if (!selectedJob) {
       toast.error("Sélectionnez un métier ou choisissez Autre.");
@@ -74,10 +92,19 @@ export function CareerGoalStepModal({ open, onSaved }: Props) {
             <button
               type="button"
               disabled={saving}
-              onClick={() => void persist(CAREER_GOAL_NEEDS_HELP_VALUE)}
+              onClick={() => void handleNeedsHelp()}
               className={`${CONNECT_BTN_SECONDARY} flex-1 disabled:opacity-50`}
             >
-              Non, j&apos;ai besoin d&apos;aide
+              {saving ? "Enregistrement…" : "Non, j'ai besoin d'aide"}
+            </button>
+          </div>
+        ) : step === "needs_help_info" ? (
+          <div className="mt-6 space-y-6">
+            <p className="text-sm leading-relaxed text-white/80">
+              Passez vos 3 tests et nous vous proposerons plusieurs métiers qui correspondent à votre profil.
+            </p>
+            <button type="button" onClick={onSaved} className={`${CONNECT_BTN_PRIMARY} w-full`}>
+              Fermer
             </button>
           </div>
         ) : (

@@ -8,6 +8,18 @@ import { EdgePublicProfileView } from "@/components/public-profile/edge-public-p
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import type { PublicProfileEarnedBadge } from "@/lib/openbadges/public-profile-earned-badges";
 
+function parsePublicBioAi(raw: unknown): string {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = JSON.parse(trimmed) as { text?: string };
+    if (parsed?.text) return parsed.text;
+  } catch {
+    // legacy plain string
+  }
+  return trimmed;
+}
+
 type ProfilePublic = {
   name: string;
   birthDate: string;
@@ -444,7 +456,7 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
     .sort((a, b) => Number(b.validated) - Number(a.validated));
   useEffect(() => {
     if (!profileData) return;
-    const stored = String((profileData as Record<string, unknown>).bio_ai ?? "").trim();
+    const stored = parsePublicBioAi((profileData as Record<string, unknown>).bio_ai);
     const firstName = String((profileData as Record<string, unknown>).first_name ?? "").trim();
     const lastName = String((profileData as Record<string, unknown>).last_name ?? "").trim();
     const fullName = String((profileData as Record<string, unknown>).full_name ?? "").trim();
@@ -481,6 +493,7 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       experiences: experiences.map((exp) => ({ title: exp.title, company: exp.company })),
       diplomas: diplomas.map((dip) => ({ title: dip.title, school: dip.school })),
       certifiedSkills,
+      declaredSkills: hardSkillEntries.map((item) => ({ name: item.name, level: item.level })),
       idmcScore: idmcGlobalScore,
       discScores: discScoresMap,
       softSkillsTop,
@@ -503,13 +516,22 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
 
   useEffect(() => {
     if (!profileData || !publicUserId) return;
-    const stored = String((profileData as Record<string, unknown>).bio_ai ?? "").trim();
-    if (stored) return;
     const hasTests =
       discScores.length > 0 || Boolean(idmcAxes) || softSkillsTop.length > 0;
-    if (!hasTests) return;
+    const hasProfileContent =
+      hardSkillEntries.length > 0 || experiences.length > 0 || diplomas.length > 0;
+    if (!hasTests && !hasProfileContent) return;
     generatePublicSummary(false);
-  }, [profileData, publicUserId, discScores, idmcAxes, softSkillsTop]);
+  }, [
+    profileData,
+    publicUserId,
+    discScores,
+    idmcAxes,
+    softSkillsTop,
+    hardSkillEntries,
+    experiences,
+    diplomas,
+  ]);
 
 
   const handleCopyLink = () => {

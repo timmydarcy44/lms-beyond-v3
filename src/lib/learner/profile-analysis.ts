@@ -31,11 +31,29 @@ export function buildProfileAnalysisTestsSignature(input: {
   discScores?: Record<string, number> | null;
   idmcScores?: Record<string, number> | null;
   softSkills?: Array<{ skill: string; score: number }>;
+  hardSkills?: string[] | null;
+  skillsMetadata?: Record<string, { level?: string }> | null;
+  experiences?: Array<{
+    employeur?: string | null;
+    intitule?: string | null;
+    date_debut?: string | null;
+  }> | null;
+  diplomas?: Array<{
+    intitule?: string | null;
+    ecole?: string | null;
+    annee_obtention?: number | null;
+  }> | null;
 }): string {
   return JSON.stringify({
     disc: input.discScores ?? {},
     idmc: input.idmcScores ?? {},
     soft: (input.softSkills ?? []).map((s) => [s.skill, s.score]),
+    hard: (input.hardSkills ?? []).slice().sort(),
+    meta: Object.entries(input.skillsMetadata ?? {})
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, meta]) => [name, meta?.level ?? ""]),
+    exp: (input.experiences ?? []).map((e) => [e.employeur ?? "", e.intitule ?? "", e.date_debut ?? ""]),
+    dip: (input.diplomas ?? []).map((d) => [d.intitule ?? "", d.ecole ?? "", d.annee_obtention ?? ""]),
   });
 }
 
@@ -243,7 +261,7 @@ export async function maybeRefreshProfileAnalysisIfStale(
 
   const { data: profile } = await service
     .from("profiles")
-    .select("first_name, email, poste_actuel")
+    .select("first_name, email, poste_actuel, hard_skills, skills_metadata")
     .eq("id", uid)
     .maybeSingle();
   if (!profile) return { refreshed: false, reason: "profile_not_found" };
@@ -251,10 +269,20 @@ export async function maybeRefreshProfileAnalysisIfStale(
   const email = String(profile.email ?? "").trim();
   const profileIds = await collectLearnerProfileCandidates(service, uid, email);
 
-  const [discScores, idmcAxes, softSkillsRadar] = await Promise.all([
+  const [discScores, idmcAxes, softSkillsRadar, experiencesRes, diplomasRes] = await Promise.all([
     fetchDiscScoresForCandidates(service, profileIds),
     fetchIdmcAxesForCandidates(service, profileIds),
     fetchSoftSkillsRadarForCandidates(service, profileIds),
+    service
+      .from("experiences_pro")
+      .select("employeur, intitule, date_debut")
+      .eq("learner_id", uid)
+      .order("date_debut", { ascending: false }),
+    service
+      .from("diplomes")
+      .select("intitule, ecole, annee_obtention")
+      .eq("learner_id", uid)
+      .order("annee_obtention", { ascending: false }),
   ]);
 
   if (!discScores && !idmcAxes && softSkillsRadar.length === 0) {
@@ -265,6 +293,17 @@ export async function maybeRefreshProfileAnalysisIfStale(
     discScores: discScores ?? {},
     idmcScores: idmcAxes ?? {},
     softSkills: softSkillsRadar.slice(0, 5),
+    hardSkills: Array.isArray(profile.hard_skills)
+      ? (profile.hard_skills as string[])
+      : typeof profile.hard_skills === "string"
+        ? profile.hard_skills.split(",").map((s) => s.trim()).filter(Boolean)
+        : [],
+    skillsMetadata:
+      profile.skills_metadata && typeof profile.skills_metadata === "object"
+        ? (profile.skills_metadata as Record<string, { level?: string }>)
+        : {},
+    experiences: experiencesRes.data ?? [],
+    diplomas: diplomasRes.data ?? [],
   });
 
   const cached = await loadProfileAnalysisFromDb(service, uid);

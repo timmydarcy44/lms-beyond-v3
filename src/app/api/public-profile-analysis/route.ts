@@ -10,10 +10,37 @@ type PublicAnalysisPayload = {
   experiences?: Array<{ title?: string; company?: string }>;
   diplomas?: Array<{ title?: string; school?: string }>;
   certifiedSkills?: string[];
+  declaredSkills?: Array<{ name: string; level: string }>;
   idmcScore?: number | null;
   discScores?: Record<string, number>;
   softSkillsTop?: Array<{ label: string; value: number }>;
 };
+
+function buildPublicBioContentSignature(body: PublicAnalysisPayload): string {
+  return JSON.stringify({
+    exp: body.experiences ?? [],
+    dip: body.diplomas ?? [],
+    certified: (body.certifiedSkills ?? []).slice().sort(),
+    declared: (body.declaredSkills ?? []).map((s) => [s.name, s.level]),
+    disc: body.discScores ?? {},
+    idmc: body.idmcScore ?? null,
+    soft: body.softSkillsTop ?? [],
+  });
+}
+
+function parseStoredPublicBio(raw: string | null | undefined): { text: string; contentSignature: string | null } | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = JSON.parse(trimmed) as { text?: string; content_signature?: string };
+    if (parsed?.text) {
+      return { text: parsed.text, contentSignature: parsed.content_signature ?? null };
+    }
+  } catch {
+    // legacy plain string
+  }
+  return { text: trimmed, contentSignature: null };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,12 +58,15 @@ export async function POST(request: NextRequest) {
           .select("bio_ai")
           .eq("id", body.userId)
           .maybeSingle();
-        const cached = String(data?.bio_ai ?? "").trim();
-        if (cached) {
-          return NextResponse.json({ analysis: cached, cached: true });
+        const cached = parseStoredPublicBio(data?.bio_ai);
+        const currentSignature = buildPublicBioContentSignature(body);
+        if (cached?.text && cached.contentSignature === currentSignature) {
+          return NextResponse.json({ analysis: cached.text, cached: true });
         }
       }
     }
+
+    const contentSignature = buildPublicBioContentSignature(body);
 
     const prompt = `Tu es expert en psychologie et en étude comportementale. À la lecture des scores suivants, réalise un profil synthétique (70 à 110 mots) pour présenter ${body.firstName ?? "le candidat"} à un recruteur.
 Priorise l'analyse psychologique et comportementale. Ne répète pas les expériences ou diplômes déjà visibles ailleurs.
@@ -61,7 +91,16 @@ Style sobre, professionnel, sans superlatifs.`;
     if (analysis && body.userId) {
       const supabase = await getServiceRoleClientOrFallback();
       if (supabase) {
-        await supabase.from("profiles").update({ bio_ai: analysis }).eq("id", body.userId);
+        await supabase
+          .from("profiles")
+          .update({
+            bio_ai: JSON.stringify({
+              text: analysis,
+              content_signature: contentSignature,
+              updated_at: new Date().toISOString(),
+            }),
+          })
+          .eq("id", body.userId);
       }
     }
     return NextResponse.json({ analysis });

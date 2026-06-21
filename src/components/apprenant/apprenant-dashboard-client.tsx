@@ -100,6 +100,18 @@ function computeAgeFromBirthDate(birthDate: string): number | null {
 
 export type ApprenantPrimaryParcours = { title: string; href: string };
 
+function parseBioAiText(raw: unknown): string {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = JSON.parse(trimmed) as { text?: string };
+    if (parsed?.text) return parsed.text;
+  } catch {
+    // legacy plain string
+  }
+  return trimmed;
+}
+
 export function ApprenantDashboardClient({
   initialView,
   primaryParcours = null,
@@ -785,8 +797,14 @@ export function ApprenantDashboardClient({
         disc: discScores,
         idmc: idmcAxes,
         soft: softSkillsRadar.map((s) => [s.skill, s.score]),
+        hard: hardSkills.slice().sort(),
+        meta: Object.entries(skillsMetadata)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([name, meta]) => [name, meta.level]),
+        exp: experiencesPro.map((e) => [e.employeur ?? "", e.intitule ?? "", e.date_debut ?? ""]),
+        dip: diplomes.map((d) => [d.intitule ?? "", d.ecole ?? "", d.annee_obtention ?? ""]),
       }),
-    [discScores, idmcAxes, softSkillsRadar],
+    [discScores, idmcAxes, softSkillsRadar, hardSkills, skillsMetadata, experiencesPro, diplomes],
   );
   const discAnalysisText = String(
     aiAnalysis ??
@@ -915,6 +933,8 @@ export function ApprenantDashboardClient({
         .eq("learner_id", user.id)
         .order("date_debut", { ascending: false });
       setExperiencesPro(expData ?? []);
+      lastAnalysisSignatureRef.current = null;
+      await supabase.from("profiles").update({ bio_ai: null }).eq("id", user.id);
       setExperienceForm({
         employeur: "",
         type_contrat: "CDI",
@@ -956,6 +976,8 @@ export function ApprenantDashboardClient({
         .eq("learner_id", user.id)
         .order("annee_obtention", { ascending: false });
       setDiplomes(diplomeData ?? []);
+      lastAnalysisSignatureRef.current = null;
+      await supabase.from("profiles").update({ bio_ai: null }).eq("id", user.id);
       setDiplomeForm({ intitule: "", ecole: "", annee_obtention: "", mode: "Alternance" });
       setShowDiplomeForm(false);
     } finally {
@@ -976,9 +998,10 @@ export function ApprenantDashboardClient({
   ) => {
     if (!supabase || !user?.id) return;
     try {
+      lastAnalysisSignatureRef.current = null;
       await supabase
         .from("profiles")
-        .update({ skills_metadata: nextMetadata, hard_skills: nextHard })
+        .update({ skills_metadata: nextMetadata, hard_skills: nextHard, bio_ai: null })
         .eq("id", user.id);
     } catch (error) {
       console.error("[skills] update error:", error);
@@ -1069,7 +1092,7 @@ export function ApprenantDashboardClient({
   const profileCity = String(profile?.city ?? "").trim();
   const profileBio =
     String(profile?.bio ?? "").trim() ||
-    String((profile as Record<string, unknown> | null)?.bio_ai ?? "").trim();
+    parseBioAiText((profile as Record<string, unknown> | null)?.bio_ai);
   const profileEmail = emailValue || String(profile?.email ?? user?.email ?? "").trim();
   const profilePhone = String(profile?.telephone ?? "").trim();
   const displayFirstName = profileFirstName;
@@ -2056,6 +2079,8 @@ export function ApprenantDashboardClient({
                             onClick={() => {
                               setPendingHardSkill(skill);
                               setPendingSkillProof(Boolean(skillsMetadata[skill]?.validated));
+                              setShowManualSkillInput(false);
+                              setManualSkillName("");
                             }}
                             className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left hover:bg-white/[0.07]"
                           >
@@ -2077,17 +2102,43 @@ export function ApprenantDashboardClient({
                         );
                       })}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setManualSkillName("");
-                          setShowManualSkillInput(true);
-                        }}
-                        className="flex w-full items-center justify-between rounded-xl border border-dashed border-white/20 bg-white/[0.03] px-3 py-2 text-left hover:bg-white/[0.07]"
-                      >
-                        <span className="text-sm text-white/80">Autre (ajouter manuellement)</span>
-                        <span className="text-xs text-white/55">Nouveau</span>
-                      </button>
+                      {!skillSearch ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingHardSkill(null);
+                            setManualSkillName("");
+                            setShowManualSkillInput(true);
+                          }}
+                          className="flex w-full items-center justify-between rounded-xl border border-dashed border-[#3D7BFF]/35 bg-[#3D7BFF]/5 px-3 py-2 text-left hover:bg-[#3D7BFF]/10"
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-sm text-white/90">Autre</span>
+                            <span className="block text-[11px] leading-snug text-white/45">
+                              Compétence absente du catalogue — saisie libre
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs text-[#3D7BFF]/80">Saisir</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingHardSkill(null);
+                            setManualSkillName(skillSearch.trim());
+                            setShowManualSkillInput(true);
+                          }}
+                          className="flex w-full items-center justify-between rounded-xl border border-dashed border-[#3D7BFF]/35 bg-[#3D7BFF]/5 px-3 py-2 text-left hover:bg-[#3D7BFF]/10"
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-sm text-white/90">Autre — « {skillSearch.trim()} »</span>
+                            <span className="block text-[11px] leading-snug text-white/45">
+                              Ajouter cette compétence en saisie libre
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs text-[#3D7BFF]/80">Saisir</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2139,11 +2190,13 @@ export function ApprenantDashboardClient({
                 ) : null}
 
                 {showManualSkillInput ? (
-                  <div className="mt-6 grid gap-3 md:grid-cols-[1fr_160px]">
+                  <div className="border-t border-white/10 bg-white/[0.02] p-4">
+                    <div className="text-sm text-white/80">Déclarer une compétence absente du catalogue</div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-[1fr_160px_auto]">
                     <input
                       value={manualSkillName}
                       onChange={(event) => setManualSkillName(event.target.value)}
-                      placeholder="Saisir une compétence personnalisée"
+                      placeholder="Nom de la compétence"
                       className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none"
                     />
                     <select
@@ -2178,14 +2231,17 @@ export function ApprenantDashboardClient({
                         const nextHard = Array.from(new Set([...hardSkills, trimmed]));
                         setSkillsMetadata(next);
                         setHardSkills(nextHard);
-                        persistSkills(next, nextHard);
+                        void persistSkills(next, nextHard);
                         setManualSkillName("");
                         setShowManualSkillInput(false);
+                        setShowSkillModal(false);
+                        setSkillSearch("");
                       }}
                       className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
                     >
                       Ajouter
                     </button>
+                    </div>
                   </div>
                 ) : null}
               </div>

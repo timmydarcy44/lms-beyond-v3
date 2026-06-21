@@ -359,11 +359,7 @@ export function EdgePublicProfileView({
                             {hardSkillEntries.map((skill) => (
                               <span
                                 key={skill.name}
-                                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                                  skill.validated
-                                    ? "border border-[#FF3B30]/25 bg-[#FF3B30]/10 text-[#FF3B30]"
-                                    : "border border-black/10 bg-[#fafafa] text-black/65"
-                                }`}
+                                className="rounded-full border border-black/10 bg-[#fafafa] px-3 py-1.5 text-xs font-medium text-black/70"
                               >
                                 {skill.name} · {skill.level}
                               </span>

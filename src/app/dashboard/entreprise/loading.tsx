@@ -1,6 +1,6 @@
 export default function EntrepriseLoading() {
   return (
-    <div className="min-h-screen animate-pulse bg-white pl-[280px] px-10 py-8">
+    <div className="min-h-screen animate-pulse bg-white lg:pl-[280px] px-10 py-8">
       <div className="mx-auto max-w-5xl">
         <div className="mx-auto h-4 w-32 rounded bg-gray-100" />
         <div className="mx-auto mt-4 h-10 w-72 rounded bg-gray-100" />

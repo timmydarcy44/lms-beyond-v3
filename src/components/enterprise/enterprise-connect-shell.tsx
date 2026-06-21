@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { EnterpriseMobileNav } from "@/components/EnterpriseSidebar";
 import { EnterpriseOverviewProvider } from "@/components/enterprise/enterprise-overview-provider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -20,5 +21,10 @@ export function EnterpriseConnectShell({ children }: { children: ReactNode }) {
     })();
   }, [router]);
 
-  return <EnterpriseOverviewProvider>{children}</EnterpriseOverviewProvider>;
+  return (
+    <EnterpriseOverviewProvider>
+      <EnterpriseMobileNav />
+      {children}
+    </EnterpriseOverviewProvider>
+  );
 }

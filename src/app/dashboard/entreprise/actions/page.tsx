@@ -78,7 +78,7 @@ export default function EnterpriseActionsHistoryPage() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
       <EnterpriseSidebar />
-      <main className="relative z-10 flex-1 px-8 py-10 pl-[280px]">
+      <main className="relative z-10 flex-1 px-8 py-10 lg:pl-[280px]">
         <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
           <div>
             <p className="text-sm text-gray-500">Pilotage</p>

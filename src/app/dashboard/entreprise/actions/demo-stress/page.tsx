@@ -168,7 +168,7 @@ export default function DemoStressActionPage() {
         </div>
 
         <EnterpriseSidebar />
-        <main className="relative min-h-screen px-8 py-10 pb-20 pl-[280px]">
+        <main className="relative min-h-screen px-8 py-10 pb-20 lg:pl-[280px]">
           <div className="mx-auto mt-12 max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-10 text-center shadow-[0_18px_70px_rgba(0,0,0,0.40)] backdrop-blur-2xl">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-emerald-400/20 bg-emerald-400/10">
               <CheckCircle2 className="h-9 w-9 text-emerald-300" aria-hidden />
@@ -204,7 +204,7 @@ export default function DemoStressActionPage() {
       </div>
 
       <EnterpriseSidebar />
-      <main className="relative min-h-screen px-8 py-10 pb-32 pl-[280px]">
+      <main className="relative min-h-screen px-8 py-10 pb-32 lg:pl-[280px]">
         {/* 1) CONTEXTE */}
         <section className="rounded-3xl border border-white/10 bg-white/5 p-7 shadow-[0_18px_70px_rgba(0,0,0,0.40)] backdrop-blur-2xl">
           <div className="flex flex-col gap-5">
@@ -377,7 +377,7 @@ export default function DemoStressActionPage() {
         {/* 4) CTA FINAL sticky */}
         <div className="fixed bottom-0 left-0 right-0 z-40">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-          <div className="relative mx-auto max-w-[1200px] pl-[280px] pr-8">
+          <div className="relative mx-auto max-w-[1200px] lg:pl-[280px] pr-8">
             <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-2xl">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="text-sm text-white/75">

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
+import { Menu } from "lucide-react";
 import { useOptionalEnterpriseOverviewContext } from "@/components/enterprise/enterprise-overview-provider";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
   BarChart3,
@@ -57,6 +59,61 @@ async function fetchViewer(): Promise<ViewerState | null> {
   return viewerInflight;
 }
 
+export function EnterpriseMobileNav() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="sticky top-0 z-40 border-b border-violet-500/15 bg-[#0f0e1a]/95 px-4 py-3 backdrop-blur-md lg:hidden">
+      <div className="flex items-center justify-between gap-3">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-violet-500/25 bg-violet-500/10 text-violet-100"
+              aria-label="Ouvrir le menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="left" className="border-violet-500/20 bg-[#0f0e1a] text-white">
+            <SheetHeader>
+              <SheetTitle className="text-left text-white">Beyond Enterprise</SheetTitle>
+            </SheetHeader>
+            <nav className="mt-6 flex flex-col gap-1" aria-label="Navigation entreprise mobile">
+              {NAV_ITEMS.map((item) => {
+                const active =
+                  item.href === "/dashboard/entreprise"
+                    ? pathname === item.href
+                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+                      active
+                        ? "bg-violet-600/20 text-violet-200"
+                        : "text-white/55 hover:bg-white/5 hover:text-white",
+                    )}
+                  >
+                    <Icon size={18} strokeWidth={1.75} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </SheetContent>
+        </Sheet>
+        <div className="min-w-0 text-sm font-semibold text-white">Beyond Enterprise</div>
+        <div className="w-10" />
+      </div>
+    </div>
+  );
+}
+
 export default function EnterpriseSidebar() {
   const pathname = usePathname();
   const overviewCtx = useOptionalEnterpriseOverviewContext();
@@ -87,7 +144,7 @@ export default function EnterpriseSidebar() {
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-50 flex h-full w-[260px] flex-col border-r border-[rgba(124,58,237,0.15)]"
+      className="fixed inset-y-0 left-0 z-50 hidden h-full w-[260px] flex-col border-r border-[rgba(124,58,237,0.15)] lg:flex"
       style={{ background: "linear-gradient(180deg, #0f0e1a 0%, #1a1535 100%)" }}
     >
       <div className="border-b border-white/10 px-6 pb-6 pt-8">

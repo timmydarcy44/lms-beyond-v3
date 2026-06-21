@@ -381,7 +381,7 @@ export default function SalarieDetailPage() {
     return (
       <div className="flex min-h-screen bg-white">
         <EnterpriseSidebar />
-        <main className="flex-1 px-8 py-10 pl-[280px] text-sm text-gray-500">Chargement…</main>
+        <main className="flex-1 px-8 py-10 lg:pl-[280px] text-sm text-gray-500">Chargement…</main>
       </div>
     );
   }
@@ -390,7 +390,7 @@ export default function SalarieDetailPage() {
     return (
       <div className="flex min-h-screen bg-white">
         <EnterpriseSidebar />
-        <main className="flex-1 px-8 py-10 pl-[280px]">
+        <main className="flex-1 px-8 py-10 lg:pl-[280px]">
           <p className="text-sm font-semibold text-gray-900">
             {error ?? "Collaborateur introuvable."}
           </p>
@@ -414,7 +414,7 @@ export default function SalarieDetailPage() {
   return (
     <div className="flex min-h-screen bg-white font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
       <EnterpriseSidebar />
-      <main className="relative z-10 flex-1 px-8 py-10 pl-[280px]">
+      <main className="relative z-10 flex-1 px-8 py-10 lg:pl-[280px]">
         {error && (
           <div className="mb-8 rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
             {error}

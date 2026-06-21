@@ -196,7 +196,7 @@ export default function ActionRequestDetailPage() {
       </div>
 
       <EnterpriseSidebar />
-      <main className="relative min-h-screen px-8 py-10 pb-24 pl-[280px]">
+      <main className="relative min-h-screen px-8 py-10 pb-24 lg:pl-[280px]">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-6">
           <div className="min-w-0">
             <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Détail intervention</div>

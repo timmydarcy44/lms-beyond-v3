@@ -110,7 +110,7 @@ export default function EnterpriseExpertProfilePage() {
       <EnterpriseSidebar />
 
       <main className="relative min-h-screen bg-slate-50 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-        <div className="mx-auto max-w-6xl px-6 py-10 pb-24 pl-[280px]">
+        <div className="mx-auto max-w-6xl px-6 py-10 pb-24 lg:pl-[280px]">
         {/* 1) Header identité */}
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="grid gap-6 md:grid-cols-[160px_1fr] md:items-center">

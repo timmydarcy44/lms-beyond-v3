@@ -106,8 +106,8 @@ export function ApprenantConnectOverview({
       };
 
   const heroPctClass = isJessica
-    ? "text-[64px] font-extrabold leading-none tracking-[-0.04em] text-[#2F2A25]"
-    : "text-[64px] font-extrabold leading-none tracking-[-0.04em] text-white";
+    ? "text-4xl font-extrabold leading-none tracking-[-0.04em] text-[#2F2A25] sm:text-5xl lg:text-[64px]"
+    : "text-4xl font-extrabold leading-none tracking-[-0.04em] text-white sm:text-5xl lg:text-[64px]";
   const heroMutedClass = isJessica ? "text-[13px] text-[#8B4513]/75" : "text-[13px] text-white/40";
   const statLabelClass = isJessica
     ? "text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8B4513]/60"

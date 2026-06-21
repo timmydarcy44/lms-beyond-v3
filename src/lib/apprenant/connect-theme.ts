@@ -76,7 +76,7 @@ const EDGE_THEME: ConnectShellTheme = {
     "flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-transparent py-2 text-[11px] font-medium text-white/55 transition hover:border-white/15 hover:bg-white/[0.03] hover:text-white/85",
   logoutBtnClass:
     "flex w-full items-center justify-center rounded-xl py-2 text-[11px] font-medium text-white/25 transition hover:bg-white/[0.04] hover:text-white/40",
-  mainClass: "relative flex-1 overflow-y-auto bg-transparent text-slate-100",
+  mainClass: "relative flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-transparent text-slate-100",
   mobileHeaderClass: "sticky top-0 z-30 border-b border-[#3D7BFF]/10 bg-[#0a0a0d]/80 px-4 py-3 backdrop-blur-md lg:hidden",
   mobileTitleClass: "truncate text-center text-sm font-semibold text-white",
   mobileMenuBtnClass:
@@ -128,7 +128,7 @@ const JESSICA_THEME: ConnectShellTheme = {
     "flex w-full items-center justify-center gap-2 rounded-xl border border-[#D2B48C]/40 bg-white/40 py-2 text-[11px] font-medium text-[#8B4513]/80 transition hover:border-[#C6A664]/45 hover:bg-white/70 hover:text-[#654321]",
   logoutBtnClass:
     "flex w-full items-center justify-center rounded-xl py-2 text-[11px] font-medium text-[#A0522D]/50 transition hover:bg-[#C6A664]/10 hover:text-[#8B4513]",
-  mainClass: "relative flex-1 overflow-y-auto bg-[#F8F5F0] text-[#2F2A25]",
+  mainClass: "relative flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-[#F8F5F0] text-[#2F2A25]",
   mobileHeaderClass:
     "sticky top-0 z-30 border-b border-[#D2B48C]/40 bg-[#F8F5F0]/95 px-4 py-3 backdrop-blur-md lg:hidden",
   mobileTitleClass: "truncate text-center text-sm font-semibold text-[#2F2A25]",

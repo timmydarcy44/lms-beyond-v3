@@ -18,6 +18,7 @@ import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import dynamic from "next/dynamic";
 import { ApprenantConnectOverview } from "@/components/apprenant/apprenant-connect-overview";
 import { CrossProfileBadgeCelebration } from "@/components/apprenant/cross-profile-badge-celebration";
+import { CareerGoalStepModal } from "@/components/apprenant/career-goal-step-modal";
 const PersonalizedActionPlanSection = dynamic(
   () =>
     import("@/components/learner/personalized-action-plan-section").then((m) => ({
@@ -166,6 +167,10 @@ export function ApprenantDashboardClient({
     date_fin_contrat?: string | null;
     access_connect?: boolean | null;
     onboarding_completed?: boolean | null;
+    career_goal?: string | null;
+    career_goal_other?: string | null;
+    role_type?: string | null;
+    role?: string | null;
   } | null>(null);
   const [discScores, setDiscScores] = useState<DiscScores | null>(null);
   const [idmcAxes, setIdmcAxes] = useState<Record<AxisKey, number> | null>(null);
@@ -1664,7 +1669,7 @@ export function ApprenantDashboardClient({
                               value={onboardingStackSearch}
                               onChange={(event) => setOnboardingStackSearch(event.target.value)}
                               placeholder="Rechercher une stack..."
-                              className="w-72 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none sm:w-72"
                             />
                             <button
                               type="button"
@@ -1676,8 +1681,8 @@ export function ApprenantDashboardClient({
                           </div>
                         </div>
                       </div>
-                      <div className="grid min-h-[420px] grid-cols-[260px_1fr]">
-                        <aside className="border-r border-white/10 bg-white/[0.03] p-4">
+                      <div className="grid min-h-[420px] grid-cols-1 md:grid-cols-[260px_1fr]">
+                        <aside className="border-b border-white/10 bg-white/[0.03] p-4 md:border-b-0 md:border-r">
                           <div className="space-y-2">
                             {GLOBAL_STACK_REFERENTIAL.map((group) => (
                               <button
@@ -1944,22 +1949,22 @@ export function ApprenantDashboardClient({
               </div>
 
           {showSkillModal ? (
-            <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 px-4">
-              <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-[#0D111A] text-white shadow-2xl">
-                <div className="border-b border-white/10 px-6 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 px-3 py-6 sm:px-4">
+              <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden overflow-y-auto rounded-3xl border border-white/10 bg-[#0D111A] text-white shadow-2xl">
+                <div className="border-b border-white/10 px-4 py-4 sm:px-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <div>
                       <div className="text-xs uppercase tracking-[0.3em] text-white/50">
                         Ajouter une compétence
                       </div>
                       <div className="mt-1 text-lg font-semibold text-white">Catalogue de compétences</div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                       <input
                         value={skillSearch}
                         onChange={(event) => setSkillSearch(event.target.value)}
                         placeholder="Rechercher une compétence..."
-                        className="w-72 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none sm:w-72"
                       />
                       <button
                         type="button"
@@ -1979,8 +1984,8 @@ export function ApprenantDashboardClient({
                   </div>
                 </div>
 
-                <div className="grid min-h-[430px] grid-cols-[280px_1fr]">
-                  <aside className="border-r border-white/10 bg-white/[0.03] p-4">
+                <div className="grid min-h-0 grid-cols-1 md:min-h-[430px] md:grid-cols-[280px_1fr]">
+                  <aside className="border-b border-white/10 bg-white/[0.03] p-4 md:border-b-0 md:border-r">
                     <div className="space-y-2">
                       {CATEGORY_LIST.map((category) => (
                         <button

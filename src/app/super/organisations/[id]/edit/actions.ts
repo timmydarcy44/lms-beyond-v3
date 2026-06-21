@@ -10,6 +10,7 @@ type UpdateOrganizationInput = {
   slug?: string;
   description?: string;
   logo?: string;
+  wantsInternalBadges?: boolean;
 };
 
 export async function updateOrganizationAction(input: UpdateOrganizationInput): Promise<{
@@ -41,6 +42,9 @@ export async function updateOrganizationAction(input: UpdateOrganizationInput): 
     const payload: Record<string, any> = {};
     if (typeof input.name === "string") payload.name = input.name;
     if (typeof input.slug === "string") payload.slug = input.slug;
+    if (typeof input.wantsInternalBadges === "boolean") {
+      payload.wants_internal_badges = input.wantsInternalBadges;
+    }
 
     const { error } = await serviceClient.from("organizations").update(payload).eq("id", input.organizationId);
     if (error) {

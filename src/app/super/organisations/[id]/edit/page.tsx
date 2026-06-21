@@ -47,7 +47,7 @@ export default async function EditOrganizationPage({
             <CardDescription>Nom et slug (minimal SQL).</CardDescription>
           </CardHeader>
           <CardContent>
-            <EditOrganizationForm organizationId={id} initialData={orgDetails as any} />
+            <EditOrganizationForm organization={orgDetails} />
           </CardContent>
         </Card>
       </div>

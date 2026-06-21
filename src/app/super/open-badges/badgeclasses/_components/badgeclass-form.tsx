@@ -267,7 +267,7 @@ export function BadgeClassForm({
 
   useEffect(() => {
     const loadOrganizations = async () => {
-      const res = await fetch("/api/super-admin/organisations");
+      const res = await fetch("/api/super-admin/organisations?internal_badges_only=1");
       const json = await res.json();
       setOrganizations(json.organizations ?? []);
     };
@@ -857,7 +857,7 @@ export function BadgeClassForm({
                   aria-invalid={Boolean(errors.organizationId)}
                   aria-describedby={errors.organizationId ? "error-organizationId" : undefined}
                 >
-                  <SelectValue placeholder="Sélectionner un club" />
+                  <SelectValue placeholder="Sélectionner une organisation" />
                 </SelectTrigger>
                 <SelectContent>
                   {organizations.map((org) => (
@@ -868,7 +868,7 @@ export function BadgeClassForm({
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">
-                Choisissez le club (PSG, OM, etc.) pour lequel ce badge est disponible.
+                Organisations ayant activé les badges internes (case sur la fiche entreprise /super).
               </p>
               {errors.organizationId ? (
                 <p id="error-organizationId" className="text-sm text-destructive">

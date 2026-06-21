@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const hasAccess = await isSuperAdmin();
     if (!hasAccess) {
@@ -17,10 +17,20 @@ export async function GET() {
       );
     }
 
-    const { data: organizations, error } = await serviceClient
+    const internalBadgesOnly =
+      request.nextUrl.searchParams.get("internal_badges_only") === "1" ||
+      request.nextUrl.searchParams.get("internal_badges_only") === "true";
+
+    let query = serviceClient
       .from("organizations")
-      .select("id, name, slug, created_at")
+      .select("id, name, slug, created_at, wants_internal_badges")
       .order("name", { ascending: true });
+
+    if (internalBadgesOnly) {
+      query = query.eq("wants_internal_badges", true);
+    }
+
+    const { data: organizations, error } = await query;
 
     if (error) {
       console.error("[api/super-admin/organisations] Error:", error);

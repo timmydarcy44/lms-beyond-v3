@@ -75,6 +75,7 @@ export type OrganizationFullDetails = {
   slug: string | null;
   description: string | null;
   logo: string | null;
+  wantsInternalBadges: boolean;
   memberCount: number;
   instructorCount: number;
   learnerCount: number;
@@ -591,7 +592,7 @@ export async function getOrganizationFullDetails(orgId: string): Promise<Organiz
     // Récupérer l'organisation
     const { data: org, error: orgError } = await supabase
       .from("organizations")
-      .select("id, name, slug, description, logo")
+      .select("id, name, slug, description, logo, wants_internal_badges")
       .eq("id", orgId)
       .single();
 
@@ -681,6 +682,7 @@ export async function getOrganizationFullDetails(orgId: string): Promise<Organiz
       slug: org.slug || null,
       description: org.description || null,
       logo: logo || org.logo || null,
+      wantsInternalBadges: Boolean((org as { wants_internal_badges?: boolean }).wants_internal_badges),
       memberCount: memberships?.length || 0,
       instructorCount,
       learnerCount,

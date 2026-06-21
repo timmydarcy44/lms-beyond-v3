@@ -36,7 +36,7 @@ export function BadgeClassList({ auth }: { auth: AuthHeaders }) {
 
   useEffect(() => {
     const loadOrganizations = async () => {
-      const res = await fetch("/api/super-admin/organisations");
+      const res = await fetch("/api/super-admin/organisations?internal_badges_only=1");
       const json = await res.json();
       const orgs = json.organizations ?? [];
       setOrganizations(orgs);

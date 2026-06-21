@@ -27,6 +27,7 @@ type OrganizationFullDetails = {
   slug: string | null;
   description: string | null;
   logo: string | null;
+  wantsInternalBadges?: boolean;
   members: Array<{
     id: string;
     email: string;
@@ -46,6 +47,9 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
   const [name, setName] = useState(organization.name);
   const [slug, setSlug] = useState(organization.slug || "");
   const [description, setDescription] = useState(organization.description || "");
+  const [wantsInternalBadges, setWantsInternalBadges] = useState(
+    Boolean(organization.wantsInternalBadges),
+  );
   const [logoPreview, setLogoPreview] = useState<string | null>(organization.logo);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
@@ -92,6 +96,7 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
         slug: slug || undefined,
         description: description || undefined,
         logo: logoBase64,
+        wantsInternalBadges,
       });
 
       if (result.success) {
@@ -182,6 +187,26 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
                 rows={3}
                 className="mt-2 border-gray-300 bg-white text-gray-900 focus:border-gray-900"
               />
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={wantsInternalBadges}
+                  onChange={(event) => setWantsInternalBadges(event.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-900">
+                    L&apos;entreprise veut-elle des badges internes ?
+                  </span>
+                  <span className="mt-1 block text-xs text-gray-600">
+                    Si coché, l&apos;organisation apparaît dans le sélecteur « Club / Organisation » lors de la
+                    création d&apos;un Open Badge (super-admin).
+                  </span>
+                </span>
+              </label>
             </div>
           </CardContent>
         </Card>

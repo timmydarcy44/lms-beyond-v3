@@ -114,35 +114,18 @@ export function ApprenantProfileEditModal({
   }, [open, effectiveProfile, refreshToken]);
 
   const persistAvatar = async (file: File) => {
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData?.user?.id;
-    if (!uid) {
-      toast.error("Session invalide.");
-      return;
-    }
     setUploading(true);
     try {
-      const extension = file.name.split(".").pop() || "jpg";
-      const path = `${uid}/${Date.now()}.${extension}`;
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-      if (uploadError) {
-        toast.error("Upload photo impossible", { description: uploadError.message });
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+      const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (!res.ok || !data?.url) {
+        toast.error(data?.error || "Upload photo impossible");
         return;
       }
-      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-      const publicUrl = pub?.publicUrl;
-      if (!publicUrl) return;
-
-      const res = await fetch("/api/beyond-connect/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatar_url: publicUrl }),
-      });
-      if (!res.ok) {
-        const j = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(j?.error || "Mise à jour refusée");
-      }
       toast.success("Photo enregistrée.");
+      setFullProfile((prev) => ({ ...(prev ?? {}), avatar_url: data.url }));
       try {
         window.dispatchEvent(new CustomEvent("apprenant-profile-updated"));
       } catch {
@@ -209,6 +192,14 @@ export function ApprenantProfileEditModal({
         <div className="grid gap-4 pt-2">
           <label className="block text-xs font-medium text-black/60">
             Photo de profil
+            {effectiveProfile?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={effectiveProfile.avatar_url}
+                alt=""
+                className="mt-2 h-16 w-16 rounded-xl border border-black/10 object-cover"
+              />
+            ) : null}
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"

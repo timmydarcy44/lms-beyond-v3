@@ -11,6 +11,7 @@ import {
   buildIdmcObservation,
   buildSoftSkillsObservation,
 } from "@/lib/apprenant/assessment-observations";
+import { sanitizeProfileAnalysisTone } from "@/lib/learner/profile-analysis-tone";
 import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 import { ProfileAnalysisOverlay } from "@/components/apprenant/profile-analysis-overlay";
 import {
@@ -101,9 +102,10 @@ function Observation({ children, cockpit = false }: { children: ReactNode; cockp
 
 function AnalysisBlocks({ content }: { content: ReactNode }) {
   if (typeof content === "string") {
+    const sanitized = sanitizeProfileAnalysisTone(content);
     return (
       <div className="space-y-3">
-        {content
+        {sanitized
           .split(/\n+/)
           .map((line) => line.trim())
           .filter(Boolean)

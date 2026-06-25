@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import {
@@ -877,30 +878,20 @@ export function ApprenantDashboardClient({
   }, [hasAnyTest, testsSignature, firstName, user?.id, discScores, idmcAxes, softSkillsRadar]);
 
   const handleAvatarUpload = async (file: File) => {
-    if (!supabase || !user?.id) return;
     setIsUploadingAvatar(true);
     try {
-      const extension = file.name.split(".").pop() || "jpg";
-      const path = `${user.id}/${Date.now()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true });
-      if (uploadError) {
-        console.error("[avatar] upload error:", uploadError);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+      const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (!res.ok || !data?.url) {
+        toast.error(data?.error || "Impossible d'enregistrer la photo.");
         return;
       }
-      const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
-      const publicUrl = publicData?.publicUrl;
-      if (!publicUrl) return;
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ avatar_url: publicUrl })
-        .eq("id", user.id);
-      if (updateError) {
-        console.error("[avatar] update profile error:", updateError);
-        return;
-      }
-      setProfile((prev) => ({ ...(prev ?? {}), avatar_url: publicUrl }));
+      setProfile((prev) => ({ ...(prev ?? {}), avatar_url: data.url }));
+      toast.success("Photo enregistrée.");
+    } catch {
+      toast.error("Erreur réseau lors de l'upload.");
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -1892,11 +1883,12 @@ export function ApprenantDashboardClient({
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-xs text-white/45">Photo</span>
+                    <span className="text-xs text-white/45">{isUploadingAvatar ? "…" : "Photo"}</span>
                   )}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={isUploadingAvatar}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
                       if (file) handleAvatarUpload(file);

@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { getPublicShareBaseUrl } from "@/lib/openbadges/urls";
 
-const DEFAULT_COVER =
-  "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1600&q=80";
+const DEFAULT_COVER = "/edge-lab/cover_analyse_comportementale.png";
 
 const slugToDisplayName = (slug: string) =>
   slug
@@ -30,10 +29,10 @@ export async function generateMetadata({
       : (params as { slug: string });
 
   const slug = resolvedParams.slug;
-  const fallbackName = slugToDisplayName(slug) || "Profil Beyond";
+  const fallbackName = slugToDisplayName(slug) || "Profil EDGE";
   let displayName = fallbackName;
-  let displayTitle = "Profil Beyond";
-  let imageUrl = DEFAULT_COVER;
+  let displayTitle = "Profil EDGE";
+  let imageUrl = absoluteUrl(DEFAULT_COVER);
 
   const supabase = await getServiceRoleClientOrFallback();
   if (supabase) {
@@ -74,9 +73,10 @@ export async function generateMetadata({
             reconversion: "Profil en reconversion",
           };
           const rawTypeLabel = String(profileData.type_profil ?? "").trim();
-          displayTitle = typeMap[rawType] || rawTypeLabel || "Profil Beyond";
+          displayTitle = typeMap[rawType] || rawTypeLabel || "Profil EDGE";
           if (profileData.avatar_url) {
-            imageUrl = String(profileData.avatar_url);
+            const avatar = String(profileData.avatar_url).trim();
+            imageUrl = avatar.startsWith("http") ? avatar : absoluteUrl(avatar);
           }
         }
       }
@@ -85,8 +85,9 @@ export async function generateMetadata({
     }
   }
 
-  const title = `${displayName} | Profil Beyond`;
-  const description = `${displayTitle} - Profil public certifie Beyond`;
+  const title = `${displayName} | Profil EDGE`;
+  const description =
+    "Bien plus qu'un CV, découvrez mon profil complet avec EDGE — profil certifié, tests comportementaux et compétences.";
   const canonicalPath = `/p/${slug}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
 
@@ -101,7 +102,7 @@ export async function generateMetadata({
       description,
       type: "profile",
       url: canonicalUrl,
-      siteName: "Beyond",
+      siteName: "EDGE",
       images: [
         {
           url: imageUrl,

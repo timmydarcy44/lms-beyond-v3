@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   Award,
   BadgeCheck,
@@ -15,7 +16,8 @@ import {
 } from "lucide-react";
 import type { PublicProfileEarnedBadge } from "@/lib/openbadges/public-profile-earned-badges";
 import { PublicProfileBadgeOverlay } from "@/components/public-profile/public-profile-badge-overlay";
-import { ProfileSectionTabs } from "@/components/profile/profile-section-tabs";
+import { ProfileSectionStack } from "@/components/profile/profile-section-stack";
+import { sanitizeProfileAnalysisTone } from "@/lib/learner/profile-analysis-tone";
 import {
   ApprenantAssessmentResults,
   type DiscScores,
@@ -28,6 +30,11 @@ const fadeUp = {
   transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
   viewport: { once: true, amount: 0.15 },
 };
+
+const motionPrintSafe = "print:!opacity-100 print:!translate-y-0";
+
+const LINKEDIN_SHARE_INTRO =
+  "Bien plus qu'un CV, découvrez mon profil complet avec EDGE";
 
 type Experience = {
   start: string;
@@ -106,23 +113,126 @@ export function EdgePublicProfileView({
 }: Props) {
   const [selectedBadge, setSelectedBadge] = useState<PublicProfileEarnedBadge | null>(null);
 
+  const sanitizedPresentation = presentation ? sanitizeProfileAnalysisTone(presentation) : "";
+  const sanitizedCorrelatedAnalysis = correlatedAnalysis
+    ? typeof correlatedAnalysis === "string"
+      ? sanitizeProfileAnalysisTone(correlatedAnalysis)
+      : correlatedAnalysis
+    : null;
+
   const nameLine =
     displayFirstName || displayLastName
       ? `${displayFirstName} ${displayLastName ? displayLastName.toUpperCase() : ""}`.trim()
       : displayName;
 
-  return (
-    <div className="min-h-screen bg-[#fafafa] font-['Inter',system-ui,sans-serif] text-[#0a0a0a]">
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-48 bg-gradient-to-b from-[#FF3B30]/[0.07] to-transparent" />
+  const handleLinkedInShare = async () => {
+    const shareText = `${LINKEDIN_SHARE_INTRO}\n\n${publicUrl}`;
+    try {
+      await navigator.clipboard.writeText(shareText);
+      toast.success("Texte de partage copié — collez-le dans votre publication LinkedIn.");
+    } catch {
+      toast.message(LINKEDIN_SHARE_INTRO, { description: publicUrl });
+    }
+    window.open(
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicUrl)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
 
-      <div className="relative mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
+  const handleDownloadPdf = () => {
+    window.print();
+  };
+
+  const competencesSection =
+    stackTools.length === 0 && hardSkillEntries.length === 0 ? (
+      <p className="text-sm text-black/50">Aucune compétence renseignée.</p>
+    ) : (
+      <>
+        {stackTools.length ? (
+          <div className="flex flex-wrap gap-2">
+            {stackTools.map((tool) => (
+              <span
+                key={tool}
+                className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-[#fafafa] px-3 py-1.5 text-xs font-medium"
+              >
+                {toolLogoResolver(tool) ? (
+                  <img src={toolLogoResolver(tool)!} alt="" className="h-4 w-4 object-contain" />
+                ) : null}
+                {tool}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-black/50">Stack technique non renseignée.</p>
+        )}
+        {hardSkillEntries.length ? (
+          <div className={`flex flex-wrap gap-2 ${stackTools.length ? "mt-4" : ""}`}>
+            {hardSkillEntries.map((skill) => (
+              <span
+                key={skill.name}
+                className="rounded-full border border-black/10 bg-[#fafafa] px-3 py-1.5 text-xs font-medium text-black/70"
+              >
+                {skill.name} · {skill.level}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </>
+    );
+
+  const experiencesSection = experiences.length ? (
+    <div className="space-y-4">
+      {experiences.map((exp) => (
+        <div
+          key={`${exp.title}-${exp.company}`}
+          className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
+        >
+          <p className="text-xs text-black/45">
+            {exp.start} — {exp.end}
+          </p>
+          <p className="mt-1 font-medium text-[#0a0a0a]">{exp.title}</p>
+          <p className="text-sm text-black/55">{exp.company}</p>
+          {exp.missions ? <p className="mt-2 text-sm text-black/60">{exp.missions}</p> : null}
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-sm text-black/50">Aucune expérience renseignée.</p>
+  );
+
+  const diplomesSection = diplomas.length ? (
+    <div className="space-y-4">
+      {diplomas.map((dip) => (
+        <div
+          key={`${dip.title}-${dip.school}`}
+          className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
+        >
+          <p className="text-xs text-black/45">{dip.start}</p>
+          <p className="mt-1 font-medium text-[#0a0a0a]">{dip.title}</p>
+          <p className="text-sm text-black/55">{dip.school}</p>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-sm text-black/50">Aucun diplôme renseigné.</p>
+  );
+
+  return (
+    <div
+      id="public-profile-print-root"
+      className="min-h-screen bg-[#fafafa] font-['Inter',system-ui,sans-serif] text-[#0a0a0a] print:bg-white"
+    >
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-48 bg-gradient-to-b from-[#FF3B30]/[0.07] to-transparent print:hidden" />
+
+      <div className="relative mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12 print:max-w-none print:px-6 print:py-4">
         <motion.header
           {...fadeUp}
-          className="mb-8 flex flex-wrap items-center justify-between gap-4"
+          className="mb-8 flex flex-wrap items-center justify-between gap-4 print:hidden"
         >
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-[#FF3B30]">EDGE</p>
-            <p className="mt-0.5 text-xs text-black/45">Profil certifié Beyond</p>
+            <p className="mt-0.5 text-xs text-black/45">Profil certifié EDGE</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -133,17 +243,16 @@ export function EdgePublicProfileView({
               <Share2 className="h-3.5 w-3.5" />
               Copier le lien
             </button>
-            <a
-              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicUrl)}`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => void handleLinkedInShare()}
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-medium text-black/70 shadow-sm hover:border-[#FF3B30]/30"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               LinkedIn
-            </a>
+            </button>
             <a
-              href={`mailto:?subject=Profil EDGE&body=${encodeURIComponent(publicUrl)}`}
+              href={`mailto:?subject=${encodeURIComponent("Profil EDGE")}&body=${encodeURIComponent(`${LINKEDIN_SHARE_INTRO}\n\n${publicUrl}`)}`}
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-medium text-black/70 shadow-sm hover:border-[#FF3B30]/30"
             >
               <Mail className="h-3.5 w-3.5" />
@@ -151,7 +260,8 @@ export function EdgePublicProfileView({
             </a>
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-medium text-black/70 shadow-sm"
+              onClick={handleDownloadPdf}
+              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-medium text-black/70 shadow-sm hover:border-[#FF3B30]/30"
             >
               <Download className="h-3.5 w-3.5" />
               PDF
@@ -159,11 +269,11 @@ export function EdgePublicProfileView({
           </div>
         </motion.header>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-8 lg:grid-cols-[1fr_320px] print:block print:space-y-6">
           <div className="space-y-6">
             <motion.section
               {...fadeUp}
-              className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8"
+              className={`overflow-hidden rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8 ${motionPrintSafe}`}
             >
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
                 {displayAvatar ? (
@@ -229,7 +339,7 @@ export function EdgePublicProfileView({
 
             <motion.section
               {...fadeUp}
-              className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8"
+              className={`rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8 ${motionPrintSafe}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -241,15 +351,15 @@ export function EdgePublicProfileView({
                 <button
                   type="button"
                   onClick={onRegeneratePresentation}
-                  className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-black/60 hover:border-[#FF3B30]/40 hover:text-[#FF3B30]"
+                  className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-black/60 hover:border-[#FF3B30]/40 hover:text-[#FF3B30] print:hidden"
                 >
                   Régénérer
                 </button>
               </div>
               {isLoadingPresentation ? (
                 <p className="mt-4 text-sm text-black/50">Génération en cours…</p>
-              ) : presentation ? (
-                <p className="mt-4 text-sm leading-relaxed text-black/70">{presentation}</p>
+              ) : sanitizedPresentation ? (
+                <p className="mt-4 text-sm leading-relaxed text-black/70">{sanitizedPresentation}</p>
               ) : (
                 <p className="mt-4 text-sm text-black/50">
                   Présentation indisponible pour le moment.
@@ -260,7 +370,7 @@ export function EdgePublicProfileView({
             {showBadges && earnedOpenBadges.length > 0 ? (
               <motion.section
                 {...fadeUp}
-                className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8"
+                className={`rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8 ${motionPrintSafe}`}
               >
                 <div className="mb-4">
                   <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
@@ -298,7 +408,7 @@ export function EdgePublicProfileView({
               </motion.section>
             ) : null}
 
-            <motion.section {...fadeUp}>
+            <motion.section {...fadeUp} className={motionPrintSafe}>
               <div className="mb-4">
                 <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
                   Bilans
@@ -312,7 +422,7 @@ export function EdgePublicProfileView({
                 discScores={discScores}
                 idmcAxes={idmcAxes}
                 softSkillsRadar={softSkillsRadar}
-                correlatedAnalysis={correlatedAnalysis}
+                correlatedAnalysis={sanitizedCorrelatedAnalysis}
               />
             </motion.section>
 
@@ -322,94 +432,16 @@ export function EdgePublicProfileView({
               diplomas.length > 0) && (
               <motion.section
                 {...fadeUp}
-                className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8"
+                className={`rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8 ${motionPrintSafe}`}
               >
                 <h2 className="text-lg font-semibold text-[#0a0a0a]">Profil professionnel</h2>
-                <ProfileSectionTabs
-                  variant="public"
+                <ProfileSectionStack
                   className="mt-5"
-                  competences={
-                    stackTools.length === 0 && hardSkillEntries.length === 0 ? (
-                      <p className="text-sm text-black/50">Aucune compétence renseignée.</p>
-                    ) : (
-                      <>
-                        {stackTools.length ? (
-                          <div className="flex flex-wrap gap-2">
-                            {stackTools.map((tool) => (
-                              <span
-                                key={tool}
-                                className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-[#fafafa] px-3 py-1.5 text-xs font-medium"
-                              >
-                                {toolLogoResolver(tool) ? (
-                                  <img
-                                    src={toolLogoResolver(tool)!}
-                                    alt=""
-                                    className="h-4 w-4 object-contain"
-                                  />
-                                ) : null}
-                                {tool}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-black/50">Stack technique non renseignée.</p>
-                        )}
-                        {hardSkillEntries.length ? (
-                          <div className={`flex flex-wrap gap-2 ${stackTools.length ? "mt-4" : ""}`}>
-                            {hardSkillEntries.map((skill) => (
-                              <span
-                                key={skill.name}
-                                className="rounded-full border border-black/10 bg-[#fafafa] px-3 py-1.5 text-xs font-medium text-black/70"
-                              >
-                                {skill.name} · {skill.level}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                      </>
-                    )
-                  }
-                  experiences={
-                    experiences.length ? (
-                      <div className="space-y-4">
-                        {experiences.map((exp) => (
-                          <div
-                            key={`${exp.title}-${exp.company}`}
-                            className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
-                          >
-                            <p className="text-xs text-black/45">
-                              {exp.start} — {exp.end}
-                            </p>
-                            <p className="mt-1 font-medium text-[#0a0a0a]">{exp.title}</p>
-                            <p className="text-sm text-black/55">{exp.company}</p>
-                            {exp.missions ? (
-                              <p className="mt-2 text-sm text-black/60">{exp.missions}</p>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-black/50">Aucune expérience renseignée.</p>
-                    )
-                  }
-                  diplomes={
-                    diplomas.length ? (
-                      <div className="space-y-4">
-                        {diplomas.map((dip) => (
-                          <div
-                            key={`${dip.title}-${dip.school}`}
-                            className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
-                          >
-                            <p className="text-xs text-black/45">{dip.start}</p>
-                            <p className="mt-1 font-medium text-[#0a0a0a]">{dip.title}</p>
-                            <p className="text-sm text-black/55">{dip.school}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-black/50">Aucun diplôme renseigné.</p>
-                    )
-                  }
+                  sections={[
+                    { id: "competences", label: "Compétences", content: competencesSection },
+                    { id: "experiences", label: "Expériences", content: experiencesSection },
+                    { id: "diplomes", label: "Diplômes", content: diplomesSection },
+                  ]}
                 />
               </motion.section>
             )}
@@ -417,7 +449,7 @@ export function EdgePublicProfileView({
 
           <motion.aside
             {...fadeUp}
-            className="h-fit space-y-4 lg:sticky lg:top-8"
+            className="h-fit space-y-4 lg:sticky lg:top-8 print:hidden"
           >
             <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_12px_48px_rgba(255,59,48,0.08)]">
               <h3 className="text-base font-semibold text-[#0a0a0a]">Je suis recruteur</h3>
@@ -426,17 +458,17 @@ export function EdgePublicProfileView({
               </p>
               <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#FF3B30]/20 bg-[#FF3B30]/5 px-3 py-2 text-xs font-medium text-[#FF3B30]">
                 <BadgeCheck className="h-4 w-4" />
-                Profil vérifié par Beyond
+                Profil vérifié par EDGE
               </div>
               <div className="mt-5 flex flex-col gap-2">
                 <Link
-                  href="/signup"
+                  href="/entreprises/connexion"
                   className="inline-flex w-full items-center justify-center rounded-full bg-[#FF3B30] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
                 >
                   Créer un compte
                 </Link>
                 <Link
-                  href="/login"
+                  href="/entreprises/connexion"
                   className="inline-flex w-full items-center justify-center rounded-full border border-black/12 px-4 py-2.5 text-sm font-semibold text-[#0a0a0a] hover:bg-black/[0.03]"
                 >
                   Me connecter
@@ -450,6 +482,22 @@ export function EdgePublicProfileView({
       {selectedBadge ? (
         <PublicProfileBadgeOverlay badge={selectedBadge} onClose={() => setSelectedBadge(null)} />
       ) : null}
+
+      <style jsx global>{`
+        @media print {
+          @page {
+            margin: 12mm;
+          }
+          body {
+            background: white !important;
+          }
+          #public-profile-print-root section,
+          #public-profile-print-root .rounded-2xl {
+            break-inside: avoid;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

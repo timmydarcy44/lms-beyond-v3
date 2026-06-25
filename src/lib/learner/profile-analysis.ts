@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getOpenAIClient } from "@/lib/ai/openai-client";
 import {
+  PROFILE_ANALYSIS_TONE_PROMPT_LINES,
+  sanitizeProfileAnalysisTone,
+} from "@/lib/learner/profile-analysis-tone";
+import {
   collectLearnerProfileCandidates,
   fetchDiscScoresForCandidates,
   fetchIdmcAxesForCandidates,
@@ -162,9 +166,7 @@ Structure la réponse en français avec exactement ces 3 parties, chacune introd
 (1 paragraphe court)
 
 Contraintes strictes :
-- Ton EDGE : direct, sobre, factuel — jamais sensationnaliste
-- Interdits : remarquable, extraordinaire, unique, sommets, professionnel équilibré, coach de vie, parcours exceptionnel
-- Pas de point d'exclamation
+${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
 - 180 à 260 mots au total
 - Vouvoiement`;
 
@@ -181,7 +183,7 @@ Contraintes strictes :
     temperature: 0.4,
   });
 
-  return response.choices[0]?.message?.content?.trim() || "";
+  return sanitizeProfileAnalysisTone(response.choices[0]?.message?.content?.trim() || "");
 }
 
 export async function loadProfileAnalysisFromDb(

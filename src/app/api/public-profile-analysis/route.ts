@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAIClient } from "@/lib/ai/openai-client";
+import {
+  PROFILE_ANALYSIS_TONE_PROMPT_LINES,
+  sanitizeProfileAnalysisTone,
+} from "@/lib/learner/profile-analysis-tone";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 type PublicAnalysisPayload = {
@@ -61,33 +65,40 @@ export async function POST(request: NextRequest) {
         const cached = parseStoredPublicBio(data?.bio_ai);
         const currentSignature = buildPublicBioContentSignature(body);
         if (cached?.text && cached.contentSignature === currentSignature) {
-          return NextResponse.json({ analysis: cached.text, cached: true });
+          return NextResponse.json({
+            analysis: sanitizeProfileAnalysisTone(cached.text),
+            cached: true,
+          });
         }
       }
     }
 
     const contentSignature = buildPublicBioContentSignature(body);
 
-    const prompt = `Tu es expert en psychologie et en étude comportementale. À la lecture des scores suivants, réalise un profil synthétique (70 à 110 mots) pour présenter ${body.firstName ?? "le candidat"} à un recruteur.
-Priorise l'analyse psychologique et comportementale. Ne répète pas les expériences ou diplômes déjà visibles ailleurs.
-Le ton doit être positif, valorisant et professionnel. Évite toute formulation négative ou dépréciative (ex: "faible", "moyenne", "manque", "absence"). Si une donnée est manquante, formule-le de manière neutre et constructive (ex: "à approfondir").
+    const prompt = `Tu rédiges une synthèse comportementale courte (70 à 110 mots) pour présenter ${body.firstName ?? "le candidat"} à un recruteur.
+Priorise l'analyse psychologique et comportementale (DISC, IDMC, soft skills). Ne répète pas les expériences ou diplômes déjà visibles ailleurs.
 Scores:
 - IDMC: ${body.idmcScore ?? "N/A"}
 - DISC: ${JSON.stringify(body.discScores ?? {})}
 - Top Soft Skills: ${JSON.stringify(body.softSkillsTop ?? [])}
 - Hard skills certifiées: ${JSON.stringify(body.certifiedSkills ?? [])}
-Style sobre, professionnel, sans superlatifs.`;
+
+Contraintes strictes :
+${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
+- Si une donnée est manquante, formule-le de manière neutre (ex. « à approfondir »)`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: "Tu es un recruteur exigeant, style sobre et factuel." },
+        { role: "system", content: "Tu es un analyste EDGE. Tu écris en français, de façon factuelle et sobre, sans formules creuses ni emphase." },
         { role: "user", content: prompt },
       ],
       temperature: 0.4,
     });
 
-    const analysis = response.choices[0]?.message?.content?.trim() || "";
+    const analysis = sanitizeProfileAnalysisTone(
+      response.choices[0]?.message?.content?.trim() || "",
+    );
     if (analysis && body.userId) {
       const supabase = await getServiceRoleClientOrFallback();
       if (supabase) {

@@ -12,18 +12,22 @@ const MINIMAL_SHELL_PATHS = [
   "/entreprises/connexion",
 ];
 
-/** Pages EDGE Lab legacy qui gardent l'ancien shell (navbar blanche). */
-const LEGACY_EDGE_LAB_SHELL_PREFIXES = [
+/**
+ * Chemins (URL navigateur) qui conservent l'ancien shell blanc.
+ * Sur edgebs.fr, le middleware réécrit vers /edge-lab/* mais usePathname() reste
+ * souvent sans le préfixe /edge-lab (ex. /, /tarifs, /apprenants).
+ */
+const LEGACY_SHELL_PATH_PREFIXES = [
   "/edge-lab/parcours",
+  "/parcours",
   "/edge-lab/entreprises",
+  "/entreprises",
   "/edge-lab/edge-online",
+  "/edge-online",
 ];
 
-function needsLegacyShell(pathname: string): boolean {
-  if (!pathname.startsWith("/edge-lab")) {
-    return true;
-  }
-  return LEGACY_EDGE_LAB_SHELL_PREFIXES.some(
+function usesLegacyShell(pathname: string): boolean {
+  return LEGACY_SHELL_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
@@ -35,8 +39,8 @@ export function EdgeLabShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Pages premium (home, marketing) embarquent déjà EdgePremiumShell — pas de double menu.
-  if (pathname.startsWith("/edge-lab") && !needsLegacyShell(pathname)) {
+  // Premium par défaut dans le layout edge-lab : les pages embarquent EdgePremiumShell.
+  if (!usesLegacyShell(pathname)) {
     return <>{children}</>;
   }
 

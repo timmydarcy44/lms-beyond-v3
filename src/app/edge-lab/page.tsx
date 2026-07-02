@@ -1,44 +1,19 @@
 import type { Metadata } from "next";
 
-import { HeroSection } from "@/components/edge-site/hero-section";
-import {
-  EmployabilitySection,
-  EdgeBeyondPartnershipSection,
-  EdgeOnlineTeaserSection,
-  EntreprisesHomeSection,
-  FinalCTASection,
-  OpenBadgeSection,
-  ParcoursPhareDarkSection,
-  ParcoursPhareLightSection,
-  ValidateursSection,
-} from "@/components/edge-site/homepage-sections";
+import { EdgePremiumHome } from "@/components/edge-site/premium/edge-premium-home";
 
 export const metadata: Metadata = {
-  title: "EDGE — École de formation professionnelle certifiante | Normandie",
+  title: "EDGE — Développons les compétences qui feront la différence demain",
   description:
-    "14 parcours certifiants, Open Badge IMS Global. Formez-vous aux méthodes des meilleurs — Normandie.",
+    "EDGE accompagne les apprenants et les organisations avec des formations innovantes, une technologie intelligente et une pédagogie orientée résultats.",
   openGraph: {
-    title: "EDGE Business School",
-    description: "Formation professionnelle certifiante en Normandie.",
+    title: "EDGE — Formation & développement des compétences",
+    description:
+      "Formations, alternance, certifications et solutions entreprise. +25 000 apprenants, 500+ organisations partenaires.",
     type: "website",
   },
 };
 
 export default function EdgeHomePage() {
-  return (
-    <>
-      <HeroSection />
-      <ValidateursSection />
-      <OpenBadgeSection />
-      <EdgeBeyondPartnershipSection />
-      <EmployabilitySection />
-      <ParcoursPhareDarkSection />
-      <ParcoursPhareLightSection />
-      <EntreprisesHomeSection />
-      <EdgeOnlineTeaserSection />
-      <section id="ecole" className="scroll-mt-20" aria-hidden />
-      <section id="a-propos" className="scroll-mt-20" aria-hidden />
-      <FinalCTASection />
-    </>
-  );
+  return <EdgePremiumHome />;
 }

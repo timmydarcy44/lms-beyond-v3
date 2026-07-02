@@ -251,10 +251,14 @@ body.light {
 
 @theme inline {
   --color-edge-red: #ff3b30;
+  --color-edge-accent: #635bff;
+  --color-edge-accent-light: #7b74ff;
   --color-edge-black: #0a0a0a;
+  --color-edge-black-deep: #050505;
   --color-edge-dark: #111110;
   --color-edge-darker: #141412;
   --color-edge-grey: #f5f5f3;
+  --color-edge-cream: #f7f7f5;
   --color-edge-photo: #1a1816;
   --color-edge-photo-light: #e8e4de;
   --color-background: var(--background);

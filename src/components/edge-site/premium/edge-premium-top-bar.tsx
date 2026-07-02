@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { EDGE_MARKETING_ROUTES } from "@/lib/edge-site/marketing-routes";
 
-export function EdgePremiumTopBar() {
+type Props = {
+  solid?: boolean;
+};
+
+export function EdgePremiumTopBar({ solid = false }: Props) {
   return (
-    <div className="relative z-[60] hidden border-b border-white/[0.04] bg-transparent lg:block">
+    <div
+      className={cn(
+        "relative hidden border-b border-white/[0.04] lg:block",
+        solid ? "bg-edge-black-deep" : "bg-transparent",
+      )}
+    >
       <div className="mx-auto flex h-9 max-w-7xl items-center justify-end px-5 sm:px-8 lg:px-10">
         <Link
           href={EDGE_MARKETING_ROUTES.formateursExperts}

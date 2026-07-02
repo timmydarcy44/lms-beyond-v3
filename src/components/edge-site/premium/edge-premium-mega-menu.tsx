@@ -12,7 +12,7 @@ type PanelProps = {
 export function EdgePremiumMegaColumnsPanel({ data, onClose }: PanelProps) {
   return (
     <div
-      className="border-b border-white/[0.06] bg-[#050505]/72 backdrop-blur-2xl"
+      className="border-b border-white/[0.06] bg-edge-black-deep"
       role="menu"
     >
       <div className="mx-auto max-w-7xl px-6 py-10 sm:px-8 lg:px-10 lg:py-12">

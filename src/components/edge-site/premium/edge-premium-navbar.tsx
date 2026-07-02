@@ -75,13 +75,13 @@ function NavDropdown({
 
 type NavbarProps = {
   overlay?: boolean;
+  pageScrolled?: boolean;
 };
 
-export function EdgePremiumNavbar({ overlay = false }: NavbarProps) {
+export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
   const [openMega, setOpenMega] = useState<MegaKey | null>(null);
-  const [scrolled, setScrolled] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -93,13 +93,6 @@ export function EdgePremiumNavbar({ overlay = false }: NavbarProps) {
   const cancelMegaClose = () => {
     if (megaTimer.current) clearTimeout(megaTimer.current);
   };
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -136,7 +129,7 @@ export function EdgePremiumNavbar({ overlay = false }: NavbarProps) {
     setOpenDropdown(null);
   };
 
-  const isSolid = scrolled || openMega !== null || openDropdown !== null || mobileOpen;
+  const isSolid = pageScrolled || openMega !== null || openDropdown !== null || mobileOpen;
 
   return (
     <header
@@ -145,8 +138,8 @@ export function EdgePremiumNavbar({ overlay = false }: NavbarProps) {
         "transition-all duration-300",
         overlay && !isSolid
           ? "border-b border-transparent bg-transparent"
-          : "border-b border-white/[0.06] bg-edge-black-deep/75 backdrop-blur-md",
-        !overlay && "border-b border-white/[0.06] bg-edge-black-deep/75 backdrop-blur-md",
+          : "border-b border-white/[0.06] bg-edge-black-deep",
+        !overlay && "border-b border-white/[0.06] bg-edge-black-deep",
       )}
       onMouseLeave={scheduleMegaClose}
     >
@@ -236,7 +229,7 @@ export function EdgePremiumNavbar({ overlay = false }: NavbarProps) {
       ) : null}
 
       {mobileOpen ? (
-        <div className="border-t border-white/[0.06] bg-edge-black-deep/95 px-5 py-6 backdrop-blur-xl lg:hidden">
+        <div className="border-t border-white/[0.06] bg-edge-black-deep px-5 py-6 lg:hidden">
           <Link
             href={EDGE_MARKETING_ROUTES.formateursExperts}
             className="mb-6 block text-[13px] text-white/45 hover:text-edge-accent"

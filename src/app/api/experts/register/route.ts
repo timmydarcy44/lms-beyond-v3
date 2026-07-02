@@ -1,28 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getExpertRegistrationConfirmationEmail } from "@/lib/emails/templates/expert-registration-confirmation";
+import { sendEmail } from "@/lib/email/resend-client";
+import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
+import { provisionExpertSignup } from "@/lib/expert/provision-expert-signup";
+import { expertSetPasswordUrl, resolveExpertAppOrigin } from "@/lib/expert/signup-redirect";
 import { getServiceRoleClient } from "@/lib/supabase/server";
-import { getResendClient } from "@/lib/email/resend-client";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
-function generateRandomPassword() {
-  // Strong random password (not shown to user). User access is activated after review.
-  const bytes = new Uint8Array(24);
-  globalThis.crypto.getRandomValues(bytes);
-  const base = Buffer.from(bytes).toString("base64url");
-  return `Bc_${base}_!9`;
+function asStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+}
+
+async function generatePasswordSetupLink(
+  supabase: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+  email: string,
+  redirectTo: string,
+): Promise<string | null> {
+  const attempts: Array<"signup" | "magiclink"> = ["signup", "magiclink"];
+  for (const type of attempts) {
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type,
+      email,
+      options: { redirectTo },
+    });
+    if (!error && data?.properties?.action_link) {
+      return data.properties.action_link;
+    }
+  }
+  return null;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("1. Données reçues : lecture JSON...");
     const supabase = getServiceRoleClient();
     if (!supabase) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
     const body = await request.json().catch(() => ({}));
-    console.log("1. Données reçues :", body);
-    console.log("RESEND_API_KEY présent :", Boolean(process.env.RESEND_API_KEY));
-
     const data = body ?? {};
 
     const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
@@ -40,37 +56,115 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Prénom/Nom requis." }, { status: 400 });
     }
 
-    const specialties = Array.isArray(data.specialties) ? data.specialties : null;
-    const formatsSupported = Array.isArray(data.formats_supported) ? data.formats_supported : null;
+    const { data: existingExpert } = await supabase
+      .from("experts")
+      .select("id, review_status, is_active")
+      .eq("email", email)
+      .maybeSingle();
 
-    // 1) Ensure auth.users exists (same id as public.experts.id)
-    console.log("1bis. Création utilisateur Auth (admin)...");
+    if (existingExpert?.review_status === "approved" && existingExpert.is_active === true) {
+      return NextResponse.json(
+        { error: "Un profil expert validé existe déjà avec cet email. Connectez-vous à votre espace." },
+        { status: 409 },
+      );
+    }
+
+    const specialties = asStringArray(data.specialties);
+    const formatsSupported = asStringArray(data.formats_supported);
+    const audiences = asStringArray(data.audiences);
+    const languages = asStringArray(data.languages);
+    const primaryDomain = typeof data.primary_domain === "string" ? data.primary_domain.trim() : "";
+    const secondaryDomains = asStringArray(data.secondary_domains) ?? [];
+    const domains = asStringArray(data.domains) ?? (primaryDomain ? [primaryDomain, ...secondaryDomains] : []);
+    const yearsExperience = typeof data.years_experience === "string" ? data.years_experience.trim() : "";
+
+    const geographicZones =
+      asStringArray(data.geographic_zones) ??
+      (typeof data.geographic_zone === "string" && data.geographic_zone.trim()
+        ? [data.geographic_zone.trim()]
+        : []);
+
+    const availabilities =
+      asStringArray(data.availabilities) ??
+      (typeof data.availability === "string" && data.availability.trim()
+        ? [data.availability.trim()]
+        : []);
+
+    const regions = asStringArray(data.regions) ?? (geographicZones.length > 0 ? geographicZones : null);
+
+    const registrationMeta = [
+      {
+        _type: "edge_registration_meta",
+        status_label: "En attente de validation",
+        primary_domain: primaryDomain || null,
+        secondary_domains: secondaryDomains,
+        domains,
+        audiences: audiences ?? [],
+        years_experience: yearsExperience || null,
+        geographic_zones: geographicZones,
+        languages: languages ?? [],
+        availabilities,
+      },
+    ];
+
     let userId: string | null = null;
-    try {
+    let isNewAuthUser = false;
+
+    const { data: existingAuth, error: existingAuthError } = await supabase.auth.admin.getUserByEmail(email);
+
+    if (existingAuth?.user?.id) {
+      userId = existingAuth.user.id;
+      await supabase.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim(),
+          role_type: "expert",
+          account_type: "expert",
+          signup_source: "edge_expert",
+          origin: "edge",
+          needs_password_setup: true,
+        },
+      });
+    } else {
+      if (existingAuthError && !String(existingAuthError.message).toLowerCase().includes("not found")) {
+        console.warn("[experts/register] getUserByEmail:", existingAuthError);
+      }
+
       const { data: created, error: createError } = await supabase.auth.admin.createUser({
         email,
-        password: generateRandomPassword(),
-        email_confirm: true,
+        email_confirm: false,
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim(),
+          role_type: "expert",
+          account_type: "expert",
+          signup_source: "edge_expert",
+          origin: "edge",
+          needs_password_setup: true,
+        },
       });
-      if (createError) throw createError;
-      userId = created?.user?.id ?? null;
-    } catch (authErr: any) {
-      // If user already exists, reuse its id.
-      try {
-        const { data: existing, error: getErr } = await supabase.auth.admin.getUserByEmail(email);
-        if (getErr) throw getErr;
-        userId = existing?.user?.id ?? null;
-      } catch (getExistingErr) {
-        console.error("[experts/register] Auth admin error:", authErr);
-        throw authErr;
+
+      if (createError || !created?.user?.id) {
+        console.error("[experts/register] createUser error:", createError);
+        return NextResponse.json({ error: createError?.message || "Impossible de créer le compte." }, { status: 500 });
       }
+
+      userId = created.user.id;
+      isNewAuthUser = true;
     }
 
     if (!userId) {
       return NextResponse.json({ error: "Impossible de créer l'utilisateur Auth." }, { status: 500 });
     }
 
-    const base: Record<string, unknown> = {
+    const provision = await provisionExpertSignup(supabase, { userId, email, firstName, lastName });
+    if (!provision.ok) {
+      return NextResponse.json({ error: provision.error }, { status: 500 });
+    }
+
+    const expertPayload: Record<string, unknown> = {
       id: userId,
       email,
       first_name: firstName,
@@ -81,75 +175,69 @@ export async function POST(request: NextRequest) {
       is_active: false,
       specialties,
       formats_supported: formatsSupported,
+      regions,
       review_status: "pending_review",
       wants_certification: wantsCertification,
+      references: registrationMeta,
     };
 
-    // best-effort insert/upsert (schema differences)
-    console.log("2. Tentative insertion DB...");
-    const attempts: Array<{ payload: Record<string, unknown>; onConflict?: string }> = [
-      { payload: base, onConflict: "email" },
-      { payload: base, onConflict: "id" },
-      { payload: { ...base, id: undefined }, onConflict: "email" },
-      { payload: { email, first_name: firstName, last_name: lastName, review_status: "pending_review", wants_certification: wantsCertification } },
-    ];
-
-    let lastErr: any = null;
-    for (const a of attempts) {
-      // eslint-disable-next-line no-await-in-loop
-      const q = a.onConflict ? supabase.from("experts").upsert(a.payload, { onConflict: a.onConflict }) : supabase.from("experts").insert(a.payload);
-      // eslint-disable-next-line no-await-in-loop
-      const { error } = await q;
-      if (!error) {
-        lastErr = null;
-        break;
-      }
-      lastErr = error;
+    const { error: expertError } = await supabase.from("experts").upsert(expertPayload, { onConflict: "id" });
+    if (expertError) {
+      const { error: emailConflictError } = await supabase.from("experts").upsert(expertPayload, { onConflict: "email" });
+      if (emailConflictError) throw emailConflictError;
     }
-    if (lastErr) throw lastErr;
+
+    const origin = resolveExpertAppOrigin(request);
+    const redirectTo = expertSetPasswordUrl(origin);
+    const passwordSetupLink = await generatePasswordSetupLink(supabase, email, redirectTo);
+
+    if (!passwordSetupLink) {
+      return NextResponse.json(
+        { error: "Profil enregistré, mais le lien de création de mot de passe n'a pas pu être généré. Contactez le support." },
+        { status: 500 },
+      );
+    }
+
+    const template = getExpertRegistrationConfirmationEmail({ firstName, passwordSetupLink });
+    const emailResult = await sendEmail({
+      to: email,
+      subject: template.subject,
+      html: template.html,
+      from: EDGE_COCKPIT_FROM,
+    });
 
     revalidatePath("/dashboard/expert");
+    revalidatePath("/admin/experts");
 
-    console.log("3. Tentative envoi email Resend...");
-    try {
-      const resend = await getResendClient();
-      if (!resend) {
-        console.warn("[experts/register] Resend non configuré (RESEND_API_KEY manquant).");
-      } else {
-        const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.55">
-<p>Bonjour,</p>
-<p>Nous avons bien reçu votre candidature. Notre équipe va l'étudier sous 48h. À très vite !</p>
-<p><strong>Accès :</strong> vos accès seront activés après revue de votre profil.</p>
-${wantsCertification ? `<p><strong>Parcours certifiant :</strong> Vous avez choisi le parcours certifiant, vous recevrez les instructions de paiement après validation de votre profil.</p>` : ""}
-</div>`;
-
-        try {
-          await resend.emails.send({
-            from: "Beyond Center <onboarding@resend.dev>",
-            to: [email],
-            subject: "Bienvenue dans le réseau Beyond Center 🚀",
-            html,
-          });
-        } catch (sendError) {
-          console.warn("[experts/register] Resend send failed:", sendError);
-        }
-      }
-    } catch (emailError) {
-      console.warn("[experts/register] Email send crashed:", emailError);
+    if (!emailResult.success) {
+      console.warn("[experts/register] resend error:", emailResult.error);
+      return NextResponse.json({
+        success: true,
+        warning: true,
+        review_status: "pending_review",
+        isNewAuthUser,
+        message:
+          "Votre profil a été enregistré, mais l'email n'a pas pu être envoyé. Contactez le support EDGE.",
+      });
     }
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+    return NextResponse.json({
+      success: true,
+      review_status: "pending_review",
+      isNewAuthUser,
+      message: "Profil enregistré. Consultez votre boîte mail pour créer votre mot de passe.",
+    });
+  } catch (error: unknown) {
+    const err = error as { message?: string; details?: string; hint?: string; code?: string };
     console.error("ERREUR API REGISTER:", error);
     return NextResponse.json(
       {
-        error: error?.message || "Erreur serveur",
-        details: error?.details,
-        hint: error?.hint,
-        code: error?.code,
+        error: err?.message || "Erreur serveur",
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code,
       },
       { status: 500 },
     );
   }
 }
-

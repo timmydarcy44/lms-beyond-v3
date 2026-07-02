@@ -118,36 +118,48 @@ export function getEdgePremiumConfig(host?: string | null) {
     },
     megaBusiness: {
       headerTitle: "Découvrir EDGE Business",
+      headerSubtitle:
+        "Former, développer, recruter et piloter les compétences de vos équipes.",
       headerHref: R.business,
       columns: [
         {
-          title: "Solutions",
+          title: "Former",
           links: [
-            { label: "Former vos équipes", href: R.businessFormations },
-            { label: "Créer une académie interne", href: R.businessAcademie },
+            { label: "Former vos équipes", href: R.businessFormerEquipes },
+            { label: "Catalogue de formations", href: R.businessCatalogue },
+            { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
+            { label: "Présentiel & distanciel", href: R.businessPresentielDistanciel },
+            { label: "Académie interne", href: R.businessAcademie },
+          ],
+        },
+        {
+          title: "Développer",
+          links: [
             { label: "Cartographier les compétences", href: R.businessCompetences },
-            { label: "Recruter des talents", href: R.businessRecrutement },
-            { label: "Piloter la performance", href: R.businessSolutions },
+            { label: "Plans de progression", href: R.businessPlansProgression },
+            { label: "Certifications", href: R.businessCertificationsBiz },
+            { label: "Open Badges", href: R.businessOpenBadges },
+            { label: "Développement des talents", href: R.businessDeveloppementTalents },
           ],
         },
         {
-          title: "Formations",
+          title: "Recruter",
           links: [
-            { label: "Management", href: R.businessFormations },
-            { label: "Vente", href: R.businessFormations },
-            { label: "Communication", href: R.businessFormations },
-            { label: "IA & productivité", href: R.businessFormations },
-            { label: "RH", href: R.businessFormations },
+            { label: "Identifier les talents", href: R.businessIdentifierTalents },
+            { label: "Évaluer les compétences", href: R.businessEvaluerCompetences },
+            { label: "Alternance", href: R.alternance },
+            { label: "Onboarding", href: R.businessOnboarding },
+            { label: "Matching candidats", href: R.businessMatchingCandidats },
           ],
         },
         {
-          title: "Plateforme",
+          title: "Piloter",
           links: [
-            { label: "Parcours blended", href: R.online },
-            { label: "E-learning", href: R.onlineFormations },
-            { label: "Tableaux de bord", href: R.businessCompetences },
-            { label: "Certifications", href: R.certifications },
-            { label: "Open Badges", href: R.certifications },
+            { label: "Tableaux de bord", href: R.businessTableauxDeBord },
+            { label: "Analytics", href: R.businessAnalytics },
+            { label: "Suivi des parcours", href: R.businessSuiviParcours },
+            { label: "ROI formation", href: R.businessRoiFormation },
+            { label: "Aide à la décision", href: R.businessAideDecision },
           ],
         },
         {

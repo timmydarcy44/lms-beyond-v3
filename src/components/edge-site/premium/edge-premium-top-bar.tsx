@@ -1,13 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { EDGE_MARKETING_ROUTES } from "@/lib/edge-site/marketing-routes";
+import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 
 type Props = {
   solid?: boolean;
 };
 
 export function EdgePremiumTopBar({ solid = false }: Props) {
+  const { routes } = useEdgePremiumConfig();
+
   return (
     <div
       className={cn(
@@ -17,7 +21,7 @@ export function EdgePremiumTopBar({ solid = false }: Props) {
     >
       <div className="mx-auto flex h-9 max-w-7xl items-center justify-end px-5 sm:px-8 lg:px-10">
         <Link
-          href={EDGE_MARKETING_ROUTES.formateursExperts}
+          href={routes.formateursExperts}
           className="group inline-flex items-center gap-1.5 text-[13px] text-white/45 transition-colors hover:text-edge-accent"
         >
           <span>Vous êtes formateur ou expert métier ?</span>

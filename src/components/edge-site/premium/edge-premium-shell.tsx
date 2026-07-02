@@ -1,5 +1,6 @@
-import { EdgePremiumFixedHeader } from "@/components/edge-site/premium/edge-premium-fixed-header";
-import { EdgePremiumFooter } from "@/components/edge-site/premium/edge-premium-footer";
+import { headers } from "next/headers";
+import { EdgePremiumShellClient } from "@/components/edge-site/premium/edge-premium-shell-client";
+import { getEdgePremiumConfig } from "@/lib/edge-site/premium-constants";
 
 type Props = {
   children: React.ReactNode;
@@ -7,12 +8,13 @@ type Props = {
   overlayNav?: boolean;
 };
 
-export function EdgePremiumShell({ children, overlayNav = true }: Props) {
+export async function EdgePremiumShell({ children, overlayNav = true }: Props) {
+  const host = (await headers()).get("host");
+  const config = getEdgePremiumConfig(host);
+
   return (
-    <div className="min-h-screen bg-edge-black-deep font-sans antialiased">
-      <EdgePremiumFixedHeader overlayNav={overlayNav} />
-      <main className={overlayNav ? undefined : "pt-16 lg:pt-[100px]"}>{children}</main>
-      <EdgePremiumFooter />
-    </div>
+    <EdgePremiumShellClient config={config} overlayNav={overlayNav}>
+      {children}
+    </EdgePremiumShellClient>
   );
 }

@@ -10,6 +10,11 @@ import {
   shouldRestrictSchoolDashboardToHandicapOnly,
 } from "@/lib/auth/school-role-type-guards";
 import { createServerClient } from "@supabase/ssr";
+import {
+  EDGE_LAB_INTERNAL_PREFIX,
+  isEdgeBsMarketingPublicPath,
+  shouldStripEdgeLabPrefix,
+} from "@/lib/edge-site/edge-marketing-path";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -164,28 +169,15 @@ export async function middleware(request: NextRequest) {
   const tenant = getTenantFromHostname(hostname);
 
   if (edgeBsHost) {
-    const edgeBsPublicPrefixes = [
-      "/parcours",
-      "/edge-online",
-      "/online",
-      "/entreprises",
-      "/tarifs",
-      "/orientation",
-      "/votre-orientation",
-      "/postuler",
-    ] as const;
-    const isEdgeBsMarketingPath =
-      url.pathname === "/" ||
-      edgeBsPublicPrefixes.some(
-        (prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`),
-      );
-    if (isEdgeBsMarketingPath) {
-      const rewriteUrl = request.nextUrl.clone();
-      rewriteUrl.pathname = url.pathname === "/" ? "/edge-lab" : `/edge-lab${url.pathname}`;
-      return NextResponse.rewrite(rewriteUrl);
+    if (url.pathname === EDGE_LAB_INTERNAL_PREFIX || url.pathname === `${EDGE_LAB_INTERNAL_PREFIX}/`) {
+      return NextResponse.redirect(new URL("/", request.url), 301);
     }
 
-    // Catalogue EDGE Online sur edgebs.fr : URLs courtes /formations → surface /edgeonline
+    if (shouldStripEdgeLabPrefix(url.pathname)) {
+      const stripped = url.pathname.slice(EDGE_LAB_INTERNAL_PREFIX.length) || "/";
+      return NextResponse.redirect(new URL(`${stripped}${url.search}`, request.url), 301);
+    }
+
     const isEdgeBsOnlineCatalogPath =
       url.pathname === "/edgeonline" ||
       url.pathname.startsWith("/edgeonline/") ||
@@ -206,6 +198,12 @@ export async function middleware(request: NextRequest) {
         rewriteUrl.pathname = `/edgeonline${url.pathname}`.replace(/\/{2,}/g, "/");
       }
       return NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
+    }
+
+    if (url.pathname === "/" || isEdgeBsMarketingPublicPath(url.pathname)) {
+      const rewriteUrl = request.nextUrl.clone();
+      rewriteUrl.pathname = url.pathname === "/" ? "/edge-lab" : `/edge-lab${url.pathname}`;
+      return NextResponse.rewrite(rewriteUrl);
     }
   }
 

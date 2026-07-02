@@ -1,34 +1,39 @@
+"use client";
+
 import Image from "next/image";
 import { ArrowRight, Briefcase, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { EDGE_PREMIUM_IMAGES, EDGE_PREMIUM_LINKS } from "@/lib/edge-site/premium-constants";
-
-const CARDS = [
-  {
-    title: "Apprenants",
-    description:
-      "Trouvez votre formation, développez vos compétences et construisez votre avenir.",
-    cta: "Découvrir l'univers apprenants",
-    href: EDGE_PREMIUM_LINKS.apprenants,
-    image: EDGE_PREMIUM_IMAGES.apprenants,
-    alt: "Jeune apprenante avec un sac à dos",
-    icon: GraduationCap,
-    gradient: "from-[#1e1648]/75 via-[#0e0c18]/88 to-[#050505]",
-  },
-  {
-    title: "Business",
-    description: "Formez vos équipes, développez les compétences et pilotez la performance.",
-    cta: "Découvrir l'univers business",
-    href: EDGE_PREMIUM_LINKS.business,
-    image: EDGE_PREMIUM_IMAGES.business,
-    alt: "Dirigeant ou manager en entreprise",
-    icon: Briefcase,
-    gradient: "from-[#0d1a3a]/75 via-[#080c16]/88 to-[#050505]",
-  },
-] as const;
+import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
+import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
 
 export function EdgePremiumAudience() {
+  const { links } = useEdgePremiumConfig();
+
+  const cards = [
+    {
+      title: "Apprenants",
+      description:
+        "Trouvez votre formation, développez vos compétences et construisez votre avenir.",
+      cta: "Découvrir l'univers apprenants",
+      href: links.apprenants,
+      image: EDGE_PREMIUM_IMAGES.apprenants,
+      alt: "Jeune apprenante avec un sac à dos",
+      icon: GraduationCap,
+      gradient: "from-[#1e1648]/75 via-[#0e0c18]/88 to-[#050505]",
+    },
+    {
+      title: "Business",
+      description: "Formez vos équipes, développez les compétences et pilotez la performance.",
+      cta: "Découvrir l'univers business",
+      href: links.business,
+      image: EDGE_PREMIUM_IMAGES.business,
+      alt: "Dirigeant ou manager en entreprise",
+      icon: Briefcase,
+      gradient: "from-[#0d1a3a]/75 via-[#080c16]/88 to-[#050505]",
+    },
+  ] as const;
+
   return (
     <section className="bg-edge-black-deep py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
@@ -40,7 +45,7 @@ export function EdgePremiumAudience() {
         </h2>
 
         <div className="mt-12 grid gap-5 lg:grid-cols-2">
-          {CARDS.map((card) => (
+          {cards.map((card) => (
             <article
               key={card.title}
               className="group relative isolate min-h-[360px] overflow-hidden rounded-[28px] border border-white/[0.07] transition-[border-color,box-shadow] duration-300 hover:border-white/[0.14] hover:shadow-[0_16px_48px_rgba(99,91,255,0.08)] sm:min-h-[400px]"

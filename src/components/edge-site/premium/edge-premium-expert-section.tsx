@@ -1,7 +1,11 @@
+"use client";
+
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
-import { EDGE_MARKETING_ROUTES } from "@/lib/edge-site/marketing-routes";
+import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 
 export function EdgePremiumExpertSection() {
+  const { links } = useEdgePremiumConfig();
+
   return (
     <section className="border-y border-black/[0.06] bg-edge-cream py-16 sm:py-20">
       <div className="mx-auto max-w-3xl px-5 text-center sm:px-8">
@@ -13,7 +17,7 @@ export function EdgePremiumExpertSection() {
           les compétences qui font la différence.
         </p>
         <div className="mt-8">
-          <EdgePremiumButton href={EDGE_MARKETING_ROUTES.expertSignup} variant="primary" showArrow shape="revolut">
+          <EdgePremiumButton href={links.expertSignup} variant="primary" showArrow shape="revolut">
             Devenir formateur / expert
           </EdgePremiumButton>
         </div>

@@ -1,7 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { EDGE_HREFS } from "@/lib/edge-site/constants";
+import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EDGE_LOGO_PATH } from "@/lib/edge-site/premium-constants";
 
 type Props = {
@@ -9,10 +11,13 @@ type Props = {
   href?: string;
 };
 
-export function EdgePremiumLogo({ className, href = EDGE_HREFS.home }: Props) {
+export function EdgePremiumLogo({ className, href }: Props) {
+  const { links } = useEdgePremiumConfig();
+  const homeHref = href ?? links.home;
+
   return (
     <Link
-      href={href}
+      href={homeHref}
       className={cn("inline-flex shrink-0 items-center", className)}
       aria-label="EDGE — Accueil"
     >

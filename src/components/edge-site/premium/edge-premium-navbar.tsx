@@ -4,13 +4,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import {
-  EDGE_MEGA_APPRENANTS,
-  EDGE_MEGA_BUSINESS,
-  EDGE_PREMIUM_LINKS,
-  EDGE_PREMIUM_NAV,
-} from "@/lib/edge-site/premium-constants";
-import { EDGE_MARKETING_ROUTES } from "@/lib/edge-site/marketing-routes";
+import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 import { EdgePremiumLogo } from "@/components/edge-site/premium/edge-premium-logo";
 import {
@@ -79,6 +73,7 @@ type NavbarProps = {
 };
 
 export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: NavbarProps) {
+  const { links, nav, megaApprenants, megaBusiness, routes } = useEdgePremiumConfig();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
   const [openMega, setOpenMega] = useState<MegaKey | null>(null);
@@ -159,7 +154,7 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
           />
           <NavDropdown
             label="Fonctionnalités"
-            items={EDGE_PREMIUM_NAV.fonctionnalites}
+            items={nav.fonctionnalites}
             open={openDropdown === "fonctionnalites"}
             scrolled={isSolid}
             onToggle={() => {
@@ -170,7 +165,7 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
           />
           <NavDropdown
             label="Ressources"
-            items={EDGE_PREMIUM_NAV.ressources}
+            items={nav.ressources}
             open={openDropdown === "ressources"}
             scrolled={isSolid}
             onToggle={() => {
@@ -180,7 +175,7 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
             onClose={() => setOpenDropdown(null)}
           />
           <Link
-            href={EDGE_PREMIUM_LINKS.tarifs}
+            href={links.tarifs}
             className="px-2.5 py-2 text-sm font-medium text-white/60 transition-colors hover:text-white xl:px-3"
           >
             Tarifs
@@ -189,13 +184,13 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
 
         <div className="hidden items-center gap-4 lg:flex xl:gap-5">
           <Link
-            href={EDGE_PREMIUM_LINKS.login}
+            href={links.login}
             className="text-sm font-medium text-white/60 transition-colors hover:text-white"
           >
             Connexion
           </Link>
           <EdgePremiumButton
-            href={EDGE_PREMIUM_LINKS.decouvrirEdge}
+            href={links.decouvrirEdge}
             variant="white"
             shape="revolut"
             className="!px-5 !py-2.5 !text-sm"
@@ -222,7 +217,7 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
       {openMega ? (
         <div className="hidden lg:block" onMouseEnter={cancelMegaClose}>
           <EdgePremiumMegaColumnsPanel
-            data={openMega === "apprenants" ? EDGE_MEGA_APPRENANTS : EDGE_MEGA_BUSINESS}
+            data={openMega === "apprenants" ? megaApprenants : megaBusiness}
             onClose={() => setOpenMega(null)}
           />
         </div>
@@ -231,7 +226,7 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
       {mobileOpen ? (
         <div className="border-t border-white/[0.06] bg-edge-black-deep px-5 py-6 lg:hidden">
           <Link
-            href={EDGE_MARKETING_ROUTES.formateursExperts}
+            href={routes.formateursExperts}
             className="mb-6 block text-[13px] text-white/45 hover:text-edge-accent"
             onClick={closeAll}
           >
@@ -240,8 +235,8 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
 
           {(
             [
-              ["Apprenants", EDGE_MEGA_APPRENANTS],
-              ["Business", EDGE_MEGA_BUSINESS],
+              ["Apprenants", megaApprenants],
+              ["Business", megaBusiness],
             ] as const
           ).map(([label, data]) => (
             <div key={label} className="mb-6">
@@ -266,7 +261,7 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
 
           <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-white/30">Fonctionnalités</p>
           <div className="mt-2 space-y-1">
-            {EDGE_PREMIUM_NAV.fonctionnalites.map((item) => (
+            {nav.fonctionnalites.map((item) => (
               <Link key={item.label} href={item.href} className="block rounded-xl px-3 py-2 text-sm text-white/70" onClick={closeAll}>
                 {item.label}
               </Link>
@@ -275,22 +270,22 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
 
           <p className="mt-6 text-[10px] uppercase tracking-[0.2em] text-white/30">Ressources</p>
           <div className="mt-2 space-y-1">
-            {EDGE_PREMIUM_NAV.ressources.map((item) => (
+            {nav.ressources.map((item) => (
               <Link key={item.label} href={item.href} className="block rounded-xl px-3 py-2 text-sm text-white/70" onClick={closeAll}>
                 {item.label}
               </Link>
             ))}
           </div>
 
-          <Link href={EDGE_PREMIUM_LINKS.tarifs} className="mt-4 block rounded-xl px-3 py-2 text-sm font-medium text-white/70" onClick={closeAll}>
+          <Link href={links.tarifs} className="mt-4 block rounded-xl px-3 py-2 text-sm font-medium text-white/70" onClick={closeAll}>
             Tarifs
           </Link>
 
           <div className="mt-8 flex flex-col gap-3 border-t border-white/[0.06] pt-6">
-            <Link href={EDGE_PREMIUM_LINKS.login} className="text-center text-sm text-white/60" onClick={closeAll}>
+            <Link href={links.login} className="text-center text-sm text-white/60" onClick={closeAll}>
               Connexion
             </Link>
-            <EdgePremiumButton href={EDGE_PREMIUM_LINKS.decouvrirEdge} variant="white" shape="revolut" className="w-full">
+            <EdgePremiumButton href={links.decouvrirEdge} variant="white" shape="revolut" className="w-full">
               Découvrir EDGE
             </EdgePremiumButton>
           </div>

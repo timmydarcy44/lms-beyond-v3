@@ -1,48 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Instagram, Linkedin, Youtube } from "lucide-react";
 import { EdgePremiumLogo } from "@/components/edge-site/premium/edge-premium-logo";
-import { EDGE_MARKETING_ROUTES as R } from "@/lib/edge-site/marketing-routes";
-
-const FOOTER_COLUMNS = [
-  {
-    title: "Apprenants",
-    links: [
-      { label: "Formations", href: R.formations },
-      { label: "Alternance", href: R.alternance },
-      { label: "Admissions", href: R.admissions },
-      { label: "Vie étudiante", href: R.vieEtudiante },
-      { label: "Financement", href: R.financement },
-    ],
-  },
-  {
-    title: "Business",
-    links: [
-      { label: "Solutions", href: R.businessSolutions },
-      { label: "Cas clients", href: R.businessCasClients },
-      { label: "Ressources", href: R.ressources },
-      { label: "Tarifs", href: R.tarifs },
-      { label: "Démo", href: R.businessDemo },
-    ],
-  },
-  {
-    title: "Ressources",
-    links: [
-      { label: "Blog", href: R.blog },
-      { label: "Guides", href: R.guides },
-      { label: "Webinaires", href: R.webinaires },
-      { label: "Formateurs / Experts", href: R.formateursExperts },
-    ],
-  },
-  {
-    title: "À propos",
-    links: [
-      { label: "Notre mission", href: R.notreMission },
-      { label: "Qui sommes-nous ?", href: R.aPropos },
-      { label: "Contact", href: R.contact },
-      { label: "Découvrir EDGE", href: R.decouvrir },
-    ],
-  },
-] as const;
+import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 
 const SOCIAL = [
   { label: "LinkedIn", href: "#", icon: Linkedin },
@@ -51,6 +12,50 @@ const SOCIAL = [
 ] as const;
 
 export function EdgePremiumFooter() {
+  const { routes } = useEdgePremiumConfig();
+  const R = routes;
+
+  const footerColumns = [
+    {
+      title: "Apprenants",
+      links: [
+        { label: "Formations", href: R.formations },
+        { label: "Alternance", href: R.alternance },
+        { label: "Admissions", href: R.admissions },
+        { label: "Vie étudiante", href: R.vieEtudiante },
+        { label: "Financement", href: R.financement },
+      ],
+    },
+    {
+      title: "Business",
+      links: [
+        { label: "Solutions", href: R.businessSolutions },
+        { label: "Cas clients", href: R.businessCasClients },
+        { label: "Ressources", href: R.ressources },
+        { label: "Tarifs", href: R.tarifs },
+        { label: "Démo", href: R.businessDemo },
+      ],
+    },
+    {
+      title: "Ressources",
+      links: [
+        { label: "Blog", href: R.blog },
+        { label: "Guides", href: R.guides },
+        { label: "Webinaires", href: R.webinaires },
+        { label: "Formateurs / Experts", href: R.formateursExperts },
+      ],
+    },
+    {
+      title: "À propos",
+      links: [
+        { label: "Notre mission", href: R.notreMission },
+        { label: "Qui sommes-nous ?", href: R.aPropos },
+        { label: "Contact", href: R.contact },
+        { label: "Découvrir EDGE", href: R.decouvrir },
+      ],
+    },
+  ] as const;
+
   return (
     <footer id="contact" className="border-t border-white/[0.06] bg-edge-black-deep px-5 py-16 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
@@ -75,7 +80,7 @@ export function EdgePremiumFooter() {
           </div>
 
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-            {FOOTER_COLUMNS.map((col) => (
+            {footerColumns.map((col) => (
               <div key={col.title}>
                 <p className="text-sm font-medium text-white">{col.title}</p>
                 <ul className="mt-4 space-y-2.5">

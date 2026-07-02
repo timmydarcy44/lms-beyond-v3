@@ -1,4 +1,4 @@
-import { EDGE_MARKETING_ROUTES as R } from "@/lib/edge-site/marketing-routes";
+import { getEdgeMarketingRoutes, type EdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
 
 /** Logo navbar / footer — asset local public. */
@@ -38,126 +38,147 @@ export const EDGE_PREMIUM_LOGOS = [
   "AIRBUS",
 ] as const;
 
-export const EDGE_PREMIUM_LINKS = {
-  apprenants: R.apprenants,
-  business: R.business,
-  tarifs: R.tarifs,
-  login: R.login,
-  contact: R.contact,
-  demo: R.businessDemo,
-  formations: R.formations,
-  conseiller: R.contact,
-  decouvrirEdge: R.decouvrir,
-  expertSignup: R.expertSignup,
-  expertDashboard: R.expertDashboard,
-  formateursExperts: R.formateursExperts,
-} as const;
+export function getEdgePremiumConfig(host?: string | null) {
+  const R = getEdgeMarketingRoutes(host);
 
-export const EDGE_PREMIUM_NAV = {
-  fonctionnalites: [
-    { label: "Formations & parcours", href: R.formations },
-    { label: "Alternance", href: R.alternance },
-    { label: "Certifications", href: R.certifications },
-    { label: "Formations en ligne", href: R.online },
-  ],
-  ressources: [
-    { label: "Blog", href: R.blog },
-    { label: "Guides", href: R.guides },
-    { label: "Webinaires", href: R.webinaires },
-    { label: "FAQ", href: R.contact },
-  ],
-} as const;
-
-export const EDGE_MEGA_APPRENANTS = {
-  headerTitle: "Découvrir EDGE Apprenants",
-  headerHref: R.apprenants,
-  columns: [
-    {
-      title: "Formations",
-      links: [
-        { label: "BTS", href: R.formationsBts },
-        { label: "Bachelor", href: R.formationsBachelor },
-        { label: "Mastère", href: R.formationsMastere },
-        { label: "Formations en ligne", href: R.onlineFormations },
-        { label: "Bootcamps", href: R.onlineBootcamps },
-      ],
+  return {
+    links: {
+      apprenants: R.apprenants,
+      business: R.business,
+      tarifs: R.tarifs,
+      login: R.login,
+      contact: R.contact,
+      demo: R.businessDemo,
+      formations: R.formations,
+      conseiller: R.contact,
+      decouvrirEdge: R.decouvrir,
+      expertSignup: R.expertSignup,
+      expertDashboard: R.expertDashboard,
+      formateursExperts: R.formateursExperts,
+      home: R.home,
     },
-    {
-      title: "Parcours",
-      links: [
+    nav: {
+      fonctionnalites: [
+        { label: "Formations & parcours", href: R.formations },
         { label: "Alternance", href: R.alternance },
-        { label: "Formation initiale", href: R.formations },
-        { label: "Formation continue", href: R.onlineFormations },
-        { label: "Admissions", href: R.admissions },
-        { label: "Financement", href: R.financement },
-      ],
-    },
-    {
-      title: "Réussir",
-      links: [
-        { label: "Accompagnement personnalisé", href: R.apprenants },
-        { label: "Vie étudiante", href: R.vieEtudiante },
-        { label: "Entreprises partenaires", href: R.apprenants },
-        { label: "Débouchés", href: R.apprenants },
         { label: "Certifications", href: R.certifications },
+        { label: "Formations en ligne", href: R.online },
+      ],
+      ressources: [
+        { label: "Blog", href: R.blog },
+        { label: "Guides", href: R.guides },
+        { label: "Webinaires", href: R.webinaires },
+        { label: "FAQ", href: R.contact },
       ],
     },
-    {
-      title: "Aide",
-      links: [
-        { label: "Trouver ma formation", href: R.formations },
-        { label: "Prendre rendez-vous", href: R.contact },
-        { label: "FAQ admissions", href: R.admissions },
-        { label: "Contact", href: R.contact },
+    megaApprenants: {
+      headerTitle: "Découvrir EDGE Apprenants",
+      headerHref: R.apprenants,
+      columns: [
+        {
+          title: "Formations",
+          links: [
+            { label: "BTS", href: R.formationsBts },
+            { label: "Bachelor", href: R.formationsBachelor },
+            { label: "Mastère", href: R.formationsMastere },
+            { label: "Formations en ligne", href: R.onlineFormations },
+            { label: "Bootcamps", href: R.onlineBootcamps },
+          ],
+        },
+        {
+          title: "Parcours",
+          links: [
+            { label: "Alternance", href: R.alternance },
+            { label: "Formation initiale", href: R.formations },
+            { label: "Formation continue", href: R.onlineFormations },
+            { label: "Admissions", href: R.admissions },
+            { label: "Financement", href: R.financement },
+          ],
+        },
+        {
+          title: "Réussir",
+          links: [
+            { label: "Accompagnement personnalisé", href: R.apprenants },
+            { label: "Vie étudiante", href: R.vieEtudiante },
+            { label: "Entreprises partenaires", href: R.apprenants },
+            { label: "Débouchés", href: R.apprenants },
+            { label: "Certifications", href: R.certifications },
+          ],
+        },
+        {
+          title: "Aide",
+          links: [
+            { label: "Trouver ma formation", href: R.formations },
+            { label: "Prendre rendez-vous", href: R.contact },
+            { label: "FAQ admissions", href: R.admissions },
+            { label: "Contact", href: R.contact },
+          ],
+        },
       ],
     },
-  ],
-} as const;
+    megaBusiness: {
+      headerTitle: "Découvrir EDGE Business",
+      headerHref: R.business,
+      columns: [
+        {
+          title: "Solutions",
+          links: [
+            { label: "Former vos équipes", href: R.businessFormations },
+            { label: "Créer une académie interne", href: R.businessAcademie },
+            { label: "Cartographier les compétences", href: R.businessCompetences },
+            { label: "Recruter des talents", href: R.businessRecrutement },
+            { label: "Piloter la performance", href: R.businessSolutions },
+          ],
+        },
+        {
+          title: "Formations",
+          links: [
+            { label: "Management", href: R.businessFormations },
+            { label: "Vente", href: R.businessFormations },
+            { label: "Communication", href: R.businessFormations },
+            { label: "IA & productivité", href: R.businessFormations },
+            { label: "RH", href: R.businessFormations },
+          ],
+        },
+        {
+          title: "Plateforme",
+          links: [
+            { label: "Parcours blended", href: R.online },
+            { label: "E-learning", href: R.onlineFormations },
+            { label: "Tableaux de bord", href: R.businessCompetences },
+            { label: "Certifications", href: R.certifications },
+            { label: "Open Badges", href: R.certifications },
+          ],
+        },
+        {
+          title: "Aide",
+          links: [
+            { label: "Demander une démo", href: R.businessDemo },
+            { label: "Parler à un conseiller", href: R.contact },
+            { label: "Cas clients", href: R.businessCasClients },
+            { label: "Tarifs", href: R.tarifs },
+          ],
+        },
+      ],
+    },
+    routes: R,
+  };
+}
 
-export const EDGE_MEGA_BUSINESS = {
-  headerTitle: "Découvrir EDGE Business",
-  headerHref: R.business,
-  columns: [
-    {
-      title: "Solutions",
-      links: [
-        { label: "Former vos équipes", href: R.businessFormations },
-        { label: "Créer une académie interne", href: R.businessAcademie },
-        { label: "Cartographier les compétences", href: R.businessCompetences },
-        { label: "Recruter des talents", href: R.businessRecrutement },
-        { label: "Piloter la performance", href: R.businessSolutions },
-      ],
-    },
-    {
-      title: "Formations",
-      links: [
-        { label: "Management", href: R.businessFormations },
-        { label: "Vente", href: R.businessFormations },
-        { label: "Communication", href: R.businessFormations },
-        { label: "IA & productivité", href: R.businessFormations },
-        { label: "RH", href: R.businessFormations },
-      ],
-    },
-    {
-      title: "Plateforme",
-      links: [
-        { label: "Parcours blended", href: R.online },
-        { label: "E-learning", href: R.onlineFormations },
-        { label: "Tableaux de bord", href: R.businessCompetences },
-        { label: "Certifications", href: R.certifications },
-        { label: "Open Badges", href: R.certifications },
-      ],
-    },
-    {
-      title: "Aide",
-      links: [
-        { label: "Demander une démo", href: R.businessDemo },
-        { label: "Parler à un conseiller", href: R.contact },
-        { label: "Cas clients", href: R.businessCasClients },
-        { label: "Tarifs", href: R.tarifs },
-      ],
-    },
-  ],
-} as const;
+export type EdgePremiumConfig = ReturnType<typeof getEdgePremiumConfig>;
 
-export type EdgeMegaColumnsData = typeof EDGE_MEGA_APPRENANTS | typeof EDGE_MEGA_BUSINESS;
+const DEFAULT_CONFIG = getEdgePremiumConfig(null);
+
+export const EDGE_PREMIUM_LINKS = DEFAULT_CONFIG.links;
+
+export const EDGE_PREMIUM_NAV = DEFAULT_CONFIG.nav;
+
+export const EDGE_MEGA_APPRENANTS = DEFAULT_CONFIG.megaApprenants;
+
+export const EDGE_MEGA_BUSINESS = DEFAULT_CONFIG.megaBusiness;
+
+export type EdgeMegaColumnsData =
+  | EdgePremiumConfig["megaApprenants"]
+  | EdgePremiumConfig["megaBusiness"];
+
+export type { EdgeMarketingRoutes };

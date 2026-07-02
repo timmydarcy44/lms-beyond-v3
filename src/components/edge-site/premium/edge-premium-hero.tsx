@@ -1,20 +1,17 @@
+"use client";
+
 import Image from "next/image";
 
+import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 
 import {
-
   EDGE_PREMIUM_AVATARS,
-
   EDGE_PREMIUM_IMAGES,
-
-  EDGE_PREMIUM_LINKS,
-
 } from "@/lib/edge-site/premium-constants";
 
-
-
 export function EdgePremiumHero() {
+  const { links } = useEdgePremiumConfig();
 
   return (
 
@@ -102,7 +99,7 @@ export function EdgePremiumHero() {
 
             <EdgePremiumButton
 
-              href={EDGE_PREMIUM_LINKS.formations}
+              href={links.formations}
 
               showArrow
 
@@ -114,7 +111,7 @@ export function EdgePremiumHero() {
 
             </EdgePremiumButton>
 
-            <EdgePremiumButton href={EDGE_PREMIUM_LINKS.conseiller} variant="secondary-dark">
+            <EdgePremiumButton href={links.conseiller} variant="secondary-dark">
 
               Parler à un conseiller
 

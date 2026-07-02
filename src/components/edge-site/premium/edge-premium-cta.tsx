@@ -1,7 +1,11 @@
+"use client";
+
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
-import { EDGE_PREMIUM_LINKS } from "@/lib/edge-site/premium-constants";
+import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 
 export function EdgePremiumCta() {
+  const { links } = useEdgePremiumConfig();
+
   return (
     <section className="bg-edge-cream pb-20 sm:pb-28">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
@@ -12,10 +16,10 @@ export function EdgePremiumCta() {
             ou celui de vos équipes ?
           </h2>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <EdgePremiumButton href={EDGE_PREMIUM_LINKS.contact} variant="white" shape="revolut">
+            <EdgePremiumButton href={links.contact} variant="white" shape="revolut">
               Nous contacter
             </EdgePremiumButton>
-            <EdgePremiumButton href={EDGE_PREMIUM_LINKS.demo} variant="outline-white" shape="revolut">
+            <EdgePremiumButton href={links.demo} variant="outline-white" shape="revolut">
               Demander une démo
             </EdgePremiumButton>
           </div>

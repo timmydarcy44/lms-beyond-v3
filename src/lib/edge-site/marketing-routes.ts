@@ -1,45 +1,67 @@
-import { EDGE_SITE_BASE } from "@/lib/edge-site/constants";
+import { edgeLinkBase, edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 
-const B = EDGE_SITE_BASE;
-
-/** Routes marketing EDGE (préfixées /edge-lab en local, racine sur edgebs.fr si rewrite). */
-export const EDGE_MARKETING_ROUTES = {
-  home: B,
-  decouvrir: `${B}#decouvrir-edge`,
-  apprenants: `${B}/apprenants`,
-  formations: `${B}/formations`,
-  formationsBts: `${B}/formations/bts`,
-  formationsBachelor: `${B}/formations/bachelor`,
-  formationsMastere: `${B}/formations/mastere`,
-  alternance: `${B}/alternance`,
-  admissions: `${B}/admissions`,
-  financement: `${B}/financement`,
-  vieEtudiante: `${B}/vie-etudiante`,
-  certifications: `${B}/certifications`,
-  business: `${B}/business`,
-  businessSolutions: `${B}/business/solutions`,
-  businessFormations: `${B}/business/formations-entreprises`,
-  businessAcademie: `${B}/business/academie-interne`,
-  businessCompetences: `${B}/business/gestion-competences`,
-  businessRecrutement: `${B}/business/recrutement`,
-  businessCasClients: `${B}/business/cas-clients`,
-  businessDemo: `${B}/business/demo`,
-  online: `${B}/online`,
-  onlineFormations: `${B}/online/formations`,
-  onlineBootcamps: `${B}/online/bootcamps`,
-  onlineCertifications: `${B}/online/certifications`,
-  formateursExperts: `${B}/formateurs-experts`,
+/** Segments URL marketing (sans préfixe /edge-lab). */
+export const EDGE_MARKETING_PATHS = {
+  home: "/",
+  decouvrir: "/#decouvrir-edge",
+  apprenants: "/apprenants",
+  formations: "/formations",
+  formationsBts: "/formations/bts",
+  formationsBachelor: "/formations/bachelor",
+  formationsMastere: "/formations/mastere",
+  alternance: "/alternance",
+  admissions: "/admissions",
+  financement: "/financement",
+  vieEtudiante: "/vie-etudiante",
+  certifications: "/certifications",
+  business: "/business",
+  businessSolutions: "/business/solutions",
+  businessFormations: "/business/formations-entreprises",
+  businessAcademie: "/business/academie-interne",
+  businessCompetences: "/business/gestion-competences",
+  businessRecrutement: "/business/recrutement",
+  businessCasClients: "/business/cas-clients",
+  businessDemo: "/business/demo",
+  online: "/online",
+  onlineFormations: "/online/formations",
+  onlineBootcamps: "/online/bootcamps",
+  onlineCertifications: "/online/certifications",
+  formateursExperts: "/formateurs-experts",
   expertSignup: "/signup/expert",
   expertDashboard: "/dashboard/expert",
-  aPropos: `${B}/a-propos`,
-  notreMission: `${B}/notre-mission`,
-  ressources: `${B}/ressources`,
-  blog: `${B}/blog`,
-  guides: `${B}/guides`,
-  webinaires: `${B}/webinaires`,
-  tarifs: `${B}/tarifs`,
-  contact: `${B}/contact`,
+  aPropos: "/a-propos",
+  notreMission: "/notre-mission",
+  ressources: "/ressources",
+  blog: "/blog",
+  guides: "/guides",
+  webinaires: "/webinaires",
+  tarifs: "/tarifs",
+  contact: "/contact",
   login: "/login",
-  parcours: `${B}/parcours`,
-  entreprises: `${B}/entreprises`,
+  parcours: "/parcours",
+  entreprises: "/entreprises",
 } as const;
+
+export type EdgeMarketingRoutes = {
+  [K in keyof typeof EDGE_MARKETING_PATHS]: string;
+};
+
+export function getEdgeMarketingRoutes(host?: string | null): EdgeMarketingRoutes {
+  const base = edgeLinkBase(host);
+  const mapPath = (path: string) => {
+    if (!path.startsWith("/")) return path;
+    if (path.includes("#")) {
+      const [pathname, hash] = path.split("#");
+      const href = edgeMarketingHref(pathname || "/", host);
+      return `${href}#${hash}`;
+    }
+    return edgeMarketingHref(path, host);
+  };
+
+  return Object.fromEntries(
+    Object.entries(EDGE_MARKETING_PATHS).map(([key, path]) => [key, mapPath(path)]),
+  ) as EdgeMarketingRoutes;
+}
+
+/** Liens par défaut (dev local avec préfixe /edge-lab). */
+export const EDGE_MARKETING_ROUTES = getEdgeMarketingRoutes(null);

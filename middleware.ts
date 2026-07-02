@@ -10,11 +10,7 @@ import {
   shouldRestrictSchoolDashboardToHandicapOnly,
 } from "@/lib/auth/school-role-type-guards";
 import { createServerClient } from "@supabase/ssr";
-import {
-  EDGE_LAB_INTERNAL_PREFIX,
-  isEdgeBsMarketingPublicPath,
-  shouldStripEdgeLabPrefix,
-} from "@/lib/edge-site/edge-marketing-path";
+import { handleEdgeBsRouting, isEdgeBsHostname } from "./middleware-edgebs";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -135,11 +131,6 @@ function isBeyondCenterHostname(host: string): boolean {
   return h === "beyondcenter.fr" || h === "www.beyondcenter.fr";
 }
 
-function isEdgeBsHostname(host: string): boolean {
-  const h = host.split(":")[0]?.toLowerCase() ?? "";
-  return h === "edgebs.fr" || h === "www.edgebs.fr";
-}
-
 function isEdgeOnlineHostname(host: string): boolean {
   const h = host.split(":")[0]?.toLowerCase() ?? "";
   return h === "edgeonline.fr" || h === "www.edgeonline.fr";
@@ -158,6 +149,15 @@ function requestMatchesConfiguredSiteHost(requestHost: string, siteUrl: string):
 }
 
 export async function middleware(request: NextRequest) {
+  try {
+    return await runMiddleware(request);
+  } catch (error) {
+    console.error("[middleware] unhandled error:", error);
+    return NextResponse.next();
+  }
+}
+
+async function runMiddleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/super")) return NextResponse.next();
   const url = request.nextUrl;
   const originalUrl = request.nextUrl.clone();
@@ -169,42 +169,8 @@ export async function middleware(request: NextRequest) {
   const tenant = getTenantFromHostname(hostname);
 
   if (edgeBsHost) {
-    if (url.pathname === EDGE_LAB_INTERNAL_PREFIX || url.pathname === `${EDGE_LAB_INTERNAL_PREFIX}/`) {
-      return NextResponse.redirect(new URL("/", request.url), 301);
-    }
-
-    if (shouldStripEdgeLabPrefix(url.pathname)) {
-      const stripped = url.pathname.slice(EDGE_LAB_INTERNAL_PREFIX.length) || "/";
-      return NextResponse.redirect(new URL(`${stripped}${url.search}`, request.url), 301);
-    }
-
-    const isEdgeBsOnlineCatalogPath =
-      url.pathname === "/edgeonline" ||
-      url.pathname.startsWith("/edgeonline/") ||
-      url.pathname === "/formations" ||
-      url.pathname.startsWith("/formations/");
-    if (isEdgeBsOnlineCatalogPath) {
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set("x-url-pathname", url.pathname);
-      requestHeaders.set("x-org-slug", "edgelab");
-      requestHeaders.set("x-site-tenant", "edgeonline");
-
-      const rewriteUrl = request.nextUrl.clone();
-      if (url.pathname === "/edgeonline") {
-        rewriteUrl.pathname = "/edgeonline";
-      } else if (url.pathname.startsWith("/edgeonline/")) {
-        rewriteUrl.pathname = url.pathname;
-      } else {
-        rewriteUrl.pathname = `/edgeonline${url.pathname}`.replace(/\/{2,}/g, "/");
-      }
-      return NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
-    }
-
-    if (url.pathname === "/" || isEdgeBsMarketingPublicPath(url.pathname)) {
-      const rewriteUrl = request.nextUrl.clone();
-      rewriteUrl.pathname = url.pathname === "/" ? "/edge-lab" : `/edge-lab${url.pathname}`;
-      return NextResponse.rewrite(rewriteUrl);
-    }
+    const edgeBsResponse = handleEdgeBsRouting(request);
+    if (edgeBsResponse) return edgeBsResponse;
   }
 
   // --- EDGE Online (premium product surface) ---

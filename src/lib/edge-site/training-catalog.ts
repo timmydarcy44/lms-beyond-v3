@@ -274,6 +274,34 @@ export function getModulesByDomain(domainId: string): TrainingModule[] {
   return EDGE_TRAINING_MODULES.filter((mod) => mod.domainId === domainId);
 }
 
+export function getModuleById(id: string): TrainingModule | undefined {
+  return EDGE_TRAINING_MODULES.find((mod) => mod.id === id || mod.code.toLowerCase() === id);
+}
+
+export function searchTrainingCatalog(query: string): {
+  domains: TrainingDomain[];
+  modules: TrainingModule[];
+} {
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    return { domains: EDGE_TRAINING_DOMAINS, modules: EDGE_TRAINING_MODULES };
+  }
+  const domains = EDGE_TRAINING_DOMAINS.filter(
+    (d) =>
+      d.title.toLowerCase().includes(q) ||
+      d.summary.toLowerCase().includes(q) ||
+      d.themeLabel.toLowerCase().includes(q),
+  );
+  const modules = EDGE_TRAINING_MODULES.filter(
+    (m) =>
+      m.title.toLowerCase().includes(q) ||
+      m.code.toLowerCase().includes(q) ||
+      m.objectives.some((o) => o.toLowerCase().includes(q)) ||
+      getTrainingDomain(m.domainId)?.title.toLowerCase().includes(q),
+  );
+  return { domains, modules };
+}
+
 export function getBadgeById(badgeId: string): TrainingBadge | undefined {
   return EDGE_TRAINING_BADGES.find((b) => b.id === badgeId);
 }

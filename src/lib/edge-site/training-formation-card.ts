@@ -150,5 +150,5 @@ export function filterFormationCards(
 }
 
 export function formationDetailPath(moduleId: string): string {
-  return `/business/former-vos-equipes/${moduleId}`;
+  return `/business/formations/${moduleId}`;
 }

@@ -8,16 +8,19 @@ import { cn } from "@/lib/utils";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
+import { FORMATION_SCENE_PHOTOS } from "@/lib/edge-site/training-formation-card";
 import {
-  filterFormationCards,
+  filterTrainingCourses,
   FORMATION_FILTER_CHIPS,
-  FORMATION_SCENE_PHOTOS,
   formationDetailPath,
-  getAllFormationCards,
-  type FormationCardData,
-} from "@/lib/edge-site/training-formation-card";
+} from "@/lib/training-courses/filters";
+import type { TrainingCoursePublic } from "@/lib/training-courses/types";
 
 const SEARCH_SUGGESTIONS = ["Management", "IA", "Soft skills", "Communication", "RH", "Leadership"];
+
+type Props = {
+  initialCourses: TrainingCoursePublic[];
+};
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -35,14 +38,18 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function FormationCard({ card }: { card: FormationCardData }) {
-  const href = edgeMarketingHref(formationDetailPath(card.module.id));
+function FormationCard({ course }: { course: TrainingCoursePublic }) {
+  const href = edgeMarketingHref(formationDetailPath(course.slug));
+  const photoUrl =
+    course.cover_url ??
+    FORMATION_SCENE_PHOTOS[course.slug.length % FORMATION_SCENE_PHOTOS.length];
+  const formatsLabel = (course.formats ?? []).join(" · ") || "Présentiel · Distanciel";
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[24px] border border-[#050505]/8 bg-white shadow-[0_2px_16px_rgba(5,5,5,0.05)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(99,91,255,0.12)]">
       <div className="relative aspect-[16/10] overflow-hidden">
         <Image
-          src={card.photoUrl}
+          src={photoUrl}
           alt=""
           fill
           className="object-cover transition duration-500 group-hover:scale-105"
@@ -51,40 +58,42 @@ function FormationCard({ card }: { card: FormationCardData }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/55 via-transparent to-transparent" />
         <span className="absolute left-4 top-4 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-edge-accent shadow-sm">
-          {card.domainLabel}
+          {course.domain ?? "Formation"}
         </span>
       </div>
 
       <div className="flex flex-1 flex-col p-5 sm:p-6">
         <h3 className="text-lg font-semibold leading-snug tracking-[-0.02em] text-[#050505] group-hover:text-edge-accent">
-          {card.title}
+          {course.title}
         </h3>
-        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[#050505]/55">{card.benefit}</p>
+        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[#050505]/55">
+          {course.short_description ?? course.objectives?.[0]}
+        </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#050505]/50">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3.5 w-3.5 text-edge-accent" />
-            {card.duration}
+            {course.duration ?? "—"}
           </span>
-          <span>{card.levelLabel}</span>
-          <span>{card.formatsLabel}</span>
+          <span>{course.level ?? "—"}</span>
+          <span>{formatsLabel}</span>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-1 rounded-full bg-edge-accent/8 px-2.5 py-1 text-[11px] font-medium text-edge-accent">
             <Award className="h-3 w-3" />
-            {card.badgeName}
+            {course.badge_name ?? "Open Badge EDGE"}
           </span>
-          <StarRating rating={card.rating} />
+          <StarRating rating={course.rating} />
         </div>
 
         <p className="mt-3 flex items-center gap-1.5 text-xs text-[#050505]/45">
           <Users className="h-3.5 w-3.5" />
-          {card.companiesCount} entreprises formées
+          {course.companies_count} entreprises formées · Jusqu&apos;à {course.max_intra_participants ?? 12} participants
         </p>
 
         <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-          <p className="text-sm font-semibold text-[#050505]">{card.priceLabel}</p>
+          <p className="text-sm font-semibold text-[#050505]">{course.price_label}</p>
           <Link
             href={href}
             className="inline-flex items-center justify-center rounded-xl bg-edge-accent px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#7B74FF]"
@@ -97,45 +106,18 @@ function FormationCard({ card }: { card: FormationCardData }) {
   );
 }
 
-function HumanInterlude({ index }: { index: number }) {
-  const photos = [
-    FORMATION_SCENE_PHOTOS[index % FORMATION_SCENE_PHOTOS.length],
-    FORMATION_SCENE_PHOTOS[(index + 3) % FORMATION_SCENE_PHOTOS.length],
-    FORMATION_SCENE_PHOTOS[(index + 6) % FORMATION_SCENE_PHOTOS.length],
-  ];
-  const captions = [
-    "Atelier en salle — échanges entre pairs",
-    "Coaching et mise en situation",
-    "Animation de groupe et brainstorming",
-  ];
-
-  return (
-    <div className="col-span-full grid gap-3 sm:grid-cols-3">
-      {photos.map((url, i) => (
-        <div key={url} className="relative aspect-[16/9] overflow-hidden rounded-[20px]">
-          <Image src={url} alt={captions[i]} fill className="object-cover" unoptimized />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/50 to-transparent" />
-          <p className="absolute bottom-3 left-4 right-4 text-xs font-medium text-white/90">{captions[i]}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function EdgeBusinessFormerEquipesPage() {
+export function EdgeBusinessFormerEquipesPage({ initialCourses }: Props) {
   const { links } = useEdgePremiumConfig();
-  const allCards = useMemo(() => getAllFormationCards(), []);
   const [searchQuery, setSearchQuery] = useState("");
   const [chipId, setChipId] = useState("all");
 
-  const visibleCards = useMemo(
-    () => filterFormationCards(allCards, searchQuery, chipId),
-    [allCards, searchQuery, chipId],
+  const visibleCourses = useMemo(
+    () => filterTrainingCourses(initialCourses, searchQuery, chipId),
+    [initialCourses, searchQuery, chipId],
   );
 
   return (
     <div className="min-h-screen bg-[#F7F7F5] text-[#050505]">
-      {/* Hero */}
       <section className="relative overflow-hidden bg-[#050505] px-5 pb-12 pt-28 sm:px-8 sm:pt-32 lg:px-10">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(99,91,255,0.22),transparent_55%)]"
@@ -152,7 +134,6 @@ export function EdgeBusinessFormerEquipesPage() {
         </div>
       </section>
 
-      {/* Recherche + filtres — sticky */}
       <section className="sticky top-0 z-30 border-b border-[#050505]/8 bg-white/95 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-5 py-5 sm:px-8 lg:px-10">
           <div className="relative max-w-2xl">
@@ -197,10 +178,9 @@ export function EdgeBusinessFormerEquipesPage() {
         </div>
       </section>
 
-      {/* Grille formations */}
       <section className="px-5 py-10 sm:px-8 lg:px-10 lg:py-14">
         <div className="mx-auto max-w-7xl">
-          {visibleCards.length === 0 ? (
+          {visibleCourses.length === 0 ? (
             <div className="rounded-[24px] border border-dashed border-[#050505]/12 bg-white py-20 text-center">
               <p className="text-sm text-[#050505]/50">Aucune formation ne correspond à votre recherche.</p>
               <button
@@ -216,20 +196,14 @@ export function EdgeBusinessFormerEquipesPage() {
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {visibleCards.map((card, index) => (
-                <div key={card.module.id} className="contents">
-                  <FormationCard card={card} />
-                  {(index + 1) % 9 === 0 && index < visibleCards.length - 1 ? (
-                    <HumanInterlude index={index} />
-                  ) : null}
-                </div>
+              {visibleCourses.map((course) => (
+                <FormationCard key={course.slug} course={course} />
               ))}
             </div>
           )}
         </div>
       </section>
 
-      {/* CTA discret */}
       <section className="border-t border-[#050505]/8 bg-white px-5 py-14 sm:px-8 lg:px-10">
         <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
           <p className="text-lg font-semibold">Besoin d&apos;aide pour choisir ?</p>

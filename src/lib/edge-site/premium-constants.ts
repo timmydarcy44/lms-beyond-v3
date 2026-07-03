@@ -193,4 +193,74 @@ export type EdgeMegaColumnsData =
   | EdgePremiumConfig["megaApprenants"]
   | EdgePremiumConfig["megaBusiness"];
 
+export type EdgeMobileNavCategory = {
+  id: string;
+  label: string;
+  links: { label: string; href: string }[];
+};
+
+export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNavCategory[] {
+  const R = config.routes;
+  return [
+    {
+      id: "apprenants",
+      label: "Apprenants",
+      links: [
+        { label: "BTS", href: R.formationsBts },
+        { label: "Bachelor", href: R.formationsBachelor },
+        { label: "Mastère", href: R.formationsMastere },
+        { label: "Formations en ligne", href: R.onlineFormations },
+        { label: "Bootcamps", href: R.onlineBootcamps },
+        { label: "Alternance", href: R.alternance },
+        { label: "Admissions", href: R.admissions },
+        { label: "Financement", href: R.financement },
+        { label: "Vie étudiante", href: R.vieEtudiante },
+      ],
+    },
+    {
+      id: "business",
+      label: "Business",
+      links: [
+        { label: "Former vos équipes", href: R.businessFormerEquipes },
+        { label: "Catalogue de formations", href: R.businessCatalogue },
+        { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
+        { label: "Académie interne", href: R.businessAcademie },
+        { label: "Recrutement", href: R.businessRecrutement },
+        { label: "Pilotage", href: R.businessTableauxDeBord },
+      ],
+    },
+    {
+      id: "fonctionnalites",
+      label: "Fonctionnalités",
+      links: [
+        { label: "LMS", href: R.online },
+        { label: "Certifications", href: R.certifications },
+        { label: "Open Badges", href: R.businessOpenBadges },
+        { label: "Analytics", href: R.businessAnalytics },
+        { label: "Matching", href: R.businessMatchingCandidats },
+        { label: "IA", href: R.businessFormerEquipes },
+      ],
+    },
+    {
+      id: "ressources",
+      label: "Ressources",
+      links: [
+        { label: "Blog", href: R.blog },
+        { label: "Guides", href: R.guides },
+        { label: "Webinaires", href: R.webinaires },
+        { label: "FAQ", href: R.contact },
+        { label: "Formateurs / Experts", href: R.formateursExperts },
+      ],
+    },
+    {
+      id: "compte",
+      label: "Compte",
+      links: [
+        { label: "Connexion", href: R.login },
+        { label: "Découvrir EDGE", href: R.decouvrir },
+      ],
+    },
+  ];
+}
+
 export type { EdgeMarketingRoutes };

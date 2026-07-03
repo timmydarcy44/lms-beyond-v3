@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 import { useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -434,9 +435,9 @@ export function ExpertCockpitDashboard({ restricted = false }: Props) {
                         <p className="text-sm font-medium">{course.title}</p>
                         <p className="mt-0.5 text-[11px] text-[#050505]/45">{course.reason}</p>
                       </div>
-                      <Link href="/dashboard/expert/edge-online" className="text-[11px] font-semibold text-[#635BFF]">
+                      <a href={EDGE_ONLINE_EXTERNAL_URL} className="text-[11px] font-semibold text-[#635BFF]">
                         Continuer
-                      </Link>
+                      </a>
                     </div>
                     <div className="mt-2 h-1 rounded-full bg-[#050505]/6">
                       <div className="h-full rounded-full bg-[#635BFF]" style={{ width: `${course.progress}%` }} />

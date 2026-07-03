@@ -61,6 +61,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Créer un utilisateur", icon: UserPlus, href: "/super/utilisateurs/new" },
     ],
   },
+  { label: "Gestion des formations", icon: BookOpen, href: "/super/formations" },
   { label: "No School", icon: Store, href: "/super/catalogue" },
   { label: "Voir mon catalogue", icon: Store, href: "/super/catalogue/preview" },
   { label: "Chiffre d'affaires", icon: DollarSign, href: "/super/chiffre-affaires" },

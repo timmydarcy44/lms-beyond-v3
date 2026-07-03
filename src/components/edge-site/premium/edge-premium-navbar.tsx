@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
@@ -11,9 +12,55 @@ import {
   EdgePremiumMegaColumnsPanel,
   EdgePremiumMegaTrigger,
 } from "@/components/edge-site/premium/edge-premium-mega-menu";
+import { getMobileNavCategories } from "@/lib/edge-site/premium-constants";
 
 type DropdownKey = "fonctionnalites" | "ressources";
 type MegaKey = "apprenants" | "business";
+
+function MobileAccordion({
+  categories,
+  onNavigate,
+}: {
+  categories: ReturnType<typeof getMobileNavCategories>;
+  onNavigate: () => void;
+}) {
+  const [openId, setOpenId] = useState<string | null>("apprenants");
+
+  return (
+    <div className="space-y-2">
+      {categories.map((category) => {
+        const isOpen = openId === category.id;
+        return (
+          <div key={category.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+              aria-expanded={isOpen}
+              onClick={() => setOpenId((prev) => (prev === category.id ? null : category.id))}
+            >
+              <span className="text-sm font-semibold text-white">{category.label}</span>
+              <ChevronDown className={cn("h-4 w-4 text-white/50 transition-transform", isOpen && "rotate-180")} />
+            </button>
+            {isOpen ? (
+              <div className="space-y-0.5 border-t border-white/[0.06] px-2 pb-2 pt-1">
+                {category.links.map((link) => (
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    className="block rounded-xl px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/[0.06] hover:text-white"
+                    onClick={onNavigate}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function NavDropdown({
   label,
@@ -73,8 +120,11 @@ type NavbarProps = {
 };
 
 export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: NavbarProps) {
-  const { links, nav, megaApprenants, megaBusiness, routes } = useEdgePremiumConfig();
+  const config = useEdgePremiumConfig();
+  const { links, nav, megaApprenants, megaBusiness, routes } = config;
+  const mobileCategories = getMobileNavCategories(config);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
   const [openMega, setOpenMega] = useState<MegaKey | null>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -88,6 +138,19 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
   const cancelMegaClose = () => {
     if (megaTimer.current) clearTimeout(megaTimer.current);
   };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -226,74 +289,55 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
         </div>
       ) : null}
 
-      {mobileOpen ? (
-        <div className="border-t border-white/[0.06] bg-edge-black-deep px-5 py-6 lg:hidden">
-          <Link
-            href={routes.formateursExperts}
-            className="mb-6 block text-[13px] text-white/45 hover:text-edge-accent"
-            onClick={closeAll}
-          >
-            Formateur ou expert ? Rejoignez EDGE →
-          </Link>
-
-          {(
-            [
-              ["Apprenants", megaApprenants],
-              ["Business", megaBusiness],
-            ] as const
-          ).map(([label, data]) => (
-            <div key={label} className="mb-6">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-edge-accent">{label}</p>
-              <p className="mt-2 text-sm font-medium text-white">{data.headerTitle}</p>
-              <div className="mt-3 space-y-1">
-                {data.columns.flatMap((col) =>
-                  col.links.map((link) => (
-                    <Link
-                      key={`${label}-${link.label}`}
-                      href={link.href}
-                      className="block rounded-xl px-3 py-2 text-sm text-white/70"
-                      onClick={closeAll}
-                    >
-                      {link.label}
+      {mounted && mobileOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-[100] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu de navigation">
+              <div className="absolute inset-0 bg-black/60" onClick={closeAll} aria-hidden />
+              <div
+                className="relative ml-auto flex w-full max-w-sm flex-col bg-edge-black-deep shadow-2xl"
+                style={{ height: "100dvh" }}
+              >
+                <div className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-5 py-4">
+                  <EdgePremiumLogo />
+                  <button
+                    type="button"
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-white"
+                    aria-label="Fermer le menu"
+                    onClick={closeAll}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 pb-12">
+                  <Link
+                    href={routes.formateursExperts}
+                    className="mb-5 block text-[13px] text-white/45 hover:text-edge-accent"
+                    onClick={closeAll}
+                  >
+                    Formateur ou expert ? Rejoignez EDGE →
+                  </Link>
+                  <MobileAccordion categories={mobileCategories} onNavigate={closeAll} />
+                  <Link
+                    href={links.tarifs}
+                    className="mt-4 block rounded-xl px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/[0.06]"
+                    onClick={closeAll}
+                  >
+                    Tarifs
+                  </Link>
+                  <div className="mt-8 flex flex-col gap-3 border-t border-white/[0.08] pt-6">
+                    <Link href={links.login} className="text-center text-sm text-white/60" onClick={closeAll}>
+                      Connexion
                     </Link>
-                  )),
-                )}
+                    <EdgePremiumButton href={links.decouvrirEdge} variant="white" shape="revolut" className="w-full">
+                      Découvrir EDGE
+                    </EdgePremiumButton>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-
-          <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-white/30">Fonctionnalités</p>
-          <div className="mt-2 space-y-1">
-            {nav.fonctionnalites.map((item) => (
-              <Link key={item.label} href={item.href} className="block rounded-xl px-3 py-2 text-sm text-white/70" onClick={closeAll}>
-                {item.label}
-              </Link>
-            ))}
-          </div>
-
-          <p className="mt-6 text-[10px] uppercase tracking-[0.2em] text-white/30">Ressources</p>
-          <div className="mt-2 space-y-1">
-            {nav.ressources.map((item) => (
-              <Link key={item.label} href={item.href} className="block rounded-xl px-3 py-2 text-sm text-white/70" onClick={closeAll}>
-                {item.label}
-              </Link>
-            ))}
-          </div>
-
-          <Link href={links.tarifs} className="mt-4 block rounded-xl px-3 py-2 text-sm font-medium text-white/70" onClick={closeAll}>
-            Tarifs
-          </Link>
-
-          <div className="mt-8 flex flex-col gap-3 border-t border-white/[0.06] pt-6">
-            <Link href={links.login} className="text-center text-sm text-white/60" onClick={closeAll}>
-              Connexion
-            </Link>
-            <EdgePremiumButton href={links.decouvrirEdge} variant="white" shape="revolut" className="w-full">
-              Découvrir EDGE
-            </EdgePremiumButton>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </header>
   );
 }

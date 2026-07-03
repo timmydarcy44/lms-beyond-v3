@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 import {
   Award,
   Bell,
@@ -20,17 +21,17 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Tableau de bord", href: "/dashboard/expert", icon: LayoutDashboard, lockedWhenRestricted: false },
-  { label: "Mon profil", href: "/dashboard/expert/profile", icon: User2, lockedWhenRestricted: false },
-  { label: "Mes missions", href: "/dashboard/expert/interventions", icon: ClipboardList, lockedWhenRestricted: true },
-  { label: "Mon agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, lockedWhenRestricted: true },
-  { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, lockedWhenRestricted: true },
-  { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, lockedWhenRestricted: false },
-  { label: "EDGE Certified", href: "/dashboard/expert/certification", icon: Award, lockedWhenRestricted: false },
-  { label: "EDGE Online", href: "/dashboard/expert/edge-online", icon: GraduationCap, lockedWhenRestricted: false },
-  { label: "Notifications", href: "/dashboard/expert/notifications", icon: Bell, lockedWhenRestricted: false },
-  { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings, lockedWhenRestricted: false },
-  { label: "Support", href: "/dashboard/expert/support", icon: HelpCircle, lockedWhenRestricted: false },
+  { label: "Tableau de bord", href: "/dashboard/expert", icon: LayoutDashboard, lockedWhenRestricted: false, external: false },
+  { label: "Mon profil", href: "/dashboard/expert/profile", icon: User2, lockedWhenRestricted: false, external: false },
+  { label: "Mes missions", href: "/dashboard/expert/interventions", icon: ClipboardList, lockedWhenRestricted: true, external: false },
+  { label: "Mon agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, lockedWhenRestricted: true, external: false },
+  { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, lockedWhenRestricted: true, external: false },
+  { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, lockedWhenRestricted: false, external: false },
+  { label: "EDGE Certified", href: "/dashboard/expert/certification", icon: Award, lockedWhenRestricted: false, external: false },
+  { label: "EDGE Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap, lockedWhenRestricted: false, external: true },
+  { label: "Notifications", href: "/dashboard/expert/notifications", icon: Bell, lockedWhenRestricted: false, external: false },
+  { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings, lockedWhenRestricted: false, external: false },
+  { label: "Support", href: "/dashboard/expert/support", icon: HelpCircle, lockedWhenRestricted: false, external: false },
 ] as const;
 
 type Props = {
@@ -57,12 +58,18 @@ export default function SidebarExpert({ restricted = false }: Props) {
         <div className="flex flex-col gap-0.5">
           {NAV_ITEMS.map((item) => {
             const isLocked = restricted && item.lockedWhenRestricted;
-            const active =
-              item.href === "/dashboard/expert"
+            const active = item.external
+              ? false
+              : item.href === "/dashboard/expert"
                 ? pathname === "/dashboard/expert"
                 : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
             const Icon = item.icon;
+            const linkClass = cn(
+              "flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium transition",
+              "text-white/55 hover:bg-white/5 hover:text-white",
+              active && "border border-[#635BFF]/25 bg-[#635BFF]/12 text-white",
+            );
 
             if (isLocked) {
               return (
@@ -78,15 +85,24 @@ export default function SidebarExpert({ restricted = false }: Props) {
               );
             }
 
+            if (item.external) {
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={linkClass}
+                >
+                  <Icon size={16} strokeWidth={1.5} className="text-white/40" />
+                  {item.label}
+                </a>
+              );
+            }
+
             return (
               <Link
                 key={item.label}
                 href={item.href}
-                className={cn(
-                  "flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium transition",
-                  "text-white/55 hover:bg-white/5 hover:text-white",
-                  active && "border border-[#635BFF]/25 bg-[#635BFF]/12 text-white",
-                )}
+                className={linkClass}
               >
                 <Icon size={16} strokeWidth={1.5} className={cn("text-white/40", active && "text-[#a8a3ff]")} />
                 {item.label}

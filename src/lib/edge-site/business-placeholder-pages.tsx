@@ -8,12 +8,6 @@ export type BusinessPlaceholderDef = {
 };
 
 export const BUSINESS_PLACEHOLDER_PAGES = {
-  "former-vos-equipes": {
-    title: "Former vos équipes",
-    description:
-      "Déployez des parcours de formation alignés sur vos enjeux métiers, du diagnostic initial au déploiement terrain.",
-    label: "Former",
-  },
   catalogue: {
     title: "Catalogue de formations",
     description:

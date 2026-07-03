@@ -124,13 +124,13 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
     setOpenDropdown(null);
   };
 
-  const isSolid = pageScrolled || openMega !== null || openDropdown !== null || mobileOpen;
+  const isSolid = pageScrolled || openDropdown !== null || mobileOpen;
 
   return (
     <header
       ref={headerRef}
       className={cn(
-        "transition-all duration-300",
+        "relative overflow-visible transition-all duration-300",
         overlay && !isSolid
           ? "border-b border-transparent bg-transparent"
           : "border-b border-white/[0.06] bg-edge-black-deep",
@@ -215,7 +215,10 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
       </div>
 
       {openMega ? (
-        <div className="hidden lg:block" onMouseEnter={cancelMegaClose}>
+        <div
+          className="absolute left-0 right-0 top-full z-50 hidden px-4 pt-3 pb-5 sm:px-6 lg:block lg:px-8"
+          onMouseEnter={cancelMegaClose}
+        >
           <EdgePremiumMegaColumnsPanel
             data={openMega === "apprenants" ? megaApprenants : megaBusiness}
             onClose={() => setOpenMega(null)}

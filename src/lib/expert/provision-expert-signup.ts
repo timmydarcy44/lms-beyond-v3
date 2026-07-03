@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logExpertRegisterError } from "@/lib/expert/register-log";
 
 type ProvisionInput = {
   userId: string;
@@ -27,7 +28,7 @@ export async function provisionExpertSignup(
       .from("profiles")
       .upsert({ id: input.userId, email: input.email, role: "expert" }, { onConflict: "id" });
     if (minimal.error) {
-      console.warn("[provisionExpertSignup] profiles upsert:", profileError, minimal.error);
+      logExpertRegisterError("profiles_upsert", profileError, { fallback: minimal.error.message });
       return { ok: false, error: profileError.message || minimal.error.message };
     }
   }

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getExpertRegistrationConfirmationEmail } from "@/lib/emails/templates/expert-registration-confirmation";
 import { sendEmail } from "@/lib/email/resend-client";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import { EXPERT_REGISTER_GENERIC_ERROR } from "@/lib/expert/register-errors";
+import { logExpertRegisterError, logExpertRegisterInfo, logExpertRegisterWarn } from "@/lib/expert/register-log";
+import { provisionExpertAuthUser } from "@/lib/expert/provision-expert-auth";
 import { provisionExpertSignup } from "@/lib/expert/provision-expert-signup";
-import { resolveAuthUserIdByEmail } from "@/lib/expert/resolve-auth-user";
 import { expertSetPasswordUrl, resolveExpertAppOrigin } from "@/lib/expert/signup-redirect";
+import { upsertExpertRegistration } from "@/lib/expert/upsert-expert-registration";
 import { getServiceRoleClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -33,17 +35,33 @@ async function generatePasswordSetupLink(
       options: { redirectTo },
     });
     if (!error && data?.properties?.action_link) {
+      logExpertRegisterInfo("generateLink_ok", { type });
       return data.properties.action_link;
     }
-    console.warn(`[experts/register] generateLink(${type}) failed:`, error?.message);
+    logExpertRegisterWarn("generateLink", error?.message ?? "no_action_link", { type });
   }
   return null;
+}
+
+function envDiagnostics(): Record<string, boolean> {
+  return {
+    hasSupabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    hasResendKey: Boolean(process.env.RESEND_API_KEY),
+    hasPublicUrl: Boolean(
+      process.env.NEXT_PUBLIC_URL ||
+        process.env.NEXT_PUBLIC_APP_URL ||
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        process.env.SITE_URL,
+    ),
+  };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = getServiceRoleClient();
     if (!supabase) {
+      logExpertRegisterError("config", "SUPABASE_SERVICE_ROLE_KEY missing", envDiagnostics());
       return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 503 });
     }
 
@@ -56,7 +74,9 @@ export async function POST(request: NextRequest) {
     const headline = typeof data.headline === "string" ? data.headline.trim() : "";
     const photoUrl = typeof data.photo_url === "string" ? data.photo_url.trim() : "";
     const linkedinUrl = typeof data.linkedin_url === "string" ? data.linkedin_url.trim() : "";
-    const wantsCertification = Boolean(data.wants_certification ?? data.wantsCertification ?? data.wants_beyond_certified);
+    const wantsCertification = Boolean(
+      data.wants_certification ?? data.wantsCertification ?? data.wants_beyond_certified,
+    );
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Email invalide." }, { status: 400 });
@@ -65,11 +85,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Prénom/Nom requis." }, { status: 400 });
     }
 
-    const { data: existingExpert } = await supabase
+    logExpertRegisterInfo("start", { emailDomain: email.split("@")[1], env: envDiagnostics() });
+
+    const { data: existingExpert, error: existingExpertError } = await supabase
       .from("experts")
       .select("id, review_status, is_active")
       .eq("email", email)
       .maybeSingle();
+
+    if (existingExpertError) {
+      logExpertRegisterError("experts_lookup", existingExpertError);
+    }
 
     if (existingExpert?.review_status === "approved" && existingExpert.is_active === true) {
       return NextResponse.json(
@@ -95,11 +121,7 @@ export async function POST(request: NextRequest) {
 
     const availabilities =
       asStringArray(data.availabilities) ??
-      (typeof data.availability === "string" && data.availability.trim()
-        ? [data.availability.trim()]
-        : []);
-
-    const regions = asStringArray(data.regions) ?? (geographicZones.length > 0 ? geographicZones : null);
+      (typeof data.availability === "string" && data.availability.trim() ? [data.availability.trim()] : []);
 
     const registrationMeta = [
       {
@@ -113,113 +135,88 @@ export async function POST(request: NextRequest) {
         geographic_zones: geographicZones,
         languages: languages ?? [],
         availabilities,
+        photo_url: photoUrl || null,
+        linkedin_url: linkedinUrl || null,
       },
     ];
 
-    let userId: string | null = existingExpert?.id ?? null;
-    let isNewAuthUser = false;
+    const origin = resolveExpertAppOrigin(request);
+    const redirectTo = expertSetPasswordUrl(origin);
+    logExpertRegisterInfo("redirectTo", { origin, redirectTo });
 
-    const existingAuthUserId = await resolveAuthUserIdByEmail(supabase, email);
+    const authResult = await provisionExpertAuthUser(supabase, {
+      email,
+      firstName,
+      lastName,
+      redirectTo,
+    });
 
-    if (existingAuthUserId) {
-      userId = existingAuthUserId;
-      const { error: updateMetaError } = await supabase.auth.admin.updateUserById(userId, {
-        user_metadata: {
-          first_name: firstName,
-          last_name: lastName,
-          full_name: `${firstName} ${lastName}`.trim(),
-          role_type: "expert",
-          account_type: "expert",
-          signup_source: "edge_expert",
-          origin: "edge",
-          needs_password_setup: true,
-        },
-      });
-      if (updateMetaError) {
-        console.error("[experts/register] updateUserById:", updateMetaError);
-      }
-    } else {
-      const { data: created, error: createError } = await supabase.auth.admin.createUser({
-        email,
-        email_confirm: false,
-        user_metadata: {
-          first_name: firstName,
-          last_name: lastName,
-          full_name: `${firstName} ${lastName}`.trim(),
-          role_type: "expert",
-          account_type: "expert",
-          signup_source: "edge_expert",
-          origin: "edge",
-          needs_password_setup: true,
-        },
-      });
-
-      if (createError || !created?.user?.id) {
-        console.error("[experts/register] createUser error:", createError);
-        return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
-      }
-
-      userId = created.user.id;
-      isNewAuthUser = true;
-    }
-
-    if (!userId) {
+    if (!authResult.ok) {
+      logExpertRegisterError("auth_provision", authResult.error, envDiagnostics());
       return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
     }
+
+    const { userId, isNewAuthUser, inviteSent } = authResult;
 
     const provision = await provisionExpertSignup(supabase, { userId, email, firstName, lastName });
     if (!provision.ok) {
-      console.error("[experts/register] provision:", provision.error);
+      logExpertRegisterError("profiles_provision", provision.error);
       return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
     }
 
-    const expertPayload: Record<string, unknown> = {
+    const expertUpsert = await upsertExpertRegistration(supabase, {
       id: userId,
       email,
       first_name: firstName,
       last_name: lastName,
       headline: headline || null,
-      photo_url: photoUrl || null,
-      linkedin_url: linkedinUrl || null,
       is_active: false,
       specialties,
       formats_supported: formatsSupported,
-      regions,
       review_status: "pending_review",
       wants_certification: wantsCertification,
+      linkedin_url: linkedinUrl || null,
       references: registrationMeta,
-    };
+    });
 
-    const { error: expertError } = await supabase.from("experts").upsert(expertPayload, { onConflict: "id" });
-    if (expertError) {
-      const { error: emailConflictError } = await supabase.from("experts").upsert(expertPayload, { onConflict: "email" });
-      if (emailConflictError) {
-        console.error("[experts/register] experts upsert:", expertError, emailConflictError);
-        return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
-      }
+    if (!expertUpsert.ok) {
+      logExpertRegisterError("experts_provision", expertUpsert.error, envDiagnostics());
+      return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
     }
 
-    const origin = resolveExpertAppOrigin(request);
-    const redirectTo = expertSetPasswordUrl(origin);
-    const passwordSetupLink = await generatePasswordSetupLink(
-      supabase,
-      email,
-      redirectTo,
-      !isNewAuthUser,
-    );
+    revalidatePath("/dashboard/expert");
+    revalidatePath("/admin/experts");
 
-    if (!passwordSetupLink) {
-      console.error("[experts/register] password link generation failed for", email);
-      return NextResponse.json(
-        {
-          error:
-            "Votre profil a été enregistré, mais le lien de création de mot de passe n'a pas pu être généré. Contactez le support EDGE.",
-        },
-        { status: 500 },
-      );
+    logExpertRegisterInfo("profile_created", { userId, isNewAuthUser, inviteSent });
+
+    const passwordSetupLink = await generatePasswordSetupLink(supabase, email, redirectTo, !isNewAuthUser);
+
+    if (!passwordSetupLink && !inviteSent) {
+      logExpertRegisterError("password_link", "generateLink_exhausted", { redirectTo });
+      return NextResponse.json({
+        success: true,
+        warning: true,
+        review_status: "pending_review",
+        isNewAuthUser,
+        message:
+          "Profil créé, mais l'email d'accès n'a pas pu être envoyé. Contactez le support EDGE pour recevoir votre lien.",
+      });
     }
 
-    const template = getExpertRegistrationConfirmationEmail({ firstName, passwordSetupLink });
+    if (!passwordSetupLink && inviteSent) {
+      return NextResponse.json({
+        success: true,
+        review_status: "pending_review",
+        isNewAuthUser,
+        message:
+          "Profil enregistré. Consultez votre boîte mail pour créer votre mot de passe (invitation Supabase).",
+      });
+    }
+
+    const template = getExpertRegistrationConfirmationEmail({
+      firstName,
+      passwordSetupLink: passwordSetupLink!,
+    });
     const emailResult = await sendEmail({
       to: email,
       subject: template.subject,
@@ -227,18 +224,15 @@ export async function POST(request: NextRequest) {
       from: EDGE_COCKPIT_FROM,
     });
 
-    revalidatePath("/dashboard/expert");
-    revalidatePath("/admin/experts");
-
     if (!emailResult.success) {
-      console.warn("[experts/register] resend error:", emailResult.error);
+      logExpertRegisterError("resend", emailResult.error ?? "send_failed", envDiagnostics());
       return NextResponse.json({
         success: true,
         warning: true,
         review_status: "pending_review",
         isNewAuthUser,
         message:
-          "Votre profil a été enregistré, mais l'email n'a pas pu être envoyé. Contactez le support EDGE.",
+          "Profil créé, mais l'email d'accès n'a pas pu être envoyé. Contactez le support EDGE pour recevoir votre lien.",
       });
     }
 
@@ -249,7 +243,7 @@ export async function POST(request: NextRequest) {
       message: "Profil enregistré. Consultez votre boîte mail pour créer votre mot de passe.",
     });
   } catch (error: unknown) {
-    console.error("[experts/register] unhandled error:", error);
+    logExpertRegisterError("unhandled", error, envDiagnostics());
     return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
   }
 }

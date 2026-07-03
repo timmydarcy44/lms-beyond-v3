@@ -118,6 +118,9 @@ export default function ExpertRegisterPage() {
         setSubmitError(msg);
         throw new Error(msg);
       }
+      if (out?.warning && typeof out?.message === "string") {
+        toast.warning(out.message);
+      }
       setSubmitted(true);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : EXPERT_REGISTER_GENERIC_ERROR;

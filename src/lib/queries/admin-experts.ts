@@ -1,8 +1,12 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
-import type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
+import { ADMIN_EXPERT_SELECT, type AdminExpertRow } from "@/lib/expert/admin-expert-types";
 
 export type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
-export { parseExpertRegistrationMeta } from "@/lib/expert/admin-expert-types";
+export {
+  parseExpertRegistrationMeta,
+  parseExpertDocuments,
+  parseExpertInternalNotes,
+} from "@/lib/expert/admin-expert-types";
 
 export async function getAdminExperts(status?: string | null): Promise<AdminExpertRow[]> {
   const supabase = getServiceRoleClient();
@@ -10,11 +14,9 @@ export async function getAdminExperts(status?: string | null): Promise<AdminExpe
 
   let query = supabase
     .from("experts")
-    .select(
-      "id,email,first_name,last_name,headline,review_status,is_active,specialties,formats_supported,regions,references,wants_certification,created_at",
-    )
+    .select(ADMIN_EXPERT_SELECT)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(500);
 
   if (status && status !== "all") {
     query = query.eq("review_status", status);
@@ -34,9 +36,7 @@ export async function getAdminExpertById(id: string): Promise<AdminExpertRow | n
 
   const { data, error } = await supabase
     .from("experts")
-    .select(
-      "id,email,first_name,last_name,headline,review_status,is_active,specialties,formats_supported,regions,references,wants_certification,created_at",
-    )
+    .select(ADMIN_EXPERT_SELECT)
     .eq("id", id)
     .maybeSingle();
 

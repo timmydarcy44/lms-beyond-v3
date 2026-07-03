@@ -62,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Gestion des formations", icon: BookOpen, href: "/super/formations" },
+  { label: "Experts / Formateurs", icon: Users, href: "/super/experts" },
   { label: "No School", icon: Store, href: "/super/catalogue" },
   { label: "Voir mon catalogue", icon: Store, href: "/super/catalogue/preview" },
   { label: "Chiffre d'affaires", icon: DollarSign, href: "/super/chiffre-affaires" },

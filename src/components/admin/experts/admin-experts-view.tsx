@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { expertReviewStatusLabel } from "@/lib/expert/expert-access";
 import type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
@@ -27,13 +28,15 @@ function statusBadgeClass(status: string | null | undefined): string {
   }
 }
 
-export function AdminExpertsView({
-  experts,
-  activeFilter,
-}: {
+type Props = {
   experts: AdminExpertRow[];
   activeFilter: string;
-}) {
+  basePath?: string;
+};
+
+export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/experts" }: Props) {
+  const [search, setSearch] = useState("");
+
   const counts = useMemo(() => {
     const map: Record<string, number> = { all: experts.length };
     for (const e of experts) {
@@ -44,22 +47,47 @@ export function AdminExpertsView({
   }, [experts]);
 
   const filteredExperts = useMemo(() => {
-    if (activeFilter === "all") return experts;
-    return experts.filter((e) => (e.review_status || "pending_review") === activeFilter);
-  }, [experts, activeFilter]);
+    let list = experts;
+    if (activeFilter !== "all") {
+      list = list.filter((e) => (e.review_status || "pending_review") === activeFilter);
+    }
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter((e) => {
+      const name = `${e.first_name ?? ""} ${e.last_name ?? ""}`.toLowerCase();
+      const specs = (e.specialties ?? []).join(" ").toLowerCase();
+      return (
+        name.includes(q) ||
+        (e.email ?? "").toLowerCase().includes(q) ||
+        (e.headline ?? "").toLowerCase().includes(q) ||
+        specs.includes(q)
+      );
+    });
+  }, [experts, activeFilter, search]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Experts EDGE</h1>
-        <p className="mt-1 text-sm text-slate-600">Validation des candidatures formateurs et experts.</p>
+        <h1 className="text-2xl font-bold text-slate-900">Experts / Formateurs</h1>
+        <p className="mt-1 text-sm text-slate-600">Validation des candidatures formateurs et experts EDGE.</p>
+      </div>
+
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher par nom, email, spécialité…"
+          className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-[#635BFF]/40"
+        />
       </div>
 
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Link
             key={f.id}
-            href={f.id === "all" ? "/admin/experts" : `/admin/experts?status=${f.id}`}
+            href={f.id === "all" ? basePath : `${basePath}?status=${f.id}`}
             className={cn(
               "rounded-full border px-4 py-2 text-sm font-medium transition",
               activeFilter === f.id
@@ -79,6 +107,7 @@ export function AdminExpertsView({
             <tr>
               <th className="px-4 py-3">Nom</th>
               <th className="px-4 py-3">Email</th>
+              <th className="px-4 py-3">Spécialités</th>
               <th className="px-4 py-3">Statut</th>
               <th className="px-4 py-3">Soumis le</th>
               <th className="px-4 py-3" />
@@ -87,7 +116,7 @@ export function AdminExpertsView({
           <tbody>
             {filteredExperts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-10 text-center text-slate-500">
                   Aucun profil expert pour ce filtre.
                 </td>
               </tr>
@@ -98,6 +127,9 @@ export function AdminExpertsView({
                   <tr key={expert.id} className="border-t border-slate-100">
                     <td className="px-4 py-3 font-medium text-slate-900">{name}</td>
                     <td className="px-4 py-3 text-slate-600">{expert.email ?? "—"}</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {(expert.specialties ?? []).slice(0, 2).join(", ") || "—"}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={cn(
@@ -113,7 +145,7 @@ export function AdminExpertsView({
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        href={`/admin/experts/${expert.id}`}
+                        href={`${basePath}/${expert.id}`}
                         className="font-semibold text-[#635BFF] hover:underline"
                       >
                         Voir la fiche

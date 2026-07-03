@@ -104,6 +104,8 @@ export async function POST(
 
   revalidatePath("/admin/experts");
   revalidatePath(`/admin/experts/${id}`);
+  revalidatePath("/super/experts");
+  revalidatePath(`/super/experts/${id}`);
   revalidatePath("/dashboard/expert");
 
   return NextResponse.json({ success: true, review_status, is_active });

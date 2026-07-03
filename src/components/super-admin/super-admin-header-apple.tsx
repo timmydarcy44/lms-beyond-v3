@@ -37,24 +37,13 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/super" },
   { label: "Gestion des formations", href: "/super/formations" },
+  { label: "Experts / Formateurs", href: "/super/experts" },
   { label: "CRM", href: "/super/utilisateurs" },
   { label: "Open Badges", href: "/super/open-badges/badgeclasses" },
   { label: "IA", href: "/super/ia" },
   { label: "Chiffre d'affaires", href: "/super/chiffre-affaires" },
   { label: "Statistiques", href: "/super/statistiques" },
-  {
-    label: "Premium",
-    href: "/super/premium",
-    children: [
-      { label: "Analyse avancée", href: "/super/premium/analyse-avancee" },
-      { label: "Beyond Care", href: "/super/premium/beyond-care" },
-      { label: "Beyond Connect", href: "/super/premium/beyond-connect" },
-      { label: "Beyond Play", href: "/super/premium/beyond-play" },
-      { label: "Beyond Note", href: "/super/premium/beyond-note" },
-    ],
-  },
-  { label: "Paramètres", href: "/super/parametres", icon: "settings" },
-  { label: "CMS", href: "/super/pages", icon: "globe" },
+  { label: "Paramètres", href: "/super/parametres" },
 ];
 
 export function SuperAdminHeaderApple() {

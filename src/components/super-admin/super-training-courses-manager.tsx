@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, Loader2, RefreshCw, Save, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, Loader2, RefreshCw, Save, Search, Sparkles, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TrainingCourseRow } from "@/lib/training-courses/types";
 
@@ -105,11 +105,99 @@ const INPUT =
   "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#635BFF]/40 focus:ring-2 focus:ring-[#635BFF]/10";
 const TEXTAREA = `${INPUT} min-h-[88px] resize-y font-mono text-xs`;
 
+function CoverUploader({
+  coverUrl,
+  courseId,
+  onUploaded,
+}: {
+  coverUrl: string;
+  courseId: string;
+  onUploaded: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("courseId", courseId);
+      const res = await fetch("/api/super/training-courses/cover", { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Upload échoué");
+      onUploaded(json.url);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Upload échoué");
+    } finally {
+      setUploading(false);
+      setDragOver(false);
+    }
+  };
+
+  return (
+    <div className="sm:col-span-2 space-y-3">
+      <span className="block text-sm font-medium text-gray-700">Cover</span>
+      {coverUrl ? (
+        <div className="relative aspect-[16/9] max-h-48 overflow-hidden rounded-xl border border-gray-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={coverUrl} alt="" className="h-full w-full object-cover" />
+        </div>
+      ) : null}
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-8 text-center transition",
+          dragOver ? "border-[#635BFF] bg-[#635BFF]/5" : "border-gray-200 bg-gray-50",
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          const file = e.dataTransfer.files[0];
+          if (file) void uploadFile(file);
+        }}
+      >
+        <Upload className="h-8 w-8 text-gray-400" />
+        <p className="mt-2 text-sm text-gray-600">Glissez une image ou</p>
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="mt-2 rounded-lg bg-[#635BFF] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7B74FF] disabled:opacity-50"
+        >
+          {uploading ? "Upload…" : "Uploader une cover"}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void uploadFile(file);
+          }}
+        />
+      </div>
+      <input
+        className={INPUT}
+        value={coverUrl}
+        onChange={(e) => onUploaded(e.target.value)}
+        placeholder="Ou coller une URL d'image"
+      />
+    </div>
+  );
+}
+
 export function SuperTrainingCoursesManager() {
   const [courses, setCourses] = useState<TrainingCourseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -185,6 +273,72 @@ export function SuperTrainingCoursesManager() {
       setError(e instanceof Error ? e.message : "Erreur de sauvegarde");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const applyAiContent = (content: Record<string, unknown>) => {
+    if (!form) return;
+    setForm({
+      ...form,
+      short_description: String(content.short_description ?? form.short_description),
+      long_description: String(content.long_description ?? form.long_description),
+      objectives: Array.isArray(content.objectives) ? content.objectives.join("\n") : form.objectives,
+      skills: Array.isArray(content.skills) ? content.skills.join("\n") : form.skills,
+      program: Array.isArray(content.program) ? JSON.stringify(content.program, null, 2) : form.program,
+      prerequisites: String(content.prerequisites ?? form.prerequisites),
+      audience: Array.isArray(content.audience) ? content.audience.join("\n") : form.audience,
+      badge_name: String(content.badge_name ?? form.badge_name),
+      inter_price: content.inter_price != null ? String(content.inter_price) : form.inter_price,
+      intra_price: content.intra_price != null ? String(content.intra_price) : form.intra_price,
+      formats: Array.isArray(content.formats) ? content.formats.join("\n") : form.formats,
+    });
+  };
+
+  const runAi = async (mode: "generate" | "improve") => {
+    if (!form) return;
+    if (mode === "generate" && !form.title.trim()) {
+      setError("Saisissez au minimum un titre.");
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/super/formations/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode,
+          title: form.title,
+          domain: form.domain,
+          duration: form.duration,
+          level: form.level,
+          existing:
+            mode === "improve"
+              ? {
+                  short_description: form.short_description,
+                  long_description: form.long_description,
+                  objectives: linesToArray(form.objectives),
+                  skills: linesToArray(form.skills),
+                  program: form.program.trim() ? JSON.parse(form.program) : null,
+                  prerequisites: form.prerequisites,
+                  audience: linesToArray(form.audience),
+                  badge_name: form.badge_name,
+                  inter_price: form.inter_price ? Number(form.inter_price) : null,
+                  intra_price: form.intra_price ? Number(form.intra_price) : null,
+                  formats: linesToArray(form.formats),
+                }
+              : undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Erreur IA");
+      applyAiContent(json.content);
+      setMessage(mode === "generate" ? "Contenu généré par l'IA." : "Contenu amélioré par l'IA.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur IA");
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -308,15 +462,34 @@ export function SuperTrainingCoursesManager() {
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
                 <h2 className="text-lg font-semibold text-gray-900">{form.title || "Sans titre"}</h2>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.is_active}
-                    onChange={(e) => updateField("is_active", e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  Formation active
-                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={generating}
+                    onClick={() => void runAi("generate")}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[#635BFF]/30 bg-[#635BFF]/8 px-3 py-2 text-xs font-semibold text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-50"
+                  >
+                    {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    Générer avec l&apos;IA
+                  </button>
+                  <button
+                    type="button"
+                    disabled={generating}
+                    onClick={() => void runAi("improve")}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Améliorer avec l&apos;IA
+                  </button>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={form.is_active}
+                      onChange={(e) => updateField("is_active", e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    Active
+                  </label>
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -332,10 +505,11 @@ export function SuperTrainingCoursesManager() {
                   <span className="mb-1 block font-medium text-gray-700">Titre</span>
                   <input className={INPUT} value={form.title} onChange={(e) => updateField("title", e.target.value)} />
                 </label>
-                <label className="block text-sm sm:col-span-2">
-                  <span className="mb-1 block font-medium text-gray-700">Cover URL</span>
-                  <input className={INPUT} value={form.cover_url} onChange={(e) => updateField("cover_url", e.target.value)} />
-                </label>
+                <CoverUploader
+                  coverUrl={form.cover_url}
+                  courseId={selected.id}
+                  onUploaded={(url) => updateField("cover_url", url)}
+                />
                 <label className="block text-sm sm:col-span-2">
                   <span className="mb-1 block font-medium text-gray-700">Description courte</span>
                   <textarea className={TEXTAREA} value={form.short_description} onChange={(e) => updateField("short_description", e.target.value)} />

@@ -18,15 +18,15 @@ export default function ExpertRegisterThankYouPage() {
 
       <header className="relative mx-auto flex max-w-5xl items-center justify-between px-6 py-8">
         <Link href="/" className="text-sm font-black uppercase tracking-[0.22em] text-white/80 hover:text-white">
-          Beyond
+          EDGE
         </Link>
-        <div className="text-xs font-semibold text-white/60">Join the Network</div>
+        <div className="text-xs font-semibold text-white/60">Réseau formateurs</div>
       </header>
 
       <main className="relative mx-auto flex min-h-[70vh] max-w-3xl items-center px-6 pb-20">
         <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-10 text-center shadow-[0_18px_70px_rgba(0,0,0,0.40)] backdrop-blur-2xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-emerald-400/20 bg-emerald-400/10">
-            <CheckCircle2 className="h-9 w-9 text-emerald-300" aria-hidden />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-[#635BFF]/25 bg-[#635BFF]/10">
+            <CheckCircle2 className="h-9 w-9 text-[#a8a3ff]" aria-hidden />
           </div>
           <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-white">Merci, votre profil est envoyé</h1>
           <p className="mt-4 text-sm text-white/70">
@@ -43,7 +43,7 @@ export default function ExpertRegisterThankYouPage() {
             </button>
             <button
               type="button"
-              onClick={() => router.push("/dashboard/entreprise")}
+              onClick={() => router.push("/dashboard/expert")}
               className="rounded-2xl bg-white px-6 py-3 text-xs font-black uppercase tracking-[0.18em] text-black hover:bg-white/90"
             >
               Aller au Dashboard

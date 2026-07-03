@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
 type Props = {
-  variant: "particulier" | "entreprise" | "invite";
+  variant: "particulier" | "entreprise" | "invite" | "expert";
   signupHref: string;
   signupLabel: string;
   initialEmail?: string;
@@ -26,6 +26,8 @@ export function EdgeAuthLinkErrorPanel({ variant, signupHref, signupLabel, initi
       ? "Demandez une nouvelle invitation à votre responsable RH, ou contactez le support."
       : variant === "entreprise"
         ? "Les liens de confirmation sont valables 24 h. Demandez un nouvel email pour continuer votre inscription entreprise."
+        : variant === "expert"
+          ? "Les liens de création de mot de passe sont valables 24 h. Reprenez votre candidature formateur pour recevoir un nouvel email."
         : "Les liens de confirmation sont valables 24 h. Saisissez votre email pour recevoir un nouveau lien d'activation.";
 
   const handleResend = async () => {

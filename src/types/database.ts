@@ -10,6 +10,7 @@ export type Expert = {
   photo_url?: string | null;
   avatar_url?: string | null;
   registration_step?: number | null;
+  review_status?: string | null;
   is_active?: boolean | null;
   is_certified_beyond?: boolean | null;
   certification_status?: CertificationStatus | string | null;

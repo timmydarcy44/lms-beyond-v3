@@ -26,6 +26,19 @@ const SCHEMA = {
     inter_price: { type: "number" },
     intra_price: { type: "number" },
     formats: { type: "array", items: { type: "string" } },
+    duration: { type: "string" },
+    level: { type: "string" },
+    meta_description: { type: "string" },
+    seo_tags: { type: "array", items: { type: "string" } },
+    why_choose: { type: "array", items: { type: "string" } },
+    faq: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { q: { type: "string" }, a: { type: "string" } },
+        required: ["q", "a"],
+      },
+    },
   },
   required: [
     "short_description",
@@ -39,6 +52,12 @@ const SCHEMA = {
     "inter_price",
     "intra_price",
     "formats",
+    "duration",
+    "level",
+    "meta_description",
+    "seo_tags",
+    "why_choose",
+    "faq",
   ],
 };
 
@@ -77,7 +96,7 @@ Niveau: ${level || "—"}
 Contenu actuel:
 ${JSON.stringify(existing, null, 2)}
 
-Retourne le JSON complet avec: short_description, long_description, objectives (5-8), skills (6-10), program (6-10 étapes avec title et duration), prerequisites, audience (3-5), badge_name, inter_price (number), intra_price (number), formats (Présentiel, Distanciel, Blended selon pertinence).`
+Retourne le JSON complet avec: short_description, long_description, objectives (5-8), skills (6-10), program (6-10 étapes avec title et duration), prerequisites, audience (3-5), badge_name, inter_price (number), intra_price (number), formats (Présentiel, Distanciel, Blended, Sur mesure), duration, level, meta_description (150-160 car.), seo_tags (8-12 mots-clés), why_choose (4-6 raisons), faq (4-6 questions avec q et a).`
         : `Génère une fiche formation professionnelle complète pour le catalogue EDGE Business.
 
 Titre: ${title}
@@ -85,7 +104,7 @@ Domaine: ${domain || "Management & compétences"}
 Durée: ${duration || "2 jours"}
 Niveau: ${level || "Intermédiaire"}
 
-Retourne le JSON avec: short_description (2 phrases), long_description (3-4 paragraphes séparés par \\n), objectives (5-8), skills (6-10), program (6-10 étapes avec title et duration), prerequisites, audience (3-5), badge_name (Open Badge EDGE), inter_price réaliste (number), intra_price (groupe, ~8x inter), formats.`;
+Retourne le JSON avec: short_description (2 phrases), long_description (3-4 paragraphes séparés par \\n), objectives (5-8), skills (6-10), program (6-10 étapes avec title et duration), prerequisites, audience (3-5), badge_name (Open Badge EDGE), inter_price réaliste (number), intra_price (groupe, ~8x inter), formats, duration, level, meta_description (150-160 car.), seo_tags (8-12), why_choose (4-6), faq (4-6 avec q et a).`;
 
     const result = await generateJSON(userPrompt, SCHEMA, systemPrompt);
 

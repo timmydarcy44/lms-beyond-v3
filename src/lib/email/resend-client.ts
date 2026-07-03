@@ -30,12 +30,16 @@ export async function getResendClient() {
   return resendInstance;
 }
 
+export const EDGE_BCC_ADDRESS = "contact@edgebs.fr";
+
 export type EmailOptions = {
   to: string | string[];
   subject: string;
   html: string;
   from?: string;
   replyTo?: string;
+  bcc?: string | string[];
+  skipBcc?: boolean;
 };
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -51,10 +55,21 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   try {
     const fromEmail = resolveResendFromEmail(options.from);
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
+    const bccList = options.skipBcc
+      ? options.bcc
+        ? Array.isArray(options.bcc)
+          ? options.bcc
+          : [options.bcc]
+        : undefined
+      : [
+          EDGE_BCC_ADDRESS,
+          ...(options.bcc ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]) : []),
+        ];
 
     const result = await resend.emails.send({
       from: fromEmail,
       to: recipients,
+      bcc: bccList?.length ? bccList : undefined,
       subject: options.subject,
       html: options.html,
       replyTo: options.replyTo,

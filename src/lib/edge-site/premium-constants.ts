@@ -1,5 +1,6 @@
 import { getEdgeMarketingRoutes, type EdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
+import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 
 /** Logo navbar / footer — asset local public. */
 export const EDGE_LOGO_PATH = "/edge-lab/edge-logo-white.png";
@@ -45,6 +46,7 @@ export function getEdgePremiumConfig(host?: string | null) {
     links: {
       apprenants: R.apprenants,
       business: R.business,
+      particulier: R.particulier,
       tarifs: R.tarifs,
       login: R.login,
       contact: R.contact,
@@ -78,31 +80,29 @@ export function getEdgePremiumConfig(host?: string | null) {
         {
           title: "Formations",
           links: [
-            { label: "BTS", href: R.formationsBts },
-            { label: "Bachelor", href: R.formationsBachelor },
-            { label: "Mastère", href: R.formationsMastere },
-            { label: "Formations en ligne", href: R.onlineFormations },
+            { label: "Titres professionnels (Bac+2)", href: R.formationsTitresPro },
+            { label: "Bachelor (Bac+3)", href: R.formationsBachelor },
+            { label: "Mastère (Bac+5)", href: R.formationsMastere },
             { label: "Bootcamps", href: R.onlineBootcamps },
+            { label: "Spécialités", href: R.formationsSpecialites },
           ],
         },
         {
           title: "Parcours",
           links: [
             { label: "Alternance", href: R.alternance },
-            { label: "Formation initiale", href: R.formations },
-            { label: "Formation continue", href: R.onlineFormations },
             { label: "Admissions", href: R.admissions },
             { label: "Financement", href: R.financement },
+            { label: "Vie étudiante", href: R.vieEtudiante },
           ],
         },
         {
           title: "Réussir",
           links: [
-            { label: "Accompagnement personnalisé", href: R.apprenants },
-            { label: "Vie étudiante", href: R.vieEtudiante },
-            { label: "Entreprises partenaires", href: R.apprenants },
+            { label: "Entreprises partenaires", href: R.entreprises },
             { label: "Débouchés", href: R.apprenants },
             { label: "Certifications", href: R.certifications },
+            { label: "Accompagnement personnalisé", href: R.contact },
           ],
         },
         {
@@ -173,6 +173,51 @@ export function getEdgePremiumConfig(host?: string | null) {
         },
       ],
     },
+    megaParticulier: {
+      headerTitle: "Découvrir EDGE Particulier",
+      headerSubtitle:
+        "Certifications, montée en compétences et accompagnement de votre évolution professionnelle.",
+      headerHref: R.particulier,
+      columns: [
+        {
+          title: "Thématiques",
+          links: [
+            { label: "Certifications pro", href: R.particulierCertifications },
+            { label: "IA", href: R.particulierIA },
+            { label: "Management", href: R.particulierManagement },
+            { label: "Vente", href: R.particulierVente },
+            { label: "RH", href: R.particulierRh },
+            { label: "Soft Skills", href: R.particulierSoftSkills },
+          ],
+        },
+        {
+          title: "Développer mes compétences",
+          links: [
+            { label: "Développer mes compétences", href: R.particulierDevelopper },
+            { label: "EDGE Online", href: EDGE_ONLINE_EXTERNAL_URL },
+            { label: "Micro-certifications", href: R.particulierMicroCertifications },
+            { label: "Open Badges", href: R.particulierOpenBadges },
+          ],
+        },
+        {
+          title: "Financer",
+          links: [
+            { label: "CPF", href: R.particulierCpf },
+            { label: "France Travail", href: R.particulierFranceTravail },
+            { label: "OPCO", href: R.particulierOpco },
+            { label: "Financement personnel", href: R.particulierFinancementPerso },
+          ],
+        },
+        {
+          title: "Évolution pro",
+          links: [
+            { label: "Reconversion", href: R.particulierReconversion },
+            { label: "Coaching", href: R.particulierCoaching },
+            { label: "Accompagnement individuel", href: R.particulierAccompagnement },
+          ],
+        },
+      ],
+    },
     routes: R,
   };
 }
@@ -189,9 +234,12 @@ export const EDGE_MEGA_APPRENANTS = DEFAULT_CONFIG.megaApprenants;
 
 export const EDGE_MEGA_BUSINESS = DEFAULT_CONFIG.megaBusiness;
 
+export const EDGE_MEGA_PARTICULIER = DEFAULT_CONFIG.megaParticulier;
+
 export type EdgeMegaColumnsData =
   | EdgePremiumConfig["megaApprenants"]
-  | EdgePremiumConfig["megaBusiness"];
+  | EdgePremiumConfig["megaBusiness"]
+  | EdgePremiumConfig["megaParticulier"];
 
 export type EdgeMobileNavCategory = {
   id: string;
@@ -206,11 +254,11 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
       id: "apprenants",
       label: "Apprenants",
       links: [
-        { label: "BTS", href: R.formationsBts },
-        { label: "Bachelor", href: R.formationsBachelor },
-        { label: "Mastère", href: R.formationsMastere },
-        { label: "Formations en ligne", href: R.onlineFormations },
+        { label: "Titres professionnels (Bac+2)", href: R.formationsTitresPro },
+        { label: "Bachelor (Bac+3)", href: R.formationsBachelor },
+        { label: "Mastère (Bac+5)", href: R.formationsMastere },
         { label: "Bootcamps", href: R.onlineBootcamps },
+        { label: "Spécialités", href: R.formationsSpecialites },
         { label: "Alternance", href: R.alternance },
         { label: "Admissions", href: R.admissions },
         { label: "Financement", href: R.financement },
@@ -227,6 +275,18 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
         { label: "Académie interne", href: R.businessAcademie },
         { label: "Recrutement", href: R.businessRecrutement },
         { label: "Pilotage", href: R.businessTableauxDeBord },
+      ],
+    },
+    {
+      id: "particulier",
+      label: "Particulier",
+      links: [
+        { label: "Certifications pro", href: R.particulierCertifications },
+        { label: "EDGE Online", href: R.particulierEdgeOnline },
+        { label: "Soft Skills", href: R.particulierSoftSkills },
+        { label: "CPF & financement", href: R.particulierCpf },
+        { label: "Reconversion", href: R.particulierReconversion },
+        { label: "Coaching", href: R.particulierCoaching },
       ],
     },
     {

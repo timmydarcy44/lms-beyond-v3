@@ -5,7 +5,7 @@ import { EDGE_TRAINING_MODULES } from "@/lib/edge-site/training-catalog";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 const SELECT_COLS =
-  "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
+  "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,meta_description,seo_tags,faq,why_choose,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
 
 export async function GET() {
   const isAdmin = await isSuperAdmin();

@@ -24,6 +24,10 @@ type FormState = {
   inter_price: string;
   max_intra_participants: string;
   badge_name: string;
+  meta_description: string;
+  seo_tags: string;
+  why_choose: string;
+  faq: string;
   trainer_name: string;
   trainer_headline: string;
   trainer_photo_url: string;
@@ -62,6 +66,10 @@ function courseToForm(course: TrainingCourseRow): FormState {
     inter_price: course.inter_price != null ? String(course.inter_price) : "",
     max_intra_participants: String(course.max_intra_participants ?? 12),
     badge_name: course.badge_name ?? "",
+    meta_description: course.meta_description ?? "",
+    seo_tags: arrayToLines(course.seo_tags),
+    why_choose: arrayToLines(course.why_choose),
+    faq: course.faq ? JSON.stringify(course.faq, null, 2) : "",
     trainer_name: course.trainer_name ?? "",
     trainer_headline: course.trainer_headline ?? "",
     trainer_photo_url: course.trainer_photo_url ?? "",
@@ -71,8 +79,12 @@ function courseToForm(course: TrainingCourseRow): FormState {
 
 function formToPayload(form: FormState) {
   let program: unknown = null;
+  let faq: unknown = null;
   if (form.program.trim()) {
     program = JSON.parse(form.program);
+  }
+  if (form.faq.trim()) {
+    faq = JSON.parse(form.faq);
   }
 
   return {
@@ -94,6 +106,10 @@ function formToPayload(form: FormState) {
     inter_price: form.inter_price.trim() ? Number(form.inter_price) : null,
     max_intra_participants: Number(form.max_intra_participants) || 12,
     badge_name: form.badge_name.trim() || null,
+    meta_description: form.meta_description.trim() || null,
+    seo_tags: linesToArray(form.seo_tags),
+    why_choose: linesToArray(form.why_choose),
+    faq,
     trainer_name: form.trainer_name.trim() || null,
     trainer_headline: form.trainer_headline.trim() || null,
     trainer_photo_url: form.trainer_photo_url.trim() || null,
@@ -291,6 +307,12 @@ export function SuperTrainingCoursesManager() {
       inter_price: content.inter_price != null ? String(content.inter_price) : form.inter_price,
       intra_price: content.intra_price != null ? String(content.intra_price) : form.intra_price,
       formats: Array.isArray(content.formats) ? content.formats.join("\n") : form.formats,
+      duration: String(content.duration ?? form.duration),
+      level: String(content.level ?? form.level),
+      meta_description: String(content.meta_description ?? form.meta_description),
+      seo_tags: Array.isArray(content.seo_tags) ? content.seo_tags.join("\n") : form.seo_tags,
+      why_choose: Array.isArray(content.why_choose) ? content.why_choose.join("\n") : form.why_choose,
+      faq: Array.isArray(content.faq) ? JSON.stringify(content.faq, null, 2) : form.faq,
     });
   };
 
@@ -545,6 +567,22 @@ export function SuperTrainingCoursesManager() {
                 <label className="block text-sm">
                   <span className="mb-1 block font-medium text-gray-700">Open Badge / certification</span>
                   <input className={INPUT} value={form.badge_name} onChange={(e) => updateField("badge_name", e.target.value)} />
+                </label>
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-gray-700">Meta description SEO</span>
+                  <textarea className={TEXTAREA} value={form.meta_description} onChange={(e) => updateField("meta_description", e.target.value)} />
+                </label>
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-gray-700">Tags SEO (un par ligne)</span>
+                  <textarea className={TEXTAREA} value={form.seo_tags} onChange={(e) => updateField("seo_tags", e.target.value)} />
+                </label>
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-gray-700">Pourquoi choisir (un par ligne)</span>
+                  <textarea className={TEXTAREA} value={form.why_choose} onChange={(e) => updateField("why_choose", e.target.value)} />
+                </label>
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-gray-700">FAQ (JSON [{`{q,a}`}])</span>
+                  <textarea className={TEXTAREA} value={form.faq} onChange={(e) => updateField("faq", e.target.value)} />
                 </label>
                 <label className="block text-sm sm:col-span-2">
                   <span className="mb-1 block font-medium text-gray-700">Objectifs (un par ligne)</span>

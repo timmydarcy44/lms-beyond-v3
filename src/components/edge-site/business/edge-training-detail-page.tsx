@@ -92,7 +92,16 @@ function PricingSidebar({
             <Award className="h-3.5 w-3.5 text-edge-accent" />
             {course.badge_name ?? "Open Badge EDGE"}
           </p>
-          <p>{detail.formatsLabel}</p>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {(course.formats ?? ["Présentiel", "Distanciel", "Blended", "Sur mesure"]).map((format) => (
+              <span
+                key={format}
+                className="rounded-full border border-[#050505]/10 bg-[#F7F7F5] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#050505]/55"
+              >
+                {format}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </aside>
@@ -199,6 +208,59 @@ export function EdgeTrainingDetailPage({ course }: Props) {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-[24px] border border-[#050505]/8 bg-white p-7">
+              <h3 className="text-lg font-semibold tracking-[-0.02em]">Pourquoi choisir cette formation</h3>
+              <ul className="mt-5 space-y-3">
+                {detail.whyFollow.map((item) => (
+                  <li key={item} className="flex gap-3 text-sm leading-relaxed text-[#050505]/65">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-edge-accent" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-[24px] border border-[#050505]/8 bg-white p-7">
+              <h3 className="text-lg font-semibold tracking-[-0.02em]">À qui s&apos;adresse cette formation</h3>
+              <ul className="mt-5 space-y-2">
+                {(course.audience ?? ["Managers", "Équipes opérationnelles", "Professionnels en évolution"]).map((a) => (
+                  <li key={a} className="flex gap-3 text-sm text-[#050505]/65">
+                    <Users className="mt-0.5 h-4 w-4 shrink-0 text-edge-accent" />
+                    {a}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
+          <section className="rounded-[24px] border border-[#635BFF]/15 bg-gradient-to-br from-[#635BFF]/8 to-white p-7">
+            <div className="flex flex-wrap items-start justify-between gap-6">
+              <div className="max-w-xl">
+                <h3 className="text-lg font-semibold tracking-[-0.02em]">Compétences acquises</h3>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {detail.competences.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full border border-[#635BFF]/20 bg-white px-3 py-1.5 text-xs font-medium text-[#635BFF]"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-[#050505]/8 bg-white px-5 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#050505]/40">Open Badge</p>
+                <p className="mt-2 flex items-center gap-2 text-base font-semibold text-[#050505]">
+                  <Award className="h-5 w-5 text-edge-accent" />
+                  {course.badge_name ?? "Open Badge EDGE"}
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-[#050505]/50">
+                  Certification vérifiable, partageable sur LinkedIn et dans votre wallet EDGE.
+                </p>
               </div>
             </div>
           </section>

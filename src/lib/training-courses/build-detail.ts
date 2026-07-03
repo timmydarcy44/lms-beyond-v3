@@ -90,20 +90,22 @@ export function buildTrainingCourseDetail(course: TrainingCoursePublic): Trainin
         price: intraLabel ?? "Sur devis",
       },
     ],
-    faq: [
-      {
-        q: "Quelle différence entre intra et inter ?",
-        a: "L'intra est organisée pour votre équipe (jusqu'à 12 participants). L'inter réunit des participants de plusieurs entreprises.",
-      },
-      {
-        q: "La formation est-elle certifiante ?",
-        a: `Oui, un ${course.badge_name ?? "Open Badge EDGE"} est délivré en fin de parcours.`,
-      },
-      {
-        q: "Peut-on adapter le programme ?",
-        a: "En intra, le contenu peut être personnalisé selon vos enjeux métier.",
-      },
-    ],
+    faq: course.faq?.length
+      ? course.faq
+      : [
+          {
+            q: "Quelle différence entre intra et inter ?",
+            a: "L'intra est organisée pour votre équipe (jusqu'à 12 participants). L'inter réunit des participants de plusieurs entreprises.",
+          },
+          {
+            q: "La formation est-elle certifiante ?",
+            a: `Oui, un ${course.badge_name ?? "Open Badge EDGE"} est délivré en fin de parcours.`,
+          },
+          {
+            q: "Peut-on adapter le programme ?",
+            a: "En intra, le contenu peut être personnalisé selon vos enjeux métier.",
+          },
+        ],
     reviews: [
       {
         author: "Sophie M.",
@@ -130,7 +132,9 @@ export function buildTrainingCourseDetail(course: TrainingCoursePublic): Trainin
         photoUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&q=80",
       },
     ],
-    whyFollow: (course.objectives ?? []).slice(0, 4),
+    whyFollow: course.why_choose?.length
+      ? course.why_choose
+      : (course.objectives ?? []).slice(0, 4),
   };
 }
 

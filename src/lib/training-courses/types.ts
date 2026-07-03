@@ -3,6 +3,11 @@ export type TrainingCourseProgramStep = {
   duration: string;
 };
 
+export type TrainingCourseFaqItem = {
+  q: string;
+  a: string;
+};
+
 export type TrainingCourseRow = {
   id: string;
   slug: string;
@@ -23,6 +28,10 @@ export type TrainingCourseRow = {
   inter_price: number | null;
   max_intra_participants: number | null;
   badge_name: string | null;
+  meta_description: string | null;
+  seo_tags: string[] | null;
+  faq: TrainingCourseFaqItem[] | null;
+  why_choose: string[] | null;
   trainer_id: string | null;
   trainer_name: string | null;
   trainer_headline: string | null;

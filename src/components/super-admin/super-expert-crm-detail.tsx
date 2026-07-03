@@ -7,15 +7,17 @@ import { useRouter } from "next/navigation";
 import {
   Award,
   BadgeCheck,
+  Briefcase,
   Calendar,
   ChevronDown,
   Clock,
+  ExternalLink,
   FileText,
   Linkedin,
   Mail,
   MessageSquare,
-  MoreHorizontal,
   Shield,
+  Star,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,38 +31,43 @@ import {
 } from "@/lib/expert/admin-expert-types";
 import {
   buildExpertTimeline,
-  computeExpertProfileProgress,
+  computeExpertKpis,
+  getExpertCoverUrl,
+  getExpertCvUrl,
   getExpertDomains,
+  getExpertPortfolioUrl,
 } from "@/lib/expert/expert-crm-utils";
+import { EDGE_CHIP_CLASSES, EDGE_STATUS_CLASSES } from "@/lib/edge-site/design-system";
 
 function statusStyles(status: string | null | undefined) {
-  switch (status) {
-    case "approved":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "rejected":
-      return "bg-red-50 text-red-700 border-red-200";
-    case "needs_info":
-      return "bg-amber-50 text-amber-800 border-amber-200";
-    default:
-      return "bg-slate-100 text-slate-600 border-slate-200";
-  }
+  const key = status as keyof typeof EDGE_STATUS_CLASSES;
+  return EDGE_STATUS_CLASSES[key] ?? EDGE_STATUS_CLASSES.pending;
 }
 
-function TagGroup({ label, items }: { label: string; items: string[] }) {
+function TagGroup({ label, items, chip = "default" }: { label: string; items: string[]; chip?: keyof typeof EDGE_CHIP_CLASSES }) {
   if (!items.length) return null;
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
       <div className="mt-2.5 flex flex-wrap gap-2">
         {items.map((item) => (
-          <span
-            key={item}
-            className="rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm"
-          >
+          <span key={item} className={EDGE_CHIP_CLASSES[chip]}>
             {item}
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+function KpiCard({ label, value, icon: Icon }: { label: string; value: string; icon: typeof User }) {
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center gap-2 text-slate-400">
+        <Icon className="h-4 w-4" strokeWidth={1.5} />
+        <span className="text-[11px] font-semibold uppercase tracking-wider">{label}</span>
+      </div>
+      <p className="mt-2 text-xl font-bold tracking-tight text-slate-900">{value}</p>
     </div>
   );
 }
@@ -103,8 +110,12 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
   const documents = parseExpertDocuments(expert.references);
   const notes = parseExpertInternalNotes(expert.references);
   const timeline = useMemo(() => buildExpertTimeline(expert), [expert]);
-  const progress = useMemo(() => computeExpertProfileProgress(expert, meta), [expert, meta]);
+  const kpis = useMemo(() => computeExpertKpis(expert, meta), [expert, meta]);
+  const progress = kpis.profileProgress;
   const domains = getExpertDomains(meta, expert);
+  const coverUrl = getExpertCoverUrl(meta);
+  const portfolioUrl = getExpertPortfolioUrl(meta);
+  const cvUrl = getExpertCvUrl(expert);
   const photo = expert.photo_url || expert.avatar_url;
   const firstName = expert.first_name ?? "";
   const lastName = expert.last_name ?? "";
@@ -159,7 +170,15 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
 
       {/* Hero CRM */}
       <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
-        <div className="h-28 bg-gradient-to-r from-[#0d1f3c] via-[#152a4a] to-[#1a3358]" aria-hidden />
+        <div
+          className="relative h-36 bg-gradient-to-r from-[#0A1628] via-[#152A4A] to-[#1a3358]"
+          aria-hidden
+        >
+          {coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+          ) : null}
+        </div>
         <div className="relative px-6 pb-6 sm:px-8">
           <div className="-mt-14 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-5">
@@ -183,11 +202,11 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                     {expertReviewStatusLabel(expert.review_status)}
                   </span>
                   {expert.is_active ? (
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                    <span className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", EDGE_STATUS_CLASSES.active)}>
                       Actif
                     </span>
                   ) : (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+                    <span className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", EDGE_STATUS_CLASSES.inactive)}>
                       Inactif
                     </span>
                   )}
@@ -220,6 +239,28 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                       LinkedIn
                     </a>
                   ) : null}
+                  {portfolioUrl ? (
+                    <a
+                      href={portfolioUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 hover:text-[#635BFF]"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Portfolio
+                    </a>
+                  ) : null}
+                  {cvUrl ? (
+                    <a
+                      href={cvUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 hover:text-[#635BFF]"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      CV
+                    </a>
+                  ) : null}
                   {expert.created_at ? (
                     <span className="inline-flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5" />
@@ -230,7 +271,7 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
               </div>
             </div>
 
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 flex-wrap gap-2">
               <button
                 type="button"
                 disabled={loading !== null}
@@ -241,13 +282,64 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
               </button>
               <button
                 type="button"
-                onClick={() => setShowActions((v) => !v)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50"
-                aria-label="Plus d'actions"
+                disabled={loading !== null}
+                onClick={() => void runReview("reject")}
+                className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-100 disabled:opacity-60"
               >
-                <MoreHorizontal className="h-5 w-5" />
+                Refuser
+              </button>
+              {expert.is_active ? (
+                <button
+                  type="button"
+                  disabled={loading !== null}
+                  onClick={() => void runAction("toggle_active")}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  Suspendre
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={loading !== null}
+                  onClick={() => void runAction("toggle_active")}
+                  className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
+                >
+                  Réactiver
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={loading !== null}
+                onClick={() => void runAction("set_certified", { certified: true })}
+                className="rounded-xl border border-[#635BFF]/25 bg-[#635BFF]/8 px-4 py-2.5 text-sm font-semibold text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-60"
+              >
+                EDGE Certified
               </button>
             </div>
+          </div>
+
+          {/* KPIs */}
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard
+              label="Missions"
+              value={kpis.missionsCount != null ? String(kpis.missionsCount) : "—"}
+              icon={Briefcase}
+            />
+            <KpiCard
+              label="Expérience"
+              value={kpis.yearsExperience ?? "—"}
+              icon={User}
+            />
+            <KpiCard
+              label="Note"
+              value={kpis.rating != null ? `${kpis.rating}/5` : "—"}
+              icon={Star}
+            />
+            <KpiCard
+              label="Dernière activité"
+              value={kpis.lastActivityLabel ?? "—"}
+              icon={Clock}
+            />
           </div>
 
           {/* Progression profil */}
@@ -270,8 +362,8 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
         <div className="space-y-6">
           <CrmCard title="Compétences & référentiel" icon={Shield}>
             <div className="grid gap-6 sm:grid-cols-2">
-              <TagGroup label="Domaines" items={domains} />
-              <TagGroup label="Spécialités" items={(expert.specialties as string[]) ?? []} />
+              <TagGroup label="Domaines" items={domains} chip="purple" />
+              <TagGroup label="Spécialités" items={(expert.specialties as string[]) ?? []} chip="navy" />
               <TagGroup label="Formats" items={(expert.formats_supported as string[]) ?? []} />
               <TagGroup label="Publics" items={(meta?.audiences as string[]) ?? []} />
               <TagGroup
@@ -310,9 +402,10 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                         href={String(doc.url)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-semibold text-[#635BFF] hover:underline"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#635BFF] hover:underline"
                       >
-                        Ouvrir
+                        <ExternalLink className="h-3 w-3" />
+                        Télécharger
                       </a>
                     ) : null}
                   </li>

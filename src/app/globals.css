@@ -253,6 +253,13 @@ body.light {
   --color-edge-red: #ff3b30;
   --color-edge-accent: #635bff;
   --color-edge-accent-light: #7b74ff;
+  --color-edge-indigo: #3b5bdb;
+  --color-edge-navy: #0a1628;
+  --color-edge-navy-mid: #0d1f3c;
+  --color-edge-navy-light: #152a4a;
+  --color-edge-gold: #c9a227;
+  --color-edge-green: #10b981;
+  --color-edge-orange: #f59e0b;
   --color-edge-black: #0a0a0a;
   --color-edge-black-deep: #050505;
   --color-edge-dark: #111110;

@@ -1,5 +1,4 @@
--- Inscription expert EDGE : statut de revue, certification, LinkedIn, activation, photo.
--- Idempotent.
+-- Statut de validation expert + champs inscription EDGE
 
 ALTER TABLE public.experts ADD COLUMN IF NOT EXISTS review_status text;
 ALTER TABLE public.experts ADD COLUMN IF NOT EXISTS wants_certification boolean NOT NULL DEFAULT false;
@@ -10,16 +9,16 @@ ALTER TABLE public.experts ADD COLUMN IF NOT EXISTS regions text[];
 ALTER TABLE public.experts ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
 
 UPDATE public.experts
-SET avatar_url = photo_url
-WHERE avatar_url IS NULL AND photo_url IS NOT NULL;
-
-UPDATE public.experts
 SET review_status = 'approved'
-WHERE review_status IS NULL AND coalesce(is_active, true) = true;
+WHERE review_status IS NULL AND is_active = true;
 
 UPDATE public.experts
 SET review_status = 'pending_review'
 WHERE review_status IS NULL;
+
+UPDATE public.experts
+SET is_active = false
+WHERE review_status = 'pending_review' AND is_active IS NULL;
 
 ALTER TABLE public.experts ALTER COLUMN review_status SET DEFAULT 'pending_review';
 

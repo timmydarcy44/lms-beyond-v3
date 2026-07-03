@@ -1,6 +1,6 @@
 "use client";
 
-import { ExpertApprovedDashboard } from "@/components/expert/expert-approved-dashboard";
+import { ExpertCockpitDashboard } from "@/components/expert/expert-cockpit-dashboard";
 import { ExpertPendingDashboard } from "@/components/expert/expert-pending-dashboard";
 import { useExpertAccess } from "@/components/expert/expert-access-provider";
 
@@ -11,5 +11,5 @@ export default function ExpertDashboardPage() {
     return <ExpertPendingDashboard />;
   }
 
-  return <ExpertApprovedDashboard />;
+  return <ExpertCockpitDashboard />;
 }

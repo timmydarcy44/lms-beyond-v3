@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ExpertAccessProvider } from "@/components/expert/expert-access-provider";
 import { ExpertRouteGuard } from "@/components/expert/expert-route-guard";
 import { expertSetPasswordPath } from "@/lib/expert/signup-redirect";
+import { loadOrCreateExpertProfile } from "@/lib/expert/load-expert-profile";
 import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 
@@ -24,10 +25,10 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
     redirect(expertSetPasswordPath());
   }
 
-  const { data: expert } = await supabase.from("experts").select("*").eq("id", session.id).maybeSingle();
+  const expert = await loadOrCreateExpertProfile(supabase, session.id, user);
 
   if (!expert) {
-    redirect("/unauthorized");
+    redirect("/login?next=/dashboard/expert");
   }
 
   const emailConfirmed = Boolean(user?.email_confirmed_at) || user?.user_metadata?.needs_password_setup === false;

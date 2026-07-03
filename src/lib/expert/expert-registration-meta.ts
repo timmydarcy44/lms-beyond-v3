@@ -1,3 +1,14 @@
+export type ExpertDocumentMeta = {
+  id: string;
+  name: string;
+  category: string;
+  url: string;
+  mime_type?: string | null;
+  size?: number | null;
+  uploaded_at: string;
+  version?: number | null;
+};
+
 export type EdgeRegistrationMeta = {
   primary_domain: string | null;
   secondary_domains: string[];
@@ -9,6 +20,10 @@ export type EdgeRegistrationMeta = {
   availabilities: string[];
   photo_url: string | null;
   linkedin_url: string | null;
+  bio_long?: string | null;
+  website_url?: string | null;
+  daily_rate?: number | null;
+  documents?: ExpertDocumentMeta[];
 };
 
 const META_TYPE = "edge_registration_meta";
@@ -34,7 +49,39 @@ export function parseRegistrationMeta(references: unknown): EdgeRegistrationMeta
     availabilities: asStrings(raw.availabilities),
     photo_url: typeof raw.photo_url === "string" ? raw.photo_url : null,
     linkedin_url: typeof raw.linkedin_url === "string" ? raw.linkedin_url : null,
+    bio_long: typeof raw.bio_long === "string" ? raw.bio_long : null,
+    website_url: typeof raw.website_url === "string" ? raw.website_url : null,
+    daily_rate: typeof raw.daily_rate === "number" ? raw.daily_rate : null,
+    documents: Array.isArray(raw.documents)
+      ? (raw.documents as ExpertDocumentMeta[]).filter((d) => d && typeof d.id === "string")
+      : [],
   };
+}
+
+export function computeProfileCompletion(fields: {
+  firstName?: string;
+  lastName?: string;
+  headline?: string;
+  bio?: string;
+  avatarUrl?: string;
+  specialties?: string[];
+  formats?: string[];
+  domains?: string[];
+  zones?: string[];
+  languages?: string[];
+}): number {
+  const checks = [
+    Boolean(fields.firstName?.trim() && fields.lastName?.trim()),
+    Boolean(fields.headline?.trim()),
+    Boolean(fields.bio?.trim()),
+    Boolean(fields.avatarUrl?.trim()),
+    (fields.specialties?.length ?? 0) > 0 || (fields.domains?.length ?? 0) > 0,
+    (fields.formats?.length ?? 0) > 0,
+    (fields.zones?.length ?? 0) > 0,
+    (fields.languages?.length ?? 0) > 0,
+  ];
+  const done = checks.filter(Boolean).length;
+  return Math.round((done / checks.length) * 100);
 }
 
 export function mergeRegistrationMeta(

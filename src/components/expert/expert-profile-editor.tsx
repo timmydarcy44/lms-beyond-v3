@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Award, Globe, MapPin, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import SidebarExpert from "@/components/SidebarExpert";
@@ -11,10 +11,12 @@ import { useSupabase } from "@/components/providers/supabase-provider";
 import { edgeCertificationLabel, isEdgeCertified } from "@/lib/expert/expert-certification";
 import { expertReviewStatusLabel } from "@/lib/expert/expert-access";
 import {
+  computeProfileCompletion,
   mergeRegistrationMeta,
   parseRegistrationMeta,
   stripRegistrationMeta,
 } from "@/lib/expert/expert-registration-meta";
+import { EXPERT_PROFILE_SELECT_TIERS, isMissingColumnError } from "@/lib/expert/expert-profile-select";
 import {
   EXPERT_AUDIENCES,
   EXPERT_AVAILABILITY_OPTIONS,
@@ -56,7 +58,8 @@ export function ExpertProfileEditor() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [bio, setBio] = useState("");
-  const [bioLong, setBioLong] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [dailyRate, setDailyRate] = useState("");
 
   const [domains, setDomains] = useState<string[]>([]);
   const [primaryDomain, setPrimaryDomain] = useState("");
@@ -74,73 +77,114 @@ export function ExpertProfileEditor() {
   const [isActive, setIsActive] = useState(false);
   const [wantsCertification, setWantsCertification] = useState(false);
   const [certificationStatus, setCertificationStatus] = useState<string | null>(null);
-  const [registrationStep, setRegistrationStep] = useState(0);
+
+  const [bioLong, setBioLong] = useState("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hydrated = useRef(false);
+  const autosaveEnabled = useRef(false);
+
+  const hydrateFromRow = useCallback((data: Record<string, unknown>, userEmail?: string) => {
+    const meta = parseRegistrationMeta(data.references);
+    setFirstName(String(data.first_name ?? ctxExpert.first_name ?? "").trim());
+    setLastName(String(data.last_name ?? ctxExpert.last_name ?? "").trim());
+    setEmail(String(data.email ?? userEmail ?? ctxExpert.email ?? "").trim());
+    setHeadline(String(data.headline ?? ctxExpert.headline ?? "").trim());
+    setAvatarUrl(
+      String(data.avatar_url ?? data.photo_url ?? meta?.photo_url ?? ctxExpert.avatar_url ?? "").trim(),
+    );
+    setLinkedinUrl(String(data.linkedin_url ?? meta?.linkedin_url ?? ctxExpert.linkedin_url ?? "").trim());
+    setBio(String(data.bio ?? ctxExpert.bio ?? "").trim());
+    setBioLong(String(data.bio_long ?? meta?.bio_long ?? "").trim());
+    setWebsiteUrl(String(data.website_url ?? meta?.website_url ?? "").trim());
+    setDailyRate(
+      data.daily_rate != null
+        ? String(data.daily_rate)
+        : meta?.daily_rate != null
+          ? String(meta.daily_rate)
+          : "",
+    );
+    setDomains(meta?.domains?.length ? meta.domains : ((data.specialties as string[]) ?? ctxExpert.specialties ?? []));
+    setPrimaryDomain(meta?.primary_domain ?? meta?.domains?.[0] ?? "");
+    setSpecialties((data.specialties as string[]) ?? ctxExpert.specialties ?? []);
+    setFormats((data.formats_supported as string[]) ?? ctxExpert.formats_supported ?? []);
+    setAudiences(meta?.audiences ?? []);
+    setGeographicZones(
+      meta?.geographic_zones?.length ? meta.geographic_zones : ((data.regions as string[]) ?? ctxExpert.regions ?? []),
+    );
+    setLanguages(meta?.languages ?? []);
+    setAvailabilities(meta?.availabilities ?? []);
+    setYearsExperience(meta?.years_experience ?? "");
+    setReferences(safeReferences(data.references ?? ctxExpert.references));
+    setReviewStatus(String(data.review_status ?? ctxExpert.review_status ?? "pending_review"));
+    setIsActive(data.is_active === true || ctxExpert.is_active === true);
+    setWantsCertification(data.wants_certification === true || ctxExpert.wants_certification === true);
+    setCertificationStatus(String(data.certification_status ?? ctxExpert.certification_status ?? ""));
+  }, [ctxExpert]);
+
+  useEffect(() => {
+    if (!hydrated.current) {
+      hydrateFromRow(ctxExpert as Record<string, unknown>, undefined);
+      hydrated.current = true;
+      setLoading(false);
+    }
+  }, [ctxExpert, hydrateFromRow]);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setLoading(true);
+    async function refresh() {
       try {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData.user?.id ?? ctxExpert.id;
 
-        const { data, error } = await supabase
-          .from("experts")
-          .select(
-            "id,email,first_name,last_name,headline,bio,bio_long,avatar_url,photo_url,specialties,formats_supported,references,review_status,is_active,wants_certification,certification_status,is_certified_beyond,registration_step,linkedin_url,regions",
-          )
-          .eq("id", userId)
-          .maybeSingle();
-        if (error) throw error;
-        if (cancelled || !data) return;
+        let row: Record<string, unknown> | null = null;
+        for (const select of EXPERT_PROFILE_SELECT_TIERS) {
+          const { data, error } = await supabase.from("experts").select(select).eq("id", userId).maybeSingle();
+          if (!error && data) {
+            row = data as Record<string, unknown>;
+            break;
+          }
+          if (error && !isMissingColumnError(error)) break;
+        }
 
-        const meta = parseRegistrationMeta(data.references);
-        setFirstName(String(data.first_name ?? "").trim());
-        setLastName(String(data.last_name ?? "").trim());
-        setEmail(String(data.email ?? userData.user?.email ?? "").trim());
-        setHeadline(String(data.headline ?? "").trim());
-        setAvatarUrl(String(data.avatar_url ?? data.photo_url ?? meta?.photo_url ?? "").trim());
-        setLinkedinUrl(String(data.linkedin_url ?? meta?.linkedin_url ?? "").trim());
-        setBio(String(data.bio ?? "").trim());
-        setBioLong(String(data.bio_long ?? "").trim());
-        setDomains(meta?.domains?.length ? meta.domains : (data.specialties as string[]) ?? []);
-        setPrimaryDomain(meta?.primary_domain ?? meta?.domains?.[0] ?? "");
-        setSpecialties((data.specialties as string[]) ?? []);
-        setFormats((data.formats_supported as string[]) ?? []);
-        setAudiences(meta?.audiences ?? []);
-        setGeographicZones(
-          meta?.geographic_zones?.length ? meta.geographic_zones : ((data.regions as string[]) ?? []),
-        );
-        setLanguages(meta?.languages ?? []);
-        setAvailabilities(meta?.availabilities ?? []);
-        setYearsExperience(meta?.years_experience ?? "");
-        setReferences(safeReferences(data.references));
-        setReviewStatus(data.review_status ?? "pending_review");
-        setIsActive(data.is_active === true);
-        setWantsCertification(data.wants_certification === true);
-        setCertificationStatus(data.certification_status ?? null);
-        setRegistrationStep(typeof data.registration_step === "number" ? data.registration_step : 0);
+        if (!cancelled && row) {
+          hydrateFromRow(row, userData.user?.email);
+        }
       } catch {
-        toast.error("Impossible de charger votre profil.");
+        /* Le contexte layout fournit déjà le profil — pas d'erreur affichée */
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          autosaveEnabled.current = true;
+        }
       }
     }
-    load();
+    refresh();
     return () => {
       cancelled = true;
     };
-  }, [ctxExpert.id, supabase]);
+  }, [ctxExpert.id, supabase, hydrateFromRow]);
 
   const name = useMemo(() => `${firstName} ${lastName}`.trim() || "Votre nom", [firstName, lastName]);
-  const completionPct = Math.round((Math.max(0, Math.min(5, registrationStep)) / 5) * 100);
+  const completionPct = computeProfileCompletion({
+    firstName,
+    lastName,
+    headline,
+    bio,
+    avatarUrl,
+    specialties,
+    formats,
+    domains,
+    zones: geographicZones,
+    languages,
+  });
   const certified = isEdgeCertified({
     certification_status: certificationStatus,
     is_certified_beyond: ctxExpert.is_certified_beyond,
   });
 
-  const handleSave = async () => {
-    setSaving(true);
+  const persistProfile = useCallback(async () => {
+    setSaveState("saving");
     try {
       const metaPatch = {
         primary_domain: primaryDomain || domains[0] || null,
@@ -153,12 +197,17 @@ export function ExpertProfileEditor() {
         availabilities,
         photo_url: avatarUrl || null,
         linkedin_url: linkedinUrl || null,
+        bio_long: bioLong.trim() || null,
+        website_url: websiteUrl.trim() || null,
+        daily_rate: dailyRate.trim() ? Number(dailyRate) : null,
       };
 
       const refsWithMeta = mergeRegistrationMeta(
         [...stripRegistrationMeta(references), ...references],
         metaPatch,
       );
+
+      const stepFromCompletion = Math.round((completionPct / 100) * 5);
 
       const payload: Record<string, unknown> = {
         first_name: firstName.trim() || null,
@@ -167,22 +216,102 @@ export function ExpertProfileEditor() {
         bio: bio.trim() || null,
         bio_long: bioLong.trim() || null,
         avatar_url: avatarUrl.trim() || null,
+        photo_url: avatarUrl.trim() || null,
         linkedin_url: linkedinUrl.trim() || null,
+        website_url: websiteUrl.trim() || null,
+        daily_rate: dailyRate.trim() ? Number(dailyRate) : null,
         specialties,
         formats_supported: formats,
+        regions: geographicZones,
         references: refsWithMeta,
-        registration_step: registrationStep,
+        registration_step: stepFromCompletion,
       };
 
-      const { error } = await supabase.from("experts").update(payload).eq("id", ctxExpert.id);
+      let { error } = await supabase.from("experts").update(payload).eq("id", ctxExpert.id);
+      if (error && isMissingColumnError(error)) {
+        const fallback = { ...payload };
+        delete fallback.bio_long;
+        delete fallback.website_url;
+        delete fallback.daily_rate;
+        ({ error } = await supabase.from("experts").update(fallback).eq("id", ctxExpert.id));
+      }
       if (error) throw error;
-      toast.success("Profil mis à jour.");
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
     } catch {
+      setSaveState("idle");
       toast.error("Impossible d'enregistrer les modifications.");
-    } finally {
-      setSaving(false);
     }
+  }, [
+    audiences,
+    avatarUrl,
+    bio,
+    bioLong,
+    completionPct,
+    ctxExpert.id,
+    dailyRate,
+    domains,
+    firstName,
+    formats,
+    geographicZones,
+    headline,
+    languages,
+    lastName,
+    linkedinUrl,
+    primaryDomain,
+    references,
+    specialties,
+    supabase,
+    websiteUrl,
+    yearsExperience,
+    availabilities,
+  ]);
+
+  const scheduleAutosave = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void persistProfile();
+    }, 1200);
+  }, [persistProfile]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await persistProfile();
+    setSaving(false);
+    toast.success("Profil mis à jour.");
   };
+
+  const skipAutosave = useRef(true);
+  useEffect(() => {
+    if (loading || !autosaveEnabled.current) return;
+    if (skipAutosave.current) {
+      skipAutosave.current = false;
+      return;
+    }
+    scheduleAutosave();
+  }, [
+    loading,
+    firstName,
+    lastName,
+    headline,
+    avatarUrl,
+    linkedinUrl,
+    websiteUrl,
+    dailyRate,
+    bio,
+    bioLong,
+    domains,
+    primaryDomain,
+    specialties,
+    formats,
+    audiences,
+    geographicZones,
+    languages,
+    availabilities,
+    yearsExperience,
+    references,
+    scheduleAutosave,
+  ]);
 
   const TagPicker = ({
     options,
@@ -232,7 +361,11 @@ export function ExpertProfileEditor() {
               onClick={handleSave}
               className="inline-flex items-center justify-center rounded-2xl bg-[#635BFF] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#7B74FF] disabled:opacity-60"
             >
-              {saving ? "Enregistrement…" : "Enregistrer"}
+              {saving || saveState === "saving"
+                ? "Enregistrement…"
+                : saveState === "saved"
+                  ? "Enregistré"
+                  : "Enregistrer"}
             </button>
           </header>
 
@@ -242,6 +375,29 @@ export function ExpertProfileEditor() {
             </div>
           ) : (
             <div className="space-y-6">
+              <section className="overflow-hidden rounded-[28px] border border-[#050505]/8 bg-white shadow-sm">
+                <div className="h-28 bg-[linear-gradient(135deg,rgba(99,91,255,0.18),rgba(5,5,5,0.04))]" />
+                <div className="relative px-6 pb-6 sm:px-8">
+                  <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex items-end gap-4">
+                      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-[#635BFF]/10 shadow-md">
+                        {avatarUrl ? (
+                          <Image src={avatarUrl} alt={name} fill className="object-cover" sizes="96px" unoptimized />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-[#635BFF]">
+                            {(firstName[0] ?? "E").toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="pb-1">
+                        <h2 className="text-2xl font-semibold tracking-tight">{name}</h2>
+                        <p className="mt-1 text-sm text-[#050505]/60">{headline || "Ajoutez votre accroche professionnelle"}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#050505]/40">Sauvegarde automatique activée</p>
+                  </div>
+                </div>
+              </section>
               <section className="rounded-[28px] border border-[#050505]/8 bg-white p-6 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Statut</p>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -295,6 +451,8 @@ export function ExpertProfileEditor() {
                   <input value={email} readOnly className="sm:col-span-2 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] px-4 py-3 text-sm text-[#050505]/55" />
                   <input value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Headline" className="sm:col-span-2 rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
                   <input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn (URL)" className="sm:col-span-2 rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
+                  <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Site internet / portfolio" className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
+                  <input value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} placeholder="Tarif journalier (€)" className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
                 </div>
               </section>
 

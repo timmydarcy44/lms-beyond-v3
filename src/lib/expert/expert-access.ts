@@ -44,6 +44,8 @@ export function expertReviewStatusLabel(status: string | null | undefined): stri
 export const EXPERT_LOCKED_ROUTES = [
   "/dashboard/expert/interventions",
   "/dashboard/expert/activite",
+  "/dashboard/expert/agenda",
+  "/dashboard/expert/revenus",
 ] as const;
 
 export function isExpertLockedRoute(pathname: string): boolean {

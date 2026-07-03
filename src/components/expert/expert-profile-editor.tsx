@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Award, Globe, MapPin, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ import {
 import {
   EXPERT_AUDIENCES,
   EXPERT_AVAILABILITY_OPTIONS,
+  EXPERT_EXPERIENCE_OPTIONS,
   EXPERT_GEOGRAPHIC_ZONES,
   EXPERT_INTERVENTION_FORMATS,
   EXPERT_LANGUAGE_OPTIONS,
@@ -354,6 +356,21 @@ export function ExpertProfileEditor() {
                     <p className="mb-2 text-xs font-medium text-[#050505]/45">Disponibilités</p>
                     <TagPicker options={EXPERT_AVAILABILITY_OPTIONS} selected={availabilities} onChange={setAvailabilities} />
                   </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#050505]/45">Expérience</p>
+                    <select
+                      value={yearsExperience}
+                      onChange={(e) => setYearsExperience(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-[#050505]/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40"
+                    >
+                      <option value="">—</option>
+                      {EXPERT_EXPERIENCE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </section>
 
@@ -401,6 +418,12 @@ export function ExpertProfileEditor() {
                   >
                     <Plus className="h-4 w-4" /> Ajouter une référence
                   </button>
+                  <Link
+                    href="/dashboard/expert/documents"
+                    className="mt-4 inline-flex text-sm font-medium text-[#635BFF] hover:underline"
+                  >
+                    Ajouter CV / justificatifs →
+                  </Link>
                 </div>
               </section>
 

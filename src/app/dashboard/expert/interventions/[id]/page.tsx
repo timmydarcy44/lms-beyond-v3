@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { cn } from "@/lib/utils";
 import SidebarExpert from "@/components/SidebarExpert";
+import { useExpertAccess } from "@/components/expert/expert-access-provider";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ export default function ExpertInterventionDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const supabase = useSupabase();
+  const { isApproved } = useExpertAccess();
 
   const [expertId, setExpertId] = useState<string | null>(null);
 
@@ -166,33 +168,27 @@ export default function ExpertInterventionDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05060a] text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[#05060a]" />
-        <div className="absolute -bottom-64 -left-64 h-[760px] w-[760px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.22),rgba(99,102,241,0.10),rgba(2,6,23,0)_60%)] blur-3xl" />
-        <div className="absolute -top-64 -right-64 h-[680px] w-[680px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.16),rgba(2,6,23,0)_62%)] blur-3xl" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
-      </div>
-
-      <SidebarExpert />
-      <main className="relative mx-auto max-w-5xl px-6 py-10 pb-24 pl-[280px]">
+    <div className="min-h-screen bg-[#F7F7F5] text-[#050505]">
+      <SidebarExpert restricted={!isApproved} />
+      <main className="min-h-screen pl-[260px]">
+        <div className="mx-auto max-w-5xl px-6 py-10 pb-24">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-6">
           <div className="min-w-0">
-            <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Espace Expert</div>
-            <h1 className="mt-2 truncate text-3xl font-extrabold tracking-tight text-white">
-              Intervention : {row?.target_label ?? "—"}
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#635BFF]">Mission</p>
+            <h1 className="mt-2 truncate text-3xl font-semibold tracking-tight">
+              {row?.target_label ?? "Intervention"}
             </h1>
-            <p className="mt-3 text-sm text-white/70">Reçue le {createdLabel}</p>
+            <p className="mt-3 text-sm text-[#050505]/55">Reçue le {createdLabel}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#a8a3ff]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#635BFF]">
               <ShieldCheck className="h-4 w-4" aria-hidden />
-              Mission ops
+              Réseau EDGE
             </span>
             <button
               type="button"
               onClick={() => router.push("/dashboard/expert/interventions")}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/80 hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-2xl border border-[#050505]/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#050505]/70 hover:bg-[#F7F7F5]"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
               Retour
@@ -201,58 +197,58 @@ export default function ExpertInterventionDetailPage() {
         </header>
 
         {error ? (
-          <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100/90">
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </div>
         ) : null}
 
         {loading ? (
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="h-56 rounded-3xl border border-white/10 bg-white/5" />
-            <div className="h-56 rounded-3xl border border-white/10 bg-white/5" />
+            <div className="h-56 rounded-[28px] border border-[#050505]/8 bg-white" />
+            <div className="h-56 rounded-[28px] border border-[#050505]/8 bg-white" />
           </div>
         ) : row ? (
           <div className="grid gap-6 md:grid-cols-2">
-            <section className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-2xl">
-              <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Contexte</div>
-              <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-6">
+            <section className="rounded-[28px] border border-[#050505]/8 bg-white p-8 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Contexte</p>
+              <div className="mt-4 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-6">
                 <div className="flex items-start gap-3">
-                  <Sparkles className="mt-0.5 h-5 w-5 text-[#a8a3ff]" aria-hidden />
-                  <div className="text-sm text-white/80">{needLabel}</div>
+                  <Sparkles className="mt-0.5 h-5 w-5 text-[#635BFF]" aria-hidden />
+                  <div className="text-sm text-[#050505]/70">{needLabel}</div>
                 </div>
-                <div className="mt-4 text-sm text-white/70">
-                  Cible : <span className="font-bold text-white">{row.target_label ?? "—"}</span>
+                <div className="mt-4 text-sm text-[#050505]/60">
+                  Cible : <span className="font-semibold text-[#050505]">{row.target_label ?? "—"}</span>
                   {row.target_count ? (
                     <>
                       {" "}
-                      • Participants : <span className="font-bold text-white">{row.target_count}</span>
+                      • Participants : <span className="font-semibold text-[#050505]">{row.target_count}</span>
                     </>
                   ) : null}
                 </div>
               </div>
 
-              <div className="mt-6 text-xs font-black uppercase tracking-[0.22em] text-white/55">Actions</div>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Actions</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={handleAccept}
                   disabled={saving || row.status === "accepted" || row.status === "scheduled"}
                   className={cn(
-                    "rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-[0.18em] transition",
+                    "rounded-2xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] transition",
                     saving || row.status === "accepted" || row.status === "scheduled"
-                      ? "cursor-not-allowed bg-white/10 text-white/40"
-                      : "bg-white text-black hover:bg-white/90",
+                      ? "cursor-not-allowed bg-[#050505]/6 text-[#050505]/35"
+                      : "bg-[#635BFF] text-white hover:bg-[#7B74FF]",
                   )}
                 >
-                  {saving ? "Traitement..." : "ACCEPTER LA MISSION"}
+                  {saving ? "Traitement..." : "Accepter la mission"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowSchedule((v) => !v)}
                   disabled={saving}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl border border-[#050505]/10 bg-white px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#050505]/70 hover:bg-[#F7F7F5] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  PLANIFIER
+                  Planifier
                 </button>
               </div>
 
@@ -263,31 +259,30 @@ export default function ExpertInterventionDetailPage() {
                     onClick={() => setShowCompletion((v) => !v)}
                     disabled={saving}
                     className={cn(
-                      "w-full rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-[0.18em] transition",
-                      "bg-emerald-400/10 text-[#a8a3ff] hover:bg-emerald-400/15 border border-emerald-400/20",
+                      "w-full rounded-2xl border border-[#635BFF]/20 bg-[#635BFF]/8 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#635BFF] transition hover:bg-[#635BFF]/12",
                       "disabled:cursor-not-allowed disabled:opacity-60",
                     )}
                   >
-                    MARQUER COMME TERMINÉE
+                    Marquer comme terminée
                   </button>
 
                   {showCompletion ? (
-                    <div className="mt-4 rounded-3xl border border-[#635BFF]/20 bg-[#635BFF]/10 p-6">
-                      <div className="text-xs font-black uppercase tracking-[0.22em] text-[#635BFF]/80">
-                        Notes de fin d'intervention
-                      </div>
+                    <div className="mt-4 rounded-2xl border border-[#635BFF]/15 bg-[#635BFF]/6 p-6">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#635BFF]">
+                        Notes de fin d&apos;intervention
+                      </p>
                       <textarea
                         value={completionNotes}
                         onChange={(e) => setCompletionNotes(e.target.value)}
                         rows={5}
                         placeholder="Impact observé, points de vigilance, recommandations..."
-                        className="mt-4 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
+                        className="mt-4 w-full resize-none rounded-2xl border border-[#050505]/10 bg-white px-4 py-3 text-sm outline-none placeholder:text-[#050505]/35"
                       />
                       <button
                         type="button"
                         onClick={handleComplete}
                         disabled={saving}
-                        className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-[#635BFF] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white hover:bg-[#7B74FF] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {saving ? "Enregistrement..." : "Valider la clôture"}
                       </button>
@@ -297,27 +292,25 @@ export default function ExpertInterventionDetailPage() {
               ) : null}
 
               {showSchedule ? (
-                <div className="mt-5 rounded-3xl border border-[#635BFF]/20 bg-[#635BFF]/10 p-6">
-                  <div className="text-xs font-black uppercase tracking-[0.22em] text-[#635BFF]/80">
-                    Planification
-                  </div>
+                <div className="mt-5 rounded-2xl border border-[#635BFF]/15 bg-[#635BFF]/6 p-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#635BFF]">Planification</p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="flex flex-col gap-2">
-                      <label className="text-xs font-bold text-[#635BFF]/80">Date</label>
+                      <label className="text-xs font-medium text-[#050505]/55">Date</label>
                       <input
                         type="date"
                         value={scheduleDate}
                         onChange={(e) => setScheduleDate(e.target.value)}
-                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none"
+                        className="rounded-2xl border border-[#050505]/10 bg-white px-4 py-2 text-sm outline-none"
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <label className="text-xs font-bold text-[#635BFF]/80">Heure</label>
+                      <label className="text-xs font-medium text-[#050505]/55">Heure</label>
                       <input
                         type="time"
                         value={scheduleTime}
                         onChange={(e) => setScheduleTime(e.target.value)}
-                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none"
+                        className="rounded-2xl border border-[#050505]/10 bg-white px-4 py-2 text-sm outline-none"
                       />
                     </div>
                   </div>
@@ -325,7 +318,7 @@ export default function ExpertInterventionDetailPage() {
                     type="button"
                     onClick={handleSchedule}
                     disabled={saving}
-                    className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-[#635BFF] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white hover:bg-[#7B74FF] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <CalendarDays className="h-4 w-4" aria-hidden />
                     Enregistrer
@@ -334,28 +327,28 @@ export default function ExpertInterventionDetailPage() {
               ) : null}
             </section>
 
-            <aside className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-2xl">
-              <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Statut</div>
-              <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-6">
+            <aside className="rounded-[28px] border border-[#050505]/8 bg-white p-8 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Statut</p>
+              <div className="mt-4 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-6">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 text-[#635BFF]" aria-hidden />
                   <div className="min-w-0">
-                    <div className="text-sm font-extrabold text-white">
+                    <div className="text-sm font-semibold text-[#050505]">
                       {row.status === "scheduled"
                         ? "Planifié"
                         : row.status === "accepted"
                           ? "Accepté"
                           : "Nouveau"}
                     </div>
-                    <div className="mt-1 text-sm text-white/65">
+                    <div className="mt-1 text-sm text-[#050505]/55">
                       {row.status === "scheduled"
-                        ? "La date a été enregistrée et transmise côté RH."
+                        ? "La date a été enregistrée et transmise."
                         : row.status === "accepted"
                           ? "Vous avez accepté la mission. Vous pouvez planifier la session."
                           : "Une nouvelle mission vous attend. Acceptez puis planifiez."}
                     </div>
                     {row.scheduled_at ? (
-                      <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-3 py-1.5 text-xs font-bold text-[#a8a3ff]">
+                      <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/8 px-3 py-1.5 text-xs font-medium text-[#635BFF]">
                         <CalendarDays className="h-4 w-4" aria-hidden />
                         {formatLaunchDate(row.scheduled_at)}
                       </div>
@@ -364,22 +357,23 @@ export default function ExpertInterventionDetailPage() {
                 </div>
               </div>
 
-              <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Données</div>
-                <div className="mt-3 text-sm text-white/70">
-                  Type : <span className="font-bold text-white">{row.action_type ?? "—"}</span>
+              <div className="mt-6 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-6">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Données</p>
+                <div className="mt-3 text-sm text-[#050505]/60">
+                  Type : <span className="font-semibold text-[#050505]">{row.action_type ?? "—"}</span>
                 </div>
-                <div className="mt-2 text-sm text-white/70">
-                  ID : <span className="font-mono text-white/80">{row.id}</span>
+                <div className="mt-2 text-sm text-[#050505]/60">
+                  ID : <span className="font-mono text-[#050505]/70">{row.id}</span>
                 </div>
               </div>
             </aside>
           </div>
         ) : (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-white/70">
+          <div className="rounded-[28px] border border-[#050505]/8 bg-white p-8 text-sm text-[#050505]/55">
             Intervention introuvable.
           </div>
         )}
+        </div>
       </main>
     </div>
   );

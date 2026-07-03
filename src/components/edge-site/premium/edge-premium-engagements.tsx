@@ -7,34 +7,34 @@ const ENGAGEMENTS = [
   {
     title: "Former",
     description:
-      "Des formations en alternance et en ligne conçues avec les entreprises pour des métiers d'avenir.",
+      "Alternance, bootcamps et catalogue entreprise — des parcours conçus avec les métiers, pas des cours génériques.",
     image: EDGE_PREMIUM_IMAGES.former,
     icon: GraduationCap,
-    href: "/edge-lab/parcours",
+    href: "/edge-lab/business/former-vos-equipes",
   },
   {
-    title: "Développer",
+    title: "Évaluer",
     description:
-      "Développez les compétences de vos équipes grâce à notre plateforme LMS intelligente.",
+      "Diagnostics, analytics et IA pour mesurer les compétences réelles et piloter le ROI formation.",
     image: EDGE_PREMIUM_IMAGES.developper,
     icon: TrendingUp,
-    href: "/edge-lab/edge-online",
-  },
-  {
-    title: "Recruter",
-    description:
-      "Identifiez les talents, évaluez les compétences et simplifiez vos processus de recrutement.",
-    image: EDGE_PREMIUM_IMAGES.recruter,
-    icon: Briefcase,
-    href: "/edge-lab/entreprises",
+    href: "/edge-lab/business/analytics",
   },
   {
     title: "Certifier",
     description:
-      "Valorisez les compétences avec des certifications reconnues et des Open Badges.",
+      "Open Badges IMS Global et parcours certifiants — des preuves vérifiables de compétences.",
     image: EDGE_PREMIUM_IMAGES.certifier,
     icon: Award,
-    href: "/edge-lab/parcours",
+    href: "/edge-lab/business/open-badges",
+  },
+  {
+    title: "Recruter",
+    description:
+      "Employabilité, alternance et matching talents — connecter les compétences aux opportunités.",
+    image: EDGE_PREMIUM_IMAGES.recruter,
+    icon: Briefcase,
+    href: "/edge-lab/business/recrutement",
   },
 ] as const;
 
@@ -43,10 +43,10 @@ export function EdgePremiumEngagements() {
     <section className="bg-edge-cream py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
         <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-edge-accent">
-          UNE PLATEFORME, 4 ENGAGEMENTS
+          UNE PLATEFORME, 4 ÉTAPES
         </p>
         <h2 className="mt-4 text-[clamp(1.75rem,3.5vw,2.75rem)] font-semibold leading-[1.15] tracking-[-0.02em] text-edge-black-deep">
-          Former. Développer. Recruter. Certifier.
+          Former. Évaluer. Certifier. Recruter.
         </h2>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">

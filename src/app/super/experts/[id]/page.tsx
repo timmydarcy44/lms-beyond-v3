@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminExpertDetailView } from "@/components/admin/experts/admin-expert-detail-view";
+import { SuperExpertCrmDetail } from "@/components/super-admin/super-expert-crm-detail";
 import { getAdminExpertById } from "@/lib/queries/admin-experts";
 
 export const metadata: Metadata = {
@@ -18,11 +17,8 @@ export default async function SuperExpertDetailPage({ params }: Props) {
   if (!expert) notFound();
 
   return (
-    <div className="space-y-6 p-6 lg:p-8">
-      <Link href="/super/experts" className="text-sm text-slate-500 hover:text-slate-800">
-        ← Retour aux experts
-      </Link>
-      <AdminExpertDetailView expert={expert} basePath="/super/experts" />
+    <div className="bg-[#f8f9fb] p-6 lg:p-8">
+      <SuperExpertCrmDetail expert={expert} basePath="/super/experts" />
     </div>
   );
 }

@@ -88,11 +88,8 @@ export function EdgePremiumHero() {
           </h1>
 
           <p className="mt-8 max-w-lg text-base leading-relaxed text-white/60 sm:text-lg">
-
-            EDGE accompagne les apprenants et les organisations avec des formations innovantes, une
-
-            technologie intelligente et une pédagogie orientée résultats.
-
+            EDGE ne forme pas seulement — nous évaluons, certifions et connectons les talents.
+            Une plateforme SaaS de compétences, pas un CFA classique.
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">

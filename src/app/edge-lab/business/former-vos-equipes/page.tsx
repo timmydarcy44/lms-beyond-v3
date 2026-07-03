@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { EdgeBusinessFormerEquipesPage } from "@/components/edge-site/business/edge-business-former-equipes-page";
+import { EdgePremiumBrandPillars } from "@/components/edge-site/premium/edge-premium-brand-pillars";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
 import { fetchPublicTrainingCourses } from "@/lib/training-courses/queries";
 import { getServerClient } from "@/lib/supabase/server";
@@ -17,6 +18,7 @@ export default async function Page() {
   return (
     <EdgePremiumShell overlayNav={false}>
       <EdgeBusinessFormerEquipesPage initialCourses={courses} />
+      <EdgePremiumBrandPillars />
     </EdgePremiumShell>
   );
 }

@@ -3,13 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Award, ClipboardList, LayoutDashboard, Lock, Settings, User2 } from "lucide-react";
+import {
+  Award,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  Lock,
+  Settings,
+  User2,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Tableau de bord", href: "/dashboard/expert", icon: LayoutDashboard, lockedWhenRestricted: false },
-  { label: "Mes Missions", href: "/dashboard/expert/interventions", icon: ClipboardList, lockedWhenRestricted: true },
-  { label: "Mon Profil", href: "/dashboard/expert/profile", icon: User2, lockedWhenRestricted: false },
-  { label: "Ma Certification", href: "/dashboard/expert/certification", icon: Award, lockedWhenRestricted: true },
+  { label: "Mon profil", href: "/dashboard/expert/profile", icon: User2, lockedWhenRestricted: false },
+  { label: "EDGE Certified", href: "/dashboard/expert/certification", icon: Award, lockedWhenRestricted: false },
+  { label: "Missions", href: "/dashboard/expert/interventions", icon: ClipboardList, lockedWhenRestricted: true },
+  { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, lockedWhenRestricted: false },
+  { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings, lockedWhenRestricted: false },
 ] as const;
 
 type Props = {
@@ -20,15 +30,15 @@ export default function SidebarExpert({ restricted = false }: Props) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 h-full w-[260px] border-r border-white/10 bg-slate-950/90 backdrop-blur-2xl">
+    <aside className="fixed inset-y-0 left-0 z-50 h-full w-[260px] border-r border-white/10 bg-[#050505]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -bottom-40 -left-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,91,255,0.22),rgba(2,6,23,0)_62%)] blur-2xl" />
+        <div className="absolute -bottom-40 -left-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,91,255,0.2),transparent_62%)] blur-2xl" />
       </div>
 
       <div className="relative border-b border-white/10 px-6 pb-6 pt-8">
-        <div className="text-[18px] font-extrabold tracking-[-0.5px] text-white">EDGE</div>
-        <div className="mt-1 text-[11px] font-medium uppercase tracking-[1.5px] text-[#a8a3ff]/80">
-          {restricted ? "Espace restreint" : "Expert Ops"}
+        <div className="text-lg font-semibold tracking-tight text-white">EDGE</div>
+        <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
+          {restricted ? "Espace restreint" : "Réseau formateurs"}
         </div>
       </div>
 
@@ -38,9 +48,7 @@ export default function SidebarExpert({ restricted = false }: Props) {
           const active =
             item.href === "/dashboard/expert"
               ? pathname === "/dashboard/expert"
-              : item.href === "/dashboard/expert/interventions"
-                ? pathname === item.href || pathname.startsWith("/dashboard/expert/interventions/")
-                : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           const Icon = item.icon;
 
@@ -48,7 +56,7 @@ export default function SidebarExpert({ restricted = false }: Props) {
             return (
               <div
                 key={item.label}
-                className="flex cursor-not-allowed items-center gap-2 rounded-[12px] px-3 py-2 text-[13.5px] font-semibold text-white/25"
+                className="flex cursor-not-allowed items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-white/25"
                 title="Disponible après validation de votre profil"
               >
                 <Icon size={16} strokeWidth={1.5} />
@@ -63,33 +71,27 @@ export default function SidebarExpert({ restricted = false }: Props) {
               key={item.label}
               href={item.href}
               className={cn(
-                "flex items-center gap-2 rounded-[12px] px-3 py-2 text-[13.5px] font-semibold transition",
-                "text-slate-400 hover:bg-white/5 hover:text-white",
-                active &&
-                  "border border-[#635BFF]/20 bg-[#635BFF]/10 text-white shadow-[0_0_22px_rgba(99,91,255,0.15)]",
+                "flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium transition",
+                "text-white/55 hover:bg-white/5 hover:text-white",
+                active && "border border-[#635BFF]/25 bg-[#635BFF]/12 text-white",
               )}
             >
-              <Icon size={16} strokeWidth={1.5} className={cn("text-slate-500", active && "text-[#c4c0ff]")} />
+              <Icon size={16} strokeWidth={1.5} className={cn("text-white/40", active && "text-[#a8a3ff]")} />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="relative mt-auto p-4">
+      <div className="absolute bottom-0 left-0 right-0 p-4">
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[0.18em] text-white/55">Espace</div>
-              <div className="mt-1 text-sm font-extrabold text-white">Formateur</div>
-            </div>
-            <Settings className="h-4 w-4 text-white/50" aria-hidden />
-          </div>
-          <div className="mt-3 text-xs text-white/55">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Espace</p>
+          <p className="mt-1 text-sm font-medium text-white">Formateur EDGE</p>
+          <p className="mt-2 text-xs text-white/45">
             {restricted
-              ? "Complétez votre profil en attendant la validation EDGE."
-              : "Gestion missions, planification et certification."}
-          </div>
+              ? "Complétez votre profil en attendant la validation."
+              : "Missions, certification et visibilité réseau."}
+          </p>
         </div>
       </div>
     </aside>

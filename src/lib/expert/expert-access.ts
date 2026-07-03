@@ -18,6 +18,8 @@ export type ExpertAccessRow = {
   formats_supported?: string[] | null;
   regions?: string[] | null;
   references?: unknown;
+  wants_certification?: boolean | null;
+  linkedin_url?: string | null;
   created_at?: string | null;
 };
 
@@ -41,7 +43,6 @@ export function expertReviewStatusLabel(status: string | null | undefined): stri
 
 export const EXPERT_LOCKED_ROUTES = [
   "/dashboard/expert/interventions",
-  "/dashboard/expert/certification",
   "/dashboard/expert/activite",
 ] as const;
 

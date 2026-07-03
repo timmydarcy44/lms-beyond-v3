@@ -16,7 +16,7 @@ const SECTIONS: Record<string, { title: string; description: string }> = {
   },
   facturation: {
     title: "Facturation",
-    description: "Suivi des factures et paiements Beyond.",
+    description: "Suivi des factures et paiements EDGE.",
   },
 };
 
@@ -31,7 +31,7 @@ export default function ExpertActiviteSectionPage() {
         <SidebarExpert />
         <main className="relative mx-auto max-w-3xl px-6 py-16">
           <p className="text-white/70">Section introuvable.</p>
-          <Link href="/dashboard/expert" className="mt-4 inline-block text-emerald-400 hover:underline">
+          <Link href="/dashboard/expert" className="mt-4 inline-block text-[#635BFF] hover:underline">
             Retour au cockpit
           </Link>
         </main>
@@ -49,7 +49,7 @@ export default function ExpertActiviteSectionPage() {
       <main className="relative mx-auto max-w-3xl px-6 py-10 pb-24 pl-[280px]">
         <Link
           href="/dashboard/expert"
-          className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-emerald-400/90 hover:text-emerald-300"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-[#635BFF] hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Retour au cockpit

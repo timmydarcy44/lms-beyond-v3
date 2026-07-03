@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { cn } from "@/lib/utils";
 import SidebarExpert from "@/components/SidebarExpert";
+import { useExpertAccess } from "@/components/expert/expert-access-provider";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CalendarDays, ShieldCheck, Sparkles } from "lucide-react";
@@ -38,8 +39,8 @@ function StatusBadge({ status }: { status: string | null }) {
   }
   if (s === "scheduled") {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-100/90">
-        <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+      <span className="inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-3 py-1.5 text-xs font-bold text-[#a8a3ff]">
+        <span className="h-2 w-2 rounded-full bg-[#635BFF]" aria-hidden />
         Planifié
       </span>
     );
@@ -63,6 +64,7 @@ function StatusBadge({ status }: { status: string | null }) {
 export default function ExpertInterventionsPage() {
   const router = useRouter();
   const supabase = useSupabase();
+  const { isApproved } = useExpertAccess();
 
   const [expertId, setExpertId] = useState<string | null>(null);
 
@@ -110,26 +112,20 @@ export default function ExpertInterventionsPage() {
   const rows = useMemo(() => items, [items]);
 
   return (
-    <div className="min-h-screen bg-[#05060a] text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[#05060a]" />
-        <div className="absolute -bottom-64 -left-64 h-[760px] w-[760px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.22),rgba(99,102,241,0.10),rgba(2,6,23,0)_60%)] blur-3xl" />
-        <div className="absolute -top-64 -right-64 h-[680px] w-[680px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.16),rgba(2,6,23,0)_62%)] blur-3xl" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
-      </div>
-
-      <SidebarExpert />
-      <main className="relative mx-auto max-w-6xl px-6 py-10 pb-24 pl-[280px]">
+    <div className="min-h-screen bg-[#F7F7F5] text-[#050505]">
+      <SidebarExpert restricted={!isApproved} />
+      <main className="min-h-screen pl-[260px]">
+        <div className="mx-auto max-w-6xl px-6 py-10 pb-24">
         <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
           <div>
-            <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Espace Expert</div>
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-white">Interventions</h1>
-            <p className="mt-3 text-sm text-white/70">Vos missions activées par les équipes RH Beyond.</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#635BFF]">Missions</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Interventions</h1>
+            <p className="mt-3 text-sm text-[#050505]/55">Vos missions activées par les entreprises partenaires EDGE.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-100/90">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#635BFF]">
               <ShieldCheck className="h-4 w-4" aria-hidden />
-              Ops
+              Réseau EDGE
             </span>
           </div>
         </header>
@@ -140,57 +136,60 @@ export default function ExpertInterventionsPage() {
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-[0_22px_80px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
-          <div className="border-b border-white/10 bg-white/5 px-6 py-5">
-            <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Missions</div>
-            <div className="mt-1 text-sm font-semibold text-white/80">Dernières demandes et planifications.</div>
+        <section className="overflow-hidden rounded-[28px] border border-[#050505]/8 bg-white shadow-sm">
+          <div className="border-b border-[#050505]/8 px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Liste</p>
+            <p className="mt-1 text-sm text-[#050505]/55">Dernières demandes et planifications.</p>
           </div>
 
           <div className="p-6">
             {loading ? (
               <div className="space-y-4">
                 {[0, 1, 2].map((k) => (
-                  <div key={k} className="h-20 rounded-2xl border border-white/10 bg-white/5" />
+                  <div key={k} className="h-20 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5]" />
                 ))}
               </div>
             ) : rows.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/75">
+              <div className="rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-6 text-sm text-[#050505]/55">
                 Aucune intervention pour le moment.
               </div>
             ) : (
               <div className="space-y-4">
                 {rows.map((it) => {
-                  const clientName = "Beyond Demo";
-                  const logoLetter = "B";
+                  const clientName =
+                    (typeof it?.metadata?.client_name === "string" && it.metadata.client_name) ||
+                    (typeof it?.metadata?.organization_name === "string" && it.metadata.organization_name) ||
+                    "Entreprise partenaire";
+                  const logoLetter = clientName.trim()[0]?.toUpperCase() ?? "E";
                   const formatLabel = it.action_type === "group_workshop" ? "Atelier collectif" : it.action_type ?? "—";
                   const scheduledFor = it?.metadata?.scheduled_for as string | undefined;
                   return (
                     <div
                       key={it.id}
-                      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-5"
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-5"
                     >
                       <div className="flex min-w-0 items-center gap-4">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10 text-sm font-extrabold text-emerald-100/90">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#635BFF]/20 bg-[#635BFF]/10 text-sm font-semibold text-[#635BFF]">
                           {logoLetter}
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-extrabold tracking-tight text-white">
+                          <div className="truncate text-sm font-semibold tracking-tight text-[#050505]">
                             {it.target_label ?? "Cible"}{" "}
-                            <span className="text-white/45">·</span>{" "}
-                            <span className="text-white/70">{clientName}</span>
+                            <span className="text-[#050505]/35">·</span>{" "}
+                            <span className="text-[#050505]/55">{clientName}</span>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/60">
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#050505]/45">
                             <span className="inline-flex items-center gap-2">
-                              <Sparkles className="h-3.5 w-3.5 text-white/50" aria-hidden />
+                              <Sparkles className="h-3.5 w-3.5 text-[#635BFF]" aria-hidden />
                               {formatLabel}
                             </span>
-                            <span className="text-white/35">•</span>
+                            <span className="text-[#050505]/25">•</span>
                             <span>{formatRelative(it.created_at)}</span>
                             {scheduledFor ? (
                               <>
-                                <span className="text-white/35">•</span>
+                                <span className="text-[#050505]/25">•</span>
                                 <span className="inline-flex items-center gap-2">
-                                  <CalendarDays className="h-3.5 w-3.5 text-white/50" aria-hidden />
+                                  <CalendarDays className="h-3.5 w-3.5 text-[#635BFF]" aria-hidden />
                                   {scheduledFor}
                                 </span>
                               </>
@@ -205,8 +204,8 @@ export default function ExpertInterventionsPage() {
                           type="button"
                           onClick={() => router.push(`/dashboard/expert/interventions/${encodeURIComponent(it.id)}`)}
                           className={cn(
-                            "rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-[0.18em] transition",
-                            "bg-white text-black hover:bg-white/90",
+                            "rounded-2xl px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition",
+                            "bg-[#635BFF] text-white hover:bg-[#7B74FF]",
                           )}
                         >
                           Gérer l'intervention
@@ -219,6 +218,7 @@ export default function ExpertInterventionsPage() {
             )}
           </div>
         </section>
+        </div>
       </main>
     </div>
   );

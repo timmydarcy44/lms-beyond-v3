@@ -54,7 +54,8 @@ export async function GET(request: NextRequest) {
       meta.needs_password_setup === true ||
       Boolean(user?.invited_at);
 
-    const flowFromParam = flowParam === "entreprise" || flowParam === "particulier" ? flowParam : null;
+    const flowFromParam =
+      flowParam === "entreprise" || flowParam === "particulier" || flowParam === "expert" ? flowParam : null;
     const flowFromNext = resolveEdgeFlowFromNextPath(decodedNext);
     const flowFromMeta = resolveEdgeSignupFlowFromMetadata(meta);
     const isCollaboratorInvite = isCollaboratorInviteMetadata(meta);

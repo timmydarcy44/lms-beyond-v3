@@ -30,8 +30,9 @@ function SetPasswordForm() {
   const nextPath = searchParams.get("next") || (flow === "invite" ? COLLABORATOR_DASHBOARD_PATH : "/dashboard/apprenant");
   const isEdgeParticulier = flow === "particulier";
   const isEdgeEntreprise = flow === "entreprise";
+  const isEdgeExpert = flow === "expert";
   const isInviteFlow = flow === "invite";
-  const isEdgeMarketingFlow = isEdgeParticulier || isEdgeEntreprise || isInviteFlow;
+  const isEdgeMarketingFlow = isEdgeParticulier || isEdgeEntreprise || isEdgeExpert || isInviteFlow;
   const authQueryKey = searchParams.toString();
 
   const hintEmail = useMemo(() => {
@@ -77,6 +78,8 @@ function SetPasswordForm() {
         toast.error(
           isEdgeEntreprise
             ? "Lien expiré ou invalide. Réinscrivez-vous sur la page entreprise EDGE pour recevoir un nouvel email."
+            : isEdgeExpert
+              ? "Lien expiré ou invalide. Réinscrivez-vous sur la page formateur EDGE pour recevoir un nouvel email."
             : isEdgeParticulier
               ? "Lien expiré ou invalide. Réinscrivez-vous sur la page EDGE pour recevoir un nouvel email."
               : isInviteFlow
@@ -98,7 +101,7 @@ function SetPasswordForm() {
       cancelled = true;
       window.clearTimeout(failTimer);
     };
-  }, [supabase, authQueryKey, isEdgeParticulier, isEdgeEntreprise, isInviteFlow]);
+  }, [supabase, authQueryKey, isEdgeParticulier, isEdgeEntreprise, isEdgeExpert, isInviteFlow]);
 
   const ensureActiveSession = async () => {
     const code = searchParams.get("code");
@@ -176,6 +179,8 @@ function SetPasswordForm() {
       toast.success(
         isEdgeEntreprise
           ? "Mot de passe créé. Bienvenue sur votre espace entreprise EDGE !"
+          : isEdgeExpert
+            ? "Mot de passe créé. Bienvenue sur votre espace formateur EDGE !"
           : isEdgeParticulier
             ? "Mot de passe créé. Bienvenue sur EDGE !"
             : isInviteFlow
@@ -205,6 +210,8 @@ function SetPasswordForm() {
       toast.success(
         isEdgeEntreprise
           ? "Bienvenue — votre espace entreprise EDGE est prêt."
+          : isEdgeExpert
+            ? "Bienvenue — votre espace formateur EDGE est prêt."
           : isInviteFlow
             ? "Bienvenue — votre espace collaborateur est prêt."
             : "Bienvenue sur EDGE — votre cockpit est prêt.",
@@ -236,10 +243,12 @@ function SetPasswordForm() {
   }
 
   if (bootState === "error" && isEdgeMarketingFlow) {
-    const panelVariant = isEdgeEntreprise ? "entreprise" : isInviteFlow ? "invite" : "particulier";
-    const retryHref = isEdgeEntreprise ? "/entreprises/connexion" : isInviteFlow ? "/login" : "/particuliers#signup";
+    const panelVariant = isEdgeEntreprise ? "entreprise" : isEdgeExpert ? "expert" : isInviteFlow ? "invite" : "particulier";
+    const retryHref = isEdgeEntreprise ? "/entreprises/connexion" : isEdgeExpert ? "/expert/register" : isInviteFlow ? "/login" : "/particuliers#signup";
     const retryLabel = isEdgeEntreprise
       ? "Réinscription entreprise"
+      : isEdgeExpert
+        ? "Nouvelle candidature formateur"
       : isInviteFlow
         ? "Page de connexion"
         : "Créer un nouveau compte";
@@ -278,7 +287,7 @@ function SetPasswordForm() {
   if (isEdgeMarketingFlow) {
     return (
       <EdgeSetPasswordForm
-        variant={isEdgeEntreprise ? "entreprise" : isInviteFlow ? "salarie" : "particulier"}
+        variant={isEdgeEntreprise ? "entreprise" : isEdgeExpert ? "particulier" : isInviteFlow ? "salarie" : "particulier"}
         isLoading={isLoading}
         errorMessage={submitError}
         onSubmit={(pwd) => void handleEdgeSubmit(pwd)}

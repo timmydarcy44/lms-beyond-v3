@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getExpertRegistrationConfirmationEmail } from "@/lib/emails/templates/expert-registration-confirmation";
 import { sendEmail } from "@/lib/email/resend-client";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
+import { EXPERT_REGISTER_GENERIC_ERROR } from "@/lib/expert/register-errors";
 import { provisionExpertSignup } from "@/lib/expert/provision-expert-signup";
+import { resolveAuthUserIdByEmail } from "@/lib/expert/resolve-auth-user";
 import { expertSetPasswordUrl, resolveExpertAppOrigin } from "@/lib/expert/signup-redirect";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -18,9 +20,13 @@ async function generatePasswordSetupLink(
   supabase: NonNullable<ReturnType<typeof getServiceRoleClient>>,
   email: string,
   redirectTo: string,
+  preferRecovery: boolean,
 ): Promise<string | null> {
-  const attempts: Array<"signup" | "magiclink"> = ["signup", "magiclink"];
-  for (const type of attempts) {
+  const types = preferRecovery
+    ? (["recovery", "magiclink", "invite", "signup"] as const)
+    : (["signup", "invite", "magiclink", "recovery"] as const);
+
+  for (const type of types) {
     const { data, error } = await supabase.auth.admin.generateLink({
       type,
       email,
@@ -29,6 +35,7 @@ async function generatePasswordSetupLink(
     if (!error && data?.properties?.action_link) {
       return data.properties.action_link;
     }
+    console.warn(`[experts/register] generateLink(${type}) failed:`, error?.message);
   }
   return null;
 }
@@ -36,7 +43,9 @@ async function generatePasswordSetupLink(
 export async function POST(request: NextRequest) {
   try {
     const supabase = getServiceRoleClient();
-    if (!supabase) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    if (!supabase) {
+      return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 503 });
+    }
 
     const body = await request.json().catch(() => ({}));
     const data = body ?? {};
@@ -107,14 +116,14 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    let userId: string | null = null;
+    let userId: string | null = existingExpert?.id ?? null;
     let isNewAuthUser = false;
 
-    const { data: existingAuth, error: existingAuthError } = await supabase.auth.admin.getUserByEmail(email);
+    const existingAuthUserId = await resolveAuthUserIdByEmail(supabase, email);
 
-    if (existingAuth?.user?.id) {
-      userId = existingAuth.user.id;
-      await supabase.auth.admin.updateUserById(userId, {
+    if (existingAuthUserId) {
+      userId = existingAuthUserId;
+      const { error: updateMetaError } = await supabase.auth.admin.updateUserById(userId, {
         user_metadata: {
           first_name: firstName,
           last_name: lastName,
@@ -126,11 +135,10 @@ export async function POST(request: NextRequest) {
           needs_password_setup: true,
         },
       });
-    } else {
-      if (existingAuthError && !String(existingAuthError.message).toLowerCase().includes("not found")) {
-        console.warn("[experts/register] getUserByEmail:", existingAuthError);
+      if (updateMetaError) {
+        console.error("[experts/register] updateUserById:", updateMetaError);
       }
-
+    } else {
       const { data: created, error: createError } = await supabase.auth.admin.createUser({
         email,
         email_confirm: false,
@@ -148,7 +156,7 @@ export async function POST(request: NextRequest) {
 
       if (createError || !created?.user?.id) {
         console.error("[experts/register] createUser error:", createError);
-        return NextResponse.json({ error: createError?.message || "Impossible de créer le compte." }, { status: 500 });
+        return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
       }
 
       userId = created.user.id;
@@ -156,12 +164,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!userId) {
-      return NextResponse.json({ error: "Impossible de créer l'utilisateur Auth." }, { status: 500 });
+      return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
     }
 
     const provision = await provisionExpertSignup(supabase, { userId, email, firstName, lastName });
     if (!provision.ok) {
-      return NextResponse.json({ error: provision.error }, { status: 500 });
+      console.error("[experts/register] provision:", provision.error);
+      return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
     }
 
     const expertPayload: Record<string, unknown> = {
@@ -184,16 +193,28 @@ export async function POST(request: NextRequest) {
     const { error: expertError } = await supabase.from("experts").upsert(expertPayload, { onConflict: "id" });
     if (expertError) {
       const { error: emailConflictError } = await supabase.from("experts").upsert(expertPayload, { onConflict: "email" });
-      if (emailConflictError) throw emailConflictError;
+      if (emailConflictError) {
+        console.error("[experts/register] experts upsert:", expertError, emailConflictError);
+        return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
+      }
     }
 
     const origin = resolveExpertAppOrigin(request);
     const redirectTo = expertSetPasswordUrl(origin);
-    const passwordSetupLink = await generatePasswordSetupLink(supabase, email, redirectTo);
+    const passwordSetupLink = await generatePasswordSetupLink(
+      supabase,
+      email,
+      redirectTo,
+      !isNewAuthUser,
+    );
 
     if (!passwordSetupLink) {
+      console.error("[experts/register] password link generation failed for", email);
       return NextResponse.json(
-        { error: "Profil enregistré, mais le lien de création de mot de passe n'a pas pu être généré. Contactez le support." },
+        {
+          error:
+            "Votre profil a été enregistré, mais le lien de création de mot de passe n'a pas pu être généré. Contactez le support EDGE.",
+        },
         { status: 500 },
       );
     }
@@ -228,16 +249,7 @@ export async function POST(request: NextRequest) {
       message: "Profil enregistré. Consultez votre boîte mail pour créer votre mot de passe.",
     });
   } catch (error: unknown) {
-    const err = error as { message?: string; details?: string; hint?: string; code?: string };
-    console.error("ERREUR API REGISTER:", error);
-    return NextResponse.json(
-      {
-        error: err?.message || "Erreur serveur",
-        details: err?.details,
-        hint: err?.hint,
-        code: err?.code,
-      },
-      { status: 500 },
-    );
+    console.error("[experts/register] unhandled error:", error);
+    return NextResponse.json({ error: EXPERT_REGISTER_GENERIC_ERROR }, { status: 500 });
   }
 }

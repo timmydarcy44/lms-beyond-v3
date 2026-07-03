@@ -83,7 +83,25 @@ export function ExpertPendingDashboard() {
                   href="/dashboard/expert/profile"
                   className="flex items-center justify-between rounded-2xl border border-[#635BFF]/15 bg-[#635BFF]/5 px-4 py-3 text-sm font-medium text-[#050505] hover:bg-[#635BFF]/10"
                 >
-                  Voir / modifier mon profil
+                  Voir mon profil
+                </Link>
+                <Link
+                  href="/dashboard/expert/profile"
+                  className="flex items-center justify-between rounded-2xl border border-[#050505]/8 px-4 py-3 text-sm text-[#050505]/70 hover:bg-[#F7F7F5]"
+                >
+                  Modifier mes informations
+                </Link>
+                <Link
+                  href="/dashboard/expert/profile"
+                  className="flex items-center justify-between rounded-2xl border border-[#050505]/8 px-4 py-3 text-sm text-[#050505]/70 hover:bg-[#F7F7F5]"
+                >
+                  Compléter mon profil
+                </Link>
+                <Link
+                  href="/dashboard/expert/profile"
+                  className="flex items-center justify-between rounded-2xl border border-[#050505]/8 px-4 py-3 text-sm text-[#050505]/70 hover:bg-[#F7F7F5]"
+                >
+                  Ajouter CV / justificatifs / certifications
                 </Link>
                 <a
                   href="mailto:cockpit@edgebs.fr?subject=Question%20candidature%20EDGE"

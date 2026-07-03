@@ -13,6 +13,7 @@ import {
   isSpecialtiesStepComplete,
   type ExpertSpecialtiesProfile,
 } from "@/lib/expert/specialties-referential";
+import { EXPERT_REGISTER_GENERIC_ERROR } from "@/lib/expert/register-errors";
 
 type StepKey = 1 | 2 | 3;
 
@@ -22,7 +23,7 @@ function StepPill({ active, done, label }: { active: boolean; done: boolean; lab
       className={cn(
         "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em]",
         done
-          ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100/90"
+          ? "border-[#635BFF]/30 bg-[#635BFF]/12 text-white"
           : active
             ? "border-[#635BFF]/35 bg-[#635BFF]/12 text-white"
             : "border-white/10 bg-white/5 text-white/50",
@@ -31,7 +32,7 @@ function StepPill({ active, done, label }: { active: boolean; done: boolean; lab
       <span
         className={cn(
           "h-2 w-2 rounded-full",
-          done ? "bg-emerald-400" : active ? "bg-[#635BFF]" : "bg-white/25",
+          done ? "bg-[#635BFF]" : active ? "bg-[#635BFF]" : "bg-white/25",
         )}
       />
       {label}
@@ -110,13 +111,16 @@ export default function ExpertRegisterPage() {
       });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = out?.error || "Erreur serveur lors de l'envoi de votre candidature.";
-        setSubmitError(String(msg));
-        throw new Error(String(msg));
+        const msg =
+          typeof out?.error === "string" && out.error.length > 0
+            ? out.error
+            : EXPERT_REGISTER_GENERIC_ERROR;
+        setSubmitError(msg);
+        throw new Error(msg);
       }
       setSubmitted(true);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Impossible de soumettre votre profil.";
+      const msg = e instanceof Error ? e.message : EXPERT_REGISTER_GENERIC_ERROR;
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -170,7 +174,7 @@ export default function ExpertRegisterPage() {
                       step.done ? "bg-[#635BFF] text-white" : "bg-white/5 text-white/35",
                     )}
                   >
-                    {step.done ? "✓" : "⏳"}
+                    {step.done ? "✓" : "○"}
                   </span>
                   <span
                     className={cn(
@@ -181,7 +185,7 @@ export default function ExpertRegisterPage() {
                     {step.label}
                   </span>
                   {i === 0 ? (
-                    <span className="ml-auto text-[10px] uppercase tracking-wide text-[#a8a3ff]">
+                    <span className="ml-auto rounded-lg border border-[#635BFF]/25 bg-[#635BFF]/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#a8a3ff]">
                       Terminé
                     </span>
                   ) : null}

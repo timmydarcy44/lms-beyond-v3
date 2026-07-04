@@ -61,8 +61,8 @@ export async function generateCrossProfileOpeningParagraph(
       ? `${input.softSkillPhrases[0]}, ${input.softSkillPhrases[1]}`
       : input.softSkillPhrases[0] ?? "";
 
-  const prompt = `Tu rédiges UNE phrase d'ouverture pour un email de résultats de diagnostic
-commercial, ton EDGE : direct, sobre, jamais ronflant ni "coach de vie".
+  const prompt = `Tu rédiges UNE phrase d'ouverture pour un email de résultats de Profil comportemental EDGE,
+ton EDGE : direct, sobre, jamais ronflant ni "coach de vie".
 
 Données fournies :
 - Archétype DISC : ${input.discArchetype}

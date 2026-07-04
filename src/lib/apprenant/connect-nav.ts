@@ -22,6 +22,8 @@ import {
 
   ClipboardList,
 
+  Target,
+
 } from "lucide-react";
 
 
@@ -38,6 +40,34 @@ export type ApprenantNavItem = {
 };
 
 const PARCOURS_HREF = "/dashboard/apprenant/parcours";
+
+export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNavItem[] {
+  const items: ApprenantNavItem[] = [
+    { label: "Mon évolution", href: "/dashboard/apprenant", icon: LayoutDashboard },
+    { label: "Mon objectif", href: "/dashboard/apprenant/objectif", icon: Target },
+    { label: "Mon Profil EDGE", href: "/dashboard/apprenant/profil-comportemental", icon: UserCircle },
+    { label: "Mes résultats", href: "/dashboard/apprenant/profil", icon: Award },
+    { label: "Mes badges", href: "/dashboard/apprenant/badges", icon: Award },
+    { label: "Mon coaching", href: "/dashboard/apprenant/coaching", icon: MonitorPlay },
+    { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
+    {
+      label: "Partager mon profil",
+      href: "#share-profile",
+      icon: Share2,
+      action: "share-profile",
+    },
+  ];
+
+  if (hasOrganisation) {
+    items.splice(6, 0, {
+      label: "Mes missions",
+      href: "/dashboard/apprenant/missions",
+      icon: ClipboardList,
+    });
+  }
+
+  return items;
+}
 
 const BASE: ApprenantNavItem[] = [
   { label: "Accueil", href: "/dashboard/apprenant", icon: LayoutDashboard },
@@ -73,9 +103,14 @@ const JESSICA_BASE: ApprenantNavItem[] = [
 export function buildApprenantNavItems(
   hasOrganisation: boolean,
   variant: ApprenantConnectVariant = "edge",
+  isParticulier = false,
 ): ApprenantNavItem[] {
   if (variant === "jessica") {
     return [...JESSICA_BASE];
+  }
+
+  if (variant === "edge" && isParticulier) {
+    return buildParticulierNavItems(hasOrganisation);
   }
 
   const items = [...BASE];

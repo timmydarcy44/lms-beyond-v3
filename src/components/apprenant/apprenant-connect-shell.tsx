@@ -17,6 +17,7 @@ import {
   slugifyPublicProfile,
 } from "@/lib/apprenant/public-profile-url";
 import { ApprenantProfileEditModal } from "@/components/apprenant/apprenant-profile-edit-modal";
+import { ObjectiveDetailStepModal } from "@/components/apprenant/objective-detail-step-modal";
 import { ConnectCockpitBackdrop } from "@/components/apprenant/connect-cockpit-backdrop";
 import { ApprenantShellProvider } from "@/components/apprenant/apprenant-shell-context";
 import { LearnerSnapshotProvider } from "@/components/learner/learner-snapshot-provider";
@@ -35,6 +36,9 @@ type ProfileSnippet = {
   school_class?: string | null;
   entreprise_id?: string | null;
   company_id?: string | null;
+  type_profil?: string | null;
+  role?: string | null;
+  role_type?: string | null;
 };
 
 export function ApprenantConnectShell({
@@ -58,6 +62,8 @@ export function ApprenantConnectShell({
   const [authMeta, setAuthMeta] = useState<Record<string, unknown>>({});
   const [hasOrganisation, setHasOrganisation] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [objectiveModalOpen, setObjectiveModalOpen] = useState(false);
+  const [isParticulier, setIsParticulier] = useState(false);
   const [snippetVersion, setSnippetVersion] = useState(0);
   const [shareCopied, setShareCopied] = useState(false);
 
@@ -73,11 +79,18 @@ export function ApprenantConnectShell({
     const { data } = await supabase
       .from("profiles")
       .select(
-        "first_name, last_name, email, phone, telephone, birth_date, city, avatar_url, school_id, school_class, entreprise_id, company_id",
+        "first_name, last_name, email, phone, telephone, birth_date, city, avatar_url, school_id, school_class, entreprise_id, company_id, type_profil, role, role_type",
       )
       .eq("id", uid)
       .maybeSingle();
     setProfile((data as ProfileSnippet) ?? null);
+
+    const role = String((data as ProfileSnippet | null)?.role ?? "").toUpperCase();
+    const roleType = String((data as ProfileSnippet | null)?.role_type ?? "").toLowerCase();
+    const metaRoleType = String(userData.user?.user_metadata?.role_type ?? "").toLowerCase();
+    setIsParticulier(
+      role === "PARTICULIER" || roleType === "particulier" || metaRoleType === "particulier",
+    );
 
     const metaOrg =
       (typeof userData.user?.user_metadata?.company_id === "string" &&
@@ -121,9 +134,23 @@ export function ApprenantConnectShell({
   }, [router, searchParams]);
 
   const navItems = useMemo(
-    () => buildApprenantNavItems(hasOrganisation, variant),
-    [hasOrganisation, variant],
+    () => buildApprenantNavItems(hasOrganisation, variant, isParticulier),
+    [hasOrganisation, isParticulier, variant],
   );
+
+  const handleProfileSaved = useCallback(() => {
+    setSnippetVersion((v) => v + 1);
+    if (isParticulier && openedPostDiscProfileRef.current) {
+      openedPostDiscProfileRef.current = false;
+      setObjectiveModalOpen(true);
+    }
+  }, [isParticulier]);
+
+  const handleObjectiveSaved = useCallback(() => {
+    setObjectiveModalOpen(false);
+    setSnippetVersion((v) => v + 1);
+    router.push("/dashboard/apprenant/profil-comportemental");
+  }, [router]);
 
   const firstName = resolveLearnerDisplayFirstName({
     profileFirstName: profile?.first_name,
@@ -235,7 +262,13 @@ export function ApprenantConnectShell({
           onOpenChange={setEditOpen}
           initialProfile={profile}
           refreshToken={snippetVersion}
-          onSaved={() => setSnippetVersion((v) => v + 1)}
+          onSaved={handleProfileSaved}
+        />
+        <ObjectiveDetailStepModal
+          open={objectiveModalOpen}
+          typeProfil={profile?.type_profil ?? (authMeta.type_profil as string)}
+          onSaved={handleObjectiveSaved}
+          onClose={() => setObjectiveModalOpen(false)}
         />
         </ApprenantShellProvider>
       </LearnerSnapshotProvider>
@@ -296,14 +329,14 @@ export function ApprenantConnectShell({
               <div className="space-y-0.5">
                 {navItems.map((item) => {
                   const isParcoursGalaxy = item.label === "Parcours" || item.label === "Mes parcours";
-                  const isEdgeOnlineEntry = item.label === "EDGE Online";
+                  const isMonCoachingEntry = item.label === "Mon coaching";
                   const isParcoursGuide = item.label === "Parcours guidé";
                   const isShareProfile = item.action === "share-profile";
                   const active =
                     !isShareProfile &&
                     (pathname === item.href ||
                       (isParcoursGalaxy && Boolean(pathname?.startsWith("/g/edgelab"))) ||
-                      (isEdgeOnlineEntry && Boolean(pathname?.startsWith("/edgeonline"))) ||
+                      (isMonCoachingEntry && Boolean(pathname?.startsWith("/dashboard/apprenant/coaching"))) ||
                       (isParcoursGuide && Boolean(pathname?.includes("/parcours-guide"))));
                   const itemClass = `group relative flex w-full items-center rounded-xl text-[13px] font-medium transition ${
                     isSidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
@@ -590,7 +623,14 @@ export function ApprenantConnectShell({
           onOpenChange={setEditOpen}
           initialProfile={profile}
           refreshToken={snippetVersion}
-          onSaved={() => setSnippetVersion((v) => v + 1)}
+          onSaved={handleProfileSaved}
+        />
+
+        <ObjectiveDetailStepModal
+          open={objectiveModalOpen}
+          typeProfil={profile?.type_profil ?? (authMeta.type_profil as string)}
+          onSaved={handleObjectiveSaved}
+          onClose={() => setObjectiveModalOpen(false)}
         />
 
         {shareCopied ? (

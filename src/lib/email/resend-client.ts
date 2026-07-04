@@ -32,6 +32,11 @@ export async function getResendClient() {
 
 export const EDGE_BCC_ADDRESS = "contact@edgebs.fr";
 
+export function resolveAdminBccEmail(): string | null {
+  const admin = process.env.ADMIN_BCC_EMAIL?.trim();
+  return admin || "timmydarcy44@gmail.com";
+}
+
 export type EmailOptions = {
   to: string | string[];
   subject: string;
@@ -55,6 +60,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   try {
     const fromEmail = resolveResendFromEmail(options.from);
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
+    const adminBcc = resolveAdminBccEmail();
     const bccList = options.skipBcc
       ? options.bcc
         ? Array.isArray(options.bcc)
@@ -63,6 +69,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
         : undefined
       : [
           EDGE_BCC_ADDRESS,
+          ...(adminBcc ? [adminBcc] : []),
           ...(options.bcc ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]) : []),
         ];
 

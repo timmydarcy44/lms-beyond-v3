@@ -51,9 +51,9 @@ export function CrossProfileBadgeCelebration({
         <p className="text-[11px] font-semibold uppercase tracking-[0.4em] text-white/45">EDGE</p>
         <h2 className="mt-3 text-2xl font-bold tracking-tight">Félicitations</h2>
         <p className="mt-4 text-base leading-relaxed text-white/85">
-          Vous obtenez votre premier badge{" "}
-          <span className="font-semibold text-white">{badgeName}</span>. Retrouvez-le dans votre
-          Wallet.
+          Vous obtenez votre badge{" "}
+          <span className="font-semibold text-white">{badgeName}</span>. Consultez votre Profil comportemental EDGE
+          et vos priorités de progression.
         </p>
 
         <div className="mt-8 flex flex-col gap-3">
@@ -62,7 +62,7 @@ export function CrossProfileBadgeCelebration({
             onClick={onDismiss}
             className="inline-flex items-center justify-center rounded-full bg-[#FF3B30] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white"
           >
-            Voir mon Wallet
+            Voir mon Profil EDGE
           </Link>
           <button
             type="button"

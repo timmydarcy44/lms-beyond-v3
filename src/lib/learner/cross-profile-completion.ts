@@ -3,7 +3,7 @@ import "server-only";
 
 import { sendEmail } from "@/lib/email/resend-client";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
-import { getParticulierDiagnosticCommercialEmail } from "@/lib/emails/templates/particulier-diagnostic-commercial";
+import { getParticulierProfilComportementalEmail } from "@/lib/emails/templates/particulier-profil-comportemental";
 import { publicAppUrl } from "@/lib/env";
 import {
   IDMC_AXIS_EMAIL_PHRASES,
@@ -19,8 +19,8 @@ import {
 } from "@/lib/learner/cross-profile-opening";
 import { maybeRefreshProfileAnalysisIfStale } from "@/lib/learner/profile-analysis";
 import {
-  DIAGNOSTIC_COMMERCIAL_BADGE_NAME,
-  resolveDiagnosticCommercialBadgeId,
+  PROFIL_COMPORTEMENTAL_BADGE_NAME,
+  resolveProfilComportementalBadgeId,
 } from "@/lib/openbadges/diagnostic-commercial-badge";
 import { buildOpenBadgeLinkedInShareUrl } from "@/lib/openbadges/linkedin-share";
 import {
@@ -84,16 +84,19 @@ async function loadTestRows(service: SupabaseClient, userId: string) {
   };
 }
 
-async function sendDiagnosticCommercialEmail(params: {
+function hasObjectiveDetails(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+  return Object.values(raw as Record<string, unknown>).some((v) => String(v ?? "").trim().length > 0);
+}
+
+async function sendProfilComportementalEmail(params: {
   email: string;
   firstName: string;
-  openingParagraph: string;
-  walletHref: string;
+  profilHref: string;
 }): Promise<boolean> {
-  const template = getParticulierDiagnosticCommercialEmail({
+  const template = getParticulierProfilComportementalEmail({
     firstName: params.firstName,
-    openingParagraph: params.openingParagraph,
-    walletHref: params.walletHref,
+    profilHref: params.profilHref,
   });
 
   const result = await sendEmail({
@@ -117,7 +120,7 @@ export async function maybeTriggerCrossProfileCompletion(
 
   const { data: profile, error: profileError } = await service
     .from("profiles")
-    .select("id, email, first_name, role, role_type, cross_profile_completion")
+    .select("id, email, first_name, role, role_type, type_profil, objective_details, cross_profile_completion")
     .eq("id", uid)
     .maybeSingle();
 
@@ -142,11 +145,17 @@ export async function maybeTriggerCrossProfileCompletion(
   }
 
   const tests = await loadTestRows(service, uid);
-  if (!tests.disc?.scores || !tests.idmc?.scores || !tests.soft?.scores) {
-    return { status: "skipped", reason: "tests_incomplete" };
+  if (!tests.disc?.scores) {
+    return { status: "skipped", reason: "disc_incomplete" };
   }
 
-  const badgeId = await resolveDiagnosticCommercialBadgeId(service);
+  if (!hasObjectiveDetails(profile.objective_details)) {
+    return { status: "skipped", reason: "objective_details_missing" };
+  }
+
+  const fullProfileComplete = Boolean(tests.idmc?.scores && tests.soft?.scores);
+
+  const badgeId = await resolveProfilComportementalBadgeId(service);
   if (!badgeId) {
     return { status: "error", message: "badge_not_found" };
   }
@@ -167,17 +176,30 @@ export async function maybeTriggerCrossProfileCompletion(
   }
 
   const discArchetype = resolveDiscArchetypeForEmail(tests.disc.scores);
-  const axisPercentages = readIdmcAxisPercentages(tests.idmc.scores);
-  if (!axisPercentages) {
-    return { status: "skipped", reason: "idmc_axes_invalid" };
+
+  let dominantAxis = "—";
+  let idmcLevel = "—";
+  let idmcStrengthPhrase = "votre organisation";
+  let topSoftSkills: ReturnType<typeof resolveTopSoftSkillsForEmail> = [];
+
+  if (tests.idmc?.scores) {
+    const axisPercentages = readIdmcAxisPercentages(tests.idmc.scores);
+    if (axisPercentages) {
+      dominantAxis = resolveDominantIdmcAxis(axisPercentages);
+      idmcLevel = resolveIdmcGlobalLevel(tests.idmc.scores, tests.idmc.level);
+      idmcStrengthPhrase = IDMC_AXIS_EMAIL_PHRASES[dominantAxis as keyof typeof IDMC_AXIS_EMAIL_PHRASES] ?? idmcStrengthPhrase;
+    }
   }
 
-  const dominantAxis = resolveDominantIdmcAxis(axisPercentages);
-  const idmcLevel = resolveIdmcGlobalLevel(tests.idmc.scores, tests.idmc.level);
-  const idmcStrengthPhrase = IDMC_AXIS_EMAIL_PHRASES[dominantAxis];
-  const topSoftSkills = resolveTopSoftSkillsForEmail(tests.soft.scores, 2);
-  if (topSoftSkills.length === 0) {
-    return { status: "skipped", reason: "soft_skills_invalid" };
+  if (tests.soft?.scores) {
+    topSoftSkills = resolveTopSoftSkillsForEmail(tests.soft.scores, 2);
+  }
+
+  if (!topSoftSkills.length) {
+    topSoftSkills = [
+      { title: "Communication assertive", emailPhrase: "une communication assertive" },
+      { title: "Organisation", emailPhrase: "une organisation efficace" },
+    ];
   }
 
   const rawCompletion = profile.cross_profile_completion as Record<string, unknown> | null;
@@ -216,7 +238,7 @@ export async function maybeTriggerCrossProfileCompletion(
   }
 
   const shareUrl = getBadgeCriteriaUrl(badgeId);
-  const badgeName = String(badgeRow.name ?? DIAGNOSTIC_COMMERCIAL_BADGE_NAME);
+  const badgeName = String(badgeRow.name ?? PROFIL_COMPORTEMENTAL_BADGE_NAME);
   const awardedAt = new Date().toISOString();
   const award = {
     awardedAt,
@@ -237,22 +259,21 @@ export async function maybeTriggerCrossProfileCompletion(
     }
   }
 
-  const walletHref = `${publicAppUrl().replace(/\/$/, "")}/dashboard/apprenant/badges`;
+  const profilHref = `${publicAppUrl().replace(/\/$/, "")}/dashboard/apprenant/profil-comportemental`;
   const email = String(profile.email ?? "").trim();
   const firstName = String(profile.first_name ?? "").trim();
 
   let emailSentAt: string | null = existingCompletion?.email_sent_at ?? null;
   if (email && !emailSentAt) {
-    const sent = await sendDiagnosticCommercialEmail({
+    const sent = await sendProfilComportementalEmail({
       email,
       firstName,
-      openingParagraph,
-      walletHref,
+      profilHref,
     });
     if (sent) emailSentAt = new Date().toISOString();
   }
 
-  const completion: CrossProfileCompletionRecord = {
+  const completion: CrossProfileCompletionRecord & { full_profile_complete?: boolean } = {
     opening_paragraph: openingParagraph,
     opening_generated_at: openingGeneratedAt,
     tests_signature: testsSignature,
@@ -265,6 +286,7 @@ export async function maybeTriggerCrossProfileCompletion(
     email_sent_at: emailSentAt,
     show_badge_animation: true,
     processed_at: new Date().toISOString(),
+    full_profile_complete: fullProfileComplete,
   };
 
   const { error: updateError } = await service

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { DIAGNOSTIC_COMMERCIAL_BADGE_NAME } from "@/lib/openbadges/diagnostic-commercial-badge";
+import { PROFIL_COMPORTEMENTAL_BADGE_NAME } from "@/lib/openbadges/diagnostic-commercial-badge";
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -51,10 +51,10 @@ export async function GET() {
 
   return NextResponse.json({
     pending: true,
-    badgeName: DIAGNOSTIC_COMMERCIAL_BADGE_NAME,
+    badgeName: PROFIL_COMPORTEMENTAL_BADGE_NAME,
     badgeImageUrl,
     openingParagraph: completion?.opening_paragraph ?? null,
-    walletHref: "/dashboard/apprenant/badges",
+    walletHref: "/dashboard/apprenant/profil-comportemental",
   });
 }
 

@@ -1116,11 +1116,9 @@ export function ApprenantDashboardClient({
   }, [profile, userRole]);
 
   const needsCareerGoal = useMemo(() => {
-    if (!user?.id || !profile || !isParticulierUser) return false;
-    if (profile.school_id || profile.entreprise_id) return false;
-    if (needsOnboarding) return false;
-    return !String(profile.career_goal ?? "").trim();
-  }, [isParticulierUser, needsOnboarding, profile, user?.id]);
+    // Remplacé par l'étape « Construisons votre objectif » après le test DISC.
+    return false;
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;

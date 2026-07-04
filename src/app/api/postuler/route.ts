@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { EDGE_COHORTE_LABEL } from "@/lib/edge-site/constants";
+import { buildEdgeEmailShell } from "@/lib/emails/edge-email-shell";
 
 function escapeHtml(value: string): string {
   return value
@@ -105,8 +106,10 @@ export async function POST(request: Request) {
         to: contactEmail,
         subject: `Nouvelle postulation — ${parcours} — ${prenom} ${nom}`,
         replyTo: email,
-        html: `
-          <h2>Nouvelle postulation EDGE</h2>
+        html: buildEdgeEmailShell({
+          title: "Nouvelle postulation EDGE",
+          preheader: `${prenom} ${nom} — ${parcours}`,
+          bodyHtml: `
           <p><strong>Parcours :</strong> ${safe.parcours}</p>
           <p><strong>Cohorte :</strong> ${safe.cohorte}</p>
           <p><strong>Nom :</strong> ${safe.prenom} ${safe.nom}</p>
@@ -117,13 +120,13 @@ export async function POST(request: Request) {
           <p><strong>Objectif :</strong> ${safe.objectif}</p>
           <p><strong>Financement :</strong> ${safe.financement}</p>
           <p><strong>Motivation :</strong><br/>${safe.motivation.replace(/\n/g, "<br/>")}</p>
-          <hr/>
+          <hr style="border:none;border-top:1px solid #E8E8E8;margin:24px 0;" />
           <p><strong>Tarif parcours :</strong> ${safe.parcoursPrix}€</p>
           <p><strong>Modules complémentaires :</strong></p>
           ${formatAddonsHtml(selectedAddons)}
           <p><strong>Total modules :</strong> +${safe.addonsTotal}€</p>
-          <p><strong>Total estimé :</strong> ${safe.totalEstime}€</p>
-        `,
+          <p><strong>Total estimé :</strong> ${safe.totalEstime}€</p>`,
+        }),
       });
 
       await sendResendEmail({
@@ -131,19 +134,18 @@ export async function POST(request: Request) {
         to: email,
         subject: `Ta postulation EDGE est bien reçue — ${parcours}`,
         replyTo: contactEmail,
-        html: `
-          <h2>Bonjour ${safe.prenom},</h2>
-          <p>Ta postulation au parcours <strong>${safe.parcours}</strong> est bien reçue.</p>
-          <p>Un membre de l'équipe EDGE te contacte dans les 48h pour un échange de 20 minutes.</p>
+        html: buildEdgeEmailShell({
+          title: `Bonjour ${safe.prenom}`,
+          preheader: `Postulation reçue — ${parcours}`,
+          bodyHtml: `<p>Ta postulation au parcours <strong>${safe.parcours}</strong> est bien reçue.</p>
+          <p>Un membre de l'équipe EDGE te contacte dans les 48 h pour un échange de 20 minutes.</p>
           ${
             selectedAddons.length > 0
               ? `<p>Modules qui t'intéressent : ${selectedAddons.map((a) => escapeHtml(String(a.titre))).join(", ")}.</p>`
               : ""
           }
-          <p>Pas d'inquiétude — aucun paiement ne te sera demandé aujourd'hui.</p>
-          <br/>
-          <p>À très vite,<br/>L'équipe EDGE</p>
-        `,
+          <p>Pas d'inquiétude — aucun paiement ne te sera demandé aujourd'hui.</p>`,
+        }),
       });
     } else {
       console.log("POSTULATION REÇUE (pas de Resend configuré):", {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildEdgeEmailShell } from "@/lib/emails/edge-email-shell";
 
 function escapeHtml(value: string): string {
   return value
@@ -39,11 +40,15 @@ export async function POST(request: Request) {
           to: contactEmail,
           reply_to: email,
           subject: `[EDGE Entreprises] Demande — ${entreprise}`,
-          html: `<p><strong>${escapeHtml(nom)}</strong> — ${escapeHtml(entreprise)}</p>
+          html: buildEdgeEmailShell({
+            title: "Nouvelle demande entreprise",
+            preheader: `${nom} — ${entreprise}`,
+            bodyHtml: `<p><strong>${escapeHtml(nom)}</strong> — ${escapeHtml(entreprise)}</p>
 <p>Email : ${escapeHtml(email)}<br/>
 Taille équipe : ${escapeHtml(taille)}<br/>
 Besoin principal : ${escapeHtml(besoin)}</p>
 <p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p>`,
+          }),
         }),
       });
 

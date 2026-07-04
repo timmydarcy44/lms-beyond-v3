@@ -30,6 +30,10 @@ import { TrainingLinesEditor } from "@/components/super-admin/training-cms/train
 import { TrainingMediaUploader } from "@/components/super-admin/training-cms/training-media-uploader";
 import { TrainingFaqEditor } from "@/components/super-admin/training-cms/training-faq-editor";
 import { TrainingSessionsEditor } from "@/components/super-admin/training-cms/training-sessions-editor";
+import {
+  TrainingAiGenerateModal,
+  type TrainingAiGeneratedContent,
+} from "@/components/super-admin/training-cms/training-ai-generate-modal";
 
 type CmsState = {
   slug: string;
@@ -178,6 +182,7 @@ export function TrainingCoursesCms() {
   const [domainFilter, setDomainFilter] = useState("all");
   const [tab, setTab] = useState<TabId>("general");
   const [state, setState] = useState<CmsState | null>(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -293,7 +298,7 @@ export function TrainingCoursesCms() {
     }
   };
 
-  const applyAi = (content: Record<string, unknown>) => {
+  const applyAi = (content: TrainingAiGeneratedContent | Record<string, unknown>) => {
     if (!state) return;
     const programStructure = Array.isArray(content.program_structure)
       ? (content.program_structure as TrainingProgramSection[])
@@ -301,7 +306,9 @@ export function TrainingCoursesCms() {
 
     setState({
       ...state,
+      slug: content.slug ? String(content.slug) : state.slug,
       title: String(content.title ?? state.title),
+      domain: content.domain ? String(content.domain) : state.domain,
       short_description: String(content.short_description ?? state.short_description),
       long_description: String(content.long_description ?? state.long_description),
       duration: String(content.duration ?? state.duration),
@@ -318,6 +325,10 @@ export function TrainingCoursesCms() {
       badge_name: String(content.badge_name ?? state.badge_name),
       inter_price: content.inter_price != null ? String(content.inter_price) : state.inter_price,
       intra_price: content.intra_price != null ? String(content.intra_price) : state.intra_price,
+      max_intra_participants:
+        content.max_intra_participants != null
+          ? String(content.max_intra_participants)
+          : state.max_intra_participants,
       formats: Array.isArray(content.formats) ? (content.formats as string[]) : state.formats,
       meta_description: String(content.meta_description ?? state.meta_description),
       seo_tags: Array.isArray(content.seo_tags) ? (content.seo_tags as string[]) : state.seo_tags,
@@ -326,9 +337,15 @@ export function TrainingCoursesCms() {
     });
   };
 
-  const runAi = async (mode: "generate" | "improve") => {
+  const handleAiGenerated = (content: TrainingAiGeneratedContent) => {
+    applyAi(content);
+    setMessage("Fiche générée. Vérifiez les informations puis cliquez sur Enregistrer.");
+    setTab("general");
+  };
+
+  const runAiImprove = async () => {
     if (!state) return;
-    if (mode === "generate" && !state.title.trim()) {
+    if (!state.title.trim()) {
       setError("Saisissez au minimum un titre.");
       return;
     }
@@ -339,18 +356,18 @@ export function TrainingCoursesCms() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode,
+          mode: "improve",
           title: state.title,
           domain: state.domain,
           duration: state.duration,
           level: state.level,
-          existing: mode === "improve" ? stateToPayload(state) : undefined,
+          existing: stateToPayload(state),
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Erreur IA");
       applyAi(json.content);
-      setMessage(mode === "generate" ? "Fiche générée par l'IA — enregistrez pour publier." : "Fiche améliorée.");
+      setMessage("Fiche améliorée. Vérifiez les informations puis cliquez sur Enregistrer.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur IA");
     } finally {
@@ -359,6 +376,25 @@ export function TrainingCoursesCms() {
   };
 
   return (
+    <>
+    <TrainingAiGenerateModal
+      open={aiModalOpen}
+      onOpenChange={setAiModalOpen}
+      onGenerated={handleAiGenerated}
+      defaults={
+        state
+          ? {
+              domain: state.domain,
+              duration: state.duration,
+              level: state.level,
+              audience: state.audience.join(", "),
+              formats: state.formats.join(", "),
+              inter_price: state.inter_price,
+              intra_price: state.intra_price,
+            }
+          : undefined
+      }
+    />
     <div className="mx-auto max-w-[1500px] space-y-6 p-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -473,18 +509,19 @@ export function TrainingCoursesCms() {
                   <button
                     type="button"
                     disabled={generating}
-                    onClick={() => void runAi("generate")}
+                    onClick={() => setAiModalOpen(true)}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-[#635BFF]/25 bg-[#635BFF]/8 px-3 py-2 text-xs font-semibold text-[#635BFF] disabled:opacity-50"
                   >
-                    {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    <Sparkles className="h-3.5 w-3.5" />
                     Générer avec l&apos;IA
                   </button>
                   <button
                     type="button"
                     disabled={generating}
-                    onClick={() => void runAi("improve")}
-                    className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    onClick={() => void runAiImprove()}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
+                    {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                     Améliorer
                   </button>
                   <Link
@@ -677,5 +714,6 @@ export function TrainingCoursesCms() {
         </main>
       </div>
     </div>
+    </>
   );
 }

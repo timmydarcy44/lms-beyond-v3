@@ -126,10 +126,10 @@ export function getEdgePremiumConfig(host?: string | null) {
           title: "Former",
           links: [
             { label: "Former vos équipes", href: R.businessFormerEquipes },
-            { label: "Catalogue de formations", href: R.businessCatalogue },
             { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
-            { label: "Présentiel & distanciel", href: R.businessPresentielDistanciel },
-            { label: "Académie interne", href: R.businessAcademie },
+            { label: "Intra-entreprise", href: R.businessFormerEquipes },
+            { label: "Inter-entreprises", href: R.businessFormerEquipes },
+            { label: "Blended learning", href: R.businessPresentielDistanciel },
           ],
         },
         {
@@ -139,7 +139,6 @@ export function getEdgePremiumConfig(host?: string | null) {
             { label: "Plans de progression", href: R.businessPlansProgression },
             { label: "Certifications", href: R.businessCertificationsBiz },
             { label: "Open Badges", href: R.businessOpenBadges },
-            { label: "Développement des talents", href: R.businessDeveloppementTalents },
           ],
         },
         {
@@ -149,7 +148,6 @@ export function getEdgePremiumConfig(host?: string | null) {
             { label: "Évaluer les compétences", href: R.businessEvaluerCompetences },
             { label: "Alternance", href: R.alternance },
             { label: "Onboarding", href: R.businessOnboarding },
-            { label: "Matching candidats", href: R.businessMatchingCandidats },
           ],
         },
         {
@@ -157,7 +155,6 @@ export function getEdgePremiumConfig(host?: string | null) {
           links: [
             { label: "Tableaux de bord", href: R.businessTableauxDeBord },
             { label: "Analytics", href: R.businessAnalytics },
-            { label: "Suivi des parcours", href: R.businessSuiviParcours },
             { label: "ROI formation", href: R.businessRoiFormation },
             { label: "Aide à la décision", href: R.businessAideDecision },
           ],
@@ -270,9 +267,8 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
       label: "Business",
       links: [
         { label: "Former vos équipes", href: R.businessFormerEquipes },
-        { label: "Catalogue de formations", href: R.businessCatalogue },
         { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
-        { label: "Académie interne", href: R.businessAcademie },
+        { label: "Blended learning", href: R.businessPresentielDistanciel },
         { label: "Recrutement", href: R.businessRecrutement },
         { label: "Pilotage", href: R.businessTableauxDeBord },
       ],

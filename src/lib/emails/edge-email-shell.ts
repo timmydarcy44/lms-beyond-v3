@@ -1,6 +1,7 @@
-/** Charte email EDGE — style Revolut : fond blanc, titre large, CTA noir */
+/** Charte email EDGE — style Revolut : fond blanc, texte noir, logo noir, CTA noir */
 
-const EDGE_LOGO_URL = "https://edgebs.fr/edge-lab/edge-logo-white.png";
+export const EDGE_EMAIL_LOGO_URL =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/EDGE_noir_sans_fond.png";
 
 function escapeHtml(value: string): string {
   return value
@@ -27,7 +28,7 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
   const title = escapeHtml(params.title);
   const preheader = params.preheader ? escapeHtml(params.preheader) : "";
   const footer = params.footerNote
-    ? `<p style="margin:32px 0 0;font-size:13px;line-height:1.6;color:#94A3B8;">${escapeHtml(params.footerNote)}</p>`
+    ? `<p style="margin:32px 0 0;font-size:13px;line-height:1.6;color:#050505;">${escapeHtml(params.footerNote)}</p>`
     : "";
 
   const ctaBlock = params.cta
@@ -49,30 +50,26 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
   <title>${title}</title>
   ${preheader ? `<meta name="description" content="${preheader}" />` : ""}
 </head>
-<body style="margin:0;padding:0;background:#F7F7F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
   ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}</div>` : ""}
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F7F7F5;padding:48px 20px 64px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#FFFFFF;padding:40px 20px 56px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;">
-        <tr><td style="padding:0 0 40px;" align="left">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-            <tr><td style="background:#0A1628;border-radius:12px;padding:12px 20px;">
-              <img src="${EDGE_LOGO_URL}" alt="EDGE" width="72" height="24" style="display:block;height:24px;width:auto;" />
-            </td></tr>
-          </table>
+        <tr><td style="padding:0 0 32px;" align="left">
+          <img src="${EDGE_EMAIL_LOGO_URL}" alt="EDGE" width="88" height="28" style="display:block;height:28px;width:auto;" />
         </td></tr>
-        <tr><td style="background:#FFFFFF;border-radius:24px;padding:48px 40px 44px;box-shadow:0 1px 3px rgba(5,5,5,0.04);">
-          <h1 style="margin:0 0 28px;font-size:32px;font-weight:700;line-height:1.15;letter-spacing:-0.03em;color:#050505;">
+        <tr><td style="padding:0;">
+          <h1 style="margin:0 0 24px;font-size:32px;font-weight:700;line-height:1.15;letter-spacing:-0.03em;color:#050505;">
             ${title}
           </h1>
-          <div style="font-size:16px;line-height:1.7;color:#475569;">
+          <div style="font-size:16px;line-height:1.7;color:#050505;">
             ${params.bodyHtml}
           </div>
           ${ctaBlock}
           ${footer}
-          <p style="margin:40px 0 0;padding-top:32px;border-top:1px solid #F1F5F9;font-size:14px;line-height:1.6;color:#94A3B8;">
+          <p style="margin:40px 0 0;padding-top:32px;border-top:1px solid #E8E8E8;font-size:14px;line-height:1.6;color:#050505;">
             L'équipe EDGE<br />
-            <a href="https://edgebs.fr" style="color:#635BFF;text-decoration:none;">edgebs.fr</a>
+            <a href="https://edgebs.fr" style="color:#050505;text-decoration:underline;">edgebs.fr</a>
           </p>
         </td></tr>
       </table>

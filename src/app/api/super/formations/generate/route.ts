@@ -2,24 +2,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { generateJSON } from "@/lib/ai/openai-client";
 
+const PROGRAM_STRUCTURE_SCHEMA = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      id: { type: "string" },
+      title: { type: "string" },
+      description: { type: "string" },
+      chapters: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            subchapters: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { id: { type: "string" }, title: { type: "string" } },
+                required: ["id", "title"],
+              },
+            },
+          },
+          required: ["id", "title", "subchapters"],
+        },
+      },
+    },
+    required: ["id", "title", "chapters"],
+  },
+};
+
 const SCHEMA = {
   type: "object",
   properties: {
+    title: { type: "string" },
     short_description: { type: "string" },
     long_description: { type: "string" },
     objectives: { type: "array", items: { type: "string" } },
     skills: { type: "array", items: { type: "string" } },
-    program: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          duration: { type: "string" },
-        },
-        required: ["title", "duration"],
-      },
-    },
+    benefits: { type: "array", items: { type: "string" } },
+    why_choose: { type: "array", items: { type: "string" } },
+    case_studies: { type: "array", items: { type: "string" } },
+    deliverables: { type: "array", items: { type: "string" } },
+    methodology: { type: "array", items: { type: "string" } },
+    program_structure: PROGRAM_STRUCTURE_SCHEMA,
     prerequisites: { type: "string" },
     audience: { type: "array", items: { type: "string" } },
     badge_name: { type: "string" },
@@ -30,7 +58,6 @@ const SCHEMA = {
     level: { type: "string" },
     meta_description: { type: "string" },
     seo_tags: { type: "array", items: { type: "string" } },
-    why_choose: { type: "array", items: { type: "string" } },
     faq: {
       type: "array",
       items: {
@@ -41,11 +68,17 @@ const SCHEMA = {
     },
   },
   required: [
+    "title",
     "short_description",
     "long_description",
     "objectives",
     "skills",
-    "program",
+    "benefits",
+    "why_choose",
+    "case_studies",
+    "deliverables",
+    "methodology",
+    "program_structure",
     "prerequisites",
     "audience",
     "badge_name",
@@ -56,7 +89,6 @@ const SCHEMA = {
     "level",
     "meta_description",
     "seo_tags",
-    "why_choose",
     "faq",
   ],
 };
@@ -82,11 +114,13 @@ export async function POST(request: NextRequest) {
     const existing = body.existing ?? {};
 
     const systemPrompt =
-      "Tu es rédacteur formation professionnelle pour EDGE Business (France). Réponds UNIQUEMENT en JSON valide, en français, ton premium et concret. Prix en euros HT. intra_price = prix groupe, inter_price = prix par participant.";
+      "Tu es rédacteur formation professionnelle pour EDGE Business (France), style CEGOS/Orsys. Réponds UNIQUEMENT en JSON valide, en français, ton premium et concret. Prix en euros HT. intra_price = prix groupe, inter_price = prix par participant. program_structure = arborescence publique (sections avec description, chapitres, sous-chapitres optionnels) — PAS de contenu LMS (pas de vidéos/PDF). Génère des id uniques (uuid-like) pour chaque section/chapitre/sous-chapitre.";
+
+    const sharedFields = `title, short_description, long_description, objectives (6-10), skills (8-12), benefits (4-6), why_choose (4-6), case_studies (3-5), deliverables (3-5), methodology (4-6), program_structure (2-4 sections, 3-6 chapitres/section, sous-chapitres si pertinent), prerequisites, audience (3-5), badge_name, inter_price, intra_price, formats, duration, level, meta_description (150-160 car.), seo_tags (8-12), faq (4-6 avec q et a)`;
 
     const userPrompt =
       mode === "improve"
-        ? `Améliore et enrichis cette fiche formation EDGE (reformule, structure mieux, garde la cohérence métier).
+        ? `Améliore et enrichis cette fiche formation EDGE.
 
 Titre: ${title}
 Domaine: ${domain || "—"}
@@ -96,7 +130,7 @@ Niveau: ${level || "—"}
 Contenu actuel:
 ${JSON.stringify(existing, null, 2)}
 
-Retourne le JSON complet avec: short_description, long_description, objectives (5-8), skills (6-10), program (6-10 étapes avec title et duration), prerequisites, audience (3-5), badge_name, inter_price (number), intra_price (number), formats (Présentiel, Distanciel, Blended, Sur mesure), duration, level, meta_description (150-160 car.), seo_tags (8-12 mots-clés), why_choose (4-6 raisons), faq (4-6 questions avec q et a).`
+Retourne le JSON complet avec: ${sharedFields}.`
         : `Génère une fiche formation professionnelle complète pour le catalogue EDGE Business.
 
 Titre: ${title}
@@ -104,7 +138,7 @@ Domaine: ${domain || "Management & compétences"}
 Durée: ${duration || "2 jours"}
 Niveau: ${level || "Intermédiaire"}
 
-Retourne le JSON avec: short_description (2 phrases), long_description (3-4 paragraphes séparés par \\n), objectives (5-8), skills (6-10), program (6-10 étapes avec title et duration), prerequisites, audience (3-5), badge_name (Open Badge EDGE), inter_price réaliste (number), intra_price (groupe, ~8x inter), formats, duration, level, meta_description (150-160 car.), seo_tags (8-12), why_choose (4-6), faq (4-6 avec q et a).`;
+Retourne le JSON avec: ${sharedFields}.`;
 
     const result = await generateJSON(userPrompt, SCHEMA, systemPrompt);
 

@@ -1,3 +1,10 @@
+import type {
+  TrainingInstructor,
+  TrainingPageBlock,
+  TrainingProgramSection,
+  TrainingSessionRow,
+} from "@/lib/training-courses/cms-types";
+
 export type TrainingCourseProgramStep = {
   title: string;
   duration: string;
@@ -32,6 +39,16 @@ export type TrainingCourseRow = {
   seo_tags: string[] | null;
   faq: TrainingCourseFaqItem[] | null;
   why_choose: string[] | null;
+  instructors: TrainingInstructor[] | null;
+  badge_class_id: string | null;
+  program_structure: TrainingProgramSection[] | null;
+  page_blocks: TrainingPageBlock[] | null;
+  sessions: TrainingSessionRow[] | null;
+  benefits: string[] | null;
+  case_studies: string[] | null;
+  deliverables: string[] | null;
+  methodology: string[] | null;
+  illustrations: string[] | null;
   trainer_id: string | null;
   trainer_name: string | null;
   trainer_headline: string | null;

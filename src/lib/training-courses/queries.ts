@@ -7,7 +7,7 @@ import {
 import type { TrainingCoursePublic, TrainingCourseRow } from "@/lib/training-courses/types";
 
 const SELECT_COLS =
-  "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,meta_description,seo_tags,faq,why_choose,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
+  "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,program_structure,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,badge_class_id,meta_description,seo_tags,faq,why_choose,instructors,page_blocks,sessions,benefits,case_studies,deliverables,methodology,illustrations,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
 
 function isMissingTableError(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;

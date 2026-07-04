@@ -1,6 +1,13 @@
-import type { TrainingCoursePublic } from "@/lib/training-courses/types";
-import { EDGE_SPECIALISTS } from "@/lib/edge-site/training-catalog-human";
-import type { TrainingReview } from "@/lib/edge-site/training-module-detail";
+import type { TrainingCourseRow, TrainingCoursePublic } from "@/lib/training-courses/types";
+import {
+  normalizePageBlocks,
+  normalizeProgramStructure,
+  type TrainingInstructor,
+  type TrainingPageBlock,
+  type TrainingProgramSection,
+  type TrainingSessionRow,
+} from "@/lib/training-courses/cms-types";
+import type { TrainingCourseFaqItem } from "@/lib/training-courses/types";
 
 export type TrainingCourseDetail = {
   course: TrainingCoursePublic;
@@ -10,131 +17,128 @@ export type TrainingCourseDetail = {
     name: string;
     specialty: string;
     photoUrl: string;
-    missionsCount: number;
-    companiesCount: number;
+    role: "primary" | "contributor";
   }[];
   methodology: string[];
   exercises: string[];
   casPratiques: string[];
+  deliverables: string[];
   competences: string[];
-  sessions: { date: string; city: string; seats: string; price: string }[];
-  faq: { q: string; a: string }[];
-  reviews: TrainingReview[];
+  sessions: TrainingSessionRow[];
+  faq: TrainingCourseFaqItem[];
   whyFollow: string[];
+  benefits: string[];
+  objectives: string[];
+  audience: string[];
+  programSections: TrainingProgramSection[];
+  pageBlocks: TrainingPageBlock[];
   formatsLabel: string;
   maxIntraParticipants: number;
+  badgeLabel: string;
+  badgeImageUrl: string | null;
 };
+
+function buildTrainersFromCourse(course: TrainingCourseRow) {
+  const instructors = (course.instructors ?? []) as TrainingInstructor[];
+  if (instructors.length) {
+    return [...instructors]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((ins) => ({
+        id: ins.expert_id,
+        name: `${ins.first_name} ${ins.last_name}`.trim(),
+        specialty: ins.headline ?? "Formateur expert EDGE",
+        photoUrl:
+          ins.photo_url ??
+          "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop",
+        role: ins.role,
+      }));
+  }
+
+  if (course.trainer_name) {
+    return [
+      {
+        id: course.trainer_id ?? "lead",
+        name: course.trainer_name,
+        specialty: course.trainer_headline ?? "Formateur expert EDGE",
+        photoUrl:
+          course.trainer_photo_url ??
+          "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop",
+        role: "primary" as const,
+      },
+    ];
+  }
+
+  return [];
+}
 
 function formatPrice(value: number | null | undefined, suffix: string): string | null {
   if (value == null) return null;
   return `${value.toLocaleString("fr-FR")} € HT ${suffix}`;
 }
 
-export function buildTrainingCourseDetail(course: TrainingCoursePublic): TrainingCourseDetail {
+export function buildTrainingCourseDetail(
+  course: TrainingCoursePublic,
+  badgeMeta?: { name?: string | null; imageUrl?: string | null },
+): TrainingCourseDetail {
   const benefit =
     course.short_description ??
+    course.benefits?.[0] ??
     course.objectives?.[0] ??
-    "Développer des compétences immédiatement applicables en entreprise.";
-
-  const leadTrainer = course.trainer_name
-    ? {
-        id: course.trainer_id ?? "lead",
-        name: course.trainer_name,
-        specialty: course.trainer_headline ?? "Formateur expert EDGE",
-        photoUrl:
-          course.trainer_photo_url ??
-          EDGE_SPECIALISTS[0]?.photoUrl ??
-          "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop",
-        missionsCount: 48,
-        companiesCount: 32,
-      }
-    : null;
-
-  const extraTrainers = EDGE_SPECIALISTS.slice(0, 2).map((s) => ({
-    id: s.id,
-    name: s.name,
-    specialty: s.specialty,
-    photoUrl: s.photoUrl,
-    missionsCount: s.missionsCount,
-    companiesCount: s.companiesCount,
-  }));
-
-  const trainers = leadTrainer
-    ? [leadTrainer, ...extraTrainers.filter((t) => t.id !== leadTrainer.id).slice(0, 1)]
-    : extraTrainers;
+    "";
 
   const interLabel = formatPrice(course.inter_price, "/ participant");
   const intraLabel = formatPrice(course.intra_price, "/ groupe");
 
+  const sessions: TrainingSessionRow[] = course.sessions?.length
+    ? course.sessions
+    : [
+        ...(interLabel
+          ? [
+              {
+                id: "inter-default",
+                date: "Prochaine session inter",
+                city: "Paris · Distanciel",
+                seats: "Places limitées",
+                price: interLabel,
+                format: "Inter-entreprises",
+              },
+            ]
+          : []),
+        ...(intraLabel
+          ? [
+              {
+                id: "intra-default",
+                date: "Session intra sur mesure",
+                city: "Dans vos locaux ou à distance",
+                seats: `Jusqu'à ${course.max_intra_participants ?? 12} participants`,
+                price: intraLabel,
+                format: "Intra-entreprise",
+              },
+            ]
+          : []),
+      ];
+
   return {
     course,
     benefit,
-    trainers,
-    methodology: ["Apports théoriques", "Mises en situation", "Retours d'expérience", "Plan d'action"],
-    exercises: ["Ateliers pratiques", "Jeux de rôle", "Études de cas sectoriels"],
-    casPratiques: ["Cas concrets issus de votre contexte", "Livrables opérationnels à emporter"],
-    competences: course.skills ?? course.objectives ?? [],
-    formatsLabel: (course.formats ?? []).join(" · ") || "Présentiel · Distanciel",
+    trainers: buildTrainersFromCourse(course),
+    methodology: course.methodology ?? [],
+    exercises: course.case_studies ?? [],
+    casPratiques: course.case_studies ?? [],
+    deliverables: course.deliverables ?? [],
+    competences: course.skills ?? [],
+    objectives: course.objectives ?? [],
+    audience: course.audience ?? [],
+    benefits: course.benefits ?? [],
+    whyFollow: course.why_choose ?? [],
+    programSections: normalizeProgramStructure(course.program_structure, course.program),
+    pageBlocks: normalizePageBlocks(course.page_blocks),
+    formatsLabel: (course.formats ?? []).join(" · "),
     maxIntraParticipants: course.max_intra_participants ?? 12,
-    sessions: [
-      {
-        date: "Prochaine session inter",
-        city: "Paris · Distanciel",
-        seats: "Places limitées",
-        price: interLabel ?? "Sur devis",
-      },
-      {
-        date: "Session intra sur mesure",
-        city: "Dans vos locaux ou à distance",
-        seats: `Jusqu'à ${course.max_intra_participants ?? 12} participants`,
-        price: intraLabel ?? "Sur devis",
-      },
-    ],
-    faq: course.faq?.length
-      ? course.faq
-      : [
-          {
-            q: "Quelle différence entre intra et inter ?",
-            a: "L'intra est organisée pour votre équipe (jusqu'à 12 participants). L'inter réunit des participants de plusieurs entreprises.",
-          },
-          {
-            q: "La formation est-elle certifiante ?",
-            a: `Oui, un ${course.badge_name ?? "Open Badge EDGE"} est délivré en fin de parcours.`,
-          },
-          {
-            q: "Peut-on adapter le programme ?",
-            a: "En intra, le contenu peut être personnalisé selon vos enjeux métier.",
-          },
-        ],
-    reviews: [
-      {
-        author: "Sophie M.",
-        role: "DRH",
-        company: "PME industrielle",
-        rating: 5,
-        text: "Formation très concrète, équipe opérationnelle dès le lendemain.",
-        photoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80",
-      },
-      {
-        author: "Thomas L.",
-        role: "Manager",
-        company: "Groupe services",
-        rating: 5,
-        text: "Intervenant expert et pédagogie adaptée à notre niveau.",
-        photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80",
-      },
-      {
-        author: "Nadia K.",
-        role: "Responsable formation",
-        company: "ETI",
-        rating: 5,
-        text: "Excellent rapport qualité-prix, nous avons renouvelé en intra.",
-        photoUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&q=80",
-      },
-    ],
-    whyFollow: course.why_choose?.length
-      ? course.why_choose
-      : (course.objectives ?? []).slice(0, 4),
+    sessions,
+    faq: course.faq ?? [],
+    badgeLabel: badgeMeta?.name ?? course.badge_name ?? "Open Badge EDGE",
+    badgeImageUrl: badgeMeta?.imageUrl ?? null,
   };
 }
 
@@ -146,4 +150,9 @@ export function formatInterPrice(course: TrainingCoursePublic): string {
 export function formatIntraPrice(course: TrainingCoursePublic): string {
   if (course.intra_price == null) return "Sur devis";
   return `${course.intra_price.toLocaleString("fr-FR")} € HT / groupe`;
+}
+
+export function isBlockVisible(detail: TrainingCourseDetail, blockId: TrainingPageBlock["id"]): boolean {
+  const block = detail.pageBlocks.find((b) => b.id === blockId);
+  return block?.visible ?? true;
 }

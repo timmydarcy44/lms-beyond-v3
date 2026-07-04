@@ -182,7 +182,7 @@ export function EnterpriseDashboardV2() {
     <div className="relative flex min-h-screen bg-white font-sans text-gray-900">
       {showBlockingOverlay ? <EnterpriseLoadingOverlay /> : null}
       <EnterpriseSidebar />
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+      <main className="flex-1 min-w-0 overflow-x-hidden px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mb-10 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-400">Espace Entreprise</p>
           <h1 className={cn("mt-2", ENTREPRISE_H1_CLASS)}>{greeting}</h1>

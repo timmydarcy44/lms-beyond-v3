@@ -145,15 +145,13 @@ export async function maybeTriggerCrossProfileCompletion(
   }
 
   const tests = await loadTestRows(service, uid);
-  if (!tests.disc?.scores) {
-    return { status: "skipped", reason: "disc_incomplete" };
+  if (!tests.disc?.scores || !tests.idmc?.scores || !tests.soft?.scores) {
+    return { status: "skipped", reason: "tests_incomplete" };
   }
 
   if (!hasObjectiveDetails(profile.objective_details)) {
     return { status: "skipped", reason: "objective_details_missing" };
   }
-
-  const fullProfileComplete = Boolean(tests.idmc?.scores && tests.soft?.scores);
 
   const badgeId = await resolveProfilComportementalBadgeId(service);
   if (!badgeId) {
@@ -176,30 +174,17 @@ export async function maybeTriggerCrossProfileCompletion(
   }
 
   const discArchetype = resolveDiscArchetypeForEmail(tests.disc.scores);
-
-  let dominantAxis = "—";
-  let idmcLevel = "—";
-  let idmcStrengthPhrase = "votre organisation";
-  let topSoftSkills: ReturnType<typeof resolveTopSoftSkillsForEmail> = [];
-
-  if (tests.idmc?.scores) {
-    const axisPercentages = readIdmcAxisPercentages(tests.idmc.scores);
-    if (axisPercentages) {
-      dominantAxis = resolveDominantIdmcAxis(axisPercentages);
-      idmcLevel = resolveIdmcGlobalLevel(tests.idmc.scores, tests.idmc.level);
-      idmcStrengthPhrase = IDMC_AXIS_EMAIL_PHRASES[dominantAxis as keyof typeof IDMC_AXIS_EMAIL_PHRASES] ?? idmcStrengthPhrase;
-    }
+  const axisPercentages = readIdmcAxisPercentages(tests.idmc.scores);
+  if (!axisPercentages) {
+    return { status: "skipped", reason: "idmc_axes_invalid" };
   }
 
-  if (tests.soft?.scores) {
-    topSoftSkills = resolveTopSoftSkillsForEmail(tests.soft.scores, 2);
-  }
-
-  if (!topSoftSkills.length) {
-    topSoftSkills = [
-      { title: "Communication assertive", emailPhrase: "une communication assertive" },
-      { title: "Organisation", emailPhrase: "une organisation efficace" },
-    ];
+  const dominantAxis = resolveDominantIdmcAxis(axisPercentages);
+  const idmcLevel = resolveIdmcGlobalLevel(tests.idmc.scores, tests.idmc.level);
+  const idmcStrengthPhrase = IDMC_AXIS_EMAIL_PHRASES[dominantAxis as keyof typeof IDMC_AXIS_EMAIL_PHRASES];
+  const topSoftSkills = resolveTopSoftSkillsForEmail(tests.soft.scores, 2);
+  if (topSoftSkills.length === 0) {
+    return { status: "skipped", reason: "soft_skills_invalid" };
   }
 
   const rawCompletion = profile.cross_profile_completion as Record<string, unknown> | null;
@@ -273,7 +258,7 @@ export async function maybeTriggerCrossProfileCompletion(
     if (sent) emailSentAt = new Date().toISOString();
   }
 
-  const completion: CrossProfileCompletionRecord & { full_profile_complete?: boolean } = {
+  const completion: CrossProfileCompletionRecord = {
     opening_paragraph: openingParagraph,
     opening_generated_at: openingGeneratedAt,
     tests_signature: testsSignature,
@@ -286,7 +271,6 @@ export async function maybeTriggerCrossProfileCompletion(
     email_sent_at: emailSentAt,
     show_badge_animation: true,
     processed_at: new Date().toISOString(),
-    full_profile_complete: fullProfileComplete,
   };
 
   const { error: updateError } = await service

@@ -28,29 +28,30 @@ export async function POST(request: Request) {
   const { data: profiles, error } = await service
     .from("profiles")
     .select("id, email, first_name, role, role_type, cross_profile_completion, profile_incomplete_reminder_sent_at")
-    .or("role.eq.PARTICULIER,role_type.eq.particulier")
-    .not("cross_profile_completion", "is", null);
+    .or("role.eq.PARTICULIER,role_type.eq.particulier");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const profilHref = `${publicAppUrl().replace(/\/$/, "")}/dashboard/apprenant/profil`;
+  const profilHref = `${publicAppUrl().replace(/\/$/, "")}/dashboard/apprenant/profil-comportemental`;
   let sent = 0;
 
   for (const profile of profiles ?? []) {
-    const completion = profile.cross_profile_completion as { badge_awarded_at?: string; full_profile_complete?: boolean } | null;
-    if (!completion?.badge_awarded_at || completion.full_profile_complete) continue;
+    const completion = profile.cross_profile_completion as { badge_awarded_at?: string } | null;
+    if (completion?.badge_awarded_at) continue;
 
     const reminderAt = profile.profile_incomplete_reminder_sent_at as string | null;
     if (reminderAt && reminderAt > cutoff) continue;
 
     const uid = String(profile.id);
-    const [idmcRes, softRes] = await Promise.all([
+    const [discRes, idmcRes, softRes] = await Promise.all([
+      service.from("disc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
       service.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
       service.from("soft_skills_resultats").select("scores").eq("learner_id", uid).maybeSingle(),
     ]);
 
+    if (!discRes.data?.scores) continue;
     if (idmcRes.data?.scores && softRes.data?.scores) continue;
 
     const email = String(profile.email ?? "").trim();

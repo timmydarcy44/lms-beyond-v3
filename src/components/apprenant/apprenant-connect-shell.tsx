@@ -329,14 +329,14 @@ export function ApprenantConnectShell({
               <div className="space-y-0.5">
                 {navItems.map((item) => {
                   const isParcoursGalaxy = item.label === "Parcours" || item.label === "Mes parcours";
-                  const isMonCoachingEntry = item.label === "Mon coaching";
+                  const isMonAccompagnementEntry = item.label === "Mon accompagnement";
                   const isParcoursGuide = item.label === "Parcours guidé";
                   const isShareProfile = item.action === "share-profile";
                   const active =
                     !isShareProfile &&
                     (pathname === item.href ||
                       (isParcoursGalaxy && Boolean(pathname?.startsWith("/g/edgelab"))) ||
-                      (isMonCoachingEntry && Boolean(pathname?.startsWith("/dashboard/apprenant/coaching"))) ||
+                      (isMonAccompagnementEntry && Boolean(pathname?.startsWith("/dashboard/apprenant/coaching"))) ||
                       (isParcoursGuide && Boolean(pathname?.includes("/parcours-guide"))));
                   const itemClass = `group relative flex w-full items-center rounded-xl text-[13px] font-medium transition ${
                     isSidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"

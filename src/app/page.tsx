@@ -25,9 +25,9 @@ export async function generateMetadata(): Promise<Metadata> {
   if (hostOnly === "edgebs.fr" && !isLocalhost) {
     return {
       metadataBase: new URL("https://edgebs.fr"),
-      title: "EDGE — Club privé d’apprentissage",
+      title: "EDGE — Développons les compétences qui feront la différence demain",
       description:
-        "IA, vente, management, comportement : parcours concrets, compétences validées par livrables réels.",
+        "EDGE accompagne les apprenants et les organisations avec des formations innovantes, une technologie intelligente et une pédagogie orientée résultats.",
       alternates: {
         canonical: "https://edgebs.fr/",
       },

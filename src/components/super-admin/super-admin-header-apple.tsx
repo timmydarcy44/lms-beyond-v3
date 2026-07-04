@@ -37,6 +37,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/super" },
   { label: "Gestion des formations", href: "/super/formations" },
+  { label: "Référentiel métiers", href: "/super/metiers" },
   { label: "Experts / Formateurs", href: "/super/experts" },
   { label: "CRM", href: "/super/utilisateurs" },
   { label: "Open Badges", href: "/super/open-badges/badgeclasses" },

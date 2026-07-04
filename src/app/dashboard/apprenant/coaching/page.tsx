@@ -8,15 +8,15 @@ import {
   CONNECT_BTN_PRIMARY,
 } from "@/lib/apprenant/connect-nav";
 
-export default function ParticulierCoachingPage() {
+export default function ParticulierAccompagnementPage() {
   return (
     <div className="space-y-6">
       <header>
         <p className={APPRENANT_CARD_KICKER}>Accompagnement</p>
-        <h1 className="mt-2 text-2xl font-bold text-white">Mon coaching</h1>
+        <h1 className="mt-2 text-2xl font-bold text-white">Mon accompagnement</h1>
         <p className="mt-2 max-w-2xl text-sm text-white/50">
-          Un coach EDGE vous aide à interpréter votre Profil comportemental et à construire un plan d&apos;action
-          réaliste vers votre objectif.
+          Un coach EDGE vous aide à interpréter votre Profil, comprendre vos écarts de compétences et construire un plan
+          d&apos;action adapté à votre métier cible.
         </p>
       </header>
 
@@ -41,8 +41,11 @@ export default function ParticulierCoachingPage() {
       </div>
 
       <p className="text-sm text-white/45">
-        <Link href="/dashboard/apprenant/profil-comportemental" className="underline underline-offset-2 hover:text-white/70">
-          Consulter d&apos;abord votre Profil comportemental EDGE
+        <Link
+          href="/dashboard/apprenant/profil-comportemental"
+          className="underline underline-offset-2 hover:text-white/70"
+        >
+          Sélectionnez d&apos;abord votre métier cible dans Mon Profil EDGE
         </Link>
       </p>
     </div>

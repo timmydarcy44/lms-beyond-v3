@@ -149,10 +149,6 @@ export async function maybeTriggerCrossProfileCompletion(
     return { status: "skipped", reason: "tests_incomplete" };
   }
 
-  if (!hasObjectiveDetails(profile.objective_details)) {
-    return { status: "skipped", reason: "objective_details_missing" };
-  }
-
   const badgeId = await resolveProfilComportementalBadgeId(service);
   if (!badgeId) {
     return { status: "error", message: "badge_not_found" };

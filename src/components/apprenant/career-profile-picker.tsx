@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import type { CareerProfile } from "@/lib/career-profiles/career-profiles-data";
-import { FEATURED_CAREER_CHIPS } from "@/lib/career-profiles/featured-careers";
-import { cn } from "@/lib/utils";
-
-type Tab = "featured" | "other";
+import {
+  CAREER_OTHER_VALUE,
+  getCareerDropdownOptions,
+} from "@/lib/career-profiles/featured-careers";
 
 type Props = {
   value: string | null;
@@ -16,21 +16,23 @@ type Props = {
 };
 
 export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved }: Props) {
-  const isFeatured = value ? FEATURED_CAREER_CHIPS.some((c) => c.slug === value) : false;
-  const [tab, setTab] = useState<Tab>(value && !isFeatured ? "other" : "featured");
-  const [customTitle, setCustomTitle] = useState(selectedTitle ?? "");
+  const options = getCareerDropdownOptions();
+  const [selectValue, setSelectValue] = useState("");
+  const [customTitle, setCustomTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!value) return;
-    const featured = FEATURED_CAREER_CHIPS.some((c) => c.slug === value);
-    if (!featured) {
-      setTab("other");
-      if (selectedTitle) setCustomTitle(selectedTitle);
+    const match = options.find((o) => o.slug === value);
+    if (match) {
+      setSelectValue(match.id);
+    } else {
+      setSelectValue(CAREER_OTHER_VALUE);
+      setCustomTitle(selectedTitle ?? value.replace(/-/g, " "));
     }
-  }, [value, selectedTitle]);
+  }, [value, selectedTitle, options]);
 
   const resolveCareer = async (payload: { slug?: string; title?: string }) => {
     setLoading(true);
@@ -38,7 +40,7 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
     setStatusMessage(
       payload.title && !payload.slug
         ? "Analyse du métier en cours avec l'IA EDGE…"
-        : "Chargement de la fiche métier…",
+        : "Chargement du référentiel métier…",
     );
 
     try {
@@ -54,8 +56,8 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
       onResolved(profile.slug, profile, { cached: Boolean(json.cached) });
       setStatusMessage(
         json.cached
-          ? "Fiche métier chargée."
-          : "Fiche métier générée et enregistrée — elle sera réutilisée pour les prochains apprenants.",
+          ? "Référentiel métier chargé."
+          : "Référentiel généré et enregistré pour les prochains apprenants.",
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur lors de l'analyse");
@@ -65,9 +67,12 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
     }
   };
 
-  const handleChip = (slug: string) => {
-    if (disabled || loading) return;
-    void resolveCareer({ slug });
+  const handleSelectChange = (next: string) => {
+    setSelectValue(next);
+    setError(null);
+    if (next === CAREER_OTHER_VALUE || !next) return;
+    const opt = options.find((o) => o.id === next);
+    if (opt) void resolveCareer({ slug: opt.slug, title: opt.label });
   };
 
   const handleCustomSubmit = () => {
@@ -76,67 +81,33 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
     void resolveCareer({ title });
   };
 
+  const selectClass =
+    "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none focus:border-[#3D7BFF]/40";
+
   return (
     <div>
-      <label className="block text-sm font-medium text-white">Métier ou projet visé</label>
+      <label className="block text-sm font-medium text-white">Métier visé (référentiel EDGE)</label>
+      <p className="mt-1 text-xs text-white/45">
+        Le métier choisi devient le référentiel pour l&apos;analyse de compatibilité et le plan d&apos;action.
+      </p>
 
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          disabled={disabled || loading}
-          onClick={() => setTab("featured")}
-          className={cn(
-            "rounded-full px-4 py-1.5 text-xs font-semibold transition",
-            tab === "featured"
-              ? "bg-[#3D7BFF] text-white"
-              : "border border-white/15 bg-white/[0.04] text-white/60 hover:text-white",
-          )}
-        >
-          Métiers courants
-        </button>
-        <button
-          type="button"
-          disabled={disabled || loading}
-          onClick={() => setTab("other")}
-          className={cn(
-            "rounded-full px-4 py-1.5 text-xs font-semibold transition",
-            tab === "other"
-              ? "bg-[#3D7BFF] text-white"
-              : "border border-white/15 bg-white/[0.04] text-white/60 hover:text-white",
-          )}
-        >
-          Autre
-        </button>
-      </div>
+      <select
+        disabled={disabled || loading}
+        value={selectValue}
+        onChange={(e) => handleSelectChange(e.target.value)}
+        className={`${selectClass} mt-3`}
+      >
+        <option value="">Sélectionnez un métier…</option>
+        {options.map((opt) => (
+          <option key={opt.id} value={opt.id}>
+            {opt.label}
+          </option>
+        ))}
+        <option value={CAREER_OTHER_VALUE}>Autre</option>
+      </select>
 
-      {tab === "featured" ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {FEATURED_CAREER_CHIPS.map((chip) => {
-            const selected = value === chip.slug;
-            return (
-              <button
-                key={chip.slug}
-                type="button"
-                disabled={disabled || loading}
-                onClick={() => handleChip(chip.slug)}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                  selected
-                    ? "border-[#3D7BFF]/50 bg-[#3D7BFF]/15 text-white"
-                    : "border-white/12 bg-white/[0.04] text-white/75 hover:border-white/25 hover:bg-white/[0.07]",
-                )}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
+      {selectValue === CAREER_OTHER_VALUE ? (
         <div className="mt-4 space-y-3">
-          <p className="text-xs text-white/45">
-            Saisissez n&apos;importe quel métier (ex. cuisinier, infirmier, développeur web). EDGE génère
-            automatiquement les compétences et les enregistre pour les prochains utilisateurs.
-          </p>
           <input
             type="text"
             disabled={disabled || loading}
@@ -148,8 +119,8 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
                 handleCustomSubmit();
               }
             }}
-            placeholder="Ex. Cuisinier, Agent immobilier, Data analyst…"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#3D7BFF]/40"
+            placeholder="Saisissez votre métier (ex. Cuisinier, Infirmier…)"
+            className={selectClass}
           />
           <button
             type="button"
@@ -161,7 +132,7 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
             Analyser ce métier
           </button>
         </div>
-      )}
+      ) : null}
 
       {loading ? (
         <p className="mt-3 flex items-center gap-2 text-xs text-white/50">

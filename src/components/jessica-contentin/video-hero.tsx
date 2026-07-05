@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 /** Fichier public Supabase — hero vitrine */
-const HERO_VIDEO_MP4 =
-  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/video%20hero%20v4.mp4";
+const HERO_VIDEO_URL =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/video%20presentration%20cabinet%20hero.MOV";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=1920&q=80";
@@ -48,7 +48,7 @@ export function VideoHero() {
           <>
             <video
               ref={videoRef}
-              src={HERO_VIDEO_MP4}
+              src={HERO_VIDEO_URL}
               autoPlay
               loop
               muted

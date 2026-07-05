@@ -2,12 +2,21 @@ import type { ParticulierObjectiveType } from "@/lib/particulier/objective-detai
 import { normalizeParticulierObjectiveType } from "@/lib/particulier/objective-detail-fields";
 import type { ProfessionalProject } from "@/lib/particulier/profil-edge-maturity";
 
+import {
+  CONTRACT_TYPES,
+  DISPONIBILITE_OPTIONS,
+  MOBILITE_OPTIONS,
+  SECTEUR_OPTIONS,
+} from "@/lib/particulier/edge-select-options";
+
 export type ProfessionalProjectField = {
   key: string;
   label: string;
   placeholder: string;
   /** Champ relié au référentiel métier EDGE (autocomplete + Autre) */
   isCareerTarget?: boolean;
+  inputType?: "text" | "select";
+  options?: Array<{ value: string; label: string }>;
 };
 
 export const OBJECTIVE_TYPE_LABELS: Record<ParticulierObjectiveType, string> = {
@@ -22,18 +31,18 @@ export const PROFESSIONAL_PROJECT_FIELDS: Record<ParticulierObjectiveType, Profe
   alternance: [
     { key: "formation_visee", label: "Formation visée", placeholder: "Ex. BTS NDRC" },
     { key: "metier_vise", label: "Métier visé", placeholder: "Ex. Responsable commercial", isCareerTarget: true },
-    { key: "secteur_souhaite", label: "Secteur souhaité", placeholder: "Ex. Distribution, tech…" },
+    { key: "secteur_souhaite", label: "Secteur souhaité", placeholder: "Choisir…", inputType: "select", options: SECTEUR_OPTIONS },
     { key: "rythme_souhaite", label: "Rythme souhaité", placeholder: "Ex. 2 semaines entreprise / 1 semaine école" },
     { key: "date_debut_recherchee", label: "Date de début recherchée", placeholder: "Ex. Septembre 2026" },
-    { key: "mobilite", label: "Mobilité", placeholder: "Ex. Locale, régionale" },
+    { key: "mobilite", label: "Mobilité", placeholder: "Choisir…", inputType: "select", options: MOBILITE_OPTIONS },
   ],
   emploi: [
     { key: "metier_recherche", label: "Métier recherché", placeholder: "Ex. Chargé de clientèle", isCareerTarget: true },
-    { key: "secteur", label: "Secteur", placeholder: "Ex. Services, industrie…" },
-    { key: "type_contrat", label: "Type de contrat", placeholder: "Ex. CDI, CDD, intérim…" },
+    { key: "secteur", label: "Secteur", placeholder: "Choisir…", inputType: "select", options: SECTEUR_OPTIONS },
+    { key: "type_contrat", label: "Type de contrat", placeholder: "Choisir…", inputType: "select", options: CONTRACT_TYPES },
     { key: "niveau_experience", label: "Niveau d'expérience", placeholder: "Ex. Débutant, 3 ans…" },
-    { key: "disponibilite", label: "Disponibilité", placeholder: "Ex. Immédiate, sous 1 mois" },
-    { key: "mobilite", label: "Mobilité", placeholder: "Ex. Locale, nationale" },
+    { key: "disponibilite", label: "Disponibilité", placeholder: "Choisir…", inputType: "select", options: DISPONIBILITE_OPTIONS },
+    { key: "mobilite", label: "Mobilité", placeholder: "Choisir…", inputType: "select", options: MOBILITE_OPTIONS },
   ],
   freelance: [
     { key: "activite_visee", label: "Activité visée", placeholder: "Ex. Consultant RH" },
@@ -45,7 +54,7 @@ export const PROFESSIONAL_PROJECT_FIELDS: Record<ParticulierObjectiveType, Profe
   reconversion: [
     { key: "metier_actuel", label: "Métier actuel", placeholder: "Ex. Assistant administratif" },
     { key: "metier_vise", label: "Métier visé", placeholder: "Ex. Chef de projet digital", isCareerTarget: true },
-    { key: "secteur_vise", label: "Secteur visé", placeholder: "Ex. Digital, santé…" },
+    { key: "secteur_vise", label: "Secteur visé", placeholder: "Choisir…", inputType: "select", options: SECTEUR_OPTIONS },
     { key: "horizon_projet", label: "Horizon du projet", placeholder: "Ex. 6 à 12 mois" },
     { key: "contraintes_principales", label: "Contraintes principales", placeholder: "Ex. Temps partiel, mobilité limitée…" },
   ],

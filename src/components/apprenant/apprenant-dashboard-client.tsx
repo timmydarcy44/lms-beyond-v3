@@ -9,7 +9,6 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import {
   GLOBAL_SKILL_REFERENTIAL,
-  GLOBAL_STACK_REFERENTIAL,
   referentialItemName,
   referentialItemSubtitle,
   resolveToolLogo,
@@ -20,6 +19,14 @@ import dynamic from "next/dynamic";
 import { ApprenantConnectOverview } from "@/components/apprenant/apprenant-connect-overview";
 import { CrossProfileBadgeCelebration } from "@/components/apprenant/cross-profile-badge-celebration";
 import { CareerGoalStepModal } from "@/components/apprenant/career-goal-step-modal";
+import { ParticulierOnboardingOverlay } from "@/components/apprenant/particulier-onboarding-overlay";
+import {
+  buildOnboardingSavePayload,
+  EMPTY_ONBOARDING_FORM,
+  mapProfileToOnboardingForm,
+  validateOnboardingForm,
+  type ParticulierOnboardingForm,
+} from "@/lib/particulier/onboarding-objective-config";
 const PersonalizedActionPlanSection = dynamic(
   () =>
     import("@/components/learner/personalized-action-plan-section").then((m) => ({
@@ -203,11 +210,6 @@ export function ApprenantDashboardClient({
   const [activeCategory, setActiveCategory] = useState<string>(
     GLOBAL_SKILL_REFERENTIAL[0]?.category ?? ""
   );
-  const [showOnboardingStackCatalog, setShowOnboardingStackCatalog] = useState(false);
-  const [onboardingStackSearch, setOnboardingStackSearch] = useState("");
-  const [onboardingStackCategory, setOnboardingStackCategory] = useState<string>(
-    GLOBAL_STACK_REFERENTIAL[0]?.category ?? ""
-  );
   const [pendingHardSkill, setPendingHardSkill] = useState<string | null>(null);
   const [pendingSkillProof, setPendingSkillProof] = useState(false);
   const [manualSkillName, setManualSkillName] = useState("");
@@ -224,29 +226,7 @@ export function ApprenantDashboardClient({
   const [schoolJoinBusy, setSchoolJoinBusy] = useState(false);
   const [schoolJoinError, setSchoolJoinError] = useState<string | null>(null);
   const [schoolJoinMessage, setSchoolJoinMessage] = useState<string | null>(null);
-  const [onboardingForm, setOnboardingForm] = useState({
-    first_name: "",
-    last_name: "",
-    birth_date: "",
-    city: "",
-    telephone: "",
-    poste_actuel: "",
-    entreprise: "",
-    type_contrat: "",
-    tjm: "",
-    expertise: "",
-    stack_technique: "",
-    disponibilite: "",
-    langues: "",
-    ancien_metier: "",
-    metier_vise: "",
-    organisme_formation: "",
-    echeance: "",
-    ecole: "",
-    niveau_etude: "",
-    rythme_alternance: "",
-    date_fin_contrat: "",
-  });
+  const [onboardingForm, setOnboardingForm] = useState<ParticulierOnboardingForm>(EMPTY_ONBOARDING_FORM);
 
   const slugify = (value: string) =>
     value
@@ -445,34 +425,7 @@ export function ApprenantDashboardClient({
           }
           setProfile(profileData ?? null);
           if (profileData) {
-            setOnboardingForm({
-              first_name: String(profileData.first_name ?? metaFirstName ?? "").trim(),
-              last_name: String(profileData.last_name ?? metaLastName ?? "").trim(),
-              birth_date: String(profileData.birth_date ?? profileData.date_naissance ?? "").trim(),
-              city: String(profileData.city ?? "").trim(),
-              telephone: String(profileData.telephone ?? "").trim(),
-              poste_actuel: String(profileData.poste_actuel ?? "").trim(),
-              entreprise: String(profileData.entreprise ?? "").trim(),
-              type_contrat: String(profileData.type_contrat ?? "").trim(),
-              tjm: String(profileData.tjm ?? "").trim(),
-              expertise: String(profileData.expertise ?? "").trim(),
-              stack_technique: String(profileData.stack_technique ?? "").trim(),
-              disponibilite:
-                profileData.disponibilite === true || String(profileData.disponibilite ?? "").toLowerCase() === "oui"
-                  ? "Oui"
-                  : profileData.disponibilite === false || String(profileData.disponibilite ?? "").toLowerCase() === "non"
-                    ? "Non"
-                    : "",
-              langues: String(profileData.langues ?? "").trim(),
-              ancien_metier: String(profileData.ancien_metier ?? "").trim(),
-              metier_vise: String(profileData.metier_vise ?? "").trim(),
-              organisme_formation: String(profileData.organisme_formation ?? "").trim(),
-              echeance: String(profileData.echeance ?? "").trim(),
-              ecole: String(profileData.ecole ?? "").trim(),
-              niveau_etude: String(profileData.niveau_etude ?? "").trim(),
-              rythme_alternance: String(profileData.rythme_alternance ?? "").trim(),
-              date_fin_contrat: String(profileData.date_fin_contrat ?? "").trim(),
-            });
+            setOnboardingForm(mapProfileToOnboardingForm(profileData as Record<string, unknown>));
           }
           try {
             const first = String(profileData.first_name ?? metaFirstName ?? "").trim();
@@ -1006,28 +959,6 @@ export function ApprenantDashboardClient({
       category: group.category,
     })),
   ).filter((item) => item.name.toLowerCase().includes(skillSearch.toLowerCase()));
-  const onboardingSelectedStacks = useMemo(
-    () =>
-      onboardingForm.stack_technique
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    [onboardingForm.stack_technique]
-  );
-  const onboardingStackItems = useMemo(
-    () =>
-      GLOBAL_STACK_REFERENTIAL
-        .filter((group) => !onboardingStackCategory || group.category === onboardingStackCategory)
-        .flatMap((group) => group.items)
-        .filter((item) => item.toLowerCase().includes(onboardingStackSearch.toLowerCase())),
-    [onboardingStackCategory, onboardingStackSearch]
-  );
-  const toggleOnboardingStack = (stack: string) => {
-    const next = onboardingSelectedStacks.includes(stack)
-      ? onboardingSelectedStacks.filter((item) => item !== stack)
-      : [...onboardingSelectedStacks, stack];
-    setOnboardingForm((prev) => ({ ...prev, stack_technique: next.join(", ") }));
-  };
   const hardSkillItems = hardSkills;
   const CATEGORY_LIST = HARD_SKILL_LIBRARY.map((group) => ({ type: "hard" as const, name: group.category }));
   const parsedTools = useMemo(() => {
@@ -1199,90 +1130,16 @@ export function ApprenantDashboardClient({
 
   const handleSaveOnboarding = async () => {
     if (!supabase || !user?.id) return;
-    const hasValue = (value: string) => value.trim().length > 0;
-    const requiredCommon = [
-      onboardingForm.first_name,
-      onboardingForm.last_name,
-      onboardingForm.city,
-      onboardingForm.telephone,
-      onboardingForm.birth_date,
-    ];
     const typeProfil = String((profile as Record<string, unknown> | null)?.type_profil ?? "").trim();
-    const requiredRole =
-      typeProfil === "freelance"
-        ? [
-            onboardingForm.tjm,
-            onboardingForm.expertise,
-            onboardingForm.stack_technique,
-            onboardingForm.disponibilite,
-            onboardingForm.langues,
-          ]
-        : typeProfil === "alternance"
-          ? [
-              onboardingForm.ecole,
-              onboardingForm.niveau_etude,
-              onboardingForm.rythme_alternance,
-              onboardingForm.date_fin_contrat,
-            ]
-          : typeProfil === "reconversion"
-            ? [
-                onboardingForm.ancien_metier,
-                onboardingForm.metier_vise,
-                onboardingForm.organisme_formation,
-                onboardingForm.echeance,
-              ]
-            : typeProfil === "emploi"
-              ? [
-                  onboardingForm.poste_actuel,
-                  onboardingForm.entreprise,
-                  onboardingForm.type_contrat,
-                ]
-              : [];
-    if (![...requiredCommon, ...requiredRole].every(hasValue)) {
-      setOnboardingError("Merci de compléter tous les champs requis pour votre profil.");
+    const validationError = validateOnboardingForm(typeProfil, onboardingForm);
+    if (validationError) {
+      setOnboardingError(validationError);
       return;
     }
     setOnboardingError(null);
     setIsSavingOnboarding(true);
     try {
-      const payload: Record<string, string | number | boolean | null> = {
-        first_name: onboardingForm.first_name || null,
-        last_name: onboardingForm.last_name || null,
-        city: onboardingForm.city || null,
-        telephone: onboardingForm.telephone || null,
-        birth_date: onboardingForm.birth_date || null,
-        age: computeAgeFromBirthDate(onboardingForm.birth_date),
-        onboarding_completed: true,
-      };
-      if (profile?.type_profil === "emploi") {
-        payload.poste_actuel = onboardingForm.poste_actuel || null;
-        payload.entreprise = onboardingForm.entreprise || null;
-        payload.type_contrat = onboardingForm.type_contrat || null;
-      }
-      if (profile?.type_profil === "freelance") {
-        payload.tjm = onboardingForm.tjm || null;
-        payload.expertise = onboardingForm.expertise || null;
-        payload.stack_technique = onboardingForm.stack_technique || null;
-        payload.disponibilite =
-          onboardingForm.disponibilite === "Oui"
-            ? true
-            : onboardingForm.disponibilite === "Non"
-              ? false
-              : null;
-        payload.langues = onboardingForm.langues || null;
-      }
-      if (profile?.type_profil === "reconversion") {
-        payload.ancien_metier = onboardingForm.ancien_metier || null;
-        payload.metier_vise = onboardingForm.metier_vise || null;
-        payload.organisme_formation = onboardingForm.organisme_formation || null;
-        payload.echeance = onboardingForm.echeance || null;
-      }
-      if (profile?.type_profil === "alternance") {
-        payload.ecole = onboardingForm.ecole || null;
-        payload.niveau_etude = onboardingForm.niveau_etude || null;
-        payload.rythme_alternance = onboardingForm.rythme_alternance || null;
-        payload.date_fin_contrat = onboardingForm.date_fin_contrat || null;
-      }
+      const payload = buildOnboardingSavePayload(typeProfil, onboardingForm, computeAgeFromBirthDate);
       const { data: updated } = await supabase
         .from("profiles")
         .update(payload)
@@ -1407,389 +1264,15 @@ export function ApprenantDashboardClient({
               if (data) setProfile(data as typeof profile);
             }}
           />
-          {showOnboardingModal ? (
-            <div className="fixed inset-0 z-[10005] flex items-center justify-center bg-black/60 px-4">
-              <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-950 p-6 shadow-2xl">
-                <div className="text-sm uppercase tracking-[0.3em] text-white/50">Première connexion</div>
-                <h2 className="mt-2 text-2xl font-semibold text-white">
-                  {displayFirstName || "Bienvenue"}, complétons votre profil
-                </h2>
-                <p className="mt-2 text-sm text-white/60">
-                  Ces informations améliorent votre matching et votre visibilité.
-                </p>
-                <div className="mt-6 grid gap-4 md:grid-cols-2">
-                  <label className="text-sm text-white/70">
-                    Prénom
-                    <input
-                      value={onboardingForm.first_name}
-                      onChange={(event) =>
-                        setOnboardingForm((prev) => ({ ...prev, first_name: event.target.value }))
-                      }
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                    />
-                  </label>
-                  <label className="text-sm text-white/70">
-                    Nom
-                    <input
-                      value={onboardingForm.last_name}
-                      onChange={(event) =>
-                        setOnboardingForm((prev) => ({ ...prev, last_name: event.target.value }))
-                      }
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                    />
-                  </label>
-                  <label className="text-sm text-white/70">
-                    Ville
-                    <input
-                      value={onboardingForm.city}
-                      onChange={(event) => setOnboardingForm((prev) => ({ ...prev, city: event.target.value }))}
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                    />
-                  </label>
-                  <label className="text-sm text-white/70">
-                    Téléphone
-                    <input
-                      value={onboardingForm.telephone}
-                      onChange={(event) =>
-                        setOnboardingForm((prev) => ({ ...prev, telephone: event.target.value }))
-                      }
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                    />
-                  </label>
-                  <label className="text-sm text-white/70 md:col-span-2">
-                    Date de naissance
-                    <input
-                      type="date"
-                      value={onboardingForm.birth_date}
-                      onChange={(event) =>
-                        setOnboardingForm((prev) => ({ ...prev, birth_date: event.target.value }))
-                      }
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                    />
-                  </label>
-                </div>
-                {profile?.type_profil === "emploi" ? (
-                  <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <label className="text-sm text-white/70">
-                      Poste actuel
-                      <input
-                        value={onboardingForm.poste_actuel}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, poste_actuel: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Entreprise
-                      <input
-                        value={onboardingForm.entreprise}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, entreprise: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Type de contrat
-                      <select
-                        value={onboardingForm.type_contrat}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, type_contrat: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      >
-                        <option value="">Choisir</option>
-                        <option value="CDI">CDI</option>
-                        <option value="CDD">CDD</option>
-                        <option value="Alternance">Alternance</option>
-                        <option value="Freelance">Freelance</option>
-                        <option value="Interim">Intérim</option>
-                      </select>
-                    </label>
-                  </div>
-                ) : null}
-                {profile?.type_profil === "freelance" ? (
-                  <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <label className="text-sm text-white/70">
-                      TJM
-                      <input
-                        value={onboardingForm.tjm}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, tjm: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Prestations
-                      <input
-                        value={onboardingForm.expertise}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, expertise: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70 md:col-span-2">
-                      Stack technique
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOnboardingStackCategory(GLOBAL_STACK_REFERENTIAL[0]?.category ?? "");
-                            setOnboardingStackSearch("");
-                            setShowOnboardingStackCatalog(true);
-                          }}
-                          className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white"
-                        >
-                          Ouvrir le catalogue
-                        </button>
-                        {onboardingSelectedStacks.length ? (
-                          onboardingSelectedStacks.map((stack) => (
-                            <span
-                              key={stack}
-                              className="rounded-full border border-edge-red/35 bg-edge-red/10 px-2 py-1 text-[11px] text-edge-red/90"
-                            >
-                              {stack}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-white/60">Aucune stack sélectionnée</span>
-                        )}
-                      </div>
-                      <input
-                        value={onboardingForm.stack_technique}
-                        readOnly
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/70"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Disponibilité
-                      <div className="mt-2 inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
-                        <button
-                          type="button"
-                          onClick={() => setOnboardingForm((prev) => ({ ...prev, disponibilite: "Oui" }))}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                            onboardingForm.disponibilite === "Oui"
-                              ? "bg-edge-red/15 text-edge-red"
-                              : "text-white/70"
-                          }`}
-                        >
-                          Oui
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setOnboardingForm((prev) => ({ ...prev, disponibilite: "Non" }))}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                            onboardingForm.disponibilite === "Non"
-                              ? "bg-rose-400/25 text-rose-200"
-                              : "text-white/70"
-                          }`}
-                        >
-                          Non
-                        </button>
-                      </div>
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Langues
-                      <input
-                        value={onboardingForm.langues}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, langues: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                  </div>
-                ) : null}
-                {profile?.type_profil === "reconversion" ? (
-                  <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <label className="text-sm text-white/70">
-                      Ancien métier
-                      <input
-                        value={onboardingForm.ancien_metier}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, ancien_metier: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Métier visé
-                      <input
-                        value={onboardingForm.metier_vise}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, metier_vise: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Organisme de formation
-                      <input
-                        value={onboardingForm.organisme_formation}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, organisme_formation: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Échéance
-                      <input
-                        type="date"
-                        value={onboardingForm.echeance}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, echeance: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                  </div>
-                ) : null}
-                {profile?.type_profil === "alternance" ? (
-                  <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <label className="text-sm text-white/70">
-                      École
-                      <input
-                        value={onboardingForm.ecole}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, ecole: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Niveau d'étude
-                      <input
-                        value={onboardingForm.niveau_etude}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, niveau_etude: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Rythme d'alternance
-                      <input
-                        value={onboardingForm.rythme_alternance}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, rythme_alternance: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-white/70">
-                      Fin de contrat
-                      <input
-                        type="date"
-                        value={onboardingForm.date_fin_contrat}
-                        onChange={(event) =>
-                          setOnboardingForm((prev) => ({ ...prev, date_fin_contrat: event.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white"
-                      />
-                    </label>
-                  </div>
-                ) : null}
-                {onboardingError ? (
-                  <p className="mt-4 text-sm text-red-300">{onboardingError}</p>
-                ) : null}
-                {showOnboardingStackCatalog ? (
-                  <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-black/75 px-4">
-                    <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-[#0D111A] text-white shadow-2xl">
-                      <div className="border-b border-white/10 px-6 py-4">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.3em] text-white/50">
-                              Ajouter une stack
-                            </div>
-                            <div className="mt-1 text-lg font-semibold text-white">Catalogue stack technique</div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              value={onboardingStackSearch}
-                              onChange={(event) => setOnboardingStackSearch(event.target.value)}
-                              placeholder="Rechercher une stack..."
-                              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none sm:w-72"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowOnboardingStackCatalog(false)}
-                              className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/75"
-                            >
-                              Fermer
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid min-h-[420px] grid-cols-1 md:grid-cols-[260px_1fr]">
-                        <aside className="border-b border-white/10 bg-white/[0.03] p-4 md:border-b-0 md:border-r">
-                          <div className="space-y-2">
-                            {GLOBAL_STACK_REFERENTIAL.map((group) => (
-                              <button
-                                key={group.category}
-                                type="button"
-                                onClick={() => setOnboardingStackCategory(group.category)}
-                                className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
-                                  onboardingStackCategory === group.category
-                                    ? "bg-white/15 text-white"
-                                    : "text-white/65 hover:bg-white/10 hover:text-white"
-                                }`}
-                              >
-                                {group.category}
-                              </button>
-                            ))}
-                          </div>
-                        </aside>
-                        <div className="p-4">
-                          <div className="max-h-[350px] space-y-2 overflow-y-auto pr-1">
-                            {onboardingStackItems.map((item) => {
-                              const active = onboardingSelectedStacks.includes(item);
-                              const logo = resolveToolLogo(item);
-                              return (
-                                <button
-                                  key={item}
-                                  type="button"
-                                  onClick={() => toggleOnboardingStack(item)}
-                                  className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left ${
-                                    active
-                                      ? "border-edge-red/35 bg-edge-red/10"
-                                      : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
-                                  }`}
-                                >
-                                  <span className="flex items-center gap-3">
-                                    {logo ? (
-                                      <img src={logo} alt={item} className="h-5 w-5 rounded-sm object-contain" />
-                                    ) : (
-                                      <span className="h-5 w-5 rounded-sm bg-white/10" />
-                                    )}
-                                    <span className="text-sm text-white/85">{item}</span>
-                                  </span>
-                                  <span className="text-xs text-white/55">{active ? "Ajouté" : "Ajouter"}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-                <div className="mt-6 flex flex-wrap justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={handleSaveOnboarding}
-                    disabled={isSavingOnboarding}
-                    className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-950"
-                  >
-                    {isSavingOnboarding ? "Sauvegarde..." : "Enregistrer"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
+          <ParticulierOnboardingOverlay
+            open={showOnboardingModal}
+            typeProfil={profile?.type_profil}
+            form={onboardingForm}
+            saving={isSavingOnboarding}
+            error={onboardingError}
+            onChange={setOnboardingForm}
+            onSave={handleSaveOnboarding}
+          />
           {initialView === "home" ? (
             <>
           <ApprenantConnectOverview

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { CareerProfilePicker } from "@/components/apprenant/career-profile-picker";
+import { EdgeSelect } from "@/components/ui/edge-select";
 import { ProfilEdgeSectionShell } from "@/components/apprenant/profil-edge/profil-edge-section-shell";
 import { useProfilEdgeSaveReturn } from "@/components/apprenant/profil-edge/use-profil-edge-save-return";
 import type { CareerProfile } from "@/lib/career-profiles/career-profiles-data";
@@ -102,6 +103,16 @@ export function ProfilEdgeProjectSection() {
               selectedTitle={careerTitle ?? form[field.key]}
               onResolved={(slug, profile) => handleCareerResolved(slug, profile)}
             />
+          ) : field.inputType === "select" && field.options ? (
+            <div key={field.key} className="block text-sm">
+              <span className="mb-1 block text-white/70">{field.label}</span>
+              <EdgeSelect
+                value={form[field.key] ?? ""}
+                onChange={(v) => setForm((f) => ({ ...f, [field.key]: v }))}
+                options={field.options}
+                placeholder={field.placeholder}
+              />
+            </div>
           ) : (
             <label key={field.key} className="block text-sm">
               <span className="mb-1 block text-white/70">{field.label}</span>

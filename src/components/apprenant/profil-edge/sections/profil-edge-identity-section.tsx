@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Pencil } from "lucide-react";
+import { ProfileAvatarUploader } from "@/components/apprenant/profile-avatar-uploader";
 import { ProfilEdgeSectionShell } from "@/components/apprenant/profil-edge/profil-edge-section-shell";
 import { useProfilEdgeSaveReturn } from "@/components/apprenant/profil-edge/use-profil-edge-save-return";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
@@ -171,14 +172,13 @@ export function ProfilEdgeIdentitySection() {
           );
         })}
 
-        <label className="block text-sm sm:col-span-2">
-          <span className="mb-1 block text-white/70">URL photo de profil</span>
-          <input
-            className={inputClass}
-            value={form.avatar_url}
-            onChange={(e) => setForm((f) => ({ ...f, avatar_url: e.target.value }))}
+        <div className="sm:col-span-2">
+          <span className="mb-2 block text-sm text-white/70">Photo de profil</span>
+          <ProfileAvatarUploader
+            currentUrl={form.avatar_url || null}
+            onUploaded={(url) => setForm((f) => ({ ...f, avatar_url: url }))}
           />
-        </label>
+        </div>
       </div>
 
       {savedMessage ? <p className="mt-4 text-sm text-emerald-400">{savedMessage}</p> : null}

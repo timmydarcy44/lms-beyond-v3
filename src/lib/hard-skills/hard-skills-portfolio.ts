@@ -4,6 +4,7 @@ import {
   referentialItemSubtitle,
 } from "@/lib/profile/competency-referential";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
+import type { SkillValidationSession } from "@/lib/hard-skills/skill-validation";
 
 export type HardSkillProofLevel = "declared" | "justified" | "evaluated" | "certified";
 
@@ -42,6 +43,7 @@ export type StoredHardSkillMeta = {
   validationStatus?: HardSkillValidationStatus;
   validated?: boolean;
   source?: "catalog" | "manual" | "badge";
+  validation?: SkillValidationSession;
 };
 
 export const HARD_SKILL_LEVELS: HardSkillLevel[] = ["Débutant", "Intermédiaire", "Confirmé", "Expert"];
@@ -112,6 +114,10 @@ export const PROOF_LEVEL_CHIP: Record<
 };
 
 function resolveProofLevel(meta: StoredHardSkillMeta | undefined): HardSkillProofLevel {
+  if (meta?.validation?.verdict === "validated") return "evaluated";
+  if (meta?.validation?.status === "analyzed") {
+    if (meta.validation.verdict === "pending" || meta.validation.verdict === "expert_needed") return "justified";
+  }
   if (meta?.proofLevel) return meta.proofLevel;
   if (meta?.proof?.url || meta?.proof?.note) return "justified";
   if (meta?.validationStatus === "edge-validated" || meta?.validationStatus === "open-badge") return "justified";
@@ -203,7 +209,10 @@ export function parseHardSkillPortfolio(
   return hardSkills.map((name) => buildHardSkillRecord(name, metadata[name]));
 }
 
-export function buildStoredMeta(record: Omit<LearnerHardSkillRecord, "name">): StoredHardSkillMeta {
+export function buildStoredMeta(
+  record: Omit<LearnerHardSkillRecord, "name">,
+  validation?: SkillValidationSession,
+): StoredHardSkillMeta {
   return {
     level: record.level,
     selfAssessment: record.selfAssessment,
@@ -212,6 +221,7 @@ export function buildStoredMeta(record: Omit<LearnerHardSkillRecord, "name">): S
     proofLevel: record.proofLevel,
     proof: record.proof,
     source: record.source,
+    ...(validation ? { validation } : {}),
   };
 }
 

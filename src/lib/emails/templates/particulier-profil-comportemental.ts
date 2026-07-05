@@ -1,4 +1,4 @@
-import { buildEdgeEmailShell } from "@/lib/emails/edge-email-shell";
+import { buildEdgeEmailShell, edgeEmailParagraph } from "@/lib/emails/edge-email-shell";
 
 function escapeHtml(value: string): string {
   return value
@@ -18,9 +18,13 @@ export function getParticulierProfilComportementalEmail(params: {
   const html = buildEdgeEmailShell({
     title: "Votre Profil comportemental EDGE est disponible",
     preheader: "Consultez vos résultats et vos priorités de progression",
-    bodyHtml: `<p>${greeting},</p>
-      <p>Votre <strong>Profil comportemental EDGE</strong> est maintenant disponible.</p>
-      <p>Vous pouvez consulter vos résultats, découvrir vos priorités de progression et accéder à vos recommandations personnalisées.</p>`,
+    bodyHtml: [
+      edgeEmailParagraph(greeting + ","),
+      edgeEmailParagraph("Votre Profil comportemental EDGE est maintenant disponible."),
+      edgeEmailParagraph(
+        "Consultez vos résultats, découvrez vos priorités de progression et accédez à vos recommandations personnalisées.",
+      ),
+    ].join(""),
     cta: { label: "Voir mon Profil EDGE", href: params.profilHref },
   });
 

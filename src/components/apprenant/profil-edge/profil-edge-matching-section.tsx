@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import type { CareerNextPriority, CareerSkillRow } from "@/lib/career-profiles/career-profile-matching";
+import type { CareerNextPriority, CareerMatchingResult, CareerSkillRow } from "@/lib/career-profiles/career-profile-matching";
+import {
+  EDGE_CTA_START_PARCOURS,
+  PARCOURS_EDGE_INCLUDES,
+  premiumSkillTitle,
+  skillProgressionCta,
+} from "@/lib/edge-skill-progression-copy";
 import { PROFIL_EDGE_SECTION_HREFS } from "@/lib/particulier/profil-edge-maturity";
 
 const TONE_CLASS: Record<CareerSkillRow["tone"], string> = {
@@ -12,7 +18,7 @@ const TONE_CLASS: Record<CareerSkillRow["tone"], string> = {
   gray: "text-white/45",
 };
 
-const FUTURE_PROGRESSION_TYPES = ["Micro-formation", "Coaching", "Exercice pratique", "Open Badge"] as const;
+const FUTURE_PROGRESSION_TYPES = [...PARCOURS_EDGE_INCLUDES] as const;
 
 function SkillList({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
   if (!items.length) {
@@ -31,7 +37,7 @@ function SkillList({ items, emptyLabel }: { items: string[]; emptyLabel: string 
 
 function priorityActionHref(actionType: CareerNextPriority["actionType"]): string {
   if (actionType === "evaluation" || actionType === "proof") return PROFIL_EDGE_SECTION_HREFS.hard_skills;
-  return "/dashboard/apprenant/formations";
+  return "/dashboard/apprenant/parcours";
 }
 
 type Props = {
@@ -75,7 +81,7 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
       {next ? (
         <section className="rounded-2xl border border-[#FF3B30]/25 bg-gradient-to-br from-[#FF3B30]/10 via-white/[0.03] to-transparent p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#FF3B30]/80">Votre prochaine priorité</p>
-          <p className="mt-2 text-xl font-bold text-white">{next.skill.charAt(0).toUpperCase() + next.skill.slice(1)}</p>
+          <p className="mt-2 text-xl font-bold text-white">{premiumSkillTitle(next.skill)}</p>
           <p className="mt-1 text-sm text-white/55">
             Impact estimé sur votre compatibilité métier :{" "}
             <span className="font-semibold text-emerald-400">+{next.impactPercent} %</span>
@@ -129,28 +135,43 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
       </section>
 
       {prioritySkills.length > 0 ? (
-        <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Compétences à développer</p>
-          <p className="mt-2 text-sm text-white/55">
-            Des parcours de progression seront proposés pour chaque compétence identifiée.
-          </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <section className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Accompagnement personnalisé</p>
+            <p className="mt-2 max-w-2xl text-sm text-white/55">
+              Chaque compétence identifiée ouvre un parcours EDGE structuré — pas une simple liste de contenus.
+            </p>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
             {prioritySkills.map((skill) => (
-              <div key={skill} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                <p className="font-semibold text-white">Développer {skill.charAt(0).toUpperCase() + skill.slice(1)}</p>
-                <p className="mt-2 text-xs font-medium uppercase tracking-wider text-amber-300/80">Bientôt disponible</p>
-                <ul className="mt-3 space-y-1 text-xs text-white/45">
+              <article
+                key={skill}
+                className="flex flex-col rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-transparent p-6"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Progression EDGE</p>
+                <h3 className="mt-3 text-lg font-semibold tracking-tight text-white">{premiumSkillTitle(skill)}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-white/55">
+                  Cette compétence limite actuellement votre compatibilité avec le métier visé.
+                </p>
+                <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Parcours EDGE</p>
+                <ul className="mt-3 space-y-2">
                   {FUTURE_PROGRESSION_TYPES.map((type) => (
-                    <li key={type}>· {type}</li>
+                    <li key={type} className="flex items-center gap-2.5 text-sm text-white/75">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 text-[10px] text-emerald-400">
+                        ✓
+                      </span>
+                      {type}
+                    </li>
                   ))}
                 </ul>
                 <Link
-                  href="/dashboard/apprenant/formations"
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08]"
+                  href="/dashboard/apprenant/parcours"
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-gray-950 transition hover:bg-white/90"
                 >
-                  Explorer les micro-formations
+                  {EDGE_CTA_START_PARCOURS}
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
-              </div>
+              </article>
             ))}
           </div>
         </section>
@@ -170,14 +191,14 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
             </p>
             <ul className="mt-2 list-inside list-disc text-sm text-white/75">
               {prioritySkills.map((s) => (
-                <li key={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</li>
+                <li key={s}>{premiumSkillTitle(s)}</li>
               ))}
             </ul>
             <Link
-              href="/dashboard/apprenant/formations"
+              href="/dashboard/apprenant/parcours"
               className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-violet-200 hover:text-white"
             >
-              Voir les micro-formations recommandées
+              {skillProgressionCta("parcours")}
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>

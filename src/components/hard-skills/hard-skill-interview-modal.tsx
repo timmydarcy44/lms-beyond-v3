@@ -6,6 +6,9 @@ import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import type { SkillValidationVerdict } from "@/lib/hard-skills/skill-validation";
 import type { SkillAnalysisApiResult } from "@/lib/hard-skills/skill-validation-analysis";
 import { verdictLabel } from "@/lib/hard-skills/skill-validation";
+import { buildSkillEvaluationReportFromAnalysis } from "@/lib/hard-skills/skill-evaluation-report";
+import { SkillEvaluationReportPanel } from "@/components/hard-skills/skill-evaluation-report-panel";
+import { EDGE_CONFIDENCE_LABEL } from "@/lib/edge-brand-copy";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 import { EDGE_INPUT_CLASS } from "@/components/ui/edge-select";
 
@@ -91,14 +94,29 @@ export function HardSkillInterviewModal({ open, skillName, level, careerTitle, o
             Préparation de l&apos;entretien…
           </p>
         ) : result ? (
-          <div className="mt-6 space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs uppercase tracking-wider text-white/40">Résultat</p>
-              <p className="mt-2 text-lg font-semibold text-white">{verdictLabel(result.verdict)}</p>
-              <p className="mt-2 text-sm text-white/60">Score de confiance : {result.confidenceScore}%</p>
-              <p className="mt-3 text-sm text-white/75">{result.summary || result.detailedAnalysis || result.analysis}</p>
-              {result.opinion ? <p className="mt-2 text-sm italic text-white/55">{result.opinion}</p> : null}
+          <div className="mt-6 space-y-5">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <p className="text-xs uppercase tracking-wider text-white/40">Résultat EDGE</p>
+              <p className="mt-1 text-lg font-semibold text-white">{verdictLabel(result.verdict)}</p>
+              <p className="mt-1 text-sm text-white/55">
+                {EDGE_CONFIDENCE_LABEL} : {result.confidenceScore} %
+              </p>
             </div>
+            <SkillEvaluationReportPanel
+              report={buildSkillEvaluationReportFromAnalysis({
+                skillName,
+                declaredLevel: level,
+                estimatedLevel: result.estimatedLevel,
+                analysis: result,
+              })}
+              skillName={skillName}
+              declaredLevel={level}
+              estimatedLevel={(result.estimatedLevel ?? level) as HardSkillLevel}
+              statusLabel={verdictLabel(result.verdict)}
+              confidenceScore={result.confidenceScore}
+              variant="dark"
+              compact
+            />
             {result.badgeSuggested && result.verdict === "validated" ? (
               <p className="text-sm text-emerald-300">
                 Vous pouvez créer le badge EDGE associé depuis votre Wallet.

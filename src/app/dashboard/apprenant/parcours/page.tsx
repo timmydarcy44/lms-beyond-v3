@@ -28,8 +28,8 @@ export default function ApprenantParcoursPage() {
         <p className={APPRENANT_PAGE_KICKER}>Parcours personnalisé</p>
         <h1 className={APPRENANT_PAGE_TITLE}>Mon parcours EDGE</h1>
         <p className={APPRENANT_PAGE_LEAD}>
-          Formations, micro-formations, coachings et Open Badges recommandés selon vos résultats et
-          votre profil professionnel.
+          Parcours EDGE, accompagnements, validations et Open Badges recommandés selon votre profil et
+          vos objectifs professionnels.
         </p>
       </section>
 

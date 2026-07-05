@@ -4,6 +4,11 @@ import { analyzeCareerFit } from "@/lib/career-profiles/career-profile-analysis"
 import type { Diplome, ExperiencePro, HardSkillLevel, LearnerHardSkillMeta } from "@/lib/particulier/profil-edge-maturity";
 import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
+import {
+  EDGE_CTA_IMPROVE_SKILL,
+  EDGE_CTA_LAUNCH_PROGRESSION,
+  EDGE_CTA_START_PARCOURS,
+} from "@/lib/edge-skill-progression-copy";
 
 export type SkillLevelLabel =
   | "Excellent"
@@ -241,17 +246,17 @@ function buildNextPriority(
   const score = row ? rowToNumericScore(row) : null;
 
   let actionType: CareerNextPriority["actionType"] = "micro_formation";
-  let actionLabel = "Commencer la micro-formation";
+  let actionLabel = EDGE_CTA_START_PARCOURS;
 
   if (develop.includes(pickSkill)) {
     actionType = "micro_formation";
-    actionLabel = "Commencer la micro-formation";
+    actionLabel = EDGE_CTA_START_PARCOURS;
   } else if (consolidate.includes(pickSkill)) {
     actionType = "evaluation";
-    actionLabel = "Passer une nouvelle évaluation";
+    actionLabel = EDGE_CTA_LAUNCH_PROGRESSION;
   } else {
     actionType = "proof";
-    actionLabel = "Déposer une preuve";
+    actionLabel = EDGE_CTA_IMPROVE_SKILL;
   }
 
   return {

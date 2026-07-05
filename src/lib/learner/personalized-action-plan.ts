@@ -8,6 +8,10 @@ import {
 } from "@/lib/learner/practitioners";
 import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 import { getParcours } from "@/lib/parcours";
+import {
+  EDGE_CTA_LAUNCH_PROGRESSION,
+  premiumSkillTitle,
+} from "@/lib/edge-skill-progression-copy";
 
 export type ActionPlanItemKind = "formation" | "coaching" | "badge" | "micro_formation";
 
@@ -66,37 +70,37 @@ type BuildPlanInput = {
 
 const SOFT_SKILL_THRESHOLDS = 55;
 
-const SKILL_COACHING_MAP: Record<string, { coaching: string; formation: string; slug?: string }> = {
+const SKILL_COACHING_MAP: Record<string, { coaching: string; parcoursTitle: string; slug?: string }> = {
   "Intelligence émotionnelle": {
     coaching: "Gestion des émotions et régulation",
-    formation: "Micro-formation : identifier et canaliser ses émotions",
+    parcoursTitle: "Parcours EDGE — Intelligence émotionnelle",
     slug: "gestion-emotions",
   },
   "Gestion du stress": {
     coaching: "Gestion du stress et charge mentale",
-    formation: "Parcours Coach & Facilitateur — posture et régulation",
+    parcoursTitle: "Parcours EDGE — Coach & Facilitateur",
     slug: "coach-facilitateur",
   },
   "Gestion des conflits": {
     coaching: "Médiation et communication assertive",
-    formation: "Micro-formation : désamorcer les tensions en équipe",
+    parcoursTitle: "Parcours EDGE — Gestion des tensions",
   },
   Leadership: {
     coaching: "Leadership situationnel",
-    formation: "Parcours Leader de la Transformation",
+    parcoursTitle: "Parcours EDGE — Leader de la Transformation",
     slug: "leader-transformation",
   },
   "Communication interpersonnelle": {
     coaching: "Communication claire et posture professionnelle",
-    formation: "Micro-formation : structurer son message",
+    parcoursTitle: "Parcours EDGE — Communication professionnelle",
   },
   Empathie: {
     coaching: "Intelligence relationnelle",
-    formation: "Micro-formation : écoute active et posture bienveillante",
+    parcoursTitle: "Parcours EDGE — Écoute et posture relationnelle",
   },
   Adaptabilité: {
     coaching: "Agilité face au changement",
-    formation: "Micro-formation : s'adapter aux imprévus",
+    parcoursTitle: "Parcours EDGE — Agilité et adaptation",
   },
 };
 
@@ -140,15 +144,15 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
     needs.push(mapping.coaching);
     const parcoursHref = mapping.slug
       ? `/edge-lab/parcours/${mapping.slug}`
-      : `${root}/formations?focus=${encodeURIComponent(skill.skill)}`;
+      : `${root}/parcours?focus=${encodeURIComponent(skill.skill)}`;
     const parcours = mapping.slug ? getParcours(mapping.slug) : null;
     items.push({
       id: `formation-${skill.skill}`,
       kind: parcours ? "formation" : "micro_formation",
-      title: parcours?.titre ?? mapping.formation,
+      title: parcours?.titre ?? mapping.parcoursTitle,
       description: parcours
-        ? `${parcours.description.slice(0, 120)}… Score actuel : ${skill.score} %.`
-        : `Score actuel : ${skill.score} % — priorité identifiée via vos soft skills.`,
+        ? `${parcours.description.slice(0, 120)}… Progression actuelle : ${skill.score} %.`
+        : `Progression actuelle : ${skill.score} % — priorité identifiée via votre profil EDGE.`,
       href: parcoursHref,
       reason: `Axe à renforcer : ${skill.skill}`,
       priority: 100 - skill.score,
@@ -174,11 +178,11 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
       items.push({
         id: `idmc-${weakest[0]}`,
         kind: formation ? "formation" : "micro_formation",
-        title: formation?.title ?? "Micro-formation IDMC ciblée",
+        title: formation?.title ?? "Parcours EDGE — consolidation IDMC",
         description: formation
           ? `${formation.description} (axe ${weakest[0]} : ${weakest[1]} %).`
           : `${need} (axe ${weakest[0]} : ${weakest[1]} %).`,
-        href: formation?.href ?? `${root}/formations?focus=idmc`,
+        href: formation?.href ?? `${root}/parcours?focus=idmc`,
         reason: need,
         priority: 100 - weakest[1],
       });
@@ -240,8 +244,8 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
   const primaryNeed = needs[0] ?? "consolider vos acquis professionnels";
   const headline = `${firstName}, vos résultats montrent un besoin en ${primaryNeed.toLowerCase()}`;
   const summary = jobTitle
-    ? `En tant que ${jobTitle}, voici le plan d'action que nous vous conseillons pour progresser efficacement.`
-    : "Voici le plan d'action que nous vous conseillons pour progresser efficacement.";
+    ? `En tant que ${jobTitle}, voici l'accompagnement EDGE recommandé pour accélérer votre progression.`
+    : "Voici l'accompagnement EDGE recommandé pour accélérer votre progression.";
 
   const parcoursSteps = items.slice(0, 5).map((item, index) => ({
     id: `step-${item.id}`,
@@ -258,14 +262,12 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
       ? {
           title: "Votre prochaine étape",
           impactPercent: Math.min(12, Math.max(5, Math.round((SOFT_SKILL_THRESHOLDS - (weakSkills[0]?.score ?? 40)) * 0.2))),
-          skills: topSkills,
+          skills: topSkills.map((s) => premiumSkillTitle(s)),
           primaryHref: topItem.href,
           primaryLabel:
-            topItem.kind === "micro_formation"
-              ? "Commencer la micro-formation"
-              : topItem.kind === "coaching"
-                ? "Réserver un coaching"
-                : "Voir la recommandation",
+            topItem.kind === "coaching"
+              ? "Réserver un accompagnement"
+              : EDGE_CTA_LAUNCH_PROGRESSION,
         }
       : null;
 

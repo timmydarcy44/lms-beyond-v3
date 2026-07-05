@@ -39,8 +39,8 @@ export function PersonalizedActionPlanSection({
       <div className={cn("rounded-2xl border border-violet-400/20 bg-violet-500/[0.06] p-6", className)}>
         <p className="text-sm font-semibold text-white">Plan d&apos;action personnalisé</p>
         <p className="mt-2 text-sm text-white/60">
-          Passez vos tests DISC, IDMC et Soft Skills pour recevoir des recommandations de formations,
-          coachings et badges adaptés à votre profil.
+          Passez vos tests DISC, IDMC et Soft Skills pour recevoir des parcours EDGE, accompagnements et
+          badges adaptés à votre profil.
         </p>
       </div>
     );
@@ -93,7 +93,7 @@ export function PersonalizedActionPlanSection({
           href={parcoursHref}
           className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-950 hover:bg-white/90"
         >
-          Voir mon parcours complet
+          Voir mes parcours EDGE
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>

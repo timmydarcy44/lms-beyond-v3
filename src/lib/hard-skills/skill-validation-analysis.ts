@@ -31,10 +31,10 @@ export const SKILL_ANALYSIS_JSON_SHAPE = `{
   "confidenceScore": 0-100,
   "verdict": "validated" | "pending" | "insufficient" | "expert_needed",
   "estimatedLevel": "Débutant" | "Intermédiaire" | "Confirmé" | "Expert",
-  "summary": "résumé court pour le recruteur",
+  "summary": "texte expliquant POURQUOI ce niveau (2-3 phrases, factuel, pour le recruteur)",
   "detailedAnalysis": "analyse détaillée complète expliquant la décision",
-  "strengths": ["force 1", "force 2"],
-  "improvementAreas": ["axe 1", "axe 2"],
+  "strengths": ["observation positive courte (ex: maîtrise du vocabulaire)", "force 2"],
+  "improvementAreas": ["axe à renforcer court (ex: peu d'exemples terrain)", "axe 2"],
   "evaluationMethods": ["Entretien expérientiel EDGE", "Analyse sémantique EDGE", "Cohérence avec le référentiel métier"],
   "opinion": "avis EDGE",
   "badgeSuggested": true/false
@@ -226,7 +226,13 @@ export function toPublicSkillCard(
     status,
     statusLabel: cfg.label,
     confidenceScore: validation?.confidenceScore ?? null,
-    hasAnalysis: validation?.status === "analyzed",
+    hasAnalysis: Boolean(
+      validation?.status === "analyzed" ||
+        validation?.summary ||
+        validation?.detailedAnalysis ||
+        validation?.analysis ||
+        (validation?.strengths?.length ?? 0) > 0,
+    ),
     validation,
   };
 }

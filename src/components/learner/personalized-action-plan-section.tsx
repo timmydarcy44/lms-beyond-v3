@@ -54,6 +54,29 @@ export function PersonalizedActionPlanSection({
         </p>
         <h2 className="mt-3 text-xl font-bold leading-snug text-white sm:text-2xl">{plan.headline}</h2>
         <p className="mt-3 max-w-3xl text-sm text-white/70">{plan.summary}</p>
+        {plan.nextStep ? (
+          <div className="mt-5 rounded-xl border border-white/15 bg-black/20 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/90">
+              {plan.nextStep.title}
+            </p>
+            <p className="mt-2 text-sm text-white/75">
+              Vous pourriez augmenter votre compatibilité de{" "}
+              <span className="font-semibold text-emerald-300">+{plan.nextStep.impactPercent} %</span> en travaillant :
+            </p>
+            <ul className="mt-2 list-inside list-disc text-sm text-white/80">
+              {plan.nextStep.skills.map((skill) => (
+                <li key={skill}>{skill}</li>
+              ))}
+            </ul>
+            <Link
+              href={plan.nextStep.primaryHref}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold text-gray-950 hover:bg-white/90"
+            >
+              {plan.nextStep.primaryLabel}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        ) : null}
         {plan.needs.length ? (
           <ul className="mt-4 flex flex-wrap gap-2">
             {plan.needs.map((need) => (

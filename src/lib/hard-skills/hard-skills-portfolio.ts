@@ -94,19 +94,19 @@ export const PROOF_LEVEL_CHIP: Record<
   { label: string; className: string; locked?: boolean }
 > = {
   declared: {
-    label: "Déclarée",
+    label: "Compétence déclarée",
     className: "bg-white/8 text-white/55 border-white/15",
   },
   justified: {
-    label: "Évaluation IA terminée",
+    label: "Analyse terminée",
     className: "bg-amber-500/20 text-amber-200 border-amber-400/35",
   },
   evaluated: {
-    label: "Validée",
+    label: "Compétence vérifiée",
     className: "bg-emerald-500/20 text-emerald-200 border-emerald-400/35",
   },
   certified: {
-    label: "Validée expert EDGE",
+    label: "EDGE Verified",
     className: "bg-violet-500/20 text-violet-200 border-violet-400/35",
   },
 };

@@ -17,7 +17,7 @@ export default function SoftSkillsLandingPage() {
         <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-20">
           <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
             <span className="rounded-full border border-white/20 px-3 py-1">15 min</span>
-            <span className="rounded-full border border-white/20 px-3 py-1">Analyse IA</span>
+            <span className="rounded-full border border-white/20 px-3 py-1">Analyse EDGE</span>
             <span className="rounded-full border border-white/20 px-3 py-1">Certifiant</span>
           </div>
 

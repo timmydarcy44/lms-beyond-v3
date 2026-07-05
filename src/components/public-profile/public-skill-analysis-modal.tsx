@@ -3,6 +3,7 @@
 import { CheckCircle2, X } from "lucide-react";
 import type { PublicSkillCardData } from "@/lib/hard-skills/skill-validation-analysis";
 import { publicStatusConfig, verdictToHistoryStatusLabel } from "@/lib/hard-skills/skill-validation-analysis";
+import { EDGE_CONFIDENCE_LABEL, sanitizeEdgePublicCopy } from "@/lib/edge-brand-copy";
 import { verdictLabel } from "@/lib/hard-skills/skill-validation";
 
 type Props = {
@@ -44,9 +45,9 @@ export function PublicSkillAnalysisModal({ skill, onClose }: Props) {
           <div className="grid gap-3 sm:grid-cols-2">
             <InfoCell label="Niveau déclaré" value={skill.declaredLevel} />
             <InfoCell label="Niveau estimé par EDGE" value={skill.estimatedLevel} />
-            <InfoCell label="Statut" value={`${publicStatusConfig(skill.status).emoji} ${statusLine}`} />
+            <InfoCell label="Statut EDGE" value={`${publicStatusConfig(skill.status).emoji} ${statusLine}`} />
             {skill.confidenceScore != null ? (
-              <InfoCell label="Confiance IA" value={`${skill.confidenceScore} %`} />
+              <InfoCell label={EDGE_CONFIDENCE_LABEL} value={`${skill.confidenceScore} %`} />
             ) : null}
           </div>
 
@@ -91,7 +92,7 @@ export function PublicSkillAnalysisModal({ skill, onClose }: Props) {
                 {v.evaluationMethods.map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm text-black/70">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#FF3B30]/80" />
-                    {item}
+                    {sanitizeEdgePublicCopy(item)}
                   </li>
                 ))}
               </ul>
@@ -126,9 +127,11 @@ export function PublicSkillAnalysisModal({ skill, onClose }: Props) {
                         year: "numeric",
                       })}
                     </p>
-                    <p className="mt-1 font-medium text-[#0a0a0a]">{entry.title}</p>
+                    <p className="mt-1 font-medium text-[#0a0a0a]">{sanitizeEdgePublicCopy(entry.title)}</p>
                     {entry.confidenceScore != null ? (
-                      <p className="mt-0.5 text-black/55">Confiance IA : {entry.confidenceScore} %</p>
+                      <p className="mt-0.5 text-black/55">
+                        {EDGE_CONFIDENCE_LABEL} : {entry.confidenceScore} %
+                      </p>
                     ) : null}
                     <p className="mt-0.5 text-black/60">
                       Statut : {entry.verdict ? verdictToHistoryStatusLabel(entry.verdict) : entry.statusLabel}

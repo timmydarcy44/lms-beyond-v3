@@ -1,6 +1,9 @@
 "use client";
 
-import type { CareerMatchingResult, CareerSkillRow } from "@/lib/career-profiles/career-profile-matching";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import type { CareerNextPriority, CareerSkillRow } from "@/lib/career-profiles/career-profile-matching";
+import { PROFIL_EDGE_SECTION_HREFS } from "@/lib/particulier/profil-edge-maturity";
 
 const TONE_CLASS: Record<CareerSkillRow["tone"], string> = {
   green: "text-emerald-400",
@@ -26,6 +29,11 @@ function SkillList({ items, emptyLabel }: { items: string[]; emptyLabel: string 
   );
 }
 
+function priorityActionHref(actionType: CareerNextPriority["actionType"]): string {
+  if (actionType === "evaluation" || actionType === "proof") return PROFIL_EDGE_SECTION_HREFS.hard_skills;
+  return "/dashboard/apprenant/formations";
+}
+
 type Props = {
   careerTitle: string;
   matching: CareerMatchingResult;
@@ -34,6 +42,8 @@ type Props = {
 
 export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }: Props) {
   const planLines = actionPlan.split("\n").filter(Boolean);
+  const prioritySkills = [...matching.develop, ...matching.consolidate].slice(0, 3);
+  const next = matching.nextPriority;
 
   return (
     <div className="space-y-6">
@@ -42,21 +52,61 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
         <p className="mt-1 text-2xl font-bold text-white">{matching.compatibilityScore} %</p>
         <p className="mt-2 text-sm text-white/60">{careerTitle}</p>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400/80">Vos forces</p>
-            <SkillList items={matching.strengths} emptyLabel="Aucune force identifiée pour le moment." />
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400/80">Forces</p>
+            <SkillList items={matching.strengths} emptyLabel="Évaluation en cours." />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-300/80">À renforcer</p>
-            <SkillList items={matching.gaps} emptyLabel="Aucun axe prioritaire identifié." />
+            <p className="text-xs font-semibold uppercase tracking-wider text-sky-300/80">À consolider</p>
+            <SkillList items={matching.consolidate} emptyLabel="Profil déjà solide sur ce volet." />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Non évalué</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-300/80">Non évaluées</p>
             <SkillList items={matching.unevaluated} emptyLabel="Toutes les compétences sont évaluées." />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-red-400/80">À développer</p>
+            <SkillList items={matching.develop} emptyLabel="Aucune lacune critique identifiée." />
           </div>
         </div>
       </section>
+
+      {next ? (
+        <section className="rounded-2xl border border-[#FF3B30]/25 bg-gradient-to-br from-[#FF3B30]/10 via-white/[0.03] to-transparent p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#FF3B30]/80">Votre prochaine priorité</p>
+          <p className="mt-2 text-xl font-bold text-white">{next.skill.charAt(0).toUpperCase() + next.skill.slice(1)}</p>
+          <p className="mt-1 text-sm text-white/55">
+            Impact estimé sur votre compatibilité métier :{" "}
+            <span className="font-semibold text-emerald-400">+{next.impactPercent} %</span>
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={priorityActionHref(next.actionType)}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold text-gray-950 hover:bg-white/90"
+            >
+              {next.actionLabel}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            {next.actionType !== "evaluation" ? (
+              <Link
+                href={PROFIL_EDGE_SECTION_HREFS.hard_skills}
+                className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.06]"
+              >
+                Passer une nouvelle évaluation
+              </Link>
+            ) : null}
+            {next.actionType !== "proof" ? (
+              <Link
+                href={PROFIL_EDGE_SECTION_HREFS.hard_skills}
+                className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.06]"
+              >
+                Déposer une preuve
+              </Link>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Tableau de compétences</p>
@@ -78,14 +128,14 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
         </table>
       </section>
 
-      {matching.gaps.length > 0 ? (
+      {prioritySkills.length > 0 ? (
         <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Compétences à développer</p>
           <p className="mt-2 text-sm text-white/55">
-            Des parcours de progression seront proposés pour chaque compétence à renforcer.
+            Des parcours de progression seront proposés pour chaque compétence identifiée.
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            {matching.gaps.map((skill) => (
+            {prioritySkills.map((skill) => (
               <div key={skill} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                 <p className="font-semibold text-white">Développer {skill.charAt(0).toUpperCase() + skill.slice(1)}</p>
                 <p className="mt-2 text-xs font-medium uppercase tracking-wider text-amber-300/80">Bientôt disponible</p>
@@ -94,13 +144,12 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
                     <li key={type}>· {type}</li>
                   ))}
                 </ul>
-                <button
-                  type="button"
-                  disabled
-                  className="mt-4 w-full cursor-not-allowed rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/35"
+                <Link
+                  href="/dashboard/apprenant/formations"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.08]"
                 >
-                  Disponible prochainement
-                </button>
+                  Explorer les micro-formations
+                </Link>
               </div>
             ))}
           </div>
@@ -109,6 +158,30 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Plan d&apos;action personnalisé</p>
+        {prioritySkills.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/[0.06] p-4">
+            <p className="text-sm font-semibold text-white">Votre prochaine étape</p>
+            <p className="mt-2 text-sm text-white/70">
+              Vous pourriez augmenter votre compatibilité de{" "}
+              <span className="font-semibold text-emerald-400">
+                +{next?.impactPercent ?? 6} %
+              </span>{" "}
+              en travaillant :
+            </p>
+            <ul className="mt-2 list-inside list-disc text-sm text-white/75">
+              {prioritySkills.map((s) => (
+                <li key={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</li>
+              ))}
+            </ul>
+            <Link
+              href="/dashboard/apprenant/formations"
+              className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-violet-200 hover:text-white"
+            >
+              Voir les micro-formations recommandées
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        ) : null}
         <div className="mt-3 space-y-2 text-sm leading-relaxed text-white/75">
           {planLines.map((line) => (
             <p key={line}>{line}</p>

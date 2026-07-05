@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BookOpen, LayoutGrid, Play, Plus, Search, User } from "lucide-react";
+import { Bell, BookOpen, Clock, LayoutGrid, Play, Plus, Search, Star, User, Users } from "lucide-react";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 import { EdgeOnlineCatalogFilters } from "@/components/edge-online/edge-online-catalog-filters";
 import { filterThematicRows } from "@/lib/edge-online/catalog-filters";
+import { deriveCourseHeroMeta, type CourseHeroMeta } from "@/lib/edge-online/course-hero-meta";
 import { FormationsSliderClient } from "./formations-slider-client";
 import { useOptionalEdgeOnlineHrefPrefix } from "@/app/edgeonline/edge-online-href-context";
 
@@ -77,6 +78,33 @@ function getToolsFromLearnerCard(card: LearnerCard | null): string[] {
   const tools = (general as any).tools;
   if (!Array.isArray(tools)) return [];
   return tools.map((x: unknown) => String(x ?? "").trim()).filter(Boolean);
+}
+
+function CourseHeroMetaStrip({ meta, compact }: { meta: CourseHeroMeta; compact?: boolean }) {
+  const textClass = compact ? "text-[11px] text-white/80" : "text-sm text-white/85";
+  const badgeClass = compact
+    ? "rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/90"
+    : "rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90";
+
+  return (
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${textClass}`}>
+      <span className="inline-flex items-center gap-1 font-medium text-amber-300">
+        <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
+        {meta.rating.toFixed(1)}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <Users className="h-3.5 w-3.5 text-white/55" />
+        {meta.learners} apprenants
+      </span>
+      <span>{meta.sequences} séquences</span>
+      <span className="inline-flex items-center gap-1">
+        <Clock className="h-3.5 w-3.5 text-white/55" />
+        {meta.hours} h
+      </span>
+      <span className={badgeClass}>{meta.badge}</span>
+      <span className={badgeClass}>Niveau {meta.level}</span>
+    </div>
+  );
 }
 
 function GalaxyLogoHero({
@@ -256,11 +284,11 @@ type EdgeNetflixMobileProps = {
   title: string;
   presentationExcerpt: string;
   href: string;
+  parcoursHref: string;
+  heroMeta: CourseHeroMeta;
   video: boolean;
   media: string | null | undefined;
   heroTools: string[];
-  galaxyLogoSrc: string;
-  galaxyLogoAlt: string;
   surfacePrefix: EdgeOnlineHrefPrefix;
   catalogChip: string;
   catalogSearch: string;
@@ -275,11 +303,11 @@ function EdgeOnlineFormationsNetflixMobile({
   title,
   presentationExcerpt,
   href,
+  parcoursHref,
+  heroMeta,
   video,
   media,
   heroTools,
-  galaxyLogoSrc,
-  galaxyLogoAlt,
   surfacePrefix,
   catalogChip,
   catalogSearch,
@@ -354,13 +382,6 @@ function EdgeOnlineFormationsNetflixMobile({
               )}
             </div>
             <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black via-black/55 to-transparent" />
-            <div className="pointer-events-none absolute left-3 top-3 z-[2]">
-              <GalaxyLogoHero
-                logoUrl={galaxyLogoSrc}
-                name={galaxyLogoAlt}
-                className="h-7 w-auto max-w-[104px] object-contain opacity-95 drop-shadow-md"
-              />
-            </div>
             <div className="absolute inset-x-0 bottom-0 z-[3] p-3 pt-12">
               {thematic ? (
                 <div className="mb-2">
@@ -372,6 +393,9 @@ function EdgeOnlineFormationsNetflixMobile({
               <h2 className="text-balance text-2xl font-bold leading-tight tracking-tight text-white drop-shadow-md">
                 {title}
               </h2>
+              <div className="pointer-events-none mt-2">
+                <CourseHeroMetaStrip meta={heroMeta} compact />
+              </div>
               {presentationExcerpt ? (
                 <p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-white/85 drop-shadow">{presentationExcerpt}</p>
               ) : null}
@@ -386,14 +410,14 @@ function EdgeOnlineFormationsNetflixMobile({
                   className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white py-2.5 text-sm font-semibold text-black shadow-lg transition active:scale-[0.99] hover:bg-white/95"
                 >
                   <Play className="h-5 w-5 shrink-0 fill-black text-black" />
-                  Lancer
+                  Commencer
                 </Link>
                 <Link
-                  href={nav("/parcours")}
+                  href={parcoursHref}
                   className="flex flex-1 items-center justify-center gap-2 rounded-md border border-white/25 bg-white/15 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition active:scale-[0.99] hover:bg-white/25"
                 >
                   <Plus className="h-5 w-5" />
-                  Parcours
+                  Ajouter au parcours
                 </Link>
               </div>
             </div>
@@ -541,6 +565,11 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
     return getToolsFromLearnerCard(h ?? null);
   }, [orgSlugNorm, h]);
 
+  const heroMeta = useMemo(() => deriveCourseHeroMeta(h ?? null), [h]);
+  const parcoursHref = isEdgeOnlineSurface
+    ? edgeOnlinePublicHref("/parcours", edgeOnlinePrefix)
+    : "/dashboard/apprenant/parcours";
+
   const netflixPills = useMemo(() => {
     const items: { label: string; href: string }[] = [{ label: "À la une", href: "#hero-top" }];
     for (const r of rows.slice(0, 10)) {
@@ -577,11 +606,11 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
           title={title}
           presentationExcerpt={presentationExcerpt}
           href={href}
+          parcoursHref={parcoursHref}
+          heroMeta={heroMeta}
           video={Boolean(video && media)}
           media={media}
           heroTools={heroTools}
-          galaxyLogoSrc={galaxyLogoSrc}
-          galaxyLogoAlt={galaxyLogoAlt}
           surfacePrefix={edgeOnlinePrefix}
           catalogChip={catalogChip}
           catalogSearch={catalogSearch}
@@ -619,17 +648,18 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
           <div
             className={`relative z-10 flex w-full flex-col ${isEdgeOnlineSurface ? "pt-14 md:pt-16" : "pt-6 md:pt-8"} ${heroMinHeightClass}`}
           >
-            {/* Logo galaxie : ~5× la taille précédente (~36px → ~180px), centré sur la largeur du hero */}
-            <div className="pointer-events-auto relative z-20 flex w-full shrink-0 justify-center px-4 md:px-8">
-              <GalaxyLogoHero
-                logoUrl={galaxyLogoSrc}
-                name={galaxyLogoAlt}
-                className="h-[132px] w-auto max-w-[min(92vw,720px)] object-contain opacity-95 md:h-[150px]"
-              />
-            </div>
+            {!isEdgeOnlineSurface ? (
+              <div className="pointer-events-auto relative z-20 flex w-full shrink-0 justify-center px-4 md:px-8">
+                <GalaxyLogoHero
+                  logoUrl={galaxyLogoSrc}
+                  name={galaxyLogoAlt}
+                  className="h-[132px] w-auto max-w-[min(92vw,720px)] object-contain opacity-95 md:h-[150px]"
+                />
+              </div>
+            ) : null}
 
             <div
-              className={`flex flex-1 flex-col justify-center pb-8 pt-4 md:pb-10 md:pt-6 ${contentShift} pr-6 md:pr-12`}
+              className={`flex flex-1 flex-col justify-center pb-8 ${isEdgeOnlineSurface ? "pt-8 md:pt-12" : "pt-4 md:pt-6"} md:pb-10 ${contentShift} pr-6 md:pr-12`}
             >
               <div
                 className={`w-full text-left ${isEdgeOnlineSurface ? "max-w-2xl lg:max-w-3xl" : "max-w-xl"} ${heroTextNudge}`}
@@ -646,28 +676,47 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
                   {title}
                 </h1>
 
+                <CourseHeroMetaStrip meta={heroMeta} />
+
                 {presentationExcerpt ? (
-                  <p className="mt-4 text-sm leading-relaxed text-white/88 md:text-base">{presentationExcerpt}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-white/88 md:text-base">{presentationExcerpt}</p>
                 ) : null}
 
-                <div className="pointer-events-auto mt-4 flex flex-col items-start gap-3">
+                <div className="pointer-events-auto mt-5 flex flex-col items-start gap-3">
                   {heroTools.length > 0 ? (
                     <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                       <CourseToolsLogos tools={heroTools} />
                     </div>
                   ) : null}
-                  <Link
-                    href={href}
-                    className="text-sm font-semibold text-white/90 underline underline-offset-4 transition hover:text-white"
-                  >
-                    voir le contenu
-                  </Link>
-                  <Button
-                    asChild
-                    className="rounded-full bg-red-600 px-10 py-3 text-sm font-bold text-white shadow-lg hover:bg-red-700"
-                  >
-                    <Link href={href}>Lancer la séquence</Link>
-                  </Button>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      asChild
+                      className="rounded-full bg-white px-8 py-3 text-sm font-bold text-black shadow-lg hover:bg-white/90"
+                    >
+                      <Link href={href}>
+                        <Play className="mr-2 inline h-4 w-4 fill-black" />
+                        Commencer
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="rounded-full border-white/30 bg-white/10 px-8 py-3 text-sm font-bold text-white backdrop-blur-sm hover:bg-white/20"
+                    >
+                      <Link href={parcoursHref}>
+                        <Plus className="mr-2 inline h-4 w-4" />
+                        Ajouter au parcours
+                      </Link>
+                    </Button>
+                  </div>
+                  {!isEdgeOnlineSurface ? (
+                    <Link
+                      href={href}
+                      className="text-sm font-semibold text-white/90 underline underline-offset-4 transition hover:text-white"
+                    >
+                      voir le contenu
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             </div>

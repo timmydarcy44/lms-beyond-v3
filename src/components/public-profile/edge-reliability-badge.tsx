@@ -22,7 +22,7 @@ export function EdgeReliabilityBadge({ score, className }: Props) {
       <p className="mt-3 text-4xl font-bold tracking-tight text-[#0a0a0a]">{score} %</p>
       <p className="mt-1 text-sm text-black/55">{label}</p>
       <ul className="mt-4 space-y-1.5 text-xs text-black/50">
-        <li>✔ Compétences évaluées par l&apos;IA</li>
+        <li>✔ Compétences évaluées selon le référentiel EDGE</li>
         <li>✔ Preuves et entretiens expérientiels</li>
         <li>✔ Cohérence du parcours EDGE</li>
       </ul>

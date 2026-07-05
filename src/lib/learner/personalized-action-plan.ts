@@ -30,6 +30,14 @@ export type CoachingRecommendation = {
   photoUrl?: string | null;
 };
 
+export type ActionPlanNextStep = {
+  title: string;
+  impactPercent: number;
+  skills: string[];
+  primaryHref: string;
+  primaryLabel: string;
+};
+
 export type PersonalizedActionPlan = {
   headline: string;
   summary: string;
@@ -43,6 +51,7 @@ export type PersonalizedActionPlan = {
     description: string;
     href: string;
   }>;
+  nextStep: ActionPlanNextStep | null;
 };
 
 type BuildPlanInput = {
@@ -242,6 +251,24 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
     href: item.href,
   }));
 
+  const topSkills = weakSkills.slice(0, 3).map((s) => s.skill);
+  const topItem = items[0];
+  const nextStep: ActionPlanNextStep | null =
+    topSkills.length > 0 && topItem
+      ? {
+          title: "Votre prochaine étape",
+          impactPercent: Math.min(12, Math.max(5, Math.round((SOFT_SKILL_THRESHOLDS - (weakSkills[0]?.score ?? 40)) * 0.2))),
+          skills: topSkills,
+          primaryHref: topItem.href,
+          primaryLabel:
+            topItem.kind === "micro_formation"
+              ? "Commencer la micro-formation"
+              : topItem.kind === "coaching"
+                ? "Réserver un coaching"
+                : "Voir la recommandation",
+        }
+      : null;
+
   return {
     headline,
     summary,
@@ -249,6 +276,7 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
     items: items.slice(0, 6),
     coachings: dedupeCoachings(coachings).slice(0, 3),
     parcoursSteps,
+    nextStep,
   };
 }
 

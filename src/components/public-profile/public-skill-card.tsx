@@ -2,6 +2,7 @@
 
 import type { PublicSkillCardData } from "@/lib/hard-skills/skill-validation-analysis";
 import { publicStatusConfig } from "@/lib/hard-skills/skill-validation-analysis";
+import { EDGE_CONFIDENCE_LABEL, EDGE_STATUS_LABEL } from "@/lib/edge-brand-copy";
 import { resolveToolLogo } from "@/lib/profile/competency-referential";
 
 type Props = {
@@ -29,18 +30,26 @@ export function PublicSkillCard({ skill, onViewAnalysis }: Props) {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-full border border-black/[0.08] bg-[#fafafa] px-2.5 py-1 font-medium text-black/65">
-          Niveau estimé · {skill.estimatedLevel}
-        </span>
-        <span className={`rounded-full border px-2.5 py-1 font-medium ${statusCfg.className}`}>
-          {statusCfg.emoji} {statusCfg.label}
-        </span>
-      </div>
+      <div className="mt-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className="text-black/45">Niveau estimé</span>
+          <span className="font-semibold text-[#0a0a0a]">{skill.estimatedLevel}</span>
+        </div>
 
-      {skill.confidenceScore != null ? (
-        <p className="mt-3 text-xs text-black/45">Confiance EDGE · {skill.confidenceScore} %</p>
-      ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className="text-black/45">{EDGE_STATUS_LABEL}</span>
+          <span className={`rounded-full border px-2.5 py-1 font-medium ${statusCfg.className}`}>
+            {statusCfg.emoji} {statusCfg.label}
+          </span>
+        </div>
+
+        {skill.confidenceScore != null ? (
+          <div className="rounded-xl border border-black/[0.06] bg-[#fafafa] px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-black/40">{EDGE_CONFIDENCE_LABEL}</p>
+            <p className="mt-1 text-lg font-bold text-[#0a0a0a]">{skill.confidenceScore} %</p>
+          </div>
+        ) : null}
+      </div>
 
       <button
         type="button"

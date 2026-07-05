@@ -11,6 +11,7 @@ import {
   verdictLabel,
   type PublicSkillStatus,
 } from "@/lib/hard-skills/skill-validation";
+import { DEFAULT_EDGE_EVALUATION_METHODS, sanitizeEdgePublicCopy } from "@/lib/edge-brand-copy";
 
 export type SkillAnalysisApiResult = {
   confidenceScore: number;
@@ -34,7 +35,7 @@ export const SKILL_ANALYSIS_JSON_SHAPE = `{
   "detailedAnalysis": "analyse détaillée complète expliquant la décision",
   "strengths": ["force 1", "force 2"],
   "improvementAreas": ["axe 1", "axe 2"],
-  "evaluationMethods": ["Entretien IA", "Analyse sémantique", "Cohérence avec les autres compétences"],
+  "evaluationMethods": ["Entretien expérientiel EDGE", "Analyse sémantique EDGE", "Cohérence avec le référentiel métier"],
   "opinion": "avis EDGE",
   "badgeSuggested": true/false
 }`;
@@ -118,15 +119,15 @@ export function buildValidationSessionFromAnalysis(params: {
 
   const interviewEntry = buildHistoryEntry({
     type: method === "interview" ? "interview" : "import",
-    title: method === "interview" ? "Entretien IA réalisé" : "Preuve importée et analysée",
+    title: method === "interview" ? "Entretien expérientiel réalisé" : "Preuve déposée",
     confidenceScore: analysis.confidenceScore,
     statusLabel: verdictToHistoryStatusLabel(analysis.verdict),
     verdict: analysis.verdict,
   });
 
-  const iaEntry = buildHistoryEntry({
+  const analysisEntry = buildHistoryEntry({
     type: "ia_validation",
-    title: "Analyse IA",
+    title: "Analyse EDGE finalisée",
     confidenceScore: analysis.confidenceScore,
     statusLabel: verdictToHistoryStatusLabel(analysis.verdict),
     verdict: analysis.verdict,
@@ -145,10 +146,8 @@ export function buildValidationSessionFromAnalysis(params: {
     improvementAreas: analysis.improvementAreas,
     evaluationMethods:
       analysis.evaluationMethods.length > 0
-        ? analysis.evaluationMethods
-        : method === "interview"
-          ? ["Entretien IA", "Analyse sémantique", "Cohérence avec les autres compétences"]
-          : ["Import de preuve", "Analyse sémantique", "Cohérence documentaire"],
+        ? analysis.evaluationMethods.map(sanitizeEdgePublicCopy)
+        : [...DEFAULT_EDGE_EVALUATION_METHODS],
     analysis: analysis.detailedAnalysis || analysis.analysis,
     opinion: analysis.opinion,
     questions: params.questions,
@@ -161,7 +160,7 @@ export function buildValidationSessionFromAnalysis(params: {
   };
 
   session = appendValidationHistory(previous, interviewEntry);
-  session = appendValidationHistory(session, iaEntry);
+  session = appendValidationHistory(session, analysisEntry);
 
   return session;
 }
@@ -193,20 +192,20 @@ export function publicStatusConfig(status: PublicSkillStatus): {
   switch (status) {
     case "expert_validated":
       return {
-        label: "Validée par un expert EDGE",
+        label: "EDGE Verified",
         emoji: "🟣",
         className: "border-violet-200 bg-violet-50 text-violet-800",
       };
     case "validated":
-      return { label: "Validée", emoji: "🟢", className: "border-emerald-200 bg-emerald-50 text-emerald-800" };
+      return { label: "Compétence vérifiée", emoji: "🟢", className: "border-emerald-200 bg-emerald-50 text-emerald-800" };
     case "ia_analyzed":
       return {
-        label: "Évaluation IA terminée",
+        label: "Analyse terminée",
         emoji: "🟡",
         className: "border-amber-200 bg-amber-50 text-amber-900",
       };
     default:
-      return { label: "Déclarée", emoji: "🔵", className: "border-sky-200 bg-sky-50 text-sky-800" };
+      return { label: "Compétence déclarée", emoji: "🔵", className: "border-sky-200 bg-sky-50 text-sky-800" };
   }
 }
 

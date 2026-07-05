@@ -2,11 +2,13 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Award, ChevronLeft, ChevronRight, Clock, Star, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { coverRawToDisplayUrl, pickCoverImageFromItem } from "@/lib/formation-cover";
 import { LazyBandwidthVideo } from "@/components/media/lazy-bandwidth-video";
+import { deriveCourseCardMeta } from "@/lib/edge-online/course-hero-meta";
+import type { LearnerCard } from "@/lib/queries/apprenant";
 
 type SliderCard = {
   id: string;
@@ -19,6 +21,11 @@ type SliderCard = {
   cover_image?: string | null;
   hero_image_url?: string | null;
   level?: string | null;
+  category_name?: string | null;
+  category?: string | null;
+  presentation?: string | null;
+  progress?: number | null;
+  builder_snapshot?: unknown;
 };
 
 const PLAYMAKERS_LOGO =
@@ -132,6 +139,46 @@ function FormationPoster({
   );
 }
 
+function EdgeOnlineCardMeta({ course }: { course: SliderCard }) {
+  const meta = deriveCourseCardMeta(course as LearnerCard);
+  const category = String(course.category_name ?? course.category ?? meta.category ?? "").trim();
+  const progress = course.progress ?? meta.progress;
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      {category ? (
+        <p className="text-[10px] font-medium uppercase tracking-wider text-black/45">{category}</p>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-black/55">
+        <span className="inline-flex items-center gap-0.5">
+          <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+          {meta.rating.toFixed(1)}
+        </span>
+        <span className="inline-flex items-center gap-0.5">
+          <Users className="h-3 w-3" />
+          {meta.learners}
+        </span>
+        <span className="inline-flex items-center gap-0.5">
+          <Clock className="h-3 w-3" />
+          {meta.hours} h
+        </span>
+        {progress != null && progress > 0 ? <span>{Math.round(progress)} %</span> : null}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {meta.level ? (
+          <span className="rounded-full border border-black/[0.08] bg-[#f5f5f3] px-1.5 py-0.5 text-[9px] font-medium text-black/65">
+            {meta.level}
+          </span>
+        ) : null}
+        <span className="inline-flex items-center gap-0.5 rounded-full border border-[#FF3B30]/20 bg-[#FF3B30]/5 px-1.5 py-0.5 text-[9px] font-medium text-[#FF3B30]">
+          <Award className="h-2.5 w-2.5" />
+          EDGE
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function FormationsSliderClient({
   title,
   cards,
@@ -148,10 +195,11 @@ export function FormationsSliderClient({
 
   const normalized = useMemo(() => {
     const raw = Array.isArray(cards) ? cards : [];
-    return raw.map((c, index) => {
+    return raw
+      .map((c, index) => {
         const fromCoverColumn = String(c.cover_image ?? "").trim();
         const fromNested = pickCoverImageFromItem(c);
-        const cover_image = (fromCoverColumn || fromNested) || null;
+        const cover_image = fromCoverColumn || fromNested || null;
 
         const slug = String(c.slug ?? c.id ?? "").trim();
         const id = String(c.id ?? "").trim() || slug || `card-${index}`;
@@ -171,6 +219,11 @@ export function FormationsSliderClient({
           cover_image,
           hero_image_url: (c.hero_image_url as string | null | undefined) ?? null,
           level: (c.level as string | null | undefined) ?? null,
+          category_name: (c.category_name as string | null | undefined) ?? null,
+          category: (c.category as string | null | undefined) ?? null,
+          presentation: (c.presentation as string | null | undefined) ?? null,
+          progress: (c.progress as number | null | undefined) ?? null,
+          builder_snapshot: c.builder_snapshot,
         } satisfies SliderCard;
       })
       .slice(0, 12);
@@ -203,34 +256,34 @@ export function FormationsSliderClient({
           {title}
         </h2>
         {!isNetflix ? (
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            className={
-              isEdgeLight
-                ? "h-8 w-8 rounded-full border border-black/[0.06] bg-[#f5f5f3] p-0 text-black/50 hover:border-black/10 hover:bg-black/[0.04]"
-                : "h-8 w-8 rounded-full border border-white/10 bg-black/30 p-0 text-white/70 hover:border-white/20 hover:bg-black/40"
-            }
-            onClick={() => scrollBy(-520)}
-            aria-label="Précédent"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className={
-              isEdgeLight
-                ? "h-8 w-8 rounded-full border border-black/[0.06] bg-[#f5f5f3] p-0 text-black/50 hover:border-black/10 hover:bg-black/[0.04]"
-                : "h-8 w-8 rounded-full border border-white/10 bg-black/30 p-0 text-white/70 hover:border-white/20 hover:bg-black/40"
-            }
-            onClick={() => scrollBy(520)}
-            aria-label="Suivant"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className={
+                isEdgeLight
+                  ? "h-8 w-8 rounded-full border border-black/[0.06] bg-[#f5f5f3] p-0 text-black/50 hover:border-black/10 hover:bg-black/[0.04]"
+                  : "h-8 w-8 rounded-full border border-white/10 bg-black/30 p-0 text-white/70 hover:border-white/20 hover:bg-black/40"
+              }
+              onClick={() => scrollBy(-520)}
+              aria-label="Précédent"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className={
+                isEdgeLight
+                  ? "h-8 w-8 rounded-full border border-black/[0.06] bg-[#f5f5f3] p-0 text-black/50 hover:border-black/10 hover:bg-black/[0.04]"
+                  : "h-8 w-8 rounded-full border border-white/10 bg-black/30 p-0 text-white/70 hover:border-white/20 hover:bg-black/40"
+              }
+              onClick={() => scrollBy(520)}
+              aria-label="Suivant"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -252,7 +305,9 @@ export function FormationsSliderClient({
               className={
                 isNetflix
                   ? "group relative w-[min(132px,calc(42vw))] shrink-0 overflow-hidden rounded-md border border-white/12 bg-zinc-900/80 shadow-lg transition active:scale-[0.98] hover:border-white/25"
-                  : "group relative w-[min(360px,calc(100vw-2.5rem))] max-w-[85vw] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition duration-300 hover:border-white/25 hover:bg-white/10 sm:max-w-none"
+                  : isEdgeLight
+                    ? "group relative w-[min(300px,calc(100vw-2.5rem))] max-w-[85vw] shrink-0 overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-[0_4px_24px_rgba(0,0,0,0.05)] transition duration-300 hover:border-black/15 sm:max-w-none"
+                    : "group relative w-[min(360px,calc(100vw-2.5rem))] max-w-[85vw] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition duration-300 hover:border-white/25 hover:bg-white/10 sm:max-w-none"
               }
             >
               <FormationPoster
@@ -260,17 +315,29 @@ export function FormationsSliderClient({
                 aspect={isNetflix ? "portrait" : "video"}
                 overlayVariant={isEdgeLight ? "edgeonline" : "default"}
               />
-              <div className={isNetflix ? "absolute bottom-0 left-0 right-0 p-2" : "absolute bottom-0 left-0 right-0 p-4"}>
+              <div
+                className={
+                  isEdgeLight
+                    ? "border-t border-black/[0.06] bg-white p-3"
+                    : isNetflix
+                      ? "absolute bottom-0 left-0 right-0 p-2"
+                      : "absolute bottom-0 left-0 right-0 p-4"
+                }
+              >
                 <div
                   className={
-                    isNetflix
-                      ? "text-[11px] font-semibold leading-snug text-white line-clamp-2"
-                      : "text-sm font-semibold leading-snug text-white line-clamp-2"
+                    isEdgeLight
+                      ? "text-sm font-semibold leading-snug text-[#0a0a0a] line-clamp-2"
+                      : isNetflix
+                        ? "text-[11px] font-semibold leading-snug text-white line-clamp-2"
+                        : "text-sm font-semibold leading-snug text-white line-clamp-2"
                   }
                 >
                   {course.title}
                 </div>
-                {filled > 0 && levelLabel ? (
+                {isEdgeLight ? (
+                  <EdgeOnlineCardMeta course={course} />
+                ) : filled > 0 && levelLabel ? (
                   <div className="mt-2 flex items-center gap-2 text-[10px] font-medium text-white/60">
                     <div className="flex items-end gap-1 origin-left scale-[0.8]">
                       {(["h-2", "h-3", "h-4", "h-5", "h-6"] as const).map((h, i) => (

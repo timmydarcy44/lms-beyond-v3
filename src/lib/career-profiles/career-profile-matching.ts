@@ -21,17 +21,35 @@ export type CareerSkillRow = {
   source: string;
 };
 
+export type CareerSkillBucket = "strength" | "consolidate" | "develop" | "unevaluated";
+
+export type CareerNextPriority = {
+  skill: string;
+  impactPercent: number;
+  actionType: "micro_formation" | "evaluation" | "proof";
+  actionLabel: string;
+};
+
 export type CareerMatchingResult = {
   compatibilityScore: number;
   strengths: string[];
-  gaps: string[];
+  /** Compétences connues mais pouvant être améliorées. */
+  consolidate: string[];
+  /** Compétences évaluées comme insuffisantes. */
+  develop: string[];
   unevaluated: string[];
   skillTable: CareerSkillRow[];
   actionPlanAxes: string[];
+  nextPriority: CareerNextPriority | null;
+  /** @deprecated Utiliser `develop` — conservé pour compatibilité interne. */
+  gaps: string[];
 };
 
 /** Score numérique minimal pour classer une compétence en « Force » (niveau Bon et au-dessus). */
 export const CAREER_STRENGTH_THRESHOLD = 72;
+
+/** Score minimal pour « À consolider » (compétence connue mais perfectible). */
+export const CAREER_CONSOLIDATE_THRESHOLD = 55;
 
 const CAREER_SOFT_TO_TEST: Record<string, string[]> = {
   "écoute active": ["Écoute active"],
@@ -165,11 +183,101 @@ function scoreToPercent(scores: number[]): number {
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 }
 
-function classifySkillRow(row: CareerSkillRow): "strength" | "gap" | "unevaluated" {
+function classifySkillRow(row: CareerSkillRow): CareerSkillBucket {
   const score = rowToNumericScore(row);
   if (score === null) return "unevaluated";
   if (score >= CAREER_STRENGTH_THRESHOLD) return "strength";
-  return "gap";
+  if (score >= CAREER_CONSOLIDATE_THRESHOLD) return "consolidate";
+  return "develop";
+}
+
+function rebalanceBuckets(
+  skillTable: CareerSkillRow[],
+  buckets: Record<CareerSkillBucket, string[]>,
+): Record<CareerSkillBucket, string[]> {
+  const result = {
+    strength: [...buckets.strength],
+    consolidate: [...buckets.consolidate],
+    develop: [...buckets.develop],
+    unevaluated: [...buckets.unevaluated],
+  };
+
+  if (result.develop.length > 0 || result.consolidate.length > 0) return result;
+
+  const scoredStrengths = skillTable
+    .filter((row) => result.strength.includes(row.skill))
+    .map((row) => ({ skill: row.skill, score: rowToNumericScore(row) ?? 0 }))
+    .sort((a, b) => a.score - b.score);
+
+  const toConsolidate = scoredStrengths.slice(0, Math.min(3, scoredStrengths.length));
+  for (const item of toConsolidate) {
+    result.strength = result.strength.filter((s) => s !== item.skill);
+    if (!result.consolidate.includes(item.skill)) {
+      result.consolidate.push(item.skill);
+    }
+  }
+
+  return result;
+}
+
+function estimateImpactPercent(skill: string, currentScore: number | null, compatibilityScore: number): number {
+  const base = currentScore != null ? Math.max(4, Math.round((100 - currentScore) * 0.12)) : 8;
+  const ceiling = Math.min(14, Math.max(5, 100 - compatibilityScore));
+  const skillHash = skill.length % 3;
+  return Math.min(ceiling, base + skillHash);
+}
+
+function buildNextPriority(
+  skillTable: CareerSkillRow[],
+  develop: string[],
+  consolidate: string[],
+  unevaluated: string[],
+  compatibilityScore: number,
+): CareerNextPriority | null {
+  const pickSkill = develop[0] ?? consolidate[0] ?? unevaluated[0];
+  if (!pickSkill) return null;
+
+  const row = skillTable.find((r) => r.skill === pickSkill);
+  const score = row ? rowToNumericScore(row) : null;
+
+  let actionType: CareerNextPriority["actionType"] = "micro_formation";
+  let actionLabel = "Commencer la micro-formation";
+
+  if (develop.includes(pickSkill)) {
+    actionType = "micro_formation";
+    actionLabel = "Commencer la micro-formation";
+  } else if (consolidate.includes(pickSkill)) {
+    actionType = "evaluation";
+    actionLabel = "Passer une nouvelle évaluation";
+  } else {
+    actionType = "proof";
+    actionLabel = "Déposer une preuve";
+  }
+
+  return {
+    skill: pickSkill,
+    impactPercent: estimateImpactPercent(pickSkill, score, compatibilityScore),
+    actionType,
+    actionLabel,
+  };
+}
+
+function axisMessage(skill: string): string {
+  const norm = normalizeSkill(skill);
+  const label = skill.charAt(0).toUpperCase() + skill.slice(1);
+  if (norm.includes("resilien") || norm.includes("stress")) {
+    return `Développer votre résilience face aux situations exigeantes (${label}).`;
+  }
+  if (norm.includes("negoc") || norm.includes("objection")) {
+    return `Améliorer vos techniques de négociation et de traitement des objections (${label}).`;
+  }
+  if (norm.includes("organ")) {
+    return `Renforcer votre organisation et votre rigueur opérationnelle (${label}).`;
+  }
+  if (norm.includes("prospec")) {
+    return `Structurer votre prospection et votre régularité commerciale (${label}).`;
+  }
+  return `Renforcer ${label} pour vous rapprocher du référentiel métier.`;
 }
 
 export function analyzeCareerMatching(params: {
@@ -230,46 +338,40 @@ export function analyzeCareerMatching(params: {
   });
 
   const rowScores = skillTable.map((row) => rowToNumericScore(row) ?? 20);
-
   const compatibilityScore = scoreToPercent(rowScores.length ? rowScores : [base.score]);
 
-  const strengths: string[] = [];
-  const gaps: string[] = [];
-  const unevaluated: string[] = [];
+  const rawBuckets: Record<CareerSkillBucket, string[]> = {
+    strength: [],
+    consolidate: [],
+    develop: [],
+    unevaluated: [],
+  };
 
   for (const row of skillTable) {
     const bucket = classifySkillRow(row);
-    if (bucket === "strength") strengths.push(row.skill);
-    else if (bucket === "gap") gaps.push(row.skill);
-    else unevaluated.push(row.skill);
+    rawBuckets[bucket].push(row.skill);
   }
 
-  const actionPlanAxes = gaps.slice(0, 3).map((s) => {
-    const norm = s.charAt(0).toUpperCase() + s.slice(1);
-    if (normalizeSkill(s).includes("resilien") || normalizeSkill(s).includes("stress")) {
-      return `Développer votre résilience face aux situations exigeantes (${norm}).`;
-    }
-    if (normalizeSkill(s).includes("negoc") || normalizeSkill(s).includes("objection")) {
-      return `Améliorer vos techniques de négociation et de traitement des objections (${norm}).`;
-    }
-    if (normalizeSkill(s).includes("organ")) {
-      return `Renforcer votre organisation et votre rigueur opérationnelle (${norm}).`;
-    }
-    if (normalizeSkill(s).includes("prospec")) {
-      return `Structurer votre prospection et votre régularité commerciale (${norm}).`;
-    }
-    return `Renforcer ${norm} pour vous rapprocher du référentiel métier.`;
-  });
+  const balanced = rebalanceBuckets(skillTable, rawBuckets);
+  const { strength: strengths, consolidate, develop, unevaluated } = balanced;
+
+  const prioritySkills = [...develop, ...consolidate, ...unevaluated].slice(0, 3);
+  const actionPlanAxes = prioritySkills.map(axisMessage);
+
+  const nextPriority = buildNextPriority(skillTable, develop, consolidate, unevaluated, compatibilityScore);
 
   return {
     compatibilityScore,
     strengths,
-    gaps,
+    consolidate,
+    develop,
     unevaluated,
     skillTable,
     actionPlanAxes: actionPlanAxes.length
       ? actionPlanAxes
-      : gaps.slice(0, 3).map((s) => `Travailler ${s.toLowerCase()}.`),
+      : consolidate.slice(0, 3).map((s) => `Consolider ${s.toLowerCase()} pour viser l'excellence.`),
+    nextPriority,
+    gaps: develop,
   };
 }
 
@@ -302,5 +404,10 @@ export function buildDynamicActionPlan(params: {
 
   const axesText = axes.map((a, i) => `${i + 1}. ${a}`).join("\n");
 
-  return `${intro}\n\nNous avons identifié ${axes.length} axe${axes.length > 1 ? "s" : ""} prioritaire${axes.length > 1 ? "s" : ""} :\n${axesText}`;
+  const nextStep = params.matching.nextPriority;
+  const nextStepLine = nextStep
+    ? `\n\nVotre prochaine priorité : ${nextStep.skill} (impact estimé +${nextStep.impactPercent} %).`
+    : "";
+
+  return `${intro}\n\nNous avons identifié ${axes.length} axe${axes.length > 1 ? "s" : ""} prioritaire${axes.length > 1 ? "s" : ""} :\n${axesText}${nextStepLine}`;
 }

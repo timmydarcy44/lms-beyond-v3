@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import {
   BookOpen,
   Brain,
-  Check,
   Eye,
   FileText,
   Headphones,
@@ -19,7 +18,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JessicaRemoteImage } from "@/components/jessica-contentin/jessica-remote-image";
-import { IphoneMockup } from "@/components/jessica-contentin/iphone-mockup";
 import { cn } from "@/lib/utils";
 
 const NEVO_URL = "https://www.nevo-app.fr/app-landing";
@@ -151,8 +149,10 @@ function PremiumBackground() {
 function HeroPhone() {
   return (
     <div className="relative mx-auto w-full max-w-[min(100%,440px)] lg:max-w-none lg:translate-y-6">
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[min(90vw,420px)] w-[min(90vw,420px)] -translate-x-1/2 -translate-y-[45%] rounded-full bg-[radial-gradient(circle,rgba(198,166,100,0.38)_0%,rgba(230,217,198,0.18)_42%,transparent_72%)] blur-2xl" />
-      <div className="pointer-events-none absolute inset-x-[8%] bottom-[6%] top-[18%] rounded-[3.5rem] bg-gradient-to-b from-white/50 to-[#E6D9C6]/20 opacity-80 backdrop-blur-sm" />
+      <div
+        className="pointer-events-none absolute left-1/2 top-[42%] h-[min(85vw,400px)] w-[min(85vw,400px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(198,166,100,0.35)_0%,rgba(230,217,198,0.15)_45%,transparent_72%)] blur-2xl"
+        aria-hidden
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 40, scale: 0.96 }}
@@ -160,13 +160,12 @@ function HeroPhone() {
         transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
         className="relative z-10 mb-[-3rem] lg:mb-[-4.5rem]"
       >
-        <div className="pointer-events-none absolute -inset-x-4 top-[12%] h-[55%] rounded-[3rem] bg-gradient-to-b from-white/30 to-transparent opacity-70" />
-        <IphoneMockup
+        {/* nevo7.png inclut déjà le cadre iPhone — pas de double mockup */}
+        <JessicaRemoteImage
           src={NEVO_HERO_SCREEN}
           alt="Application NEVO — menu des fonctionnalités sur smartphone"
           priority
-          className="relative z-10 w-[min(100%,340px)] sm:w-[min(100%,380px)] lg:w-[min(100%,420px)]"
-          premium
+          className="relative z-10 mx-auto h-auto w-full max-w-[min(100%,340px)] drop-shadow-[0_48px_90px_-28px_rgba(47,42,37,0.42)] sm:max-w-[380px] lg:max-w-[420px]"
         />
       </motion.div>
     </div>
@@ -273,14 +272,6 @@ export function JessicaNevoPresentation() {
                   <a href="#fonctionnalites">Voir les fonctionnalités</a>
                 </Button>
               </div>
-
-              <p
-                className="inline-flex max-w-md items-start gap-2 rounded-2xl border border-[#E6D9C6]/70 bg-white/60 px-4 py-3 text-xs leading-relaxed text-[#5C5348] backdrop-blur-sm"
-                style={{ fontFamily: SF_PRO }}
-              >
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#C6A664]" strokeWidth={2.5} />
-                <span>Recommandée dans le cadre des accompagnements du cabinet Jessica Contentin.</span>
-              </p>
             </motion.div>
 
             <HeroPhone />

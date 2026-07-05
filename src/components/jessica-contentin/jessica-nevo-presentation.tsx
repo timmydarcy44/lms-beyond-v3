@@ -144,23 +144,15 @@ export function JessicaNevoPresentation() {
             Nevo transforme vos contenus en fiches, schémas, audio, quiz et bien plus — avec un mode neuro
             adapté pour les apprenants ayant des troubles DYS.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center">
             <Button
               asChild
               size="lg"
               className="rounded-full bg-[#C6A664] px-8 text-white hover:bg-[#B88A44]"
             >
               <Link href={NEVO_URL} target="_blank" rel="noopener noreferrer">
-                Découvrir Nevo
+                Découvrir NEVO →
               </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="rounded-full border-[#C6A664]/50 bg-white px-8 text-[#2F2A25] hover:bg-[#FDF9F3]"
-            >
-              <a href="#ressources-a-telecharger">Ressources à télécharger</a>
             </Button>
           </div>
         </div>

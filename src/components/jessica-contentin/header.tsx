@@ -40,7 +40,7 @@ const specialitesMegaMenu: {
     items: [
       { label: "Accompagnement TND", href: "/jessica-contentin/specialites/tnd", icon: Puzzle },
       { label: "Harcèlement scolaire", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
-      { label: "Gestion des émotions", href: "/jessica-contentin/specialites/therapie", icon: Heart },
+      { label: "Ado : Gestion des émotions", href: "/jessica-contentin/specialites/therapie", icon: Heart },
     ],
   },
   {
@@ -156,6 +156,15 @@ export function JessicaContentinHeader() {
       subscription.unsubscribe();
     };
   }, [isMounted]);
+
+  const closeMenus = () => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+      dropdownTimeoutRef.current = null;
+    }
+    setActiveDropdown(null);
+    setMobileMenuOpen(false);
+  };
   
   const menuItems = [
     {
@@ -224,6 +233,11 @@ export function JessicaContentinHeader() {
               >
                 <Link
                   href={item.href}
+                  onClick={() => {
+                    if (item.submenuColumns || item.submenuItems) {
+                      closeMenus();
+                    }
+                  }}
                   className={cn(
                     "flex items-center gap-1 px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg transition-colors hover:bg-[#E6D9C6]/50 whitespace-nowrap",
                     activeDropdown === item.href && "bg-[#E6D9C6]/50"
@@ -260,6 +274,7 @@ export function JessicaContentinHeader() {
                           <Link
                             key={subItem.href}
                             href={subItem.href}
+                            onClick={closeMenus}
                             className="flex items-start gap-3 rounded-xl px-3 py-3 text-[#2F2A25] hover:bg-[#E6D9C6]/40 transition-colors"
                           >
                             <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-[#E6D9C6]">
@@ -307,6 +322,7 @@ export function JessicaContentinHeader() {
                                 <Link
                                   key={subItem.href + subItem.label}
                                   href={subItem.href}
+                                  onClick={closeMenus}
                                   className="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-[#2F2A25] hover:text-[#8B6F47] hover:bg-[#E6D9C6]/40 transition-colors"
                                 >
                                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 ring-1 ring-[#E6D9C6]">
@@ -396,7 +412,7 @@ export function JessicaContentinHeader() {
                   <Link
                     href={item.href}
                     className="block px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
-                    onClick={() => !item.submenuColumns && !item.submenuItems && setMobileMenuOpen(false)}
+                    onClick={closeMenus}
                   >
                     {item.label}
                   </Link>
@@ -407,7 +423,7 @@ export function JessicaContentinHeader() {
                           key={subItem.href}
                           href={subItem.href}
                           className="block px-4 py-2 text-sm text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
-                          onClick={() => setMobileMenuOpen(false)}
+                          onClick={closeMenus}
                         >
                           {subItem.label}
                         </Link>
@@ -427,7 +443,7 @@ export function JessicaContentinHeader() {
                                 key={subItem.href + subItem.label}
                                 href={subItem.href}
                                 className="block px-4 py-2 text-sm text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
-                                onClick={() => setMobileMenuOpen(false)}
+                                onClick={closeMenus}
                               >
                                 {subItem.label}
                               </Link>

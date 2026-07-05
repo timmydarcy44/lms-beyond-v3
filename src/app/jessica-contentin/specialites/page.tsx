@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Brain, Heart, Users, BookOpen, Shield, Target, Lightbulb, Baby, GraduationCap, BookMarked } from "lucide-react";
+import { ArrowRight, Brain, Heart, Users, Shield, Target, Lightbulb, Baby, GraduationCap, BookMarked } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -38,13 +38,6 @@ const specialites = [
     icon: Baby,
     description: "Soutien et conseils pour les parents dans leur rôle éducatif.",
     presentation: "Un espace d'écoute et de conseils pour vous accompagner dans votre rôle de parent. Stratégies éducatives adaptées, gestion des conflits familiaux et renforcement du lien parent-enfant pour créer un environnement familial épanouissant.",
-  },
-  {
-    id: "tests",
-    title: "Tests de connaissance de soi",
-    icon: BookOpen,
-    description: "Évaluations et bilans pour mieux se connaître et identifier ses forces.",
-    presentation: "Des bilans psychopédagogiques approfondis pour mieux comprendre vos compétences, identifier vos forces et vos axes d'amélioration. Des recommandations personnalisées pour orienter votre parcours et développer votre potentiel.",
   },
   {
     id: "harcelement",
@@ -101,15 +94,23 @@ export default function SpecialitesPage() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Mes Spécialités en Psychopédagogie - Troubles DYS, TDA-H, Harcèlement scolaire | Caen
+              Trouver l&apos;accompagnement qui vous correspond
             </h1>
             <p
-              className="text-xl text-[#2F2A25]/80 max-w-3xl mx-auto"
+              className="text-xl text-[#2F2A25]/80 max-w-3xl mx-auto leading-relaxed"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Un accompagnement personnalisé adapté à chaque besoin spécifique. Découvrez mes spécialités : <strong>accompagnement TND (troubles DYS, TDA-H)</strong>, <strong>harcèlement scolaire</strong>, <strong>phobie scolaire</strong>, <strong>gestion des émotions</strong>, <strong>confiance en soi</strong>, <strong>orientation scolaire</strong> et <strong>neuroéducation</strong>. Cabinet à Bretteville sur Odon, près de Caen.
+              Découvrez les différents domaines d&apos;accompagnement proposés au cabinet.
+            </p>
+            <p
+              className="text-lg text-[#2F2A25]/75 max-w-3xl mx-auto mt-4 leading-relaxed"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+              }}
+            >
+              Chaque spécialité répond à des besoins spécifiques afin de vous offrir un accompagnement personnalisé, adapté à votre fonctionnement et à vos objectifs.
             </p>
           </motion.div>
         </div>

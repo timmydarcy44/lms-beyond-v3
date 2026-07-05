@@ -6,34 +6,18 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, Users, Clock, Target, Heart, TrendingUp, Award, Brain, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import Image from "next/image";
+import { JessicaRemoteImage } from "@/components/jessica-contentin/jessica-remote-image";
+import { jessicaStorageUrl } from "@/lib/jessica-contentin/media-urls";
 import { useState } from "react";
-import { env } from "@/lib/env";
 import { StrategicInternalLinks } from "@/components/jessica-contentin/strategic-internal-links";
 import { SPECIALITY_SEO_CONFIG } from "@/lib/seo/link-juice-strategy";
 import Link from "next/link";
 import Script from "next/script";
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
-// Fonction pour construire l'URL Supabase Storage
-function getSupabaseStorageUrl(bucket: string, path: string): string {
-  const supabaseUrl = 
-    env.supabaseUrl || 
-    (typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) ||
-    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
-  
-  if (!supabaseUrl) {
-    return "";
-  }
-  
-  const encodedBucket = encodeURIComponent(bucket);
-  const pathParts = path.split('/');
-  const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
-  
-  return `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`;
-}
+const AUDIENCE_LINE = "Enfants • Adolescents • Étudiants • Adultes";
 
-const BUCKET_NAME = "Jessica CONTENTIN";
+const CONFIDANCE_HERO_IMAGE = jessicaStorageUrl("Confiance_en_soi_test.png");
 
 // Couleurs du branding Jessica Contentin
 const primaryColor = "#8B6F47"; // Marron principal
@@ -80,7 +64,7 @@ const specialitesContent: Record<string, {
     title: "Renforcer la confiance en soi et l'estime de soi",
     subtitle: "Mieux se connaître, renforcer sa confiance et mobiliser ses ressources.",
     description: "Cet accompagnement vise à renforcer progressivement les compétences essentielles à la confiance en soi : compréhension de soi, régulation émotionnelle, affirmation de soi, valorisation des ressources personnelles et autonomie.",
-    heroImage: getSupabaseStorageUrl(BUCKET_NAME, "Confiance_en_soi.jpg") || "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80",
+    heroImage: CONFIDANCE_HERO_IMAGE,
     stats: [
       { value: "10+ ans", label: "d'expérience dans l'éducation et l'accompagnement" },
       { value: "100+", label: "jeunes accompagnés" },
@@ -176,7 +160,7 @@ const specialitesContent: Record<string, {
     forWho: [],
   },
   "guidance-parentale": {
-    title: "Guidance parentale",
+    title: "Comprendre mieux son enfant",
     subtitle: "Comprendre son enfant pour mieux l'accompagner au quotidien",
     description: "Un accompagnement destiné aux parents souhaitant mieux comprendre les besoins de leur enfant et mettre en place des stratégies éducatives adaptées à leur situation familiale.",
     whatIs: {
@@ -249,9 +233,9 @@ const specialitesContent: Record<string, {
     forWho: [],
   },
   "therapie": {
-    title: "Accompagnement psycho-émotionnel",
-    subtitle: "Accompagnement pour la gestion des émotions",
-    description: "Un accompagnement pour mieux comprendre et gérer vos émotions.",
+    title: "Retrouver un équilibre émotionnel durable",
+    subtitle: "Comprendre son fonctionnement émotionnel pour mieux faire face au stress, aux changements et aux défis du quotidien.",
+    description: "Une approche globale qui prend en compte les émotions, le fonctionnement cognitif et les stratégies d'adaptation.",
     whatIs: {
       title: "Qu'est-ce que l'accompagnement psycho-émotionnel ?",
       description: "Un accompagnement pour la gestion des émotions.",
@@ -298,9 +282,9 @@ const specialitesContent: Record<string, {
     forWho: [],
   },
   "strategie-apprentissage": {
-    title: "Stratégie d'apprentissage",
-    subtitle: "Développement de méthodes et techniques d'apprentissage personnalisées",
-    description: "Des méthodes et techniques d'apprentissage adaptées à votre profil et à vos besoins.",
+    title: "Apprendre à apprendre",
+    subtitle: "Comprendre son fonctionnement cognitif pour développer des méthodes d'apprentissage adaptées à son profil.",
+    description: "Chaque accompagnement est personnalisé afin d'identifier les stratégies les plus efficaces pour améliorer la compréhension, la mémorisation, l'organisation et l'autonomie dans les apprentissages.",
     whatIs: {
       title: "Qu'est-ce que la stratégie d'apprentissage ?",
       description: "Des méthodes pour développer votre autonomie et améliorer vos performances.",
@@ -317,6 +301,19 @@ const specialitesContent: Record<string, {
     forWho: [],
   },
 };
+
+function AudienceLine() {
+  return (
+    <p
+      className="mt-5 text-sm font-light tracking-wide text-[#5C5348]/80"
+      style={{
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+      }}
+    >
+      {AUDIENCE_LINE}
+    </p>
+  );
+}
 
 // Composant FAQ avec accordéon
 function FAQItem({ question, answer }: { question: string; answer: string }) {
@@ -371,13 +368,12 @@ export default function SpecialiteDetailPage({
         {/* Hero Section */}
         <section className="relative">
           <div className="relative h-[70vh] min-h-[600px] w-full overflow-hidden">
-            <Image
-              src={content.heroImage || "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80"}
+            <JessicaRemoteImage
+              src={content.heroImage || CONFIDANCE_HERO_IMAGE}
               alt={content.title}
               fill
               className="object-cover"
               priority
-              sizes="100vw"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
             <div className="absolute inset-0 flex items-end">
@@ -594,6 +590,12 @@ export default function SpecialiteDetailPage({
   }
 
   // Pour les autres spécialités, afficher un design simplifié
+  const isConsultationHero = slug === "therapie" || slug === "strategie-apprentissage";
+  const heroTitle =
+    slug === "therapie" || slug === "strategie-apprentissage" || slug === "guidance-parentale"
+      ? content.title
+      : SPECIALITY_SEO_CONFIG[slug]?.h1 || content.title;
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
       {/* Hero Section */}
@@ -605,10 +607,14 @@ export default function SpecialiteDetailPage({
             transition={{ duration: 0.8 }}
           >
             <h1
-              className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+              className={
+                slug === "therapie"
+                  ? "text-2xl md:text-3xl lg:text-[2.65rem] font-bold mb-6"
+                  : "text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+              }
               style={{ color: textColor }}
             >
-              {SPECIALITY_SEO_CONFIG[slug]?.h1 || content.title}
+              {heroTitle}
             </h1>
             <p
               className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto"
@@ -632,10 +638,11 @@ export default function SpecialiteDetailPage({
               asChild
             >
               <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                Prendre rendez-vous
+                {isConsultationHero ? "Réserver une première consultation" : "Prendre rendez-vous"}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </a>
             </Button>
+            {isConsultationHero ? <AudienceLine /> : null}
           </motion.div>
         </div>
       </section>

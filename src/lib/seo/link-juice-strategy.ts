@@ -494,7 +494,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   "guidance-parentale": {
     title: "Guidance parentale & Neuroéducation : Comprendre pour apaiser",
     description: "Guidance parentale à Caen : comprendre son enfant, stratégies éducatives adaptées, gestion des émotions et du quotidien familial. Cabinet Bretteville sur Odon.",
-    h1: "Guidance parentale — Comprendre son enfant pour mieux l'accompagner",
+    h1: "Guidance parentale — Comprendre mieux son enfant",
     keywords: [
       "guidance parentale Caen",
       "accompagnement parents Caen",
@@ -564,7 +564,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   "therapie": {
     title: "Accompagnement psycho-émotionnel & Neuroéducation à Caen",
     description: "Accompagnement pour la gestion des émotions à Caen. Techniques de régulation émotionnelle, gestion anxiété, travail sur traumatismes. Cabinet Bretteville sur Odon.",
-    h1: "Accompagnement Psycho-émotionnel - Gestion des Émotions et Résilience",
+    h1: "Retrouver un équilibre émotionnel durable",
     keywords: [
       "accompagnement psycho-émotionnel Caen",
       "gestion émotions Caen",
@@ -635,7 +635,7 @@ export const SPECIALITY_SEO_CONFIG: Record<string, {
   "strategie-apprentissage": {
     title: "Stratégies d'apprentissage & Neuroéducation : Méthodes personnalisées",
     description: "Développement de méthodes et techniques d'apprentissage personnalisées à Caen. Organisation du travail, mémorisation, concentration, gestion du temps. Cabinet Bretteville sur Odon.",
-    h1: "Stratégies d'Apprentissage - Méthodes Personnalisées pour la Réussite",
+    h1: "Apprendre à apprendre",
     keywords: [
       "stratégies apprentissage Caen",
       "méthodes apprentissage",

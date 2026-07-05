@@ -98,18 +98,16 @@ export const PROOF_LEVEL_CHIP: Record<
     className: "bg-white/8 text-white/55 border-white/15",
   },
   justified: {
-    label: "Justifiée",
-    className: "bg-sky-500/20 text-sky-200 border-sky-400/35",
+    label: "Évaluation IA terminée",
+    className: "bg-amber-500/20 text-amber-200 border-amber-400/35",
   },
   evaluated: {
-    label: "Évaluée",
-    className: "bg-violet-500/15 text-violet-200/60 border-violet-400/25",
-    locked: true,
+    label: "Validée",
+    className: "bg-emerald-500/20 text-emerald-200 border-emerald-400/35",
   },
   certified: {
-    label: "Certifiée",
-    className: "bg-emerald-500/15 text-emerald-200/60 border-emerald-400/25",
-    locked: true,
+    label: "Validée expert EDGE",
+    className: "bg-violet-500/20 text-violet-200 border-violet-400/35",
   },
 };
 

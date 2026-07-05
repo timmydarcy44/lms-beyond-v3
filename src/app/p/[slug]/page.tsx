@@ -5,6 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import { EdgePublicProfileView } from "@/components/public-profile/edge-public-profile-view";
+import type { StoredHardSkillMeta } from "@/lib/hard-skills/hard-skills-portfolio";
+import {
+  buildPublicSkillCards,
+  computeEdgeReliabilityIndex,
+} from "@/lib/hard-skills/skill-validation-analysis";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import type { PublicProfileEarnedBadge } from "@/lib/openbadges/public-profile-earned-badges";
 
@@ -183,9 +188,7 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
   const searchParams = useSearchParams();
   const [settings, setSettings] = useState<ProfileSettings>(DEFAULT_SETTINGS);
   const [profileData, setProfileData] = useState<Record<string, unknown> | null>(null);
-  const [skillsMetadata, setSkillsMetadata] = useState<
-    Record<string, { level: "Débutant" | "Intermédiaire" | "Expert"; validated: boolean; source: "manual" | "badge" }>
-  >({});
+  const [skillsMetadata, setSkillsMetadata] = useState<Record<string, StoredHardSkillMeta>>({});
   const [hardSkills, setHardSkills] = useState<string[]>([]);
   const [stackTools, setStackTools] = useState<string[]>([]);
   const [softSkillsTop, setSoftSkillsTop] = useState<Array<{ label: string; value: number }>>([]);
@@ -448,6 +451,14 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
     return values.filter(Boolean);
   }, [isFreelanceProfile, profileData]);
   const displayAvatar = profileData?.avatar_url ? String(profileData.avatar_url) : "";
+  const publicSkillCards = useMemo(
+    () => buildPublicSkillCards(hardSkills.length ? hardSkills : Object.keys(skillsMetadata), skillsMetadata),
+    [hardSkills, skillsMetadata],
+  );
+  const edgeReliabilityIndex = useMemo(
+    () => computeEdgeReliabilityIndex(hardSkills.length ? hardSkills : Object.keys(skillsMetadata), skillsMetadata),
+    [hardSkills, skillsMetadata],
+  );
   const hardSkillEntries = (hardSkills.length ? hardSkills : Object.keys(skillsMetadata))
     .map((skill) => ({
       name: skill,
@@ -613,9 +624,11 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       diplomas={diplomas}
       hardSkillEntries={hardSkillEntries.map((skill) => ({
         name: skill.name,
-        level: skill.level,
-        validated: skill.validated,
+        level: String(skill.level ?? "Débutant"),
+        validated: Boolean(skill.validated),
       }))}
+      publicSkillCards={publicSkillCards}
+      edgeReliabilityIndex={edgeReliabilityIndex}
       stackTools={stackTools}
       toolLogoResolver={getToolLogoForLabel}
       earnedOpenBadges={earnedOpenBadges}

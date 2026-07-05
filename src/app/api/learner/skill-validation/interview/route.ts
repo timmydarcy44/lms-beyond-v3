@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateJSON } from "@/lib/ai/openai-client";
 import { interviewQuestionCount } from "@/lib/hard-skills/skill-validation";
+import {
+  parseSkillAnalysisApiResult,
+  SKILL_ANALYSIS_JSON_SHAPE,
+} from "@/lib/hard-skills/skill-validation-analysis";
 import { sendSkillValidationEmails } from "@/lib/hard-skills/send-skill-validation-emails";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -51,20 +55,16 @@ Questions et réponses :
 ${questions.map((q: string, i: number) => `Q${i + 1}: ${q}\nR: ${answers[i] ?? "(vide)"}`).join("\n\n")}
 
 Réponds en JSON :
-{
-  "confidenceScore": 0-100,
-  "verdict": "validated" | "pending" | "insufficient" | "expert_needed",
-  "analysis": "analyse courte",
-  "opinion": "avis EDGE",
-  "badgeSuggested": true/false
-}`;
+${SKILL_ANALYSIS_JSON_SHAPE}`;
 
       const result = await generateJSON(prompt);
       if (!result?.verdict) {
         return NextResponse.json({ error: "Analyse impossible" }, { status: 500 });
       }
 
-      const verdict = String(result.verdict);
+      const parsed = parseSkillAnalysisApiResult(result as Record<string, unknown>, level);
+
+      const verdict = parsed.verdict;
       const service = getServiceRoleClient();
       const profileRes = await (service ?? supabase)
         .from("profiles")
@@ -82,13 +82,7 @@ Réponds en JSON :
         verdict: verdict as "validated" | "pending" | "insufficient" | "expert_needed",
       });
 
-      return NextResponse.json({
-        confidenceScore: Number(result.confidenceScore) || 0,
-        verdict: result.verdict,
-        analysis: String(result.analysis ?? ""),
-        opinion: String(result.opinion ?? ""),
-        badgeSuggested: Boolean(result.badgeSuggested),
-      });
+      return NextResponse.json(parsed);
     }
 
     return NextResponse.json({ error: "Action invalide" }, { status: 400 });

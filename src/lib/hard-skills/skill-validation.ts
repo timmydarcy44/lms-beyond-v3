@@ -8,11 +8,31 @@ export type SkillValidationVerdict =
   | "insufficient"
   | "expert_needed";
 
+/** Statut affiché sur le profil public */
+export type PublicSkillStatus = "declared" | "ia_analyzed" | "validated" | "expert_validated";
+
+export type SkillValidationHistoryEntry = {
+  id: string;
+  date: string;
+  type: "interview" | "import" | "proof_added" | "ia_validation" | "expert_validation";
+  title: string;
+  confidenceScore?: number;
+  statusLabel: string;
+  verdict?: SkillValidationVerdict;
+};
+
 export type SkillValidationSession = {
   method: SkillValidationMethod;
   status: "in_progress" | "analyzed";
   verdict?: SkillValidationVerdict;
   confidenceScore?: number;
+  declaredLevel?: HardSkillLevel;
+  estimatedLevel?: HardSkillLevel;
+  summary?: string;
+  detailedAnalysis?: string;
+  strengths?: string[];
+  improvementAreas?: string[];
+  evaluationMethods?: string[];
   analysis?: string;
   opinion?: string;
   questions?: string[];
@@ -21,6 +41,9 @@ export type SkillValidationSession = {
   proofNote?: string;
   analyzedAt?: string;
   badgeSuggested?: boolean;
+  expertValidated?: boolean;
+  expertValidatedAt?: string;
+  history?: SkillValidationHistoryEntry[];
 };
 
 export function interviewQuestionCount(level: HardSkillLevel): number {
@@ -47,12 +70,12 @@ export function verdictToProofLevel(verdict: SkillValidationVerdict): "declared"
 export function verdictLabel(verdict: SkillValidationVerdict): string {
   switch (verdict) {
     case "validated":
-      return "Compétence validée";
+      return "Validation obtenue";
     case "pending":
-      return "Validation en attente";
+      return "Validation complémentaire recommandée";
     case "insufficient":
-      return "Validation insuffisante";
+      return "Preuves insuffisantes";
     case "expert_needed":
-      return "Expert EDGE nécessaire";
+      return "Validation expert nécessaire";
   }
 }

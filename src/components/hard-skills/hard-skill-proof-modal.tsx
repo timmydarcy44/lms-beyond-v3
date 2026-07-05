@@ -6,6 +6,7 @@ import { EdgeSelect, EDGE_INPUT_CLASS } from "@/components/ui/edge-select";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import type { HardSkillProof } from "@/lib/hard-skills/hard-skills-portfolio";
 import type { SkillValidationVerdict } from "@/lib/hard-skills/skill-validation";
+import type { SkillAnalysisApiResult } from "@/lib/hard-skills/skill-validation-analysis";
 import { verdictLabel } from "@/lib/hard-skills/skill-validation";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 import { cn } from "@/lib/utils";
@@ -18,13 +19,7 @@ const PROOF_TYPES: Array<{ value: HardSkillProof["type"]; label: string }> = [
   { value: "other", label: "Autre preuve" },
 ];
 
-type AnalysisResult = {
-  confidenceScore: number;
-  verdict: SkillValidationVerdict;
-  analysis: string;
-  opinion: string;
-  badgeSuggested?: boolean;
-};
+type AnalysisResult = SkillAnalysisApiResult;
 
 type Props = {
   open: boolean;
@@ -103,7 +98,7 @@ export function HardSkillProofModal({ open, skillName, level, onClose, onComplet
               <p className="text-xs uppercase tracking-wider text-white/40">Analyse EDGE</p>
               <p className="mt-2 text-lg font-semibold text-white">{verdictLabel(result.verdict)}</p>
               <p className="mt-2 text-sm text-white/60">Score de confiance : {result.confidenceScore}%</p>
-              <p className="mt-3 text-sm text-white/75">{result.analysis}</p>
+              <p className="mt-3 text-sm text-white/75">{result.summary || result.detailedAnalysis || result.analysis}</p>
             </div>
             <button type="button" onClick={onClose} className={CONNECT_BTN_PRIMARY}>
               Fermer

@@ -4,17 +4,12 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import type { SkillValidationVerdict } from "@/lib/hard-skills/skill-validation";
+import type { SkillAnalysisApiResult } from "@/lib/hard-skills/skill-validation-analysis";
 import { verdictLabel } from "@/lib/hard-skills/skill-validation";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 import { EDGE_INPUT_CLASS } from "@/components/ui/edge-select";
 
-type AnalysisResult = {
-  confidenceScore: number;
-  verdict: SkillValidationVerdict;
-  analysis: string;
-  opinion: string;
-  badgeSuggested?: boolean;
-};
+type AnalysisResult = SkillAnalysisApiResult;
 
 type Props = {
   open: boolean;
@@ -101,7 +96,7 @@ export function HardSkillInterviewModal({ open, skillName, level, careerTitle, o
               <p className="text-xs uppercase tracking-wider text-white/40">Résultat</p>
               <p className="mt-2 text-lg font-semibold text-white">{verdictLabel(result.verdict)}</p>
               <p className="mt-2 text-sm text-white/60">Score de confiance : {result.confidenceScore}%</p>
-              <p className="mt-3 text-sm text-white/75">{result.analysis}</p>
+              <p className="mt-3 text-sm text-white/75">{result.summary || result.detailedAnalysis || result.analysis}</p>
               {result.opinion ? <p className="mt-2 text-sm italic text-white/55">{result.opinion}</p> : null}
             </div>
             {result.badgeSuggested && result.verdict === "validated" ? (

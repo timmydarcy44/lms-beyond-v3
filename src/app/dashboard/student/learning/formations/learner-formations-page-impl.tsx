@@ -20,6 +20,8 @@ import type { ApprenantDashboardData, LearnerCard } from "@/lib/queries/apprenan
 import { edgeOnlinePublicHref, type EdgeOnlineHrefPrefix } from "@/lib/edge-online-public-path";
 import { cn } from "@/lib/utils";
 
+import { EdgeOnlineCatalogFilters } from "@/components/edge-online/edge-online-catalog-filters";
+import { filterThematicRows } from "@/lib/edge-online/catalog-filters";
 import { FormationsSliderClient } from "./formations-slider-client";
 import { useOptionalEdgeOnlineHrefPrefix } from "@/app/edgeonline/edge-online-href-context";
 
@@ -260,6 +262,10 @@ type EdgeNetflixMobileProps = {
   galaxyLogoSrc: string;
   galaxyLogoAlt: string;
   surfacePrefix: EdgeOnlineHrefPrefix;
+  catalogChip: string;
+  catalogSearch: string;
+  onCatalogChipChange: (id: string) => void;
+  onCatalogSearchChange: (q: string) => void;
 };
 
 function EdgeOnlineFormationsNetflixMobile({
@@ -275,6 +281,10 @@ function EdgeOnlineFormationsNetflixMobile({
   galaxyLogoSrc,
   galaxyLogoAlt,
   surfacePrefix,
+  catalogChip,
+  catalogSearch,
+  onCatalogChipChange,
+  onCatalogSearchChange,
 }: EdgeNetflixMobileProps) {
   const nav = (path: string) => edgeOnlinePublicHref(path, surfacePrefix);
 
@@ -391,6 +401,15 @@ function EdgeOnlineFormationsNetflixMobile({
         </div>
       </div>
 
+      <div className="mt-4 bg-white px-3 py-4">
+        <EdgeOnlineCatalogFilters
+          activeChip={catalogChip}
+          searchQuery={catalogSearch}
+          onChipChange={onCatalogChipChange}
+          onSearchChange={onCatalogSearchChange}
+        />
+      </div>
+
       <div className="mt-6 space-y-6">
         {rows.map((row) => (
           <div key={row.title} id={rowSectionDomId(row.title)} className="scroll-mt-[calc(7rem+env(safe-area-inset-top,0px))]">
@@ -433,6 +452,8 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
   const orgSlugNorm = (orgSlug ?? data.organizationSlug ?? "").trim();
   const isEdgeOnlineSurface = surfaceVariant === "edgeonline";
   const edgeOnlinePrefix = useOptionalEdgeOnlineHrefPrefix();
+  const [catalogChip, setCatalogChip] = useState("all");
+  const [catalogSearch, setCatalogSearch] = useState("");
 
   const formations = useMemo(() => {
     const raw = data.formations ?? [];
@@ -460,6 +481,11 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
       ),
     [formations, heroId, orgSlug, data.organizationSlug],
   );
+
+  const filteredRows = useMemo(() => {
+    if (!isEdgeOnlineSurface) return rows;
+    return filterThematicRows(rows, catalogChip, catalogSearch);
+  }, [rows, isEdgeOnlineSurface, catalogChip, catalogSearch]);
 
   if (formations.length === 0) {
     return (
@@ -545,7 +571,7 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
     >
       {isEdgeOnlineSurface ? (
         <EdgeOnlineFormationsNetflixMobile
-          rows={rows}
+          rows={filteredRows}
           pills={netflixPills}
           thematic={thematic}
           title={title}
@@ -557,6 +583,10 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
           galaxyLogoSrc={galaxyLogoSrc}
           galaxyLogoAlt={galaxyLogoAlt}
           surfacePrefix={edgeOnlinePrefix}
+          catalogChip={catalogChip}
+          catalogSearch={catalogSearch}
+          onCatalogChipChange={setCatalogChip}
+          onCatalogSearchChange={setCatalogSearch}
         />
       ) : null}
       <div className={cn("space-y-12 pb-12", isEdgeOnlineSurface && "hidden md:block")}>
@@ -644,10 +674,21 @@ export function LearnerFormationsPageImpl({ data, orgSlug, surfaceVariant = "def
           </div>
         </section>
 
+        {isEdgeOnlineSurface ? (
+          <div className="border-b border-black/[0.06] bg-white px-4 py-6 sm:px-8 md:px-10">
+            <EdgeOnlineCatalogFilters
+              activeChip={catalogChip}
+              searchQuery={catalogSearch}
+              onChipChange={setCatalogChip}
+              onSearchChange={setCatalogSearch}
+            />
+          </div>
+        ) : null}
+
         <div
           className={`space-y-10 pr-4 md:pr-10 ${contentShift} ${isEdgeOnlineSurface ? "bg-white pl-4 sm:pl-6 md:pl-8" : ""}`}
         >
-          {rows.map((row) => (
+          {(isEdgeOnlineSurface ? filteredRows : rows).map((row) => (
             <FormationsSliderClient
               key={row.title}
               title={row.title}

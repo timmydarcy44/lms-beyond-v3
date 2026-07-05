@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { edgeOnlinePublicHref } from "@/lib/edge-online-public-path";
@@ -8,7 +9,6 @@ import { cn } from "@/lib/utils";
 
 import { useOptionalEdgeOnlineHrefPrefix } from "./edge-online-href-context";
 
-/** Ordre : Formations en premier, puis Parcours, Profil, etc. */
 const NAV_ITEMS = [
   { href: "/", label: "Formations" },
   { href: "/parcours", label: "Parcours" },
@@ -29,16 +29,26 @@ function isNavActive(href: string, pathname: string | null): boolean {
   return p === href || p.startsWith(`${href}/`);
 }
 
-/**
- * Menu type Netflix : fixé en overlay sur le hero, fond transparent (léger dégradé pour lisibilité).
- */
 export function EdgeOnlineTopNav() {
   const pathname = usePathname();
   const prefix = useOptionalEdgeOnlineHrefPrefix();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <header
-      className="pointer-events-none fixed inset-x-0 top-0 z-[100] border-b border-black/[0.06] bg-[#0a0a0a] pb-3 pt-[max(0.65rem,env(safe-area-inset-top))]"
+      className={cn(
+        "pointer-events-none fixed inset-x-0 top-0 z-[100] pb-3 pt-[max(0.65rem,env(safe-area-inset-top))] transition-all duration-300 ease-out",
+        scrolled
+          ? "border-b border-white/10 bg-black/72 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+          : "border-b border-transparent bg-transparent",
+      )}
       aria-label="Navigation"
     >
       <div className="pointer-events-auto mx-auto flex w-full max-w-[1920px] justify-center px-3 sm:px-5">
@@ -54,7 +64,7 @@ export function EdgeOnlineTopNav() {
                 href={edgeOnlinePublicHref(it.href, prefix)}
                 className={cn(
                   "shrink-0 rounded-md px-2 py-2 text-[13px] font-medium tracking-wide transition sm:px-3 sm:text-sm",
-                  "drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]",
+                  scrolled ? "" : "drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]",
                   active ? "text-white" : "text-white/80 hover:text-white",
                 )}
               >

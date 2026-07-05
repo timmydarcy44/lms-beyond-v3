@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import type { PublicProfileEarnedBadge } from "@/lib/openbadges/public-profile-earned-badges";
 import { PublicProfileBadgeOverlay } from "@/components/public-profile/public-profile-badge-overlay";
+import { PublicSkillCard } from "@/components/public-profile/public-skill-card";
+import { PublicSkillAnalysisModal } from "@/components/public-profile/public-skill-analysis-modal";
+import { EdgeReliabilityBadge } from "@/components/public-profile/edge-reliability-badge";
+import type { PublicSkillCardData } from "@/lib/hard-skills/skill-validation-analysis";
 import { ProfileSectionStack } from "@/components/profile/profile-section-stack";
 import { sanitizeProfileAnalysisTone } from "@/lib/learner/profile-analysis-tone";
 import {
@@ -78,7 +82,9 @@ type Props = {
   onCopyLink: () => void;
   experiences: Experience[];
   diplomas: Diploma[];
-  hardSkillEntries: HardSkillEntry[];
+  hardSkillEntries?: HardSkillEntry[];
+  publicSkillCards?: PublicSkillCardData[];
+  edgeReliabilityIndex?: number;
   stackTools: string[];
   toolLogoResolver: (label: string) => string | null;
   earnedOpenBadges?: PublicProfileEarnedBadge[];
@@ -105,13 +111,30 @@ export function EdgePublicProfileView({
   onCopyLink,
   experiences,
   diplomas,
-  hardSkillEntries,
+  hardSkillEntries = [],
+  publicSkillCards = [],
+  edgeReliabilityIndex = 0,
   stackTools,
   toolLogoResolver,
   earnedOpenBadges = [],
   showBadges = true,
 }: Props) {
   const [selectedBadge, setSelectedBadge] = useState<PublicProfileEarnedBadge | null>(null);
+  const [analysisSkill, setAnalysisSkill] = useState<PublicSkillCardData | null>(null);
+
+  const skillCards =
+    publicSkillCards.length > 0
+      ? publicSkillCards
+      : hardSkillEntries.map((s) => ({
+          name: s.name,
+          category: "Compétence",
+          declaredLevel: s.level as PublicSkillCardData["declaredLevel"],
+          estimatedLevel: s.level as PublicSkillCardData["estimatedLevel"],
+          status: s.validated ? ("validated" as const) : ("declared" as const),
+          statusLabel: s.validated ? "Validée" : "Déclarée",
+          confidenceScore: null,
+          hasAnalysis: false,
+        }));
 
   const sanitizedPresentation = presentation ? sanitizeProfileAnalysisTone(presentation) : "";
   const sanitizedCorrelatedAnalysis = correlatedAnalysis
@@ -145,7 +168,7 @@ export function EdgePublicProfileView({
   };
 
   const competencesSection =
-    stackTools.length === 0 && hardSkillEntries.length === 0 ? (
+    stackTools.length === 0 && skillCards.length === 0 ? (
       <p className="text-sm text-black/50">Aucune compétence renseignée.</p>
     ) : (
       <>
@@ -163,18 +186,15 @@ export function EdgePublicProfileView({
               </span>
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-black/50">Stack technique non renseignée.</p>
-        )}
-        {hardSkillEntries.length ? (
-          <div className={`flex flex-wrap gap-2 ${stackTools.length ? "mt-4" : ""}`}>
-            {hardSkillEntries.map((skill) => (
-              <span
+        ) : null}
+        {skillCards.length ? (
+          <div className={`grid gap-4 sm:grid-cols-2 ${stackTools.length ? "mt-6" : ""}`}>
+            {skillCards.map((skill) => (
+              <PublicSkillCard
                 key={skill.name}
-                className="rounded-full border border-black/10 bg-[#fafafa] px-3 py-1.5 text-xs font-medium text-black/70"
-              >
-                {skill.name} · {skill.level}
-              </span>
+                skill={skill}
+                onViewAnalysis={() => setAnalysisSkill(skill)}
+              />
             ))}
           </div>
         ) : null}
@@ -292,6 +312,11 @@ export function EdgePublicProfileView({
                     {nameLine}
                   </h1>
                   <p className="mt-1 text-sm text-black/50">{displayTitle}</p>
+                  {edgeReliabilityIndex > 0 ? (
+                    <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#FF3B30]/20 bg-[#FF3B30]/5 px-3 py-1.5 text-xs font-semibold text-[#FF3B30]">
+                      Indice de fiabilité EDGE · {edgeReliabilityIndex} %
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -426,7 +451,7 @@ export function EdgePublicProfileView({
               />
             </motion.section>
 
-            {(hardSkillEntries.length > 0 ||
+            {(skillCards.length > 0 ||
               stackTools.length > 0 ||
               experiences.length > 0 ||
               diplomas.length > 0) && (
@@ -452,6 +477,9 @@ export function EdgePublicProfileView({
             className="h-fit space-y-4 lg:sticky lg:top-8 print:hidden"
           >
             <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_12px_48px_rgba(255,59,48,0.08)]">
+              {edgeReliabilityIndex > 0 ? (
+                <EdgeReliabilityBadge score={edgeReliabilityIndex} className="mb-5 border-0 bg-transparent p-0 shadow-none" />
+              ) : null}
               <h3 className="text-base font-semibold text-[#0a0a0a]">Je suis recruteur</h3>
               <p className="mt-2 text-sm text-black/55">
                 Découvrez notre système de matching et contactez ce profil.
@@ -478,6 +506,10 @@ export function EdgePublicProfileView({
           </motion.aside>
         </div>
       </div>
+
+      {analysisSkill ? (
+        <PublicSkillAnalysisModal skill={analysisSkill} onClose={() => setAnalysisSkill(null)} />
+      ) : null}
 
       {selectedBadge ? (
         <PublicProfileBadgeOverlay badge={selectedBadge} onClose={() => setSelectedBadge(null)} />

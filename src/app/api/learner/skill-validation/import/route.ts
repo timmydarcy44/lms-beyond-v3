@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateJSON } from "@/lib/ai/openai-client";
+import {
+  parseSkillAnalysisApiResult,
+  SKILL_ANALYSIS_JSON_SHAPE,
+} from "@/lib/hard-skills/skill-validation-analysis";
 import { sendSkillValidationEmails } from "@/lib/hard-skills/send-skill-validation-emails";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -33,18 +37,14 @@ Contenu / description :
 ${documentExcerpt || "—"}
 
 Réponds en JSON :
-{
-  "confidenceScore": 0-100,
-  "verdict": "validated" | "pending" | "insufficient" | "expert_needed",
-  "analysis": "analyse courte",
-  "opinion": "avis EDGE",
-  "badgeSuggested": true/false
-}`;
+${SKILL_ANALYSIS_JSON_SHAPE}`;
 
     const result = await generateJSON(prompt);
     if (!result?.verdict) {
       return NextResponse.json({ error: "Analyse impossible" }, { status: 500 });
     }
+
+    const parsed = parseSkillAnalysisApiResult(result as Record<string, unknown>, level);
 
     const service = getServiceRoleClient();
     const profileRes = await (service ?? supabase)
@@ -60,17 +60,11 @@ Réponds en JSON :
       firstName,
       email,
       skillName,
-      verdict: String(result.verdict) as "validated" | "pending" | "insufficient" | "expert_needed",
+      verdict: parsed.verdict,
       sendProofReceived: true,
     });
 
-    return NextResponse.json({
-      confidenceScore: Number(result.confidenceScore) || 0,
-      verdict: result.verdict,
-      analysis: String(result.analysis ?? ""),
-      opinion: String(result.opinion ?? ""),
-      badgeSuggested: Boolean(result.badgeSuggested),
-    });
+    return NextResponse.json(parsed);
   } catch (error) {
     console.error("[skill-validation/import]", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

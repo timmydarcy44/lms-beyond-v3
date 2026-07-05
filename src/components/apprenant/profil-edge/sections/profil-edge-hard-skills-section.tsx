@@ -30,15 +30,13 @@ import {
 } from "@/lib/hard-skills/hard-skills-portfolio";
 import type { SkillValidationSession, SkillValidationVerdict } from "@/lib/hard-skills/skill-validation";
 import { verdictToProofLevel } from "@/lib/hard-skills/skill-validation";
+import {
+  buildValidationSessionFromAnalysis,
+  type SkillAnalysisApiResult,
+} from "@/lib/hard-skills/skill-validation-analysis";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type AnalysisPayload = {
-  confidenceScore: number;
-  verdict: SkillValidationVerdict;
-  analysis: string;
-  opinion: string;
-  badgeSuggested?: boolean;
-};
+type AnalysisPayload = SkillAnalysisApiResult;
 
 type PendingAction =
   | { mode: "add-catalog"; entry: HardSkillCatalogEntry }
@@ -128,20 +126,17 @@ export function ProfilEdgeHardSkillsSection() {
     qa?: { questions: string[]; answers: string[] },
   ) => {
     const existing = metadata[skillName];
-    const validation: SkillValidationSession = {
+    const declaredLevel = existing?.level ?? "Intermédiaire";
+    const validation = buildValidationSessionFromAnalysis({
       method,
-      status: "analyzed",
-      verdict: analysis.verdict,
-      confidenceScore: analysis.confidenceScore,
-      analysis: analysis.analysis,
-      opinion: analysis.opinion,
+      declaredLevel: declaredLevel as HardSkillLevel,
+      analysis,
       questions: qa?.questions,
       answers: qa?.answers,
       proofUrl: proof?.url,
       proofNote: proof?.note,
-      analyzedAt: new Date().toISOString(),
-      badgeSuggested: analysis.badgeSuggested,
-    };
+      previous: existing?.validation,
+    });
     const record = buildHardSkillRecord(skillName, {
       ...existing,
       proof: proof ?? existing?.proof,

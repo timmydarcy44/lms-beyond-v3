@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 function ProofLevelChip({ level }: { level: LearnerHardSkillRecord["proofLevel"] }) {
   const config = PROOF_LEVEL_CHIP[level];
-  const label = config.locked ? config.label : config.label;
+  const label = config.label;
   return (
     <span className={cn("inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium", config.className)}>
       {label}

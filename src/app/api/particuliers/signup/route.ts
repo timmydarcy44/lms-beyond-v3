@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendParticulierConfirmationLink } from "@/lib/particuliers/send-confirmation-link";
+import { sendParticulierAdminSignupNotification } from "@/lib/particuliers/send-admin-signup-notification";
 import { upsertParticulierProfile } from "@/lib/particuliers/upsert-particulier-profile";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -101,6 +102,25 @@ export async function POST(request: NextRequest) {
     if (!profileResult.ok) {
       console.error("[particuliers/signup] profile error:", profileResult.error);
       return NextResponse.json({ error: profileResult.error }, { status: 500 });
+    }
+
+    const { data: createdProfile } = await supabase
+      .from("profiles")
+      .select("created_at")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const adminNotify = await sendParticulierAdminSignupNotification(request, {
+      userId,
+      firstName,
+      lastName,
+      email,
+      objectif: objectif || null,
+      registeredAt: createdProfile?.created_at ?? new Date().toISOString(),
+    });
+
+    if (!adminNotify.ok) {
+      console.error("[particuliers/signup] admin notification error:", adminNotify.error);
     }
 
     const publicSlug = slugify(`${firstName} ${lastName}` || email.split("@")[0] || userId);

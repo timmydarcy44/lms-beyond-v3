@@ -18,12 +18,14 @@ describe("profil-edge-maturity", () => {
         city: "Paris",
         avatar_url: "https://example.com/a.jpg",
         professional_project: {
-          objectif: "CDI",
-          metier_vise: "Commercial",
+          metier_recherche: "Commercial",
           secteur: "Immobilier",
-          mobilite: "Locale",
+          type_contrat: "CDI",
+          niveau_experience: "3 ans",
           disponibilite: "Immédiate",
+          mobilite: "Locale",
         },
+        type_profil: "emploi",
         hard_skills: [],
       },
       hasDisc: true,
@@ -52,12 +54,14 @@ describe("profil-edge-maturity", () => {
     expect(
       isProfessionalProjectComplete(
         parseProfessionalProject({
-          objectif: "x",
-          metier_vise: "y",
-          secteur: "z",
-          mobilite: "a",
-          disponibilite: "b",
+          metier_recherche: "Commercial",
+          secteur: "Immobilier",
+          type_contrat: "CDI",
+          niveau_experience: "Junior",
+          disponibilite: "Immédiate",
+          mobilite: "Locale",
         }),
+        "emploi",
       ),
     ).toBe(true);
   });

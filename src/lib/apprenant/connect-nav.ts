@@ -22,8 +22,6 @@ import {
 
   ClipboardList,
 
-  Target,
-
 } from "lucide-react";
 
 
@@ -44,7 +42,6 @@ const PARCOURS_HREF = "/dashboard/apprenant/parcours";
 export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNavItem[] {
   const items: ApprenantNavItem[] = [
     { label: "Mon évolution", href: "/dashboard/apprenant", icon: LayoutDashboard },
-    { label: "Mon objectif", href: "/dashboard/apprenant/objectif", icon: Target },
     { label: "Mon Profil EDGE", href: "/dashboard/apprenant/profil-comportemental", icon: UserCircle },
     { label: "Mes résultats", href: "/dashboard/apprenant/profil", icon: Award },
     { label: "Mes badges", href: "/dashboard/apprenant/badges", icon: Award },

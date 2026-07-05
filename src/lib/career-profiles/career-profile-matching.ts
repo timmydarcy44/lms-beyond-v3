@@ -25,9 +25,13 @@ export type CareerMatchingResult = {
   compatibilityScore: number;
   strengths: string[];
   gaps: string[];
+  unevaluated: string[];
   skillTable: CareerSkillRow[];
   actionPlanAxes: string[];
 };
+
+/** Score numérique minimal pour classer une compétence en « Force » (niveau Bon et au-dessus). */
+export const CAREER_STRENGTH_THRESHOLD = 72;
 
 const CAREER_SOFT_TO_TEST: Record<string, string[]> = {
   "écoute active": ["Écoute active"],
@@ -146,9 +150,26 @@ function diplomaMentionsSkill(skill: string, diplomas: Diplome[]): boolean {
   });
 }
 
+function rowToNumericScore(row: CareerSkillRow): number | null {
+  if (row.userLevel === "Non évaluée" || row.userLevel === "Non renseigné") return null;
+  if (row.userLevel === "Excellent") return 95;
+  if (row.userLevel === "Très bon") return 85;
+  if (row.userLevel === "Bon") return 72;
+  if (row.userLevel === "Moyen") return 55;
+  if (row.userLevel === "À renforcer") return 35;
+  return null;
+}
+
 function scoreToPercent(scores: number[]): number {
   if (!scores.length) return 0;
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+}
+
+function classifySkillRow(row: CareerSkillRow): "strength" | "gap" | "unevaluated" {
+  const score = rowToNumericScore(row);
+  if (score === null) return "unevaluated";
+  if (score >= CAREER_STRENGTH_THRESHOLD) return "strength";
+  return "gap";
 }
 
 export function analyzeCareerMatching(params: {
@@ -208,27 +229,20 @@ export function analyzeCareerMatching(params: {
     };
   });
 
-  const rowScores = skillTable.map((row) => {
-    if (row.userLevel === "Excellent") return 95;
-    if (row.userLevel === "Très bon") return 85;
-    if (row.userLevel === "Bon") return 72;
-    if (row.userLevel === "Moyen") return 55;
-    if (row.userLevel === "À renforcer") return 35;
-    if (row.userLevel === "Non évaluée") return 40;
-    return 20;
-  });
+  const rowScores = skillTable.map((row) => rowToNumericScore(row) ?? 20);
 
   const compatibilityScore = scoreToPercent(rowScores.length ? rowScores : [base.score]);
 
-  const strengths = skillTable
-    .filter((r) => r.tone === "green" && r.userLevel !== "Non évaluée" && r.userLevel !== "Non renseigné")
-    .map((r) => r.skill)
-    .slice(0, 6);
+  const strengths: string[] = [];
+  const gaps: string[] = [];
+  const unevaluated: string[] = [];
 
-  const gaps = skillTable
-    .filter((r) => r.tone === "red" || r.tone === "orange" || r.userLevel === "Non renseigné")
-    .map((r) => r.skill)
-    .slice(0, 8);
+  for (const row of skillTable) {
+    const bucket = classifySkillRow(row);
+    if (bucket === "strength") strengths.push(row.skill);
+    else if (bucket === "gap") gaps.push(row.skill);
+    else unevaluated.push(row.skill);
+  }
 
   const actionPlanAxes = gaps.slice(0, 3).map((s) => {
     const norm = s.charAt(0).toUpperCase() + s.slice(1);
@@ -249,12 +263,13 @@ export function analyzeCareerMatching(params: {
 
   return {
     compatibilityScore,
-    strengths: strengths.length ? strengths : base.profileStrengths,
-    gaps: gaps.length ? gaps : base.axesToReinforce,
+    strengths,
+    gaps,
+    unevaluated,
     skillTable,
     actionPlanAxes: actionPlanAxes.length
       ? actionPlanAxes
-      : base.axesToReinforce.slice(0, 3).map((s) => `Travailler ${s.toLowerCase()}.`),
+      : gaps.slice(0, 3).map((s) => `Travailler ${s.toLowerCase()}.`),
   };
 }
 

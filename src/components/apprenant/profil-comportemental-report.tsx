@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Award, Lock } from "lucide-react";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
-import { CareerProfilePicker } from "@/components/apprenant/career-profile-picker";
 import { ProfilEdgeMaturityGauge } from "@/components/apprenant/profil-edge/profil-edge-maturity-gauge";
 import { ProfilEdgeMatchingSection } from "@/components/apprenant/profil-edge/profil-edge-matching-section";
 import { ProfilEdgeObjectiveCard } from "@/components/apprenant/profil-edge/profil-edge-objective-card";
+import { ProfilEdgeProfileBlocks } from "@/components/apprenant/profil-edge/profil-edge-profile-blocks";
 import {
   analyzeCareerMatching,
   buildDynamicActionPlan,
@@ -20,10 +20,15 @@ import { EDGE_PARTICULIER_COACHING } from "@/lib/particulier/coaching-config";
 import {
   computeProfilEdgeMaturity,
   parseProfessionalProject,
+  PROFIL_EDGE_SECTION_HREFS,
   type Diplome,
   type ExperiencePro,
   type LearnerHardSkillMeta,
 } from "@/lib/particulier/profil-edge-maturity";
+import {
+  extractCareerTitleFromProject,
+  mergeObjectiveDetailsIntoProject,
+} from "@/lib/particulier/professional-project-fields";
 import { buildProfilEdgeExplorations, isProfilEdgeComplete } from "@/lib/particulier/profil-edge-progress";
 import {
   APPRENANT_CARD_BODY,
@@ -32,6 +37,17 @@ import {
   CONNECT_BTN_SECONDARY,
 } from "@/lib/apprenant/connect-nav";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
+  try {
+    const careerRes = await fetch(`/api/career-profiles/search?slug=${encodeURIComponent(slug)}`);
+    const careerJson = await careerRes.json();
+    if (careerRes.ok && careerJson.profile) return careerJson.profile as CareerProfile;
+  } catch {
+    /* fallback static */
+  }
+  return getCareerProfileBySlug(slug) ?? null;
+}
 
 export function ProfilComportementalReport() {
   const supabase = createSupabaseBrowserClient();
@@ -43,7 +59,6 @@ export function ProfilComportementalReport() {
   const [softSkillsScores, setSoftSkillsScores] = useState<Record<string, number> | null>(null);
   const [badgeAwarded, setBadgeAwarded] = useState(false);
   const [badgeName, setBadgeName] = useState("Profil comportemental EDGE");
-  const [targetCareerSlug, setTargetCareerSlug] = useState<string | null>(null);
   const [selectedCareer, setSelectedCareer] = useState<CareerProfile | null>(null);
   const [professionalProject, setProfessionalProject] = useState(parseProfessionalProject(null));
   const [hardSkills, setHardSkills] = useState<string[]>([]);
@@ -51,6 +66,7 @@ export function ProfilComportementalReport() {
   const [experiences, setExperiences] = useState<ExperiencePro[]>([]);
   const [diplomas, setDiplomas] = useState<Diplome[]>([]);
   const [profileRow, setProfileRow] = useState<Record<string, unknown>>({});
+  const [typeProfil, setTypeProfil] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data: userData } = await supabase.auth.getUser();
@@ -61,7 +77,7 @@ export function ProfilComportementalReport() {
       supabase
         .from("profiles")
         .select(
-          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, cross_profile_completion, professional_project, hard_skills, skills_metadata",
+          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata",
         )
         .eq("id", uid)
         .maybeSingle(),
@@ -73,9 +89,16 @@ export function ProfilComportementalReport() {
     ]);
 
     const profile = profileRes.data;
+    const objectiveDetails = (profile?.objective_details as Record<string, string>) ?? {};
+    const project = mergeObjectiveDetailsIntoProject(
+      profile?.type_profil,
+      parseProfessionalProject(profile?.professional_project),
+      objectiveDetails,
+    );
     setProfileRow((profile as Record<string, unknown>) ?? {});
+    setTypeProfil(profile?.type_profil ? String(profile.type_profil) : null);
     setFirstName(String(profile?.first_name ?? "").trim());
-    setProfessionalProject(parseProfessionalProject(profile?.professional_project));
+    setProfessionalProject(project);
     setHardSkills(Array.isArray(profile?.hard_skills) ? (profile.hard_skills as string[]) : []);
     setSkillsMetadata((profile?.skills_metadata as Record<string, LearnerHardSkillMeta>) ?? {});
 
@@ -113,19 +136,8 @@ export function ProfilComportementalReport() {
     );
 
     const slug = profile?.target_career_slug ? String(profile.target_career_slug) : null;
-    setTargetCareerSlug(slug);
     if (slug) {
-      try {
-        const careerRes = await fetch(`/api/career-profiles/search?slug=${encodeURIComponent(slug)}`);
-        const careerJson = await careerRes.json();
-        if (careerRes.ok && careerJson.profile) {
-          setSelectedCareer(careerJson.profile as CareerProfile);
-        } else {
-          setSelectedCareer(getCareerProfileBySlug(slug) ?? null);
-        }
-      } catch {
-        setSelectedCareer(getCareerProfileBySlug(slug) ?? null);
-      }
+      setSelectedCareer(await loadCareerBySlug(slug));
     } else {
       setSelectedCareer(null);
     }
@@ -174,6 +186,7 @@ export function ProfilComportementalReport() {
       computeProfilEdgeMaturity({
         profile: {
           ...profileRow,
+          type_profil: typeProfil,
           hard_skills: hardSkills,
           professional_project: professionalProject,
         },
@@ -185,6 +198,7 @@ export function ProfilComportementalReport() {
       }),
     [
       profileRow,
+      typeProfil,
       hardSkills,
       professionalProject,
       discScores,
@@ -219,10 +233,7 @@ export function ProfilComportementalReport() {
     });
   }, [firstName, selectedCareer, matching, discScores]);
 
-  const handleCareerResolved = (slug: string, profile: CareerProfile) => {
-    setTargetCareerSlug(slug);
-    setSelectedCareer(profile);
-  };
+  const careerTitle = selectedCareer?.title ?? extractCareerTitleFromProject(typeProfil, professionalProject);
 
   if (loading) {
     return <p className="text-sm text-white/50">Chargement de votre Profil EDGE…</p>;
@@ -251,19 +262,31 @@ export function ProfilComportementalReport() {
 
       <ProfilEdgeMaturityGauge maturity={maturity} />
 
-      <ProfilEdgeObjectiveCard project={professionalProject} careerTitle={selectedCareer?.title} />
+      <ProfilEdgeObjectiveCard project={professionalProject} typeProfil={typeProfil} careerTitle={careerTitle} />
 
-      <section className={APPRENANT_CARD_BODY}>
-        <CareerProfilePicker
-          value={targetCareerSlug}
-          selectedTitle={selectedCareer?.title}
-          onResolved={(slug, profile) => handleCareerResolved(slug, profile)}
-        />
-      </section>
+      {!selectedCareer && extractCareerTitleFromProject(typeProfil, professionalProject) ? (
+        <section className={APPRENANT_CARD_BODY}>
+          <p className="text-sm text-white/60">
+            Le métier « {extractCareerTitleFromProject(typeProfil, professionalProject)} » n&apos;a pas encore été
+            analysé.{" "}
+            <Link href={PROFIL_EDGE_SECTION_HREFS.projet} className="text-[#3D7BFF] hover:underline">
+              Complétez votre projet professionnel
+            </Link>{" "}
+            pour activer l&apos;analyse de compatibilité.
+          </p>
+        </section>
+      ) : null}
 
       {matching && selectedCareer ? (
         <ProfilEdgeMatchingSection careerTitle={selectedCareer.title} matching={matching} actionPlan={actionPlan} />
       ) : null}
+
+      <ProfilEdgeProfileBlocks
+        experiencesCount={experiences.length}
+        diplomasCount={diplomas.length}
+        hardSkills={hardSkills}
+        skillsMetadata={skillsMetadata}
+      />
 
       <section className={APPRENANT_CARD_BODY}>
         <div className="flex items-center gap-3">
@@ -274,14 +297,22 @@ export function ProfilComportementalReport() {
           )}
           <div>
             <p className="text-xs uppercase tracking-wider text-white/40">Badge Profil comportemental EDGE</p>
-            <p className="font-semibold text-white">
-              {profilTestsComplete && badgeAwarded ? badgeName : "Aucun badge disponible."}
-            </p>
+            {!profilTestsComplete ? (
+              <>
+                <p className="font-semibold text-white">Profil EDGE en cours</p>
+                <p className="mt-1 text-sm text-white/55">Aucun badge disponible pour le moment.</p>
+              </>
+            ) : badgeAwarded ? (
+              <p className="font-semibold text-white">{badgeName}</p>
+            ) : (
+              <p className="font-semibold text-white">Aucun badge disponible pour le moment.</p>
+            )}
           </div>
         </div>
         {!profilTestsComplete ? (
           <p className="mt-3 text-sm text-white/50">
-            Le badge est délivré uniquement après les 3 tests EDGE : comportemental, soft skills et profil psychologique.
+            Le badge est délivré uniquement après les 3 tests EDGE : profil comportemental, soft skills et
+            motivation / fonctionnement.
           </p>
         ) : badgeAwarded ? (
           <Link href="/dashboard/apprenant/badges" className={`${CONNECT_BTN_SECONDARY} mt-4 w-fit`}>

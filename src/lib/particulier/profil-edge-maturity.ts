@@ -1,10 +1,9 @@
-export type ProfessionalProject = {
-  objectif?: string;
-  metier_vise?: string;
-  secteur?: string;
-  mobilite?: string;
-  disponibilite?: string;
-};
+import {
+  isProfessionalProjectCompleteForType,
+  mergeObjectiveDetailsIntoProject,
+} from "@/lib/particulier/professional-project-fields";
+
+export type ProfessionalProject = Record<string, string | undefined>;
 
 export type ProfilEdgeMaturityBlockId =
   | "identite"
@@ -32,8 +31,12 @@ export type HardSkillLevel = "Débutant" | "Intermédiaire" | "Confirmé" | "Exp
 
 export type LearnerHardSkillMeta = {
   level: HardSkillLevel;
-  validated?: boolean;
-  source?: "manual" | "badge";
+  selfAssessment?: number;
+  category?: string;
+  referentialCategory?: string;
+  proofLevel?: "declared" | "justified" | "evaluated" | "certified";
+  proof?: { type: "link" | "document" | "portfolio" | "cv" | "other"; url?: string; note?: string };
+  source?: "catalog" | "manual" | "badge";
 };
 
 export type ExperiencePro = {
@@ -76,16 +79,21 @@ function filled(value: unknown): boolean {
 export function parseProfessionalProject(raw: unknown): ProfessionalProject {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const row = raw as Record<string, unknown>;
-  return {
-    objectif: filled(row.objectif) ? String(row.objectif).trim() : undefined,
-    metier_vise: filled(row.metier_vise) ? String(row.metier_vise).trim() : undefined,
-    secteur: filled(row.secteur) ? String(row.secteur).trim() : undefined,
-    mobilite: filled(row.mobilite) ? String(row.mobilite).trim() : undefined,
-    disponibilite: filled(row.disponibilite) ? String(row.disponibilite).trim() : undefined,
-  };
+  const project: ProfessionalProject = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (filled(value)) project[key] = String(value).trim();
+  }
+  return project;
 }
 
-export function isProfessionalProjectComplete(project: ProfessionalProject): boolean {
+export function isProfessionalProjectComplete(
+  project: ProfessionalProject,
+  typeProfil?: string | null,
+): boolean {
+  if (typeProfil) {
+    return isProfessionalProjectCompleteForType(typeProfil, project);
+  }
+  // Rétrocompatibilité ancien format générique
   return (
     filled(project.objectif) &&
     filled(project.metier_vise) &&
@@ -125,6 +133,8 @@ export function computeProfilEdgeMaturity(input: {
     city?: string | null;
     avatar_url?: string | null;
     professional_project?: unknown;
+    type_profil?: string | null;
+    objective_details?: unknown;
     hard_skills?: unknown;
   };
   hasDisc: boolean;
@@ -133,13 +143,17 @@ export function computeProfilEdgeMaturity(input: {
   experiencesCount: number;
   diplomasCount: number;
 }): ProfilEdgeMaturity {
-  const project = parseProfessionalProject(input.profile.professional_project);
+  const project = mergeObjectiveDetailsIntoProject(
+    input.profile.type_profil,
+    parseProfessionalProject(input.profile.professional_project),
+    (input.profile.objective_details as Record<string, string>) ?? null,
+  );
   const hardSkills = Array.isArray(input.profile.hard_skills)
     ? (input.profile.hard_skills as unknown[]).map(String).filter((s) => s.trim())
     : [];
 
   const identityComplete = isIdentityComplete(input.profile);
-  const projectComplete = isProfessionalProjectComplete(project);
+  const projectComplete = isProfessionalProjectComplete(project, input.profile.type_profil);
   const testsCount = [input.hasDisc, input.hasSoftSkills, input.hasIdmc].filter(Boolean).length;
   const testsPercent = testsCount * 10;
   const experiencesComplete = input.experiencesCount > 0;

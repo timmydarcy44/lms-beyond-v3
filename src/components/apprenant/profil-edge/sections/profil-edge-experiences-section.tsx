@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { ProfilEdgeSectionShell } from "@/components/apprenant/profil-edge/profil-edge-section-shell";
+import { useProfilEdgeSaveReturn } from "@/components/apprenant/profil-edge/use-profil-edge-save-return";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 import type { ExperiencePro } from "@/lib/particulier/profil-edge-maturity";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -32,6 +33,7 @@ function mapRow(row: Record<string, unknown>): ExperiencePro {
 
 export function ProfilEdgeExperiencesSection() {
   const supabase = createSupabaseBrowserClient();
+  const { savedMessage, finishSave } = useProfilEdgeSaveReturn();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<ExperiencePro[]>([]);
@@ -93,6 +95,7 @@ export function ProfilEdgeExperiencesSection() {
     await load();
     resetForm();
     setSaving(false);
+    finishSave();
   };
 
   const startEdit = (exp: ExperiencePro) => {
@@ -188,6 +191,7 @@ export function ProfilEdgeExperiencesSection() {
           </button>
         )}
       </div>
+      {savedMessage ? <p className="mt-4 text-sm text-emerald-400">{savedMessage}</p> : null}
     </ProfilEdgeSectionShell>
   );
 }

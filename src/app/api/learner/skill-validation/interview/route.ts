@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateJSON } from "@/lib/ai/openai-client";
+import { generateJSON, getOpenAIClient } from "@/lib/ai/openai-client";
+import { buildFallbackInterviewQuestions } from "@/lib/hard-skills/interview-fallback-questions";
 import { interviewQuestionCount } from "@/lib/hard-skills/skill-validation";
 import {
   parseSkillAnalysisApiResult,
@@ -27,22 +28,40 @@ export async function POST(request: NextRequest) {
 
     if (action === "questions") {
       const count = interviewQuestionCount(level);
+
+      if (!getOpenAIClient()) {
+        return NextResponse.json({
+          questions: buildFallbackInterviewQuestions(skillName, level, count, careerTitle),
+          source: "fallback",
+        });
+      }
+
       const prompt = `Tu es un expert EDGE en validation de compétences professionnelles.
 Génère exactement ${count} questions d'entretien expérientiel (PAS de QCM) pour évaluer la compétence "${skillName}" au niveau "${level}"${careerTitle ? ` pour le métier "${careerTitle}"` : ""}.
 
 Chaque question doit explorer une expérience concrète : projets, méthodes, outils, résultats, difficultés.
 Réponds en JSON : { "questions": ["question 1", ...] }`;
 
-      const result = await generateJSON(prompt);
+      const result = await generateJSON(prompt, {
+        type: "object",
+        properties: {
+          questions: { type: "array", items: { type: "string" } },
+        },
+        required: ["questions"],
+      });
+
       const questions = Array.isArray(result?.questions)
         ? result.questions.map(String).filter(Boolean).slice(0, count)
         : [];
 
       if (!questions.length) {
-        return NextResponse.json({ error: "Génération des questions impossible" }, { status: 500 });
+        return NextResponse.json({
+          questions: buildFallbackInterviewQuestions(skillName, level, count, careerTitle),
+          source: "fallback",
+        });
       }
 
-      return NextResponse.json({ questions });
+      return NextResponse.json({ questions, source: "ai" });
     }
 
     if (action === "analyze") {

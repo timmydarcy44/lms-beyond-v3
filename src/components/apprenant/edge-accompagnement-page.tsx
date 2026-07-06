@@ -12,7 +12,7 @@ import {
   getCoachingBookingHref,
   type EdgeAccompagnementOffer,
 } from "@/lib/particulier/coaching-config";
-import { formatSlotLabel, formatEurosFromCents } from "@/lib/particulier/accompagnement-booking";
+import { formatSlotLabel, formatEurosFromCents, PAYMENT_STATUS_LABELS } from "@/lib/particulier/accompagnement-booking";
 import { APPRENANT_CARD_KICKER } from "@/lib/apprenant/connect-nav";
 
 const fadeUp: Variants = {
@@ -162,6 +162,8 @@ export function EdgeAccompagnementPage() {
       selected_slot: string;
       amount_cents: number;
       status: string;
+      payment_status: string;
+      manage_token?: string;
     }>
   >([]);
 
@@ -288,10 +290,20 @@ export function EdgeAccompagnementPage() {
                 <div>
                   <p className="font-medium text-white">{r.offer_name}</p>
                   <p className="mt-1 text-sm capitalize text-white/45">{formatSlotLabel(r.selected_slot)}</p>
+                  {r.manage_token ? (
+                    <Link
+                      href={`/dashboard/accompagnement/gerer/${r.manage_token}`}
+                      className="mt-2 inline-block text-xs text-white/40 underline underline-offset-2 hover:text-white/60"
+                    >
+                      Modifier ou annuler
+                    </Link>
+                  ) : null}
                 </div>
                 <div className="text-sm text-white/50">
                   <p>{formatEurosFromCents(r.amount_cents)}</p>
-                  <p className="text-xs text-emerald-400/80">Confirmée</p>
+                  <p className="text-xs text-emerald-400/80">
+                    {PAYMENT_STATUS_LABELS[r.payment_status as keyof typeof PAYMENT_STATUS_LABELS] ?? r.status}
+                  </p>
                 </div>
               </article>
             ))}

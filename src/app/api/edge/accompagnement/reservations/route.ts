@@ -19,10 +19,9 @@ export async function GET() {
     const { data, error } = await supabase
       .from("edge_accompagnement_reservations")
       .select(
-        "id, offer_slug, offer_name, amount_cents, duration_label, selected_slot, status, payment_status, paid_at, created_at",
+        "id, offer_slug, offer_name, amount_cents, duration_label, selected_slot, status, payment_status, paid_at, created_at, coach_name, manage_token",
       )
       .eq("user_id", user.id)
-      .in("payment_status", ["paid"])
       .order("created_at", { ascending: false })
       .limit(20);
 

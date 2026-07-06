@@ -14,7 +14,20 @@ export type EdgeAccompagnementReservationStatus =
   | "cancelled"
   | "refunded";
 
-export type EdgeAccompagnementPaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type EdgeAccompagnementPaymentStatus =
+  | "pending"
+  | "paid"
+  | "cancelled"
+  | "refunded"
+  | "failed";
+
+export const PAYMENT_STATUS_LABELS: Record<EdgeAccompagnementPaymentStatus, string> = {
+  pending: "Paiement en attente",
+  paid: "Paiement validé",
+  cancelled: "Paiement annulé",
+  refunded: "Paiement remboursé",
+  failed: "Paiement échoué",
+};
 
 export type BookableEdgeOffer = {
   slug: EdgeAccompagnementOfferSlug;

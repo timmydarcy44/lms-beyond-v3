@@ -37,6 +37,11 @@ export function resolveAdminBccEmail(): string | null {
   return admin || "timmydarcy44@gmail.com";
 }
 
+export type EmailAttachment = {
+  filename: string;
+  content: string | Buffer;
+};
+
 export type EmailOptions = {
   to: string | string[];
   subject: string;
@@ -45,6 +50,7 @@ export type EmailOptions = {
   replyTo?: string;
   bcc?: string | string[];
   skipBcc?: boolean;
+  attachments?: EmailAttachment[];
 };
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -80,6 +86,10 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       subject: options.subject,
       html: options.html,
       replyTo: options.replyTo,
+      attachments: options.attachments?.map((a) => ({
+        filename: a.filename,
+        content: typeof a.content === "string" ? Buffer.from(a.content) : a.content,
+      })),
     });
 
     if (result.error) {

@@ -39,6 +39,8 @@ type Props = {
   softSkillsRadar?: Array<{ skill: string; score: number }>;
   onScrollToProfil: () => void;
   onOpenEditProfile?: () => void;
+  /** Masque le hero principal — modules secondaires uniquement */
+  compact?: boolean;
 };
 
 export function ApprenantConnectOverview({
@@ -58,6 +60,7 @@ export function ApprenantConnectOverview({
   softSkillsRadar = [],
   onScrollToProfil,
   onOpenEditProfile,
+  compact = false,
 }: Props) {
   const appShell = useApprenantShell();
   const t = useApprenantPageTokens();
@@ -116,7 +119,9 @@ export function ApprenantConnectOverview({
   const statDividerClass = isJessica ? "h-8 w-px bg-[#D2B48C]/40" : "h-8 w-px bg-white/10";
 
   return (
-    <div className="mb-10 space-y-8">
+    <div className={compact ? "space-y-6" : "mb-10 space-y-8"}>
+      {!compact ? (
+      <>
       <header className={`flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-start sm:justify-between ${headerBorder}`}>
         <div className="space-y-2">
           <p className={t.pageKicker}>Accueil</p>
@@ -216,6 +221,12 @@ export function ApprenantConnectOverview({
           </button>
         </div>
       </section>
+      </>
+      ) : (
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">
+          Explorer votre espace
+        </p>
+      )}
 
       <ApprenantEdgeWalletSection badges={earnedOpenBadges} />
 

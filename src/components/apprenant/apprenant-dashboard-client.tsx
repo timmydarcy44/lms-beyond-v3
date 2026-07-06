@@ -34,6 +34,13 @@ const PersonalizedActionPlanSection = dynamic(
     })),
   { ssr: false },
 );
+const EdgeDashboardGpsContainer = dynamic(
+  () =>
+    import("@/components/apprenant/edge-gps/edge-dashboard-gps-container").then((m) => ({
+      default: m.EdgeDashboardGpsContainer,
+    })),
+  { ssr: false },
+);
 import {
   ApprenantAssessmentResults,
   type DiscScores,
@@ -1275,6 +1282,31 @@ export function ApprenantDashboardClient({
           />
           {initialView === "home" ? (
             <>
+          {!isSalarieSurface && appShell?.variant !== "jessica" ? (
+            <EdgeDashboardGpsContainer
+              profile={(profile ?? null) as Record<string, unknown> | null}
+              discScores={discScores}
+              idmcAxes={idmcAxes}
+              softSkillsRadar={softSkillsRadar}
+              hardSkills={hardSkills}
+              skillsMetadata={skillsMetadata}
+              experiences={experiencesPro as ExperiencePro[]}
+              diplomas={diplomes as Diplome[]}
+              personalizedPlan={personalizedPlan}
+              visibleBadges={visibleOpenBadges}
+              earnedBadgeCount={earnedOpenBadges.length}
+              profileCompletionPercent={profileCompletion.score}
+            />
+          ) : null}
+
+          <section
+            id="dashboard-secondary-modules"
+            className={
+              !isSalarieSurface && appShell?.variant !== "jessica"
+                ? "mt-12 space-y-8 border-t border-white/[0.08] pt-10"
+                : "space-y-8"
+            }
+          >
           <ApprenantConnectOverview
             firstName={firstName}
             greetingWord={greetingWord}
@@ -1292,15 +1324,16 @@ export function ApprenantDashboardClient({
             softSkillsRadar={softSkillsRadar}
             onScrollToProfil={scrollToProfilSection}
             onOpenEditProfile={() => appShell?.openEditProfile()}
+            compact={!isSalarieSurface && appShell?.variant !== "jessica"}
           />
 
               <PersonalizedActionPlanSection
                 plan={personalizedPlan}
                 parcoursHref="/dashboard/apprenant/parcours"
-                className="mt-8"
+                className="opacity-90"
               />
 
-              <div className="mt-6 space-y-6">
+              <div className="space-y-6">
 
                 {profile?.school_id ? (
                   <div className="rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 via-cyan-500/5 to-transparent px-5 py-4 text-sm">
@@ -1332,6 +1365,7 @@ export function ApprenantDashboardClient({
                   </div>
                 ) : null}
               </div>
+          </section>
             </>
           ) : (
             <>

@@ -332,9 +332,9 @@ export function ProfilComportementalReport() {
             <Link href="/dashboard/apprenant/coaching" className={CONNECT_BTN_PRIMARY}>
               Découvrir les formules
             </Link>
-            <a href={getCoachingBookingHref("progression")} className={CONNECT_BTN_SECONDARY}>
+            <Link href={getCoachingBookingHref("progression")} className={CONNECT_BTN_SECONDARY}>
               Réserver un accompagnement
-            </a>
+            </Link>
           </div>
         </section>
       ) : null}

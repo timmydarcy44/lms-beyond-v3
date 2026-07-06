@@ -1,9 +1,18 @@
 /** Accompagnement premium EDGE — contenus et tarifs (particulier). */
 
-export const EDGE_COACHING_BOOKING_URL =
-  process.env.NEXT_PUBLIC_EDGE_COACHING_BOOKING_URL ?? "mailto:contact@edge-lab.fr";
+import {
+  getProgrammeRequestHref,
+  getReservationPageHref,
+  type EdgeAccompagnementOfferSlug,
+} from "@/lib/particulier/accompagnement-booking";
 
 export type EdgeAccompagnementOfferId = "progression" | "simulation" | "programme";
+
+const OFFER_ID_TO_SLUG: Record<EdgeAccompagnementOfferId, EdgeAccompagnementOfferSlug> = {
+  progression: "coaching-progression",
+  simulation: "simulation-professionnelle",
+  programme: "programme-progression",
+};
 
 export type EdgeAccompagnementOffer = {
   id: EdgeAccompagnementOfferId;
@@ -132,14 +141,9 @@ export const EDGE_ACCOMPAGNEMENT_FAQ = [
 ] as const;
 
 export function getCoachingBookingHref(offerId?: EdgeAccompagnementOfferId): string {
-  const base = EDGE_COACHING_BOOKING_URL;
-  if (!offerId || !base.startsWith("mailto:")) {
-    return offerId ? `${base}${base.includes("?") ? "&" : "?"}offre=${offerId}` : base;
-  }
-  const offer = EDGE_ACCOMPAGNEMENT_OFFERS.find((o) => o.id === offerId);
-  const subject = encodeURIComponent(`Accompagnement EDGE — ${offer?.title ?? offerId}`);
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}subject=${subject}`;
+  if (!offerId) return "/dashboard/apprenant/coaching";
+  if (offerId === "programme") return getProgrammeRequestHref();
+  return getReservationPageHref(OFFER_ID_TO_SLUG[offerId]);
 }
 
 /** @deprecated Utiliser EDGE_ACCOMPAGNEMENT_OFFERS — conservé pour imports legacy */

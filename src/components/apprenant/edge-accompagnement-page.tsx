@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion, type Variants } from "framer-motion";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,10 +9,10 @@ import {
   EDGE_ACCOMPAGNEMENT_FAQ,
   EDGE_ACCOMPAGNEMENT_OFFERS,
   EDGE_ACCOMPAGNEMENT_WHY,
-  EDGE_COACHING_BOOKING_URL,
   getCoachingBookingHref,
   type EdgeAccompagnementOffer,
 } from "@/lib/particulier/coaching-config";
+import { formatSlotLabel, formatEurosFromCents } from "@/lib/particulier/accompagnement-booking";
 import { APPRENANT_CARD_KICKER } from "@/lib/apprenant/connect-nav";
 
 const fadeUp: Variants = {
@@ -30,6 +31,7 @@ const CARD =
 
 function OfferCard({ offer }: { offer: EdgeAccompagnementOffer }) {
   const bookingHref = getCoachingBookingHref(offer.id);
+  const isExternal = bookingHref.startsWith("http");
 
   return (
     <motion.article
@@ -100,17 +102,23 @@ function OfferCard({ offer }: { offer: EdgeAccompagnementOffer }) {
         ) : null}
       </div>
 
-      <a
-        href={bookingHref}
-        target={bookingHref.startsWith("http") ? "_blank" : undefined}
-        rel={bookingHref.startsWith("http") ? "noopener noreferrer" : undefined}
-        className={cn(
-          offer.featured ? BTN_PRIMARY : BTN_SECONDARY,
-          "mt-8 w-full sm:w-auto",
-        )}
-      >
-        {offer.ctaLabel}
-      </a>
+      {isExternal ? (
+        <a
+          href={bookingHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(offer.featured ? BTN_PRIMARY : BTN_SECONDARY, "mt-8 w-full sm:w-auto")}
+        >
+          {offer.ctaLabel}
+        </a>
+      ) : (
+        <Link
+          href={bookingHref}
+          className={cn(offer.featured ? BTN_PRIMARY : BTN_SECONDARY, "mt-8 w-full sm:w-auto")}
+        >
+          {offer.ctaLabel}
+        </Link>
+      )}
     </motion.article>
   );
 }
@@ -147,6 +155,25 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 }
 
 export function EdgeAccompagnementPage() {
+  const [reservations, setReservations] = useState<
+    Array<{
+      id: string;
+      offer_name: string;
+      selected_slot: string;
+      amount_cents: number;
+      status: string;
+    }>
+  >([]);
+
+  useEffect(() => {
+    void fetch("/api/edge/accompagnement/reservations")
+      .then((r) => r.json())
+      .then((data: { reservations?: typeof reservations }) => {
+        if (data.reservations) setReservations(data.reservations);
+      })
+      .catch(() => undefined);
+  }, []);
+
   return (
     <div className="relative space-y-20 pb-8 md:space-y-28 md:pb-12">
       {/* Hero */}
@@ -168,14 +195,9 @@ export function EdgeAccompagnementPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3 pt-2">
-          <a
-            href={getCoachingBookingHref("progression")}
-            target={EDGE_COACHING_BOOKING_URL.startsWith("http") ? "_blank" : undefined}
-            rel={EDGE_COACHING_BOOKING_URL.startsWith("http") ? "noopener noreferrer" : undefined}
-            className={BTN_PRIMARY}
-          >
+          <Link href={getCoachingBookingHref("progression")} className={BTN_PRIMARY}>
             Réserver un accompagnement
-          </a>
+          </Link>
           <a href="#formules" className={BTN_SECONDARY}>
             Découvrir les formules
           </a>
@@ -251,6 +273,31 @@ export function EdgeAccompagnementPage() {
           ))}
         </motion.div>
       </section>
+
+      {reservations.length > 0 ? (
+        <section className="space-y-6">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
+              Vos réservations
+            </p>
+            <h2 className="mt-3 text-xl font-semibold tracking-tight text-white">Mon accompagnement</h2>
+          </div>
+          <div className="space-y-3">
+            {reservations.map((r) => (
+              <article key={r.id} className={cn(CARD, "flex flex-col gap-2 p-6 sm:flex-row sm:items-center sm:justify-between")}>
+                <div>
+                  <p className="font-medium text-white">{r.offer_name}</p>
+                  <p className="mt-1 text-sm capitalize text-white/45">{formatSlotLabel(r.selected_slot)}</p>
+                </div>
+                <div className="text-sm text-white/50">
+                  <p>{formatEurosFromCents(r.amount_cents)}</p>
+                  <p className="text-xs text-emerald-400/80">Confirmée</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* FAQ */}
       <section className="space-y-8 md:space-y-10">

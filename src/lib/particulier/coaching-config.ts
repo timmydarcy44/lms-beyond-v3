@@ -1,4 +1,4 @@
-/** Accompagnement premium EDGE — contenus et tarifs (particulier). */
+/** Accompagnement EDGE — contenus et tarifs (particulier). */
 
 import {
   getProgrammeRequestHref,
@@ -8,7 +8,7 @@ import {
 
 export type EdgeAccompagnementOfferId = "membership" | "progression" | "simulation" | "programme";
 
-export type OfferBadge = "Le plus populaire" | "Recommandé" | "Sur mesure";
+export type OfferTier = "principal" | "ponctuel" | "cible" | "longue-duree";
 
 export type OfferIcon = "crown" | "target" | "zap" | "layers";
 
@@ -23,18 +23,14 @@ export type EdgeAccompagnementOffer = {
   price: string;
   priceSuffix?: string;
   duration?: string;
+  tier: OfferTier;
+  tierLabel: string;
   description: string;
-  highlights: string[];
-  includes: string[];
-  includesLabel?: string;
-  examples?: string[];
-  examplesLabel?: string;
-  afterSimulation?: string[];
+  /** Bénéfice principal — affiché en priorité */
+  valueProposition: string;
+  benefits: string[];
   ctaLabel: string;
-  badge?: OfferBadge;
   icon: OfferIcon;
-  featured?: boolean;
-  recommended?: boolean;
 };
 
 export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
@@ -43,47 +39,33 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
     title: "EDGE Membership",
     price: "49 €",
     priceSuffix: "/mois",
-    description:
-      "L'accompagnement continu pour progresser chaque mois — le meilleur rapport valeur/prix pour transformer votre profil EDGE en résultats concrets.",
-    highlights: [
-      "1 coaching individuel / mois inclus",
-      "Analyses & simulations illimitées",
-      "Priorisation IA de vos compétences",
-    ],
-    includes: [
-      "Coaching mensuel 45 min avec un expert EDGE",
-      "Accès prioritaire aux créneaux",
-      "Suivi de progression personnalisé",
-      "Recommandations de parcours EDGE",
-      "Réévaluation des compétences chaque trimestre",
-      "Support par email entre les séances",
+    tier: "principal",
+    tierLabel: "Offre principale",
+    description: "Accompagnement continu pour structurer votre progression professionnelle.",
+    valueProposition: "Un suivi mensuel pour avancer régulièrement sur vos compétences prioritaires.",
+    benefits: [
+      "Coaching individuel chaque mois",
+      "Analyses et simulations régulières",
+      "Recommandations personnalisées selon votre profil EDGE",
     ],
     ctaLabel: "Rejoindre EDGE Membership",
-    badge: "Le plus populaire",
     icon: "crown",
-    featured: true,
-    recommended: true,
   },
   {
     id: "progression",
     title: "Coaching Progression",
     price: "149 €",
     duration: "60 min",
-    description: "Une séance ponctuelle pour construire votre feuille de route de progression.",
-    highlights: [
-      "Analyse complète de votre profil",
-      "Plan d'action 30 jours",
-      "Priorisation des compétences clés",
+    tier: "ponctuel",
+    tierLabel: "Séance ponctuelle",
+    description: "Une séance pour analyser votre profil et définir un plan d'action.",
+    valueProposition: "Clarifier vos priorités et structurer les prochaines étapes.",
+    benefits: [
+      "Analyse de votre profil EDGE",
+      "Priorisation des compétences",
+      "Plan d'action sur 30 jours",
     ],
-    includes: [
-      "Analyse complète de votre profil EDGE",
-      "Priorisation des compétences à développer",
-      "Conseils personnalisés selon votre objectif",
-      "Plan d'action concret sur 30 jours",
-      "Recommandations de parcours EDGE",
-    ],
-    ctaLabel: "Réserver",
-    badge: "Recommandé",
+    ctaLabel: "Réserver une séance",
     icon: "target",
   },
   {
@@ -91,22 +73,16 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
     title: "Simulation Professionnelle",
     price: "179 €",
     duration: "60–90 min",
-    description: "Préparez-vous à une situation professionnelle réelle avec débrief expert.",
-    highlights: [
-      "Mise en situation réaliste",
-      "Débrief détaillé",
-      "Axes de progression ciblés",
+    tier: "cible",
+    tierLabel: "Préparation ciblée",
+    description: "Mise en situation professionnelle avec débrief structuré.",
+    valueProposition: "Vous préparer concrètement à une situation à venir.",
+    benefits: [
+      "Entretien, négociation, prise de parole…",
+      "Débrief avec un expert EDGE",
+      "Axes de progression identifiés",
     ],
-    examples: [
-      "entretien d'embauche",
-      "rendez-vous commercial",
-      "négociation",
-      "management",
-      "prise de parole",
-    ],
-    includes: [],
-    afterSimulation: ["débrief détaillé", "axes de progression", "recommandations EDGE"],
-    ctaLabel: "Réserver",
+    ctaLabel: "Préparer une simulation",
     icon: "zap",
   },
   {
@@ -114,22 +90,16 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
     title: "Programme Progression",
     price: "390 €",
     priceSuffix: "+",
-    description: "Un accompagnement dans la durée pour accélérer votre évolution professionnelle.",
-    highlights: [
-      "Plusieurs séances individuelles",
-      "Suivi personnalisé",
+    tier: "longue-duree",
+    tierLabel: "Accompagnement longue durée",
+    description: "Plusieurs séances sur une période définie, avec suivi entre les rendez-vous.",
+    valueProposition: "Un accompagnement structuré dans la durée.",
+    benefits: [
+      "Séances individuelles planifiées",
+      "Suivi et exercices entre les séances",
       "Réévaluation des compétences",
     ],
-    includesLabel: "Comprend",
-    includes: [
-      "plusieurs séances individuelles",
-      "suivi personnalisé",
-      "exercices entre les séances",
-      "réévaluation des compétences",
-      "parcours EDGE recommandés",
-    ],
-    ctaLabel: "Demander un devis",
-    badge: "Sur mesure",
+    ctaLabel: "Construire un programme",
     icon: "layers",
   },
 ];
@@ -145,48 +115,30 @@ export type ComparisonFeature = {
 export const EDGE_OFFER_COMPARISON: ComparisonFeature[] = [
   { label: "Coaching individuel", membership: "1×/mois", progression: "1 séance", simulation: "—", programme: "Multi-séances" },
   { label: "Analyse profil EDGE", membership: true, progression: true, simulation: true, programme: true },
-  { label: "Plan d'action personnalisé", membership: true, progression: true, simulation: false, programme: true },
+  { label: "Plan d'action", membership: true, progression: true, simulation: false, programme: true },
   { label: "Simulation professionnelle", membership: true, progression: false, simulation: true, programme: true },
   { label: "Suivi dans la durée", membership: true, progression: false, simulation: false, programme: true },
   { label: "Réévaluation compétences", membership: "Trimestrielle", progression: false, simulation: false, programme: true },
-  { label: "Support entre séances", membership: true, progression: false, simulation: false, programme: true },
-  { label: "Rapport qualité/prix", membership: "★★★★★", progression: "★★★", simulation: "★★★", programme: "★★★★" },
 ];
-
-export const EDGE_ACCOMPAGNEMENT_WHY = {
-  title: "Pourquoi être accompagné ?",
-  text: "L'intelligence artificielle identifie vos forces, vos axes de progression et les compétences prioritaires. L'accompagnement humain transforme cette analyse en résultats concrets.",
-  cards: [
-    { emoji: "🎯", title: "Objectif clair", description: "Construire une stratégie adaptée à votre projet." },
-    { emoji: "📈", title: "Progression rapide", description: "Prioriser les compétences à fort impact." },
-    { emoji: "🧠", title: "Mise en pratique", description: "Passer de la théorie à l'action." },
-    { emoji: "🏅", title: "Valorisation", description: "Renforcer votre profil EDGE." },
-  ],
-} as const;
 
 export const EDGE_ACCOMPAGNEMENT_FAQ = [
   {
-    question: "Pourquoi choisir EDGE Membership plutôt qu'une séance ?",
+    question: "Quelle est la différence entre l'analyse EDGE et un accompagnement ?",
     answer:
-      "À 49 €/mois, EDGE Membership inclut un coaching mensuel (valeur 149 €), des analyses illimitées et un suivi continu. C'est le meilleur rapport valeur/prix pour progresser durablement.",
+      "L'analyse EDGE identifie vos compétences, vos écarts et vos priorités à partir de votre profil. L'accompagnement permet d'approfondir ces éléments avec un expert et de définir un plan d'action.",
   },
   {
-    question: "Quelle est la différence entre l'IA EDGE et un coaching ?",
+    question: "Puis-je réserver sans avoir terminé mon profil ?",
     answer:
-      "L'IA EDGE analyse votre profil et identifie vos priorités. Le coaching transforme ce diagnostic en plan d'action concret avec un expert humain.",
+      "Oui. Plus votre profil EDGE est complet, plus l'accompagnement sera précis.",
   },
   {
-    question: "Puis-je réserver sans avoir terminé mes tests ?",
-    answer:
-      "Oui. Plus votre profil EDGE est complet, plus l'accompagnement sera précis — mais vous pouvez démarrer dès maintenant.",
-  },
-  {
-    question: "Les accompagnements sont-ils en visioconférence ?",
+    question: "Les séances sont-elles en visioconférence ?",
     answer: "Oui. Toutes les séances se déroulent en visioconférence.",
   },
   {
-    question: "Puis-je utiliser mon CPF ?",
-    answer: "Selon la formule, le financement CPF peut être possible. Contactez-nous pour vérifier votre éligibilité.",
+    question: "Le financement CPF est-il possible ?",
+    answer: "Selon la formule choisie. Contactez-nous pour vérifier votre éligibilité.",
   },
 ] as const;
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
+import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
 import { analyzeCareerMatching } from "@/lib/career-profiles/career-profile-matching";
 import {
   getCareerProfileBySlug,
@@ -11,23 +12,18 @@ import {
   buildPublicSkillCards,
   computeEdgeReliabilityIndex,
 } from "@/lib/hard-skills/skill-validation-analysis";
-import {
-  computeProfilEdgeMaturity,
-  parseProfessionalProject,
-  type LearnerHardSkillMeta,
-} from "@/lib/particulier/profil-edge-maturity";
+import { buildPersonalizedActionPlan } from "@/lib/learner/personalized-action-plan";
+import type { LearnerHardSkillMeta } from "@/lib/particulier/profil-edge-maturity";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export type AccompagnementProgression = {
+export type AccompagnementSituation = {
   loading: boolean;
   edgeIndex: number;
   validatedCount: number;
   totalSkills: number;
-  prioritySkills: string[];
-  todayScore: number;
-  projectedScore: number;
-  projectedGain: number;
-  firstName: string;
+  skillsToDevelop: number;
+  unevaluatedCount: number;
+  recommendedPathsCount: number;
 };
 
 async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
@@ -41,15 +37,14 @@ async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
   return getCareerProfileBySlug(slug) ?? null;
 }
 
-export function useAccompagnementProgression(): AccompagnementProgression {
+export function useAccompagnementSituation(): AccompagnementSituation {
   const [loading, setLoading] = useState(true);
   const [edgeIndex, setEdgeIndex] = useState(0);
   const [validatedCount, setValidatedCount] = useState(0);
   const [totalSkills, setTotalSkills] = useState(0);
-  const [prioritySkills, setPrioritySkills] = useState<string[]>([]);
-  const [todayScore, setTodayScore] = useState(0);
-  const [projectedGain, setProjectedGain] = useState(28);
-  const [firstName, setFirstName] = useState("");
+  const [skillsToDevelop, setSkillsToDevelop] = useState(0);
+  const [unevaluatedCount, setUnevaluatedCount] = useState(0);
+  const [recommendedPathsCount, setRecommendedPathsCount] = useState(0);
 
   const load = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -58,37 +53,38 @@ export function useAccompagnementProgression(): AccompagnementProgression {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [profileRes, discRes, softRes, expRes, dipRes] = await Promise.all([
+    const [profileRes, discRes, softRes, idmcRes, expRes, dipRes] = await Promise.all([
       supabase
         .from("profiles")
-        .select(
-          "first_name, hard_skills, skills_metadata, professional_project, target_career_slug, type_profil",
-        )
+        .select("hard_skills, skills_metadata, target_career_slug, job_title")
         .eq("id", user.id)
         .maybeSingle(),
-      supabase.from("disc_resultats").select("scores").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("soft_skills_resultats").select("scores").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("experiences_pro").select("id").eq("user_id", user.id),
-      supabase.from("diplomes").select("id").eq("user_id", user.id),
+      supabase
+        .from("disc_resultats")
+        .select("scores")
+        .eq("profile_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("soft_skills_resultats")
+        .select("scores")
+        .eq("learner_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from("idmc_resultats").select("scores").eq("profile_id", user.id).maybeSingle(),
+      supabase.from("experiences_pro").select("*").eq("learner_id", user.id),
+      supabase.from("diplomes").select("*").eq("learner_id", user.id),
     ]);
 
     const profile = profileRes.data;
     if (!profile) return;
 
-    setFirstName(String(profile.first_name ?? ""));
-
     const hardSkills = (profile.hard_skills as string[] | null) ?? [];
     const skillsMetadata = (profile.skills_metadata as Record<string, LearnerHardSkillMeta>) ?? {};
-    const cards = buildPublicSkillCards(
-      hardSkills.length ? hardSkills : Object.keys(skillsMetadata),
-      skillsMetadata,
-    );
+    const skillNames = hardSkills.length ? hardSkills : Object.keys(skillsMetadata);
+    const cards = buildPublicSkillCards(skillNames, skillsMetadata);
 
-    const reliability = computeEdgeReliabilityIndex(
-      hardSkills.length ? hardSkills : Object.keys(skillsMetadata),
-      skillsMetadata,
-    );
-    setEdgeIndex(reliability);
+    setEdgeIndex(computeEdgeReliabilityIndex(skillNames, skillsMetadata));
     setTotalSkills(cards.length);
     setValidatedCount(
       cards.filter((c) => c.status === "validated" || c.status === "expert_validated").length,
@@ -96,12 +92,37 @@ export function useAccompagnementProgression(): AccompagnementProgression {
 
     const discScores = discRes.data?.scores as DiscScores | null;
     const softSkillsScores = (softRes.data?.scores as Record<string, number> | null) ?? null;
+    const idmcAxes = idmcRes.data?.scores as Record<AxisKey, number> | null;
+    const softSkillsList = softSkillsScores
+      ? Object.entries(softSkillsScores).map(([skill, score]) => ({ skill, score }))
+      : [];
+
+    const experiences = (expRes.data ?? []).map((row) => ({
+      id: String(row.id),
+      employeur: row.employeur,
+      poste: row.poste ?? null,
+      type_contrat: row.type_contrat,
+      date_debut: row.date_debut,
+      date_fin: row.date_fin,
+      missions: row.missions,
+      competences_developpees: Array.isArray(row.competences_developpees)
+        ? row.competences_developpees.map(String)
+        : [],
+    }));
+
+    const diplomas = (dipRes.data ?? []).map((row) => ({
+      id: String(row.id),
+      intitule: row.intitule,
+      ecole: row.ecole,
+      annee_obtention: row.annee_obtention,
+      mode: row.mode,
+      diploma_type: row.diploma_type ?? null,
+      niveau: row.niveau ?? null,
+      description: row.description ?? null,
+    }));
+
     const careerSlug = profile.target_career_slug as string | null;
     const career = careerSlug ? await loadCareerBySlug(careerSlug) : null;
-
-    let compatScore = reliability;
-    let priorities: string[] = [];
-    let gain = 28;
 
     if (discScores && career) {
       const matching = analyzeCareerMatching({
@@ -110,34 +131,30 @@ export function useAccompagnementProgression(): AccompagnementProgression {
         softSkillsScores,
         hardSkills,
         skillsMetadata,
-        experiences: expRes.data ?? [],
-        diplomas: dipRes.data ?? [],
-        hasIdmc: false,
+        experiences,
+        diplomas,
+        hasIdmc: Boolean(idmcAxes),
       });
-      compatScore = matching.compatibilityScore;
-      priorities = [...matching.develop, ...matching.consolidate].slice(0, 3);
-      gain = matching.nextPriority?.impactPercent
-        ? Math.min(35, matching.nextPriority.impactPercent * Math.max(1, priorities.length))
-        : 28;
+      setSkillsToDevelop(matching.develop.length);
+      setUnevaluatedCount(matching.unevaluated.length);
     } else {
-      const maturity = computeProfilEdgeMaturity({
-        profile: {
-          hard_skills: hardSkills,
-          professional_project: parseProfessionalProject(profile.professional_project),
-          type_profil: profile.type_profil,
-        },
-        hasDisc: Boolean(discScores),
-        hasSoftSkills: Boolean(softSkillsScores),
-        hasIdmc: false,
-        experiencesCount: expRes.data?.length ?? 0,
-        diplomasCount: dipRes.data?.length ?? 0,
-      });
-      compatScore = maturity.totalPercent || reliability;
+      setSkillsToDevelop(cards.filter((c) => c.status === "ia_analyzed").length);
+      setUnevaluatedCount(cards.filter((c) => c.status === "declared").length);
     }
 
-    setTodayScore(compatScore);
-    setPrioritySkills(priorities);
-    setProjectedGain(gain);
+    const plan = buildPersonalizedActionPlan({
+      discScores,
+      idmcAxes,
+      softSkills: softSkillsList,
+      jobTitle: profile.job_title as string | null,
+      surface: "apprenant",
+    });
+    const pathItems = plan
+      ? plan.parcoursSteps.length > 0
+        ? plan.parcoursSteps.length
+        : plan.items.filter((i) => i.kind === "formation" || i.kind === "micro_formation").length
+      : 0;
+    setRecommendedPathsCount(pathItems);
   }, []);
 
   useEffect(() => {
@@ -154,20 +171,16 @@ export function useAccompagnementProgression(): AccompagnementProgression {
     };
   }, [load]);
 
-  const projectedScore = useMemo(
-    () => Math.min(98, todayScore + projectedGain),
-    [todayScore, projectedGain],
-  );
-
   return {
     loading,
     edgeIndex,
     validatedCount,
     totalSkills,
-    prioritySkills,
-    todayScore,
-    projectedScore,
-    projectedGain,
-    firstName,
+    skillsToDevelop,
+    unevaluatedCount,
+    recommendedPathsCount,
   };
 }
+
+/** @deprecated Utiliser useAccompagnementSituation */
+export const useAccompagnementProgression = useAccompagnementSituation;

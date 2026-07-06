@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateJSON, getOpenAIClient } from "@/lib/ai/openai-client";
+import {
+  analyzeSkillValidation,
+  buildFallbackSkillAnalysis,
+} from "@/lib/hard-skills/skill-validation-analyze";
 import { buildFallbackInterviewQuestions } from "@/lib/hard-skills/interview-fallback-questions";
 import { interviewQuestionCount } from "@/lib/hard-skills/skill-validation";
-import {
-  parseSkillAnalysisApiResult,
-  SKILL_ANALYSIS_JSON_SHAPE,
-} from "@/lib/hard-skills/skill-validation-analysis";
+import { parseSkillAnalysisApiResult } from "@/lib/hard-skills/skill-validation-analysis";
 import { sendSkillValidationEmails } from "@/lib/hard-skills/send-skill-validation-emails";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { generateJSON, getOpenAIClient } from "@/lib/ai/openai-client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,13 +43,15 @@ Génère exactement ${count} questions d'entretien expérientiel (PAS de QCM) po
 Chaque question doit explorer une expérience concrète : projets, méthodes, outils, résultats, difficultés.
 Réponds en JSON : { "questions": ["question 1", ...] }`;
 
-      const result = await generateJSON(prompt, {
-        type: "object",
-        properties: {
-          questions: { type: "array", items: { type: "string" } },
+      const result = await generateJSON(
+        prompt,
+        {
+          type: "object",
+          properties: { questions: { type: "array", items: { type: "string" } } },
+          required: ["questions"],
         },
-        required: ["questions"],
-      });
+        "Tu génères des questions d'entretien professionnel en français.",
+      );
 
       const questions = Array.isArray(result?.questions)
         ? result.questions.map(String).filter(Boolean).slice(0, count)
@@ -71,19 +74,24 @@ Réponds en JSON : { "questions": ["question 1", ...] }`;
       const prompt = `Analyse cet entretien expérientiel EDGE pour la compétence "${skillName}" (niveau déclaré : ${level}).
 
 Questions et réponses :
-${questions.map((q: string, i: number) => `Q${i + 1}: ${q}\nR: ${answers[i] ?? "(vide)"}`).join("\n\n")}
+${questions.map((q: string, i: number) => `Q${i + 1}: ${q}\nR: ${answers[i] ?? "(vide)"}`).join("\n\n")}`;
 
-Réponds en JSON :
-${SKILL_ANALYSIS_JSON_SHAPE}`;
-
-      const result = await generateJSON(prompt);
-      if (!result?.verdict) {
-        return NextResponse.json({ error: "Analyse impossible" }, { status: 500 });
-      }
+      const { result, source } = await analyzeSkillValidation({
+        skillName,
+        level,
+        prompt,
+        fallback: () =>
+          buildFallbackSkillAnalysis({
+            skillName,
+            level,
+            mode: "interview",
+            questions,
+            answers,
+          }),
+      });
 
       const parsed = parseSkillAnalysisApiResult(result as Record<string, unknown>, level);
 
-      const verdict = parsed.verdict;
       const service = getServiceRoleClient();
       const profileRes = await (service ?? supabase)
         .from("profiles")
@@ -91,17 +99,14 @@ ${SKILL_ANALYSIS_JSON_SHAPE}`;
         .eq("id", userData.user.id)
         .maybeSingle();
 
-      const firstName = String(profileRes.data?.first_name ?? "");
-      const email = String(profileRes.data?.email ?? userData.user.email ?? "");
-
       await sendSkillValidationEmails({
-        firstName,
-        email,
+        firstName: String(profileRes.data?.first_name ?? ""),
+        email: String(profileRes.data?.email ?? userData.user.email ?? ""),
         skillName,
-        verdict: verdict as "validated" | "pending" | "insufficient" | "expert_needed",
-      });
+        verdict: parsed.verdict,
+      }).catch((err) => console.error("[skill-validation/interview] email:", err));
 
-      return NextResponse.json(parsed);
+      return NextResponse.json({ ...parsed, analysisSource: source });
     }
 
     return NextResponse.json({ error: "Action invalide" }, { status: 400 });

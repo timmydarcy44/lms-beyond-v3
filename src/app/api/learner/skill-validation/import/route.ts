@@ -1,12 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateJSON } from "@/lib/ai/openai-client";
+import { extractTextWithVision } from "@/lib/ai/openai-client";
 import {
-  parseSkillAnalysisApiResult,
-  SKILL_ANALYSIS_JSON_SHAPE,
-} from "@/lib/hard-skills/skill-validation-analysis";
+  analyzeSkillValidation,
+  buildFallbackSkillAnalysis,
+} from "@/lib/hard-skills/skill-validation-analyze";
+import { parseSkillAnalysisApiResult } from "@/lib/hard-skills/skill-validation-analysis";
 import { sendSkillValidationEmails } from "@/lib/hard-skills/send-skill-validation-emails";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+
+const TEXT_MIME = new Set([
+  "text/plain",
+  "text/csv",
+  "application/json",
+  "text/markdown",
+]);
+
+async function extractProofContent(file: File | null, proofNote: string): Promise<string> {
+  let documentExcerpt = proofNote.trim();
+
+  if (!file || file.size === 0) return documentExcerpt;
+
+  if (file.size < 500_000 && (TEXT_MIME.has(file.type) || file.name.endsWith(".txt"))) {
+    const text = await file.text().catch(() => "");
+    if (text) documentExcerpt = [documentExcerpt, text.slice(0, 4000)].filter(Boolean).join("\n\n");
+    return documentExcerpt;
+  }
+
+  const isVision =
+    file.type.startsWith("image/") ||
+    file.type === "application/pdf" ||
+    file.name.match(/\.(png|jpe?g|webp|pdf)$/i);
+
+  if (isVision && file.size < 8_000_000) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const mime = file.type || (file.name.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+    const visionText = await extractTextWithVision(buffer, mime);
+    if (visionText) {
+      documentExcerpt = [documentExcerpt, visionText.slice(0, 4000)].filter(Boolean).join("\n\n");
+    }
+  }
+
+  if (!documentExcerpt && file.name) {
+    documentExcerpt = `Fichier fourni : ${file.name} (${file.type || "format binaire"})`;
+  }
+
+  return documentExcerpt;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,24 +65,26 @@ export async function POST(request: NextRequest) {
 
     if (!skillName) return NextResponse.json({ error: "Compétence requise" }, { status: 400 });
 
-    let documentExcerpt = proofNote;
-    if (file && file.size > 0 && file.size < 500_000) {
-      const text = await file.text().catch(() => "");
-      if (text) documentExcerpt = text.slice(0, 4000);
-    }
+    const documentExcerpt = await extractProofContent(file, proofNote);
 
     const prompt = `Analyse cette preuve de compétence pour "${skillName}" (niveau déclaré : ${level}).
 Lien : ${proofUrl || "—"}
 Contenu / description :
-${documentExcerpt || "—"}
+${documentExcerpt || "—"}`;
 
-Réponds en JSON :
-${SKILL_ANALYSIS_JSON_SHAPE}`;
-
-    const result = await generateJSON(prompt);
-    if (!result?.verdict) {
-      return NextResponse.json({ error: "Analyse impossible" }, { status: 500 });
-    }
+    const { result, source } = await analyzeSkillValidation({
+      skillName,
+      level,
+      prompt,
+      fallback: () =>
+        buildFallbackSkillAnalysis({
+          skillName,
+          level,
+          mode: "proof",
+          proofNote: documentExcerpt,
+          proofUrl,
+        }),
+    });
 
     const parsed = parseSkillAnalysisApiResult(result as Record<string, unknown>, level);
 
@@ -53,18 +95,15 @@ ${SKILL_ANALYSIS_JSON_SHAPE}`;
       .eq("id", userData.user.id)
       .maybeSingle();
 
-    const firstName = String(profileRes.data?.first_name ?? "");
-    const email = String(profileRes.data?.email ?? userData.user.email ?? "");
-
     await sendSkillValidationEmails({
-      firstName,
-      email,
+      firstName: String(profileRes.data?.first_name ?? ""),
+      email: String(profileRes.data?.email ?? userData.user.email ?? ""),
       skillName,
       verdict: parsed.verdict,
       sendProofReceived: true,
-    });
+    }).catch((err) => console.error("[skill-validation/import] email:", err));
 
-    return NextResponse.json(parsed);
+    return NextResponse.json({ ...parsed, analysisSource: source });
   } catch (error) {
     console.error("[skill-validation/import]", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

@@ -49,6 +49,9 @@ export function HardSkillInterviewModal({ open, skillName, level, careerTitle, o
         if (!res.ok) throw new Error(json.error ?? "Erreur");
         setQuestions(json.questions ?? []);
         setAnswers((json.questions ?? []).map(() => ""));
+        if (json.source === "fallback") {
+          setError(null);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Impossible de charger l'entretien");
       } finally {

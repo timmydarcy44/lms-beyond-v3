@@ -76,6 +76,8 @@ export type EdgeProgressionGps = {
   hasObjective: boolean;
   compatibilityPercent: number;
   prioritySkillsRemaining: number;
+  gapsCount: number;
+  prioritySkill: string;
   summarySentence: string;
   parcoursHref: string;
   nextStep: EdgeNextStep;
@@ -215,12 +217,11 @@ function buildNextStep(
       skill: p.skill,
       subPriority: p.actionType === "micro_formation" ? "Micro-formation recommandée" : undefined,
       why: `Cette compétence est actuellement le principal écart entre votre profil et votre objectif « ${objectiveTitle} ».`,
-      actionLabel: p.actionLabel,
-      actionHref:
-        plan?.items.find((i) => i.title.toLowerCase().includes(p.skill.toLowerCase()))?.href ??
-        "/dashboard/apprenant/parcours",
-      estimatedMinutes: p.actionType === "micro_formation" ? 25 : 45,
-      expectedOutcome: "Progression mesurable sur cette compétence et mise à jour de votre profil EDGE.",
+      actionLabel: "Demander une recommandation personnalisée",
+      actionHref: "/dashboard/apprenant/parcours",
+      estimatedMinutes: 2,
+      expectedOutcome:
+        "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
     };
   }
 
@@ -229,10 +230,11 @@ function buildNextStep(
     return {
       skill,
       why: plan.nextStep.title,
-      actionLabel: plan.nextStep.primaryLabel,
-      actionHref: plan.nextStep.primaryHref,
-      estimatedMinutes: 30,
-      expectedOutcome: `Renforcement de ${skill} pour rapprocher votre profil de votre objectif.`,
+      actionLabel: "Demander une recommandation personnalisée",
+      actionHref: "/dashboard/apprenant/parcours",
+      estimatedMinutes: 2,
+      expectedOutcome:
+        "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
     };
   }
 
@@ -241,10 +243,11 @@ function buildNextStep(
     return {
       skill,
       why: `Compétence prioritaire pour votre objectif « ${objectiveTitle} ».`,
-      actionLabel: "Commencer cette étape",
-      actionHref: "/dashboard/apprenant/profil-comportemental/hard-skills",
-      estimatedMinutes: 40,
-      expectedOutcome: "Première validation ou analyse de cette compétence.",
+      actionLabel: "Demander une recommandation personnalisée",
+      actionHref: "/dashboard/apprenant/parcours",
+      estimatedMinutes: 2,
+      expectedOutcome:
+        "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
     };
   }
 
@@ -253,8 +256,8 @@ function buildNextStep(
     why: "Vos tests et votre objectif professionnel permettent de calculer les écarts précis.",
     actionLabel: "Définir mon objectif",
     actionHref: "/dashboard/apprenant/profil-comportemental/projet",
-    estimatedMinutes: 15,
-    expectedOutcome: "Parcours personnalisé et prochaines étapes identifiées.",
+    estimatedMinutes: 5,
+    expectedOutcome: "Vos écarts de compétences seront identifiés pour préparer une recommandation.",
   };
 }
 
@@ -310,8 +313,8 @@ function buildTimeline(params: {
     },
     {
       id: "goal",
-      label: "Objectif atteint",
-      done: params.compatibilityPercent >= 85,
+      label: "Parcours personnalisé proposé",
+      done: false,
     },
   );
 
@@ -366,9 +369,11 @@ export function buildEdgeProgressionGps(params: {
     ? matching.develop.length + matching.consolidate.length
     : prioritySkills.length;
 
+  const gapsCount = Math.max(prioritySkillsRemaining, 0);
+
   const summarySentence = hasObjective
-    ? `Vous êtes à ${compatibilityPercent} % de votre objectif. Il vous reste ${Math.max(prioritySkillsRemaining, 0)} compétence${prioritySkillsRemaining > 1 ? "s" : ""} prioritaire${prioritySkillsRemaining > 1 ? "s" : ""} à développer.`
-    : `Complétez votre objectif professionnel pour activer le parcours guidé.`;
+    ? `Compatibilité estimée : ${compatibilityPercent} %. EDGE a identifié ${gapsCount} écart${gapsCount > 1 ? "s" : ""} de compétences à traiter pour rapprocher votre profil de cet objectif.`
+    : `Définissez votre objectif professionnel pour que EDGE identifie vos écarts et prépare une recommandation personnalisée.`;
 
   const cards = buildPublicSkillCards(
     params.hardSkills.length ? params.hardSkills : Object.keys(params.skillsMetadata),
@@ -390,7 +395,7 @@ export function buildEdgeProgressionGps(params: {
         estimatedLevel: card?.estimatedLevel ?? row.userLevel,
         gapLabel: gapLabelFromRow(row),
         status,
-        actionLabel: status === "validated" ? "Voir le détail" : "Travailler",
+        actionLabel: status === "validated" ? "Voir le détail" : "Analyser cette compétence",
         actionHref:
           status === "validated"
             ? "/dashboard/apprenant/profil-comportemental/hard-skills"
@@ -447,6 +452,8 @@ export function buildEdgeProgressionGps(params: {
     hasObjective,
     compatibilityPercent,
     prioritySkillsRemaining,
+    gapsCount,
+    prioritySkill: nextStep.skill,
     summarySentence,
     parcoursHref: "/dashboard/apprenant/parcours",
     nextStep,

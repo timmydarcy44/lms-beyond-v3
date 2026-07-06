@@ -11,6 +11,7 @@ import {
   APPRENANT_PAGE_SHELL,
   APPRENANT_PAGE_TITLE,
 } from "@/lib/apprenant/connect-nav";
+import { PARCOURS_CONCIERGE_INTRO } from "@/lib/apprenant/edge-personalized-path-request";
 
 const STEP_ICON = {
   formation: BookOpen,
@@ -31,6 +32,7 @@ export default function ApprenantParcoursPage() {
           Parcours EDGE, accompagnements, validations et Open Badges recommandés selon votre profil et
           vos objectifs professionnels.
         </p>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/55">{PARCOURS_CONCIERGE_INTRO}</p>
       </section>
 
       <PersonalizedActionPlanSection

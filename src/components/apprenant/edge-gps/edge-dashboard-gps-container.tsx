@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
 import { EdgeDashboardGps } from "@/components/apprenant/edge-gps/edge-dashboard-gps";
+import { EdgeDashboardOnboarding } from "@/components/apprenant/edge-gps/edge-dashboard-onboarding";
+import { EdgeParcoursRequestModal } from "@/components/apprenant/edge-gps/edge-parcours-request-modal";
 import { EdgeWhatNowFab } from "@/components/apprenant/edge-gps/edge-what-now-fab";
 import { EdgeWhatNowModal } from "@/components/apprenant/edge-gps/edge-what-now-modal";
 import type { StoredHardSkillMeta } from "@/lib/hard-skills/hard-skills-portfolio";
@@ -27,8 +29,13 @@ type Props = {
   profileCompletionPercent: number;
 };
 
+function scrollToSkillsGaps() {
+  document.getElementById("edge-skills-gaps")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 export function EdgeDashboardGpsContainer(props: Props) {
   const [whatNowOpen, setWhatNowOpen] = useState(false);
+  const [parcoursRequestOpen, setParcoursRequestOpen] = useState(false);
 
   const { gps, loading } = useEdgeProgressionGps({
     profile: props.profile,
@@ -45,18 +52,36 @@ export function EdgeDashboardGpsContainer(props: Props) {
     profileCompletionPercent: props.profileCompletionPercent,
   });
 
+  const prioritySkills = gps.skills
+    .filter((s) => s.status === "priority" || s.status === "to_develop")
+    .slice(0, 5)
+    .map((s) => s.name);
+
+  const openParcoursRequest = useCallback(() => setParcoursRequestOpen(true), []);
+
   return (
     <>
+      <EdgeDashboardOnboarding />
       <EdgeDashboardGps
         gps={gps}
         loading={loading}
         onWhatNow={() => setWhatNowOpen(true)}
+        onRequestParcours={openParcoursRequest}
+        onViewGaps={scrollToSkillsGaps}
       />
       <EdgeWhatNowFab onClick={() => setWhatNowOpen(true)} />
       <EdgeWhatNowModal
         open={whatNowOpen}
         onClose={() => setWhatNowOpen(false)}
-        nextStep={gps.nextStep}
+        gps={gps}
+        onRequestParcours={openParcoursRequest}
+        onViewSkills={scrollToSkillsGaps}
+      />
+      <EdgeParcoursRequestModal
+        open={parcoursRequestOpen}
+        onClose={() => setParcoursRequestOpen(false)}
+        defaultObjective={gps.objectiveTitle !== "Objectif professionnel" ? gps.objectiveTitle : ""}
+        prioritySkills={prioritySkills.length ? prioritySkills : gps.prioritySkill ? [gps.prioritySkill] : []}
       />
     </>
   );

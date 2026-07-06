@@ -1,9 +1,9 @@
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 
-/** CTA principaux — vocabulaire premium EDGE (OS compétences). */
-export const EDGE_CTA_START_PARCOURS = "Commencer le parcours";
-export const EDGE_CTA_LAUNCH_PROGRESSION = "Lancer ma progression";
-export const EDGE_CTA_IMPROVE_SKILL = "Améliorer cette compétence";
+/** CTA principaux — vocabulaire premium EDGE (approche concierge). */
+export const EDGE_CTA_START_PARCOURS = "Construire mon parcours EDGE";
+export const EDGE_CTA_LAUNCH_PROGRESSION = "Demander une recommandation personnalisée";
+export const EDGE_CTA_IMPROVE_SKILL = "Préparer mon plan d'action";
 
 /** Éléments affichés sur les cartes Parcours EDGE (futurs modules). */
 export const PARCOURS_EDGE_INCLUDES = [

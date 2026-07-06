@@ -1,17 +1,37 @@
 "use client";
 
-import Link from "next/link";
 import { Clock, Target, X } from "lucide-react";
-import type { EdgeNextStep } from "@/lib/apprenant/edge-progression-gps";
+import type { EdgeProgressionGps } from "@/lib/apprenant/edge-progression-gps";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  nextStep: EdgeNextStep;
+  gps: Pick<
+    EdgeProgressionGps,
+    "objectiveTitle" | "prioritySkill" | "gapsCount" | "hasObjective"
+  >;
+  onRequestParcours?: () => void;
+  onViewSkills?: () => void;
 };
 
-export function EdgeWhatNowModal({ open, onClose, nextStep }: Props) {
+export function EdgeWhatNowModal({
+  open,
+  onClose,
+  gps,
+  onRequestParcours,
+  onViewSkills,
+}: Props) {
   if (!open) return null;
+
+  const handleRequest = () => {
+    onClose();
+    onRequestParcours?.();
+  };
+
+  const handleViewSkills = () => {
+    onClose();
+    onViewSkills?.();
+  };
 
   return (
     <div className="fixed inset-0 z-[170] flex items-end justify-center p-4 sm:items-center">
@@ -29,29 +49,65 @@ export function EdgeWhatNowModal({ open, onClose, nextStep }: Props) {
         </button>
 
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">
-          Que dois-je faire maintenant ?
+          Que faire maintenant ?
         </p>
-        <h3 className="mt-3 text-lg font-semibold text-white">{nextStep.skill}</h3>
-        <p className="mt-3 text-sm leading-relaxed text-white/65">{nextStep.why}</p>
+        <p className="mt-3 text-sm leading-relaxed text-white/65">
+          Votre profil est analysé. La prochaine étape consiste à transformer vos résultats en parcours
+          concret.
+        </p>
 
         <div className="mt-5 space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
-          <div className="flex items-center gap-2 text-sm text-white/70">
-            <Clock className="h-4 w-4 text-white/40" />
-            <span>Temps estimé : {nextStep.estimatedMinutes} min</span>
-          </div>
           <div className="flex items-start gap-2 text-sm text-white/70">
             <Target className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
-            <span>{nextStep.expectedOutcome}</span>
+            <span>
+              <span className="text-white/45">Objectif : </span>
+              {gps.objectiveTitle}
+            </span>
+          </div>
+          {gps.hasObjective && gps.prioritySkill ? (
+            <div className="flex items-start gap-2 text-sm text-white/70">
+              <Target className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+              <span>
+                <span className="text-white/45">Compétence prioritaire : </span>
+                {gps.prioritySkill}
+              </span>
+            </div>
+          ) : null}
+          <div className="flex items-center gap-2 text-sm text-white/70">
+            <Target className="h-4 w-4 text-white/40" />
+            <span>
+              <span className="text-white/45">Écarts identifiés : </span>
+              {gps.gapsCount}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-white/70">
+            <Clock className="h-4 w-4 text-white/40" />
+            <span>
+              <span className="text-white/45">Temps estimé pour la recommandation : </span>2 minutes
+            </span>
           </div>
         </div>
 
-        <Link
-          href={nextStep.actionHref}
-          onClick={onClose}
-          className="mt-6 flex w-full items-center justify-center rounded-lg bg-[#3D7BFF] py-3 text-sm font-semibold text-white hover:bg-[#2F6AE8]"
-        >
-          {nextStep.actionLabel}
-        </Link>
+        <div className="mt-6 space-y-2">
+          {onRequestParcours ? (
+            <button
+              type="button"
+              onClick={handleRequest}
+              className="flex w-full items-center justify-center rounded-lg bg-[#3D7BFF] py-3 text-sm font-semibold text-white hover:bg-[#2F6AE8]"
+            >
+              Demander mon parcours personnalisé
+            </button>
+          ) : null}
+          {onViewSkills ? (
+            <button
+              type="button"
+              onClick={handleViewSkills}
+              className="flex w-full items-center justify-center rounded-lg border border-white/15 py-3 text-sm font-medium text-white/80 hover:bg-white/[0.05]"
+            >
+              Voir mes compétences
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

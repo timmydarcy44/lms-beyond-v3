@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight, Check, Circle, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EdgeProgressionGps } from "@/lib/apprenant/edge-progression-gps";
@@ -11,11 +10,13 @@ type Props = {
   gps: EdgeProgressionGps;
   loading?: boolean;
   onWhatNow?: () => void;
+  onRequestParcours?: () => void;
+  onViewGaps?: () => void;
 };
 
 const CARD = "rounded-2xl border border-white/[0.08] bg-white/[0.03]";
 
-export function EdgeDashboardGps({ gps, loading, onWhatNow }: Props) {
+export function EdgeDashboardGps({ gps, loading, onWhatNow, onRequestParcours, onViewGaps }: Props) {
   if (loading) {
     return (
       <div className="mb-8 space-y-4 animate-pulse">
@@ -43,13 +44,16 @@ export function EdgeDashboardGps({ gps, loading, onWhatNow }: Props) {
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link
-            href={gps.parcoursHref}
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-[#0a0a0a] transition hover:bg-white/90"
-          >
-            Continuer mon parcours
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {onRequestParcours ? (
+            <button
+              type="button"
+              onClick={onRequestParcours}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-[#0a0a0a] transition hover:bg-white/90"
+            >
+              Construire mon parcours EDGE
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : null}
           {onWhatNow ? (
             <button
               type="button"
@@ -57,33 +61,49 @@ export function EdgeDashboardGps({ gps, loading, onWhatNow }: Props) {
               className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/[0.05]"
             >
               <Compass className="h-4 w-4" />
-              Que dois-je faire maintenant ?
+              Que faire maintenant ?
             </button>
           ) : null}
         </div>
       </section>
 
-      {/* 2. Prochaine étape — zone la plus visible */}
+      {/* 2. Prochaine étape — approche concierge */}
       <section className="rounded-2xl border border-[#3D7BFF]/30 bg-gradient-to-br from-[#3D7BFF]/15 via-[#3D7BFF]/5 to-transparent p-5 sm:p-7">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">
-          Aujourd&apos;hui, votre prochaine étape
+          Votre prochaine étape
         </p>
-        <h3 className="mt-3 text-lg font-semibold text-white sm:text-xl">
-          Travaillez la compétence : {gps.nextStep.skill}
-        </h3>
-        {gps.nextStep.subPriority ? (
-          <p className="mt-1 text-sm text-white/55">Sous-priorité : {gps.nextStep.subPriority}</p>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/75">
+          EDGE a identifié les compétences qui influencent le plus votre objectif. Pour éviter un parcours
+          générique, nous vous proposons de construire une recommandation personnalisée à partir de vos
+          résultats.
+        </p>
+        {gps.prioritySkill && gps.hasObjective ? (
+          <p className="mt-4 text-sm font-medium text-white">
+            Compétence prioritaire identifiée :{" "}
+            <span className="text-[#8BB4FF]">{gps.prioritySkill}</span>
+          </p>
         ) : null}
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/70">
-          <span className="font-medium text-white/90">Pourquoi ?</span> {gps.nextStep.why}
-        </p>
-        <Link
-          href={gps.nextStep.actionHref}
-          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#3D7BFF] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2F6AE8]"
-        >
-          Commencer cette étape
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+        <div className="mt-6 flex flex-wrap gap-3">
+          {onRequestParcours ? (
+            <button
+              type="button"
+              onClick={onRequestParcours}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#3D7BFF] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2F6AE8]"
+            >
+              Construire mon parcours EDGE
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : null}
+          {onViewGaps ? (
+            <button
+              type="button"
+              onClick={onViewGaps}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-5 py-3 text-sm font-medium text-white/80 transition hover:bg-white/[0.05]"
+            >
+              Voir mes écarts
+            </button>
+          ) : null}
+        </div>
       </section>
 
       {/* 3. Timeline */}
@@ -126,7 +146,9 @@ export function EdgeDashboardGps({ gps, loading, onWhatNow }: Props) {
       </section>
 
       {/* 4. Compétences */}
-      <EdgeSkillsGapTable skills={gps.skills} objectiveTitle={gps.objectiveTitle} />
+      <div id="edge-skills-gaps">
+        <EdgeSkillsGapTable skills={gps.skills} objectiveTitle={gps.objectiveTitle} />
+      </div>
 
       {/* 7. Accompagnement */}
       <EdgeAccompagnementNudge />

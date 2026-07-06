@@ -16,7 +16,7 @@ import {
   getCareerProfileBySlug,
   type CareerProfile,
 } from "@/lib/career-profiles/career-profiles-data";
-import { EDGE_PARTICULIER_COACHING } from "@/lib/particulier/coaching-config";
+import { getCoachingBookingHref } from "@/lib/particulier/coaching-config";
 import {
   computeProfilEdgeMaturity,
   parseProfessionalProject,
@@ -323,21 +323,18 @@ export function ProfilComportementalReport() {
 
       {matching && selectedCareer ? (
         <section className={APPRENANT_CARD_BODY}>
-          <h2 className="text-lg font-semibold text-white">Aller plus loin avec un coach EDGE</h2>
-          <p className="mt-2 text-sm leading-relaxed text-white/60">
-            Un coach EDGE peut vous aider à interpréter votre analyse métier et structurer votre plan d&apos;action.
+          <h2 className="text-lg font-semibold text-white">Accélérer votre progression</h2>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/55">
+            Transformez votre analyse EDGE en compétences concrètes avec un expert : coaching, simulation
+            professionnelle ou programme de progression.
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {[EDGE_PARTICULIER_COACHING.restitution, EDGE_PARTICULIER_COACHING.accompagnement].map((offer) => (
-              <div key={offer.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-                <p className="font-semibold text-white">{offer.title}</p>
-                <p className="mt-1 text-xs text-white/45">{offer.duration}</p>
-                <p className="mt-4 text-sm font-semibold text-white">{offer.priceLabel}</p>
-                <Link href={offer.href} className={`${CONNECT_BTN_PRIMARY} mt-4 inline-flex`}>
-                  {offer.ctaLabel}
-                </Link>
-              </div>
-            ))}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/dashboard/apprenant/coaching" className={CONNECT_BTN_PRIMARY}>
+              Découvrir les formules
+            </Link>
+            <a href={getCoachingBookingHref("progression")} className={CONNECT_BTN_SECONDARY}>
+              Réserver un accompagnement
+            </a>
           </div>
         </section>
       ) : null}

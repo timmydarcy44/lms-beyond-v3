@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { PublicProfileEarnedBadge } from "@/lib/openbadges/public-profile-earned-badges";
 import { PublicProfileBadgeOverlay } from "@/components/public-profile/public-profile-badge-overlay";
-import { PublicSkillCard } from "@/components/public-profile/public-skill-card";
+import { PublicSkillList } from "@/components/public-profile/public-skill-list";
 import { PublicSkillAnalysisModal } from "@/components/public-profile/public-skill-analysis-modal";
 import { EdgeReliabilityBadge } from "@/components/public-profile/edge-reliability-badge";
 import type { PublicSkillCardData } from "@/lib/hard-skills/skill-validation-analysis";
@@ -188,14 +188,8 @@ export function EdgePublicProfileView({
           </div>
         ) : null}
         {skillCards.length ? (
-          <div className={`grid gap-4 sm:grid-cols-2 ${stackTools.length ? "mt-6" : ""}`}>
-            {skillCards.map((skill) => (
-              <PublicSkillCard
-                key={skill.name}
-                skill={skill}
-                onViewAnalysis={() => setAnalysisSkill(skill)}
-              />
-            ))}
+          <div className={stackTools.length ? "mt-5" : ""}>
+            <PublicSkillList skills={skillCards} onSelect={setAnalysisSkill} />
           </div>
         ) : null}
       </>

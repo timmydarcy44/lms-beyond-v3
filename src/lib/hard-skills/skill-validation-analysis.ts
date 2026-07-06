@@ -200,12 +200,26 @@ export function publicStatusConfig(status: PublicSkillStatus): {
       return { label: "Compétence vérifiée", emoji: "🟢", className: "border-emerald-200 bg-emerald-50 text-emerald-800" };
     case "ia_analyzed":
       return {
-        label: "Analyse terminée",
+        label: "Analyse réalisée",
         emoji: "🟡",
         className: "border-amber-200 bg-amber-50 text-amber-900",
       };
     default:
-      return { label: "Compétence déclarée", emoji: "🔵", className: "border-sky-200 bg-sky-50 text-sky-800" };
+      return { label: "Déclarée", emoji: "🔵", className: "border-sky-200 bg-sky-50 text-sky-800" };
+  }
+}
+
+/** Libellé court pour la liste compacte du profil public */
+export function publicStatusCompactLabel(status: PublicSkillStatus): string {
+  switch (status) {
+    case "expert_validated":
+      return "EDGE Verified";
+    case "validated":
+      return "Compétence vérifiée";
+    case "ia_analyzed":
+      return "Analyse réalisée";
+    default:
+      return "Déclarée";
   }
 }
 

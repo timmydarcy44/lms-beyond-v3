@@ -93,3 +93,77 @@ export function getSkillGapTips(skillName: string, max = 5): string[] {
 export function getSkillGapWhyImportant(skillName: string, objectiveLabel: string): string {
   return `Cette compétence influence directement votre progression vers « ${objectiveLabel} ». La travailler en priorité vous rapproche d'un profil crédible pour ce projet.`;
 }
+
+/** Sous-compétences concrètes à développer (Bloc « Ce qu'il faut développer »). */
+const SKILL_WHAT_TO_DEVELOP: Record<string, string[]> = {
+  communication: [
+    "Structurer un message clair",
+    "Adapter son discours à l'interlocuteur",
+    "Gérer les objections",
+    "Pratiquer l'écoute active",
+  ],
+  empathie: [
+    "Savoir reformuler",
+    "Identifier les émotions de l'interlocuteur",
+    "Adapter sa réponse",
+    "Gérer les désaccords",
+    "Faire preuve d'écoute active",
+  ],
+  creativite: [
+    "Générer des idées nouvelles",
+    "Croiser des références variées",
+    "Tester rapidement une idée",
+    "Présenter une proposition originale",
+  ],
+  influence: [
+    "Argumenter selon les bénéfices",
+    "Créer l'adhésion",
+    "Identifier les décideurs",
+    "Obtenir des accords progressifs",
+  ],
+  organisation: [
+    "Prioriser les tâches",
+    "Découper un objectif",
+    "Suivre un plan simple",
+    "Tenir les délais",
+  ],
+  negociation: [
+    "Définir sa marge de manœuvre",
+    "Préparer plusieurs scénarios",
+    "Comprendre les motivations",
+    "Conclure un accord",
+  ],
+};
+
+export function getSkillWhatToDevelop(skillName: string): string[] {
+  const key = normalizeSkillKey(skillName);
+  if (SKILL_WHAT_TO_DEVELOP[key]) return SKILL_WHAT_TO_DEVELOP[key];
+  for (const [pattern, list] of Object.entries(SKILL_WHAT_TO_DEVELOP)) {
+    if (key.includes(pattern) || pattern.includes(key)) return list;
+  }
+  if (key.includes("commun")) return SKILL_WHAT_TO_DEVELOP.communication;
+  if (key.includes("empath")) return SKILL_WHAT_TO_DEVELOP.empathie;
+  if (key.includes("creat")) return SKILL_WHAT_TO_DEVELOP.creativite;
+  return [
+    "Identifier une situation d'application",
+    "Observer un modèle inspirant",
+    "S'entraîner sur un cas concret",
+    "Recueillir un retour",
+  ];
+}
+
+export type SkillProgressionStep = {
+  label: string;
+  meta?: string;
+};
+
+/** Plan d'action concret (Bloc « Comment progresser »). */
+export function getSkillProgressionPlan(skillName: string): SkillProgressionStep[] {
+  return [
+    { label: `Faire l'exercice ciblé sur « ${skillName} »`, meta: "10 min" },
+    { label: "Réaliser une simulation IA", meta: "15 min" },
+    { label: "Déposer une preuve terrain" },
+    { label: "Valider la compétence" },
+    { label: "Obtenir un badge EDGE" },
+  ];
+}

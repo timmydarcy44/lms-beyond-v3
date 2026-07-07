@@ -62,7 +62,7 @@ export function ProfilEdgeHubResults({ matching }: Props) {
           bgClass="bg-sky-500/[0.06]"
         />
         <MetricCard
-          label="Non évaluées"
+          label="À explorer"
           count={matching.unevaluated.length}
           colorClass="text-white/50"
           bgClass="bg-white/[0.03]"

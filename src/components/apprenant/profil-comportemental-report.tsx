@@ -251,8 +251,9 @@ export function ProfilComportementalReport() {
       <header>
         <p className={APPRENANT_CARD_KICKER}>EDGE Particulier</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl">Mon Profil EDGE</h1>
-        <p className="mt-2 text-sm text-white/50">
-          Moteur de progression — orientation, compétences et évolution professionnelle
+        <p className="mt-2 max-w-2xl text-sm text-white/50">
+          EDGE analyse vos compétences et vous guide étape par étape pour progresser vers votre objectif
+          professionnel.
         </p>
       </header>
 

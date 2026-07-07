@@ -6,6 +6,7 @@ import { Check, ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EdgeSkillGapRow } from "@/lib/apprenant/edge-progression-gps";
 import { statusLabelForGap } from "@/lib/apprenant/edge-progression-gps";
+import { coachingLevelDisplay } from "@/lib/apprenant/edge-coaching-copy";
 import {
   GAP_BADGE,
   LEVEL_BADGE,
@@ -48,7 +49,7 @@ function LevelPill({ level }: { level: string }) {
         pillClass("bg-white/[0.06] text-white/50 ring-1 ring-white/10", LEVEL_BADGE, level),
       )}
     >
-      {level}
+      {coachingLevelDisplay(level)}
     </span>
   );
 }
@@ -237,8 +238,8 @@ export function EdgeSkillsGapTable({
           <LegendDot className="bg-sky-500/80" label="Écart faible" />
           <LegendDot className="bg-amber-500/80" label="Écart moyen" />
           <LegendDot className="bg-rose-500/80" label="Écart fort" />
-          <LegendDot className="bg-[#3D7BFF]/80" label="Prioritaire" />
-          <LegendDot className="bg-white/30" label="Non évalué" />
+          <LegendDot className="bg-[#3D7BFF]/80" label="Priorité EDGE" />
+          <LegendDot className="bg-white/30" label="À explorer" />
         </div>
       </section>
 

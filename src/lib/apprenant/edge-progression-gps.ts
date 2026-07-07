@@ -111,8 +111,8 @@ function enrichSkillRow(
 function gapLabelFromRow(row: CareerSkillRow): string {
   if (row.tone === "green") return "Aligné";
   if (row.tone === "orange") return "À consolider";
-  if (row.tone === "red") return "Écart majeur";
-  return "Non évalué";
+  if (row.tone === "red") return "Prochaine progression";
+  return "À évaluer";
 }
 
 function resolveSkillStatus(
@@ -137,15 +137,15 @@ function resolveSkillStatus(
 function statusLabel(status: SkillGapStatus): string {
   switch (status) {
     case "validated":
-      return "Validée";
+      return "Alignée";
     case "in_progress":
-      return "En cours";
+      return "En progression";
     case "priority":
-      return "Prioritaire";
+      return "Priorité EDGE";
     case "badge_available":
       return "Badge disponible";
     default:
-      return "À développer";
+      return "À consolider";
   }
 }
 

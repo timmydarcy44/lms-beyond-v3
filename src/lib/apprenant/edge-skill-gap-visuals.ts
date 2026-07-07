@@ -14,7 +14,7 @@ export function levelScoreFromLabel(level: string): number | null {
 
 export function gapSeverityFrom(gapLabel: string, status: SkillGapStatus): GapSeverity {
   if (status === "validated" || gapLabel === "Aligné") return "aligned";
-  if (gapLabel === "Écart majeur") return "high";
+  if (gapLabel === "Écart majeur" || gapLabel === "Prochaine progression") return "high";
   if (gapLabel === "À consolider") return "medium";
   if (gapLabel === "Non évalué" || gapLabel === "À évaluer") return "unevaluated";
   if (status === "priority") return "low";

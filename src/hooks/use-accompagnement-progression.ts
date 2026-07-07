@@ -16,6 +16,14 @@ import { buildPersonalizedActionPlan } from "@/lib/learner/personalized-action-p
 import type { LearnerHardSkillMeta } from "@/lib/particulier/profil-edge-maturity";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
+export type AccompagnementNextAction = {
+  skill: string;
+  why: string;
+  action: string;
+  estimatedMinutes: number;
+  impact: "Fort" | "Moyen";
+} | null;
+
 export type AccompagnementSituation = {
   loading: boolean;
   edgeIndex: number;
@@ -24,6 +32,15 @@ export type AccompagnementSituation = {
   skillsToDevelop: number;
   unevaluatedCount: number;
   recommendedPathsCount: number;
+  /** Complétude du profil : compétences évaluées / total attendu. */
+  completionPercent: number;
+  evaluatedCount: number;
+  totalExpectedSkills: number;
+  alignedCount: number;
+  consolidateCount: number;
+  compatibilityPercent: number;
+  objectiveLabel: string;
+  nextAction: AccompagnementNextAction;
 };
 
 async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
@@ -45,6 +62,14 @@ export function useAccompagnementSituation(): AccompagnementSituation {
   const [skillsToDevelop, setSkillsToDevelop] = useState(0);
   const [unevaluatedCount, setUnevaluatedCount] = useState(0);
   const [recommendedPathsCount, setRecommendedPathsCount] = useState(0);
+  const [completionPercent, setCompletionPercent] = useState(0);
+  const [evaluatedCount, setEvaluatedCount] = useState(0);
+  const [totalExpectedSkills, setTotalExpectedSkills] = useState(0);
+  const [alignedCount, setAlignedCount] = useState(0);
+  const [consolidateCount, setConsolidateCount] = useState(0);
+  const [compatibilityPercent, setCompatibilityPercent] = useState(0);
+  const [objectiveLabel, setObjectiveLabel] = useState("votre objectif professionnel");
+  const [nextAction, setNextAction] = useState<AccompagnementNextAction>(null);
 
   const load = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -124,6 +149,8 @@ export function useAccompagnementSituation(): AccompagnementSituation {
     const careerSlug = profile.target_career_slug as string | null;
     const career = careerSlug ? await loadCareerBySlug(careerSlug) : null;
 
+    if (career?.title) setObjectiveLabel(career.title);
+
     if (discScores && career) {
       const matching = analyzeCareerMatching({
         career,
@@ -135,11 +162,47 @@ export function useAccompagnementSituation(): AccompagnementSituation {
         diplomas,
         hasIdmc: Boolean(idmcAxes),
       });
-      setSkillsToDevelop(matching.develop.length);
-      setUnevaluatedCount(matching.unevaluated.length);
+      const develop = matching.develop.length;
+      const unevaluated = matching.unevaluated.length;
+      const aligned = matching.strengths.length;
+      const consolidate = matching.consolidate.length;
+      const expected = matching.skillTable.length || aligned + consolidate + develop + unevaluated;
+      const evaluated = Math.max(expected - unevaluated, 0);
+
+      setSkillsToDevelop(develop);
+      setUnevaluatedCount(unevaluated);
+      setAlignedCount(aligned);
+      setConsolidateCount(consolidate);
+      setTotalExpectedSkills(expected);
+      setEvaluatedCount(evaluated);
+      setCompletionPercent(expected > 0 ? Math.round((evaluated / expected) * 100) : 0);
+      setCompatibilityPercent(matching.compatibilityScore);
+
+      if (matching.nextPriority) {
+        setNextAction({
+          skill: matching.nextPriority.skill,
+          why: `Compétence clé pour votre objectif « ${career.title} ».`,
+          action: matching.nextPriority.actionLabel,
+          estimatedMinutes: matching.nextPriority.actionType === "evaluation" ? 5 : 10,
+          impact: "Fort",
+        });
+      }
     } else {
-      setSkillsToDevelop(cards.filter((c) => c.status === "ia_analyzed").length);
-      setUnevaluatedCount(cards.filter((c) => c.status === "declared").length);
+      const develop = cards.filter((c) => c.status === "ia_analyzed").length;
+      const unevaluated = cards.filter((c) => c.status === "declared").length;
+      const validated = cards.filter(
+        (c) => c.status === "validated" || c.status === "expert_validated",
+      ).length;
+      const expected = cards.length;
+      const evaluated = Math.max(expected - unevaluated, 0);
+
+      setSkillsToDevelop(develop);
+      setUnevaluatedCount(unevaluated);
+      setAlignedCount(validated);
+      setConsolidateCount(develop);
+      setTotalExpectedSkills(expected);
+      setEvaluatedCount(evaluated);
+      setCompletionPercent(expected > 0 ? Math.round((evaluated / expected) * 100) : 0);
     }
 
     const plan = buildPersonalizedActionPlan({
@@ -179,6 +242,14 @@ export function useAccompagnementSituation(): AccompagnementSituation {
     skillsToDevelop,
     unevaluatedCount,
     recommendedPathsCount,
+    completionPercent,
+    evaluatedCount,
+    totalExpectedSkills,
+    alignedCount,
+    consolidateCount,
+    compatibilityPercent,
+    objectiveLabel,
+    nextAction,
   };
 }
 

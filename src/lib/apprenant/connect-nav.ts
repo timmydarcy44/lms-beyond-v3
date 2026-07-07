@@ -45,7 +45,7 @@ export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNav
     { label: "Mon Profil EDGE", href: "/dashboard/apprenant/profil-comportemental", icon: UserCircle },
     { label: "Mes résultats", href: "/dashboard/apprenant/profil", icon: Award },
     { label: "Mes badges", href: "/dashboard/apprenant/badges", icon: Award },
-    { label: "Mon accompagnement", href: "/dashboard/apprenant/coaching", icon: MonitorPlay },
+    { label: "Mon plan de progression", href: "/dashboard/apprenant/coaching", icon: MonitorPlay },
     { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
     {
       label: "Partager mon profil",

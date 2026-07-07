@@ -129,11 +129,11 @@ function SituationActuelle() {
 
   if (s.loading) {
     return (
-      <div className="animate-pulse rounded-xl border border-[#E8EAED] bg-white p-6">
-        <div className="h-3 w-36 rounded bg-[#EEF0F2]" />
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <div className="animate-pulse space-y-4">
+        <div className="h-24 rounded-xl border border-[#E8EAED] bg-white" />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 rounded-lg bg-[#F4F5F7]" />
+            <div key={i} className="h-16 rounded-lg bg-[#F4F5F7]" />
           ))}
         </div>
       </div>
@@ -141,20 +141,55 @@ function SituationActuelle() {
   }
 
   const metrics = [
-    { label: "Indice EDGE", value: `${s.edgeIndex} %` },
-    {
-      label: "Compétences validées",
-      value: s.totalSkills > 0 ? `${s.validatedCount} / ${s.totalSkills}` : "—",
-    },
-    { label: "Compétences à développer", value: String(s.skillsToDevelop) },
-    { label: "Compétences non encore évaluées", value: String(s.unevaluatedCount) },
+    { label: "Compétences alignées", value: String(s.alignedCount) },
+    { label: "À consolider", value: String(s.consolidateCount) },
+    { label: "À développer", value: String(s.skillsToDevelop) },
+    { label: "À explorer", value: String(s.unevaluatedCount) },
     { label: "Parcours recommandés", value: String(s.recommendedPathsCount) },
   ];
 
   return (
-    <motion.section initial="hidden" animate="show" variants={fadeUp}>
+    <motion.section initial="hidden" animate="show" variants={fadeUp} className="space-y-5">
       <p className={LABEL}>Votre situation actuelle</p>
-      <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[#E8EAED] bg-[#E8EAED] sm:grid-cols-5">
+
+      {/* KPI pédagogique principal : complétude du profil */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-[#191C1F]/10 bg-white p-5 sm:col-span-1">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-[#8B919A]">Complétude du profil</p>
+          <p className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[#191C1F]">
+            {s.completionPercent}
+            <span className="text-lg text-[#8B919A]"> %</span>
+          </p>
+          <p className="mt-1 text-xs text-[#5C6370]">
+            {s.evaluatedCount} compétence{s.evaluatedCount > 1 ? "s" : ""} évaluée
+            {s.evaluatedCount > 1 ? "s" : ""} sur {s.totalExpectedSkills || "—"}
+          </p>
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#EEF0F2]">
+            <div
+              className="h-full rounded-full bg-[#191C1F] transition-all"
+              style={{ width: `${Math.max(4, s.completionPercent)}%` }}
+            />
+          </div>
+        </div>
+        <div className="rounded-xl border border-[#191C1F]/10 bg-white p-5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-[#8B919A]">Progression vers l&apos;objectif</p>
+          <p className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[#191C1F]">
+            {s.compatibilityPercent}
+            <span className="text-lg text-[#8B919A]"> %</span>
+          </p>
+          <p className="mt-1 text-xs text-[#5C6370]">{s.objectiveLabel}</p>
+        </div>
+        <div className="rounded-xl border border-[#191C1F]/10 bg-white p-5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-[#8B919A]">Priorité actuelle</p>
+          <p className="mt-2 text-lg font-semibold tracking-[-0.01em] text-[#191C1F]">
+            {s.nextAction?.skill ?? "Compléter votre profil"}
+          </p>
+          <p className="mt-1 text-xs text-[#5C6370]">La compétence à travailler en premier.</p>
+        </div>
+      </div>
+
+      {/* Répartition des compétences */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[#E8EAED] bg-[#E8EAED] sm:grid-cols-5">
         {metrics.map((m) => (
           <div key={m.label} className="bg-white px-4 py-5">
             <p className="text-[10px] font-medium uppercase tracking-wider text-[#8B919A]">{m.label}</p>
@@ -162,7 +197,64 @@ function SituationActuelle() {
           </div>
         ))}
       </div>
+
+      {/* Votre prochaine action recommandée */}
+      {s.nextAction ? (
+        <div className="rounded-xl border border-[#191C1F]/10 bg-[#191C1F] p-6 text-white">
+          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/50">
+            Votre prochaine action recommandée
+          </p>
+          <p className="mt-3 text-lg font-semibold tracking-[-0.01em]">Priorité : {s.nextAction.skill}</p>
+          <p className="mt-1 text-sm text-white/70">{s.nextAction.why}</p>
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-white/70">
+            <span>Action recommandée : {s.nextAction.action}</span>
+            <span>Durée estimée : {s.nextAction.estimatedMinutes} min</span>
+            <span>Impact estimé : {s.nextAction.impact}</span>
+          </div>
+          <Link
+            href="/dashboard/apprenant?premiers-pas=1"
+            className="mt-5 inline-flex items-center justify-center rounded-lg bg-white px-5 py-2.5 text-[13px] font-medium text-[#191C1F] transition hover:bg-white/90"
+          >
+            Commencer maintenant
+          </Link>
+        </div>
+      ) : null}
+
+      {/* Timeline */}
+      <ProgressionTimeline nextSkill={s.nextAction?.skill ?? null} />
     </motion.section>
+  );
+}
+
+function ProgressionTimeline({ nextSkill }: { nextSkill: string | null }) {
+  const groups = [
+    {
+      when: "Aujourd'hui",
+      items: [nextSkill ? `Faire l'exercice recommandé (${nextSkill})` : "Définir votre objectif professionnel"],
+    },
+    { when: "Cette semaine", items: ["Réaliser une simulation IA", "Déposer une preuve"] },
+    { when: "Ce mois-ci", items: ["Suivre une formation courte", "Demander une validation", "Obtenir un badge"] },
+  ];
+
+  return (
+    <div className="rounded-xl border border-[#E8EAED] bg-white p-6">
+      <p className={LABEL}>Votre plan des prochaines semaines</p>
+      <div className="mt-4 grid gap-6 sm:grid-cols-3">
+        {groups.map((group) => (
+          <div key={group.when}>
+            <p className="text-sm font-semibold text-[#191C1F]">{group.when}</p>
+            <ul className="mt-2 space-y-2">
+              {group.items.map((item) => (
+                <li key={item} className="flex gap-2 text-sm text-[#5C6370]">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#191C1F]/40" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -219,13 +311,13 @@ export function EdgeAccompagnementPage() {
     <div className={cn(PAGE, "mx-auto max-w-5xl space-y-14 pb-6 md:space-y-16")}>
       {/* Hero sobre */}
       <motion.header initial="hidden" animate="show" variants={fadeUp} className="max-w-2xl space-y-4">
-        <p className={LABEL}>Accompagnement</p>
+        <p className={LABEL}>Mon plan de progression</p>
         <h1 className="text-[1.625rem] font-semibold leading-[1.2] tracking-[-0.025em] text-[#191C1F] md:text-[1.75rem]">
-          Accélérez votre progression professionnelle
+          Mon plan de progression
         </h1>
         <p className="text-[15px] leading-relaxed text-[#5C6370]">
-          EDGE identifie vos compétences, vos axes de progression et les accompagnements les plus adaptés à
-          votre objectif professionnel. Cette page présente les solutions permettant d&apos;aller plus loin.
+          EDGE vous propose les prochaines actions les plus utiles pour développer vos compétences et
+          atteindre votre objectif professionnel.
         </p>
       </motion.header>
 

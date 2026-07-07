@@ -15,7 +15,7 @@ type Props = {
 export function ProfilEdgeObjectiveCard({ project, typeProfil, careerTitle }: Props) {
   const lines = projectSummaryLines(typeProfil, project);
   const metierLine = lines.find((l) => l.label.toLowerCase().includes("métier"));
-  const metier = careerTitle || metierLine?.value || "—";
+  const metier = metierLine?.value || careerTitle || "—";
 
   return (
     <section className="rounded-2xl border border-[#3D7BFF]/20 bg-gradient-to-br from-[#3D7BFF]/10 to-white/[0.02] p-5">

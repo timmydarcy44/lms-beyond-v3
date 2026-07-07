@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import type { EdgeProgressionGps } from "@/lib/apprenant/edge-progression-gps";
 import type { OnboardingRowHighlight } from "@/components/apprenant/edge-gps/edge-skills-gap-table";
 
-export type FirstStepsStep = "objective" | "gaps" | "priority" | "parcours" | "done";
+export type FirstStepsStep = "objective" | "gaps" | "build" | "form" | "done";
 
 type Props = {
   active: boolean;
@@ -17,13 +17,11 @@ type Props = {
   onRequestParcours: () => void;
   onComplete?: () => void;
   onObjectiveConfirmed?: (objective: string) => void;
-  onPrioritySelected?: (skill: string) => void;
-  selectedPriority?: string | null;
   objectiveDraft?: string;
   onObjectiveDraftChange?: (value: string) => void;
 };
 
-const STEP_ORDER: FirstStepsStep[] = ["objective", "gaps", "priority", "parcours", "done"];
+const STEP_ORDER: FirstStepsStep[] = ["objective", "gaps", "build", "form", "done"];
 
 function scrollToId(id: string) {
   window.setTimeout(() => {
@@ -52,8 +50,6 @@ export function EdgeFirstStepsGuide({
   onRequestParcours,
   onComplete,
   onObjectiveConfirmed,
-  onPrioritySelected,
-  selectedPriority,
   objectiveDraft: objectiveDraftProp,
   onObjectiveDraftChange,
 }: Props) {
@@ -62,7 +58,6 @@ export function EdgeFirstStepsGuide({
 
   const objectiveDraft = objectiveDraftProp ?? internalObjective;
   const setObjectiveDraft = onObjectiveDraftChange ?? setInternalObjective;
-
   const examples = useMemo(() => findExampleSkills(gps), [gps]);
 
   useEffect(() => {
@@ -76,8 +71,7 @@ export function EdgeFirstStepsGuide({
   useEffect(() => {
     if (!active) return;
     if (step === "gaps") scrollToId("edge-skills-gaps");
-    if (step === "priority") scrollToId("edge-skills-gaps");
-    if (step === "parcours") scrollToId("edge-accompagnement-nudge");
+    if (step === "build") scrollToId("edge-next-step-section");
   }, [active, step]);
 
   const showToast = useCallback((message: string) => {
@@ -186,24 +180,16 @@ export function EdgeFirstStepsGuide({
           ) : null}
 
           {step === "gaps" ? (
-            <GapsStep examples={examples} onContinue={() => onStepChange("priority")} />
+            <GapsStep examples={examples} onContinue={() => onStepChange("build")} />
           ) : null}
 
-          {step === "priority" ? (
-            <PriorityStep
-              prioritySkill={selectedPriority ?? null}
-              onContinue={() => {
-                if (!selectedPriority) return;
-                onPrioritySelected?.(selectedPriority);
-                showToast("Priorité sélectionnée. Nous allons pouvoir préparer un parcours adapté.");
-                window.setTimeout(() => onStepChange("parcours"), 900);
-              }}
-            />
+          {step === "build" ? (
+            <BuildStep onContinue={() => onStepChange("form")} />
           ) : null}
 
-          {step === "parcours" ? (
-            <ParcoursStep
-              onRequest={onRequestParcours}
+          {step === "form" ? (
+            <FormStep
+              onOpenForm={() => onRequestParcours()}
               onSkip={() => onStepChange("done")}
             />
           ) : null}
@@ -286,7 +272,7 @@ function GapsStep({
       <ul className="mt-3 space-y-1.5 text-xs text-white/50">
         {examples.aligned ? (
           <li>
-            <span className="text-emerald-300">●</span> {examples.aligned.name} — alignée
+            <span className="text-emerald-300">●</span> {examples.aligned.name} — validée / alignée
           </li>
         ) : null}
         {examples.unevaluated ? (
@@ -311,59 +297,45 @@ function GapsStep({
   );
 }
 
-function PriorityStep({
-  prioritySkill,
-  onContinue,
-}: {
-  prioritySkill: string | null;
-  onContinue: () => void;
-}) {
+function BuildStep({ onContinue }: { onContinue: () => void }) {
   return (
     <div>
-      <h3 className="text-base font-semibold text-white">Choisir une priorité</h3>
-      <p className="mt-2 text-sm text-white/55">
-        Sélectionnez une compétence dans le tableau pour préparer votre parcours.
+      <h3 className="text-base font-semibold text-white">Construire mon parcours EDGE</h3>
+      <p className="mt-2 text-sm leading-relaxed text-white/55">
+        EDGE identifie vos écarts. Un expert EDGE peut ensuite construire un parcours personnalisé
+        adapté à votre situation — pas un catalogue générique.
       </p>
-      {prioritySkill ? (
-        <p className="mt-3 rounded-lg border border-[#3D7BFF]/25 bg-[#3D7BFF]/10 px-3 py-2 text-sm text-[#8BB4FF]">
-          {prioritySkill}
-        </p>
-      ) : (
-        <p className="mt-3 text-xs text-white/40">Cliquez sur une ligne du tableau.</p>
-      )}
       <button
         type="button"
         onClick={onContinue}
-        disabled={!prioritySkill}
-        className="mt-4 w-full rounded-lg bg-[#3D7BFF] py-2.5 text-sm font-medium text-white hover:bg-[#2F6AE8] disabled:opacity-50"
+        className="mt-4 w-full rounded-lg bg-white py-2.5 text-sm font-medium text-[#0a0a0a] hover:bg-white/90"
       >
-        Choisir cette priorité
+        Demander une recommandation personnalisée
       </button>
     </div>
   );
 }
 
-function ParcoursStep({ onRequest, onSkip }: { onRequest: () => void; onSkip: () => void }) {
+function FormStep({ onOpenForm, onSkip }: { onOpenForm: () => void; onSkip: () => void }) {
   return (
     <div>
-      <h3 className="text-base font-semibold text-white">Demander un parcours personnalisé</h3>
-      <p className="mt-2 text-sm leading-relaxed text-white/55">
-        EDGE identifie vos écarts. Un conseiller peut ensuite construire un parcours personnalisé pour
-        vous aider à progresser concrètement.
+      <h3 className="text-base font-semibold text-white">Demander mon parcours personnalisé</h3>
+      <p className="mt-2 text-sm text-white/55">
+        Complétez le formulaire en 2 minutes. Un conseiller EDGE analysera votre profil.
       </p>
       <button
         type="button"
-        onClick={onRequest}
-        className="mt-4 w-full rounded-lg bg-white py-2.5 text-sm font-medium text-[#0a0a0a] hover:bg-white/90"
+        onClick={onOpenForm}
+        className="mt-4 w-full rounded-lg bg-[#3D7BFF] py-2.5 text-sm font-medium text-white hover:bg-[#2F6AE8]"
       >
-        Demander mon parcours personnalisé
+        Ouvrir le formulaire
       </button>
       <button
         type="button"
         onClick={onSkip}
         className="mt-2 w-full rounded-lg border border-white/15 py-2.5 text-sm text-white/60 hover:bg-white/[0.04]"
       >
-        Terminer sans demander
+        Terminer sans envoyer
       </button>
     </div>
   );

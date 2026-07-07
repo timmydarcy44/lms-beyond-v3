@@ -72,12 +72,17 @@ export function ProfilEdgeProjectSection() {
     finishSave();
   };
 
-  const handleCareerResolved = (slug: string, profile: CareerProfile) => {
+  const handleCareerResolved = (
+    slug: string,
+    profile: CareerProfile,
+    meta: { userLabel: string },
+  ) => {
     if (!careerFieldKey) return;
-    const nextForm = { ...form, [careerFieldKey]: profile.title };
+    const displayTitle = meta.userLabel.trim() || profile.title;
+    const nextForm = { ...form, [careerFieldKey]: displayTitle };
     setForm(nextForm);
     setTargetCareerSlug(slug);
-    setCareerTitle(profile.title);
+    setCareerTitle(displayTitle);
   };
 
   const save = async () => {
@@ -101,7 +106,7 @@ export function ProfilEdgeProjectSection() {
               key={field.key}
               value={targetCareerSlug}
               selectedTitle={careerTitle ?? form[field.key]}
-              onResolved={(slug, profile) => handleCareerResolved(slug, profile)}
+              onResolved={(slug, profile, meta) => handleCareerResolved(slug, profile, meta)}
             />
           ) : field.inputType === "select" && field.options ? (
             <div key={field.key} className="block text-sm">

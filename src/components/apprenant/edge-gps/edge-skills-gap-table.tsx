@@ -127,9 +127,42 @@ export function EdgeSkillsGapTable({
     <>
       <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
         <div className="border-b border-white/[0.06] px-4 py-3 sm:px-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">Compétences</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">Mes compétences</p>
           <p className="mt-0.5 text-xs text-white/45">Écarts avec « {objectiveTitle} »</p>
         </div>
+
+        {/* Mobile — cartes empilées */}
+        <ul className="space-y-3 p-4 sm:hidden">
+          {skills.map((skill) => {
+            const highlight = onboardingHighlights?.[skill.name] ?? null;
+            return (
+              <li key={skill.name}>
+                <button
+                  type="button"
+                  onClick={() => handleRowActivate(skill)}
+                  className={cn(
+                    "w-full rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 text-left transition active:scale-[0.99]",
+                    highlight && ONBOARDING_ROW_RING[highlight],
+                    !highlight && "hover:border-white/15",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-semibold text-white">{skill.name}</p>
+                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-white/30" />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <LevelPill level={skill.estimatedLevel} />
+                    <GapPill label={skill.gapLabel} severity={skill.gapSeverity} />
+                    <StatusPill status={skill.status} />
+                  </div>
+                  <div className="mt-3">
+                    <LevelBar score={skill.levelScore} />
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
 
         <div className="hidden border-b border-white/[0.06] bg-white/[0.02] px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-white/35 sm:grid sm:grid-cols-[2fr_1.1fr_1fr_1fr_auto] sm:gap-3 sm:px-5">
           <span>Compétence</span>
@@ -139,7 +172,7 @@ export function EdgeSkillsGapTable({
           <span className="text-right">Action</span>
         </div>
 
-        <ul className="divide-y divide-white/[0.05]">
+        <ul className="hidden divide-y divide-white/[0.05] sm:block">
           {skills.map((skill) => {
             const highlight = onboardingHighlights?.[skill.name] ?? null;
             const isPrioritySelected = prioritySelectMode && selectedPriority === skill.name;

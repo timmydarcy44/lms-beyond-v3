@@ -48,7 +48,6 @@ export function EdgeDashboardGpsContainer(props: Props) {
   const [parcoursRequestOpen, setParcoursRequestOpen] = useState(false);
   const [firstStepsActive, setFirstStepsActive] = useState(false);
   const [firstStepsStep, setFirstStepsStep] = useState<FirstStepsStep>("objective");
-  const [selectedPriority, setSelectedPriority] = useState<string | null>(null);
   const [confirmedObjective, setConfirmedObjective] = useState<string | null>(null);
   const [objectiveDraft, setObjectiveDraft] = useState("");
 
@@ -73,17 +72,23 @@ export function EdgeDashboardGpsContainer(props: Props) {
     if (forceStart || shouldAutoStartFirstSteps()) {
       setFirstStepsActive(true);
       setFirstStepsStep("objective");
-      setSelectedPriority(gps.prioritySkill || gps.skills[0]?.name || null);
     }
-  }, [loading, searchParams, gps.prioritySkill, gps.skills]);
+  }, [loading, searchParams]);
 
-  const prioritySkills = useMemo(() => {
-    if (selectedPriority) return [selectedPriority];
-    return gps.skills
-      .filter((s) => s.status === "priority" || s.status === "to_develop")
-      .slice(0, 5)
-      .map((s) => s.name);
-  }, [gps.skills, selectedPriority]);
+  useEffect(() => {
+    if (firstStepsActive && firstStepsStep === "form") {
+      setParcoursRequestOpen(true);
+    }
+  }, [firstStepsActive, firstStepsStep]);
+
+  const prioritySkills = useMemo(
+    () =>
+      gps.skills
+        .filter((s) => s.status === "priority" || s.status === "to_develop")
+        .slice(0, 5)
+        .map((s) => s.name),
+    [gps.skills],
+  );
 
   const onboardingHighlights = useMemo(
     () => buildOnboardingHighlights(gps, firstStepsStep),
@@ -97,9 +102,9 @@ export function EdgeDashboardGpsContainer(props: Props) {
       completed: true,
       completedAt: new Date().toISOString(),
       objective: confirmedObjective ?? objectiveDraft.trim() ?? gps.objectiveTitle,
-      selectedPriority: selectedPriority ?? undefined,
+      selectedPriority: gps.prioritySkill || undefined,
     });
-  }, [confirmedObjective, objectiveDraft, gps.objectiveTitle, selectedPriority]);
+  }, [confirmedObjective, objectiveDraft, gps.objectiveTitle, gps.prioritySkill]);
 
   const handleStepChange = useCallback(
     (step: FirstStepsStep) => {
@@ -115,10 +120,6 @@ export function EdgeDashboardGpsContainer(props: Props) {
     setFirstStepsActive(true);
   }, [persistFirstSteps]);
 
-  const handleFirstStepsComplete = useCallback(() => {
-    setFirstStepsActive(false);
-  }, []);
-
   return (
     <>
       <EdgeFirstStepsGuide
@@ -128,10 +129,8 @@ export function EdgeDashboardGpsContainer(props: Props) {
         gps={gps}
         onClose={() => setFirstStepsActive(false)}
         onRequestParcours={openParcoursRequest}
-        onComplete={handleFirstStepsComplete}
+        onComplete={() => setFirstStepsActive(false)}
         onObjectiveConfirmed={setConfirmedObjective}
-        onPrioritySelected={setSelectedPriority}
-        selectedPriority={selectedPriority}
         objectiveDraft={objectiveDraft}
         onObjectiveDraftChange={setObjectiveDraft}
       />
@@ -144,9 +143,6 @@ export function EdgeDashboardGpsContainer(props: Props) {
         onViewGaps={scrollToSkillsGaps}
         firstStepsStep={firstStepsActive ? firstStepsStep : null}
         onboardingHighlights={firstStepsActive ? onboardingHighlights : undefined}
-        prioritySelectMode={firstStepsActive && firstStepsStep === "priority"}
-        selectedPriority={selectedPriority}
-        onSelectPriority={setSelectedPriority}
       />
 
       <EdgeWhatNowFab onClick={() => setWhatNowOpen(true)} />

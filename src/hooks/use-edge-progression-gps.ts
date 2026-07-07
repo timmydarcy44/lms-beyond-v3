@@ -40,7 +40,7 @@ export function useEdgeProgressionGps(params: {
   earnedBadgeCount: number;
   profileCompletionPercent: number;
 }): { gps: EdgeProgressionGps; loading: boolean } {
-  const [careerTitle, setCareerTitle] = useState<string | null>(null);
+  const [referentialTitle, setReferentialTitle] = useState<string | null>(null);
   const [matching, setMatching] = useState<ReturnType<typeof analyzeCareerMatching> | null>(null);
   const [hasCrossProfileBadge, setHasCrossProfileBadge] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,7 +48,7 @@ export function useEdgeProgressionGps(params: {
   const load = useCallback(async () => {
     const slug = String(params.profile?.target_career_slug ?? "").trim();
     if (!slug || !params.discScores) {
-      setCareerTitle(null);
+      setReferentialTitle(null);
       setMatching(null);
       return;
     }
@@ -56,7 +56,7 @@ export function useEdgeProgressionGps(params: {
     const career = await loadCareerBySlug(slug);
     if (!career) return;
 
-    setCareerTitle(career.title);
+    setReferentialTitle(career.title);
     setMatching(
       analyzeCareerMatching({
         career,
@@ -113,10 +113,10 @@ export function useEdgeProgressionGps(params: {
       buildEdgeProgressionGps({
         ...params,
         matching,
-        careerTitle,
+        referentialTitle,
         hasCrossProfileBadge,
       }),
-    [params, matching, careerTitle, hasCrossProfileBadge],
+    [params, matching, referentialTitle, hasCrossProfileBadge],
   );
 
   return { gps, loading };

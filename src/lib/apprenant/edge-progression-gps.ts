@@ -80,6 +80,7 @@ export type EdgeNextStep = {
 
 export type EdgeProgressionGps = {
   objectiveTitle: string;
+  referentialTitle: string | null;
   hasObjective: boolean;
   compatibilityPercent: number;
   prioritySkillsRemaining: number;
@@ -361,18 +362,23 @@ export function buildEdgeProgressionGps(params: {
   earnedBadgeCount: number;
   matching: CareerMatchingResult | null;
   careerTitle?: string | null;
+  referentialTitle?: string | null;
   profileCompletionPercent?: number;
   hasCrossProfileBadge?: boolean;
 }): EdgeProgressionGps {
   const project = parseProfessionalProject(params.profile?.professional_project);
-  const objectiveTitle =
-    params.careerTitle?.trim() ||
+  const userObjectiveTitle =
     extractCareerTitleFromProject(
       params.profile?.type_profil as string | undefined,
       project,
     ) ||
     String(params.profile?.career_goal_other ?? params.profile?.career_goal ?? "").trim() ||
-    "Objectif professionnel";
+    "";
+  const referentialTitle = params.referentialTitle?.trim() || params.careerTitle?.trim() || null;
+  const objectiveTitle = userObjectiveTitle || referentialTitle || "Objectif professionnel";
+  const showReferentialHint =
+    Boolean(userObjectiveTitle && referentialTitle) &&
+    userObjectiveTitle.toLowerCase() !== referentialTitle.toLowerCase();
 
   const hasObjective = objectiveTitle !== "Objectif professionnel" && objectiveTitle.length > 0;
 
@@ -471,6 +477,7 @@ export function buildEdgeProgressionGps(params: {
 
   return {
     objectiveTitle,
+    referentialTitle: showReferentialHint ? referentialTitle : null,
     hasObjective,
     compatibilityPercent,
     prioritySkillsRemaining,

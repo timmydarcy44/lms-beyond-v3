@@ -185,7 +185,7 @@ export function DyslexiaSettingsPalette({
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="border-white/10 bg-[#12141C] text-white">
                   <SelectItem value="OpenDyslexic">OpenDyslexic</SelectItem>
                   <SelectItem value="Comic Sans MS">Comic Sans MS</SelectItem>
                   <SelectItem value="Arial">Arial</SelectItem>
@@ -249,7 +249,7 @@ export function DyslexiaSettingsPalette({
                 <SelectTrigger className="bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="border-white/10 bg-[#12141C] text-white">
                   <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="high">Élevé</SelectItem>
                   <SelectItem value="very-high">Très élevé</SelectItem>

@@ -7,12 +7,17 @@ import {
   CAREER_OTHER_VALUE,
   getCareerDropdownOptions,
 } from "@/lib/career-profiles/featured-careers";
+import { EdgeSelect } from "@/components/ui/edge-select";
 
 type Props = {
   value: string | null;
   selectedTitle?: string | null;
   disabled?: boolean;
-  onResolved: (slug: string, profile: CareerProfile, meta: { cached: boolean }) => void;
+  onResolved: (
+    slug: string,
+    profile: CareerProfile,
+    meta: { cached: boolean; userLabel: string },
+  ) => void;
 };
 
 export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved }: Props) {
@@ -29,10 +34,14 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
 
   useEffect(() => {
     if (!value) return;
-    const match = options.find((o) => o.slug === value);
+    const byLabel = selectedTitle
+      ? options.find((o) => o.label.toLowerCase() === selectedTitle.toLowerCase())
+      : null;
+    const bySlug = options.find((o) => o.slug === value);
+    const match = byLabel ?? bySlug;
     if (match) {
       setSelectValue(match.id);
-      setSearch(match.label);
+      setSearch(selectedTitle ?? match.label);
     } else {
       setSelectValue(CAREER_OTHER_VALUE);
       const title = selectedTitle ?? value.replace(/-/g, " ");
@@ -97,9 +106,14 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
       if (!res.ok) throw new Error(json.error ?? "Analyse impossible");
 
       const profile = json.profile as CareerProfile;
-      onResolved(profile.slug, profile, { cached: Boolean(json.cached) });
-      setSearch(profile.title);
-      setSelectValue(options.find((o) => o.slug === profile.slug)?.id ?? CAREER_OTHER_VALUE);
+      const userLabel = payload.title?.trim() || profile.title;
+      onResolved(profile.slug, profile, { cached: Boolean(json.cached), userLabel });
+      setSearch(userLabel);
+      setSelectValue(
+        options.find((o) => o.label === userLabel)?.id ??
+          options.find((o) => o.slug === profile.slug)?.id ??
+          CAREER_OTHER_VALUE,
+      );
       setStatusMessage(
         json.cached
           ? "Référentiel métier chargé."
@@ -202,20 +216,17 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
         ) : null}
       </div>
 
-      <select
-        disabled={disabled || loading}
+      <EdgeSelect
         value={selectValue}
-        onChange={(e) => handleSelectChange(e.target.value)}
-        className={`${selectClass} mt-3`}
-      >
-        <option value="">Ou sélectionnez dans la liste…</option>
-        {options.map((opt) => (
-          <option key={opt.id} value={opt.id}>
-            {opt.label}
-          </option>
-        ))}
-        <option value={CAREER_OTHER_VALUE}>Autre</option>
-      </select>
+        onChange={handleSelectChange}
+        disabled={disabled || loading}
+        placeholder="Ou sélectionnez dans la liste…"
+        className="mt-3"
+        options={[
+          ...options.map((opt) => ({ value: opt.id, label: opt.label })),
+          { value: CAREER_OTHER_VALUE, label: "Autre" },
+        ]}
+      />
 
       {selectValue === CAREER_OTHER_VALUE ? (
         <div className="mt-4 space-y-3">

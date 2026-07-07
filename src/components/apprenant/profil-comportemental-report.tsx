@@ -233,7 +233,10 @@ export function ProfilComportementalReport() {
     });
   }, [firstName, selectedCareer, matching, discScores]);
 
-  const careerTitle = selectedCareer?.title ?? extractCareerTitleFromProject(typeProfil, professionalProject);
+  const careerTitle =
+    extractCareerTitleFromProject(typeProfil, professionalProject) ??
+    selectedCareer?.title ??
+    "";
 
   if (loading) {
     return <p className="text-sm text-white/50">Chargement de votre Profil EDGE…</p>;

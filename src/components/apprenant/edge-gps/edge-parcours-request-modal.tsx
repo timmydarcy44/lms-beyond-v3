@@ -11,6 +11,7 @@ import {
   type PersonalizedPathRequestPayload,
   type SupportPreferenceOption,
 } from "@/lib/apprenant/edge-personalized-path-request";
+import { EdgeSelect } from "@/components/ui/edge-select";
 
 type Props = {
   open: boolean;
@@ -145,47 +146,29 @@ export function EdgeParcoursRequestModal({
 
               <label className="block space-y-1.5">
                 <span className="text-xs font-medium text-white/70">Situation actuelle</span>
-                <select
+                <EdgeSelect
                   value={currentStatus}
-                  onChange={(e) => setCurrentStatus(e.target.value as CurrentSituationOption)}
-                  className="w-full rounded-lg border border-white/10 bg-[#12141C] px-3 py-2.5 text-sm text-white focus:border-[#3D7BFF]/50 focus:outline-none"
-                >
-                  {CURRENT_SITUATION_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setCurrentStatus(v as CurrentSituationOption)}
+                  options={CURRENT_SITUATION_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                />
               </label>
 
               <label className="block space-y-1.5">
                 <span className="text-xs font-medium text-white/70">Échéance</span>
-                <select
+                <EdgeSelect
                   value={deadline}
-                  onChange={(e) => setDeadline(e.target.value as DeadlineOption)}
-                  className="w-full rounded-lg border border-white/10 bg-[#12141C] px-3 py-2.5 text-sm text-white focus:border-[#3D7BFF]/50 focus:outline-none"
-                >
-                  {DEADLINE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setDeadline(v as DeadlineOption)}
+                  options={DEADLINE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                />
               </label>
 
               <label className="block space-y-1.5">
                 <span className="text-xs font-medium text-white/70">Préférence</span>
-                <select
+                <EdgeSelect
                   value={supportPreference}
-                  onChange={(e) => setSupportPreference(e.target.value as SupportPreferenceOption)}
-                  className="w-full rounded-lg border border-white/10 bg-[#12141C] px-3 py-2.5 text-sm text-white focus:border-[#3D7BFF]/50 focus:outline-none"
-                >
-                  {SUPPORT_PREFERENCE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setSupportPreference(v as SupportPreferenceOption)}
+                  options={SUPPORT_PREFERENCE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                />
               </label>
 
               <label className="block space-y-1.5">

@@ -19,15 +19,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const title = String(body.title ?? "").trim();
+    const prompt = String(body.prompt ?? "").trim();
+    const title = String(body.title ?? prompt).trim();
     const slug = String(body.slug ?? "").trim();
 
     if (!title && !slug) {
-      return NextResponse.json({ error: "Indiquez un métier." }, { status: 400 });
+      return NextResponse.json({ error: "Indiquez votre projet professionnel." }, { status: 400 });
     }
 
-    if (title.length > 120) {
-      return NextResponse.json({ error: "Intitulé de métier trop long." }, { status: 400 });
+    if (title.length > 600) {
+      return NextResponse.json({ error: "Description du projet trop longue." }, { status: 400 });
     }
 
     const resolved = await resolveCareerProfile({ title: title || undefined, slug: slug || undefined });

@@ -2,18 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { CareerProfilePicker } from "@/components/apprenant/career-profile-picker";
 import { EdgeSelect } from "@/components/ui/edge-select";
 import { ProfilEdgeSectionShell } from "@/components/apprenant/profil-edge/profil-edge-section-shell";
 import { useProfilEdgeSaveReturn } from "@/components/apprenant/profil-edge/use-profil-edge-save-return";
-import type { CareerProfile } from "@/lib/career-profiles/career-profiles-data";
 import { CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
-import { objectiveTypeLabel } from "@/lib/particulier/professional-project-fields";
 import {
-  getCareerTargetFieldKey,
-  getProfessionalProjectFields,
-  mergeObjectiveDetailsIntoProject,
-} from "@/lib/particulier/professional-project-fields";
+  buildCareerResolvePrompt,
+  EDGE_PROJECT_KEYS,
+  isEdgeProjectV2Complete,
+  migrateLegacyProjectToV2,
+  PROFESSION_OPTIONS,
+  SECTEUR_V2_OPTIONS,
+} from "@/lib/particulier/edge-professional-project-v2";
+import { mergeObjectiveDetailsIntoProject } from "@/lib/particulier/professional-project-fields";
 import { parseProfessionalProject, type ProfessionalProject } from "@/lib/particulier/profil-edge-maturity";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -22,13 +23,9 @@ export function ProfilEdgeProjectSection() {
   const { savedMessage, finishSave } = useProfilEdgeSaveReturn();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [typeProfil, setTypeProfil] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<ProfessionalProject>({});
-  const [targetCareerSlug, setTargetCareerSlug] = useState<string | null>(null);
-  const [careerTitle, setCareerTitle] = useState<string | null>(null);
-
-  const fields = getProfessionalProjectFields(typeProfil);
-  const careerFieldKey = getCareerTargetFieldKey(typeProfil);
+  const [resolvedTitle, setResolvedTitle] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data: userData } = await supabase.auth.getUser();
@@ -41,97 +38,155 @@ export function ProfilEdgeProjectSection() {
       .maybeSingle();
 
     const objectiveDetails = (data?.objective_details as Record<string, string>) ?? {};
-    const project = mergeObjectiveDetailsIntoProject(
+    const merged = mergeObjectiveDetailsIntoProject(
       data?.type_profil,
       parseProfessionalProject(data?.professional_project),
       objectiveDetails,
     );
-
-    setTypeProfil(data?.type_profil ? String(data.type_profil) : null);
+    const project = migrateLegacyProjectToV2(merged);
     setForm(project);
-    const slug = data?.target_career_slug ? String(data.target_career_slug) : null;
-    setTargetCareerSlug(slug);
-    const careerKey = getCareerTargetFieldKey(data?.type_profil);
-    setCareerTitle(careerKey ? project[careerKey] ?? null : null);
+
+    if (data?.target_career_slug) {
+      try {
+        const res = await fetch(
+          `/api/career-profiles/search?slug=${encodeURIComponent(String(data.target_career_slug))}`,
+        );
+        const json = await res.json();
+        if (res.ok && json.profile?.title) setResolvedTitle(String(json.profile.title));
+      } catch {
+        /* ignore */
+      }
+    }
   }, [supabase]);
 
   useEffect(() => {
     void load().finally(() => setLoading(false));
   }, [load]);
 
-  const persist = async (nextForm: ProfessionalProject) => {
+  const setField = (key: string, value: string) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    setError(null);
+  };
+
+  const save = async () => {
+    if (!isEdgeProjectV2Complete(form)) {
+      setError("Renseignez la profession, le secteur et décrivez votre projet (20 caractères minimum).");
+      return;
+    }
+
     setSaving(true);
+    setError(null);
+
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
     if (!uid) {
       setSaving(false);
       return;
     }
-    await supabase.from("profiles").update({ professional_project: nextForm }).eq("id", uid);
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ professional_project: form })
+      .eq("id", uid);
+
+    if (updateError) {
+      setError(updateError.message);
+      setSaving(false);
+      return;
+    }
+
+    const prompt = buildCareerResolvePrompt(form);
+    try {
+      const resolveRes = await fetch("/api/learner/career-profiles/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const resolveJson = await resolveRes.json();
+      if (resolveRes.ok && resolveJson.profile?.title) {
+        setResolvedTitle(String(resolveJson.profile.title));
+      } else if (!resolveRes.ok) {
+        setError(
+          String(resolveJson.error ?? "Projet enregistré, mais l'analyse métier a échoué. Réessayez."),
+        );
+        setSaving(false);
+        finishSave();
+        return;
+      }
+    } catch {
+      setError("Projet enregistré, mais l'analyse métier est indisponible pour le moment.");
+      setSaving(false);
+      finishSave();
+      return;
+    }
+
     setSaving(false);
     finishSave();
-  };
-
-  const handleCareerResolved = (
-    slug: string,
-    profile: CareerProfile,
-    meta: { userLabel: string },
-  ) => {
-    if (!careerFieldKey) return;
-    const displayTitle = meta.userLabel.trim() || profile.title;
-    const nextForm = { ...form, [careerFieldKey]: displayTitle };
-    setForm(nextForm);
-    setTargetCareerSlug(slug);
-    setCareerTitle(displayTitle);
-  };
-
-  const save = async () => {
-    await persist(form);
   };
 
   if (loading) return <p className="text-sm text-white/50">Chargement…</p>;
 
   const inputClass =
     "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none focus:border-[#3D7BFF]/40";
+  const textareaClass = `${inputClass} min-h-[120px] resize-y`;
 
   return (
     <ProfilEdgeSectionShell
       title="Projet professionnel"
-      description={`Objectif : ${objectiveTypeLabel(typeProfil)} — complétez les informations adaptées à votre situation.`}
+      description="Décrivez votre cap : EDGE identifie ensuite le métier le plus pertinent pour votre analyse."
     >
-      <div className="space-y-6">
-        {fields.map((field) =>
-          field.isCareerTarget ? (
-            <CareerProfilePicker
-              key={field.key}
-              value={targetCareerSlug}
-              selectedTitle={careerTitle ?? form[field.key]}
-              onResolved={(slug, profile, meta) => handleCareerResolved(slug, profile, meta)}
-            />
-          ) : field.inputType === "select" && field.options ? (
-            <div key={field.key} className="block text-sm">
-              <span className="mb-1 block text-white/70">{field.label}</span>
-              <EdgeSelect
-                value={form[field.key] ?? ""}
-                onChange={(v) => setForm((f) => ({ ...f, [field.key]: v }))}
-                options={field.options}
-                placeholder={field.placeholder}
-              />
-            </div>
-          ) : (
-            <label key={field.key} className="block text-sm">
-              <span className="mb-1 block text-white/70">{field.label}</span>
-              <input
-                className={inputClass}
-                placeholder={field.placeholder}
-                value={form[field.key] ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, [field.key]: e.target.value }))}
-              />
-            </label>
-          ),
-        )}
+      <div className="space-y-5">
+        <div className="block text-sm">
+          <span className="mb-1 block text-white/70">Profession</span>
+          <EdgeSelect
+            value={form[EDGE_PROJECT_KEYS.profession] ?? ""}
+            onChange={(v) => setField(EDGE_PROJECT_KEYS.profession, v)}
+            options={[...PROFESSION_OPTIONS]}
+            placeholder="Choisir une profession…"
+          />
+        </div>
+
+        <div className="block text-sm">
+          <span className="mb-1 block text-white/70">Secteur</span>
+          <EdgeSelect
+            value={form[EDGE_PROJECT_KEYS.secteur] ?? ""}
+            onChange={(v) => setField(EDGE_PROJECT_KEYS.secteur, v)}
+            options={[...SECTEUR_V2_OPTIONS]}
+            placeholder="Choisir un secteur…"
+          />
+        </div>
+
+        <label className="block text-sm">
+          <span className="mb-1 block text-white/70">Spécialité (optionnelle)</span>
+          <input
+            className={inputClass}
+            placeholder="Ex. Immobilier de prestige, e-commerce sport…"
+            value={form[EDGE_PROJECT_KEYS.specialite] ?? ""}
+            onChange={(e) => setField(EDGE_PROJECT_KEYS.specialite, e.target.value)}
+          />
+        </label>
+
+        <label className="block text-sm">
+          <span className="mb-1 block text-white/70">
+            Décrivez votre projet professionnel <span className="text-rose-400">*</span>
+          </span>
+          <textarea
+            className={textareaClass}
+            placeholder="Ex. Je souhaite évoluer vers un poste de chargé de clientèle B2B dans l'immobilier commercial, en valorisant mon expérience terrain et ma capacité à négocier."
+            value={form[EDGE_PROJECT_KEYS.projetLibre] ?? ""}
+            onChange={(e) => setField(EDGE_PROJECT_KEYS.projetLibre, e.target.value)}
+          />
+          <span className="mt-1 block text-xs text-white/35">Minimum 20 caractères</span>
+        </label>
       </div>
 
+      {resolvedTitle ? (
+        <p className="mt-4 text-xs text-white/45">
+          Référentiel EDGE utilisé pour l&apos;analyse : {resolvedTitle}
+        </p>
+      ) : null}
+
+      {error ? <p className="mt-4 text-sm text-rose-400">{error}</p> : null}
       {savedMessage ? <p className="mt-4 text-sm text-emerald-400">{savedMessage}</p> : null}
 
       <button type="button" onClick={() => void save()} disabled={saving} className={`${CONNECT_BTN_PRIMARY} mt-6`}>

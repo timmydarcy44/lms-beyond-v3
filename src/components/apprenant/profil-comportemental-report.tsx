@@ -5,12 +5,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Award, Lock } from "lucide-react";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import { ProfilEdgeMaturityGauge } from "@/components/apprenant/profil-edge/profil-edge-maturity-gauge";
-import { ProfilEdgeMatchingSection } from "@/components/apprenant/profil-edge/profil-edge-matching-section";
-import { ProfilEdgeObjectiveCard } from "@/components/apprenant/profil-edge/profil-edge-objective-card";
+import { ProfilEdgeHubActionPlan } from "@/components/apprenant/profil-edge/profil-edge-hub-action-plan";
+import { ProfilEdgeHubGaps } from "@/components/apprenant/profil-edge/profil-edge-hub-gaps";
+import { ProfilEdgeHubObjective } from "@/components/apprenant/profil-edge/profil-edge-hub-objective";
+import { ProfilEdgeHubResults } from "@/components/apprenant/profil-edge/profil-edge-hub-results";
 import { ProfilEdgeProfileBlocks } from "@/components/apprenant/profil-edge/profil-edge-profile-blocks";
 import {
   analyzeCareerMatching,
-  buildDynamicActionPlan,
 } from "@/lib/career-profiles/career-profile-matching";
 import {
   getCareerProfileBySlug,
@@ -29,6 +30,7 @@ import {
   extractCareerTitleFromProject,
   mergeObjectiveDetailsIntoProject,
 } from "@/lib/particulier/professional-project-fields";
+import { buildUserObjectiveDisplay, migrateLegacyProjectToV2 } from "@/lib/particulier/edge-professional-project-v2";
 import { buildProfilEdgeExplorations, isProfilEdgeComplete } from "@/lib/particulier/profil-edge-progress";
 import {
   APPRENANT_CARD_BODY,
@@ -52,7 +54,6 @@ async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
 export function ProfilComportementalReport() {
   const supabase = createSupabaseBrowserClient();
   const [loading, setLoading] = useState(true);
-  const [firstName, setFirstName] = useState("");
   const [discScores, setDiscScores] = useState<DiscScores | null>(null);
   const [hasIdmc, setHasIdmc] = useState(false);
   const [hasSoftSkills, setHasSoftSkills] = useState(false);
@@ -90,14 +91,15 @@ export function ProfilComportementalReport() {
 
     const profile = profileRes.data;
     const objectiveDetails = (profile?.objective_details as Record<string, string>) ?? {};
-    const project = mergeObjectiveDetailsIntoProject(
-      profile?.type_profil,
-      parseProfessionalProject(profile?.professional_project),
-      objectiveDetails,
+    const project = migrateLegacyProjectToV2(
+      mergeObjectiveDetailsIntoProject(
+        profile?.type_profil,
+        parseProfessionalProject(profile?.professional_project),
+        objectiveDetails,
+      ),
     );
     setProfileRow((profile as Record<string, unknown>) ?? {});
     setTypeProfil(profile?.type_profil ? String(profile.type_profil) : null);
-    setFirstName(String(profile?.first_name ?? "").trim());
     setProfessionalProject(project);
     setHardSkills(Array.isArray(profile?.hard_skills) ? (profile.hard_skills as string[]) : []);
     setSkillsMetadata((profile?.skills_metadata as Record<string, LearnerHardSkillMeta>) ?? {});
@@ -223,20 +225,11 @@ export function ProfilComportementalReport() {
     });
   }, [discScores, selectedCareer, softSkillsScores, hardSkills, skillsMetadata, experiences, diplomas, hasIdmc]);
 
-  const actionPlan = useMemo(() => {
-    if (!discScores || !selectedCareer || !matching) return "";
-    return buildDynamicActionPlan({
-      firstName,
-      careerTitle: selectedCareer.title,
-      matching,
-      discScores,
-    });
-  }, [firstName, selectedCareer, matching, discScores]);
-
-  const careerTitle =
-    extractCareerTitleFromProject(typeProfil, professionalProject) ??
-    selectedCareer?.title ??
-    "";
+  const objectiveLabel =
+    buildUserObjectiveDisplay(professionalProject) ||
+    extractCareerTitleFromProject(typeProfil, professionalProject) ||
+    selectedCareer?.title ||
+    "votre objectif professionnel";
 
   if (loading) {
     return <p className="text-sm text-white/50">Chargement de votre Profil EDGE…</p>;
@@ -265,15 +258,17 @@ export function ProfilComportementalReport() {
 
       <ProfilEdgeMaturityGauge maturity={maturity} />
 
-      <ProfilEdgeObjectiveCard project={professionalProject} typeProfil={typeProfil} careerTitle={careerTitle} />
+      <ProfilEdgeHubObjective
+        project={professionalProject}
+        referentialTitle={selectedCareer?.title ?? null}
+      />
 
       {!selectedCareer && extractCareerTitleFromProject(typeProfil, professionalProject) ? (
         <section className={APPRENANT_CARD_BODY}>
           <p className="text-sm text-white/60">
-            Le métier « {extractCareerTitleFromProject(typeProfil, professionalProject)} » n&apos;a pas encore été
-            analysé.{" "}
+            Votre projet n&apos;a pas encore été analysé.{" "}
             <Link href={PROFIL_EDGE_SECTION_HREFS.projet} className="text-[#3D7BFF] hover:underline">
-              Complétez votre projet professionnel
+              Enregistrez votre projet professionnel
             </Link>{" "}
             pour activer l&apos;analyse de compatibilité.
           </p>
@@ -281,7 +276,11 @@ export function ProfilComportementalReport() {
       ) : null}
 
       {matching && selectedCareer ? (
-        <ProfilEdgeMatchingSection careerTitle={selectedCareer.title} matching={matching} actionPlan={actionPlan} />
+        <div className="space-y-6">
+          <ProfilEdgeHubResults matching={matching} />
+          <ProfilEdgeHubGaps matching={matching} objectiveLabel={objectiveLabel} />
+          <ProfilEdgeHubActionPlan matching={matching} />
+        </div>
       ) : null}
 
       <ProfilEdgeProfileBlocks
@@ -328,15 +327,14 @@ export function ProfilComportementalReport() {
         <section className={APPRENANT_CARD_BODY}>
           <h2 className="text-lg font-semibold text-white">Accélérer votre progression</h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/55">
-            Transformez votre analyse EDGE en compétences concrètes avec un expert : coaching, simulation
-            professionnelle ou programme de progression.
+            Un spécialiste EDGE peut vous accompagner sur vos écarts prioritaires.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/dashboard/apprenant/coaching" className={CONNECT_BTN_PRIMARY}>
-              Découvrir les formules
+            <Link href={getCoachingBookingHref("progression")} className={CONNECT_BTN_PRIMARY}>
+              Être accompagné par un spécialiste EDGE
             </Link>
-            <Link href={getCoachingBookingHref("progression")} className={CONNECT_BTN_SECONDARY}>
-              Réserver un accompagnement
+            <Link href="/dashboard/apprenant/coaching" className={CONNECT_BTN_SECONDARY}>
+              Découvrir les formules
             </Link>
           </div>
         </section>

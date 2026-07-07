@@ -15,6 +15,10 @@ import type { PersonalizedActionPlan } from "@/lib/learner/personalized-action-p
 import type { LearnerVisibleOpenBadge } from "@/lib/openbadges/learner-visible-badges";
 import { buildProfilEdgeExplorations, isProfilEdgeComplete } from "@/lib/particulier/profil-edge-progress";
 import {
+  buildUserObjectiveDisplay,
+  migrateLegacyProjectToV2,
+} from "@/lib/particulier/edge-professional-project-v2";
+import {
   extractCareerTitleFromProject,
 } from "@/lib/particulier/professional-project-fields";
 import type { Diplome, ExperiencePro } from "@/lib/particulier/profil-edge-maturity";
@@ -366,8 +370,9 @@ export function buildEdgeProgressionGps(params: {
   profileCompletionPercent?: number;
   hasCrossProfileBadge?: boolean;
 }): EdgeProgressionGps {
-  const project = parseProfessionalProject(params.profile?.professional_project);
+  const project = migrateLegacyProjectToV2(parseProfessionalProject(params.profile?.professional_project));
   const userObjectiveTitle =
+    buildUserObjectiveDisplay(project) ||
     extractCareerTitleFromProject(
       params.profile?.type_profil as string | undefined,
       project,

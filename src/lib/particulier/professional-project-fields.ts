@@ -1,5 +1,10 @@
 import type { ParticulierObjectiveType } from "@/lib/particulier/objective-detail-fields";
 import { normalizeParticulierObjectiveType } from "@/lib/particulier/objective-detail-fields";
+import {
+  buildUserObjectiveDisplay,
+  isEdgeProjectV2Complete,
+  migrateLegacyProjectToV2,
+} from "@/lib/particulier/edge-professional-project-v2";
 import type { ProfessionalProject } from "@/lib/particulier/profil-edge-maturity";
 
 import {
@@ -89,6 +94,10 @@ export function extractCareerTitleFromProject(
   typeProfil: string | null | undefined,
   project: ProfessionalProject,
 ): string | null {
+  const migrated = migrateLegacyProjectToV2(project);
+  const v2Display = buildUserObjectiveDisplay(migrated);
+  if (v2Display) return v2Display;
+
   const key = getCareerTargetFieldKey(typeProfil);
   if (!key) return null;
   const value = project[key]?.trim();
@@ -103,6 +112,9 @@ export function isProfessionalProjectCompleteForType(
   typeProfil: string | null | undefined,
   project: ProfessionalProject,
 ): boolean {
+  const migrated = migrateLegacyProjectToV2(project);
+  if (isEdgeProjectV2Complete(migrated)) return true;
+
   const fields = getProfessionalProjectFields(typeProfil);
   if (!fields.length) return false;
   return fields.every((f) => filled(project[f.key]));
@@ -131,6 +143,18 @@ export function projectSummaryLines(
   typeProfil: string | null | undefined,
   project: ProfessionalProject,
 ): Array<{ label: string; value: string }> {
+  const migrated = migrateLegacyProjectToV2(project);
+  const display = buildUserObjectiveDisplay(migrated);
+  if (display) {
+    return [
+      { label: "Objectif", value: display },
+      {
+        label: "Projet",
+        value: migrated.edge_projet_libre?.trim() || "—",
+      },
+    ];
+  }
+
   return getProfessionalProjectFields(typeProfil)
     .slice(0, 3)
     .map((f) => ({ label: f.label, value: project[f.key]?.trim() || "—" }));

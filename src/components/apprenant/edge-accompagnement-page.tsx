@@ -198,6 +198,24 @@ function SituationActuelle() {
         ))}
       </div>
 
+      {/* Progression du coach gamifié (données réelles des défis) */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[#E8EAED] bg-[#E8EAED] sm:grid-cols-4">
+        {[
+          { label: "XP total", value: String(s.totalXp) },
+          { label: "Série", value: `${s.currentStreak} j` },
+          { label: "Défis terminés", value: String(s.completedChallenges) },
+          {
+            label: "Badges",
+            value: `${s.badgesEarned}${s.badgesInProgress ? ` · ${s.badgesInProgress} en cours` : ""}`,
+          },
+        ].map((m) => (
+          <div key={m.label} className="bg-white px-4 py-5">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[#8B919A]">{m.label}</p>
+            <p className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[#191C1F]">{m.value}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Votre prochaine action recommandée */}
       {s.nextAction ? (
         <div className="rounded-xl border border-[#191C1F]/10 bg-[#191C1F] p-6 text-white">
@@ -212,10 +230,10 @@ function SituationActuelle() {
             <span>Impact estimé : {s.nextAction.impact}</span>
           </div>
           <Link
-            href="/dashboard/apprenant?premiers-pas=1"
+            href={`/dashboard/apprenant/defi?skill=${encodeURIComponent(s.nextAction.skill)}&objective=${encodeURIComponent(s.objectiveLabel)}`}
             className="mt-5 inline-flex items-center justify-center rounded-lg bg-white px-5 py-2.5 text-[13px] font-medium text-[#191C1F] transition hover:bg-white/90"
           >
-            Commencer maintenant
+            Lancer le Défi EDGE
           </Link>
         </div>
       ) : null}
@@ -232,7 +250,7 @@ function ProgressionTimeline({ nextSkill }: { nextSkill: string | null }) {
       when: "Aujourd'hui",
       items: [nextSkill ? `Faire l'exercice recommandé (${nextSkill})` : "Définir votre objectif professionnel"],
     },
-    { when: "Cette semaine", items: ["Réaliser une simulation IA", "Déposer une preuve"] },
+    { when: "Cette semaine", items: ["Relever un Défi EDGE", "Déposer une preuve"] },
     { when: "Ce mois-ci", items: ["Suivre une formation courte", "Demander une validation", "Obtenir un badge"] },
   ];
 
@@ -371,7 +389,7 @@ export function EdgeAccompagnementPage() {
                   <th className="px-5 py-2.5 text-left font-medium">Inclus</th>
                   <th className="px-3 py-2.5 text-center font-medium">Membership</th>
                   <th className="px-3 py-2.5 text-center font-medium">Coaching</th>
-                  <th className="px-3 py-2.5 text-center font-medium">Simulation</th>
+                  <th className="px-3 py-2.5 text-center font-medium">Défi EDGE</th>
                   <th className="px-3 py-2.5 text-center font-medium">Programme</th>
                 </tr>
               </thead>

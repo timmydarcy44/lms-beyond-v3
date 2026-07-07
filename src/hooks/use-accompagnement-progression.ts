@@ -41,6 +41,12 @@ export type AccompagnementSituation = {
   compatibilityPercent: number;
   objectiveLabel: string;
   nextAction: AccompagnementNextAction;
+  /** Données réelles du coach gamifié (défis, XP, série, badges). */
+  totalXp: number;
+  currentStreak: number;
+  completedChallenges: number;
+  badgesEarned: number;
+  badgesInProgress: number;
 };
 
 async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
@@ -70,6 +76,11 @@ export function useAccompagnementSituation(): AccompagnementSituation {
   const [compatibilityPercent, setCompatibilityPercent] = useState(0);
   const [objectiveLabel, setObjectiveLabel] = useState("votre objectif professionnel");
   const [nextAction, setNextAction] = useState<AccompagnementNextAction>(null);
+  const [totalXp, setTotalXp] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [completedChallenges, setCompletedChallenges] = useState(0);
+  const [badgesEarned, setBadgesEarned] = useState(0);
+  const [badgesInProgress, setBadgesInProgress] = useState(0);
 
   const load = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -77,6 +88,25 @@ export function useAccompagnementSituation(): AccompagnementSituation {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Données réelles du coach gamifié (tables edge_*).
+    const [xpRes, streakRes, runsRes, badgeRes] = await Promise.all([
+      supabase.from("edge_xp_events").select("amount").eq("user_id", user.id),
+      supabase.from("edge_streaks").select("current_streak").eq("user_id", user.id).maybeSingle(),
+      supabase
+        .from("edge_challenge_runs")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "completed"),
+      supabase.from("edge_badge_progress").select("status").eq("user_id", user.id),
+    ]);
+
+    setTotalXp((xpRes.data ?? []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0));
+    setCurrentStreak(Number(streakRes.data?.current_streak) || 0);
+    setCompletedChallenges(runsRes.count ?? 0);
+    const badges = badgeRes.data ?? [];
+    setBadgesEarned(badges.filter((b) => b.status === "earned").length);
+    setBadgesInProgress(badges.filter((b) => b.status === "in_progress").length);
 
     const [profileRes, discRes, softRes, idmcRes, expRes, dipRes] = await Promise.all([
       supabase
@@ -250,6 +280,11 @@ export function useAccompagnementSituation(): AccompagnementSituation {
     compatibilityPercent,
     objectiveLabel,
     nextAction,
+    totalXp,
+    currentStreak,
+    completedChallenges,
+    badgesEarned,
+    badgesInProgress,
   };
 }
 

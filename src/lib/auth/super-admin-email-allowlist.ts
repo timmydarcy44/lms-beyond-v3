@@ -4,6 +4,7 @@
 const BUILTIN_SUPER_ADMIN_EMAILS = new Set([
   "timmydarcy44@gmail.com",
   "contentin.cabinet@gmail.com",
+  "jerome.picot@edgebs.fr",
 ]);
 
 function parseSuperAdminEmailsFromEnv(): string[] {

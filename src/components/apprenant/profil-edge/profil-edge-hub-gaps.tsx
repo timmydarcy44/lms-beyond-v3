@@ -27,6 +27,8 @@ import {
   expectedLevelForObjective,
   isUnevaluatedLevel,
 } from "@/lib/apprenant/edge-coaching-copy";
+import { getSkillEvidence } from "@/lib/apprenant/edge-skill-evidence";
+import { EDGE_CHALLENGE_FORMATS, pickRecommendedChallenge } from "@/lib/apprenant/edge-challenges";
 import type { SkillGapStatus } from "@/lib/apprenant/edge-progression-gps";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 
@@ -93,6 +95,8 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
   const tips = selected ? getSkillGapTips(selected.name) : [];
   const whatToDevelop = selected ? getSkillWhatToDevelop(selected.name) : [];
   const plan = selected ? getSkillProgressionPlan(selected.name) : [];
+  const evidence = selected ? getSkillEvidence(selected.name, selected.status) : null;
+  const recommendedChallenge = selected ? pickRecommendedChallenge(selected.name) : null;
 
   const firstPriority = priorities[0]?.name ?? "à définir";
 
@@ -223,7 +227,7 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                 <li key={skill} className="flex items-center justify-between gap-3 py-2.5">
                   <span className="text-sm text-white/75">{skill}</span>
                   <Link
-                    href="/dashboard/apprenant?premiers-pas=1"
+                    href={`/dashboard/apprenant/defi?skill=${encodeURIComponent(skill)}&format=ai&objective=${encodeURIComponent(objectiveLabel)}`}
                     className="text-xs font-medium text-[#8BB4FF] hover:underline"
                   >
                     Évaluer si nécessaire
@@ -275,6 +279,36 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                 </div>
               </div>
 
+              {/* Pourquoi EDGE pense cela ? + niveau de confiance */}
+              {evidence ? (
+                <div className="rounded-xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/[0.06] p-4">
+                  <p className="text-sm font-semibold text-white">{evidence.title}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-white/65">{evidence.intro}</p>
+                  <ul className="mt-2 space-y-1.5 text-sm text-white/75">
+                    {evidence.behaviors.map((b) => (
+                      <li key={b} className="flex gap-2">
+                        <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#8BB4FF]" />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 text-xs text-white/50">
+                    Ces éléments correspondent aux attendus de cette compétence.
+                  </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-[#3D7BFF]"
+                        style={{ width: `${evidence.confidence}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-semibold text-[#8BB4FF]">
+                      Confiance {evidence.confidence} %
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
                   Pourquoi cette compétence compte
@@ -296,6 +330,40 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                     </li>
                   ))}
                 </ul>
+              </div>
+
+              {/* Défis disponibles — chaque compétence devient un défi */}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Défis disponibles</p>
+                <div className="mt-2 grid gap-2">
+                  {EDGE_CHALLENGE_FORMATS.map((format) => {
+                    const recommended = recommendedChallenge?.id === format.id;
+                    return (
+                      <Link
+                        key={format.id}
+                        href={`/dashboard/apprenant/defi?skill=${encodeURIComponent(selected.name)}&format=${format.id}&objective=${encodeURIComponent(objectiveLabel)}&target=${encodeURIComponent(selected.expectedLevel)}`}
+                        className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
+                          recommended
+                            ? "border-[#3D7BFF]/40 bg-[#3D7BFF]/[0.08]"
+                            : "border-white/[0.08] bg-white/[0.02] hover:border-white/20"
+                        }`}
+                      >
+                        <span className="text-lg">{format.emoji}</span>
+                        <span className="flex-1 text-sm text-white/80">{format.label}</span>
+                        {recommended ? (
+                          <span className="rounded-full bg-[#3D7BFF]/20 px-2 py-0.5 text-[10px] font-semibold text-[#8BB4FF]">
+                            Recommandé
+                          </span>
+                        ) : format.meta ? (
+                          <span className="text-[11px] text-white/40">{format.meta}</span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[11px] text-white/40">
+                  L&apos;IA choisit le format le plus adapté à votre progression.
+                </p>
               </div>
 
               <div>
@@ -321,7 +389,7 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
 
               <div className="space-y-2 border-t border-white/[0.08] pt-4">
                 <Link
-                  href="/dashboard/apprenant?premiers-pas=1"
+                  href={`/dashboard/apprenant/defi?skill=${encodeURIComponent(selected.name)}&format=${recommendedChallenge?.id ?? "ai"}&objective=${encodeURIComponent(objectiveLabel)}&target=${encodeURIComponent(selected.expectedLevel)}`}
                   className={`${CONNECT_BTN_PRIMARY} flex w-full items-center justify-center py-3`}
                 >
                   <Play className="mr-2 h-4 w-4" />
@@ -329,11 +397,11 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                 </Link>
                 <div className="grid grid-cols-2 gap-2">
                   <Link
-                    href="/dashboard/apprenant?premiers-pas=1"
+                    href={`/dashboard/apprenant/defi?skill=${encodeURIComponent(selected.name)}&format=ai&objective=${encodeURIComponent(objectiveLabel)}&target=${encodeURIComponent(selected.expectedLevel)}`}
                     className={`${CONNECT_BTN_SECONDARY} flex items-center justify-center gap-1.5 py-2 text-xs`}
                   >
                     <MessageCircle className="h-3.5 w-3.5" />
-                    Simulation IA
+                    Défi EDGE
                   </Link>
                   <Link
                     href="/dashboard/apprenant/profil"

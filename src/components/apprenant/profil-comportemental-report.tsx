@@ -9,6 +9,7 @@ import { ProfilEdgeHubActionPlan } from "@/components/apprenant/profil-edge/prof
 import { ProfilEdgeHubGaps } from "@/components/apprenant/profil-edge/profil-edge-hub-gaps";
 import { ProfilEdgeHubObjective } from "@/components/apprenant/profil-edge/profil-edge-hub-objective";
 import { ProfilEdgeHubResults } from "@/components/apprenant/profil-edge/profil-edge-hub-results";
+import { EdgeGamificationPanel } from "@/components/apprenant/profil-edge/edge-gamification-panel";
 import { ProfilEdgeProfileBlocks } from "@/components/apprenant/profil-edge/profil-edge-profile-blocks";
 import {
   analyzeCareerMatching,
@@ -256,6 +257,8 @@ export function ProfilComportementalReport() {
           professionnel.
         </p>
       </header>
+
+      {matching && selectedCareer ? <EdgeGamificationPanel matching={matching} /> : null}
 
       <ProfilEdgeMaturityGauge maturity={maturity} />
 

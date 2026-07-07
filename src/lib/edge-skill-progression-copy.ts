@@ -9,7 +9,7 @@ export const EDGE_CTA_IMPROVE_SKILL = "Préparer mon plan d'action";
 export const PARCOURS_EDGE_INCLUDES = [
   "Coaching guidé EDGE",
   "Exercices",
-  "Simulations",
+  "Défis EDGE",
   "Validation EDGE",
   "Badge",
 ] as const;
@@ -17,7 +17,7 @@ export const PARCOURS_EDGE_INCLUDES = [
 /** Recommandations génériques pour atteindre le niveau suivant. */
 export const EDGE_NEXT_LEVEL_STEPS = [
   "suivre un parcours EDGE",
-  "réaliser une simulation",
+  "relever un Défi EDGE",
   "déposer une preuve terrain",
   "refaire une évaluation",
 ] as const;

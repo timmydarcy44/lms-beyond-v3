@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 const PORTRAIT_PHOTO_URL =
-  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Bureau.jpg";
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Photo%20presentation.png";
 
 /** Bloc présentation d’accueil (cabinet Jessica CONTENTIN). */
 export function JessicaHomePresentation() {

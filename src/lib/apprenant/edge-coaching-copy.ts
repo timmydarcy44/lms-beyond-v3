@@ -85,3 +85,33 @@ export function expectedLevelForObjective(status: SkillGapStatus): "Expert" | "A
   if (status === "validated") return "Expert";
   return "Intermédiaire";
 }
+
+const WHY_USEFUL: Record<string, string> = {
+  communication: "Utile pour convaincre et fédérer",
+  empathie: "Utile pour comprendre votre audience",
+  creativite: "Utile pour créer du contenu original",
+  influence: "Utile pour créer l'adhésion",
+  organisation: "Utile pour tenir vos objectifs",
+  negociation: "Utile pour conclure vos accords",
+  leadership: "Utile pour entraîner une équipe",
+  prospection: "Utile pour développer vos opportunités",
+};
+
+/** Phrase courte « Pourquoi c'est utile » pour la colonne du tableau. */
+export function coachingWhyUseful(skill: string, objectiveLabel: string): string {
+  const key = skill
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+  if (WHY_USEFUL[key]) return WHY_USEFUL[key];
+  for (const [pattern, text] of Object.entries(WHY_USEFUL)) {
+    if (key.includes(pattern) || pattern.includes(key)) return text;
+  }
+  return `Atout pour « ${objectiveLabel} »`;
+}
+
+/** Prochaine action pour une force déjà identifiée. */
+export function coachingForceAction(index: number): string {
+  return index % 2 === 0 ? "Déposer une preuve" : "Continuer à pratiquer";
+}

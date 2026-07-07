@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
+import { getCoachingBookingHref } from "@/lib/particulier/coaching-config";
 import { CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
 
 type Props = {
@@ -22,7 +23,7 @@ export function ProfilEdgeHubActionPlan({ matching }: Props) {
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">
         4. Mon plan d&apos;action
       </p>
-      <p className="mt-2 text-sm text-white/55">Compétences à développer, par ordre de priorité.</p>
+      <p className="mt-2 text-sm text-white/55">Vos prochaines progressions, par ordre de priorité.</p>
 
       <ol className="mt-5 space-y-2">
         {priorities.map((skill, index) => (
@@ -39,10 +40,10 @@ export function ProfilEdgeHubActionPlan({ matching }: Props) {
       </ol>
 
       <Link
-        href="/dashboard/apprenant?premiers-pas=1"
+        href={getCoachingBookingHref("progression")}
         className={`${CONNECT_BTN_PRIMARY} mt-6 inline-flex w-full items-center justify-center gap-2 sm:w-auto`}
       >
-        Construire mon parcours EDGE
+        Construire mon parcours EDGE avec un expert
         <ArrowRight className="h-4 w-4" />
       </Link>
     </section>

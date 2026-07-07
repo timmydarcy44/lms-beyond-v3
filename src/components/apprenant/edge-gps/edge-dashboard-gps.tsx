@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowRight, Check, Circle, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getCoachingBookingHref } from "@/lib/particulier/coaching-config";
 import type { EdgeProgressionGps } from "@/lib/apprenant/edge-progression-gps";
 import {
   EdgeSkillsGapTable,
@@ -74,14 +76,13 @@ export function EdgeDashboardGps({
         </div>
         <div className="mt-4 flex flex-col gap-2 sm:mt-5 sm:flex-row sm:flex-wrap sm:gap-3">
           {onRequestParcours ? (
-            <button
-              type="button"
-              onClick={onRequestParcours}
+            <Link
+              href={getCoachingBookingHref("progression")}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-[#0a0a0a] transition hover:bg-white/90 sm:w-auto sm:rounded-lg sm:py-2.5"
             >
-              Construire mon parcours EDGE
+              Construire mon parcours EDGE avec un expert
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </Link>
           ) : null}
           {onWhatNow ? (
             <button
@@ -118,14 +119,13 @@ export function EdgeDashboardGps({
         ) : null}
         <div className="mt-4 flex flex-col gap-2 sm:mt-6 sm:flex-row sm:flex-wrap sm:gap-3">
           {onRequestParcours ? (
-            <button
-              type="button"
-              onClick={onRequestParcours}
+            <Link
+              href={getCoachingBookingHref("progression")}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3D7BFF] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#2F6AE8] sm:w-auto sm:rounded-lg"
             >
-              Construire mon parcours EDGE
+              Construire mon parcours EDGE avec un expert
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </Link>
           ) : null}
           {onViewGaps ? (
             <button

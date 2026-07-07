@@ -43,35 +43,23 @@ export function ProfilEdgeHubResults({ matching }: Props) {
           </p>
         </div>
         <div className="rounded-xl border border-[#3D7BFF]/25 bg-[#3D7BFF]/10 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#8BB4FF]">Priorité</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#8BB4FF]">Priorité actuelle</p>
           <p className="mt-1 text-sm font-semibold text-white">{priorityLabel}</p>
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3">
         <MetricCard
-          label="Forces"
+          label="Forces identifiées"
           count={matching.strengths.length}
           colorClass="text-emerald-300"
           bgClass="bg-emerald-500/[0.06]"
         />
         <MetricCard
-          label="À consolider"
-          count={matching.consolidate.length}
+          label="Prochaines progressions"
+          count={matching.develop.length + matching.consolidate.length}
           colorClass="text-sky-300"
           bgClass="bg-sky-500/[0.06]"
-        />
-        <MetricCard
-          label="À explorer"
-          count={matching.unevaluated.length}
-          colorClass="text-white/50"
-          bgClass="bg-white/[0.03]"
-        />
-        <MetricCard
-          label="À développer"
-          count={matching.develop.length}
-          colorClass="text-rose-300"
-          bgClass="bg-rose-500/[0.06]"
         />
       </div>
     </section>

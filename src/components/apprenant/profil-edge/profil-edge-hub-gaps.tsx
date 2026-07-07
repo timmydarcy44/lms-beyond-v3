@@ -2,7 +2,16 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, X, Play, FileCheck2, GraduationCap, MessageCircle } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  X,
+  Play,
+  FileCheck2,
+  GraduationCap,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
 import { getCoachingBookingHref } from "@/lib/particulier/coaching-config";
 import {
@@ -12,10 +21,9 @@ import {
   getSkillProgressionPlan,
 } from "@/lib/particulier/edge-skill-gap-tips";
 import {
-  coachingImportanceLabel,
+  coachingForceAction,
   coachingLevelDisplay,
-  coachingNextAction,
-  coachingStatusDisplay,
+  coachingWhyUseful,
   expectedLevelForObjective,
   isUnevaluatedLevel,
 } from "@/lib/apprenant/edge-coaching-copy";
@@ -30,128 +38,204 @@ type Props = {
 type CoachingSkill = {
   name: string;
   level: string;
-  isUnevaluated: boolean;
-  status: SkillGapStatus;
-  importance: "Très importante" | "Importante" | "Utile";
+  situation: string;
+  whyUseful: string;
   nextAction: string;
-  statusLabel: string;
+  status: SkillGapStatus;
   expectedLevel: string;
+  kind: "force" | "priority";
 };
 
-function statusFor(skill: string, matching: CareerMatchingResult): SkillGapStatus {
-  const lower = skill.toLowerCase();
-  if (matching.strengths.some((s) => s.toLowerCase() === lower)) return "validated";
-  if (matching.develop.some((s) => s.toLowerCase() === lower)) return "priority";
-  if (matching.consolidate.some((s) => s.toLowerCase() === lower)) return "to_develop";
-  return "to_develop";
+function levelFromTable(skill: string, matching: CareerMatchingResult): string {
+  const row = matching.skillTable.find((r) => r.skill.toLowerCase() === skill.toLowerCase());
+  return row?.userLevel ?? "Bon";
 }
 
-const STATUS_PILL: Record<string, string> = {
-  Alignée: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25",
-  "En progression": "bg-cyan-500/12 text-cyan-200 ring-1 ring-cyan-500/20",
-  "Priorité EDGE": "bg-[#3D7BFF]/20 text-[#8BB4FF] ring-1 ring-[#3D7BFF]/35",
-  "À consolider": "bg-amber-500/12 text-amber-200/90 ring-1 ring-amber-500/20",
-  "À évaluer": "bg-white/[0.06] text-white/50 ring-1 ring-white/10",
-  "Badge disponible": "bg-violet-500/15 text-violet-300 ring-1 ring-violet-500/25",
-};
-
-const IMPORTANCE_PILL: Record<string, string> = {
-  "Très importante": "text-[#8BB4FF]",
-  Importante: "text-white/70",
-  Utile: "text-white/45",
-};
+const RESERVATION_HREF = getCoachingBookingHref("progression");
 
 export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
   const [selected, setSelected] = useState<CoachingSkill | null>(null);
+  const [showLater, setShowLater] = useState(false);
 
-  const skills = useMemo<CoachingSkill[]>(() => {
-    const rows = matching.skillTable.length
-      ? matching.skillTable.map((r) => ({ name: r.skill, level: r.userLevel }))
-      : [
-          ...matching.develop.map((s) => ({ name: s, level: "À renforcer" })),
-          ...matching.consolidate.map((s) => ({ name: s, level: "Moyen" })),
-          ...matching.unevaluated.map((s) => ({ name: s, level: "Non évaluée" })),
-        ];
+  const { forces, priorities, laterSkills } = useMemo(() => {
+    const forces: CoachingSkill[] = matching.strengths.map((name, index) => ({
+      name,
+      level: coachingLevelDisplay(levelFromTable(name, matching)),
+      situation: "Force identifiée",
+      whyUseful: coachingWhyUseful(name, objectiveLabel),
+      nextAction: coachingForceAction(index),
+      status: "validated" as SkillGapStatus,
+      expectedLevel: expectedLevelForObjective("validated"),
+      kind: "force" as const,
+    }));
 
-    return rows.map(({ name, level }) => {
-      const unevaluated = isUnevaluatedLevel(level);
-      const status = unevaluated ? "to_develop" : statusFor(name, matching);
-      return {
-        name,
-        level: coachingLevelDisplay(level),
-        isUnevaluated: unevaluated,
-        status,
-        importance: coachingImportanceLabel(status, unevaluated),
-        nextAction: coachingNextAction(name, status, unevaluated),
-        statusLabel: coachingStatusDisplay(status, unevaluated),
-        expectedLevel: expectedLevelForObjective(status),
-      };
-    });
-  }, [matching]);
+    const priorityNames = [
+      ...matching.develop,
+      ...matching.consolidate.filter((s) => !matching.develop.includes(s)),
+    ].slice(0, 3);
 
-  if (!skills.length) {
-    return (
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">3. Vos écarts</p>
-        <p className="mt-3 text-sm text-white/55">Vos compétences apparaîtront ici après vos évaluations.</p>
-      </section>
-    );
-  }
+    const priorities: CoachingSkill[] = priorityNames.map((name) => ({
+      name,
+      level: coachingLevelDisplay(levelFromTable(name, matching)),
+      situation: "Priorité actuelle",
+      whyUseful: coachingWhyUseful(name, objectiveLabel),
+      nextAction: "Faire l'exercice guidé",
+      status: "priority" as SkillGapStatus,
+      expectedLevel: expectedLevelForObjective("priority"),
+      kind: "priority" as const,
+    }));
+
+    const laterSkills = matching.unevaluated;
+
+    return { forces, priorities, laterSkills };
+  }, [matching, objectiveLabel]);
 
   const tips = selected ? getSkillGapTips(selected.name) : [];
   const whatToDevelop = selected ? getSkillWhatToDevelop(selected.name) : [];
   const plan = selected ? getSkillProgressionPlan(selected.name) : [];
 
+  const firstPriority = priorities[0]?.name ?? "à définir";
+
   return (
     <>
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">3. Vos écarts</p>
-        <p className="mt-2 text-sm text-white/50">
-          Pour chaque compétence, EDGE vous indique où vous en êtes et la prochaine action utile.
+      {/* Bloc résumé — hiérarchie de lecture positive */}
+      <section className="rounded-2xl border border-[#3D7BFF]/25 bg-gradient-to-br from-[#3D7BFF]/[0.12] to-transparent p-5 sm:p-6">
+        <div className="flex items-center gap-2 text-[#8BB4FF]">
+          <Sparkles className="h-4 w-4" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Votre progression</span>
+        </div>
+        <h2 className="mt-3 text-xl font-semibold text-white">Votre parcours commence déjà</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">
+          EDGE a identifié vos premières forces et vous propose de progresser étape par étape, sans tout
+          travailler en même temps.
         </p>
 
-        {/* En-têtes (desktop) */}
-        <div className="mt-4 hidden grid-cols-[1.4fr_0.8fr_0.9fr_1.3fr_0.9fr] gap-3 border-b border-white/[0.06] pb-2 text-[10px] font-semibold uppercase tracking-wider text-white/35 md:grid">
-          <span>Compétence</span>
-          <span>Niveau actuel</span>
-          <span>Importance</span>
-          <span>Prochaine action</span>
-          <span>Statut EDGE</span>
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
+            <p className="text-2xl font-bold tabular-nums text-emerald-300">{forces.length}</p>
+            <p className="mt-1 text-[11px] text-white/55">Forces identifiées</p>
+          </div>
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
+            <p className="truncate text-sm font-semibold text-[#8BB4FF]">{firstPriority}</p>
+            <p className="mt-1 text-[11px] text-white/55">Priorité actuelle</p>
+          </div>
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
+            <p className="text-2xl font-bold tabular-nums text-white/70">{laterSkills.length}</p>
+            <p className="mt-1 text-[11px] text-white/55">À explorer plus tard</p>
+          </div>
         </div>
 
-        <ul className="divide-y divide-white/[0.06]">
-          {skills.map((skill) => (
-            <li key={skill.name}>
-              <button
-                type="button"
-                onClick={() => setSelected(skill)}
-                className="w-full py-3 text-left transition hover:bg-white/[0.03] md:grid md:grid-cols-[1.4fr_0.8fr_0.9fr_1.3fr_0.9fr] md:items-center md:gap-3"
-              >
-                <span className="flex items-center justify-between gap-2 md:block">
-                  <span className="text-sm font-medium text-white">{skill.name}</span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-white/30 md:hidden" />
-                </span>
-                <span className="mt-1 block text-xs text-white/60 md:mt-0 md:text-sm">{skill.level}</span>
-                <span className={`mt-1 block text-xs md:mt-0 ${IMPORTANCE_PILL[skill.importance]}`}>
-                  {skill.importance}
-                </span>
-                <span className="mt-1 block text-xs text-white/55 md:mt-0">{skill.nextAction}</span>
-                <span className="mt-2 flex items-center gap-2 md:mt-0">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                      STATUS_PILL[skill.statusLabel] ?? "bg-white/[0.06] text-white/50 ring-1 ring-white/10"
-                    }`}
-                  >
-                    {skill.statusLabel}
-                  </span>
-                  <ChevronRight className="hidden h-4 w-4 shrink-0 text-white/30 md:block" />
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => setSelected(priorities[0] ?? forces[0] ?? null)}
+            className={`${CONNECT_BTN_PRIMARY} inline-flex items-center justify-center gap-2`}
+            disabled={!priorities.length && !forces.length}
+          >
+            <Play className="h-4 w-4" />
+            Commencer ma prochaine action
+          </button>
+          <Link
+            href={RESERVATION_HREF}
+            className={`${CONNECT_BTN_SECONDARY} inline-flex items-center justify-center gap-2`}
+          >
+            Construire mon parcours EDGE avec un expert
+          </Link>
+        </div>
       </section>
 
+      {/* Tableau principal : forces + priorités uniquement */}
+      {forces.length || priorities.length ? (
+        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">Vos forces &amp; priorités</p>
+
+          <div className="mt-4 hidden grid-cols-[1.1fr_1fr_1.4fr_1.2fr] gap-3 border-b border-white/[0.06] pb-2 text-[10px] font-semibold uppercase tracking-wider text-white/35 md:grid">
+            <span>Compétence</span>
+            <span>Situation actuelle</span>
+            <span>Pourquoi c&apos;est utile</span>
+            <span>Prochaine action</span>
+          </div>
+
+          <ul className="divide-y divide-white/[0.06]">
+            {[...forces, ...priorities].map((skill) => (
+              <li key={`${skill.kind}-${skill.name}`}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(skill)}
+                  className="w-full py-3 text-left transition hover:bg-white/[0.03] md:grid md:grid-cols-[1.1fr_1fr_1.4fr_1.2fr] md:items-center md:gap-3"
+                >
+                  <span className="flex items-center justify-between gap-2 md:block">
+                    <span className="text-sm font-medium text-white">{skill.name}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-white/30 md:hidden" />
+                  </span>
+                  <span className="mt-1 block md:mt-0">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        skill.kind === "force"
+                          ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25"
+                          : "bg-[#3D7BFF]/20 text-[#8BB4FF] ring-1 ring-[#3D7BFF]/35"
+                      }`}
+                    >
+                      {skill.situation}
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-xs text-white/55 md:mt-0">{skill.whyUseful}</span>
+                  <span className="mt-1 flex items-center gap-2 text-xs text-white/70 md:mt-0">
+                    {skill.nextAction}
+                    <ChevronRight className="hidden h-4 w-4 shrink-0 text-white/30 md:block" />
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* Bloc replié : compétences à explorer plus tard */}
+      {laterSkills.length ? (
+        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setShowLater((v) => !v)}
+            className="flex w-full items-center justify-between gap-4 text-left"
+            aria-expanded={showLater}
+          >
+            <div>
+              <h3 className="text-sm font-semibold text-white">Compétences à explorer plus tard</h3>
+              <p className="mt-1 text-xs leading-relaxed text-white/50">
+                Ces compétences ne sont pas des lacunes. Elles seront évaluées progressivement si elles
+                deviennent utiles pour votre objectif professionnel.
+              </p>
+              <p className="mt-2 text-xs font-medium text-white/60">
+                {laterSkills.length} compétence{laterSkills.length > 1 ? "s" : ""} disponible
+                {laterSkills.length > 1 ? "s" : ""}
+              </p>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-white/70">
+              {showLater ? "Masquer" : "Afficher"}
+              <ChevronDown className={`h-4 w-4 transition-transform ${showLater ? "rotate-180" : ""}`} />
+            </span>
+          </button>
+
+          {showLater ? (
+            <ul className="mt-4 divide-y divide-white/[0.06]">
+              {laterSkills.map((skill) => (
+                <li key={skill} className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="text-sm text-white/75">{skill}</span>
+                  <Link
+                    href="/dashboard/apprenant?premiers-pas=1"
+                    className="text-xs font-medium text-[#8BB4FF] hover:underline"
+                  >
+                    Évaluer si nécessaire
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* Drawer coaching (5 blocs) */}
       {selected ? (
         <div className="fixed inset-0 z-[160] flex justify-end">
           <button
@@ -176,7 +260,6 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto p-5">
-              {/* Bloc 1 — Votre niveau actuel */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
                   <p className="text-[10px] uppercase tracking-wider text-white/40">Niveau actuel</p>
@@ -187,12 +270,11 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                   <p className="mt-1 text-sm font-semibold text-white">{selected.expectedLevel}</p>
                 </div>
                 <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-white/40">Écart</p>
-                  <p className="mt-1 text-sm font-semibold text-white">{selected.statusLabel}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-white/40">Situation</p>
+                  <p className="mt-1 text-sm font-semibold text-white">{selected.situation}</p>
                 </div>
               </div>
 
-              {/* Bloc 2 — Pourquoi cette compétence compte */}
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
                   Pourquoi cette compétence compte
@@ -202,7 +284,6 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                 </p>
               </div>
 
-              {/* Bloc 3 — Ce qu'il faut développer */}
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
                   Ce qu&apos;il faut développer
@@ -217,7 +298,6 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                 </ul>
               </div>
 
-              {/* Bloc 4 — Comment progresser */}
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Comment progresser</p>
                 <ol className="mt-3 space-y-2">
@@ -239,7 +319,6 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                 ) : null}
               </div>
 
-              {/* Bloc 5 — Prochaine action recommandée */}
               <div className="space-y-2 border-t border-white/[0.08] pt-4">
                 <Link
                   href="/dashboard/apprenant?premiers-pas=1"
@@ -271,7 +350,7 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                     Formations
                   </Link>
                   <Link
-                    href={getCoachingBookingHref("progression")}
+                    href={RESERVATION_HREF}
                     className={`${CONNECT_BTN_SECONDARY} flex items-center justify-center gap-1.5 py-2 text-xs`}
                   >
                     <MessageCircle className="h-3.5 w-3.5" />

@@ -3,8 +3,12 @@
 import { ArrowRight, Check, Circle, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EdgeProgressionGps } from "@/lib/apprenant/edge-progression-gps";
-import { EdgeSkillsGapTable } from "@/components/apprenant/edge-gps/edge-skills-gap-table";
+import {
+  EdgeSkillsGapTable,
+  type OnboardingRowHighlight,
+} from "@/components/apprenant/edge-gps/edge-skills-gap-table";
 import { EdgeAccompagnementNudge } from "@/components/apprenant/edge-gps/edge-accompagnement-nudge";
+import type { FirstStepsStep } from "@/components/apprenant/edge-gps/edge-first-steps-guide";
 
 type Props = {
   gps: EdgeProgressionGps;
@@ -12,11 +16,27 @@ type Props = {
   onWhatNow?: () => void;
   onRequestParcours?: () => void;
   onViewGaps?: () => void;
+  firstStepsStep?: FirstStepsStep | null;
+  onboardingHighlights?: Record<string, OnboardingRowHighlight>;
+  prioritySelectMode?: boolean;
+  selectedPriority?: string | null;
+  onSelectPriority?: (skillName: string) => void;
 };
 
 const CARD = "rounded-2xl border border-white/[0.08] bg-white/[0.03]";
 
-export function EdgeDashboardGps({ gps, loading, onWhatNow, onRequestParcours, onViewGaps }: Props) {
+export function EdgeDashboardGps({
+  gps,
+  loading,
+  onWhatNow,
+  onRequestParcours,
+  onViewGaps,
+  firstStepsStep,
+  onboardingHighlights,
+  prioritySelectMode,
+  selectedPriority,
+  onSelectPriority,
+}: Props) {
   if (loading) {
     return (
       <div className="mb-8 space-y-4 animate-pulse">
@@ -26,10 +46,19 @@ export function EdgeDashboardGps({ gps, loading, onWhatNow, onRequestParcours, o
     );
   }
 
+  const objectiveHighlighted = firstStepsStep === "objective";
+  const accompagnementHighlighted = firstStepsStep === "parcours";
+
   return (
     <div className="mb-10 space-y-5">
-      {/* 1. Mon objectif */}
-      <section className={cn(CARD, "p-5 sm:p-6")}>
+      <section
+        id="edge-objective-section"
+        className={cn(
+          CARD,
+          "p-5 transition sm:p-6",
+          objectiveHighlighted && "ring-2 ring-[#3D7BFF]/45 border-[#3D7BFF]/30",
+        )}
+      >
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">Mon objectif</p>
         <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
@@ -67,7 +96,6 @@ export function EdgeDashboardGps({ gps, loading, onWhatNow, onRequestParcours, o
         </div>
       </section>
 
-      {/* 2. Prochaine étape — approche concierge */}
       <section className="rounded-2xl border border-[#3D7BFF]/30 bg-gradient-to-br from-[#3D7BFF]/15 via-[#3D7BFF]/5 to-transparent p-5 sm:p-7">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">
           Votre prochaine étape
@@ -106,7 +134,6 @@ export function EdgeDashboardGps({ gps, loading, onWhatNow, onRequestParcours, o
         </div>
       </section>
 
-      {/* 3. Timeline */}
       <section className={cn(CARD, "p-5 sm:p-6")}>
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">Votre parcours</p>
         <ol className="mt-5 flex gap-0 overflow-x-auto pb-2">
@@ -145,13 +172,28 @@ export function EdgeDashboardGps({ gps, loading, onWhatNow, onRequestParcours, o
         </ol>
       </section>
 
-      {/* 4. Compétences */}
-      <div id="edge-skills-gaps">
-        <EdgeSkillsGapTable skills={gps.skills} objectiveTitle={gps.objectiveTitle} />
+      <div
+        id="edge-skills-gaps"
+        className={cn(
+          firstStepsStep === "gaps" || firstStepsStep === "priority"
+            ? "rounded-2xl ring-2 ring-[#3D7BFF]/35"
+            : "",
+        )}
+      >
+        <EdgeSkillsGapTable
+          skills={gps.skills}
+          objectiveTitle={gps.objectiveTitle}
+          onboardingHighlights={onboardingHighlights}
+          prioritySelectMode={prioritySelectMode}
+          selectedPriority={selectedPriority}
+          onSelectPriority={onSelectPriority}
+        />
       </div>
 
-      {/* 7. Accompagnement */}
-      <EdgeAccompagnementNudge />
+      <EdgeAccompagnementNudge
+        onRequestParcours={onRequestParcours}
+        highlighted={accompagnementHighlighted}
+      />
     </div>
   );
 }

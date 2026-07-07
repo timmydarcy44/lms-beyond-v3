@@ -19,6 +19,11 @@ import {
 } from "@/lib/particulier/professional-project-fields";
 import type { Diplome, ExperiencePro } from "@/lib/particulier/profil-edge-maturity";
 import { parseProfessionalProject } from "@/lib/particulier/profil-edge-maturity";
+import {
+  gapSeverityFrom,
+  levelScoreFromLabel,
+  type GapSeverity,
+} from "@/lib/apprenant/edge-skill-gap-visuals";
 
 export type SkillGapStatus =
   | "validated"
@@ -48,6 +53,8 @@ export type EdgeSkillGapRow = {
   estimatedLevel: string;
   gapLabel: string;
   status: SkillGapStatus;
+  levelScore: number | null;
+  gapSeverity: GapSeverity;
   actionLabel: string;
   actionHref: string;
   whyImportant: string;
@@ -84,6 +91,17 @@ export type EdgeProgressionGps = {
   timeline: TimelineStep[];
   skills: EdgeSkillGapRow[];
 };
+
+function enrichSkillRow(
+  partial: Omit<EdgeSkillGapRow, "levelScore" | "gapSeverity">,
+): EdgeSkillGapRow {
+  const level = partial.estimatedLevel;
+  return {
+    ...partial,
+    levelScore: levelScoreFromLabel(level),
+    gapSeverity: gapSeverityFrom(partial.gapLabel, partial.status),
+  };
+}
 
 function gapLabelFromRow(row: CareerSkillRow): string {
   if (row.tone === "green") return "Aligné";
@@ -390,35 +408,39 @@ export function buildEdgeProgressionGps(params: {
     for (const row of matching.skillTable.slice(0, 12)) {
       const status = resolveSkillStatus(row.skill, matching, params.skillsMetadata, badgeNameSet);
       const card = cards.find((c) => c.name.toLowerCase() === row.skill.toLowerCase());
-      skillRows.push({
-        name: row.skill,
-        estimatedLevel: card?.estimatedLevel ?? row.userLevel,
-        gapLabel: gapLabelFromRow(row),
-        status,
-        actionLabel: status === "validated" ? "Voir le détail" : "Analyser cette compétence",
-        actionHref:
-          status === "validated"
-            ? "/dashboard/apprenant/profil-comportemental/hard-skills"
-            : "/dashboard/apprenant/parcours",
-        whyImportant: `Compétence clé pour « ${objectiveTitle} » — niveau actuel : ${row.userLevel}.`,
-        currentResult: `${row.userLevel} · ${row.source}`,
-        resources: buildResources(row.skill, params.personalizedPlan, params.visibleBadges),
-      });
+      skillRows.push(
+        enrichSkillRow({
+          name: row.skill,
+          estimatedLevel: card?.estimatedLevel ?? row.userLevel,
+          gapLabel: gapLabelFromRow(row),
+          status,
+          actionLabel: status === "validated" ? "Voir le détail" : "Analyser cette compétence",
+          actionHref:
+            status === "validated"
+              ? "/dashboard/apprenant/profil-comportemental/hard-skills"
+              : "/dashboard/apprenant/parcours",
+          whyImportant: `Compétence clé pour « ${objectiveTitle} » — niveau actuel : ${row.userLevel}.`,
+          currentResult: `${row.userLevel} · ${row.source}`,
+          resources: buildResources(row.skill, params.personalizedPlan, params.visibleBadges),
+        }),
+      );
     }
   } else {
     for (const card of cards.slice(0, 10)) {
       const status = resolveSkillStatus(card.name, null, params.skillsMetadata, badgeNameSet);
-      skillRows.push({
-        name: card.name,
-        estimatedLevel: card.estimatedLevel,
-        gapLabel: status === "validated" ? "Aligné" : "À évaluer",
-        status,
-        actionLabel: status === "validated" ? "Voir" : "Valider",
-        actionHref: "/dashboard/apprenant/profil-comportemental/hard-skills",
-        whyImportant: `Compétence de votre portfolio EDGE.`,
-        currentResult: card.statusLabel,
-        resources: buildResources(card.name, params.personalizedPlan, params.visibleBadges),
-      });
+      skillRows.push(
+        enrichSkillRow({
+          name: card.name,
+          estimatedLevel: card.estimatedLevel,
+          gapLabel: status === "validated" ? "Aligné" : "À évaluer",
+          status,
+          actionLabel: status === "validated" ? "Voir" : "Valider",
+          actionHref: "/dashboard/apprenant/profil-comportemental/hard-skills",
+          whyImportant: `Compétence de votre portfolio EDGE.`,
+          currentResult: card.statusLabel,
+          resources: buildResources(card.name, params.personalizedPlan, params.visibleBadges),
+        }),
+      );
     }
   }
 

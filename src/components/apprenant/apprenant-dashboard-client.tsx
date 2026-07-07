@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
@@ -1283,20 +1283,22 @@ export function ApprenantDashboardClient({
           {initialView === "home" ? (
             <>
           {!isSalarieSurface && appShell?.variant !== "jessica" ? (
-            <EdgeDashboardGpsContainer
-              profile={(profile ?? null) as Record<string, unknown> | null}
-              discScores={discScores}
-              idmcAxes={idmcAxes}
-              softSkillsRadar={softSkillsRadar}
-              hardSkills={hardSkills}
-              skillsMetadata={skillsMetadata}
-              experiences={experiencesPro as ExperiencePro[]}
-              diplomas={diplomes as Diplome[]}
-              personalizedPlan={personalizedPlan}
-              visibleBadges={visibleOpenBadges}
-              earnedBadgeCount={earnedOpenBadges.length}
-              profileCompletionPercent={profileCompletion.score}
-            />
+            <Suspense fallback={<div className="mb-8 h-40 animate-pulse rounded-2xl bg-white/[0.04]" />}>
+              <EdgeDashboardGpsContainer
+                profile={(profile ?? null) as Record<string, unknown> | null}
+                discScores={discScores}
+                idmcAxes={idmcAxes}
+                softSkillsRadar={softSkillsRadar}
+                hardSkills={hardSkills}
+                skillsMetadata={skillsMetadata}
+                experiences={experiencesPro as ExperiencePro[]}
+                diplomas={diplomes as Diplome[]}
+                personalizedPlan={personalizedPlan}
+                visibleBadges={visibleOpenBadges}
+                earnedBadgeCount={earnedOpenBadges.length}
+                profileCompletionPercent={profileCompletion.score}
+              />
+            </Suspense>
           ) : null}
 
           <section

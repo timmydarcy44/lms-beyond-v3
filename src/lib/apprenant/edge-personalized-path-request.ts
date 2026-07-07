@@ -1,6 +1,40 @@
 /** Demande de parcours personnalisé EDGE — approche concierge */
 
+/** @deprecated Remplacé par EDGE_FIRST_STEPS_KEY */
 export const EDGE_DASHBOARD_ONBOARDING_KEY = "edge_gps_onboarding_v1_seen";
+
+export const EDGE_FIRST_STEPS_KEY = "edge_first_steps_v2";
+
+export type EdgeFirstStepsPersisted = {
+  completed: boolean;
+  completedAt?: string;
+  objective?: string;
+  selectedPriority?: string;
+};
+
+export function shouldAutoStartFirstSteps(): boolean {
+  const state = readFirstStepsState();
+  return !state?.completed;
+}
+
+export function readFirstStepsState(): EdgeFirstStepsPersisted | null {
+  try {
+    const raw = localStorage.getItem(EDGE_FIRST_STEPS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as EdgeFirstStepsPersisted;
+  } catch {
+    return null;
+  }
+}
+
+export function writeFirstStepsState(state: EdgeFirstStepsPersisted) {
+  try {
+    localStorage.setItem(EDGE_FIRST_STEPS_KEY, JSON.stringify(state));
+    localStorage.setItem(EDGE_DASHBOARD_ONBOARDING_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
 
 export type PersonalizedPathRequestStatus =
   | "pending"

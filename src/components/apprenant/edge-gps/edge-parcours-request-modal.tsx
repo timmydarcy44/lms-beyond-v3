@@ -17,6 +17,7 @@ type Props = {
   onClose: () => void;
   defaultObjective?: string;
   prioritySkills?: string[];
+  onSubmittedSuccess?: () => void;
 };
 
 export function EdgeParcoursRequestModal({
@@ -24,6 +25,7 @@ export function EdgeParcoursRequestModal({
   onClose,
   defaultObjective = "",
   prioritySkills = [],
+  onSubmittedSuccess,
 }: Props) {
   const [objective, setObjective] = useState(defaultObjective);
   const [currentStatus, setCurrentStatus] = useState<CurrentSituationOption>("etudiant");
@@ -79,6 +81,7 @@ export function EdgeParcoursRequestModal({
         throw new Error(json.error ?? "Envoi impossible");
       }
       setConfirmed(true);
+      onSubmittedSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de l'envoi");
     } finally {

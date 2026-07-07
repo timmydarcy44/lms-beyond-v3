@@ -447,14 +447,24 @@ export function ApprenantConnectShell({
                 </div>
               )}
               {variant === "edge" ? (
-                <Link
-                  href="/dashboard/ressources"
-                  title="Aide & ressources"
-                  className={`${theme.helpLinkClass} ${isSidebarCollapsed ? "px-0" : "px-2"}`}
-                >
-                  <LifeBuoy className="h-3.5 w-3.5 shrink-0 text-white/45" />
-                  {!isSidebarCollapsed ? <span>Aide & ressources</span> : null}
-                </Link>
+                <>
+                  <Link
+                    href="/dashboard/apprenant?premiers-pas=1"
+                    title="Premiers pas EDGE"
+                    className={`${theme.helpLinkClass} ${isSidebarCollapsed ? "px-0" : "px-2"}`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#8BB4FF]/80" />
+                    {!isSidebarCollapsed ? <span>Premiers pas</span> : null}
+                  </Link>
+                  <Link
+                    href="/dashboard/ressources"
+                    title="Aide & ressources"
+                    className={`${theme.helpLinkClass} ${isSidebarCollapsed ? "px-0" : "px-2"}`}
+                  >
+                    <LifeBuoy className="h-3.5 w-3.5 shrink-0 text-white/45" />
+                    {!isSidebarCollapsed ? <span>Aide & ressources</span> : null}
+                  </Link>
+                </>
               ) : (
                 <Link
                   href="/jessica-contentin/parcours-guide"

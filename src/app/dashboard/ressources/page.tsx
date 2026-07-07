@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getApprenantDashboardData } from "@/lib/queries/apprenant";
 import { ResourcePreviewButton } from "@/components/resources/resource-preview-button";
 import { CinematicHero } from "@/components/dashboard/cinematic-hero";
+import { EdgeFirstStepsRelaunchCard } from "@/components/apprenant/edge-gps/edge-first-steps-relaunch-card";
 
 const RESOURCE_TABS = [
   { key: "guide", label: "Guides" },
@@ -69,6 +70,7 @@ export default async function LearnerResourcesPage() {
       />
 
       <div className="relative z-10 -mt-24 mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 pb-20 md:px-10">
+        <EdgeFirstStepsRelaunchCard />
         {firstResource ? (
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#FF512F]/25 via-[#DD2476]/20 to-transparent p-8 shadow-[0_40px_120px_-40px_rgba(221,36,118,0.45)]">

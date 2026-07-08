@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import { jessicaCatalogItemsOrFilter } from "@/lib/jessica-contentin/catalog-ownership";
+import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 import { CatalogueJessicaClient } from "./catalogue-jessica-client";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
 export default async function CatalogueJessicaPage() {
   const hasAccess = await isSuperAdmin();
@@ -31,11 +31,11 @@ export default async function CatalogueJessicaPage() {
     return null;
   }
 
-  // Récupérer tous les catalog_items de Jessica
+  // Récupérer tous les catalog_items de Jessica (creator_id ou created_by)
   const { data: catalogItems } = await supabase
     .from("catalog_items")
     .select("id, title, item_type, content_id, is_active, created_at, updated_at")
-    .eq("creator_id", jessicaProfile.id)
+    .or(jessicaCatalogItemsOrFilter(jessicaProfile.id))
     .order("created_at", { ascending: false });
 
   return (

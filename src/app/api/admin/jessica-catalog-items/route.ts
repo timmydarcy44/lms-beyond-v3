@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
-
-const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
-const JESSICA_CONTENTIN_UUID = "17364229-fe78-4986-ac69-41b880e34631";
+import {
+  JESSICA_CONTENTIN_PROFILE_ID,
+  jessicaCatalogItemsOrFilter,
+} from "@/lib/jessica-contentin/catalog-ownership";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     const { data: catalogItems, error } = await supabase
       .from("catalog_items")
       .select("id, title, item_type, price, is_active")
-      .eq("created_by", JESSICA_CONTENTIN_UUID)
+      .or(jessicaCatalogItemsOrFilter(JESSICA_CONTENTIN_PROFILE_ID))
       .eq("is_active", true)
       .order("title", { ascending: true });
 

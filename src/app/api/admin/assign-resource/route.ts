@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { sendResourceAccessEmail } from "@/lib/emails/send-resource-access";
-
-const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
+import { catalogItemBelongsToJessica } from "@/lib/jessica-contentin/catalog-ownership";
+import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 
 export async function POST(request: NextRequest) {
   console.log("[admin/assign-resource] POST request received");
@@ -49,19 +49,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que le catalog_item appartient à Jessica
+    // Vérifier que le catalog_item appartient à Jessica (creator_id ou created_by)
     const { data: catalogItem } = await supabase
       .from("catalog_items")
-      .select("id, title, item_type, content_id, creator_id")
+      .select("id, title, item_type, content_id, creator_id, created_by, is_active")
       .eq("id", catalogItemId)
-      .eq("creator_id", jessicaProfile.id)
       .maybeSingle();
 
-    if (!catalogItem) {
+    if (!catalogItem || !catalogItemBelongsToJessica(catalogItem, jessicaProfile.id)) {
       return NextResponse.json(
         { error: "Ressource non trouvée ou n'appartient pas à Jessica" },
         { status: 404 }
       );
+    }
+
+    if (!catalogItem.is_active) {
+      await supabase
+        .from("catalog_items")
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq("id", catalogItemId);
     }
 
     // Récupérer les informations de l'utilisateur

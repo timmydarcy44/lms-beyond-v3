@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { jessicaCatalogItemsOrFilter } from "@/lib/jessica-contentin/catalog-ownership";
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
           created_by,
           slug
         `)
-        .eq("created_by", jessicaProfileId)
+        .or(jessicaCatalogItemsOrFilter(String(jessicaProfileId)))
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(100);

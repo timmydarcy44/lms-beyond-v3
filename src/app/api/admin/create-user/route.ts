@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       user_metadata: {
         full_name: fullName,
         phone: phone || null,
+        signup_source: "jessica_contentin",
       },
     });
 

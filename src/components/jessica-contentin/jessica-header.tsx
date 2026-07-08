@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Users, FileText, Package } from "lucide-react";
+import { Calendar, FileText, Package, Contact } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function JessicaHeader() {
@@ -33,6 +33,24 @@ export function JessicaHeader() {
 
           {/* Navigation Items */}
           <div className="flex items-center gap-2">
+            {/* CRM */}
+            <Link
+              href="/super/jessica-crm"
+              className={cn(
+                "px-4 py-2 text-sm font-medium transition-colors rounded-lg flex items-center gap-2",
+                pathname === "/super/jessica-crm" || pathname?.startsWith("/super/jessica-crm/")
+                  ? "text-white"
+                  : "text-[#A0522D] hover:text-white",
+                pathname === "/super/jessica-crm" || pathname?.startsWith("/super/jessica-crm/")
+                  ? "bg-[#C6A664]"
+                  : "bg-[#E6D9C6] hover:bg-[#C6A664]",
+              )}
+              style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
+            >
+              <Contact className="h-4 w-4" />
+              <span>CRM</span>
+            </Link>
+
             {/* Agenda */}
             <Link
               href="/super/agenda"
@@ -67,24 +85,6 @@ export function JessicaHeader() {
             >
               <Package className="h-4 w-4" />
               <span>Catalogue</span>
-            </Link>
-
-            {/* Gestion client */}
-            <Link
-              href="/super/gestion-client"
-              className={cn(
-                "px-4 py-2 text-sm font-medium transition-colors rounded-lg flex items-center gap-2",
-                pathname === "/super/gestion-client" || pathname?.startsWith("/super/gestion-client/")
-                  ? "text-white"
-                  : "text-[#A0522D] hover:text-white",
-                pathname === "/super/gestion-client" || pathname?.startsWith("/super/gestion-client/")
-                  ? "bg-[#C6A664]"
-                  : "bg-[#E6D9C6] hover:bg-[#C6A664]",
-              )}
-              style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
-            >
-              <Users className="h-4 w-4" />
-              <span>Gestion client</span>
             </Link>
 
             {/* Créer un article de blog */}

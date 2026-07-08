@@ -2,23 +2,30 @@
 
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { parseClientName } from "@/lib/jessica-contentin/parse-client-name";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
+const JESSICA_SIGNUP_SOURCE = "jessica_contentin";
 
 export type JessicaUserListItem = {
   id: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
   fullName: string | null;
   phone: string | null;
   createdAt: string;
   totalRevenue: number;
   purchaseCount: number;
   testCount: number;
+  assignedCatalogItemIds: string[];
 };
 
 export type JessicaUserDetails = {
   id: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
   fullName: string | null;
   phone: string | null;
   createdAt: string;
@@ -45,8 +52,43 @@ export type JessicaUserDetails = {
   testCount: number;
 };
 
+async function getJessicaClientIdSet(
+  supabase: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+  jessicaProfileId: string,
+): Promise<Set<string>> {
+  const ids = new Set<string>();
+
+  const { data: accessRows } = await supabase
+    .from("catalog_access")
+    .select(`user_id, catalog_items!inner(creator_id)`)
+    .eq("catalog_items.creator_id", jessicaProfileId)
+    .in("access_status", ["purchased", "manually_granted", "free"])
+    .not("user_id", "is", null);
+
+  for (const row of accessRows ?? []) {
+    const uid = (row as { user_id?: string }).user_id;
+    if (uid) ids.add(uid);
+  }
+
+  let page = 1;
+  const perPage = 200;
+  while (page <= 10) {
+    const { data: authPage, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error || !authPage?.users?.length) break;
+    for (const user of authPage.users) {
+      const source = String(user.user_metadata?.signup_source ?? "");
+      if (source === JESSICA_SIGNUP_SOURCE) ids.add(user.id);
+    }
+    if (authPage.users.length < perPage) break;
+    page += 1;
+  }
+
+  ids.delete(jessicaProfileId);
+  return ids;
+}
+
 /**
- * Récupère la liste de tous les utilisateurs avec leurs statistiques
+ * Récupère la liste des clients Jessica avec leurs statistiques
  */
 export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
   const hasAccess = await isSuperAdmin();
@@ -74,10 +116,13 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
       return [];
     }
 
-    // Récupérer TOUS les profils (pas seulement ceux qui ont des achats)
+    const clientIds = await getJessicaClientIdSet(supabase, jessicaProfile.id);
+    if (clientIds.size === 0) return [];
+
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, email, full_name, phone, created_at")
+      .in("id", Array.from(clientIds))
       .order("created_at", { ascending: false });
 
     if (!profiles || profiles.length === 0) {
@@ -91,6 +136,7 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
       .from("catalog_access")
       .select(`
         user_id,
+        catalog_item_id,
         granted_at,
         access_status,
         catalog_items!inner (
@@ -106,22 +152,29 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
 
     // Calculer les statistiques pour chaque utilisateur
     const usersWithStats = (profiles || []).map((profile) => {
-      const userAccess = (accessData || []).filter((a: any) => a.user_id === profile.id);
-      // Calculer le CA uniquement pour les achats (pas les assignations manuelles)
-      const purchasedAccess = userAccess.filter((a: any) => a.access_status === "purchased");
-      const totalRevenue = purchasedAccess.reduce((sum: number, a: any) => {
+      const userAccess = (accessData || []).filter((a: { user_id?: string }) => a.user_id === profile.id);
+      const purchasedAccess = userAccess.filter(
+        (a: { access_status?: string }) => a.access_status === "purchased",
+      );
+      const totalRevenue = purchasedAccess.reduce((sum: number, a: { catalog_items?: { price?: number } }) => {
         return sum + (a.catalog_items?.price || 0);
       }, 0);
+      const { firstName, lastName } = parseClientName(profile.full_name);
 
       return {
         id: profile.id,
         email: profile.email || "",
+        firstName,
+        lastName,
         fullName: profile.full_name || null,
         phone: profile.phone || null,
         createdAt: profile.created_at || new Date().toISOString(),
         totalRevenue,
         purchaseCount: userAccess.length,
-        testCount: 0, // Sera calculé séparément
+        testCount: 0,
+        assignedCatalogItemIds: userAccess
+          .map((a: { catalog_item_id?: string }) => a.catalog_item_id)
+          .filter(Boolean) as string[],
       };
     });
 
@@ -291,13 +344,18 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
     });
 
     // Calculer les statistiques
-    const totalRevenue = purchases.reduce((sum, p) => sum + p.price, 0);
+    const totalRevenue = purchases
+      .filter((p) => p.accessStatus === "purchased")
+      .reduce((sum, p) => sum + p.price, 0);
     const purchaseCount = purchases.length;
     const testCount = testResults.length;
+    const { firstName, lastName } = parseClientName(profile.full_name);
 
     return {
       id: profile.id,
       email: profile.email || "",
+      firstName,
+      lastName,
       fullName: profile.full_name || null,
       phone: profile.phone || null,
       createdAt: profile.created_at || new Date().toISOString(),

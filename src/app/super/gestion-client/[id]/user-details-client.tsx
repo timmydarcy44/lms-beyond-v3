@@ -149,10 +149,10 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold mb-1" style={{ color: textColor }}>
-                Assigner une ressource
+                Assigner une formation
               </h3>
               <p className="text-sm" style={{ color: textColor, opacity: 0.7 }}>
-                Ouvrir l'accès à une ressource pour ce client
+                La formation apparaîtra dans l&apos;espace Mon compte du client
               </p>
             </div>
             {availableToAssign.length > 0 ? (
@@ -174,7 +174,7 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                   ) : (
                     <>
                       <Plus className="h-4 w-4 mr-2" />
-                      Assigner une ressource
+                      Assigner une formation
                     </>
                   )}
                 </Button>

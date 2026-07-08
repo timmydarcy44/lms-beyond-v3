@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   ArrowLeft,
   Award,
@@ -37,12 +37,12 @@ import {
 
 type Phase = "loading" | "briefing" | "chat" | "finishing" | "debrief";
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const } },
 };
 
-const stagger = { show: { transition: { staggerChildren: 0.07 } } };
+const stagger: Variants = { show: { transition: { staggerChildren: 0.07 } } };
 
 /** Scène d'abord, coach discret ensuite. */
 function messagesFromCoachReply(reply: MissionCoachReply, isOpening = false): MissionChatMessage[] {

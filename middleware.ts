@@ -102,6 +102,7 @@ const BEYOND_ONLY_PREFIXES = [
 const JESSICA_ALIAS_PREFIXES = [
   "/consultations",
   "/a-propos",
+  "/methode",
   "/specialites",
   "/programmes",
   "/parcours-guide",

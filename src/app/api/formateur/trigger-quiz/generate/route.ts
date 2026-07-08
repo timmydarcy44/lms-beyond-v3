@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { getCourseBuilderSnapshot } from "@/lib/queries/formateur";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
+import { AI_CONTEXT_LIMITS, capChapitresForQuiz, truncateText } from "@/lib/ai/context-limits";
 
 type GeneratedQuestion =
   | {
@@ -26,21 +27,27 @@ type GeneratedQuestion =
 
 function buildChapitresPayload(snapshot: CourseBuilderSnapshot) {
   const sections = Array.isArray(snapshot.sections) ? snapshot.sections : [];
-  return sections
+  const raw = sections
     .map((section: any) => {
       const chapters = Array.isArray(section?.chapters) ? section.chapters : [];
       return {
-        section: String(section?.title ?? "").trim(),
+        section: truncateText(String(section?.title ?? "").trim(), 120),
         chapters: chapters
           .map((chapter: any) => {
             const subs = Array.isArray(chapter?.subchapters) ? chapter.subchapters : [];
             return {
-              section: String(section?.title ?? "").trim(),
-              chapter: String(chapter?.title ?? "").trim(),
-              content: String(chapter?.content ?? chapter?.summary ?? "").trim(),
+              section: truncateText(String(section?.title ?? "").trim(), 120),
+              chapter: truncateText(String(chapter?.title ?? "").trim(), 200),
+              content: truncateText(
+                String(chapter?.content ?? chapter?.summary ?? "").trim(),
+                AI_CONTEXT_LIMITS.CHAPTER_TEXT_MAX,
+              ),
               subchapters: subs.map((sub: any) => ({
-                title: String(sub?.title ?? "").trim(),
-                content: String(sub?.content ?? sub?.summary ?? "").trim(),
+                title: truncateText(String(sub?.title ?? "").trim(), 120),
+                content: truncateText(
+                  String(sub?.content ?? sub?.summary ?? "").trim(),
+                  AI_CONTEXT_LIMITS.SUBCHAPTER_TEXT_MAX,
+                ),
               })),
             };
           })
@@ -48,6 +55,7 @@ function buildChapitresPayload(snapshot: CourseBuilderSnapshot) {
       };
     })
     .filter((x: any) => x.section || (x.chapters?.length ?? 0) > 0);
+  return capChapitresForQuiz(raw);
 }
 
 export async function POST(request: NextRequest) {
@@ -90,8 +98,8 @@ export async function POST(request: NextRequest) {
     const openai = new OpenAI({ apiKey });
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      max_tokens: 5000,
+      model: "gpt-4o-mini",
+      max_tokens: 4000,
       messages: [
         {
           role: "system",

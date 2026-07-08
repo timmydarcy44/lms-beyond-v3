@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getOpenAIClient } from "@/lib/ai/openai-client";
 import {
+  AI_CONTEXT_LIMITS,
+  capChatMessages,
+  truncateText,
+} from "@/lib/ai/context-limits";
+import {
   getInterviewOpeningPrompt,
   getInterviewSystemPrompt,
   type InterviewAudience,
@@ -26,16 +31,26 @@ export async function POST(request: NextRequest) {
       audience?: InterviewAudience;
     };
 
-    const messages = Array.isArray(body.messages) ? body.messages : [];
+    const messages = capChatMessages(
+      Array.isArray(body.messages) ? body.messages : [],
+      AI_CONTEXT_LIMITS.INTERVIEW_MAX_MESSAGES,
+      AI_CONTEXT_LIMITS.INTERVIEW_MESSAGE_MAX,
+    );
     const audience: InterviewAudience = body.audience === "parent" ? "parent" : "professional";
-    const contextText = String(body.contextText ?? "").trim().slice(0, 12_000);
+    const contextText = truncateText(
+      String(body.contextText ?? "").trim(),
+      AI_CONTEXT_LIMITS.INTERVIEW_CONTEXT_MAX,
+    );
     if (!contextText) {
       return NextResponse.json({ error: "Contexte du chapitre manquant" }, { status: 400 });
     }
 
     const chapterTitle = String(body.chapterTitle ?? "Chapitre").trim();
     const courseTitle = String(body.courseTitle ?? "").trim();
-    const interviewObjectives = String(body.interviewObjectives ?? "").trim().slice(0, 2000);
+    const interviewObjectives = truncateText(
+      String(body.interviewObjectives ?? "").trim(),
+      AI_CONTEXT_LIMITS.INTERVIEW_OBJECTIVES_MAX,
+    );
 
     const objectivesBlock = interviewObjectives
       ? `\n\nObjectifs pédagogiques fixés par le formateur (prioritaires pour tes questions) :\n${interviewObjectives}`
@@ -60,7 +75,7 @@ ${contextText}${objectivesBlock}`;
     } else {
       for (const m of messages) {
         if (m.role === "user" || m.role === "assistant") {
-          openAiMessages.push({ role: m.role, content: String(m.content ?? "").slice(0, 4000) });
+          openAiMessages.push({ role: m.role, content: m.content });
         }
       }
     }

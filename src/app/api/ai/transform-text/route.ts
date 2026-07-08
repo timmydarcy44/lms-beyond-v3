@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case "rephrase": {
         fullPrompt = await loadPrompt(featureId, { text, style: options?.style });
-        result = await generateText(fullPrompt, { model: "gpt-4o", maxTokens: 2000 });
+        result = await generateText(fullPrompt, { model: "gpt-4o-mini", maxTokens: 2000 });
         format = "text";
         break;
       }
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       case "translate": {
         const targetLanguage = options?.targetLanguage || "anglais";
         fullPrompt = await loadPrompt(featureId, { text, targetLanguage });
-        result = await generateText(fullPrompt, { model: "gpt-4o", maxTokens: 2000 });
+        result = await generateText(fullPrompt, { model: "gpt-4o-mini", maxTokens: 2000 });
         format = "text";
         break;
       }
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
       case "synthesis": {
         fullPrompt = await loadPrompt(featureId, { text });
-        result = await generateText(fullPrompt, { model: "gpt-4o", maxTokens: 4500 });
+        result = await generateText(fullPrompt, { model: "gpt-4o-mini", maxTokens: 4500 });
         format = "text";
         break;
       }
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       route: "transform-text",
       action,
       provider: "openai",
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       costEur: getOpenAIActionCost(action),
       metadata: {
         options,
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
             route: "transform-text",
             action,
             provider: "openai",
-            model: "gpt-4o",
+            model: "gpt-4o-mini",
             costEur: 0,
             metadata: {
               error: error instanceof Error ? error.message : String(error),

@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { getCourseBuilderSnapshot } from "@/lib/queries/formateur";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
+import { capChapitresForQuiz, AI_CONTEXT_LIMITS, truncateText } from "@/lib/ai/context-limits";
+import { logAIUsageEvent } from "@/lib/ai/usage-logger";
 
 export const maxDuration = 60;
 
@@ -16,12 +18,6 @@ type ChapterPayload = {
   }>;
 };
 
-function truncateText(value: string, max = 2500): string {
-  const text = String(value ?? "").trim();
-  if (text.length <= max) return text;
-  return `${text.slice(0, max)}…`;
-}
-
 function buildChapitresFromSnapshot(snapshot: CourseBuilderSnapshot): ChapterPayload[] {
   return (snapshot.sections ?? [])
     .map((section) => ({
@@ -30,10 +26,16 @@ function buildChapitresFromSnapshot(snapshot: CourseBuilderSnapshot): ChapterPay
         .map((chapter) => ({
           section: truncateText(String(section.title ?? ""), 200),
           chapter: truncateText(String(chapter.title ?? ""), 200),
-          content: truncateText(String(chapter.content ?? chapter.summary ?? "")),
+          content: truncateText(
+            String(chapter.content ?? chapter.summary ?? ""),
+            AI_CONTEXT_LIMITS.CHAPTER_TEXT_MAX,
+          ),
           subchapters: (chapter.subchapters ?? []).map((sub) => ({
-            title: truncateText(String(sub.title ?? ""), 200),
-            content: truncateText(String(sub.content ?? sub.summary ?? "")),
+            title: truncateText(String(sub.title ?? ""), 120),
+            content: truncateText(
+              String(sub.content ?? sub.summary ?? ""),
+              AI_CONTEXT_LIMITS.SUBCHAPTER_TEXT_MAX,
+            ),
           })),
         }))
         .filter((chapter) => chapter.chapter || chapter.content || (chapter.subchapters?.length ?? 0) > 0),
@@ -49,11 +51,11 @@ function sanitizeClientChapitres(chapitres: unknown): ChapterPayload[] {
       ? (section as ChapterPayload).chapters!.map((chapter) => ({
           section: truncateText(String(chapter?.section ?? ""), 200),
           chapter: truncateText(String(chapter?.chapter ?? ""), 200),
-          content: truncateText(String(chapter?.content ?? "")),
+          content: truncateText(String(chapter?.content ?? ""), AI_CONTEXT_LIMITS.CHAPTER_TEXT_MAX),
           subchapters: Array.isArray(chapter?.subchapters)
             ? chapter.subchapters.map((sub) => ({
-                title: truncateText(String(sub?.title ?? ""), 200),
-                content: truncateText(String(sub?.content ?? "")),
+                title: truncateText(String(sub?.title ?? ""), 120),
+                content: truncateText(String(sub?.content ?? ""), AI_CONTEXT_LIMITS.SUBCHAPTER_TEXT_MAX),
               }))
             : [],
         }))
@@ -109,6 +111,8 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    chapitres = capChapitresForQuiz(chapitres);
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -166,6 +170,19 @@ Retourne UNIQUEMENT un objet JSON valide avec cette structure :
     if (!questions.length) {
       return NextResponse.json({ error: "Aucune question générée par l'IA" }, { status: 500 });
     }
+
+    await logAIUsageEvent(supabase, {
+      userId: user.id,
+      route: "formateur/quiz/generate",
+      action: String(body.type),
+      provider: "openai",
+      model: "gpt-4o-mini",
+      costEur: 0.01,
+      metadata: {
+        nb_questions: body.nb_questions,
+        formation_id: formationId || null,
+      },
+    });
 
     return NextResponse.json({ questions });
   } catch (error) {

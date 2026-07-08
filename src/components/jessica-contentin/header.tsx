@@ -11,17 +11,18 @@ import {
   Heart,
   Brain,
   BookOpen,
-  Shield,
   Sparkles,
   Compass,
   Target,
   Activity,
-  Users,
   Puzzle,
   type LucideIcon,
   Smartphone,
-  Moon,
   Download,
+  GraduationCap,
+  FileText,
+  HelpCircle,
+  Newspaper,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -31,66 +32,88 @@ import { getUserName } from "@/lib/utils/user-name";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
-const specialitesMegaMenu: {
+const accompagnementsMegaMenu: {
   title: string;
   items: { label: string; href: string; icon: LucideIcon }[];
 }[] = [
   {
-    title: "ENFANTS & ADOS",
+    title: "Apprentissage & méthodologie",
     items: [
-      { label: "Accompagnement TND", href: "/jessica-contentin/specialites/tnd", icon: Puzzle },
-      { label: "Harcèlement scolaire", href: "/jessica-contentin/specialites/harcelement", icon: Shield },
-      { label: "Ado : Gestion des émotions", href: "/jessica-contentin/specialites/therapie", icon: Heart },
+      { label: "Difficultés d'apprentissage", href: "/specialites/strategie-apprentissage", icon: BookOpen },
+      { label: "Méthodologie de travail", href: "/specialites/strategie-apprentissage", icon: Target },
+      { label: "Collège", href: "/specialites/strategie-apprentissage", icon: BookOpen },
+      { label: "Lycée", href: "/specialites/strategie-apprentissage", icon: GraduationCap },
+      { label: "Études supérieures", href: "/specialites/orientation-professionnelle", icon: GraduationCap },
+      { label: "Orientation", href: "/specialites/orientation-professionnelle", icon: Compass },
     ],
   },
   {
-    title: "ÉTUDIANTS",
+    title: "Neurodéveloppement",
     items: [
-      { label: "Orientation", href: "/jessica-contentin/specialites/orientation-professionnelle", icon: Compass },
-      { label: "Stratégie d'apprentissage", href: "/jessica-contentin/specialites/strategie-apprentissage", icon: Target },
-      { label: "Gestion du stress examens", href: "/jessica-contentin/specialites/gestion-stress", icon: Activity },
-      { label: "Neuroéducation", href: "/jessica-contentin/specialites/neuroeducation", icon: Brain },
-      { label: "Confiance en soi", href: "/jessica-contentin/specialites/confiance-en-soi", icon: Sparkles },
+      { label: "TDAH", href: "/specialites/tnd", icon: Brain },
+      { label: "Troubles DYS", href: "/specialites/tnd", icon: Puzzle },
+      { label: "TSA", href: "/specialites/tnd", icon: Puzzle },
+      { label: "Haut potentiel", href: "/specialites/tnd", icon: Sparkles },
+      { label: "Fonctions exécutives", href: "/specialites/neuroeducation", icon: Brain },
     ],
   },
   {
-    title: "ADULTES",
+    title: "Émotions & confiance",
     items: [
-      { label: "Régulation émotionnelle", href: "/jessica-contentin/specialites/regulation-emotionnelle", icon: Heart },
-      { label: "Confiance en soi", href: "/jessica-contentin/specialites/confiance-en-soi", icon: Sparkles },
-    ],
-  },
-  {
-    title: "PARENTS",
-    items: [
-      { label: "Guidance parentale", href: "/jessica-contentin/specialites/guidance-parentale", icon: Users },
+      { label: "Gestion du stress", href: "/specialites/gestion-stress", icon: Activity },
+      { label: "Anxiété", href: "/specialites/gestion-stress", icon: Heart },
+      { label: "Confiance en soi", href: "/specialites/confiance-en-soi", icon: Sparkles },
+      { label: "Motivation", href: "/specialites/confiance-en-soi", icon: Target },
+      { label: "Régulation émotionnelle", href: "/specialites/regulation-emotionnelle", icon: Heart },
     ],
   },
 ];
 
-const outilsMegaMenu: { label: string; href: string; icon: LucideIcon; description: string }[] = [
+const ressourcesMegaMenu: { label: string; href: string; icon: LucideIcon; description: string }[] = [
   {
-    label: "Application",
-    href: "/jessica-contentin/ressources/application-neuro-adaptee",
-    icon: Smartphone,
-    description: "Performance cognitive au quotidien",
+    label: "Articles",
+    href: "/blog",
+    icon: FileText,
+    description: "Conseils et décryptages en neuroéducation",
   },
   {
-    label: "Cartes — Rituel du sommeil",
-    href: "/jessica-contentin/ressources/cartes-rituel-sommeil",
-    icon: Moon,
-    description: "Un jeu de cartes pour des soirées apaisées",
-  },
-  {
-    label: "Ressources à télécharger",
-    href: "/jessica-contentin/ressources/telecharger",
+    label: "Guides PDF",
+    href: "/ressources/telecharger",
     icon: Download,
     description: "Fiches et guides psychopédagogiques",
+  },
+  {
+    label: "Conseils",
+    href: "/blog",
+    icon: Sparkles,
+    description: "Astuces pratiques pour le quotidien",
+  },
+  {
+    label: "FAQ",
+    href: "/consultations",
+    icon: HelpCircle,
+    description: "Questions fréquentes sur les accompagnements",
+  },
+  {
+    label: "Actualités",
+    href: "/blog",
+    icon: Newspaper,
+    description: "Dernières publications et actualités",
+  },
+  {
+    label: "NEVO",
+    href: "/ressources/application-neuro-adaptee",
+    icon: Smartphone,
+    description: "La plateforme qui prolonge les séances entre deux rendez-vous",
   },
 ];
 
 export function JessicaContentinHeader() {
   const pathname = usePathname();
+  const isHomePage =
+    pathname === "/" ||
+    pathname === "/jessica-contentin" ||
+    pathname?.replace(/\/$/, "") === "/jessica-contentin";
   
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -168,39 +191,40 @@ export function JessicaContentinHeader() {
   
   const menuItems = [
     {
-      label: "Consultations",
-      href: "/jessica-contentin/consultations",
+      label: "Accompagnements",
+      href: "/specialites",
+      submenuColumns: accompagnementsMegaMenu,
     },
     {
-      label: "Spécialités",
-      href: "/jessica-contentin/specialites",
-      submenuColumns: specialitesMegaMenu,
+      label: "Méthode",
+      href: "/methode",
     },
     {
-      label: "Parcours guidé",
-      href: "/jessica-contentin/parcours-guide",
-    },
-    {
-      label: "Outils et ressources",
-      href: "/jessica-contentin/ressources",
-      submenuItems: outilsMegaMenu,
-    },
-    {
-      label: "Blog",
-      href: "/jessica-contentin/blog",
+      label: "Ressources",
+      href: "/ressources",
+      submenuItems: ressourcesMegaMenu,
     },
   ];
 
   return (
     <>
-      <div className="mx-4 mt-4">
-        <header className="sticky top-4 z-50 bg-[#F8F5F0]/90 backdrop-blur-md border-b border-[#E6D9C6]/50 rounded-2xl shadow-lg">
+      <div className={cn(isHomePage ? "fixed top-0 left-0 right-0 z-50" : "mx-4 mt-4")}>
+        <header
+          className={cn(
+            isHomePage
+              ? "border-b border-white/10 bg-transparent shadow-none backdrop-blur-none"
+              : "sticky top-4 z-50 rounded-2xl border-b border-[#E6D9C6]/50 bg-[#F8F5F0]/90 shadow-lg backdrop-blur-md",
+          )}
+        >
         <nav className="mx-auto max-w-7xl px-6">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex h-16 items-center justify-between lg:h-20">
           {/* Logo */}
-          <Link href="/jessica-contentin" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <span
-              className="text-xl font-normal text-[#2F2A25] whitespace-nowrap"
+              className={cn(
+                "text-xl font-normal whitespace-nowrap",
+                isHomePage ? "text-white drop-shadow-sm" : "text-[#2F2A25]",
+              )}
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
@@ -239,8 +263,11 @@ export function JessicaContentinHeader() {
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-1 px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg transition-colors hover:bg-[#E6D9C6]/50 whitespace-nowrap",
-                    activeDropdown === item.href && "bg-[#E6D9C6]/50"
+                    "flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors",
+                    isHomePage
+                      ? "text-white hover:bg-white/15"
+                      : "text-[#2F2A25] hover:bg-[#E6D9C6]/50",
+                    activeDropdown === item.href && (isHomePage ? "bg-white/15" : "bg-[#E6D9C6]/50"),
                   )}
                 >
                   {item.label}
@@ -295,7 +322,7 @@ export function JessicaContentinHeader() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3, ease: "easeOut" }}
-                      className="absolute left-1/2 top-full mt-3 w-[1040px] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl bg-[#F8F5F0] border border-[#E6D9C6] shadow-xl py-6 z-50"
+                      className="absolute left-1/2 top-full mt-3 w-[920px] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl bg-[#F8F5F0] border border-[#E6D9C6] shadow-xl py-6 z-50"
                       onMouseEnter={() => {
                         // Annuler le timeout de fermeture quand la souris entre dans le menu
                         if (dropdownTimeoutRef.current) {
@@ -310,7 +337,7 @@ export function JessicaContentinHeader() {
                         }, 300);
                       }}
                     >
-                      <div className="grid grid-cols-4 gap-8 px-8">
+                      <div className="grid grid-cols-3 gap-8 px-8">
                         {item.submenuColumns.map((column) => (
                           <div key={column.title} className="space-y-4">
                             <div className="text-[11px] font-semibold text-[#8B6F47] uppercase tracking-[0.18em]">
@@ -346,7 +373,12 @@ export function JessicaContentinHeader() {
           <div className="hidden lg:flex items-center gap-4">
             <Button
               asChild
-              className="!rounded-full !border !border-[#C6A664] !bg-[#C6A664] !px-6 !text-white hover:!bg-[#B88A44]"
+              className={cn(
+                "!rounded-full !px-6",
+                isHomePage
+                  ? "!border !border-[#C6A664] !bg-[#C6A664] !text-white hover:!bg-[#B88A44]"
+                  : "!border !border-[#C6A664] !bg-[#C6A664] !text-white hover:!bg-[#B88A44]",
+              )}
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
@@ -355,26 +387,15 @@ export function JessicaContentinHeader() {
                 Prendre rendez-vous
               </a>
             </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="!rounded-full !border-2 !border-[#C6A664] !bg-transparent !px-6 !text-[#8B6F47] hover:!border-[#B88A44] hover:!bg-[#C6A664]/10 hover:!text-[#B88A44]"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                borderColor: '#8B6F47',
-                borderWidth: '2px',
-              }}
-            >
-              <Link href="/jessica-contentin/inscription">
-                Commencer
-              </Link>
-            </Button>
             {/* Mon compte - tout à droite, plus petit, sans bordure */}
             {/* Utiliser isMounted pour éviter les problèmes d'hydratation */}
             {isMounted && isAuthenticated && userFirstName ? (
               <Link 
-                href="/jessica-contentin/mon-compte"
-                className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
+                href="/mon-compte"
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
+                  isHomePage ? "text-white hover:text-white/80" : "text-[#2F2A25] hover:text-[#C6A664]",
+                )}
                 style={{
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                 }}
@@ -383,11 +404,11 @@ export function JessicaContentinHeader() {
               </Link>
             ) : (
               <Link 
-                href="/jessica-contentin/mon-compte"
-                className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
-                style={{
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                }}
+                href="/mon-compte"
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
+                  isHomePage ? "text-white hover:text-white/80" : "text-[#2F2A25] hover:text-[#C6A664]",
+                )}
               >
                 <User className="h-3.5 w-3.5" />
               </Link>
@@ -396,7 +417,7 @@ export function JessicaContentinHeader() {
 
           {/* Mobile Menu Button */}
           <button
-            className="lg:hidden p-2 text-[#2F2A25]"
+            className={cn("p-2 lg:hidden", isHomePage ? "text-white" : "text-[#2F2A25]")}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -405,13 +426,23 @@ export function JessicaContentinHeader() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-[#E6D9C6] py-4">
+          <div
+            className={cn(
+              "border-t py-4 lg:hidden",
+              isHomePage ? "border-white/20 bg-[#2F2A25]/90 backdrop-blur-md" : "border-[#E6D9C6]",
+            )}
+          >
             <div className="flex flex-col gap-2">
               {menuItems.map((item) => (
                 <div key={item.href}>
                   <Link
                     href={item.href}
-                    className="block px-4 py-2 text-sm font-medium text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
+                    className={cn(
+                      "block rounded-lg px-4 py-2 text-sm font-medium",
+                      isHomePage
+                        ? "text-white hover:bg-white/10"
+                        : "text-[#2F2A25] hover:bg-[#E6D9C6]/50",
+                    )}
                     onClick={closeMenus}
                   >
                     {item.label}
@@ -466,20 +497,6 @@ export function JessicaContentinHeader() {
                   <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
                     Prendre rendez-vous
                   </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="!rounded-full !border-2 !border-[#C6A664] !bg-transparent !text-[#8B6F47] hover:!border-[#B88A44] hover:!bg-[#C6A664]/10 hover:!text-[#B88A44]"
-                  style={{
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-                    borderColor: '#8B6F47',
-                    borderWidth: '2px',
-                  }}
-                >
-                  <Link href="/jessica-contentin/inscription">
-                    Commencer
-                  </Link>
                 </Button>
                 {/* Mon compte - plus petit, sans bordure */}
                 {/* Utiliser isMounted pour éviter les problèmes d'hydratation */}

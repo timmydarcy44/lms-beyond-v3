@@ -21,7 +21,7 @@ export function VideoHero() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6 }}
-      className="relative mx-0 mb-0 h-[calc(100vh-4rem)] min-h-[560px] scroll-mt-4 overflow-hidden md:mx-4 md:mb-4 md:rounded-2xl"
+      className="relative min-h-screen w-full overflow-hidden scroll-mt-0"
     >
       <div className="absolute inset-0">
         {mediaFailed ? (
@@ -50,7 +50,7 @@ export function VideoHero() {
         {mediaFailed ? <div className="absolute inset-0 bg-[#F8F2EA]/80" /> : null}
       </div>
 
-      <div className="relative z-10 flex h-full items-center px-6 lg:px-16">
+      <div className="relative z-10 flex min-h-screen items-center px-6 pt-24 pb-16 lg:px-16">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}

@@ -11,6 +11,7 @@ import {
   isCollaboratorInviteMetadata,
 } from "@/lib/entreprise/collaborator-invite";
 import { env } from "@/lib/env";
+import { isJessicaMarketingHostname } from "@/lib/jessica-contentin/studio-config";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
   const flowParam = url.searchParams.get("flow");
 
   const decodedNext = nextParam ? decodeURIComponent(nextParam) : null;
-  const fallbackPath = "/dashboard/apprenant";
+  const fallbackPath = isJessicaMarketingHostname(url.hostname) ? "/mon-compte" : "/dashboard/apprenant";
 
   if (code && env.supabaseUrl && env.supabaseAnonKey) {
     const cookieCarrier = NextResponse.next();

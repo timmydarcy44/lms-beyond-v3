@@ -1,24 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getServerClient } from "@/lib/supabase/server";
+import { checkAIConfig } from "@/lib/utils/check-ai-config";
+
 /**
- * Route pour vérifier la configuration des clés API IA
+ * Vérifie si l'IA est configurée (sans exposer de détail sur les clés).
+ * Réservé aux utilisateurs authentifiés.
  */
-export async function GET(request: NextRequest) {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const openaiKey = process.env.OPENAI_API_KEY;
+export async function GET(_request: NextRequest) {
+  const supabase = await getServerClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+  }
 
-  const config = {
-    anthropic: {
-      configured: !!anthropicKey,
-      keyLength: anthropicKey?.length || 0,
-      valid: anthropicKey ? anthropicKey.length > 10 : false,
-    },
-    openai: {
-      configured: !!openaiKey,
-      keyLength: openaiKey?.length || 0,
-      valid: openaiKey ? openaiKey.length > 10 : false,
-    },
-  };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
 
-  return NextResponse.json(config);
+  const config = checkAIConfig();
+  return NextResponse.json({
+    isConfigured: config.isConfigured,
+    provider: config.provider,
+  });
 }

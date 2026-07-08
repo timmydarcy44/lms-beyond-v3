@@ -8,6 +8,7 @@ import {
 } from "@/lib/queries/apprenant";
 import { getServerClient } from "@/lib/supabase/server";
 import { resolveJessicaCreatorId } from "@/lib/jessica-contentin/resolve-creator-id";
+import { isJessicaStudioCourse } from "@/lib/jessica-contentin/formation-access";
 
 interface FormationLessonPlayPageProps {
   params: Promise<{
@@ -40,11 +41,11 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
   const courseId = card.id;
   const { data: course } = await readClient
     .from("courses")
-    .select("id, creator_id")
+    .select("id, creator_id, org_id, created_by")
     .eq("id", courseId)
     .maybeSingle();
 
-  if (!course || String(course.creator_id) !== jessicaCreatorId) {
+  if (!course || !isJessicaStudioCourse(course, jessicaCreatorId)) {
     notFound();
   }
 
@@ -55,13 +56,21 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
   let hasEnrollment = false;
   if (user?.id) {
     const enrollmentClient = serviceClient || supabase;
-    const { data: enrollment } = await enrollmentClient
-      .from("enrollments")
-      .select("course_id")
-      .eq("user_id", user.id)
-      .eq("course_id", course.id)
-      .maybeSingle();
-    hasEnrollment = Boolean(enrollment);
+    const [{ data: enrollment }, { data: courseEnrollment }] = await Promise.all([
+      enrollmentClient
+        .from("enrollments")
+        .select("course_id")
+        .eq("user_id", user.id)
+        .eq("course_id", course.id)
+        .maybeSingle(),
+      enrollmentClient
+        .from("course_enrollments")
+        .select("course_id")
+        .eq("user_id", user.id)
+        .eq("course_id", course.id)
+        .maybeSingle(),
+    ]);
+    hasEnrollment = Boolean(enrollment) || Boolean(courseEnrollment);
   }
   
   // Trouver le catalog_item_id pour ce course
@@ -123,10 +132,13 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     });
 
     if (!hasAccess) {
-      // Rediriger vers la page de paiement
-      console.log("[formations/[slug]/play] No access, redirecting to payment:", `/dashboard/catalogue/module/${catalogItem.id}/payment`);
+      // Rediriger vers la page de paiement ou mon-compte (clients Jessica)
+      console.log("[formations/[slug]/play] No access, redirecting");
       const { redirect } = await import("next/navigation");
-      redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
+      if (catalogItem.id) {
+        redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
+      }
+      redirect("/mon-compte");
     }
   } else if (!user && !catalogItem.is_free) {
     // Si l'utilisateur n'est pas connecté et le module n'est pas gratuit, rediriger vers la page de paiement

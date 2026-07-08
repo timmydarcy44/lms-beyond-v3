@@ -37,7 +37,6 @@ Sinon :
 - Fais une fiche claire avec points cles, definitions et exemples.`;
 
 export async function POST(request: NextRequest) {
-  console.log("Clé OpenAI présente:", !!process.env.OPENAI_API_KEY);
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 

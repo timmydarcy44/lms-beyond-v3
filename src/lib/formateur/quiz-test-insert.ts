@@ -113,7 +113,6 @@ export async function insertQuizTestRow(
     status: "draft",
     kind: "quiz",
     questions: input.questions,
-    created_by: input.userId,
     creator_id: input.userId,
     owner_id: input.userId,
     evaluation_type: input.evaluationType || "qcm",
@@ -129,6 +128,7 @@ export async function insertQuizTestRow(
     "org_id",
     "owner_id",
     "creator_id",
+    "created_by",
     "evaluation_type",
     "scoring",
     "form_url",
@@ -160,7 +160,7 @@ export async function insertQuizTestRow(
       return { data: null, error: { message: "org_id requis pour créer le quiz", code } };
     }
 
-    if (code === "42703") {
+    if (code === "42703" || code === "PGRST204") {
       const match = message.match(/'([^']+)' column/i) ?? message.match(/column "?(\w+)"?/i);
       const column = match?.[1];
       if (column && column in payload) {

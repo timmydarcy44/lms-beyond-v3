@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { LazyBandwidthVideo } from "@/components/media/lazy-bandwidth-video";
 import { getLearnerContentDetail } from "@/lib/queries/apprenant";
+import { firstPlayableLessonId } from "@/lib/jessica-contentin/formation-access";
 
 const DEFAULT_INSTRUCTOR_AVATAR = "/fallback.svg";
 
@@ -100,7 +101,11 @@ export default async function FormationDetailPage({ params }: { params: Promise<
 
   const cover = String(courseRow.cover_image ?? "");
   const isVideo = cover.toLowerCase().endsWith(".mp4") || cover.toLowerCase().includes(".mp4");
-  const playHref = `/formations/${slug}/play`;
+  const allLessons = (info.modules ?? []).flatMap((module) => module.lessons ?? []);
+  const firstLessonId = firstPlayableLessonId(info.modules);
+  const playHref = firstLessonId
+    ? `/formations/${slug}/play/${firstLessonId}`
+    : `/formations/${slug}/play`;
 
   const displayName =
     (typeof instructorProfile?.full_name === "string" ? instructorProfile.full_name : "").trim() || "Expert";
@@ -157,10 +162,15 @@ export default async function FormationDetailPage({ params }: { params: Promise<
         ) : null}
 
         <div className="mt-12 grid grid-cols-1 gap-6 px-8 md:grid-cols-2 lg:grid-cols-4">
-          {info.modules?.map((module: { id: string; title: string }, idx: number) => (
+          {info.modules?.map((module: { id: string; title: string; lessons?: Array<{ id: string }> }, idx: number) => {
+            const moduleLesson = module.lessons?.[0];
+            const moduleHref = moduleLesson?.id
+              ? `/formations/${slug}/play/${moduleLesson.id}`
+              : playHref;
+            return (
             <Link
               key={module.id}
-              href={playHref}
+              href={moduleHref}
               className="group relative aspect-video overflow-hidden rounded-lg border border-white/5 bg-[#141414] transition-all hover:border-white/20"
             >
               <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/90 to-transparent" />
@@ -171,7 +181,8 @@ export default async function FormationDetailPage({ params }: { params: Promise<
                 <h4 className="text-sm font-bold text-white">{module.title}</h4>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
     </LearningSessionTracker>

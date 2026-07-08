@@ -7,6 +7,7 @@
 
 
 import { getOpenAIClient, generateJSON } from "@/lib/ai/openai-client";
+import { capTranscript, AI_CONTEXT_LIMITS } from "@/lib/ai/context-limits";
 
 import { memoryBlockForPrompt, type CoachMemory } from "@/lib/apprenant/edge-coach-memory";
 
@@ -539,11 +540,13 @@ export async function getMissionCoachReply(
 
   try {
 
-    const isOpening = messages.length === 0;
+    const trimmedMessages = messages.slice(-AI_CONTEXT_LIMITS.EDGE_MAX_HISTORY_MESSAGES);
 
-    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    const isOpening = trimmedMessages.length === 0;
 
-    const userTurns = countUserTurns(messages);
+    const lastUser = [...trimmedMessages].reverse().find((m) => m.role === "user");
+
+    const userTurns = countUserTurns(trimmedMessages);
 
 
 
@@ -555,8 +558,8 @@ export async function getMissionCoachReply(
 
 
 
-    const transcript = messages
-
+    const transcript = capTranscript(
+      trimmedMessages
       .map((m) => {
 
         const who =
@@ -567,7 +570,8 @@ export async function getMissionCoachReply(
 
       })
 
-      .join("\n");
+      .join("\n"),
+    );
 
 
 
@@ -599,11 +603,11 @@ export async function getMissionCoachReply(
 
     try {
 
-      return parseCoachReply(JSON.parse(text) as Record<string, unknown>, ctx, messages);
+      return parseCoachReply(JSON.parse(text) as Record<string, unknown>, ctx, trimmedMessages);
 
     } catch {
 
-      return fallbackCoachReply(ctx, messages);
+      return fallbackCoachReply(ctx, trimmedMessages);
 
     }
 

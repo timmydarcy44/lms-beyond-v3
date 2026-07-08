@@ -7,12 +7,12 @@ const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 export default async function JessicaContentinAccountPage() {
   const supabase = await getServerClient();
   if (!supabase) {
-    redirect("/jessica-contentin/login?next=/jessica-contentin/mon-compte");
+    redirect("/login?next=/mon-compte");
   }
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/jessica-contentin/login?next=/jessica-contentin/mon-compte");
+    redirect("/login?next=/mon-compte");
   }
 
   // Récupérer l'ID de Jessica Contentin pour vérifier que l'utilisateur a accès à ses contenus

@@ -48,7 +48,7 @@ function postLoginDestination(searchParams: URLSearchParams): string {
   if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
     return raw;
   }
-  return "/jessica-contentin/mon-compte";
+  return "/mon-compte";
 }
 
 export default function JessicaContentinLoginPage() {
@@ -107,17 +107,21 @@ function JessicaContentinLoginContent() {
         setError(signInError.message || "Identifiants incorrects.");
         return;
       }
+      const hasExplicitNext =
+        Boolean(searchParams.get("next")?.trim()) || Boolean(searchParams.get("redirect")?.trim());
       let destination = dest;
-      try {
-        const res = await fetch("/api/auth/resolve-destination", { method: "POST" });
-        if (res.ok) {
-          const payload = (await res.json()) as { destination?: string };
-          if (payload.destination?.startsWith("/")) {
-            destination = payload.destination;
+      if (hasExplicitNext) {
+        try {
+          const res = await fetch("/api/auth/resolve-destination", { method: "POST" });
+          if (res.ok) {
+            const payload = (await res.json()) as { destination?: string };
+            if (payload.destination?.startsWith("/")) {
+              destination = payload.destination;
+            }
           }
+        } catch {
+          // fallback dest
         }
-      } catch {
-        // fallback dest
       }
       router.push(destination);
       router.refresh();

@@ -29,18 +29,20 @@ export default async function ChiffreAffairesPage() {
     | Array<{
         id: string;
         created_at: string;
+        route: string | null;
         action: string | null;
         provider: string | null;
         model: string | null;
         cost_eur: number | null;
       }>
     | null = null;
+  let routeBreakdown: Array<{ label: string; total: number; count: number }> = [];
 
   if (supabase) {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [{ data: totalData, error: totalError }, { data: monthData, error: monthError }, { data: weekData, error: weekError }, { count, error: countError }, { data: eventsData, error: eventsError }] =
+    const [{ data: totalData, error: totalError }, { data: monthData, error: monthError }, { data: weekData, error: weekError }, { count, error: countError }, { data: eventsData, error: eventsError }, { data: weekEventsData, error: weekEventsError }] =
       await Promise.all([
         supabase.from("ai_usage_events").select("total:sum(cost_eur)").single(),
         supabase.from("ai_usage_events").select("total:sum(cost_eur)").gte("created_at", thirtyDaysAgo).single(),
@@ -48,12 +50,16 @@ export default async function ChiffreAffairesPage() {
         supabase.from("ai_usage_events").select("id", { count: "exact", head: true }),
         supabase
           .from("ai_usage_events")
-          .select("id, created_at, action, provider, model, cost_eur")
+          .select("id, created_at, route, action, provider, model, cost_eur")
           .order("created_at", { ascending: false })
-          .limit(8),
+          .limit(12),
+        supabase
+          .from("ai_usage_events")
+          .select("route, action, cost_eur")
+          .gte("created_at", sevenDaysAgo),
       ]);
 
-    const errors = [totalError, monthError, weekError, countError, eventsError].filter(Boolean);
+    const errors = [totalError, monthError, weekError, countError, eventsError, weekEventsError].filter(Boolean);
     if (errors.some((err) => err && err.code === TABLE_NOT_FOUND_CODE)) {
       tableMissing = true;
     } else {
@@ -62,6 +68,20 @@ export default async function ChiffreAffairesPage() {
       aiExpenses7Days = Number(weekData?.total ?? 0);
       aiEventsCount = count ?? 0;
       latestEvents = eventsData ?? [];
+
+      const breakdownMap = new Map<string, { total: number; count: number }>();
+      for (const row of weekEventsData ?? []) {
+        const label = [row.route, row.action].filter(Boolean).join(" / ") || "inconnu";
+        const prev = breakdownMap.get(label) ?? { total: 0, count: 0 };
+        breakdownMap.set(label, {
+          total: prev.total + Number(row.cost_eur ?? 0),
+          count: prev.count + 1,
+        });
+      }
+      routeBreakdown = [...breakdownMap.entries()]
+        .map(([label, stats]) => ({ label, ...stats }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 10);
     }
   }
 
@@ -296,6 +316,30 @@ export default async function ChiffreAffairesPage() {
               </CardContent>
             </Card>
           ) : hasExpenses ? (
+            <div className="space-y-6">
+            {routeBreakdown.length > 0 ? (
+              <Card className="border-gray-200 bg-white shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-900">
+                    Répartition par route (7 derniers jours)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {routeBreakdown.map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/60 px-4 py-3 text-sm"
+                    >
+                      <span className="font-medium text-gray-800">{row.label}</span>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>{row.count} appel{row.count > 1 ? "s" : ""}</span>
+                        <span className="font-semibold text-gray-800">{formatCurrency(row.total)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
             <Card className="border-gray-200 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-gray-900">Historique des appels IA</CardTitle>
@@ -308,8 +352,11 @@ export default async function ChiffreAffairesPage() {
                   >
                     <div className="flex items-center gap-2 font-medium text-gray-800">
                       <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                        {event.action || "inconnue"}
+                        {event.route ? `${event.route}` : event.action || "inconnue"}
                       </span>
+                      {event.route && event.action ? (
+                        <span className="text-xs text-gray-500">{event.action}</span>
+                      ) : null}
                       <span className="text-xs text-gray-500">
                         {new Date(event.created_at).toLocaleString("fr-FR")}
                       </span>
@@ -325,6 +372,7 @@ export default async function ChiffreAffairesPage() {
                 ))}
               </CardContent>
             </Card>
+            </div>
           ) : (
             <Card className="border-gray-200 bg-white shadow-sm">
               <CardHeader>

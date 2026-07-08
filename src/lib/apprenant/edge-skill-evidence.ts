@@ -7,8 +7,6 @@
 import type { SkillGapStatus } from "@/lib/apprenant/edge-progression-gps";
 import { getBehaviorGrid } from "@/lib/apprenant/edge-behavior-grids";
 
-import { getBehaviorGrid } from "@/lib/apprenant/edge-behavior-grids";
-
 const GENERIC_BEHAVIORS = [
   "abordez les situations avec méthode",
   "cherchez à comprendre avant d'agir",

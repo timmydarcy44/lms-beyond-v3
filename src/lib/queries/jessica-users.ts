@@ -4,6 +4,8 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { parseClientName } from "@/lib/jessica-contentin/parse-client-name";
 import {
+  catalogItemsTableExists,
+  fetchJessicaCourseEnrollmentsForUsers,
   getJessicaStudioCourseIds,
   isJessicaAssignableCatalogItem,
 } from "@/lib/jessica-contentin/sync-jessica-catalog";
@@ -63,25 +65,38 @@ async function getJessicaClientIdSet(
   const ids = new Set<string>();
 
   const studioCourseIds = await getJessicaStudioCourseIds(supabase);
-  const { data: accessRows } = await supabase
-    .from("catalog_access")
-    .select(`user_id, catalog_items!inner(id, creator_id, created_by, item_type, content_id)`)
-    .in("access_status", ["purchased", "manually_granted", "free"])
-    .not("user_id", "is", null);
 
-  const jessicaAccessRows = (accessRows ?? []).filter((row) => {
-    const item = (row as { catalog_items?: Record<string, unknown> }).catalog_items;
-    if (!item) return false;
-    return isJessicaAssignableCatalogItem(
-      item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
-      jessicaProfileId,
-      studioCourseIds,
-    );
-  });
+  if (await catalogItemsTableExists(supabase)) {
+    const { data: accessRows } = await supabase
+      .from("catalog_access")
+      .select(`user_id, catalog_items!inner(id, creator_id, created_by, item_type, content_id)`)
+      .in("access_status", ["purchased", "manually_granted", "free"])
+      .not("user_id", "is", null);
 
-  for (const row of jessicaAccessRows) {
-    const uid = (row as { user_id?: string }).user_id;
-    if (uid) ids.add(uid);
+    const jessicaAccessRows = (accessRows ?? []).filter((row) => {
+      const item = (row as { catalog_items?: Record<string, unknown> }).catalog_items;
+      if (!item) return false;
+      return isJessicaAssignableCatalogItem(
+        item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
+        jessicaProfileId,
+        studioCourseIds,
+      );
+    });
+
+    for (const row of jessicaAccessRows) {
+      const uid = (row as { user_id?: string }).user_id;
+      if (uid) ids.add(uid);
+    }
+  }
+
+  if (studioCourseIds.size > 0) {
+    const { data: enrollmentRows } = await supabase
+      .from("course_enrollments")
+      .select("user_id")
+      .in("course_id", Array.from(studioCourseIds));
+    for (const row of enrollmentRows ?? []) {
+      if (row.user_id) ids.add(String(row.user_id));
+    }
   }
 
   let page = 1;
@@ -145,42 +160,42 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
 
     const userIds = profiles.map((p) => p.id);
 
-    // Récupérer les achats liés aux contenus de Jessica (inclure purchased et manually_granted)
     const studioCourseIds = await getJessicaStudioCourseIds(supabase);
+    const hasCatalog = await catalogItemsTableExists(supabase);
 
-    const { data: accessDataRaw } = await supabase
-      .from("catalog_access")
-      .select(`
-        user_id,
-        catalog_item_id,
-        granted_at,
-        access_status,
-        catalog_items!inner (
-          id,
-          creator_id,
-          created_by,
-          item_type,
-          content_id,
-          price
-        )
-      `)
-      .in("access_status", ["purchased", "manually_granted"])
-      .in("user_id", userIds)
-      .not("user_id", "is", null);
+    let accessData: Array<Record<string, unknown>> = [];
+    if (hasCatalog) {
+      const { data: accessDataRaw } = await supabase
+        .from("catalog_access")
+        .select(`
+          user_id,
+          catalog_item_id,
+          granted_at,
+          access_status,
+          catalog_items!inner (id, creator_id, created_by, item_type, content_id, price)
+        `)
+        .in("access_status", ["purchased", "manually_granted"])
+        .in("user_id", userIds)
+        .not("user_id", "is", null);
 
-    const accessData = (accessDataRaw ?? []).filter((row: { catalog_items?: Record<string, unknown> }) => {
-      const item = row.catalog_items;
-      if (!item) return false;
-      return isJessicaAssignableCatalogItem(
-        item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
-        jessicaProfile.id,
-        studioCourseIds,
-      );
-    });
+      accessData = (accessDataRaw ?? []).filter((row: { catalog_items?: Record<string, unknown> }) => {
+        const item = row.catalog_items;
+        if (!item) return false;
+        return isJessicaAssignableCatalogItem(
+          item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
+          jessicaProfile.id,
+          studioCourseIds,
+        );
+      });
+    }
+
+    const courseEnrollments = await fetchJessicaCourseEnrollmentsForUsers(supabase, userIds);
 
     // Calculer les statistiques pour chaque utilisateur
     const usersWithStats = (profiles || []).map((profile) => {
       const userAccess = (accessData || []).filter((a: { user_id?: string }) => a.user_id === profile.id);
+      const userEnrollments = courseEnrollments.filter((e) => e.user_id === profile.id);
+      const enrolledCourseIds = new Set(userEnrollments.map((e) => e.course_id));
       const purchasedAccess = userAccess.filter(
         (a: { access_status?: string }) => a.access_status === "purchased",
       );
@@ -188,6 +203,10 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
         return sum + (a.catalog_items?.price || 0);
       }, 0);
       const { firstName, lastName } = parseClientName(profile.full_name);
+
+      const assignedFromCatalog = userAccess
+        .map((a: { catalog_item_id?: string }) => a.catalog_item_id)
+        .filter(Boolean) as string[];
 
       return {
         id: profile.id,
@@ -198,11 +217,9 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
         phone: profile.phone || null,
         createdAt: profile.created_at || new Date().toISOString(),
         totalRevenue,
-        purchaseCount: userAccess.length,
+        purchaseCount: userAccess.length + userEnrollments.length,
         testCount: 0,
-        assignedCatalogItemIds: userAccess
-          .map((a: { catalog_item_id?: string }) => a.catalog_item_id)
-          .filter(Boolean) as string[],
+        assignedCatalogItemIds: [...assignedFromCatalog, ...Array.from(enrolledCourseIds)],
       };
     });
 
@@ -277,42 +294,39 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
       return null;
     }
 
-    // Récupérer les achats (inclure purchased et manually_granted)
     const studioCourseIds = await getJessicaStudioCourseIds(supabase);
+    const hasCatalog = await catalogItemsTableExists(supabase);
 
-    const { data: accessDataRaw } = await supabase
-      .from("catalog_access")
-      .select(`
-        id,
-        catalog_item_id,
-        granted_at,
-        access_status,
-        catalog_items!inner (
+    let accessData: Array<Record<string, unknown>> = [];
+    if (hasCatalog) {
+      const { data: accessDataRaw } = await supabase
+        .from("catalog_access")
+        .select(`
           id,
-          title,
-          item_type,
-          price,
-          creator_id,
-          created_by,
-          content_id
-        )
-      `)
-      .eq("user_id", userId)
-      .in("access_status", ["purchased", "manually_granted"])
-      .is("organization_id", null)
-      .order("granted_at", { ascending: false });
+          catalog_item_id,
+          granted_at,
+          access_status,
+          catalog_items!inner (
+            id, title, item_type, price, creator_id, created_by, content_id
+          )
+        `)
+        .eq("user_id", userId)
+        .in("access_status", ["purchased", "manually_granted"])
+        .is("organization_id", null)
+        .order("granted_at", { ascending: false });
 
-    const accessData = (accessDataRaw ?? []).filter((row: { catalog_items?: Record<string, unknown> }) => {
-      const item = row.catalog_items;
-      if (!item) return false;
-      return isJessicaAssignableCatalogItem(
-        item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
-        jessicaProfile.id,
-        studioCourseIds,
-      );
-    });
+      accessData = (accessDataRaw ?? []).filter((row: { catalog_items?: Record<string, unknown> }) => {
+        const item = row.catalog_items;
+        if (!item) return false;
+        return isJessicaAssignableCatalogItem(
+          item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
+          jessicaProfile.id,
+          studioCourseIds,
+        );
+      });
+    }
 
-    const purchases = (accessData || []).map((a: any) => ({
+    const purchasesFromCatalog = (accessData || []).map((a: any) => ({
       id: a.id,
       catalogItemId: a.catalog_item_id,
       title: a.catalog_items?.title || "Titre inconnu",
@@ -322,6 +336,29 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
       status: a.access_status === "manually_granted" ? "manually_granted" : "completed",
       accessStatus: a.access_status || "purchased",
     }));
+
+    const enrollments = await fetchJessicaCourseEnrollmentsForUsers(supabase, [userId]);
+    const catalogContentIds = new Set(
+      purchasesFromCatalog.map((p) => {
+        const row = accessData?.find((a: any) => a.id === p.id);
+        return row?.catalog_items?.content_id as string | undefined;
+      }).filter(Boolean),
+    );
+
+    const purchasesFromEnrollments = enrollments
+      .filter((e) => !catalogContentIds.has(e.course_id))
+      .map((e) => ({
+        id: `enrollment-${e.id}`,
+        catalogItemId: e.course_id,
+        title: e.courses?.title || "Formation",
+        itemType: "module",
+        price: 0,
+        purchasedAt: e.created_at || new Date().toISOString(),
+        status: "manually_granted",
+        accessStatus: "manually_granted",
+      }));
+
+    const purchases = [...purchasesFromCatalog, ...purchasesFromEnrollments];
 
     // Récupérer les résultats de tests
     const { data: testAttempts } = await supabase

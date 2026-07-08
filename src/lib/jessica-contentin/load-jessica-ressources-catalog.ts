@@ -1,6 +1,8 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
-const JESSICA_CONTENTIN_UUID = "17364229-fe78-4986-ac69-41b880e34631";
+import { JESSICA_CONTENTIN_PROFILE_ID } from "@/lib/jessica-contentin/catalog-ownership";
+
+const JESSICA_CONTENTIN_UUID = JESSICA_CONTENTIN_PROFILE_ID;
 
 async function getCatalogItemsFallback(supabase: ReturnType<typeof getServiceRoleClient>, userId: string | null) {
   if (!supabase) return [];

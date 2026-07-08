@@ -25,10 +25,16 @@ export async function resolveJessicaProfileId(
   return data?.id ?? JESSICA_CONTENTIN_PROFILE_ID;
 }
 
+export async function catalogItemsTableExists(supabase: SupabaseClient): Promise<boolean> {
+  const { error } = await supabase.from("catalog_items").select("id").limit(1);
+  return error?.code !== "PGRST205";
+}
+
 export async function getJessicaStudioCourseIds(
   supabase: SupabaseClient,
 ): Promise<Set<string>> {
   const ids = new Set<string>();
+  const jessicaId = await resolveJessicaProfileId(supabase);
 
   const { data: orgCourses } = await supabase
     .from("courses")
@@ -38,11 +44,10 @@ export async function getJessicaStudioCourseIds(
     if (row.id) ids.add(String(row.id));
   }
 
-  const jessicaId = await resolveJessicaProfileId(supabase);
   const { data: ownedCourses } = await supabase
     .from("courses")
     .select("id")
-    .or(`creator_id.eq.${jessicaId},created_by.eq.${jessicaId},owner_id.eq.${jessicaId}`);
+    .or(`creator_id.eq.${jessicaId},owner_id.eq.${jessicaId}`);
   for (const row of ownedCourses ?? []) {
     if (row.id) ids.add(String(row.id));
   }
@@ -50,11 +55,30 @@ export async function getJessicaStudioCourseIds(
   return ids;
 }
 
+async function fetchJessicaStudioCourses(
+  supabase: SupabaseClient,
+): Promise<CourseRow[]> {
+  const courseIds = await getJessicaStudioCourseIds(supabase);
+  if (!courseIds.size) return [];
+
+  const { data: courses, error } = await supabase
+    .from("courses")
+    .select("id, title, description, cover_image, status")
+    .in("id", Array.from(courseIds))
+    .order("title", { ascending: true });
+
+  if (error) {
+    console.error("[sync-jessica-catalog] courses fetch error:", error);
+    return [];
+  }
+  return (courses ?? []) as CourseRow[];
+}
+
 async function upsertModuleCatalogItem(
   supabase: SupabaseClient,
   jessicaId: string,
   course: CourseRow,
-): Promise<void> {
+): Promise<string | null> {
   const { data: existingRows } = await supabase
     .from("catalog_items")
     .select("id, creator_id, created_by, is_active")
@@ -86,34 +110,40 @@ async function upsertModuleCatalogItem(
       const staleIds = existingRows.slice(1).map((r) => r.id);
       await supabase.from("catalog_items").delete().in("id", staleIds);
     }
-    return;
+    return existing.id;
   }
 
-  await supabase.from("catalog_items").insert({
-    content_id: course.id,
-    item_type: "module",
-    ...payload,
-    created_at: now,
-  });
+  const { data: inserted, error } = await supabase
+    .from("catalog_items")
+    .insert({
+      content_id: course.id,
+      item_type: "module",
+      ...payload,
+      created_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.warn("[sync-jessica-catalog] catalog insert failed:", course.id, error.message);
+    return null;
+  }
+  return inserted?.id ?? null;
 }
 
-/** Synchronise les formations studio Jessica vers catalog_items (assignables CRM). */
+/** Synchronise les formations studio Jessica vers catalog_items (si la table existe). */
 export async function syncJessicaStudioCatalog(
   supabase: SupabaseClient,
   jessicaId?: string,
 ): Promise<void> {
+  if (!(await catalogItemsTableExists(supabase))) return;
+
   const profileId = jessicaId ?? (await resolveJessicaProfileId(supabase));
-  const courseIds = await getJessicaStudioCourseIds(supabase);
-  if (!courseIds.size) return;
+  const courses = await fetchJessicaStudioCourses(supabase);
 
-  const { data: courses } = await supabase
-    .from("courses")
-    .select("id, title, description, cover_image, status")
-    .in("id", Array.from(courseIds));
-
-  for (const course of courses ?? []) {
+  for (const course of courses) {
     try {
-      await upsertModuleCatalogItem(supabase, profileId, course as CourseRow);
+      await upsertModuleCatalogItem(supabase, profileId, course);
     } catch (error) {
       console.warn("[sync-jessica-catalog] course sync failed:", course.id, error);
     }
@@ -127,6 +157,8 @@ export type JessicaCatalogItemRef = {
   content_id: string | null;
   creator_id?: string | null;
   created_by?: string | null;
+  /** Assignation directe via course_enrollments (pas de catalog_item). */
+  courseDirect?: boolean;
 };
 
 export function isJessicaAssignableCatalogItem(
@@ -138,17 +170,37 @@ export function isJessicaAssignableCatalogItem(
   if (item.item_type === "module" && item.content_id && studioCourseIds.has(String(item.content_id))) {
     return true;
   }
+  if (item.courseDirect && item.content_id && studioCourseIds.has(String(item.content_id))) {
+    return true;
+  }
   return false;
 }
 
-/** Tous les catalog_items assignables depuis le CRM Jessica. */
+function coursesToCatalogRefs(courses: CourseRow[]): JessicaCatalogItemRef[] {
+  return courses.map((course) => ({
+    id: course.id,
+    title: course.title,
+    item_type: "module",
+    content_id: course.id,
+    courseDirect: true,
+  }));
+}
+
+/** Tous les catalog_items (ou formations studio) assignables depuis le CRM Jessica. */
 export async function fetchJessicaAssignableCatalogItems(
   supabase: SupabaseClient,
 ): Promise<JessicaCatalogItemRef[]> {
   const jessicaId = await resolveJessicaProfileId(supabase);
+  const studioCourseIds = await getJessicaStudioCourseIds(supabase);
+  const hasCatalogTable = await catalogItemsTableExists(supabase);
+
+  if (!hasCatalogTable) {
+    console.warn("[sync-jessica-catalog] catalog_items absent — fallback courses studio");
+    return coursesToCatalogRefs(await fetchJessicaStudioCourses(supabase));
+  }
+
   await syncJessicaStudioCatalog(supabase, jessicaId);
 
-  const studioCourseIds = await getJessicaStudioCourseIds(supabase);
   const byId = new Map<string, JessicaCatalogItemRef>();
 
   const { data: ownedItems, error: ownedError } = await supabase
@@ -184,7 +236,76 @@ export async function fetchJessicaAssignableCatalogItems(
     }
   }
 
+  if (byId.size === 0) {
+    return coursesToCatalogRefs(await fetchJessicaStudioCourses(supabase));
+  }
+
   return Array.from(byId.values()).sort((a, b) =>
     String(a.title ?? "").localeCompare(String(b.title ?? ""), "fr"),
   );
+}
+
+/** Assigne une formation studio via course_enrollments (fallback sans catalog_items). */
+export async function assignJessicaCourseToUser(
+  supabase: SupabaseClient,
+  courseId: string,
+  userId: string,
+  jessicaId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const studioCourseIds = await getJessicaStudioCourseIds(supabase);
+  if (!studioCourseIds.has(courseId)) {
+    return { ok: false, error: "Formation hors studio Jessica" };
+  }
+
+  const row = { course_id: courseId, user_id: userId };
+  let result = await supabase
+    .from("course_enrollments")
+    .upsert(row, { onConflict: "user_id,course_id" });
+
+  if (result.error) {
+    result = await supabase.from("course_enrollments").insert(row);
+  }
+
+  if (result.error) {
+    return { ok: false, error: result.error.message };
+  }
+
+  console.log("[sync-jessica-catalog] course_enrollments OK", { courseId, userId, jessicaId });
+  return { ok: true };
+}
+
+/** Inscriptions studio Jessica d'un client (fallback sans catalog_access). */
+export async function fetchJessicaCourseEnrollmentsForUsers(
+  supabase: SupabaseClient,
+  userIds: string[],
+): Promise<
+  Array<{
+    id: string;
+    user_id: string;
+    course_id: string;
+    created_at: string | null;
+    courses: { id: string; title: string; cover_image: string | null } | null;
+  }>
+> {
+  if (!userIds.length) return [];
+  const studioCourseIds = await getJessicaStudioCourseIds(supabase);
+  if (!studioCourseIds.size) return [];
+
+  const { data, error } = await supabase
+    .from("course_enrollments")
+    .select("id, user_id, course_id, created_at, courses(id, title, cover_image)")
+    .in("user_id", userIds)
+    .in("course_id", Array.from(studioCourseIds));
+
+  if (error) {
+    console.warn("[sync-jessica-catalog] course_enrollments fetch:", error.message);
+    return [];
+  }
+  return (data ?? []) as Array<{
+    id: string;
+    user_id: string;
+    course_id: string;
+    created_at: string | null;
+    courses: { id: string; title: string; cover_image: string | null } | null;
+  }>;
 }

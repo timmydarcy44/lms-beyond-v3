@@ -1,7 +1,7 @@
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 
-/** UUID profil Jessica Contentin (stable en prod). */
-export const JESSICA_CONTENTIN_PROFILE_ID = "17364229-fe78-4986-ac69-41b880e34631";
+/** UUID profil Jessica Contentin (prod zmcefidiiqqppowymoqb). */
+export const JESSICA_CONTENTIN_PROFILE_ID = "fcdc770d-4474-43ae-97d6-e70ef7e58779";
 
 export type JessicaCatalogOwnerFields = {
   creator_id?: string | null;

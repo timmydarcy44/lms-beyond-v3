@@ -171,6 +171,15 @@ Retourne UNIQUEMENT un objet JSON valide avec cette structure :
   } catch (error) {
     console.error("[api/formateur/quiz/generate] error:", error);
     const message = error instanceof Error ? error.message : "Erreur interne";
+    if (message.includes("429") || message.toLowerCase().includes("quota")) {
+      return NextResponse.json(
+        {
+          error:
+            "Quota OpenAI dépassé — rechargez votre compte sur platform.openai.com ou contactez l'administrateur.",
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

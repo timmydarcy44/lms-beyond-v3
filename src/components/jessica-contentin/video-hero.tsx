@@ -1,31 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
-/** Fichier public Supabase — hero vitrine */
-const HERO_VIDEO_URL =
-  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/video%20presentration%20cabinet%20hero.MOV";
+const HERO_IMAGE_URL =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/hero%20section.png";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=1920&q=80";
 
 export function VideoHero() {
   const [mediaFailed, setMediaFailed] = useState(false);
-  const [needsPlay, setNeedsPlay] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  const tryPlay = async () => {
-    const el = videoRef.current;
-    if (!el) return;
-    try {
-      await el.play();
-      setNeedsPlay(el.paused);
-    } catch {
-      setNeedsPlay(true);
-    }
-  };
 
   return (
     <motion.section
@@ -36,7 +23,6 @@ export function VideoHero() {
       transition={{ duration: 0.6 }}
       className="relative mx-0 mb-0 h-[calc(100vh-4rem)] min-h-[560px] scroll-mt-4 overflow-hidden md:mx-4 md:mb-4 md:rounded-2xl"
     >
-      {/* Vidéo pleine frame — lisibilité du texte assurée par le panneau crème (z-10), sans voile sur la vidéo */}
       <div className="absolute inset-0">
         {mediaFailed ? (
           <img
@@ -46,28 +32,17 @@ export function VideoHero() {
           />
         ) : (
           <>
-            <video
-              ref={videoRef}
-              src={HERO_VIDEO_URL}
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              poster={FALLBACK_IMAGE}
-              className="absolute inset-0 h-full w-full object-cover [filter:saturate(1.12)_contrast(1.04)_sepia(0.14)_hue-rotate(-6deg)]"
+            <Image
+              src={HERO_IMAGE_URL}
+              alt="Jessica Contentin — psychopédagogue"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-[center_20%] [filter:saturate(1.08)_contrast(1.03)_sepia(0.08)_hue-rotate(-4deg)]"
               onError={() => setMediaFailed(true)}
-              onLoadedMetadata={() => void tryPlay()}
-              onCanPlay={() => void tryPlay()}
-              onPlay={() => setNeedsPlay(false)}
-              onPause={() => {
-                const el = videoRef.current;
-                if (el && el.currentTime < 0.25) setNeedsPlay(true);
-              }}
             />
-            {/* Filtre chaud léger (ambiance dorée / coucher de soleil) sans masquer la vidéo */}
             <div
-              className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-500/18 via-orange-600/12 to-rose-900/22 mix-blend-soft-light"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-500/14 via-orange-600/10 to-rose-900/18 mix-blend-soft-light"
               aria-hidden
             />
           </>
@@ -75,7 +50,6 @@ export function VideoHero() {
         {mediaFailed ? <div className="absolute inset-0 bg-[#F8F2EA]/80" /> : null}
       </div>
 
-      {/* Texte sur panneau crème lisible */}
       <div className="relative z-10 flex h-full items-center px-6 lg:px-16">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -145,32 +119,6 @@ export function VideoHero() {
               </a>
             </Button>
           </motion.div>
-
-          {needsPlay ? (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                variant="ghost"
-                className="rounded-full border border-[#C6A664]/40 bg-[#FDF9F3] px-6 py-5 text-sm font-semibold text-[#2F2A25] hover:bg-[#F8F2EA]"
-                onClick={() => void tryPlay()}
-              >
-                Lancer la vidéo
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="rounded-full border border-[#E6D9C6] bg-white/80 px-6 py-5 text-sm font-semibold text-[#5C5348] hover:bg-[#FDF9F3]"
-                onClick={() => {
-                  const el = videoRef.current;
-                  if (!el) return;
-                  el.muted = false;
-                  void tryPlay();
-                }}
-              >
-                Activer le son
-              </Button>
-            </div>
-          ) : null}
         </motion.div>
       </div>
     </motion.section>

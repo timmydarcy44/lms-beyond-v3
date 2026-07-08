@@ -4,6 +4,8 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 import { sendResourceAccessEmail } from "@/lib/emails/send-resource-access";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 import {
+  assignJessicaCourseToUser,
+  catalogItemsTableExists,
   getJessicaStudioCourseIds,
   isJessicaAssignableCatalogItem,
   resolveJessicaProfileId,
@@ -55,26 +57,57 @@ export async function POST(request: NextRequest) {
     }
 
     const jessicaId = jessicaProfile.id ?? (await resolveJessicaProfileId(supabase));
-    await syncJessicaStudioCatalog(supabase, jessicaId);
+    const hasCatalogTable = await catalogItemsTableExists(supabase);
+    if (hasCatalogTable) {
+      await syncJessicaStudioCatalog(supabase, jessicaId);
+    }
     const studioCourseIds = await getJessicaStudioCourseIds(supabase);
 
-    const { data: catalogItem } = await supabase
-      .from("catalog_items")
-      .select("id, title, item_type, content_id, creator_id, created_by, is_active")
-      .eq("id", catalogItemId)
-      .maybeSingle();
+    let catalogItem: {
+      id: string;
+      title: string;
+      item_type: string;
+      content_id: string | null;
+      creator_id?: string | null;
+      created_by?: string | null;
+      is_active?: boolean;
+    } | null = null;
 
-    if (
-      !catalogItem ||
-      !isJessicaAssignableCatalogItem(catalogItem, jessicaId, studioCourseIds)
-    ) {
+    if (hasCatalogTable) {
+      const { data } = await supabase
+        .from("catalog_items")
+        .select("id, title, item_type, content_id, creator_id, created_by, is_active")
+        .eq("id", catalogItemId)
+        .maybeSingle();
+      catalogItem = data;
+    }
+
+    // Fallback : catalogItemId = course_id studio (sans table catalog_items)
+    if (!catalogItem && studioCourseIds.has(String(catalogItemId))) {
+      const { data: course } = await supabase
+        .from("courses")
+        .select("id, title")
+        .eq("id", catalogItemId)
+        .maybeSingle();
+      if (course) {
+        catalogItem = {
+          id: course.id,
+          title: course.title,
+          item_type: "module",
+          content_id: course.id,
+          is_active: true,
+        };
+      }
+    }
+
+    if (!catalogItem || !isJessicaAssignableCatalogItem(catalogItem, jessicaId, studioCourseIds)) {
       return NextResponse.json(
         { error: "Ressource non trouvée ou n'appartient pas à Jessica" },
         { status: 404 }
       );
     }
 
-    if (!catalogItem.is_active) {
+    if (hasCatalogTable && catalogItem.is_active === false) {
       await supabase
         .from("catalog_items")
         .update({ is_active: true, updated_at: new Date().toISOString() })
@@ -95,71 +128,86 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier si l'accès existe déjà
-    const { data: existingAccess } = await supabase
-      .from("catalog_access")
-      .select("id, access_status")
-      .eq("user_id", userId)
-      .eq("catalog_item_id", catalogItemId)
-      .is("organization_id", null)
-      .maybeSingle();
+    const courseIdForEnrollment = String(catalogItem.content_id || catalogItemId);
+    const useCourseEnrollment =
+      !hasCatalogTable || (catalogItem.id === courseIdForEnrollment && studioCourseIds.has(courseIdForEnrollment));
 
-    let access;
-    let accessError;
+    let access: Record<string, unknown> | null = null;
 
-    if (existingAccess) {
-      // Si l'accès existe déjà, le mettre à jour (réassignation)
-      console.log("[admin/assign-resource] Access already exists, updating...");
-      const { data: updatedAccess, error: updateError } = await supabase
-        .from("catalog_access")
-        .update({
-          access_status: "manually_granted",
-          granted_by: jessicaProfile.id,
-          granted_at: new Date().toISOString(),
-          grant_reason: "Accès accordé manuellement par Jessica Contentin",
-        })
-        .eq("id", existingAccess.id)
-        .select()
-        .single();
-      
-      access = updatedAccess;
-      accessError = updateError;
-    } else {
-      // Créer l'accès (utiliser catalog_access avec user_id pour B2C)
-      console.log("[admin/assign-resource] Creating new access...");
-      const { data: newAccess, error: insertError } = await supabase
-        .from("catalog_access")
-        .insert({
-          user_id: userId,
-          catalog_item_id: catalogItemId,
-          organization_id: null, // B2C, pas d'organisation
-          access_status: "manually_granted",
-          granted_by: jessicaProfile.id,
-          granted_at: new Date().toISOString(),
-          grant_reason: "Accès accordé manuellement par Jessica Contentin",
-        })
-        .select()
-        .single();
-      
-      access = newAccess;
-      accessError = insertError;
-    }
-
-    if (accessError) {
-      console.error("[admin/assign-resource] Error creating access:", JSON.stringify(accessError, null, 2));
-      console.error("[admin/assign-resource] Error code:", accessError.code);
-      console.error("[admin/assign-resource] Error message:", accessError.message);
-      console.error("[admin/assign-resource] Error details:", accessError.details);
-      console.error("[admin/assign-resource] Error hint:", accessError.hint);
-      return NextResponse.json(
-        { 
-          error: "Erreur lors de l'assignation de la ressource",
-          details: accessError.message,
-          code: accessError.code,
-          hint: accessError.hint
-        },
-        { status: 500 }
+    if (useCourseEnrollment) {
+      const enrollment = await assignJessicaCourseToUser(
+        supabase,
+        courseIdForEnrollment,
+        userId,
+        jessicaId,
       );
+      if (!enrollment.ok) {
+        return NextResponse.json(
+          { error: enrollment.error || "Erreur lors de l'assignation de la formation" },
+          { status: 500 },
+        );
+      }
+      access = { via: "course_enrollments", course_id: courseIdForEnrollment, user_id: userId };
+    } else {
+      const realCatalogItemId = catalogItem.id;
+
+      const { data: existingAccess } = await supabase
+        .from("catalog_access")
+        .select("id, access_status")
+        .eq("user_id", userId)
+        .eq("catalog_item_id", realCatalogItemId)
+        .is("organization_id", null)
+        .maybeSingle();
+
+      let accessError;
+
+      if (existingAccess) {
+        const { data: updatedAccess, error: updateError } = await supabase
+          .from("catalog_access")
+          .update({
+            access_status: "manually_granted",
+            granted_by: jessicaProfile.id,
+            granted_at: new Date().toISOString(),
+            grant_reason: "Accès accordé manuellement par Jessica Contentin",
+          })
+          .eq("id", existingAccess.id)
+          .select()
+          .single();
+
+        access = updatedAccess;
+        accessError = updateError;
+      } else {
+        const { data: newAccess, error: insertError } = await supabase
+          .from("catalog_access")
+          .insert({
+            user_id: userId,
+            catalog_item_id: realCatalogItemId,
+            organization_id: null,
+            access_status: "manually_granted",
+            granted_by: jessicaProfile.id,
+            granted_at: new Date().toISOString(),
+            grant_reason: "Accès accordé manuellement par Jessica Contentin",
+          })
+          .select()
+          .single();
+
+        access = newAccess;
+        accessError = insertError;
+      }
+
+      if (accessError) {
+        return NextResponse.json(
+          {
+            error: "Erreur lors de l'assignation de la ressource",
+            details: accessError.message,
+            code: accessError.code,
+            hint: accessError.hint,
+          },
+          { status: 500 },
+        );
+      }
+
+      await assignJessicaCourseToUser(supabase, courseIdForEnrollment, userId, jessicaId);
     }
 
     // Construire l'URL de la ressource avec slug si disponible

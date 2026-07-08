@@ -1,113 +1,104 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Flame, Sparkles, Trophy, Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import { Flame, Trophy } from "lucide-react";
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
-import {
-  computeEdgeXp,
-  edgeLevelFromXp,
-  getDailyChallenge,
-  getSkillOfTheDay,
-  touchStreak,
-} from "@/lib/apprenant/edge-gamification";
-import { pickDailyNotification } from "@/lib/apprenant/edge-coach-notifications";
+import { edgeLevelFromXp } from "@/lib/apprenant/edge-gamification";
+import { EdgeDailyMissionCard } from "@/components/apprenant/profil-edge/edge-daily-mission-card";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Props = {
   matching: CareerMatchingResult;
+  objective?: string;
 };
 
-export function EdgeGamificationPanel({ matching }: Props) {
-  const [streak, setStreak] = useState(1);
+const fadeUp = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
+};
+
+export function EdgeGamificationPanel({ matching, objective }: Props) {
+  const [totalXp, setTotalXp] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [statsReady, setStatsReady] = useState(false);
 
   useEffect(() => {
-    setStreak(touchStreak());
+    let cancelled = false;
+    void (async () => {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+
+      const [xpRes, streakRes] = await Promise.all([
+        supabase.from("edge_xp_events").select("amount").eq("user_id", user.id),
+        supabase.from("edge_streaks").select("current_streak").eq("user_id", user.id).maybeSingle(),
+      ]);
+
+      if (cancelled) return;
+      setTotalXp((xpRes.data ?? []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0));
+      setStreak(Number(streakRes.data?.current_streak) || 0);
+      setStatsReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const xp = computeEdgeXp(matching);
-  const level = edgeLevelFromXp(xp);
-  const daily = getDailyChallenge(matching);
-  const skillOfDay = getSkillOfTheDay(matching);
-  const notification = pickDailyNotification(matching);
+  const level = edgeLevelFromXp(totalXp);
 
   return (
-    <section className="rounded-2xl border border-[#3D7BFF]/25 bg-gradient-to-br from-[#3D7BFF]/[0.12] via-[#3D7BFF]/[0.04] to-transparent p-5 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#3D7BFF]/20 text-[#8BB4FF]">
-            <Trophy className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">
-              Niveau {level.level} · {level.title}
-            </p>
-            <p className="mt-0.5 text-sm text-white/60">
-              <span className="font-semibold text-white">{level.totalXp} XP</span> — coach EDGE
-            </p>
-          </div>
-        </div>
+    <div className="space-y-4">
+      <EdgeDailyMissionCard matching={matching} objective={objective} />
 
-        <div className="flex items-center gap-2 rounded-full border border-orange-400/30 bg-orange-400/10 px-3 py-1.5">
-          <Flame className="h-4 w-4 text-orange-300" />
-          <span className="text-sm font-semibold text-orange-200">
-            {streak} jour{streak > 1 ? "s" : ""}
-          </span>
-        </div>
-      </div>
-
-      {/* Barre de progression XP */}
-      <div className="mt-4">
-        <div className="flex items-center justify-between text-[11px] text-white/45">
-          <span>Progression</span>
-          <span>
-            {level.xpIntoLevel} / {level.xpForNextLevel} XP
-          </span>
-        </div>
-        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-[#3D7BFF]" style={{ width: `${level.percentToNext}%` }} />
-        </div>
-      </div>
-
-      {/* Cartes : compétence du jour + défi du jour */}
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        {skillOfDay ? (
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
-            <div className="flex items-center gap-2 text-[#8BB4FF]">
-              <Sparkles className="h-4 w-4" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider">Compétence du jour</span>
+      <motion.section
+        initial="hidden"
+        animate="show"
+        variants={fadeUp}
+        className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3D7BFF]/15 text-[#8BB4FF]">
+              <Trophy className="h-4 w-4" />
             </div>
-            <p className="mt-2 text-base font-semibold text-white">{skillOfDay}</p>
-            <p className="mt-1 text-xs text-white/50">Mise en avant pour vous aujourd&apos;hui.</p>
-          </div>
-        ) : null}
-
-        {daily ? (
-          <Link
-            href={`/dashboard/apprenant/defi?skill=${encodeURIComponent(daily.skill)}&format=${daily.format.id}`}
-            className="group rounded-xl border border-[#3D7BFF]/30 bg-[#3D7BFF]/[0.08] p-4 transition hover:border-[#3D7BFF]/50"
-          >
-            <div className="flex items-center gap-2 text-[#8BB4FF]">
-              <Zap className="h-4 w-4" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider">Défi du jour · +{daily.xpReward} XP</span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                Niveau {level.level} · {level.title}
+              </p>
+              <p className="text-sm text-white/60">
+                <span className="font-semibold text-white">{statsReady ? level.totalXp : "—"} XP</span>
+              </p>
             </div>
-            <p className="mt-2 text-base font-semibold text-white">
-              {daily.format.emoji} {daily.format.label}
-            </p>
-            <p className="mt-1 text-xs text-white/50">Compétence : {daily.skill}</p>
-          </Link>
-        ) : null}
-      </div>
+          </div>
 
-      {/* Notification coach personnalisée */}
-      {notification ? (
-        <Link
-          href={notification.href}
-          className="mt-3 flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 transition hover:border-white/20"
-        >
-          <span className="text-lg">{notification.emoji}</span>
-          <span className="flex-1 text-sm text-white/70">{notification.message}</span>
-        </Link>
-      ) : null}
-    </section>
+          <div className="flex items-center gap-2 rounded-full border border-orange-400/25 bg-orange-400/10 px-3 py-1">
+            <Flame className="h-3.5 w-3.5 text-orange-300" />
+            <span className="text-sm font-medium text-orange-200">
+              {statsReady ? streak : "—"} jour{streak > 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-[10px] text-white/40">
+            <span>Progression</span>
+            <span>
+              {level.xpIntoLevel} / {level.xpForNextLevel} XP
+            </span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <motion.div
+              className="h-full rounded-full bg-[#3D7BFF]"
+              initial={{ width: 0 }}
+              animate={{ width: statsReady ? `${level.percentToNext}%` : "0%" }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            />
+          </div>
+        </div>
+      </motion.section>
+    </div>
   );
 }

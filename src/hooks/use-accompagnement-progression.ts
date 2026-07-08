@@ -41,7 +41,7 @@ export type AccompagnementSituation = {
   compatibilityPercent: number;
   objectiveLabel: string;
   nextAction: AccompagnementNextAction;
-  /** Données réelles du coach gamifié (défis, XP, série, badges). */
+  /** Données réelles du coach gamifié (missions, XP, série, badges). */
   totalXp: number;
   currentStreak: number;
   completedChallenges: number;

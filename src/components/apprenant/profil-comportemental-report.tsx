@@ -258,7 +258,9 @@ export function ProfilComportementalReport() {
         </p>
       </header>
 
-      {matching && selectedCareer ? <EdgeGamificationPanel matching={matching} /> : null}
+      {matching && selectedCareer ? (
+        <EdgeGamificationPanel matching={matching} objective={objectiveLabel} />
+      ) : null}
 
       <ProfilEdgeMaturityGauge maturity={maturity} />
 

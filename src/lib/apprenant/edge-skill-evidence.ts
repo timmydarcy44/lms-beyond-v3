@@ -100,7 +100,7 @@ export function getSkillEvidence(skill: string, status: SkillGapStatus): SkillEv
       : "Pourquoi EDGE vous propose de travailler cette compétence ?",
     intro: isForce
       ? "Notre IA a identifié plusieurs comportements compatibles avec cette compétence. Vos réponses montrent notamment que vous :"
-      : "Notre IA a repéré des signaux encourageants, à confirmer par un défi. Vos réponses montrent que vous :",
+      : "Notre IA a repéré des signaux encourageants, à confirmer par une mission. Vos réponses montrent que vous :",
     behaviors: behaviorsFor(skill),
     confidence: confidenceFor(skill, status),
   };

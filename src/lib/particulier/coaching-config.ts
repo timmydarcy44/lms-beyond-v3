@@ -70,7 +70,7 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
   },
   {
     id: "simulation",
-    title: "Défi EDGE",
+    title: "Mission EDGE avec expert",
     price: "179 €",
     duration: "60–90 min",
     tier: "cible",
@@ -82,7 +82,7 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
       "Débrief avec un expert EDGE",
       "Axes de progression identifiés",
     ],
-    ctaLabel: "Lancer un Défi EDGE",
+    ctaLabel: "Réserver une mission avec expert",
     icon: "zap",
   },
   {
@@ -116,7 +116,7 @@ export const EDGE_OFFER_COMPARISON: ComparisonFeature[] = [
   { label: "Coaching individuel", membership: "1×/mois", progression: "1 séance", simulation: "—", programme: "Multi-séances" },
   { label: "Analyse profil EDGE", membership: true, progression: true, simulation: true, programme: true },
   { label: "Plan d'action", membership: true, progression: true, simulation: false, programme: true },
-  { label: "Défi EDGE", membership: true, progression: false, simulation: true, programme: true },
+  { label: "Mission EDGE (expert)", membership: true, progression: false, simulation: true, programme: true },
   { label: "Suivi dans la durée", membership: true, progression: false, simulation: false, programme: true },
   { label: "Réévaluation compétences", membership: "Trimestrielle", progression: false, simulation: false, programme: true },
 ];

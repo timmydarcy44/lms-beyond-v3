@@ -15,6 +15,7 @@ import {
 } from "@/lib/particulier/coaching-config";
 import { formatSlotLabel, formatEurosFromCents, PAYMENT_STATUS_LABELS } from "@/lib/particulier/accompagnement-booking";
 import { useAccompagnementSituation } from "@/hooks/use-accompagnement-progression";
+import { missionHref } from "@/lib/apprenant/edge-mission-types";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 12 },
@@ -198,12 +199,12 @@ function SituationActuelle() {
         ))}
       </div>
 
-      {/* Progression du coach gamifié (données réelles des défis) */}
+      {/* Progression du coach gamifié (données réelles des missions) */}
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[#E8EAED] bg-[#E8EAED] sm:grid-cols-4">
         {[
           { label: "XP total", value: String(s.totalXp) },
           { label: "Série", value: `${s.currentStreak} j` },
-          { label: "Défis terminés", value: String(s.completedChallenges) },
+          { label: "Missions terminées", value: String(s.completedChallenges) },
           {
             label: "Badges",
             value: `${s.badgesEarned}${s.badgesInProgress ? ` · ${s.badgesInProgress} en cours` : ""}`,
@@ -230,10 +231,10 @@ function SituationActuelle() {
             <span>Impact estimé : {s.nextAction.impact}</span>
           </div>
           <Link
-            href={`/dashboard/apprenant/defi?skill=${encodeURIComponent(s.nextAction.skill)}&objective=${encodeURIComponent(s.objectiveLabel)}`}
+            href={missionHref(s.nextAction.skill, { objective: s.objectiveLabel })}
             className="mt-5 inline-flex items-center justify-center rounded-lg bg-white px-5 py-2.5 text-[13px] font-medium text-[#191C1F] transition hover:bg-white/90"
           >
-            Lancer le Défi EDGE
+            Lancer la Mission EDGE
           </Link>
         </div>
       ) : null}
@@ -250,7 +251,7 @@ function ProgressionTimeline({ nextSkill }: { nextSkill: string | null }) {
       when: "Aujourd'hui",
       items: [nextSkill ? `Faire l'exercice recommandé (${nextSkill})` : "Définir votre objectif professionnel"],
     },
-    { when: "Cette semaine", items: ["Relever un Défi EDGE", "Déposer une preuve"] },
+    { when: "Cette semaine", items: ["Réaliser une Mission EDGE", "Déposer une preuve"] },
     { when: "Ce mois-ci", items: ["Suivre une formation courte", "Demander une validation", "Obtenir un badge"] },
   ];
 
@@ -389,7 +390,7 @@ export function EdgeAccompagnementPage() {
                   <th className="px-5 py-2.5 text-left font-medium">Inclus</th>
                   <th className="px-3 py-2.5 text-center font-medium">Membership</th>
                   <th className="px-3 py-2.5 text-center font-medium">Coaching</th>
-                  <th className="px-3 py-2.5 text-center font-medium">Défi EDGE</th>
+                  <th className="px-3 py-2.5 text-center font-medium">Mission EDGE</th>
                   <th className="px-3 py-2.5 text-center font-medium">Programme</th>
                 </tr>
               </thead>

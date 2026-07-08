@@ -4,13 +4,13 @@
  */
 
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
-import { getDailyChallenge, getNextBadgeSkill, getSkillOfTheDay } from "@/lib/apprenant/edge-gamification";
+import { getDailyMission, getNextBadgeSkill, getSkillOfTheDay } from "@/lib/apprenant/edge-gamification";
+import { missionHref } from "@/lib/apprenant/edge-mission-types";
 
 export type EdgeCoachNotification = {
   id: string;
   emoji: string;
   message: string;
-  /** Compétence concernée (jamais générique). */
   skill: string;
   href: string;
   tone: "challenge" | "badge" | "insight" | "action";
@@ -18,25 +18,20 @@ export type EdgeCoachNotification = {
 
 const PROFIL_HREF = "/dashboard/apprenant/profil";
 
-function challengeHref(skill: string, format?: string): string {
-  const base = `/dashboard/apprenant/defi?skill=${encodeURIComponent(skill)}`;
-  return format ? `${base}&format=${format}` : base;
-}
-
 export function buildCoachNotifications(
   matching: CareerMatchingResult,
   date = new Date(),
 ): EdgeCoachNotification[] {
   const notifications: EdgeCoachNotification[] = [];
 
-  const daily = getDailyChallenge(matching, date);
+  const daily = getDailyMission(matching, date);
   if (daily) {
     notifications.push({
-      id: "daily-challenge",
+      id: "daily-mission",
       emoji: "🎯",
-      message: `Votre défi du jour est disponible : ${daily.skill}.`,
+      message: `J'ai préparé votre mission du jour sur ${daily.skill}. Elle vous attend quand vous êtes prêt.`,
       skill: daily.skill,
-      href: challengeHref(daily.skill, daily.format.id),
+      href: missionHref(daily.skill),
       tone: "challenge",
     });
   }
@@ -58,9 +53,9 @@ export function buildCoachNotifications(
     notifications.push({
       id: "adapted-situation",
       emoji: "✨",
-      message: `L'IA a préparé une nouvelle mise en situation adaptée à votre progression en ${skillOfDay}.`,
+      message: `L'IA a préparé une nouvelle mission adaptée à votre progression en ${skillOfDay}.`,
       skill: skillOfDay,
-      href: challengeHref(skillOfDay, "situation"),
+      href: missionHref(skillOfDay),
       tone: "insight",
     });
   }
@@ -70,9 +65,9 @@ export function buildCoachNotifications(
     notifications.push({
       id: "share-experience",
       emoji: "🎤",
-      message: `Aujourd'hui, racontez une expérience de 5 minutes en ${firstForce} pour progresser.`,
+      message: `Aujourd'hui, une mission de 10 minutes vous attend en ${firstForce} pour progresser.`,
       skill: firstForce,
-      href: challengeHref(firstForce, "story"),
+      href: missionHref(firstForce),
       tone: "action",
     });
   }
@@ -80,7 +75,6 @@ export function buildCoachNotifications(
   return notifications;
 }
 
-/** Notification « du jour » (une seule, mise en avant). */
 export function pickDailyNotification(
   matching: CareerMatchingResult,
   date = new Date(),

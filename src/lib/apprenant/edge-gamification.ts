@@ -1,14 +1,11 @@
 /**
- * Gamification EDGE — XP, niveaux, progression, défi du jour, compétence du
- * jour. L'objectif est un ressenti « Duolingo » : progression visible,
- * retour quotidien, jamais une évaluation.
- *
- * Les calculs sont purs et déterministes (dérivés du profil de matching).
- * La série de jours (streak) dépend d'un état persistant côté client.
+ * Gamification EDGE — XP d'engagement, niveaux, mission du jour, compétence du jour.
+ * L'XP ne valide jamais une compétence : il récompense l'engagement (missions,
+ * preuves, badges). La série (streak) est persistée côté serveur (edge_streaks).
  */
 
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
-import { pickRecommendedChallenge, type EdgeChallengeFormat } from "@/lib/apprenant/edge-challenges";
+import { pickMissionMechanic, type MissionMechanic } from "@/lib/apprenant/edge-missions";
 
 const LEVEL_TITLES = [
   "Explorateur",
@@ -31,7 +28,7 @@ export type EdgeLevelInfo = {
   percentToNext: number;
 };
 
-/** XP dérivé du profil : chaque force et progression rapporte des points. */
+/** @deprecated L'XP provient des événements edge_xp_events (engagement uniquement). */
 export function computeEdgeXp(matching: CareerMatchingResult): number {
   const forces = matching.strengths.length * 120;
   const consolidating = matching.consolidate.length * 70;
@@ -54,14 +51,14 @@ export function edgeLevelFromXp(totalXp: number): EdgeLevelInfo {
   };
 }
 
-export type EdgeDailyChallenge = {
+export type EdgeDailyMission = {
   skill: string;
-  format: EdgeChallengeFormat;
+  mechanic: MissionMechanic;
   xpReward: number;
 };
 
-/** Compétence + format du défi du jour (déterministe selon la date). */
-export function getDailyChallenge(matching: CareerMatchingResult, date = new Date()): EdgeDailyChallenge | null {
+/** Compétence + mission du jour (déterministe selon la date). */
+export function getDailyMission(matching: CareerMatchingResult, date = new Date()): EdgeDailyMission | null {
   const pool = [
     ...(matching.nextPriority ? [matching.nextPriority.skill] : []),
     ...matching.develop,
@@ -71,8 +68,11 @@ export function getDailyChallenge(matching: CareerMatchingResult, date = new Dat
   if (!pool.length) return null;
   const dayIndex = Math.floor(date.getTime() / 86_400_000);
   const skill = pool[dayIndex % pool.length];
-  return { skill, format: pickRecommendedChallenge(skill), xpReward: 50 };
+  return { skill, mechanic: pickMissionMechanic(skill), xpReward: 50 };
 }
+
+/** @deprecated Utiliser getDailyMission */
+export const getDailyChallenge = getDailyMission;
 
 /** Compétence du jour à mettre en avant (carte). */
 export function getSkillOfTheDay(matching: CareerMatchingResult, date = new Date()): string | null {
@@ -87,36 +87,3 @@ export function getNextBadgeSkill(matching: CareerMatchingResult): string | null
   return matching.consolidate[0] ?? matching.develop[0] ?? matching.strengths[0] ?? null;
 }
 
-/* ----------------------------- Série (streak) ----------------------------- */
-
-const STREAK_KEY = "edge-streak-v1";
-
-type StreakState = { count: number; lastDay: string };
-
-function todayKey(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
-}
-
-/** Met à jour et renvoie la série de jours consécutifs (client uniquement). */
-export function touchStreak(date = new Date()): number {
-  if (typeof window === "undefined") return 1;
-  const today = todayKey(date);
-  let state: StreakState | null = null;
-  try {
-    const raw = window.localStorage.getItem(STREAK_KEY);
-    if (raw) state = JSON.parse(raw) as StreakState;
-  } catch {
-    state = null;
-  }
-  if (state?.lastDay === today) return state.count;
-
-  const yesterday = todayKey(new Date(date.getTime() - 86_400_000));
-  const nextCount = state?.lastDay === yesterday ? state.count + 1 : 1;
-  const next: StreakState = { count: nextCount, lastDay: today };
-  try {
-    window.localStorage.setItem(STREAK_KEY, JSON.stringify(next));
-  } catch {
-    /* ignore */
-  }
-  return nextCount;
-}

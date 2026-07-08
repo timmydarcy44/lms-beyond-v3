@@ -165,6 +165,7 @@ async function upsertBadgeProgress(
   userId: string,
   skill: string,
   validated: boolean,
+  validationProgress = 0,
 ): Promise<MissionBadgeState> {
   const key = badgeKeyForSkill(skill);
   const { data: existing, error: readError } = await db
@@ -174,29 +175,35 @@ async function upsertBadgeProgress(
     .eq("badge_key", key)
     .maybeSingle();
 
-  const increment = validated ? 25 : 15;
+  const increment = validated ? 25 : 12;
   const prevProgress = existing && !readError ? Number(existing.progress) || 0 : 0;
-  const progress = Math.min(100, prevProgress + increment);
-  const status: MissionBadgeState["status"] = "in_progress";
+  const matrixProgress = Math.max(prevProgress, Math.min(100, validationProgress));
+  const progress = validated ? 100 : Math.min(100, Math.max(matrixProgress, prevProgress + increment));
+  const status: MissionBadgeState["status"] = validated ? "earned" : progress >= 75 ? "in_progress" : "in_progress";
   const now = new Date().toISOString();
 
   if (readError) {
     return { key, skill, progress, status };
   }
 
+  const payload = {
+    progress,
+    status,
+    skill_name: skill,
+    updated_at: now,
+    ...(validated ? { earned_at: now } : {}),
+  };
+
   if (existing) {
-    await db
-      .from("edge_badge_progress")
-      .update({ progress, status, skill_name: skill, updated_at: now })
-      .eq("user_id", userId)
-      .eq("badge_key", key);
+    await db.from("edge_badge_progress").update(payload).eq("user_id", userId).eq("badge_key", key);
   } else {
     await db.from("edge_badge_progress").insert({
       user_id: userId,
       badge_key: key,
       skill_name: skill,
       progress,
-      status: "in_progress",
+      status,
+      ...(validated ? { earned_at: now } : {}),
     });
   }
 
@@ -261,14 +268,20 @@ export async function finishMissionEphemeral(
     const [prevXp, currentStreak, badgeState] = await Promise.all([
       computeTotalXp(db, userId),
       touchStreak(db, userId).catch(() => 0),
-      upsertBadgeProgress(db, userId, ctx.skillName, debrief.skillValidated).catch(() => badge),
+      upsertBadgeProgress(
+        db,
+        userId,
+        ctx.skillName,
+        debrief.skillValidated,
+        debrief.proofMatrix?.validationProgress ?? debrief.confidence,
+      ).catch(() => badge),
     ]);
     totalXp = prevXp + xpAwarded;
     streak = currentStreak;
     badge = badgeState;
   }
 
-  return { runId, debrief, xpAwarded, totalXp, streak, badge, gaugeState, outcome: gaugeState?.outcome };
+  return { runId, debrief, xpAwarded, totalXp, streak, badge, gaugeState, outcome: gaugeState?.outcome, proofMatrix: debrief.proofMatrix };
 }
 
 export async function finishMissionRun(
@@ -293,6 +306,9 @@ export async function finishMissionRun(
     recommendedMissionTitle: debrief.recommendedMissionTitle,
     gaugeState,
     outcome: gaugeState?.outcome ?? debrief.outcome,
+    proofMatrix: debrief.proofMatrix,
+    missionBehaviorLines: debrief.missionBehaviorLines,
+    behaviorsNotYetValidated: debrief.behaviorsNotYetValidated,
   };
 
   const baseUpdate = {
@@ -336,7 +352,13 @@ export async function finishMissionRun(
   const [totalXp, streak, badge] = await Promise.all([
     computeTotalXp(db, userId),
     touchStreak(db, userId),
-    upsertBadgeProgress(db, userId, ctx.skillName, debrief.skillValidated),
+    upsertBadgeProgress(
+      db,
+      userId,
+      ctx.skillName,
+      debrief.skillValidated,
+      debrief.proofMatrix?.validationProgress ?? debrief.confidence,
+    ),
   ]);
 
   const notif = buildFinishNotification(ctx.skillName, badge);
@@ -350,5 +372,5 @@ export async function finishMissionRun(
     status: "pending",
   });
 
-  return { runId, debrief, xpAwarded, totalXp, streak, badge, gaugeState, outcome: gaugeState?.outcome };
+  return { runId, debrief, xpAwarded, totalXp, streak, badge, gaugeState, outcome: gaugeState?.outcome, proofMatrix: debrief.proofMatrix };
 }

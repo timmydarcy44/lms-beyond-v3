@@ -6,6 +6,9 @@ import { missionApiErrorResponse } from "@/lib/apprenant/edge-mission-api-errors
 import { generateMissionBrief } from "@/lib/apprenant/edge-mission-generator";
 import { getMissionCoachReply, generateMissionDebrief } from "@/lib/apprenant/edge-mission-engine";
 import { computeMissionOutcome, initialMissionGauges } from "@/lib/apprenant/edge-mission-gauges";
+import { observationsFromTurns, parseBehaviorTurns } from "@/lib/apprenant/edge-behavior-evidence";
+import { buildAndPersistProofMatrix } from "@/lib/apprenant/edge-behavior-store";
+import { getBehaviorGrid } from "@/lib/apprenant/edge-behavior-grids";
 import {
   buildDailyMissionPreview,
   enrichCoachMemoryWithMatching,
@@ -277,12 +280,21 @@ export async function POST(request: NextRequest) {
         reply.gaugeDeltas?.length && userTurns > 0
           ? [...gaugeHistory, { turn: userTurns, deltas: reply.gaugeDeltas }]
           : gaugeHistory;
+      const behaviorHistory = parseBehaviorTurns(body.behaviorHistory);
+      const newBehaviorHistory =
+        reply.observedBehaviors?.length && userTurns > 0
+          ? [
+              ...behaviorHistory,
+              { turn: userTurns, behaviors: reply.observedBehaviors },
+            ]
+          : behaviorHistory;
       return NextResponse.json({
         reply,
         canFinish: userTurns >= 2,
         gauges,
         gaugeDeltas: reply.gaugeDeltas,
         gaugeHistory: newHistory,
+        behaviorHistory: newBehaviorHistory,
       });
     }
 
@@ -307,13 +319,34 @@ export async function POST(request: NextRequest) {
         outcome,
       };
 
-      const debrief = await generateMissionDebrief(ctx, messages, proofText);
+      const behaviorTurns = parseBehaviorTurns(body.behaviorHistory);
+      const grid = getBehaviorGrid(ctx.skillName);
+      const missionObservations = observationsFromTurns(
+        behaviorTurns,
+        runId,
+        mission.title,
+        grid,
+      );
+      const proofMatrix = await buildAndPersistProofMatrix(
+        db,
+        user.id,
+        ctx.skillName,
+        mission.title,
+        missionObservations,
+      );
+
+      const debrief = await generateMissionDebrief(ctx, messages, proofText, {
+        proofMatrix,
+        behaviorTurns,
+      });
       debrief.outcome = outcome;
+      debrief.proofMatrix = proofMatrix;
+      debrief.skillValidated = proofMatrix.isValidated;
       const isEphemeral = Boolean(body.ephemeral) || runId.startsWith("ephemeral-");
 
       if (isEphemeral || !db) {
         const result = await finishMissionEphemeral(db, user.id, runId, ctx, debrief, gaugeState);
-        return NextResponse.json({ ...result, ephemeral: true, outcome, gaugeState });
+        return NextResponse.json({ ...result, ephemeral: true, outcome, gaugeState, proofMatrix });
       }
 
       const result = await finishMissionRun(
@@ -326,7 +359,7 @@ export async function POST(request: NextRequest) {
         proofText,
         gaugeState,
       );
-      return NextResponse.json({ ...result, outcome, gaugeState });
+      return NextResponse.json({ ...result, outcome, gaugeState, proofMatrix });
     }
 
     return NextResponse.json(missionApiErrorResponse(400, { error: "Action inconnue.", code: "unknown_action" }), {

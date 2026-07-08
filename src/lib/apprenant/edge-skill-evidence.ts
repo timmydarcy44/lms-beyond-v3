@@ -5,57 +5,9 @@
  */
 
 import type { SkillGapStatus } from "@/lib/apprenant/edge-progression-gps";
+import { getBehaviorGrid } from "@/lib/apprenant/edge-behavior-grids";
 
-function normalizeKey(skill: string): string {
-  return skill
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-}
-
-const BEHAVIORS: Record<string, string[]> = {
-  communication: [
-    "structurez votre message avant de le transmettre",
-    "adaptez votre discours à votre interlocuteur",
-    "cherchez à être compris plutôt qu'à avoir raison",
-  ],
-  "analyse de marche": [
-    "comparez plusieurs solutions avant de décider",
-    "recherchez des informations avant d'agir",
-    "structurez votre réflexion à partir de faits",
-  ],
-  creativite: [
-    "explorez plusieurs pistes avant de trancher",
-    "associez des idées venant de domaines différents",
-    "proposez des approches originales",
-  ],
-  empathie: [
-    "prêtez attention au ressenti de vos interlocuteurs",
-    "reformulez pour vérifier votre compréhension",
-    "adaptez votre réponse au contexte de l'autre",
-  ],
-  influence: [
-    "argumentez à partir des bénéfices pour l'autre",
-    "cherchez l'adhésion plutôt que l'imposition",
-    "identifiez les bons interlocuteurs",
-  ],
-  organisation: [
-    "priorisez vos tâches selon leur impact",
-    "découpez les objectifs en étapes concrètes",
-    "anticipez les délais",
-  ],
-  negociation: [
-    "préparez vos échanges à l'avance",
-    "cherchez à comprendre les motivations de l'autre",
-    "visez un accord équilibré",
-  ],
-  leadership: [
-    "clarifiez l'objectif commun avant d'agir",
-    "donnez de la visibilité à votre équipe",
-    "prenez des décisions assumées",
-  ],
-};
+import { getBehaviorGrid } from "@/lib/apprenant/edge-behavior-grids";
 
 const GENERIC_BEHAVIORS = [
   "abordez les situations avec méthode",
@@ -64,15 +16,9 @@ const GENERIC_BEHAVIORS = [
 ];
 
 function behaviorsFor(skill: string): string[] {
-  const key = normalizeKey(skill);
-  if (BEHAVIORS[key]) return BEHAVIORS[key];
-  for (const [pattern, list] of Object.entries(BEHAVIORS)) {
-    if (key.includes(pattern) || pattern.includes(key)) return list;
-  }
-  if (key.includes("commun")) return BEHAVIORS.communication;
-  if (key.includes("creat")) return BEHAVIORS.creativite;
-  if (key.includes("empath")) return BEHAVIORS.empathie;
-  return GENERIC_BEHAVIORS;
+  const grid = getBehaviorGrid(skill);
+  const labels = grid.behaviors.map((b) => b.label.toLowerCase());
+  return labels.length ? labels : GENERIC_BEHAVIORS;
 }
 
 /** Confiance déterministe (varie légèrement selon la compétence). */
@@ -99,8 +45,8 @@ export function getSkillEvidence(skill: string, status: SkillGapStatus): SkillEv
       ? "Pourquoi cette compétence est identifiée comme une force ?"
       : "Pourquoi EDGE vous propose de travailler cette compétence ?",
     intro: isForce
-      ? "Notre IA a identifié plusieurs comportements compatibles avec cette compétence. Vos réponses montrent notamment que vous :"
-      : "Notre IA a repéré des signaux encourageants, à confirmer par une mission. Vos réponses montrent que vous :",
+      ? "Notre IA a documenté plusieurs comportements observables compatibles avec cette compétence. Votre dossier de preuves montre notamment que vous :"
+      : "Notre IA observe des signaux comportementaux à confirmer par des missions dans des contextes variés. Vos échanges montrent que vous :",
     behaviors: behaviorsFor(skill),
     confidence: confidenceFor(skill, status),
   };

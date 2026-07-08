@@ -92,6 +92,46 @@ export type MissionCoachReply = {
   gaugeDeltas?: MissionGaugeDelta[];
   /** État des jauges après application des deltas. */
   gauges?: MissionGauge[];
+  /** Comportements observés ce tour (observation, pas évaluation). */
+  observedBehaviors?: BehaviorObservation[];
+};
+
+/** Comportement observable détecté après une intervention utilisateur. */
+export type BehaviorObservation = {
+  key: string;
+  label: string;
+  observed: boolean;
+  evidenceQuote: string;
+};
+
+export type BehaviorObservationTurn = {
+  turn: number;
+  behaviors: BehaviorObservation[];
+};
+
+export type BehaviorProofRow = {
+  behaviorKey: string;
+  behaviorLabel: string;
+  description: string;
+  observed: boolean;
+  observationCount: number;
+  missionContextCount: number;
+  status: "not_observed" | "emerging" | "confirmed";
+  latestEvidence?: string;
+  debriefLine?: string;
+};
+
+export type SkillProofMatrix = {
+  skillName: string;
+  skillKey: string;
+  totalBehaviors: number;
+  observedBehaviors: number;
+  distinctMissionContexts: number;
+  rows: BehaviorProofRow[];
+  validationProgress: number;
+  isValidated: boolean;
+  validationMessage: string;
+  behaviorsToWork: string[];
 };
 
 /** Débrief enrichi en fin de mission. */
@@ -119,6 +159,12 @@ export type MissionDebrief = {
   progressHighlight: string;
   /** Issue de la mission selon les jauges finales. */
   outcome?: MissionOutcome;
+  /** Matrice de preuves comportementales (dossier cumulatif). */
+  proofMatrix?: SkillProofMatrix;
+  /** Observations comportementales de cette mission uniquement. */
+  missionBehaviorLines?: string[];
+  /** Comportements non encore observés à travailler. */
+  behaviorsNotYetValidated?: string[];
 };
 
 export type MissionGaugeState = {
@@ -144,6 +190,7 @@ export type MissionFinishResult = {
   badge: MissionBadgeState;
   gaugeState?: MissionGaugeState;
   outcome?: MissionOutcome;
+  proofMatrix?: SkillProofMatrix;
 };
 
 import type { CoachMemory } from "@/lib/apprenant/edge-coach-memory";

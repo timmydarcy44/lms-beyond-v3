@@ -4,6 +4,7 @@
  */
 
 import { generateJSON } from "@/lib/ai/openai-client";
+import { behaviorGridBlockForPrompt, getBehaviorGrid } from "@/lib/apprenant/edge-behavior-grids";
 import type { MissionBrief, MissionDifficulty, MissionFormatId } from "@/lib/apprenant/edge-mission-types";
 
 export type MissionGenerateInput = {
@@ -121,13 +122,17 @@ export async function generateMissionBrief(input: MissionGenerateInput): Promise
     ? `Missions déjà réalisées (ne pas répéter) : ${input.pastMissionTitles.join(", ")}.`
     : "";
 
+  const behaviorGrid = behaviorGridBlockForPrompt(getBehaviorGrid(input.skillName));
+
   const prompt = `Génère une Mission EDGE personnalisée pour développer la compétence « ${input.skillName} ».
 
 Objectif professionnel de l'apprenant : ${input.objective || "non précisé"}
 Niveau actuel : ${level} — niveau visé : ${input.levelExpected || "supérieur"}
 ${past}
 
-La mission doit :
+${behaviorGrid}
+
+La mission doit créer des SITUATIONS permettant d'observer ces comportements — pas de bonne réponse unique.
 - avoir un titre accrocheur et concret (ex. « Convaincre un directeur financier »)
 - un contexte professionnel réaliste lié au métier visé, avec une ENTREPRISE nommée et des ENJEUX précis (budget, délai, concurrence…)
 - des personnages NOMMÉS avec prénom, rôle, entreprise et une touche émotionnelle (stress, scepticisme, urgence…)
@@ -135,7 +140,7 @@ La mission doit :
 - un objectif de mission concret (ex. obtenir un deuxième rendez-vous)
 - 2-3 compétences secondaires
 - 3 résultats « vous serez capable de »
-- 3 critères de réussite
+- 3 critères de réussite alignés sur des comportements observables de la grille
 - durée estimée en minutes (10-20)
 
 Le coach jouera un personnage (pas un examinateur). L'apprenant doit avoir l'impression de VIVRE une situation, pas de répondre à un questionnaire. Français, ton professionnel adulte.`;

@@ -24,6 +24,26 @@ import {
 
 } from "@/lib/apprenant/edge-mission-gauges";
 
+import {
+
+  behaviorSectionForPrompt,
+
+  buildBehaviorDebrief,
+
+  coachFeedbackFromBehaviors,
+
+  debriefSystemPromptWithBehaviors,
+
+  observedBehaviorsJsonBlock,
+
+  parseObservedBehaviorsFromTurn,
+
+} from "@/lib/apprenant/edge-mission-behavior";
+
+import type { BehaviorTurnObservation } from "@/lib/apprenant/edge-behavior-evidence";
+import { heuristicBehaviorDetection } from "@/lib/apprenant/edge-behavior-evidence";
+import { getBehaviorGrid } from "@/lib/apprenant/edge-behavior-grids";
+
 import type {
 
   MissionChatMessage,
@@ -33,6 +53,8 @@ import type {
   MissionContext,
 
   MissionDebrief,
+
+  SkillProofMatrix,
 
 } from "@/lib/apprenant/edge-mission-types";
 
@@ -102,11 +124,13 @@ Après une réponse utilisateur :
 
    - Puis relance, contredit, précise, met la pression ou demande une preuve.
 
-2. coachFeedback : 1-2 phrases MAX, discret, après la scène. Peut mentionner brièvement l'effet sur une jauge. Ex : "Bon réflexe : tu cherches à comprendre avant d'argumenter."
+2. coachFeedback : 1-2 phrases MAX, discret, après la scène. Mentionne un COMPORTEMENT observé (pas « bonne réponse »). Peut lier à une jauge.
 
 3. gaugeDeltas : variations de jauges selon la qualité stratégique (pas seulement la politesse).
 
-4. coachInsight détaillé : UNIQUEMENT tous les 3 tours — sinon NE PAS le remplir.
+4. observedBehaviors : comportements de la grille réellement manifestés dans la réponse utilisateur (observed: true/false + evidenceQuote).
+
+5. coachInsight détaillé : UNIQUEMENT tous les 3 tours — sinon NE PAS le remplir.
 
 
 
@@ -119,6 +143,8 @@ ${missionBlock(ctx)}
 ${memorySection(ctx)}
 
 ${gaugeSection(ctx)}
+
+${behaviorSectionForPrompt(ctx)}
 
 
 
@@ -138,7 +164,9 @@ JSON attendu à chaque tour (hors ouverture) :
 
   "coachFeedback": "feedback court ou chaîne vide",
 
-  "gaugeDeltas": [{ "name": "Confiance du client", "delta": 8, "reason": "..." }]
+  "gaugeDeltas": [{ "name": "Confiance du client", "delta": 8, "reason": "..." }],
+
+  ${observedBehaviorsJsonBlock()}
 
 }
 
@@ -188,9 +216,11 @@ ORDRE OBLIGATOIRE :
 
 2. nextQuestion (optionnel) : relance du personnage.
 
-3. coachFeedback : 1-2 phrases max.${detailed ? " Ajoute coachInsight (analyse détaillée)." : " PAS de coachInsight ce tour."}
+3. coachFeedback : 1-2 phrases max, orienté COMPORTEMENT observé.${detailed ? " Ajoute coachInsight (analyse détaillée)." : " PAS de coachInsight ce tour."}
 
-4. gaugeDeltas : variations réalistes.`;
+4. observedBehaviors : liste des comportements de la grille observés ou absents ce tour.
+
+5. gaugeDeltas : variations réalistes.`;
 
 }
 
@@ -316,6 +346,14 @@ function fallbackCoachReply(ctx: MissionContext, messages: MissionChatMessage[])
 
 
 
+  const lastUserText = messages.filter((m) => m.role === "user").pop()?.content ?? "";
+  const observedBehaviors = heuristicBehaviorDetection(lastUserText, getBehaviorGrid(ctx.skillName)).map((b) => ({
+    key: b.key,
+    label: b.label,
+    observed: b.observed,
+    evidenceQuote: b.evidenceQuote,
+  }));
+
   const reply: MissionCoachReply = {
 
     sceneReply: turn.scene,
@@ -325,6 +363,8 @@ function fallbackCoachReply(ctx: MissionContext, messages: MissionChatMessage[])
     gaugeDeltas,
 
     gauges: updated,
+
+    observedBehaviors: observedBehaviors.length ? observedBehaviors : undefined,
 
   };
 
@@ -398,6 +438,18 @@ function parseCoachReply(
 
 
 
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+
+  const lastUserText = lastUser?.content ?? "";
+
+  const observedBehaviors = !isOpening
+
+    ? parseObservedBehaviorsFromTurn(raw, ctx, lastUserText)
+
+    : undefined;
+
+
+
   const result: MissionCoachReply = {
 
     sceneReply,
@@ -405,6 +457,8 @@ function parseCoachReply(
     gauges: updatedGauges,
 
     gaugeDeltas: gaugeDeltas.length ? gaugeDeltas : undefined,
+
+    observedBehaviors,
 
   };
 
@@ -420,6 +474,9 @@ function parseCoachReply(
 
   if (feedback && !isOpening) {
     result.coachFeedback = feedback.slice(0, 280);
+  } else if (!isOpening && observedBehaviors?.length) {
+    const behaviorFeedback = coachFeedbackFromBehaviors(observedBehaviors, ctx.skillName);
+    if (behaviorFeedback) result.coachFeedback = behaviorFeedback;
   } else if (!isOpening && gaugeDeltas.length > 0 && gaugeDeltas[0].reason) {
     result.coachFeedback = gaugeDeltas[0].reason.slice(0, 280);
   }
@@ -712,6 +769,14 @@ export async function generateMissionDebrief(
 
   proofText = "",
 
+  options?: {
+
+    proofMatrix?: SkillProofMatrix;
+
+    behaviorTurns?: BehaviorTurnObservation[];
+
+  },
+
 ): Promise<MissionDebrief> {
 
   const transcript = messages
@@ -732,15 +797,21 @@ export async function generateMissionDebrief(
 
   const gaugeInfo = ctx.gaugeState ? gaugesBlockForPrompt(ctx.gaugeState) : "";
 
+  const behaviorPrompt = options?.proofMatrix
+
+    ? debriefSystemPromptWithBehaviors(ctx, options.proofMatrix)
+
+    : "Coach EDGE bienveillant. JSON uniquement.";
+
 
 
   const raw = await generateJSON(
 
-    `Analyse cette Mission EDGE terminée.\n${missionBlock(ctx)}\n${gaugeInfo ? `Jauges finales :\n${gaugeInfo}` : ""}\nPreuve : ${proofText || "aucune"}\nTranscript :\n${transcript}`,
+    `${behaviorPrompt}\n\nAnalyse cette Mission EDGE terminée.\n${missionBlock(ctx)}\n${gaugeInfo ? `Jauges finales :\n${gaugeInfo}` : ""}\nPreuve : ${proofText || "aucune"}\nTranscript :\n${transcript}`,
 
     DEBRIEF_SCHEMA,
 
-    "Coach EDGE bienveillant. JSON uniquement.",
+    behaviorPrompt,
 
   );
 
@@ -748,7 +819,15 @@ export async function generateMissionDebrief(
 
   if (!raw || typeof raw !== "object") {
 
-    return fallbackDebrief(ctx, messages, proofText);
+    const fallback = fallbackDebrief(ctx, messages, proofText);
+
+    if (options?.proofMatrix) {
+
+      return buildBehaviorDebrief(ctx, messages, options.proofMatrix, options.behaviorTurns ?? [], fallback);
+
+    }
+
+    return fallback;
 
   }
 
@@ -760,7 +839,7 @@ export async function generateMissionDebrief(
 
 
 
-  return {
+  const baseDebrief: MissionDebrief = {
 
     strengths: Array.isArray(raw.strengths) ? raw.strengths.map(String).slice(0, 4) : [],
 
@@ -772,7 +851,7 @@ export async function generateMissionDebrief(
 
     nextAction: String(raw.nextAction ?? ""),
 
-    skillValidated: Boolean(raw.skillValidated),
+    skillValidated: options?.proofMatrix?.isValidated ?? Boolean(raw.skillValidated),
 
     summary: String(raw.summary ?? "").slice(0, 500),
 
@@ -795,6 +874,30 @@ export async function generateMissionDebrief(
     progressHighlight,
 
   };
+
+
+
+  if (options?.proofMatrix) {
+
+    return buildBehaviorDebrief(
+
+      ctx,
+
+      messages,
+
+      options.proofMatrix,
+
+      options.behaviorTurns ?? [],
+
+      baseDebrief,
+
+    );
+
+  }
+
+
+
+  return baseDebrief;
 
 }
 

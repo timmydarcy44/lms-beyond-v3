@@ -18,6 +18,7 @@ import {
 import { EDGE_MISSION_LABEL } from "@/lib/apprenant/edge-missions";
 import { formatMissionApiError } from "@/lib/apprenant/edge-mission-api-errors";
 import type {
+  BehaviorObservationTurn,
   CoachInsight,
   MissionBrief,
   MissionChatMessage,
@@ -27,6 +28,7 @@ import type {
   MissionGaugeTurn,
 } from "@/lib/apprenant/edge-mission-types";
 import { EdgeMissionGaugePanel } from "@/components/apprenant/profil-edge/edge-mission-gauge-panel";
+import { EdgeMissionProofMatrix } from "@/components/apprenant/profil-edge/edge-mission-proof-matrix";
 import {
   APPRENANT_CARD_KICKER,
   CONNECT_BTN_PRIMARY,
@@ -91,6 +93,7 @@ export function EdgeMissionRunner() {
   const [gauges, setGauges] = useState<MissionGauge[]>([]);
   const [initialGauges, setInitialGauges] = useState<MissionGauge[]>([]);
   const [gaugeHistory, setGaugeHistory] = useState<MissionGaugeTurn[]>([]);
+  const [behaviorHistory, setBehaviorHistory] = useState<BehaviorObservationTurn[]>([]);
   const [lastDeltas, setLastDeltas] = useState<MissionCoachReply["gaugeDeltas"]>(undefined);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -155,6 +158,7 @@ export function EdgeMissionRunner() {
       setGauges((json.gauges as MissionGauge[]) ?? []);
       setInitialGauges((json.initialGauges as MissionGauge[]) ?? []);
       setGaugeHistory([]);
+      setBehaviorHistory([]);
       setLastDeltas(undefined);
       setMessages(messagesFromCoachReply(json.reply as MissionCoachReply, true));
       setPhase("chat");
@@ -174,6 +178,7 @@ export function EdgeMissionRunner() {
     setGauges([]);
     setInitialGauges([]);
     setGaugeHistory([]);
+    setBehaviorHistory([]);
     setLastDeltas(undefined);
     void startMission();
   }, [startMission]);
@@ -197,6 +202,7 @@ export function EdgeMissionRunner() {
           gauges,
           initialGauges,
           gaugeHistory,
+          behaviorHistory,
           ...baseBody(),
         }),
       });
@@ -206,13 +212,14 @@ export function EdgeMissionRunner() {
       if (json.gauges) setGauges(json.gauges as MissionGauge[]);
       if (json.gaugeDeltas) setLastDeltas(json.gaugeDeltas as MissionCoachReply["gaugeDeltas"]);
       if (json.gaugeHistory) setGaugeHistory(json.gaugeHistory as MissionGaugeTurn[]);
+      if (json.behaviorHistory) setBehaviorHistory(json.behaviorHistory as BehaviorObservationTurn[]);
       setCanFinish(Boolean(json.canFinish));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur de communication avec le coach.");
     } finally {
       setSending(false);
     }
-  }, [input, sending, messages, mission, baseBody, gauges, initialGauges, gaugeHistory]);
+  }, [input, sending, messages, mission, baseBody, gauges, initialGauges, gaugeHistory, behaviorHistory]);
 
   const finish = useCallback(async () => {
     if (!mission) return;
@@ -232,6 +239,7 @@ export function EdgeMissionRunner() {
           gauges,
           initialGauges,
           gaugeHistory,
+          behaviorHistory,
           ...baseBody(),
         }),
       });
@@ -243,7 +251,7 @@ export function EdgeMissionRunner() {
       setError(e instanceof Error ? e.message : "Impossible de finaliser la mission.");
       setPhase("chat");
     }
-  }, [runId, messages, proofText, mission, baseBody, ephemeral, gauges, initialGauges, gaugeHistory]);
+  }, [runId, messages, proofText, mission, baseBody, ephemeral, gauges, initialGauges, gaugeHistory, behaviorHistory]);
 
   if (error && phase === "loading") {
     return (
@@ -351,9 +359,10 @@ export function EdgeMissionRunner() {
 
   /* ------------------------------ Débrief ----------------------------- */
   if (phase === "debrief" && result) {
-    const { debrief, xpAwarded, totalXp, streak, badge, outcome } = result;
+    const { debrief, xpAwarded, totalXp, streak, badge, outcome, proofMatrix } = result;
     const badgeSoon = badge.progress >= 75;
     const missionOutcome = outcome ?? debrief.outcome;
+    const matrix = proofMatrix ?? debrief.proofMatrix;
     return (
       <motion.div
         className="mx-auto max-w-2xl space-y-5"
@@ -398,6 +407,30 @@ export function EdgeMissionRunner() {
           </motion.section>
         ) : null}
 
+        {matrix ? <motion.div variants={fadeUp}><EdgeMissionProofMatrix matrix={matrix} /></motion.div> : null}
+
+        {debrief.missionBehaviorLines?.length ? (
+          <motion.section variants={fadeUp} className="rounded-2xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/[0.06] p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#8BB4FF]">Ce que j&apos;ai observé aujourd&apos;hui</p>
+            <ul className="mt-3 space-y-2">
+              {debrief.missionBehaviorLines.map((line) => (
+                <li key={line} className="text-sm leading-relaxed text-white/75">{line}</li>
+              ))}
+            </ul>
+          </motion.section>
+        ) : null}
+
+        {debrief.behaviorsNotYetValidated?.length ? (
+          <motion.section variants={fadeUp} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Comportements pas encore validés</p>
+            <ul className="mt-3 space-y-2">
+              {debrief.behaviorsNotYetValidated.map((line) => (
+                <li key={line} className="text-sm text-white/60">{line}</li>
+              ))}
+            </ul>
+          </motion.section>
+        ) : null}
+
         {/* Récompenses — XP et série */}
         <motion.div variants={fadeUp} className="grid grid-cols-3 gap-3">
           <Stat label="XP gagnés" value={`+${xpAwarded}`} accent="text-[#8BB4FF]" delay={0.1} />
@@ -428,8 +461,8 @@ export function EdgeMissionRunner() {
           </div>
 
           <DebriefBlock title="Vos points forts" items={debrief.strengths} />
-          <DebriefBlock title="Vos axes d'amélioration" items={debrief.improvements} />
-          <DebriefBlock title="Ce que j'ai observé" items={debrief.observations} />
+          <DebriefBlock title="Axes à renforcer" items={debrief.improvements} />
+          <DebriefBlock title="Observations comportementales" items={debrief.observations} />
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Pourquoi je pense cela</p>
             <p className="mt-2 text-sm leading-relaxed text-white/70">{debrief.whyThink}</p>
@@ -455,9 +488,11 @@ export function EdgeMissionRunner() {
               />
             </div>
             <p className="mt-2 text-xs text-white/45">
-              {badgeSoon
-                ? `Votre badge ${badge.skill} est presque disponible — encore quelques missions !`
-                : "Les Open Badges restent la seule certification vérifiable."}
+              {badge.status === "earned"
+                ? `Compétence validée par dossier de preuves comportementales.`
+                : badgeSoon
+                  ? `Dossier presque complet (${badge.progress} %) — encore quelques missions dans des contextes variés.`
+                  : "Les Open Badges restent la certification vérifiable — alimentée par votre matrice de preuves."}
             </p>
           </div>
 

@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 const HERO_IMAGE_URL =
-  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/hero%20section.png";
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/hero%20section%202%20(1).png";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=1920&q=80";
@@ -38,7 +38,7 @@ export function VideoHero() {
               fill
               priority
               sizes="100vw"
-              className="object-cover object-[center_20%] [filter:saturate(1.08)_contrast(1.03)_sepia(0.08)_hue-rotate(-4deg)]"
+              className="object-cover object-[72%_42%] md:object-left [filter:saturate(1.08)_contrast(1.03)_sepia(0.08)_hue-rotate(-4deg)]"
               onError={() => setMediaFailed(true)}
             />
             <div

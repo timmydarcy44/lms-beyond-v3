@@ -33,6 +33,33 @@ export function firstPlayableLessonId(
   return null;
 }
 
+/** Extrait les IDs de chapitres depuis builder_snapshot (fallback si modules vides). */
+export function lessonIdsFromBuilderSnapshot(snapshot: unknown): string[] {
+  const parsed =
+    typeof snapshot === "string"
+      ? (() => {
+          try {
+            return JSON.parse(snapshot);
+          } catch {
+            return null;
+          }
+        })()
+      : snapshot;
+
+  const ids: string[] = [];
+  for (const section of (parsed as { sections?: unknown[] })?.sections ?? []) {
+    for (const chapter of (section as { chapters?: unknown[] })?.chapters ?? []) {
+      const chapterId = (chapter as { id?: string })?.id;
+      if (chapterId) ids.push(String(chapterId));
+      for (const sub of (chapter as { subchapters?: unknown[] })?.subchapters ?? []) {
+        const subId = (sub as { id?: string })?.id;
+        if (subId) ids.push(String(subId));
+      }
+    }
+  }
+  return ids;
+}
+
 const GRANTED_CATALOG_STATUSES = new Set(["purchased", "free", "manually_granted"]);
 
 /** Accès lecture formation sur jessicacontentin.fr (sans passer par edgebs). */

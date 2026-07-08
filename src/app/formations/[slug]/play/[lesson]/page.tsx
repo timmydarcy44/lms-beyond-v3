@@ -5,10 +5,12 @@ import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provi
 import {
   getLearnerContentDetail,
   type LearnerFlashcard,
+  type LearnerLesson,
 } from "@/lib/queries/apprenant";
 import { getServerClient } from "@/lib/supabase/server";
 import {
   canPlayJessicaFormation,
+  lessonIdsFromBuilderSnapshot,
 } from "@/lib/jessica-contentin/formation-access";
 
 interface FormationLessonPlayPageProps {
@@ -36,18 +38,15 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
 
   const { getServiceRoleClient } = await import("@/lib/supabase/server");
   const serviceClient = getServiceRoleClient();
-  const readClient = serviceClient ?? supabase;
+  const enrollmentClient = serviceClient ?? supabase;
 
-  const courseId = card.id;
-  const { data: course } = await readClient
+  const { data: course } = await supabase
     .from("courses")
-    .select("id, creator_id, org_id, created_by")
-    .eq("id", courseId)
+    .select("id, creator_id, org_id, created_by, builder_snapshot")
+    .or(`slug.eq.${slug},id.eq.${slug}`)
     .maybeSingle();
 
-  if (!course) {
-    notFound();
-  }
+  const courseId = String(course?.id ?? card.id);
 
   const {
     data: { user },
@@ -57,39 +56,36 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     redirect(`/login?next=${encodeURIComponent(playPath)}`);
   }
 
-  let hasEnrollment = false;
-  const enrollmentClient = serviceClient || supabase;
   const [{ data: enrollment }, { data: courseEnrollment }] = await Promise.all([
     enrollmentClient
       .from("enrollments")
       .select("course_id")
       .eq("user_id", user.id)
-      .eq("course_id", course.id)
+      .eq("course_id", courseId)
       .maybeSingle(),
     enrollmentClient
       .from("course_enrollments")
       .select("course_id")
       .eq("user_id", user.id)
-      .eq("course_id", course.id)
+      .eq("course_id", courseId)
       .maybeSingle(),
   ]);
-  hasEnrollment = Boolean(enrollment) || Boolean(courseEnrollment);
+  const hasEnrollment = Boolean(enrollment) || Boolean(courseEnrollment);
 
-  const catalogClient = readClient;
-
-  const { data: catalogItem, error: catalogItemError } = await catalogClient
+  const catalogReadClient = serviceClient ?? supabase;
+  const { data: catalogItem, error: catalogItemError } = await catalogReadClient
     .from("catalog_items")
     .select("id, is_free, price")
-    .eq("content_id", course.id)
+    .eq("content_id", courseId)
     .eq("item_type", "module")
     .maybeSingle();
-  
+
   if (catalogItemError) {
     console.error("[formations/[slug]/play] Error fetching catalog_item:", catalogItemError);
   }
 
   let catalogAccessStatus: string | null = null;
-  if (catalogItem && user) {
+  if (catalogItem) {
     const { data: userAccess } = await supabase
       .from("catalog_access")
       .select("access_status")
@@ -100,7 +96,7 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     catalogAccessStatus = userAccess?.access_status ?? null;
   }
 
-  const isCreator = String(course.creator_id ?? course.created_by ?? "") === user.id;
+  const isCreator = String(course?.creator_id ?? course?.created_by ?? "") === user.id;
   const hasPlayAccess = canPlayJessicaFormation({
     isCreator,
     hasEnrollment,
@@ -114,29 +110,33 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
 
   const modules = detail.modules || [];
   const allLessons = modules.flatMap((module) => module.lessons ?? []);
-  const activeLesson = allLessons.find((item) => item.id === lesson) ?? allLessons[0];
+  let activeLesson = allLessons.find((item) => item.id === lesson) ?? allLessons[0] ?? null;
 
-  if (!activeLesson) {
-    console.warn("[formation/play] Lesson not found:", { lesson, availableLessons: allLessons.map(l => l.id) });
-    notFound();
+  if (!activeLesson && course?.builder_snapshot) {
+    const snapshotLessonIds = lessonIdsFromBuilderSnapshot(course.builder_snapshot);
+    const requestedExists = snapshotLessonIds.includes(lesson);
+    const fallbackLessonId = requestedExists ? lesson : snapshotLessonIds[0];
+    if (fallbackLessonId) {
+      activeLesson = {
+        id: fallbackLessonId,
+        title: "Chapitre",
+        type: "document",
+      } as LearnerLesson;
+    }
   }
 
-  const activeModule = modules.find((module) => module.lessons?.some((item: { id: string }) => item.id === activeLesson.id));
+  if (!activeLesson) {
+    redirect(`/formations/${slug}`);
+  }
+
+  const activeModule = modules.find((module) =>
+    module.lessons?.some((item: { id: string }) => item.id === activeLesson.id),
+  );
   const videoSrc = activeLesson.videoUrl || detail.trailerUrl || undefined;
   const activeIndex = allLessons.findIndex((item: { id: string }) => item.id === activeLesson.id);
   const previousLesson = activeIndex > 0 ? allLessons[activeIndex - 1] : null;
   const nextLesson = activeIndex >= 0 && activeIndex < allLessons.length - 1 ? allLessons[activeIndex + 1] : null;
   const flashcards = activeLesson.flashcards ?? [];
-  
-  // Debug: Log des flashcards
-  console.log("[formation/play] Active lesson flashcards:", JSON.stringify({
-    lessonId: activeLesson.id,
-    lessonTitle: activeLesson.title,
-    flashcardsCount: flashcards.length,
-    flashcards: flashcards.map((f: LearnerFlashcard) => ({ id: f.id, front: f.front?.substring(0, 30) }))
-  }));
-  
-  // Utiliser la route formations au lieu de catalog/formations
   const baseHref = `/formations/${slug}`;
 
   return (
@@ -161,4 +161,3 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     </DyslexiaModeProvider>
   );
 }
-

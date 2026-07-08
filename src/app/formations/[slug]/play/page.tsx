@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { getLearnerContentDetail } from "@/lib/queries/apprenant";
-import { firstPlayableLessonId } from "@/lib/jessica-contentin/formation-access";
+import { firstPlayableLessonId, lessonIdsFromBuilderSnapshot } from "@/lib/jessica-contentin/formation-access";
 import { getServerClient } from "@/lib/supabase/server";
 
 export default async function FormationPlayIndexPage({
@@ -25,27 +25,7 @@ export default async function FormationPlayIndexPage({
         .or(`slug.eq.${slug},id.eq.${slug}`)
         .maybeSingle();
 
-      const snapshot =
-        typeof course?.builder_snapshot === "string"
-          ? JSON.parse(course.builder_snapshot)
-          : course?.builder_snapshot;
-
-      for (const section of snapshot?.sections ?? []) {
-        for (const chapter of section?.chapters ?? []) {
-          if (chapter?.id) {
-            firstLessonId = String(chapter.id);
-            break;
-          }
-          for (const sub of chapter?.subchapters ?? []) {
-            if (sub?.id) {
-              firstLessonId = String(sub.id);
-              break;
-            }
-          }
-          if (firstLessonId) break;
-        }
-        if (firstLessonId) break;
-      }
+      firstLessonId = lessonIdsFromBuilderSnapshot(course?.builder_snapshot)[0] ?? null;
     }
   }
 

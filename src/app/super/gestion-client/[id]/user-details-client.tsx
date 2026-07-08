@@ -235,7 +235,9 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
             </DropdownMenu>
             ) : (
               <div className="px-4 py-2 text-sm" style={{ color: textColor, opacity: 0.7 }}>
-                Toutes les ressources sont déjà assignées
+                {availableResources.length === 0
+                  ? "Aucune formation disponible — publiez une formation dans le studio Jessica."
+                  : "Toutes les formations sont déjà assignées"}
               </div>
             )}
           </div>

@@ -1,6 +1,65 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
+import { getCourseBuilderSnapshot } from "@/lib/queries/formateur";
+import type { CourseBuilderSnapshot } from "@/types/course-builder";
+
+export const maxDuration = 60;
+
+type ChapterPayload = {
+  section?: string;
+  chapters?: Array<{
+    section?: string;
+    chapter?: string;
+    content?: string;
+    subchapters?: Array<{ title?: string; content?: string }>;
+  }>;
+};
+
+function truncateText(value: string, max = 2500): string {
+  const text = String(value ?? "").trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}…`;
+}
+
+function buildChapitresFromSnapshot(snapshot: CourseBuilderSnapshot): ChapterPayload[] {
+  return (snapshot.sections ?? [])
+    .map((section) => ({
+      section: truncateText(String(section.title ?? ""), 200),
+      chapters: (section.chapters ?? [])
+        .map((chapter) => ({
+          section: truncateText(String(section.title ?? ""), 200),
+          chapter: truncateText(String(chapter.title ?? ""), 200),
+          content: truncateText(String(chapter.content ?? chapter.summary ?? "")),
+          subchapters: (chapter.subchapters ?? []).map((sub) => ({
+            title: truncateText(String(sub.title ?? ""), 200),
+            content: truncateText(String(sub.content ?? sub.summary ?? "")),
+          })),
+        }))
+        .filter((chapter) => chapter.chapter || chapter.content || (chapter.subchapters?.length ?? 0) > 0),
+    }))
+    .filter((section) => section.section || (section.chapters?.length ?? 0) > 0);
+}
+
+function sanitizeClientChapitres(chapitres: unknown): ChapterPayload[] {
+  if (!Array.isArray(chapitres)) return [];
+  return chapitres.map((section) => ({
+    section: truncateText(String((section as ChapterPayload)?.section ?? ""), 200),
+    chapters: Array.isArray((section as ChapterPayload)?.chapters)
+      ? (section as ChapterPayload).chapters!.map((chapter) => ({
+          section: truncateText(String(chapter?.section ?? ""), 200),
+          chapter: truncateText(String(chapter?.chapter ?? ""), 200),
+          content: truncateText(String(chapter?.content ?? "")),
+          subchapters: Array.isArray(chapter?.subchapters)
+            ? chapter.subchapters.map((sub) => ({
+                title: truncateText(String(sub?.title ?? ""), 200),
+                content: truncateText(String(sub?.content ?? "")),
+              }))
+            : [],
+        }))
+      : [],
+  }));
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json().catch(() => null)) as
       | {
+          formation_id?: string;
           chapitres?: unknown;
           nb_questions?: number;
           type?: string;
@@ -27,18 +87,40 @@ export async function POST(request: NextRequest) {
         }
       | null;
 
-    if (!body?.chapitres || !body?.nb_questions || !body?.type || !body?.niveau) {
+    if (!body?.nb_questions || !body?.type || !body?.niveau) {
       return NextResponse.json({ error: "Données manquantes pour générer le quiz" }, { status: 400 });
+    }
+
+    let chapitres = sanitizeClientChapitres(body.chapitres);
+    let formationTitre = String(body.formation_titre ?? "").trim();
+
+    const formationId = String(body.formation_id ?? "").trim();
+    if ((!chapitres.length || chapitres.every((s) => !(s.chapters?.length ?? 0))) && formationId) {
+      const snapshot = (await getCourseBuilderSnapshot(formationId)) as CourseBuilderSnapshot | null;
+      if (snapshot) {
+        chapitres = buildChapitresFromSnapshot(snapshot);
+        formationTitre = formationTitre || String(snapshot.general?.title ?? "").trim();
+      }
+    }
+
+    if (!chapitres.length) {
+      return NextResponse.json(
+        { error: "Sélectionnez au moins un chapitre ou enregistrez la formation avant de générer." },
+        { status: 400 },
+      );
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "OpenAI non configuré" }, { status: 503 });
+      return NextResponse.json(
+        { error: "OpenAI non configuré sur le serveur (OPENAI_API_KEY manquante)" },
+        { status: 503 },
+      );
     }
 
     const openai = new OpenAI({ apiKey });
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       max_tokens: 4000,
       response_format: { type: "json_object" },
       messages: [
@@ -65,8 +147,8 @@ Retourne UNIQUEMENT un objet JSON valide avec cette structure :
         {
           role: "user",
           content: JSON.stringify({
-            formation_titre: body.formation_titre ?? "",
-            chapitres: body.chapitres,
+            formation_titre: formationTitre || "Formation",
+            chapitres,
           }),
         },
       ],

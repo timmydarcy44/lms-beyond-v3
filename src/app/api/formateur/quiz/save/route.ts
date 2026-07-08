@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
-import { insertQuizTestRow, resolveQuizAuthorOrgId } from "@/lib/formateur/quiz-test-insert";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { ensureQuizAuthorOrgId, insertQuizTestRow } from "@/lib/formateur/quiz-test-insert";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,9 +44,10 @@ export async function POST(request: NextRequest) {
         ? body.description.trim()
         : `Quiz généré par IA — ${titre}`;
 
-    const orgId = await resolveQuizAuthorOrgId(supabase, user.id);
+    const orgId = await ensureQuizAuthorOrgId(supabase, user.id, user.email);
+    const writeClient = getServiceRoleClient() ?? supabase;
 
-    const { data: testData, error: insertError } = await insertQuizTestRow(supabase, {
+    const { data: testData, error: insertError } = await insertQuizTestRow(writeClient, {
       title: titre,
       description,
       questions: body.questions,
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       ];
 
       for (const payload of minimalAttempts) {
-        const { error } = await supabase.from("course_tests").insert(payload);
+        const { error } = await writeClient.from("course_tests").insert(payload);
         if (!error) {
           linked = true;
           break;

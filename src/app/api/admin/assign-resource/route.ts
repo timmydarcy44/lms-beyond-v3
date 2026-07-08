@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { sendResourceAccessEmail } from "@/lib/emails/send-resource-access";
-import { catalogItemBelongsToJessica } from "@/lib/jessica-contentin/catalog-ownership";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
+import {
+  getJessicaStudioCourseIds,
+  isJessicaAssignableCatalogItem,
+  resolveJessicaProfileId,
+  syncJessicaStudioCatalog,
+} from "@/lib/jessica-contentin/sync-jessica-catalog";
 
 export async function POST(request: NextRequest) {
   console.log("[admin/assign-resource] POST request received");
@@ -49,14 +54,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que le catalog_item appartient à Jessica (creator_id ou created_by)
+    const jessicaId = jessicaProfile.id ?? (await resolveJessicaProfileId(supabase));
+    await syncJessicaStudioCatalog(supabase, jessicaId);
+    const studioCourseIds = await getJessicaStudioCourseIds(supabase);
+
     const { data: catalogItem } = await supabase
       .from("catalog_items")
       .select("id, title, item_type, content_id, creator_id, created_by, is_active")
       .eq("id", catalogItemId)
       .maybeSingle();
 
-    if (!catalogItem || !catalogItemBelongsToJessica(catalogItem, jessicaProfile.id)) {
+    if (
+      !catalogItem ||
+      !isJessicaAssignableCatalogItem(catalogItem, jessicaId, studioCourseIds)
+    ) {
       return NextResponse.json(
         { error: "Ressource non trouvée ou n'appartient pas à Jessica" },
         { status: 404 }

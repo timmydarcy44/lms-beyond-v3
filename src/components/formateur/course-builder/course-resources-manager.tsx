@@ -206,6 +206,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          formation_id: effectiveCourseId,
           chapitres: selectedPayload,
           nb_questions: Number(questionCount),
           type: questionType,

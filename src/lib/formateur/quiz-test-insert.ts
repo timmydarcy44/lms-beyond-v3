@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getServiceRoleClient } from "@/lib/supabase/server";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 
 export function slugifyQuizTitle(title: string): string {
   const base = title
@@ -34,6 +36,58 @@ export async function resolveQuizAuthorOrgId(
   if (fallbackOrg) return String(fallbackOrg);
 
   return null;
+}
+
+async function createEmergencyOrg(
+  supabase: SupabaseClient,
+  userId: string,
+  role: "admin" | "instructor",
+): Promise<string | null> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const orgName = profile?.full_name || profile?.email || `Organisation ${userId.slice(0, 8)}`;
+  const serviceClient = getServiceRoleClient();
+  const clientToUse = serviceClient ?? supabase;
+
+  let orgResult = await clientToUse
+    .from("organizations")
+    .insert({ name: orgName, description: "Organisation créée automatiquement pour les quiz" })
+    .select("id")
+    .single();
+
+  if (orgResult.error?.code === "42703") {
+    orgResult = await clientToUse.from("organizations").insert({ name: orgName }).select("id").single();
+  }
+
+  if (orgResult.error || !orgResult.data?.id) {
+    console.error("[quiz-test-insert] emergency org failed:", orgResult.error);
+    return null;
+  }
+
+  const orgId = String(orgResult.data.id);
+  await clientToUse.from("org_memberships").insert({
+    user_id: userId,
+    org_id: orgId,
+    role,
+  });
+
+  return orgId;
+}
+
+export async function ensureQuizAuthorOrgId(
+  supabase: SupabaseClient,
+  userId: string,
+  email?: string | null,
+): Promise<string | null> {
+  const existing = await resolveQuizAuthorOrgId(supabase, userId);
+  if (existing) return existing;
+
+  const role = isSuperAdminEmailAllowlisted(email) ? "admin" : "instructor";
+  return createEmergencyOrg(supabase, userId, role);
 }
 
 type InsertQuizTestInput = {
@@ -100,6 +154,10 @@ export async function insertQuizTestRow(
     if (code === "23502" && message.includes("form_url")) {
       payload.form_url = "";
       continue;
+    }
+
+    if (code === "23502" && message.includes("org_id") && !payload.org_id) {
+      return { data: null, error: { message: "org_id requis pour créer le quiz", code } };
     }
 
     if (code === "42703") {

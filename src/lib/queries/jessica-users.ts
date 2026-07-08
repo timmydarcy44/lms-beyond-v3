@@ -3,6 +3,10 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { parseClientName } from "@/lib/jessica-contentin/parse-client-name";
+import {
+  getJessicaStudioCourseIds,
+  isJessicaAssignableCatalogItem,
+} from "@/lib/jessica-contentin/sync-jessica-catalog";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 const JESSICA_SIGNUP_SOURCE = "jessica_contentin";
@@ -58,14 +62,24 @@ async function getJessicaClientIdSet(
 ): Promise<Set<string>> {
   const ids = new Set<string>();
 
+  const studioCourseIds = await getJessicaStudioCourseIds(supabase);
   const { data: accessRows } = await supabase
     .from("catalog_access")
-    .select(`user_id, catalog_items!inner(creator_id)`)
-    .eq("catalog_items.creator_id", jessicaProfileId)
+    .select(`user_id, catalog_items!inner(id, creator_id, created_by, item_type, content_id)`)
     .in("access_status", ["purchased", "manually_granted", "free"])
     .not("user_id", "is", null);
 
-  for (const row of accessRows ?? []) {
+  const jessicaAccessRows = (accessRows ?? []).filter((row) => {
+    const item = (row as { catalog_items?: Record<string, unknown> }).catalog_items;
+    if (!item) return false;
+    return isJessicaAssignableCatalogItem(
+      item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
+      jessicaProfileId,
+      studioCourseIds,
+    );
+  });
+
+  for (const row of jessicaAccessRows) {
     const uid = (row as { user_id?: string }).user_id;
     if (uid) ids.add(uid);
   }
@@ -132,7 +146,9 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
     const userIds = profiles.map((p) => p.id);
 
     // Récupérer les achats liés aux contenus de Jessica (inclure purchased et manually_granted)
-    const { data: accessData } = await supabase
+    const studioCourseIds = await getJessicaStudioCourseIds(supabase);
+
+    const { data: accessDataRaw } = await supabase
       .from("catalog_access")
       .select(`
         user_id,
@@ -142,13 +158,25 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
         catalog_items!inner (
           id,
           creator_id,
+          created_by,
+          item_type,
+          content_id,
           price
         )
       `)
-      .eq("catalog_items.creator_id", jessicaProfile.id)
       .in("access_status", ["purchased", "manually_granted"])
       .in("user_id", userIds)
-      .not("user_id", "is", null); // Seulement les accès B2C (avec user_id)
+      .not("user_id", "is", null);
+
+    const accessData = (accessDataRaw ?? []).filter((row: { catalog_items?: Record<string, unknown> }) => {
+      const item = row.catalog_items;
+      if (!item) return false;
+      return isJessicaAssignableCatalogItem(
+        item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
+        jessicaProfile.id,
+        studioCourseIds,
+      );
+    });
 
     // Calculer les statistiques pour chaque utilisateur
     const usersWithStats = (profiles || []).map((profile) => {
@@ -250,7 +278,9 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
     }
 
     // Récupérer les achats (inclure purchased et manually_granted)
-    const { data: accessData } = await supabase
+    const studioCourseIds = await getJessicaStudioCourseIds(supabase);
+
+    const { data: accessDataRaw } = await supabase
       .from("catalog_access")
       .select(`
         id,
@@ -262,14 +292,25 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
           title,
           item_type,
           price,
-          creator_id
+          creator_id,
+          created_by,
+          content_id
         )
       `)
       .eq("user_id", userId)
-      .eq("catalog_items.creator_id", jessicaProfile.id)
       .in("access_status", ["purchased", "manually_granted"])
-      .is("organization_id", null) // Seulement les accès B2C
+      .is("organization_id", null)
       .order("granted_at", { ascending: false });
+
+    const accessData = (accessDataRaw ?? []).filter((row: { catalog_items?: Record<string, unknown> }) => {
+      const item = row.catalog_items;
+      if (!item) return false;
+      return isJessicaAssignableCatalogItem(
+        item as Parameters<typeof isJessicaAssignableCatalogItem>[0],
+        jessicaProfile.id,
+        studioCourseIds,
+      );
+    });
 
     const purchases = (accessData || []).map((a: any) => ({
       id: a.id,

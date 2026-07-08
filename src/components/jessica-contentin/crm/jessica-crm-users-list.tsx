@@ -161,7 +161,7 @@ export function JessicaCrmUsersList({ initialUsers, availableResources }: Jessic
                             className="rounded-full border-2 px-4 py-2.5 text-sm min-w-[220px]"
                             style={{ borderColor: "#E6D9C6", backgroundColor: "#F8F5F0", color: "#2F2A25" }}
                             defaultValue=""
-                            disabled={toAssign.length === 0}
+                            disabled={availableResources.length === 0 || toAssign.length === 0}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (value) void handleAssign(user.id, value);
@@ -169,7 +169,11 @@ export function JessicaCrmUsersList({ initialUsers, availableResources }: Jessic
                             }}
                           >
                             <option value="" disabled>
-                              {toAssign.length === 0 ? "Toutes les formations assignées" : "Choisir une formation…"}
+                              {availableResources.length === 0
+                                ? "Aucune formation disponible"
+                                : toAssign.length === 0
+                                  ? "Toutes les formations assignées"
+                                  : "Choisir une formation…"}
                             </option>
                             {toAssign.map((r) => (
                               <option key={r.id} value={r.id}>

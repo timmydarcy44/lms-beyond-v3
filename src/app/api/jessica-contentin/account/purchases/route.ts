@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { jessicaCatalogItemsOrFilter } from "@/lib/jessica-contentin/catalog-ownership";
+import {
+  getJessicaStudioCourseIds,
+  isJessicaAssignableCatalogItem,
+} from "@/lib/jessica-contentin/sync-jessica-catalog";
 
 export async function GET(request: NextRequest) {
   try {
@@ -162,12 +166,12 @@ export async function GET(request: NextRequest) {
     // Filtrer uniquement les contenus de Jessica Contentin côté serveur si on a son ID
     let filteredAccess = access || [];
     if (jessicaProfileId && filteredAccess.length > 0) {
+      const studioCourseIds = await getJessicaStudioCourseIds(supabase);
       const beforeCount = filteredAccess.length;
       filteredAccess = filteredAccess.filter((item: any) => {
-        const hasCatalogItem = !!item.catalog_items;
-        const creatorId = item.catalog_items?.creator_id || item.catalog_items?.created_by;
-        const creatorMatches = String(creatorId) === String(jessicaProfileId);
-        return hasCatalogItem && creatorMatches;
+        const catalogItem = item.catalog_items;
+        if (!catalogItem) return false;
+        return isJessicaAssignableCatalogItem(catalogItem, String(jessicaProfileId), studioCourseIds);
       });
       console.log("[api/jessica-contentin/account/purchases] Filtered access (Jessica only):", {
         before: beforeCount,

@@ -7,7 +7,7 @@ export function emptyDailyBriefing(): DailyBriefing {
       total: 0,
       actions_overdue: 0,
       actions_today: 0,
-      top_insight: "Aucune donnée pipeline pour le moment — ajoutez des prospects BTOB.",
+      top_insight: "Pipeline vide — ajoutez des prospects BTOB pour activer le coach commercial.",
     },
     priorities: [],
     max_priorities: 0,

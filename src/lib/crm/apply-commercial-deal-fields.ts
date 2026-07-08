@@ -1,4 +1,9 @@
 const COMMERCIAL_KEYS = [
+  "contact_owner_email",
+  "siret",
+  "siren",
+  "naf_code",
+  "opco_name",
   "sector",
   "employee_count",
   "location",
@@ -31,7 +36,13 @@ export function applyCommercialFieldsFromBody(
     if (partial && body[key] === undefined) continue;
     if (!partial && body[key] === undefined) continue;
 
-    if (key === "training_needs") {
+    if (key === "siret") {
+      const digits = String(body.siret ?? "").replace(/\s/g, "");
+      target.siret = digits.length === 14 ? digits : null;
+    } else if (key === "siren") {
+      const digits = String(body.siren ?? "").replace(/\s/g, "");
+      target.siren = digits.length === 9 ? digits : null;
+    } else if (key === "training_needs") {
       target.training_needs = Array.isArray(body.training_needs)
         ? body.training_needs.map((n) => String(n).trim()).filter(Boolean)
         : [];

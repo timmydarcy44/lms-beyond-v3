@@ -71,7 +71,9 @@ Format JSON attendu :
 
 RÈGLES :
 - Maximum 3 priorités
-- Priorise : score engagement élevé + next_action_date dépassée ou aujourd'hui
+- Priorise : score engagement élevé (2-3/3) + next_action_date dépassée ou aujourd'hui ou dans 2 jours
+- Priorise aussi : priority "haute", étapes demo_realisee et proposition_a_faire
+- Si total prospects > 0, ne jamais dire qu'il n'y a aucun prospect
 - Les emails doivent être courts, percutants, système 1 — jamais de présentation produit
 - Les scripts d'appel doivent sonner naturel, pas commercial
 - Si un contact est identifié (contact_name), l'utiliser dans le mail

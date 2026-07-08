@@ -1,4 +1,5 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import { sendNewPipelineProspectNotification } from "@/lib/crm/pipeline-prospect-emails";
 
 export type PipelineBtobPriority = "haute" | "moyenne" | "standard";
 
@@ -12,6 +13,11 @@ export type McpPipelineBtobInput = {
   phone?: string | null;
   contact_linkedin?: string | null;
   company_linkedin?: string | null;
+  contact_owner_email?: string | null;
+  siret?: string | null;
+  siren?: string | null;
+  naf_code?: string | null;
+  opco_name?: string | null;
   sector?: string | null;
   location?: string | null;
   employee_count?: string | null;
@@ -84,6 +90,19 @@ export function mapMcpInputToDealRow(
   if (!partial || input.company_linkedin !== undefined) {
     set("company_linkedin", pickString(input.company_linkedin));
   }
+  if (!partial || input.contact_owner_email !== undefined) {
+    set("contact_owner_email", pickString(input.contact_owner_email));
+  }
+  if (!partial || input.siret !== undefined) {
+    const digits = pickString(input.siret)?.replace(/\s/g, "") ?? "";
+    set("siret", digits.length === 14 ? digits : null);
+  }
+  if (!partial || input.siren !== undefined) {
+    const digits = pickString(input.siren)?.replace(/\s/g, "") ?? "";
+    set("siren", digits.length === 9 ? digits : null);
+  }
+  if (!partial || input.naf_code !== undefined) set("naf_code", pickString(input.naf_code));
+  if (!partial || input.opco_name !== undefined) set("opco_name", pickString(input.opco_name));
   if (!partial || input.sector !== undefined) set("sector", pickString(input.sector));
   if (!partial || input.location !== undefined) set("location", pickString(input.location));
   if (!partial || input.employee_count !== undefined) {
@@ -189,6 +208,19 @@ export async function createPipelineBtobDeal(input: McpPipelineBtobInput) {
 
   const { data, error } = await supabase.from("crm_pipeline_deals").insert(row).select("*").single();
   if (error) throw new Error(error.message);
+
+  void sendNewPipelineProspectNotification({
+    deal_id: String(data.id),
+    company_name: String(data.company_name),
+    contact_first_name: data.contact_first_name ? String(data.contact_first_name) : null,
+    email: data.email ? String(data.email) : null,
+    phone: data.phone ? String(data.phone) : null,
+    stage_slug: data.stage_slug ? String(data.stage_slug) : null,
+    contact_owner_email: data.contact_owner_email ? String(data.contact_owner_email) : null,
+    siret: data.siret ? String(data.siret) : null,
+    opco_name: data.opco_name ? String(data.opco_name) : null,
+  }).catch((err) => console.error("[pipeline-btob-mcp] notification email:", err));
+
   return data;
 }
 

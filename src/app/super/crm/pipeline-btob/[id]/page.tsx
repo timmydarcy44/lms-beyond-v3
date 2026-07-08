@@ -7,6 +7,7 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreateOrganisationModal } from "@/components/onboarding/create-organisation-modal";
 import type { PipelineDeal } from "@/lib/crm/pipeline-shared";
+import { pipelineOwnerLabel } from "@/lib/crm/pipeline-btob-owners";
 import {
   canCreateOrganisation,
   hasOrganisationLink,
@@ -73,6 +74,18 @@ export default function PipelineBtobDealPage() {
           {deal.contact_first_name}
           {deal.email ? ` · ${deal.email}` : ""}
         </p>
+        {deal.contact_owner_email ? (
+          <p className="mt-1 text-xs text-indigo-600">
+            Propriétaire : {pipelineOwnerLabel(deal.contact_owner_email)}
+          </p>
+        ) : null}
+        {deal.siret ? (
+          <p className="mt-1 text-xs text-gray-500">
+            SIRET {deal.siret}
+            {deal.opco_name ? ` · OPCO ${deal.opco_name}` : ""}
+            {deal.naf_code ? ` · NAF ${deal.naf_code}` : ""}
+          </p>
+        ) : null}
         <p className="mt-1 text-xs text-gray-500">Étape : {deal.stage_slug}</p>
 
         <div className="mt-6 flex flex-wrap gap-3">

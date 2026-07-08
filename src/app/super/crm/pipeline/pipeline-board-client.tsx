@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Plus, Pencil, Trash2, DollarSign, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,10 +37,21 @@ import {
   PipelineBtobCommercialFields,
   type BtobCommercialFormState,
 } from "./pipeline-btob-commercial-fields";
+import { fetchSiretCompany } from "@/lib/ecole/fetch-siret-company";
+import {
+  DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,
+  PIPELINE_BTOB_CONTACT_OWNERS,
+  pipelineOwnerLabel,
+} from "@/lib/crm/pipeline-btob-owners";
 
 type DealForm = {
   id?: string;
   stage_slug: string;
+  contact_owner_email: string;
+  siret: string;
+  siren: string;
+  naf_code: string;
+  opco_name: string;
   company_name: string;
   contact_first_name: string;
   email: string;
@@ -51,6 +62,11 @@ type DealForm = {
 
 const emptyDeal = (stage: string): DealForm => ({
   stage_slug: stage,
+  contact_owner_email: DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,
+  siret: "",
+  siren: "",
+  naf_code: "",
+  opco_name: "",
   company_name: "",
   contact_first_name: "",
   email: "",
@@ -72,6 +88,7 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
   const [commercial, setCommercial] = useState<BtobCommercialFormState>(emptyBtobCommercial());
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
   const [stageLabelDraft, setStageLabelDraft] = useState("");
+  const [siretLoading, setSiretLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -138,6 +155,11 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
     setForm({
       id: deal.id,
       stage_slug: deal.stage_slug,
+      contact_owner_email: deal.contact_owner_email ?? DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,
+      siret: deal.siret ?? "",
+      siren: deal.siren ?? "",
+      naf_code: deal.naf_code ?? "",
+      opco_name: deal.opco_name ?? "",
       company_name: deal.company_name,
       contact_first_name: deal.contact_first_name,
       email: deal.email ?? "",
@@ -149,6 +171,47 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
     setDialogOpen(true);
   };
 
+  const lookupSiret = async () => {
+    const digits = form.siret.replace(/\s/g, "");
+    if (digits.length !== 14) {
+      toast.error("Saisissez un SIRET à 14 chiffres.");
+      return;
+    }
+    setSiretLoading(true);
+    const res = await fetchSiretCompany(digits);
+    setSiretLoading(false);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    const d = res.data;
+    const location = [d.zip_code, d.city].filter(Boolean).join(" ");
+    const enrichNotes = [
+      d.opco_name ? `OPCO : ${d.opco_name}` : null,
+      d.naf_code ? `NAF : ${d.naf_code}` : null,
+      d.address ? `Adresse : ${d.address}` : null,
+      d.tranche_effectif ? `Effectif : ${d.tranche_effectif}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    setForm((prev) => ({
+      ...prev,
+      siret: d.siret,
+      siren: d.siren,
+      naf_code: d.naf_code,
+      opco_name: d.opco_name,
+      company_name: d.company_name || prev.company_name,
+      notes: enrichNotes ? (prev.notes ? `${prev.notes}\n${enrichNotes}` : enrichNotes) : prev.notes,
+    }));
+    setCommercial((prev) => ({
+      ...prev,
+      location: location || prev.location,
+      why_target: d.sector ? (prev.why_target || `Secteur : ${d.sector}`) : prev.why_target,
+    }));
+    toast.success("Fiche entreprise récupérée.");
+  };
+
   const saveDeal = async () => {
     if (!form.company_name.trim()) {
       toast.error("Nom de l'entreprise requis");
@@ -156,6 +219,11 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
     }
     const payload = {
       stage_slug: form.stage_slug,
+      contact_owner_email: form.contact_owner_email || null,
+      siret: form.siret || null,
+      siren: form.siren || null,
+      naf_code: form.naf_code || null,
+      opco_name: form.opco_name || null,
       company_name: form.company_name,
       contact_first_name: form.contact_first_name,
       email: form.email || null,
@@ -265,7 +333,7 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
             </div>
           </div>
           <p className="text-sm text-gray-500 max-w-md text-right">
-            Affiché dès qu&apos;une carte atteint « Proposition envoyé » ou « Réussi »
+            Affiché dès qu&apos;une carte atteint « Proposition envoyée » ou « Réussi »
           </p>
         </div>
       ) : null}
@@ -318,6 +386,11 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
                   >
                     <p className="font-medium text-gray-900 text-sm">{deal.company_name}</p>
                     <p className="text-xs text-gray-600 mt-0.5">{deal.contact_first_name}</p>
+                    {!isBtoc && deal.contact_owner_email ? (
+                      <p className="text-[10px] text-indigo-600 mt-0.5">
+                        {pipelineOwnerLabel(deal.contact_owner_email)}
+                      </p>
+                    ) : null}
                     {deal.email ? (
                       <p className="text-xs text-gray-500 truncate mt-1">{deal.email}</p>
                     ) : null}
@@ -429,6 +502,48 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
                 ))}
               </select>
             </div>
+            {!isBtoc ? (
+              <div className="space-y-2">
+                <Label>Propriétaire du contact</Label>
+                <select
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  value={form.contact_owner_email}
+                  onChange={(e) => setForm({ ...form, contact_owner_email: e.target.value })}
+                >
+                  {PIPELINE_BTOB_CONTACT_OWNERS.map((o) => (
+                    <option key={o.email} value={o.email}>
+                      {o.label} ({o.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            {!isBtoc ? (
+              <div className="space-y-2">
+                <Label>SIRET</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={form.siret}
+                    onChange={(e) => setForm({ ...form, siret: e.target.value })}
+                    placeholder="14 chiffres"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={siretLoading}
+                    onClick={() => void lookupSiret()}
+                  >
+                    {siretLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rechercher"}
+                  </Button>
+                </div>
+                {form.opco_name || form.naf_code ? (
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                    {form.opco_name ? <Badge variant="secondary">OPCO : {form.opco_name}</Badge> : null}
+                    {form.naf_code ? <Badge variant="secondary">NAF : {form.naf_code}</Badge> : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label>{isBtoc ? "Nom / libellé *" : "Entreprise *"}</Label>
               <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />

@@ -15,10 +15,10 @@ export const DEFAULT_BTOC_PIPELINE_STAGES = [
 export const DEFAULT_PIPELINE_STAGES = [
   { slug: "a_appeler", label: "A appeler", sort_order: 0 },
   { slug: "envoi_mail", label: "Envoi mail", sort_order: 1 },
-  { slug: "presentation_programmee", label: "Présentation programmé", sort_order: 2 },
-  { slug: "demo_realisee", label: "Demo réalisé", sort_order: 3 },
+  { slug: "presentation_programmee", label: "Présentation programmée", sort_order: 2 },
+  { slug: "demo_realisee", label: "Démo réalisée", sort_order: 3 },
   { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 4 },
-  { slug: "proposition_envoyee", label: "Proposition envoyé", sort_order: 5 },
+  { slug: "proposition_envoyee", label: "Proposition envoyée", sort_order: 5 },
   { slug: "reussi", label: "Réussi", sort_order: 6 },
   { slug: "echec", label: "Échec", sort_order: 7 },
 ] as const;
@@ -31,6 +31,11 @@ export type PipelineStage = {
 };
 
 export type PipelineDealCommercial = {
+  contact_owner_email?: string | null;
+  siret?: string | null;
+  siren?: string | null;
+  naf_code?: string | null;
+  opco_name?: string | null;
   sector?: string | null;
   employee_count?: string | null;
   location?: string | null;

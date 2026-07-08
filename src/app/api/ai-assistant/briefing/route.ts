@@ -6,6 +6,7 @@ import {
   buildOrgDailyBriefingSystemPrompt,
   enrichBriefingWithProspects,
 } from "@/lib/crm/daily-briefing-prompt";
+import { buildPipelineCoachBriefing, mergeBriefingWithPipelineData } from "@/lib/crm/build-pipeline-coach-briefing";
 import { parseBriefingJson } from "@/lib/crm/parse-briefing-json";
 import type { BriefingApiResponse } from "@/lib/crm/daily-briefing-types";
 import { emptyDailyBriefing } from "@/lib/crm/empty-daily-briefing";
@@ -71,15 +72,27 @@ export async function GET() {
 
     let briefing;
     if (!raw) {
-      briefing = emptyDailyBriefing();
+      briefing = buildPipelineCoachBriefing(
+        prospects as Record<string, unknown>[],
+        summary,
+      );
     } else {
       try {
         briefing = parseBriefingJson(raw);
       } catch (e) {
-        console.warn("[ai-assistant/briefing] JSON invalide, fallback vide:", e);
-        briefing = emptyDailyBriefing();
+        console.warn("[ai-assistant/briefing] JSON invalide, fallback pipeline:", e);
+        briefing = buildPipelineCoachBriefing(
+          prospects as Record<string, unknown>[],
+          summary,
+        );
       }
     }
+
+    briefing = mergeBriefingWithPipelineData(
+      briefing,
+      prospects as Record<string, unknown>[],
+      summary,
+    );
 
     briefing = enrichBriefingWithProspects(
       briefing,
@@ -94,10 +107,23 @@ export async function GET() {
     return NextResponse.json(response);
   } catch (error) {
     console.error("[ai-assistant/briefing]", error);
-    const response: BriefingApiResponse = {
-      briefing: emptyDailyBriefing(),
-      generated_at: new Date().toISOString(),
-    };
-    return NextResponse.json(response);
+    try {
+      const summary = await getPipelineBtobSummary();
+      const prospects = await listPipelineBtobDeals({ limit: 50 });
+      const response: BriefingApiResponse = {
+        briefing: enrichBriefingWithProspects(
+          buildPipelineCoachBriefing(prospects as Record<string, unknown>[], summary),
+          prospects as Record<string, unknown>[],
+        ),
+        generated_at: new Date().toISOString(),
+      };
+      return NextResponse.json(response);
+    } catch {
+      const response: BriefingApiResponse = {
+        briefing: emptyDailyBriefing(),
+        generated_at: new Date().toISOString(),
+      };
+      return NextResponse.json(response);
+    }
   }
 }

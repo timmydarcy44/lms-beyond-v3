@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { sendNewPipelineProspectNotification } from "@/lib/crm/pipeline-prospect-emails";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
   DEFAULT_BTOC_PIPELINE_STAGES,
@@ -123,5 +124,20 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  if (pipeline_type === "btob" && data) {
+    void sendNewPipelineProspectNotification({
+      deal_id: String(data.id),
+      company_name: String(data.company_name),
+      contact_first_name: data.contact_first_name ? String(data.contact_first_name) : null,
+      email: data.email ? String(data.email) : null,
+      phone: data.phone ? String(data.phone) : null,
+      stage_slug: data.stage_slug ? String(data.stage_slug) : null,
+      contact_owner_email: data.contact_owner_email ? String(data.contact_owner_email) : null,
+      siret: data.siret ? String(data.siret) : null,
+      opco_name: data.opco_name ? String(data.opco_name) : null,
+    }).catch((err) => console.error("[crm/pipeline] notification email:", err));
+  }
+
   return NextResponse.json({ deal: data });
 }

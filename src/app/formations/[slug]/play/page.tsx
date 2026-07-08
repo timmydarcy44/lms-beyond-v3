@@ -10,6 +10,7 @@ export default async function FormationPlayIndexPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+
   const data = await getLearnerContentDetail("formations", slug);
   if (!data) notFound();
 

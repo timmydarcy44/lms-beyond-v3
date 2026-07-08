@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { JessicaLessonPlayView } from "./jessica-lesson-wrapper";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
@@ -7,8 +7,9 @@ import {
   type LearnerFlashcard,
 } from "@/lib/queries/apprenant";
 import { getServerClient } from "@/lib/supabase/server";
-import { resolveJessicaCreatorId } from "@/lib/jessica-contentin/resolve-creator-id";
-import { isJessicaStudioCourse } from "@/lib/jessica-contentin/formation-access";
+import {
+  canPlayJessicaFormation,
+} from "@/lib/jessica-contentin/formation-access";
 
 interface FormationLessonPlayPageProps {
   params: Promise<{
@@ -19,6 +20,7 @@ interface FormationLessonPlayPageProps {
 
 export default async function FormationLessonPlayPage({ params }: FormationLessonPlayPageProps) {
   const { slug, lesson } = await params;
+  const playPath = `/formations/${slug}/play/${lesson}`;
 
   const data = await getLearnerContentDetail("formations", slug);
   if (!data) {
@@ -36,8 +38,6 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
   const serviceClient = getServiceRoleClient();
   const readClient = serviceClient ?? supabase;
 
-  const jessicaCreatorId = await resolveJessicaCreatorId();
-
   const courseId = card.id;
   const { data: course } = await readClient
     .from("courses")
@@ -45,35 +45,38 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     .eq("id", courseId)
     .maybeSingle();
 
-  if (!course || !isJessicaStudioCourse(course, jessicaCreatorId)) {
+  if (!course) {
     notFound();
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  const catalogClient = readClient;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent(playPath)}`);
+  }
 
   let hasEnrollment = false;
-  if (user?.id) {
-    const enrollmentClient = serviceClient || supabase;
-    const [{ data: enrollment }, { data: courseEnrollment }] = await Promise.all([
-      enrollmentClient
-        .from("enrollments")
-        .select("course_id")
-        .eq("user_id", user.id)
-        .eq("course_id", course.id)
-        .maybeSingle(),
-      enrollmentClient
-        .from("course_enrollments")
-        .select("course_id")
-        .eq("user_id", user.id)
-        .eq("course_id", course.id)
-        .maybeSingle(),
-    ]);
-    hasEnrollment = Boolean(enrollment) || Boolean(courseEnrollment);
-  }
-  
-  // Trouver le catalog_item_id pour ce course
+  const enrollmentClient = serviceClient || supabase;
+  const [{ data: enrollment }, { data: courseEnrollment }] = await Promise.all([
+    enrollmentClient
+      .from("enrollments")
+      .select("course_id")
+      .eq("user_id", user.id)
+      .eq("course_id", course.id)
+      .maybeSingle(),
+    enrollmentClient
+      .from("course_enrollments")
+      .select("course_id")
+      .eq("user_id", user.id)
+      .eq("course_id", course.id)
+      .maybeSingle(),
+  ]);
+  hasEnrollment = Boolean(enrollment) || Boolean(courseEnrollment);
+
+  const catalogClient = readClient;
+
   const { data: catalogItem, error: catalogItemError } = await catalogClient
     .from("catalog_items")
     .select("id, is_free, price")
@@ -85,28 +88,8 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
     console.error("[formations/[slug]/play] Error fetching catalog_item:", catalogItemError);
   }
 
-  console.log("[formations/[slug]/play] Access check:", {
-    courseId: course.id,
-    userId: user?.id,
-    catalogItemId: catalogItem?.id,
-    isFree: catalogItem?.is_free,
-    catalogItemExists: !!catalogItem,
-    hasEnrollment,
-  });
-
-  // Pas de catalog_item : accès créateur ou apprenant inscrit (enrollment)
-  if (!catalogItem) {
-    console.warn("[formations/[slug]/play] Catalog item not found for course:", course.id);
-    if (user && (course.creator_id === user.id || hasEnrollment)) {
-      console.log("[formations/[slug]/play] Access granted (creator or enrollment, no catalog_item)");
-    } else {
-      console.log("[formations/[slug]/play] No catalog_item and no enrollment, redirecting to catalogue");
-      const { redirect } = await import("next/navigation");
-      redirect(`/dashboard/catalogue`);
-    }
-  } else if (user) {
-    const isCreator = course.creator_id === user.id;
-    
+  let catalogAccessStatus: string | null = null;
+  if (catalogItem && user) {
     const { data: userAccess } = await supabase
       .from("catalog_access")
       .select("access_status")
@@ -114,37 +97,19 @@ export default async function FormationLessonPlayPage({ params }: FormationLesso
       .eq("user_id", user.id)
       .is("organization_id", null)
       .maybeSingle();
+    catalogAccessStatus = userAccess?.access_status ?? null;
+  }
 
-    const hasExplicitAccess = userAccess && (
-      userAccess.access_status === "purchased" ||
-      userAccess.access_status === "free" ||
-      userAccess.access_status === "manually_granted"
-    );
+  const isCreator = String(course.creator_id ?? course.created_by ?? "") === user.id;
+  const hasPlayAccess = canPlayJessicaFormation({
+    isCreator,
+    hasEnrollment,
+    catalogAccessStatus,
+    isFree: Boolean(catalogItem?.is_free),
+  });
 
-    const hasAccess = isCreator || hasExplicitAccess || hasEnrollment || catalogItem.is_free;
-
-    console.log("[formations/[slug]/play] Access decision:", {
-      isCreator,
-      hasExplicitAccess,
-      isFree: catalogItem.is_free,
-      hasAccess,
-      accessStatus: userAccess?.access_status,
-    });
-
-    if (!hasAccess) {
-      // Rediriger vers la page de paiement ou mon-compte (clients Jessica)
-      console.log("[formations/[slug]/play] No access, redirecting");
-      const { redirect } = await import("next/navigation");
-      if (catalogItem.id) {
-        redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
-      }
-      redirect("/mon-compte");
-    }
-  } else if (!user && !catalogItem.is_free) {
-    // Si l'utilisateur n'est pas connecté et le module n'est pas gratuit, rediriger vers la page de paiement
-    console.log("[formations/[slug]/play] User not logged in, redirecting to payment:", `/dashboard/catalogue/module/${catalogItem.id}/payment`);
-    const { redirect } = await import("next/navigation");
-    redirect(`/dashboard/catalogue/module/${catalogItem.id}/payment`);
+  if (!hasPlayAccess) {
+    redirect("/mon-compte");
   }
 
   const modules = detail.modules || [];

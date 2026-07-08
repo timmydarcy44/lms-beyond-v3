@@ -32,3 +32,23 @@ export function firstPlayableLessonId(
   }
   return null;
 }
+
+const GRANTED_CATALOG_STATUSES = new Set(["purchased", "free", "manually_granted"]);
+
+/** Accès lecture formation sur jessicacontentin.fr (sans passer par edgebs). */
+export function canPlayJessicaFormation(input: {
+  isCreator: boolean;
+  hasEnrollment: boolean;
+  catalogAccessStatus: string | null;
+  isFree: boolean;
+}): boolean {
+  if (input.isCreator || input.hasEnrollment) return true;
+  if (input.isFree) return true;
+  if (
+    input.catalogAccessStatus &&
+    GRANTED_CATALOG_STATUSES.has(input.catalogAccessStatus)
+  ) {
+    return true;
+  }
+  return false;
+}

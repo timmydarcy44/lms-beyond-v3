@@ -14,7 +14,6 @@ import {
   Sparkles,
   Compass,
   Target,
-  Activity,
   Puzzle,
   type LucideIcon,
   Smartphone,
@@ -32,41 +31,26 @@ import { getUserName } from "@/lib/utils/user-name";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
-const accompagnementsMegaMenu: {
-  title: string;
-  items: { label: string; href: string; icon: LucideIcon }[];
-}[] = [
-  {
-    title: "Apprentissage & méthodologie",
-    items: [
-      { label: "Difficultés d'apprentissage", href: "/specialites/strategie-apprentissage", icon: BookOpen },
-      { label: "Méthodologie de travail", href: "/specialites/strategie-apprentissage", icon: Target },
-      { label: "Collège", href: "/specialites/strategie-apprentissage", icon: BookOpen },
-      { label: "Lycée", href: "/specialites/strategie-apprentissage", icon: GraduationCap },
-      { label: "Études supérieures", href: "/specialites/orientation-professionnelle", icon: GraduationCap },
-      { label: "Orientation", href: "/specialites/orientation-professionnelle", icon: Compass },
-    ],
-  },
-  {
-    title: "Neurodéveloppement",
-    items: [
-      { label: "TDAH", href: "/specialites/tnd", icon: Brain },
-      { label: "Troubles DYS", href: "/specialites/tnd", icon: Puzzle },
-      { label: "TSA", href: "/specialites/tnd", icon: Puzzle },
-      { label: "Haut potentiel", href: "/specialites/tnd", icon: Sparkles },
-      { label: "Fonctions exécutives", href: "/specialites/neuroeducation", icon: Brain },
-    ],
-  },
-  {
-    title: "Émotions & confiance",
-    items: [
-      { label: "Gestion du stress", href: "/specialites/gestion-stress", icon: Activity },
-      { label: "Anxiété", href: "/specialites/gestion-stress", icon: Heart },
-      { label: "Confiance en soi", href: "/specialites/confiance-en-soi", icon: Sparkles },
-      { label: "Motivation", href: "/specialites/confiance-en-soi", icon: Target },
-      { label: "Régulation émotionnelle", href: "/specialites/regulation-emotionnelle", icon: Heart },
-    ],
-  },
+const apprentissageMegaMenu: { label: string; href: string; icon: LucideIcon }[] = [
+  { label: "Difficultés d'apprentissage", href: "/specialites/strategie-apprentissage", icon: BookOpen },
+  { label: "Méthodologie de travail", href: "/specialites/strategie-apprentissage", icon: Target },
+  { label: "Collège", href: "/specialites/strategie-apprentissage", icon: BookOpen },
+  { label: "Lycée", href: "/specialites/strategie-apprentissage", icon: GraduationCap },
+  { label: "Études supérieures", href: "/specialites/orientation-professionnelle", icon: GraduationCap },
+  { label: "Orientation", href: "/specialites/orientation-professionnelle", icon: Compass },
+];
+
+const neurodeveloppementMegaMenu: { label: string; href: string; icon: LucideIcon }[] = [
+  { label: "TDAH", href: "/specialites/tnd", icon: Brain },
+  { label: "Troubles DYS", href: "/specialites/tnd", icon: Puzzle },
+  { label: "TSA", href: "/specialites/tnd", icon: Puzzle },
+  { label: "Haut potentiel", href: "/specialites/tnd", icon: Sparkles },
+];
+
+const emotionsMegaMenu: { label: string; href: string; icon: LucideIcon }[] = [
+  { label: "Régulation émotionnelle", href: "/specialites/regulation-emotionnelle", icon: Heart },
+  { label: "Confiance en soi", href: "/specialites/confiance-en-soi", icon: Sparkles },
+  { label: "Motivation", href: "/specialites/confiance-en-soi", icon: Target },
 ];
 
 const ressourcesMegaMenu: { label: string; href: string; icon: LucideIcon; description: string }[] = [
@@ -191,9 +175,19 @@ export function JessicaContentinHeader() {
   
   const menuItems = [
     {
-      label: "Accompagnements",
-      href: "/specialites",
-      submenuColumns: accompagnementsMegaMenu,
+      label: "Apprentissage et méthodologie",
+      href: "/specialites/strategie-apprentissage",
+      submenuItems: apprentissageMegaMenu,
+    },
+    {
+      label: "Neurodéveloppement",
+      href: "/specialites/tnd",
+      submenuItems: neurodeveloppementMegaMenu,
+    },
+    {
+      label: "Emotions et confiance",
+      href: "/specialites/regulation-emotionnelle",
+      submenuItems: emotionsMegaMenu,
     },
     {
       label: "Méthode",
@@ -373,12 +367,7 @@ export function JessicaContentinHeader() {
           <div className="hidden lg:flex items-center gap-4">
             <Button
               asChild
-              className={cn(
-                "!rounded-full !px-6",
-                isHomePage
-                  ? "!border !border-[#C6A664] !bg-[#C6A664] !text-white hover:!bg-[#B88A44]"
-                  : "!border !border-[#C6A664] !bg-[#C6A664] !text-white hover:!bg-[#B88A44]",
-              )}
+              className="!rounded-full !border !border-white/90 !bg-white !px-6 !text-[#2F2A25] hover:!bg-white/90"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
@@ -489,7 +478,7 @@ export function JessicaContentinHeader() {
               <div className="mt-4 flex flex-col gap-3">
                 <Button
                   asChild
-                  className="!rounded-full !border !border-[#C6A664] !bg-[#C6A664] !text-white hover:!bg-[#B88A44]"
+                  className="!rounded-full !border !border-[#2F2A25]/15 !bg-white !text-[#2F2A25] hover:!bg-white/90"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}

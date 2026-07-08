@@ -472,6 +472,27 @@ export function JessicaContentinAccountContent({
                         </p>
                       )}
                     </div>
+                    {purchase.catalog_item.item_type === "module" ? (
+                      <a href={getItemUrl(purchase.catalog_item)}>
+                        <Button
+                          className="px-4 py-2 text-xs font-medium rounded-full transition-all"
+                          style={{
+                            backgroundColor: primaryColor,
+                            color: '#FFFFFF',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = '0.9';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          Accéder
+                        </Button>
+                      </a>
+                    ) : (
                     <Link href={getItemUrl(purchase.catalog_item)}>
                       <Button
                         className="px-4 py-2 text-xs font-medium rounded-full transition-all"
@@ -491,6 +512,7 @@ export function JessicaContentinAccountContent({
                         Accéder
                       </Button>
                     </Link>
+                    )}
                   </div>
                 </div>
               </div>

@@ -16,6 +16,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { EDGE_MISSION_LABEL } from "@/lib/apprenant/edge-missions";
+import { formatMissionApiError } from "@/lib/apprenant/edge-mission-api-errors";
 import type {
   CoachInsight,
   MissionBrief,
@@ -68,12 +69,19 @@ export function EdgeMissionRunner() {
   const [sending, setSending] = useState(false);
   const [canFinish, setCanFinish] = useState(false);
   const [result, setResult] = useState<MissionFinishResult | null>(null);
+  const [ephemeral, setEphemeral] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const baseBody = useCallback(
-    () => ({ skill, objective, levelCurrent, levelExpected, format: "situation" as const }),
-    [skill, objective, levelCurrent, levelExpected],
+    () => ({
+      skill: skill || mission?.primarySkill || "",
+      objective,
+      levelCurrent,
+      levelExpected,
+      format: "situation" as const,
+    }),
+    [skill, mission?.primarySkill, objective, levelCurrent, levelExpected],
   );
 
   useEffect(() => {
@@ -90,7 +98,7 @@ export function EdgeMissionRunner() {
           body: JSON.stringify({ action: "generate", ...baseBody() }),
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? "Erreur");
+        if (!res.ok) throw new Error(formatMissionApiError(json as Record<string, unknown>, res.status));
         if (!cancelled) {
           setMission(json.mission as MissionBrief);
           setPhase("briefing");
@@ -119,8 +127,9 @@ export function EdgeMissionRunner() {
         body: JSON.stringify({ action: "start", mission, ...baseBody() }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Erreur");
+      if (!res.ok) throw new Error(formatMissionApiError(json as Record<string, unknown>, res.status));
       setRunId(json.runId);
+      setEphemeral(Boolean(json.ephemeral));
       setMessages(messagesFromCoachReply(json.reply as MissionCoachReply));
       setPhase("chat");
     } catch (e) {
@@ -145,7 +154,7 @@ export function EdgeMissionRunner() {
         body: JSON.stringify({ action: "reply", mission, messages: nextMessages, ...baseBody() }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Erreur");
+      if (!res.ok) throw new Error(formatMissionApiError(json as Record<string, unknown>, res.status));
       setMessages((prev) => [...prev, ...messagesFromCoachReply(json.reply as MissionCoachReply)]);
       setCanFinish(Boolean(json.canFinish));
     } catch (e) {
@@ -163,10 +172,10 @@ export function EdgeMissionRunner() {
       const res = await fetch("/api/learner/edge-mission", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "finish", runId, mission, messages, proofText, ...baseBody() }),
+        body: JSON.stringify({ action: "finish", runId, ephemeral, mission, messages, proofText, ...baseBody() }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Erreur");
+      if (!res.ok) throw new Error(formatMissionApiError(json as Record<string, unknown>, res.status));
       setResult(json as MissionFinishResult);
       setPhase("debrief");
     } catch (e) {

@@ -68,7 +68,7 @@ export async function fetchCoachMemory(db: DB, userId: string): Promise<CoachMem
     db.from("profiles").select("first_name").eq("id", userId).maybeSingle(),
     db
       .from("edge_challenge_runs")
-      .select("mission_title, skill_name, completed_at, summary, strengths, debrief_extended")
+      .select("skill_name, completed_at, summary, strengths")
       .eq("user_id", userId)
       .eq("status", "completed")
       .order("completed_at", { ascending: false })
@@ -89,7 +89,7 @@ export async function fetchCoachMemory(db: DB, userId: string): Promise<CoachMem
   ]);
 
   const recentMissions: PastMissionSummary[] = (runsRes.data ?? []).map((r) => ({
-    title: String(r.mission_title ?? r.skill_name ?? "Mission"),
+    title: String(r.skill_name ?? "Mission"),
     skill: String(r.skill_name ?? ""),
     completedAt: String(r.completed_at ?? ""),
     summary: String(r.summary ?? ""),

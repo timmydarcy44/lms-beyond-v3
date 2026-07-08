@@ -5,6 +5,7 @@ import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/
 import { missionApiErrorResponse } from "@/lib/apprenant/edge-mission-api-errors";
 import { generateMissionBrief } from "@/lib/apprenant/edge-mission-generator";
 import { getMissionCoachReply, generateMissionDebrief } from "@/lib/apprenant/edge-mission-engine";
+import { computeMissionOutcome, initialMissionGauges } from "@/lib/apprenant/edge-mission-gauges";
 import {
   buildDailyMissionPreview,
   enrichCoachMemoryWithMatching,
@@ -17,7 +18,14 @@ import {
   finishMissionRun,
 } from "@/lib/apprenant/edge-mission-store";
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
-import type { MissionBrief, MissionChatMessage, MissionContext, MissionFormatId } from "@/lib/apprenant/edge-mission-types";
+import type {
+  MissionBrief,
+  MissionChatMessage,
+  MissionContext,
+  MissionFormatId,
+  MissionGauge,
+  MissionGaugeTurn,
+} from "@/lib/apprenant/edge-mission-types";
 import { normalizeSkillSlug } from "@/lib/apprenant/edge-mission-types";
 
 const VALID_FORMATS: MissionFormatId[] = ["story", "situation", "proof", "video", "ai", "quickchallenge"];
@@ -87,13 +95,53 @@ function parseMessages(body: Record<string, unknown>): MissionChatMessage[] {
     .slice(-40);
 }
 
+function parseGauges(raw: unknown): MissionGauge[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const gauges = raw
+    .filter((g) => g && typeof g === "object")
+    .map((g) => {
+      const o = g as Record<string, unknown>;
+      return {
+        key: String(o.key ?? "").slice(0, 40),
+        name: String(o.name ?? "").slice(0, 80),
+        value: Math.max(0, Math.min(100, Math.round(Number(o.value) || 0))),
+      };
+    })
+    .filter((g) => g.key && g.name);
+  return gauges.length ? gauges : undefined;
+}
+
+function parseGaugeHistory(raw: unknown): MissionGaugeTurn[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((t) => t && typeof t === "object")
+    .map((t) => {
+      const o = t as Record<string, unknown>;
+      const deltas = Array.isArray(o.deltas)
+        ? o.deltas
+            .filter((d) => d && typeof d === "object")
+            .map((d) => {
+              const dd = d as Record<string, unknown>;
+              return {
+                name: String(dd.name ?? ""),
+                delta: Number(dd.delta) || 0,
+                reason: String(dd.reason ?? "").slice(0, 200),
+              };
+            })
+        : [];
+      return { turn: Number(o.turn) || 0, deltas };
+    })
+    .slice(-20);
+}
+
 function toContext(
   base: ReturnType<typeof parseBase>,
   mission: MissionBrief,
   coachMemory?: Awaited<ReturnType<typeof fetchCoachMemory>>,
+  gaugeState?: MissionGauge[],
 ): MissionContext {
   const skillName = base.skillName || mission.primarySkill;
-  return { ...base, skillName, mission, coachMemory };
+  return { ...base, skillName, mission, coachMemory, gaugeState };
 }
 
 export async function POST(request: NextRequest) {
@@ -162,7 +210,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ctx = toContext(base, mission, db ? await fetchCoachMemory(db, user.id) : undefined);
+    const coachMemory = db ? await fetchCoachMemory(db, user.id) : undefined;
+    const gaugeStateFromBody = parseGauges(body.gauges);
+    const skillForGauges = base.skillName || mission.primarySkill;
+    const initialGauges = parseGauges(body.initialGauges) ?? initialMissionGauges(skillForGauges);
+    const ctx = toContext(
+      base,
+      mission,
+      coachMemory,
+      gaugeStateFromBody ?? initialGauges,
+    );
 
     if (!ctx.skillName) {
       return NextResponse.json(
@@ -193,12 +250,17 @@ export async function POST(request: NextRequest) {
         ephemeral = true;
       }
 
+      ctx.gaugeState = initialGauges;
       const reply = await getMissionCoachReply(ctx, []);
+      const gauges = reply.gauges ?? initialGauges;
       return NextResponse.json({
         runId,
         reply,
         mission: ctx.mission,
         ephemeral,
+        gauges,
+        initialGauges,
+        gaugeHistory: [] as MissionGaugeTurn[],
         ...(ephemeral && process.env.NODE_ENV !== "production"
           ? { hint: "Persistance DB indisponible — mission en mode local (débrief sans XP persisté)." }
           : {}),
@@ -207,9 +269,21 @@ export async function POST(request: NextRequest) {
 
     if (action === "reply") {
       const messages = parseMessages(body);
+      const gaugeHistory = parseGaugeHistory(body.gaugeHistory);
       const reply = await getMissionCoachReply(ctx, messages);
       const userTurns = messages.filter((m) => m.role === "user").length;
-      return NextResponse.json({ reply, canFinish: userTurns >= 2 });
+      const gauges = reply.gauges ?? ctx.gaugeState ?? initialGauges;
+      const newHistory =
+        reply.gaugeDeltas?.length && userTurns > 0
+          ? [...gaugeHistory, { turn: userTurns, deltas: reply.gaugeDeltas }]
+          : gaugeHistory;
+      return NextResponse.json({
+        reply,
+        canFinish: userTurns >= 2,
+        gauges,
+        gaugeDeltas: reply.gaugeDeltas,
+        gaugeHistory: newHistory,
+      });
     }
 
     if (action === "finish") {
@@ -222,16 +296,37 @@ export async function POST(request: NextRequest) {
       }
       const messages = parseMessages(body);
       const proofText = String(body.proofText ?? "").trim().slice(0, 4000);
+      const gaugeHistory = parseGaugeHistory(body.gaugeHistory);
+      const finalGauges = parseGauges(body.gauges) ?? ctx.gaugeState ?? initialGauges;
+      ctx.gaugeState = finalGauges;
+      const outcome = computeMissionOutcome(finalGauges);
+      const gaugeState = {
+        initial: initialGauges,
+        final: finalGauges,
+        history: gaugeHistory,
+        outcome,
+      };
+
       const debrief = await generateMissionDebrief(ctx, messages, proofText);
+      debrief.outcome = outcome;
       const isEphemeral = Boolean(body.ephemeral) || runId.startsWith("ephemeral-");
 
       if (isEphemeral || !db) {
-        const result = await finishMissionEphemeral(db, user.id, runId, ctx, debrief);
-        return NextResponse.json({ ...result, ephemeral: true });
+        const result = await finishMissionEphemeral(db, user.id, runId, ctx, debrief, gaugeState);
+        return NextResponse.json({ ...result, ephemeral: true, outcome, gaugeState });
       }
 
-      const result = await finishMissionRun(db, user.id, runId, ctx, debrief, messages, proofText);
-      return NextResponse.json(result);
+      const result = await finishMissionRun(
+        db,
+        user.id,
+        runId,
+        ctx,
+        debrief,
+        messages,
+        proofText,
+        gaugeState,
+      );
+      return NextResponse.json({ ...result, outcome, gaugeState });
     }
 
     return NextResponse.json(missionApiErrorResponse(400, { error: "Action inconnue.", code: "unknown_action" }), {

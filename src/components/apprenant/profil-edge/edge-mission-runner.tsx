@@ -23,7 +23,10 @@ import type {
   MissionChatMessage,
   MissionCoachReply,
   MissionFinishResult,
+  MissionGauge,
+  MissionGaugeTurn,
 } from "@/lib/apprenant/edge-mission-types";
+import { EdgeMissionGaugePanel } from "@/components/apprenant/profil-edge/edge-mission-gauge-panel";
 import {
   APPRENANT_CARD_KICKER,
   CONNECT_BTN_PRIMARY,
@@ -39,17 +42,32 @@ const fadeUp = {
 
 const stagger = { show: { transition: { staggerChildren: 0.07 } } };
 
-function messagesFromCoachReply(reply: MissionCoachReply): MissionChatMessage[] {
+/** Scène d'abord, coach discret ensuite. */
+function messagesFromCoachReply(reply: MissionCoachReply, isOpening = false): MissionChatMessage[] {
   const out: MissionChatMessage[] = [];
-  if (reply.coachIntro?.trim()) {
-    out.push({ role: "assistant", kind: "coach", content: reply.coachIntro });
+
+  if (isOpening && reply.coachIntro?.trim()) {
+    out.push({ role: "assistant", kind: "coach", content: reply.coachIntro, coachTone: "intro" });
   }
-  if (reply.coachInsight) {
-    out.push({ role: "assistant", kind: "coach", content: "", coachInsight: reply.coachInsight });
-  }
+
   if (reply.sceneReply?.trim()) {
     out.push({ role: "assistant", kind: "scene", content: reply.sceneReply });
   }
+
+  if (!isOpening && reply.coachFeedback?.trim()) {
+    out.push({ role: "assistant", kind: "coach", content: reply.coachFeedback, coachTone: "hint" });
+  }
+
+  if (!isOpening && reply.showDetailedInsight && reply.coachInsight) {
+    out.push({
+      role: "assistant",
+      kind: "coach",
+      content: "",
+      coachInsight: reply.coachInsight,
+      coachTone: "analysis",
+    });
+  }
+
   return out;
 }
 
@@ -70,6 +88,10 @@ export function EdgeMissionRunner() {
   const [canFinish, setCanFinish] = useState(false);
   const [result, setResult] = useState<MissionFinishResult | null>(null);
   const [ephemeral, setEphemeral] = useState(false);
+  const [gauges, setGauges] = useState<MissionGauge[]>([]);
+  const [initialGauges, setInitialGauges] = useState<MissionGauge[]>([]);
+  const [gaugeHistory, setGaugeHistory] = useState<MissionGaugeTurn[]>([]);
+  const [lastDeltas, setLastDeltas] = useState<MissionCoachReply["gaugeDeltas"]>(undefined);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +152,11 @@ export function EdgeMissionRunner() {
       if (!res.ok) throw new Error(formatMissionApiError(json as Record<string, unknown>, res.status));
       setRunId(json.runId);
       setEphemeral(Boolean(json.ephemeral));
-      setMessages(messagesFromCoachReply(json.reply as MissionCoachReply));
+      setGauges((json.gauges as MissionGauge[]) ?? []);
+      setInitialGauges((json.initialGauges as MissionGauge[]) ?? []);
+      setGaugeHistory([]);
+      setLastDeltas(undefined);
+      setMessages(messagesFromCoachReply(json.reply as MissionCoachReply, true));
       setPhase("chat");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Impossible de démarrer la mission.");
@@ -138,6 +164,19 @@ export function EdgeMissionRunner() {
       setSending(false);
     }
   }, [mission, baseBody]);
+
+  const replayMission = useCallback(() => {
+    setResult(null);
+    setRunId(null);
+    setMessages([]);
+    setProofText("");
+    setCanFinish(false);
+    setGauges([]);
+    setInitialGauges([]);
+    setGaugeHistory([]);
+    setLastDeltas(undefined);
+    void startMission();
+  }, [startMission]);
 
   const send = useCallback(async () => {
     const content = input.trim();
@@ -151,18 +190,29 @@ export function EdgeMissionRunner() {
       const res = await fetch("/api/learner/edge-mission", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reply", mission, messages: nextMessages, ...baseBody() }),
+        body: JSON.stringify({
+          action: "reply",
+          mission,
+          messages: nextMessages,
+          gauges,
+          initialGauges,
+          gaugeHistory,
+          ...baseBody(),
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(formatMissionApiError(json as Record<string, unknown>, res.status));
-      setMessages((prev) => [...prev, ...messagesFromCoachReply(json.reply as MissionCoachReply)]);
+      setMessages((prev) => [...prev, ...messagesFromCoachReply(json.reply as MissionCoachReply, false)]);
+      if (json.gauges) setGauges(json.gauges as MissionGauge[]);
+      if (json.gaugeDeltas) setLastDeltas(json.gaugeDeltas as MissionCoachReply["gaugeDeltas"]);
+      if (json.gaugeHistory) setGaugeHistory(json.gaugeHistory as MissionGaugeTurn[]);
       setCanFinish(Boolean(json.canFinish));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur de communication avec le coach.");
     } finally {
       setSending(false);
     }
-  }, [input, sending, messages, mission, baseBody]);
+  }, [input, sending, messages, mission, baseBody, gauges, initialGauges, gaugeHistory]);
 
   const finish = useCallback(async () => {
     if (!mission) return;
@@ -172,7 +222,18 @@ export function EdgeMissionRunner() {
       const res = await fetch("/api/learner/edge-mission", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "finish", runId, ephemeral, mission, messages, proofText, ...baseBody() }),
+        body: JSON.stringify({
+          action: "finish",
+          runId,
+          ephemeral,
+          mission,
+          messages,
+          proofText,
+          gauges,
+          initialGauges,
+          gaugeHistory,
+          ...baseBody(),
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(formatMissionApiError(json as Record<string, unknown>, res.status));
@@ -182,7 +243,7 @@ export function EdgeMissionRunner() {
       setError(e instanceof Error ? e.message : "Impossible de finaliser la mission.");
       setPhase("chat");
     }
-  }, [runId, messages, proofText, mission, baseBody]);
+  }, [runId, messages, proofText, mission, baseBody, ephemeral, gauges, initialGauges, gaugeHistory]);
 
   if (error && phase === "loading") {
     return (
@@ -290,8 +351,9 @@ export function EdgeMissionRunner() {
 
   /* ------------------------------ Débrief ----------------------------- */
   if (phase === "debrief" && result) {
-    const { debrief, xpAwarded, totalXp, streak, badge } = result;
+    const { debrief, xpAwarded, totalXp, streak, badge, outcome } = result;
     const badgeSoon = badge.progress >= 75;
+    const missionOutcome = outcome ?? debrief.outcome;
     return (
       <motion.div
         className="mx-auto max-w-2xl space-y-5"
@@ -318,6 +380,23 @@ export function EdgeMissionRunner() {
             </div>
           </div>
         </motion.section>
+
+        {missionOutcome ? (
+          <motion.section
+            variants={fadeUp}
+            className={`rounded-2xl border p-5 ${
+              missionOutcome.level === "success"
+                ? "border-emerald-400/25 bg-emerald-500/[0.06]"
+                : missionOutcome.level === "partial"
+                  ? "border-[#3D7BFF]/25 bg-[#3D7BFF]/[0.06]"
+                  : "border-white/[0.08] bg-white/[0.03]"
+            }`}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Issue de la mission</p>
+            <p className="mt-2 text-base font-semibold text-white">{missionOutcome.title}</p>
+            <p className="mt-1 text-sm text-white/60">{missionOutcome.message}</p>
+          </motion.section>
+        ) : null}
 
         {/* Récompenses — XP et série */}
         <motion.div variants={fadeUp} className="grid grid-cols-3 gap-3">
@@ -389,12 +468,24 @@ export function EdgeMissionRunner() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Link
-              href={`/dashboard/apprenant/mission?skill=${encodeURIComponent(skill)}&objective=${encodeURIComponent(objective)}`}
-              className={`${CONNECT_BTN_PRIMARY} inline-flex items-center justify-center gap-2`}
-            >
-              <Trophy className="h-4 w-4" /> Mission suivante
-            </Link>
+            {missionOutcome && (missionOutcome.level === "retry" || missionOutcome.level === "constructive_failure") ? (
+              <button
+                type="button"
+                onClick={() => replayMission()}
+                disabled={sending}
+                className={`${CONNECT_BTN_PRIMARY} inline-flex items-center justify-center gap-2`}
+              >
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Rejouer la mission
+              </button>
+            ) : (
+              <Link
+                href={`/dashboard/apprenant/mission?skill=${encodeURIComponent(skill)}&objective=${encodeURIComponent(objective)}`}
+                className={`${CONNECT_BTN_PRIMARY} inline-flex items-center justify-center gap-2`}
+              >
+                <Trophy className="h-4 w-4" /> Mission suivante
+              </Link>
+            )}
             <Link href="/dashboard/apprenant/profil" className={`${CONNECT_BTN_SECONDARY} inline-flex items-center justify-center gap-2`}>
               Retour au profil
             </Link>
@@ -411,8 +502,10 @@ export function EdgeMissionRunner() {
       <div>
         <p className={APPRENANT_CARD_KICKER}>{EDGE_MISSION_LABEL}</p>
         <h1 className="text-lg font-semibold text-white">{mission.title}</h1>
-        <p className="text-xs text-white/45">Coach : {mission.coachRole}</p>
+        <p className="text-xs text-white/45">{mission.coachRole}</p>
       </div>
+
+      {gauges.length > 0 ? <EdgeMissionGaugePanel gauges={gauges} lastDeltas={lastDeltas} /> : null}
 
       <div ref={scrollRef} className="max-h-[52vh] min-h-[280px] space-y-3 overflow-y-auto rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
         <AnimatePresence initial={false}>
@@ -424,26 +517,28 @@ export function EdgeMissionRunner() {
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {m.role === "assistant" && m.coachInsight ? (
+              {m.role === "assistant" && m.coachInsight && m.coachTone === "analysis" ? (
                 <CoachInsightBubble insight={m.coachInsight} />
               ) : (
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                     m.role === "user"
                       ? "bg-[#3D7BFF] text-white"
-                      : m.kind === "coach"
-                        ? "border border-[#3D7BFF]/25 bg-[#3D7BFF]/[0.08] text-white/85"
-                        : "border border-white/[0.08] bg-white/[0.04] text-white/80"
+                      : m.kind === "scene"
+                        ? "border border-white/[0.12] bg-white/[0.06] text-white/90 shadow-sm"
+                        : m.coachTone === "hint"
+                          ? "max-w-[70%] border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-white/55"
+                          : "border border-[#3D7BFF]/20 bg-[#3D7BFF]/[0.06] text-white/80"
                   }`}
                 >
-                  {m.role === "assistant" ? (
-                    <span
-                      className={`mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider ${
-                        m.kind === "coach" ? "text-[#8BB4FF]" : "text-[#8BB4FF]/70"
-                      }`}
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      {m.kind === "coach" ? "Coach EDGE" : mission.coachRole}
+                  {m.role === "assistant" && m.kind !== "scene" ? (
+                    <span className="mb-1 flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-[#8BB4FF]/70">
+                      <Sparkles className="h-2.5 w-2.5" /> Coach EDGE
+                    </span>
+                  ) : null}
+                  {m.role === "assistant" && m.kind === "scene" ? (
+                    <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                      {mission.coachRole}
                     </span>
                   ) : null}
                   {m.content}
@@ -548,6 +643,7 @@ function Stat({
 }
 
 function CoachInsightBubble({ insight }: { insight: CoachInsight }) {
+  const [open, setOpen] = useState(false);
   const rows = [
     { label: "Pourquoi je t'ai posé cette question", value: insight.whyAsked },
     { label: "Ce que j'ai observé", value: insight.whatObserved },
@@ -556,18 +652,31 @@ function CoachInsightBubble({ insight }: { insight: CoachInsight }) {
   ].filter((r) => r.value?.trim());
 
   return (
-    <div className="max-w-[90%] rounded-2xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/[0.06] px-4 py-3">
-      <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8BB4FF]">
-        <Sparkles className="h-3 w-3" /> Coach EDGE — mon analyse
-      </span>
-      <div className="mt-2 space-y-2">
-        {rows.map((row) => (
-          <div key={row.label}>
-            <p className="text-[10px] font-medium uppercase tracking-wide text-white/40">{row.label}</p>
-            <p className="text-sm leading-relaxed text-white/75">{row.value}</p>
+    <div className="max-w-[75%]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-[10px] font-medium text-white/40 transition hover:text-white/60"
+      >
+        <Sparkles className="h-3 w-3 text-[#8BB4FF]/60" />
+        {open ? "Masquer l'analyse du coach" : "Voir l'analyse du coach"}
+      </button>
+      {open ? (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="mt-2 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5"
+        >
+          <div className="space-y-2">
+            {rows.map((row) => (
+              <div key={row.label}>
+                <p className="text-[9px] font-medium uppercase tracking-wide text-white/35">{row.label}</p>
+                <p className="text-xs leading-relaxed text-white/60">{row.value}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </motion.div>
+      ) : null}
     </div>
   );
 }

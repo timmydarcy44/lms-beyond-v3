@@ -233,6 +233,7 @@ export async function finishMissionEphemeral(
   runId: string,
   ctx: MissionContext,
   debrief: MissionDebrief,
+  gaugeState?: import("@/lib/apprenant/edge-mission-types").MissionGaugeState,
 ): Promise<MissionFinishResult> {
   const xpAwarded = computeMissionXp(false);
   let totalXp = xpAwarded;
@@ -267,7 +268,7 @@ export async function finishMissionEphemeral(
     badge = badgeState;
   }
 
-  return { runId, debrief, xpAwarded, totalXp, streak, badge };
+  return { runId, debrief, xpAwarded, totalXp, streak, badge, gaugeState, outcome: gaugeState?.outcome };
 }
 
 export async function finishMissionRun(
@@ -278,6 +279,7 @@ export async function finishMissionRun(
   debrief: MissionDebrief,
   messages: MissionChatMessage[],
   proofText: string,
+  gaugeState?: import("@/lib/apprenant/edge-mission-types").MissionGaugeState,
 ): Promise<MissionFinishResult> {
   const hasProof = proofText.trim().length > 20;
   const xpAwarded = computeMissionXp(hasProof);
@@ -289,6 +291,8 @@ export async function finishMissionRun(
     examplesFromAnswers: debrief.examplesFromAnswers,
     whatToWorkNext: debrief.whatToWorkNext,
     recommendedMissionTitle: debrief.recommendedMissionTitle,
+    gaugeState,
+    outcome: gaugeState?.outcome ?? debrief.outcome,
   };
 
   const baseUpdate = {
@@ -346,7 +350,5 @@ export async function finishMissionRun(
     status: "pending",
   });
 
-  return { runId, debrief, xpAwarded, totalXp, streak, badge };
+  return { runId, debrief, xpAwarded, totalXp, streak, badge, gaugeState, outcome: gaugeState?.outcome };
 }
-
-export type { MissionBrief };

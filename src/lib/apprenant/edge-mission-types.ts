@@ -25,6 +25,39 @@ export type MissionBrief = {
   difficulty: MissionDifficulty;
   level: string;
   whySelected: string[];
+  /** Jauges dynamiques de la situation (optionnel, défaut selon compétence). */
+  gauges?: { key: string; label: string; initial: number }[];
+};
+
+export type MissionGauge = {
+  key: string;
+  name: string;
+  value: number;
+};
+
+export type MissionGaugeDelta = {
+  name: string;
+  delta: number;
+  reason: string;
+  key?: string;
+};
+
+export type MissionGaugeTurn = {
+  turn: number;
+  deltas: MissionGaugeDelta[];
+};
+
+export type MissionGaugeSnapshot = {
+  gauges: MissionGauge[];
+  capturedAt: string;
+};
+
+export type MissionOutcomeLevel = "success" | "partial" | "constructive_failure" | "retry";
+
+export type MissionOutcome = {
+  level: MissionOutcomeLevel;
+  title: string;
+  message: string;
 };
 
 export type MissionChatMessage = {
@@ -33,6 +66,8 @@ export type MissionChatMessage = {
   /** coach = voix du Coach EDGE (hors scène) ; scene = personnage incarné */
   kind?: "coach" | "scene";
   coachInsight?: CoachInsight;
+  /** intro | hint = discret ; analysis = analyse détaillée repliée */
+  coachTone?: "intro" | "hint" | "analysis";
 };
 
 /** Retour transparent du coach après chaque réponse de l'apprenant. */
@@ -46,10 +81,17 @@ export type CoachInsight = {
 export type MissionCoachReply = {
   /** Message d'accueil personnalisé (début de mission uniquement). */
   coachIntro?: string;
-  /** Explication transparente après une réponse utilisateur. */
-  coachInsight?: CoachInsight;
-  /** Réplique in-character dans la scénarisation. */
+  /** Réplique du personnage — TOUJOURS en premier après une réponse utilisateur. */
   sceneReply: string;
+  /** Feedback court du coach (1-2 phrases), après la scène. */
+  coachFeedback?: string;
+  /** Analyse détaillée — uniquement toutes les 2-3 interactions. */
+  coachInsight?: CoachInsight;
+  showDetailedInsight?: boolean;
+  /** Variations de jauges après ce tour. */
+  gaugeDeltas?: MissionGaugeDelta[];
+  /** État des jauges après application des deltas. */
+  gauges?: MissionGauge[];
 };
 
 /** Débrief enrichi en fin de mission. */
@@ -75,6 +117,15 @@ export type MissionDebrief = {
   celebrationMessage: string;
   /** Compétence sur laquelle l'apprenant a le plus progressé aujourd'hui. */
   progressHighlight: string;
+  /** Issue de la mission selon les jauges finales. */
+  outcome?: MissionOutcome;
+};
+
+export type MissionGaugeState = {
+  initial: MissionGauge[];
+  final: MissionGauge[];
+  history: MissionGaugeTurn[];
+  outcome: MissionOutcome;
 };
 
 export type MissionBadgeState = {
@@ -91,6 +142,8 @@ export type MissionFinishResult = {
   totalXp: number;
   streak: number;
   badge: MissionBadgeState;
+  gaugeState?: MissionGaugeState;
+  outcome?: MissionOutcome;
 };
 
 import type { CoachMemory } from "@/lib/apprenant/edge-coach-memory";
@@ -103,6 +156,7 @@ export type MissionContext = {
   format: MissionFormatId;
   mission: MissionBrief;
   coachMemory?: CoachMemory;
+  gaugeState?: MissionGauge[];
 };
 
 export function normalizeSkillSlug(skill: string): string {

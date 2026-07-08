@@ -234,7 +234,9 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
       );
     } catch (error) {
       console.error(error);
-      toast.error("Erreur lors de la génération du quiz.");
+      toast.error("Erreur lors de la génération du quiz.", {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsGenerating(false);
     }

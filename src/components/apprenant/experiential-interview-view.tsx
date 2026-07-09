@@ -6,7 +6,8 @@ import { Loader2, Mic, RotateCcw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { InterviewAudience, InterviewPlayTheme } from "@/lib/apprenant/interview-audience";
+import type { InterviewAudience, InterviewPlayTheme, InterviewStyle } from "@/lib/apprenant/interview-audience";
+import { interviewBlockTitle } from "@/lib/apprenant/interview-audience";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -23,6 +24,7 @@ type ExperientialInterviewViewProps = {
   initialAssistantMessage?: string | null;
   theme?: InterviewPlayTheme;
   audience?: InterviewAudience;
+  interviewStyle?: InterviewStyle;
 };
 
 export function ExperientialInterviewView({
@@ -36,8 +38,11 @@ export function ExperientialInterviewView({
   initialAssistantMessage,
   theme = "edge",
   audience = "professional",
+  interviewStyle = "experiential",
 }: ExperientialInterviewViewProps) {
   const isJessica = theme === "jessica";
+  const isCoaching = interviewStyle === "coaching";
+  const blockTitle = interviewBlockTitle(interviewStyle);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
@@ -63,13 +68,14 @@ export function ExperientialInterviewView({
           chapterTitle,
           courseTitle,
           audience,
+          interviewStyle,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Erreur de l'assistant");
       return String(data.reply ?? "").trim();
     },
-    [contextText, interviewObjectives, chapterTitle, courseTitle, audience],
+    [contextText, interviewObjectives, chapterTitle, courseTitle, audience, interviewStyle],
   );
 
   const bootstrap = useCallback(async () => {
@@ -180,7 +186,7 @@ export function ExperientialInterviewView({
                   : "text-[10px] font-semibold uppercase tracking-[0.35em] text-violet-300/80"
               }
             >
-              {isJessica ? "Entretien" : "EDGE AI"}
+              {isCoaching ? "Coaching" : "Entretien"}
             </p>
             <h2
               className={
@@ -189,7 +195,7 @@ export function ExperientialInterviewView({
                   : "mt-4 text-[30px] font-bold leading-tight tracking-tight text-white"
               }
             >
-              Entretien expérientiel
+              {blockTitle}
             </h2>
             <p
               className={
@@ -198,9 +204,13 @@ export function ExperientialInterviewView({
                   : "mt-3 text-sm leading-relaxed text-white/70"
               }
             >
-              {isJessica
-                ? "Un échange guidé pour relier ce que vous avez appris à votre quotidien avec votre enfant."
-                : "Entretien expérientiel guidé : questions courtes, réponses écrites ou à l'oral pour ancrer vos apprentissages."}
+              {isCoaching
+                ? "Un échange guidé pour vérifier votre compréhension du cours, sans supposer de situation personnelle."
+                : isJessica
+                  ? audience === "parent"
+                    ? "Un échange guidé pour relier ce que vous avez appris à votre quotidien avec votre enfant."
+                    : "Un échange guidé pour relier ce que vous avez appris à votre pratique."
+                  : "Entretien expérientiel guidé : questions courtes, réponses écrites ou à l'oral pour ancrer vos apprentissages."}
             </p>
           </div>
           <div

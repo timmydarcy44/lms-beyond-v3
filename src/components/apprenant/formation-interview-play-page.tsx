@@ -7,6 +7,7 @@ import {
   buildInterviewRevisionOutline,
   resolveInterviewParentChapterTitle,
 } from "@/lib/apprenant/interview-revision-outline";
+import { resolveLessonInterviewConfig } from "@/lib/apprenant/interview-audience";
 
 type FormationInterviewPlayPageProps = {
   category: string;
@@ -65,6 +66,10 @@ export async function FormationInterviewPlayPage({
     (activeLesson as { interview_objectives?: string }).interview_objectives ?? "",
   ).trim();
   const isJessica = variant === "jessica";
+  const { style: interviewStyle, audience } = resolveLessonInterviewConfig(
+    activeLesson as { interview_style?: string; interview_audience?: string },
+    { jessicaSite: isJessica },
+  );
   const playBaseHref = isJessica ? `/formations/${slug}` : card.href;
 
   const activeIndex = allLessons.findIndex((l) => l.id === lessonId);
@@ -92,7 +97,8 @@ export async function FormationInterviewPlayPage({
           returnHref={returnHref}
           revisionItems={revisionItems}
           theme={isJessica ? "jessica" : "edge"}
-          audience={isJessica ? "parent" : "professional"}
+          interviewStyle={interviewStyle}
+          audience={audience}
         />
       </div>
     </DyslexiaModeProvider>

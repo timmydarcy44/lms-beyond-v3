@@ -1091,7 +1091,7 @@ export function LessonPlayView({
         <p className={cn("text-xs uppercase tracking-[0.3em]", isJessica ? "text-slate-500" : "text-white/70")}>
           Sommaire
         </p>
-        <h2 className="text-lg font-semibold md:text-2xl">{detail.title}</h2>
+        <h2 className={cn("text-lg font-semibold md:text-2xl", isJessica && "text-[#2F2A25]")}>{detail.title}</h2>
         <p className={cn("mt-1 text-xs", isJessica ? "text-slate-500" : "text-white/70")}>
           Naviguez librement entre les chapitres
         </p>
@@ -1323,9 +1323,13 @@ export function LessonPlayView({
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-        .apprenant-sidebar,
-        .apprenant-sidebar * {
+        .apprenant-sidebar:not(.apprenant-sidebar--jessica),
+        .apprenant-sidebar:not(.apprenant-sidebar--jessica) * {
           color: white;
+        }
+        .apprenant-sidebar--jessica,
+        .apprenant-sidebar--jessica * {
+          color: inherit;
         }
 
         /* Pro reading: tight spacing + contrast */
@@ -1482,6 +1486,7 @@ export function LessonPlayView({
             <div
               className={cn(
                 "apprenant-sidebar scrollbar-hide min-h-0 flex-1 scroll-smooth overflow-y-auto",
+                isJessica && "apprenant-sidebar--jessica",
                 !showDesktopOutline && "hidden lg:hidden",
               )}
             >

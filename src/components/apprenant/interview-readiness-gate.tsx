@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { BookOpen, Sparkles } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { InterviewPlayTheme } from "@/lib/apprenant/interview-audience";
+import type { InterviewPlayTheme, InterviewStyle } from "@/lib/apprenant/interview-audience";
+import { interviewBlockTitle } from "@/lib/apprenant/interview-audience";
 
 type InterviewReadinessGateProps = {
   chapterTitle: string;
@@ -14,6 +15,7 @@ type InterviewReadinessGateProps = {
   onRevise: () => void;
   className?: string;
   theme?: InterviewPlayTheme;
+  interviewStyle?: InterviewStyle;
 };
 
 function parseObjectivesList(raw: string): string[] {
@@ -27,7 +29,6 @@ const CHOICE_STYLES = {
   ready: {
     letter: "A",
     label: "Prêt !",
-    sub: "Je lance l'entretien expérientiel",
     ring: "ring-amber-400/60",
     hover: "hover:border-amber-400 hover:shadow-[0_0_32px_rgba(251,191,36,0.35)]",
     grad: "from-amber-500/20 via-amber-400/10 to-transparent",
@@ -46,10 +47,12 @@ function ReadinessChoice({
   variant,
   onClick,
   isJessica,
+  readySub,
 }: {
   variant: keyof typeof CHOICE_STYLES;
   onClick: () => void;
   isJessica: boolean;
+  readySub?: string;
 }) {
   const cfg = CHOICE_STYLES[variant];
   return (
@@ -92,7 +95,11 @@ function ReadinessChoice({
           {cfg.label}
         </span>
         <span className={isJessica ? "mt-1 text-sm text-[#8B4513]/75" : "mt-1 text-sm text-white/55"}>
-          {cfg.sub}
+          {variant === "ready"
+            ? readySub ?? "Je lance l'entretien expérientiel"
+            : "sub" in cfg
+              ? cfg.sub
+              : ""}
         </span>
       </span>
       {!isJessica ? (
@@ -116,8 +123,11 @@ export function InterviewReadinessGate({
   onRevise,
   className,
   theme = "edge",
+  interviewStyle = "experiential",
 }: InterviewReadinessGateProps) {
   const isJessica = theme === "jessica";
+  const isCoaching = interviewStyle === "coaching";
+  const blockTitle = interviewBlockTitle(interviewStyle);
   const objectives = parseObjectivesList(String(interviewObjectives ?? "").trim());
 
   return (
@@ -168,15 +178,26 @@ export function InterviewReadinessGate({
             : "text-center text-[10px] font-semibold uppercase tracking-[0.4em] text-violet-300/80"
         }
       >
-        Entretien expérientiel
+        {blockTitle}
       </p>
 
       <div className="mt-4 space-y-3 text-center">
         <p className={isJessica ? "text-lg leading-relaxed text-[#2F2A25] sm:text-xl" : "text-lg leading-relaxed text-white/90 sm:text-xl"}>
-          Vous venez de voir le chapitre sur{" "}
-          <span className={isJessica ? "font-semibold text-[#B8860B]" : "font-semibold text-violet-200"}>
-            {chapterTitle}
-          </span>
+          {isCoaching ? (
+            <>
+              Vous allez être coaché sur le chapitre{" "}
+              <span className={isJessica ? "font-semibold text-[#B8860B]" : "font-semibold text-violet-200"}>
+                {chapterTitle}
+              </span>
+            </>
+          ) : (
+            <>
+              Vous venez de voir le chapitre sur{" "}
+              <span className={isJessica ? "font-semibold text-[#B8860B]" : "font-semibold text-violet-200"}>
+                {chapterTitle}
+              </span>
+            </>
+          )}
           {courseTitle ? (
             <span className={isJessica ? "mt-2 block text-sm text-[#8B4513]/70" : "mt-2 block text-sm text-white/50"}>
               Formation : {courseTitle}
@@ -184,9 +205,11 @@ export function InterviewReadinessGate({
           ) : null}
         </p>
         <p className={isJessica ? "text-base text-[#8B4513]/80" : "text-base text-white/70"}>
-          {isJessica
-            ? "Un échange guidé pour relier ce que vous avez appris à votre quotidien avec votre enfant."
-            : "Vous allez passer l'entretien expérientiel : un échange guidé pour relier ce que vous avez appris à votre pratique."}
+          {isCoaching
+            ? "Un échange guidé pour vérifier votre compréhension du cours, sans supposer de situation personnelle."
+            : isJessica
+              ? "Un échange guidé pour relier ce que vous avez appris à votre vécu (selon la thématique choisie par le formateur)."
+              : "Vous allez passer l'entretien expérientiel : un échange guidé pour relier ce que vous avez appris à votre pratique."}
         </p>
         {objectives.length > 0 ? (
           <div
@@ -239,7 +262,14 @@ export function InterviewReadinessGate({
         }}
       >
         <motion.div variants={{ hidden: { opacity: 0, x: -12 }, visible: { opacity: 1, x: 0 } }}>
-          <ReadinessChoice variant="ready" onClick={onReady} isJessica={isJessica} />
+          <ReadinessChoice
+            variant="ready"
+            onClick={onReady}
+            isJessica={isJessica}
+            readySub={
+              isCoaching ? "Je lance le coaching sur le cours" : "Je lance l'entretien expérientiel"
+            }
+          />
         </motion.div>
         <motion.div variants={{ hidden: { opacity: 0, x: 12 }, visible: { opacity: 1, x: 0 } }}>
           <ReadinessChoice variant="revise" onClick={onRevise} isJessica={isJessica} />

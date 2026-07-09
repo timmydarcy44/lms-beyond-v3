@@ -61,6 +61,8 @@ export function CreateInterviewModal({
   );
   const [placementValue, setPlacementValue] = useState(`after_chapter:${chapter.id}`);
   const [objectives, setObjectives] = useState("");
+  const [interviewStyle, setInterviewStyle] = useState<"experiential" | "coaching">("coaching");
+  const [interviewAudience, setInterviewAudience] = useState<"professional" | "parent">("professional");
   const [busy, setBusy] = useState(false);
 
   const placementOptions = useMemo(
@@ -71,6 +73,8 @@ export function CreateInterviewModal({
   useEffect(() => {
     if (!open) {
       setObjectives("");
+      setInterviewStyle("coaching");
+      setInterviewAudience("professional");
       return;
     }
     const defaultPlacement = placementOptions.some((o) => o.value === `after_chapter:${chapter.id}`)
@@ -106,15 +110,22 @@ export function CreateInterviewModal({
     setBusy(true);
     try {
       const blockId = nanoid();
+      const blockTitle =
+        interviewStyle === "coaching" ? "Se faire coacher" : "Entretien expérientiel";
       const block = {
         id: blockId,
-        title: "Entretien expérientiel",
+        title: blockTitle,
         duration: "10–15 min",
         type: "text" as const,
-        summary: "Conversation guidée par l’IA pour contextualiser vos apprentissages.",
+        summary:
+          interviewStyle === "coaching"
+            ? "Coaching guidé par l'IA sur le contenu du chapitre."
+            : "Conversation guidée par l'IA pour contextualiser vos apprentissages.",
         content: "",
         kind: "experiential_interview" as const,
         interview_context: plain.slice(0, 14_000),
+        interview_style: interviewStyle,
+        ...(interviewStyle === "experiential" ? { interview_audience: interviewAudience } : {}),
         ...(objectivesTrim ? { interview_objectives: objectivesTrim.slice(0, 2000) } : {}),
       };
 
@@ -144,13 +155,71 @@ export function CreateInterviewModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-white">
                 <MessageCircle className="h-5 w-5 text-violet-300" />
-                Créer un entretien expérientiel
+                Créer un entretien IA
               </DialogTitle>
               <DialogDescription className="text-slate-300">
-                Choisissez où placer l&apos;entretien dans la formation. Le contexte est tiré du chapitre «{" "}
+                Choisissez le type d&apos;échange et son emplacement. Le contexte est tiré du chapitre «{" "}
                 {chapter.title || "Sans titre"} » ({sectionTitle}).
               </DialogDescription>
             </DialogHeader>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-white">Type d&apos;échange</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setInterviewStyle("coaching")}
+                  className={`rounded-xl border p-4 text-left transition ${
+                    interviewStyle === "coaching"
+                      ? "border-violet-400 bg-violet-500/20"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <p className="font-semibold text-white">Se faire coacher</p>
+                  <p className="mt-1 text-xs text-slate-300">
+                    Questions sur le contenu du cours, sans supposer de vécu personnel.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInterviewStyle("experiential")}
+                  className={`rounded-xl border p-4 text-left transition ${
+                    interviewStyle === "experiential"
+                      ? "border-violet-400 bg-violet-500/20"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <p className="font-semibold text-white">Entretien expérientiel</p>
+                  <p className="mt-1 text-xs text-slate-300">
+                    Relier le chapitre à une situation concrète (pro ou familiale).
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {interviewStyle === "experiential" ? (
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-white">Thématique de l&apos;entretien</Label>
+                <Select
+                  value={interviewAudience}
+                  onValueChange={(v) =>
+                    setInterviewAudience(v === "parent" ? "parent" : "professional")
+                  }
+                >
+                  <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border border-white/10 bg-slate-950/95 text-white">
+                    <SelectItem value="professional" className="text-white">
+                      Vécu professionnel / mise en pratique
+                    </SelectItem>
+                    <SelectItem value="parent" className="text-white">
+                      Vécu familial (parent et enfant)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label className="text-sm font-semibold text-white">

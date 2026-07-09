@@ -21,6 +21,10 @@ export type CourseBuilderSubchapter = {
   interview_context?: string;
   /** Objectifs pédagogiques guidant les questions de l’entretien. */
   interview_objectives?: string;
+  /** experiential = vécu (pro ou parent) ; coaching = questions sur le contenu du cours. */
+  interview_style?: "experiential" | "coaching";
+  /** Thématique de l'entretien expérientiel uniquement. */
+  interview_audience?: "professional" | "parent";
 };
 
 export type ChapterUnlockCondition = "previous_chapter_completed" | "previous_quiz_score";

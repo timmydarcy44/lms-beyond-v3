@@ -116,7 +116,15 @@ export default async function FormationDetailPage({ params }: { params: Promise<
   return (
     <LearningSessionTracker contentType="course" contentId={String(courseRow.id)} showIndicator={false}>
       <div className="min-h-screen bg-black pb-20 text-white">
-        <section className="relative flex h-[60vh] items-end overflow-hidden px-8 pb-12">
+        <div className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-black/80 px-6 py-4 backdrop-blur-md">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+          >
+            ← Retour sur le site de Jessica
+          </Link>
+        </div>
+        <section className="relative flex h-[60vh] items-end overflow-hidden px-8 pb-12 pt-20">
           <div className="absolute inset-0 z-0">
             {isVideo ? (
               <LazyBandwidthVideo

@@ -10,6 +10,7 @@ import {
   getInterviewOpeningPrompt,
   getInterviewSystemPrompt,
   type InterviewAudience,
+  type InterviewStyle,
 } from "@/lib/apprenant/interview-audience";
 import { getSession } from "@/lib/auth/session";
 
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
       chapterTitle?: string;
       courseTitle?: string;
       audience?: InterviewAudience;
+      interviewStyle?: InterviewStyle;
     };
 
     const messages = capChatMessages(
@@ -37,6 +39,8 @@ export async function POST(request: NextRequest) {
       AI_CONTEXT_LIMITS.INTERVIEW_MESSAGE_MAX,
     );
     const audience: InterviewAudience = body.audience === "parent" ? "parent" : "professional";
+    const interviewStyle: InterviewStyle =
+      body.interviewStyle === "coaching" ? "coaching" : "experiential";
     const contextText = truncateText(
       String(body.contextText ?? "").trim(),
       AI_CONTEXT_LIMITS.INTERVIEW_CONTEXT_MAX,
@@ -62,7 +66,7 @@ Chapitre : ${chapterTitle}
 Contenu du chapitre :
 ${contextText}${objectivesBlock}`;
 
-    const systemPrompt = getInterviewSystemPrompt(audience);
+    const systemPrompt = getInterviewSystemPrompt(interviewStyle, audience);
     const openAiMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
       { role: "system", content: `${systemPrompt}\n\n${contextBlock}` },
     ];
@@ -70,7 +74,7 @@ ${contextText}${objectivesBlock}`;
     if (messages.length === 0) {
       openAiMessages.push({
         role: "user",
-        content: getInterviewOpeningPrompt(audience),
+        content: getInterviewOpeningPrompt(interviewStyle, audience),
       });
     } else {
       for (const m of messages) {

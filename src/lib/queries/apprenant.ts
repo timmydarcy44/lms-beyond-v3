@@ -222,6 +222,8 @@ export type LearnerLesson = {
   resource_id?: string;
   interview_context?: string;
   interview_objectives?: string;
+  interview_style?: "experiential" | "coaching";
+  interview_audience?: "professional" | "parent";
   /** UUID chapitre/sous-chapitre en base (pont avec flashcards `chapter_id` et cache local). */
   dbChapterId?: string | null;
 };
@@ -1203,6 +1205,16 @@ export async function getLearnerContentDetail(
                       resource_id: resourceId,
                       interview_context: hasInterviewContext ? interviewContext : undefined,
                       interview_objectives: interviewObjectives || undefined,
+                      interview_style:
+                        subchapter.interview_style === "coaching" ||
+                        subchapter.interview_style === "experiential"
+                          ? subchapter.interview_style
+                          : undefined,
+                      interview_audience:
+                        subchapter.interview_audience === "parent" ||
+                        subchapter.interview_audience === "professional"
+                          ? subchapter.interview_audience
+                          : undefined,
                     });
                   }
                 });

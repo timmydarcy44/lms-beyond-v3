@@ -11,7 +11,7 @@ import { InterviewRevisionPanel } from "@/components/apprenant/interview-revisio
 import { Button } from "@/components/ui/button";
 import type { InterviewFeedbackPayload } from "@/app/api/ai/experiential-interview/feedback/route";
 import type { RevisionLessonItem } from "@/lib/apprenant/interview-revision-outline";
-import type { InterviewAudience, InterviewPlayTheme } from "@/lib/apprenant/interview-audience";
+import type { InterviewAudience, InterviewPlayTheme, InterviewStyle } from "@/lib/apprenant/interview-audience";
 
 type InterviewPlayClientProps = {
   contextText: string;
@@ -23,6 +23,7 @@ type InterviewPlayClientProps = {
   revisionItems: RevisionLessonItem[];
   theme?: InterviewPlayTheme;
   audience?: InterviewAudience;
+  interviewStyle?: InterviewStyle;
 };
 
 async function fetchOpeningMessage(
@@ -31,6 +32,7 @@ async function fetchOpeningMessage(
   courseTitle?: string,
   interviewObjectives?: string,
   audience: InterviewAudience = "professional",
+  interviewStyle: InterviewStyle = "experiential",
 ): Promise<string | null> {
   if (!contextText.trim() || contextText.trim().length < 40) return null;
   try {
@@ -44,6 +46,7 @@ async function fetchOpeningMessage(
         chapterTitle,
         courseTitle,
         audience,
+        interviewStyle,
       }),
     });
     const data = await res.json();
@@ -64,6 +67,7 @@ export function InterviewPlayClient({
   revisionItems,
   theme = "edge",
   audience = "professional",
+  interviewStyle = "experiential",
 }: InterviewPlayClientProps) {
   const isJessica = theme === "jessica";
   const router = useRouter();
@@ -85,13 +89,13 @@ export function InterviewPlayClient({
   useEffect(() => {
     if (flowPhase !== "cinematic" && flowPhase !== "readiness") return;
     let cancelled = false;
-    void fetchOpeningMessage(contextText, chapterTitle, courseTitle, interviewObjectives, audience).then((reply) => {
+    void fetchOpeningMessage(contextText, chapterTitle, courseTitle, interviewObjectives, audience, interviewStyle).then((reply) => {
       if (!cancelled && reply) setPrefetchedOpening(reply);
     });
     return () => {
       cancelled = true;
     };
-  }, [flowPhase, contextText, interviewObjectives, chapterTitle, courseTitle, lessonId, audience]);
+  }, [flowPhase, contextText, interviewObjectives, chapterTitle, courseTitle, lessonId, audience, interviewStyle]);
 
   const userTurns = messages.filter((m) => m.role === "user" && m.content.trim()).length;
   const canFinish = userTurns >= 2;
@@ -189,6 +193,7 @@ export function InterviewPlayClient({
             onReady={startInterview}
             onRevise={() => setFlowPhase("revision")}
             theme={theme}
+            interviewStyle={interviewStyle}
           />
         </div>
       ) : null}
@@ -266,6 +271,7 @@ export function InterviewPlayClient({
               onMessagesChange={setMessages}
               theme={theme}
               audience={audience}
+              interviewStyle={interviewStyle}
               className="h-full min-h-0 rounded-none border-0 shadow-none"
             />
           </div>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { JessicaFullWidthVideoSection } from "@/components/jessica-contentin/jessica-full-width-video-section";
 
 /** URL courte (réécrite sur le domaine vitrine Jessica ; route alias en local). */
 const SPECIALITES_HREF = "/specialites";
@@ -124,37 +125,14 @@ export function JessicaParcoursProgramCards({
       </div>
     </motion.section>
 
-    {/* Vidéo bannière — taille contenue, texte centré comme la référence */}
-    <section aria-label={featuredVideoTitle ?? "Vidéo"} className="bg-gradient-to-b from-[#F3E8D8] to-[#FAF7F2] px-4 py-10 md:px-8 md:py-14">
-      <div className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-3xl bg-[#2a2210] shadow-[0_28px_70px_-28px_rgba(45,36,28,0.4)]">
-        <div className="relative aspect-video max-h-[min(72vh,640px)] min-h-[200px] w-full">
-          <video
-            className="absolute inset-0 h-full w-full object-cover"
-            src={featuredVideoUrl}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-          />
-          <div className="pointer-events-none absolute inset-0 bg-black/45" />
-          {(featuredVideoTitle || featuredVideoSubtitle) && (
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-              {featuredVideoTitle ? (
-                <h3 className="max-w-4xl text-2xl font-light tracking-tight text-white drop-shadow-md md:text-4xl lg:text-5xl">
-                  {featuredVideoTitle}
-                </h3>
-              ) : null}
-              {featuredVideoSubtitle ? (
-                <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/90 md:text-lg">
-                  {featuredVideoSubtitle}
-                </p>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
+    {featuredVideoUrl && featuredVideoTitle ? (
+      <JessicaFullWidthVideoSection
+        videoUrl={featuredVideoUrl}
+        title={featuredVideoTitle}
+        subtitle={featuredVideoSubtitle}
+        ariaLabel={featuredVideoTitle}
+      />
+    ) : null}
     </>
   );
 }

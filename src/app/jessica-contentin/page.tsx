@@ -6,6 +6,7 @@ import { JessicaParcoursProgramCards, type ParcoursProgramCard } from "@/compone
 import { PROGRAMMES, programmePresentationHref } from "@/lib/jessica-contentin/programmes-catalog";
 import { GoogleReviewsSlider } from "@/components/jessica-contentin/google-reviews-slider";
 import { JessicaHomeAccompagnementSection } from "@/components/jessica-contentin/jessica-home-accompagnement-section";
+import { JessicaFullWidthVideoSection } from "@/components/jessica-contentin/jessica-full-width-video-section";
 import { motion } from "framer-motion";
 import Script from "next/script";
 
@@ -13,6 +14,11 @@ const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-
 
 const VIDEO_SOUS_PARCOURS =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Design%20sans%20titre.mp4";
+
+const VIDEO_NEVO =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/video%20nevo.mp4";
+
+const NEVO_HREF = "/ressources/application-neuro-adaptee";
 
 const PARCOURS_CARDS: ParcoursProgramCard[] = PROGRAMMES.map((p) => {
   const base: ParcoursProgramCard = {
@@ -38,7 +44,7 @@ export default function JessicaContentinHomePage() {
       <JessicaParcoursProgramCards
         cards={PARCOURS_CARDS}
         featuredVideoUrl={VIDEO_SOUS_PARCOURS}
-        featuredVideoTitle="Un accompagnement personnalisé pour comprendre, ajuster et progresser."
+        featuredVideoTitle="Un accompagnement personnalisé pour comprendre, ajuster et progresser"
       />
 
       <JessicaHomeAccompagnementSection />
@@ -57,6 +63,14 @@ export default function JessicaContentinHomePage() {
           <GoogleReviewsSlider />
         </div>
       </motion.section>
+
+      <JessicaFullWidthVideoSection
+        videoUrl={VIDEO_NEVO}
+        title="Prolongez l'accompagnement entre les séances"
+        ctaLabel="Découvrir nevo."
+        ctaHref={NEVO_HREF}
+        ariaLabel="NEVO — prolonger l'accompagnement entre les séances"
+      />
 
       {/* Méthode */}
       <motion.section

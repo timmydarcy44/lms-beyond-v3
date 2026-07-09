@@ -2317,6 +2317,10 @@ export function LessonPlayView({
             <FlashcardPlayer
               cards={beyondFlashCards}
               onClose={() => setIsBeyondFlashOpen(false)}
+              trackingContext={{
+                courseId,
+                scopeId: String(activeLesson.id),
+              }}
             />,
             document.body,
           )

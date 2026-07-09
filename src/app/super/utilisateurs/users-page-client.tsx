@@ -155,6 +155,7 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: UsersPage
               <TableHead className="font-semibold text-gray-700">Label</TableHead>
               <TableHead className="font-semibold text-gray-700">Dernière connexion</TableHead>
               <TableHead className="font-semibold text-gray-700">Création compte</TableHead>
+              <TableHead className="font-semibold text-gray-700 text-center">Quiz / tests</TableHead>
               <TableHead className="font-semibold text-gray-700 text-right">Chiffre d&apos;affaires</TableHead>
               <TableHead className="w-[120px]" />
             </TableRow>
@@ -162,7 +163,7 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: UsersPage
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-12 text-center text-gray-500">
+                <TableCell colSpan={10} className="py-12 text-center text-gray-500">
                   Aucun contact trouvé
                 </TableCell>
               </TableRow>
@@ -195,6 +196,9 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: UsersPage
                     </TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">
                       {formatDate(user.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600 text-center tabular-nums">
+                      {user.testCount}
                     </TableCell>
                     <TableCell className="text-sm text-gray-900 text-right font-medium tabular-nums">
                       {formatCurrency(user.totalRevenue)}

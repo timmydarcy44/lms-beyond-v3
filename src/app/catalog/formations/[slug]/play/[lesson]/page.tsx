@@ -3,6 +3,7 @@ import { getLearnerContentDetail } from "@/lib/queries/apprenant";
 import { LessonPlayView } from "@/components/apprenant/lesson-play-view";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { LearningSessionTracker } from "@/components/learning-session-tracker";
 
 /**
  * Page de lecture d'une leçon spécifique dans une formation
@@ -44,6 +45,7 @@ export default async function FormationLessonPlayPage({
 
   return (
     <DyslexiaModeProvider>
+      <LearningSessionTracker contentType="course" contentId={card.id} showIndicator={false}>
       <div className="min-h-screen bg-white text-slate-900">
         <DashboardShell
           title={activeLesson.title}
@@ -67,6 +69,7 @@ export default async function FormationLessonPlayPage({
         />
         </DashboardShell>
       </div>
+      </LearningSessionTracker>
     </DyslexiaModeProvider>
   );
 }

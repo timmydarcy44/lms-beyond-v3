@@ -38,4 +38,5 @@ export type CrmUserListItem = {
   createdAt: string | null;
   lastSignInAt: string | null;
   totalRevenue: number;
+  testCount: number;
 };

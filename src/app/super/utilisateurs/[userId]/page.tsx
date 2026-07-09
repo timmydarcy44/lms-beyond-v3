@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getUserFullDetails } from "@/lib/queries/super-admin";
+import { getLearnerDossier } from "@/lib/queries/learner-dossier";
+import { LearnerDossierPanel } from "@/components/super-admin/learner-dossier-panel";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Mail, Building2, Edit, GraduationCap, BookOpen, FileText, Layers, Shield, Phone } from "lucide-react";
+import { ArrowLeft, User, Mail, Building2, Edit, GraduationCap, BookOpen, FileText, Layers, Shield, Phone, Calendar, Clock, ClipboardCheck } from "lucide-react";
 import { UserTestResultsSection } from "./test-results-section";
 
 export default async function UserDetailsPage({
@@ -17,13 +19,31 @@ export default async function UserDetailsPage({
   console.log("[super-admin/page] UserDetailsPage - userId type:", typeof userId);
   console.log("[super-admin/page] UserDetailsPage - userId length:", userId?.length);
   
-  const userDetails = await getUserFullDetails(userId);
+  const [userDetails, dossier] = await Promise.all([
+    getUserFullDetails(userId),
+    getLearnerDossier(userId),
+  ]);
   
   console.log("[super-admin/page] UserDetailsPage - userDetails:", userDetails ? "Found" : "Not found");
 
   if (!userDetails) {
     console.error("[super-admin/page] UserDetailsPage - User not found, returning 404");
     notFound();
+  }
+
+  function formatTrackingDate(value: string | null): string {
+    if (!value) return "—";
+    try {
+      return new Date(value).toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "—";
+    }
   }
 
   return (
@@ -85,6 +105,27 @@ export default async function UserDetailsPage({
               <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 capitalize">
                 {userDetails.role === "instructor" ? "Formateur" : userDetails.role === "learner" ? "Apprenant" : userDetails.role === "admin" ? "Administrateur" : userDetails.role === "tutor" ? "Tuteur" : userDetails.role}
               </span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Création du compte</p>
+              <p className="text-gray-900 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                {userDetails.createdAt ? formatTrackingDate(userDetails.createdAt) : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Dernière connexion</p>
+              <p className="text-gray-900 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-gray-500" />
+                {userDetails.lastSignInAt ? formatTrackingDate(userDetails.lastSignInAt) : "Jamais connecté"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Quiz / tests réalisés</p>
+              <p className="text-gray-900 flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 text-gray-500" />
+                {userDetails.testCount}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -246,7 +287,14 @@ export default async function UserDetailsPage({
         </Card>
       )}
 
-      {/* Section Résultats de tests */}
+      {dossier ? (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-gray-900">Fiche de suivi apprenant</h2>
+          <LearnerDossierPanel dossier={dossier} variant="default" />
+        </div>
+      ) : null}
+
+      {/* Section Résultats de tests détaillés */}
       <UserTestResultsSection userId={userId} />
     </div>
   );

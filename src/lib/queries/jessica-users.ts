@@ -9,6 +9,10 @@ import {
   getJessicaStudioCourseIds,
   isJessicaAssignableCatalogItem,
 } from "@/lib/jessica-contentin/sync-jessica-catalog";
+import {
+  fetchLastSignInForUser,
+  fetchLastSignInForUserIds,
+} from "@/lib/queries/learner-tracking";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 const JESSICA_SIGNUP_SOURCE = "jessica_contentin";
@@ -21,6 +25,7 @@ export type JessicaUserListItem = {
   fullName: string | null;
   phone: string | null;
   createdAt: string;
+  lastSignInAt: string | null;
   totalRevenue: number;
   purchaseCount: number;
   testCount: number;
@@ -35,6 +40,7 @@ export type JessicaUserDetails = {
   fullName: string | null;
   phone: string | null;
   createdAt: string;
+  lastSignInAt: string | null;
   purchases: Array<{
     id: string;
     catalogItemId: string;
@@ -163,6 +169,8 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
     const studioCourseIds = await getJessicaStudioCourseIds(supabase);
     const hasCatalog = await catalogItemsTableExists(supabase);
 
+    const lastSignInMap = await fetchLastSignInForUserIds(supabase, userIds);
+
     let accessData: Array<Record<string, unknown>> = [];
     if (hasCatalog) {
       const { data: accessDataRaw } = await supabase
@@ -216,6 +224,7 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
         fullName: profile.full_name || null,
         phone: profile.phone || null,
         createdAt: profile.created_at || new Date().toISOString(),
+        lastSignInAt: lastSignInMap.get(profile.id) ?? null,
         totalRevenue,
         purchaseCount: userAccess.length + userEnrollments.length,
         testCount: 0,
@@ -428,6 +437,7 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
     const purchaseCount = purchases.length;
     const testCount = testResults.length;
     const { firstName, lastName } = parseClientName(profile.full_name);
+    const lastSignInAt = await fetchLastSignInForUser(supabase, userId);
 
     return {
       id: profile.id,
@@ -437,6 +447,7 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
       fullName: profile.full_name || null,
       phone: profile.phone || null,
       createdAt: profile.created_at || new Date().toISOString(),
+      lastSignInAt,
       purchases,
       testResults,
       totalRevenue,

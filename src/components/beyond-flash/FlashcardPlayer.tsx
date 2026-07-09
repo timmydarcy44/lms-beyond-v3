@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, X as XIcon } from "lucide-react";
 
@@ -19,16 +19,58 @@ export type FlashcardPlayerProps = {
   /** Active a typing-based validation (optional). */
   typingMode?: boolean;
   onClose?: () => void;
+  trackingContext?: {
+    courseId: string;
+    scopeId: string;
+  };
 };
 
 const FLASH_MS = 520;
 
-export function FlashcardPlayer({ cards, className, typingMode, onClose }: FlashcardPlayerProps) {
+export function FlashcardPlayer({ cards, className, typingMode, onClose, trackingContext }: FlashcardPlayerProps) {
   const total = cards.length;
   const [index, setIndex] = useState(0);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [screenFlash, setScreenFlash] = useState<null | "green" | "red">(null);
   const [flipped, setFlipped] = useState(false);
+
+  const startedAtRef = useRef(new Date().toISOString());
+  const knownCountRef = useRef(0);
+  const unknownCountRef = useRef(0);
+  const cardResultsRef = useRef<Array<{ cardId: string; result: "known" | "unknown" }>>([]);
+  const persistedRef = useRef(false);
+
+  const persistSession = useCallback(async () => {
+    if (!trackingContext || persistedRef.current) return;
+    if (knownCountRef.current === 0 && unknownCountRef.current === 0) return;
+    persistedRef.current = true;
+    const durationSeconds = Math.max(
+      1,
+      Math.round((Date.now() - new Date(startedAtRef.current).getTime()) / 1000),
+    );
+    try {
+      await fetch("/api/learner/flashcard-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseId: trackingContext.courseId,
+          scopeId: trackingContext.scopeId,
+          totalCards: total,
+          knownCount: knownCountRef.current,
+          unknownCount: unknownCountRef.current,
+          cardResults: cardResultsRef.current,
+          durationSeconds,
+          startedAt: startedAtRef.current,
+        }),
+      });
+    } catch {
+      persistedRef.current = false;
+    }
+  }, [trackingContext, total]);
+
+  const handleClose = useCallback(() => {
+    void persistSession().finally(() => onClose?.());
+  }, [onClose, persistSession]);
 
   const current = cards[index] ?? null;
   const progressPct = total > 0 ? Math.round((Math.min(reviewedCount, total) / total) * 100) : 0;
@@ -41,15 +83,20 @@ export function FlashcardPlayer({ cards, className, typingMode, onClose }: Flash
   const flashAndNext = useCallback(
     (result: "known" | "unknown") => {
       if (!current || screenFlash) return;
+      cardResultsRef.current.push({ cardId: current.id, result });
+      if (result === "known") knownCountRef.current += 1;
+      else unknownCountRef.current += 1;
       setReviewedCount((c) => Math.min(c + 1, total));
       setScreenFlash(result === "known" ? "green" : "red");
       window.setTimeout(() => {
         setScreenFlash(null);
         setFlipped(false);
-        setIndex((i) => Math.min(i + 1, total));
+        const nextIndex = Math.min(index + 1, total);
+        setIndex(nextIndex);
+        if (nextIndex >= total) void persistSession();
       }, FLASH_MS);
     },
-    [current, total, screenFlash],
+    [current, total, screenFlash, index, persistSession],
   );
 
   const submitKnown = useCallback(() => flashAndNext("known"), [flashAndNext]);
@@ -79,7 +126,7 @@ export function FlashcardPlayer({ cards, className, typingMode, onClose }: Flash
             type="button"
             variant="ghost"
             className="absolute right-4 top-4 z-[630] rounded-full bg-black/40 text-white hover:bg-black/55"
-            onClick={onClose}
+            onClick={handleClose}
           >
             Fermer
           </Button>
@@ -102,7 +149,7 @@ export function FlashcardPlayer({ cards, className, typingMode, onClose }: Flash
             type="button"
             variant="ghost"
             className="absolute right-4 top-4 z-[630] rounded-full bg-black/40 text-white hover:bg-black/55"
-            onClick={onClose}
+            onClick={handleClose}
           >
             Fermer
           </Button>

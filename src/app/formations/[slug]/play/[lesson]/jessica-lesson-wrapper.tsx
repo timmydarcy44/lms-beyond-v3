@@ -2,6 +2,7 @@
 
 import { LessonPlayView } from "@/components/apprenant/lesson-play-view";
 import { FloatingDashboardCTA } from "@/components/apprenant/floating-dashboard-cta";
+import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import type {
   LearnerDetail,
   LearnerFlashcard,
@@ -25,9 +26,11 @@ type LessonPlayViewProps = {
 
 export function JessicaLessonPlayView(props: LessonPlayViewProps) {
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      <LessonPlayView {...props} theme="jessica" />
-      <FloatingDashboardCTA />
-    </div>
+    <LearningSessionTracker contentType="course" contentId={props.courseId} showIndicator={false}>
+      <div className="min-h-screen bg-[#FAFAFA]">
+        <LessonPlayView {...props} theme="jessica" />
+        <FloatingDashboardCTA />
+      </div>
+    </LearningSessionTracker>
   );
 }

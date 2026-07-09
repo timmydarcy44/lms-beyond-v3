@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Mail, Phone, Calendar, Loader2 } from "lucide-react";
+import { Search, Mail, Phone, Calendar, Loader2, Clock, ClipboardCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import type { JessicaUserListItem } from "@/lib/queries/jessica-users";
@@ -16,6 +16,15 @@ type JessicaCrmUsersListProps = {
   initialUsers: JessicaUserListItem[];
   availableResources: JessicaResource[];
 };
+
+function formatTrackingDate(value: string | null): string {
+  if (!value) return "Jamais connecté";
+  try {
+    return format(new Date(value), "dd MMM yyyy", { locale: fr });
+  } catch {
+    return "—";
+  }
+}
 
 export function JessicaCrmUsersList({ initialUsers, availableResources }: JessicaCrmUsersListProps) {
   const [users, setUsers] = useState(initialUsers);
@@ -140,7 +149,15 @@ export function JessicaCrmUsersList({ initialUsers, availableResources }: Jessic
                           ) : null}
                           <span className="flex items-center gap-1.5">
                             <Calendar className="h-3.5 w-3.5 opacity-50" />
-                            {format(new Date(user.createdAt), "dd MMM yyyy", { locale: fr })}
+                            Inscrit le {format(new Date(user.createdAt), "dd MMM yyyy", { locale: fr })}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 opacity-50" />
+                            Dernière connexion : {formatTrackingDate(user.lastSignInAt)}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <ClipboardCheck className="h-3.5 w-3.5 opacity-50" />
+                            {user.testCount} quiz / test{user.testCount > 1 ? "s" : ""}
                           </span>
                         </div>
                       </div>

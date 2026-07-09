@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ExperientialInterviewView } from "@/components/apprenant/experiential-interview-view";
@@ -12,12 +12,17 @@ import { Button } from "@/components/ui/button";
 import type { InterviewFeedbackPayload } from "@/app/api/ai/experiential-interview/feedback/route";
 import type { RevisionLessonItem } from "@/lib/apprenant/interview-revision-outline";
 import type { InterviewAudience, InterviewPlayTheme, InterviewStyle } from "@/lib/apprenant/interview-audience";
+import { cn } from "@/lib/utils";
+
+type ChatMessage = { role: "user" | "assistant"; content: string };
+type FlowPhase = "readiness" | "cinematic" | "revision" | "chat" | "feedback";
 
 type InterviewPlayClientProps = {
   contextText: string;
   interviewObjectives?: string;
   chapterTitle: string;
   courseTitle?: string;
+  courseId?: string;
   lessonId: string;
   returnHref: string;
   revisionItems: RevisionLessonItem[];
@@ -62,6 +67,7 @@ export function InterviewPlayClient({
   interviewObjectives,
   chapterTitle,
   courseTitle,
+  courseId,
   lessonId,
   returnHref,
   revisionItems,
@@ -77,6 +83,46 @@ export function InterviewPlayClient({
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [prefetchedOpening, setPrefetchedOpening] = useState<string | null>(null);
+  const chatStartedAtRef = useRef<string | null>(null);
+  const sessionPersistedRef = useRef(false);
+
+  const persistInterviewSession = useCallback(
+    async (params: {
+      status: "completed" | "abandoned";
+      messages: ChatMessage[];
+      feedback?: InterviewFeedbackPayload | null;
+    }) => {
+      if (sessionPersistedRef.current) return;
+      sessionPersistedRef.current = true;
+      const startedAt = chatStartedAtRef.current ?? new Date().toISOString();
+      const durationSeconds = Math.max(
+        1,
+        Math.round((Date.now() - new Date(startedAt).getTime()) / 1000),
+      );
+      try {
+        await fetch("/api/learner/interview-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            courseId: courseId ?? null,
+            lessonId,
+            interviewStyle,
+            audience,
+            chapterTitle,
+            courseTitle,
+            status: params.status,
+            messages: params.messages,
+            feedback: params.feedback ?? null,
+            startedAt,
+            durationSeconds,
+          }),
+        });
+      } catch {
+        sessionPersistedRef.current = false;
+      }
+    },
+    [audience, chapterTitle, courseId, courseTitle, interviewStyle, lessonId],
+  );
 
   useEffect(() => {
     setFlowPhase("readiness");
@@ -84,6 +130,8 @@ export function InterviewPlayClient({
     setFeedback(null);
     setFeedbackError(null);
     setPrefetchedOpening(null);
+    chatStartedAtRef.current = null;
+    sessionPersistedRef.current = false;
   }, [lessonId]);
 
   useEffect(() => {
@@ -131,6 +179,11 @@ export function InterviewPlayClient({
       if (!res.ok) throw new Error(data?.error || "Impossible de générer le bilan");
       setFeedback(data.feedback as InterviewFeedbackPayload);
       markInterviewDone();
+      void persistInterviewSession({
+        status: "completed",
+        messages,
+        feedback: data.feedback as InterviewFeedbackPayload,
+      });
     } catch (e) {
       setFeedbackError(e instanceof Error ? e.message : "Erreur lors du bilan");
     } finally {
@@ -144,6 +197,7 @@ export function InterviewPlayClient({
   };
 
   const startInterview = () => {
+    chatStartedAtRef.current = new Date().toISOString();
     setMessages([]);
     setFlowPhase("chat");
   };
@@ -226,7 +280,12 @@ export function InterviewPlayClient({
               variant="outline"
               onClick={() => {
                 if (canFinish) void handleFinish();
-                else router.push(returnHref);
+                else {
+                  if (userTurns > 0) {
+                    void persistInterviewSession({ status: "abandoned", messages });
+                  }
+                  router.push(returnHref);
+                }
               }}
               className={
                 isJessica

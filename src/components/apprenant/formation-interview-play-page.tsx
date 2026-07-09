@@ -8,6 +8,7 @@ import {
   resolveInterviewParentChapterTitle,
 } from "@/lib/apprenant/interview-revision-outline";
 import { resolveLessonInterviewConfig } from "@/lib/apprenant/interview-audience";
+import { LearningSessionTracker } from "@/components/learning-session-tracker";
 
 type FormationInterviewPlayPageProps = {
   category: string;
@@ -81,6 +82,7 @@ export async function FormationInterviewPlayPage({
 
   return (
     <DyslexiaModeProvider>
+      <LearningSessionTracker contentType="course" contentId={String(card.id)} showIndicator={false}>
       <div
         className={
           isJessica
@@ -93,6 +95,7 @@ export async function FormationInterviewPlayPage({
           interviewObjectives={interviewObjectives || undefined}
           chapterTitle={displayChapterTitle}
           courseTitle={card.title}
+          courseId={String(card.id)}
           lessonId={activeLesson.id}
           returnHref={returnHref}
           revisionItems={revisionItems}
@@ -101,6 +104,7 @@ export async function FormationInterviewPlayPage({
           audience={audience}
         />
       </div>
+      </LearningSessionTracker>
     </DyslexiaModeProvider>
   );
 }

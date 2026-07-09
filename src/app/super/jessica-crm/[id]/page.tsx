@@ -4,6 +4,7 @@ import { getServerClient } from "@/lib/supabase/server";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 import { getJessicaUserDetails } from "@/lib/queries/jessica-users";
 import { getJessicaResources } from "@/lib/queries/jessica-resources";
+import { getLearnerDossier } from "@/lib/queries/learner-dossier";
 import { UserDetailsClient } from "@/app/super/gestion-client/[id]/user-details-client";
 import { formatClientName } from "@/lib/jessica-contentin/parse-client-name";
 import Link from "next/link";
@@ -27,9 +28,10 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
   }
 
   const { id } = await params;
-  const [userDetails, resources] = await Promise.all([
+  const [userDetails, resources, dossier] = await Promise.all([
     getJessicaUserDetails(id),
     getJessicaResources(),
+    getLearnerDossier(id),
   ]);
 
   if (!userDetails) notFound();
@@ -54,7 +56,7 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
             {userDetails.phone ? ` · ${userDetails.phone}` : ""}
           </p>
         </div>
-        <UserDetailsClient userDetails={userDetails} availableResources={resources} />
+        <UserDetailsClient userDetails={userDetails} availableResources={resources} dossier={dossier} />
       </div>
     </div>
   );

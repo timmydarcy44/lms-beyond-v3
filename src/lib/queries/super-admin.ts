@@ -4,6 +4,11 @@ import { getServerClient, getServiceRoleClient, getServiceRoleClientOrFallback }
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import type { FormateurContentLibrary } from "@/lib/queries/formateur";
 import { splitFullName, type CrmUserListItem } from "@/lib/crm/crm-shared";
+import {
+  fetchLastSignInMap,
+  fetchLastSignInForUser,
+  fetchTestCountForUserIds,
+} from "@/lib/queries/learner-tracking";
 
 export type { CrmUserListItem } from "@/lib/crm/crm-shared";
 
@@ -740,18 +745,20 @@ export async function getCrmUsers(): Promise<CrmUserListItem[]> {
       createdAt: null,
       lastSignInAt: null,
       totalRevenue: 0,
+      testCount: 0,
     }));
   }
 
   const userIds = baseUsers.map((u) => u.id);
 
-  const [{ data: profileRows }, revenueByUser, lastSignInByUser] = await Promise.all([
+  const [{ data: profileRows }, revenueByUser, lastSignInByUser, testCountByUser] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, created_at, full_name")
       .in("id", userIds),
     fetchUserRevenueMap(supabase, userIds),
     fetchLastSignInMap(supabase),
+    fetchTestCountForUserIds(supabase, userIds),
   ]);
 
   const createdAtMap = new Map(
@@ -770,6 +777,7 @@ export async function getCrmUsers(): Promise<CrmUserListItem[]> {
       createdAt: createdAtMap.get(user.id) ?? null,
       lastSignInAt: lastSignInByUser.get(user.id) ?? null,
       totalRevenue: revenueByUser.get(user.id) ?? 0,
+      testCount: testCountByUser.get(user.id) ?? 0,
     };
   });
 }
@@ -793,29 +801,6 @@ async function fetchUserRevenueMap(
     const item = (row as { catalog_items?: { price?: number } | { price?: number }[] }).catalog_items;
     const price = Array.isArray(item) ? Number(item[0]?.price ?? 0) : Number(item?.price ?? 0);
     map.set(uid, (map.get(uid) ?? 0) + price);
-  }
-
-  return map;
-}
-
-async function fetchLastSignInMap(
-  supabase: NonNullable<Awaited<ReturnType<typeof getServerClient>>>,
-): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  const admin = (supabase as { auth?: { admin?: { listUsers?: (opts: { page?: number; perPage?: number }) => Promise<{ data?: { users?: Array<{ id: string; last_sign_in_at?: string | null }> } }> } } }).auth?.admin;
-  if (!admin?.listUsers) return map;
-
-  let page = 1;
-  const perPage = 200;
-  for (let i = 0; i < 20; i += 1) {
-    const { data } = await admin.listUsers({ page, perPage });
-    const users = data?.users ?? [];
-    if (users.length === 0) break;
-    for (const u of users) {
-      if (u.last_sign_in_at) map.set(u.id, u.last_sign_in_at);
-    }
-    if (users.length < perPage) break;
-    page += 1;
   }
 
   return map;
@@ -935,6 +920,9 @@ export type UserFullDetails = {
   fullName: string | null;
   role: string;
   phone: string | null;
+  createdAt: string | null;
+  lastSignInAt: string | null;
+  testCount: number;
   access_lms: boolean | null;
   access_connect: boolean | null;
   access_care: boolean | null;
@@ -1067,13 +1055,25 @@ export async function getUserFullDetails(userId: string): Promise<UserFullDetail
         }
         
         const { data: tests } = await testsQuery.order("created_at", { ascending: false });
-        
+
+        const [lastSignInAt, testCountMap] = await Promise.all([
+          fetchLastSignInForUser(supabase, userId),
+          fetchTestCountForUserIds(supabase, [userId]),
+        ]);
+
         return {
           id: user.id,
           email: user.email || "",
           fullName: user.full_name || null,
           role: user.role || "learner",
           phone: user.phone || null,
+          createdAt: user.created_at ?? null,
+          lastSignInAt,
+          testCount: testCountMap.get(userId) ?? 0,
+          access_lms: user.access_lms ?? null,
+          access_connect: user.access_connect ?? null,
+          access_care: user.access_care ?? null,
+          access_pro: user.access_pro ?? null,
           organizations,
           courses: (courses || []).map((c: any) => ({
             id: c.id,
@@ -1110,7 +1110,7 @@ export async function getUserFullDetails(userId: string): Promise<UserFullDetail
     // Méthode normale (avec ou sans service role)
     let { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, role, phone, access_lms, access_connect, access_care, access_pro")
+      .select("id, email, full_name, role, phone, created_at, access_lms, access_connect, access_care, access_pro")
       .eq("id", userId)
       .single();
     
@@ -1310,12 +1310,20 @@ export async function getUserFullDetails(userId: string): Promise<UserFullDetail
     
     const { data: tests } = await testsQuery.order("created_at", { ascending: false });
 
+    const [lastSignInAt, testCountMap] = await Promise.all([
+      fetchLastSignInForUser(supabase, userId),
+      fetchTestCountForUserIds(supabase, [userId]),
+    ]);
+
     return {
       id: profile.id,
       email: profile.email || "",
       fullName: profile.full_name || null,
       role: profile.role || "learner",
       phone: profile.phone || null,
+      createdAt: (profile as { created_at?: string }).created_at ?? null,
+      lastSignInAt,
+      testCount: testCountMap.get(userId) ?? 0,
       access_lms: (profile as any)?.access_lms ?? null,
       access_connect: (profile as any)?.access_connect ?? null,
       access_care: (profile as any)?.access_care ?? null,

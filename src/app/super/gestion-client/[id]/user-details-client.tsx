@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Euro, ShoppingBag, FileText, Calendar, Mail, Phone, User, Plus, Loader2, X } from "lucide-react";
+import { Euro, ShoppingBag, FileText, Calendar, Mail, Phone, User, Plus, Loader2, X, Clock } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { JessicaUserDetails } from "@/lib/queries/jessica-users";
 import type { JessicaResource } from "@/lib/queries/jessica-resources";
+import { TestResultsViewer } from "@/components/catalogue/test-results-viewer";
+import { LearnerDossierPanel } from "@/components/super-admin/learner-dossier-panel";
+import type { LearnerDossier } from "@/lib/queries/learner-dossier";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,10 +24,11 @@ import { toast } from "sonner";
 type UserDetailsClientProps = {
   userDetails: JessicaUserDetails;
   availableResources: JessicaResource[];
+  dossier?: LearnerDossier | null;
 };
 
-export function UserDetailsClient({ userDetails, availableResources }: UserDetailsClientProps) {
-  const [activeTab, setActiveTab] = useState("overview");
+export function UserDetailsClient({ userDetails, availableResources, dossier }: UserDetailsClientProps) {
+  const [activeTab, setActiveTab] = useState(dossier ? "suivi" : "overview");
   const [isAssigning, setIsAssigning] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -393,6 +397,19 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
                 </p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5" style={{ color: textColor, opacity: 0.5 }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: textColor, opacity: 0.7 }}>
+                  Dernière connexion
+                </p>
+                <p className="text-base" style={{ color: textColor }}>
+                  {userDetails.lastSignInAt
+                    ? format(new Date(userDetails.lastSignInAt), "dd MMMM yyyy à HH:mm", { locale: fr })
+                    : "Jamais connecté"}
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -434,6 +451,12 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
             Tests ({userDetails.testResults.length})
           </TabsTrigger>
         </TabsList>
+
+        {dossier ? (
+          <TabsContent value="suivi" className="mt-6">
+            <LearnerDossierPanel dossier={dossier} variant="jessica" />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="overview" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -663,62 +686,19 @@ export function UserDetailsClient({ userDetails, availableResources }: UserDetai
         </TabsContent>
 
         <TabsContent value="tests" className="mt-6">
-          <Card
-            className="rounded-2xl border-2"
-            style={{
-              borderColor: secondaryColor,
-              backgroundColor: bgColor,
+          <TestResultsViewer
+            userId={userDetails.id}
+            showHeader
+            colors={{
+              primary: primaryColor,
+              secondary: secondaryColor,
+              accent: primaryColor,
+              text: textColor,
+              textSecondary: textColor,
+              surface: surfaceColor,
+              background: bgColor,
             }}
-          >
-            <CardHeader>
-              <CardTitle style={{ color: textColor }}>
-                Résultats des tests ({userDetails.testResults.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {userDetails.testResults.length === 0 ? (
-                <p style={{ color: textColor, opacity: 0.7 }}>
-                  Aucun test réalisé pour le moment
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {userDetails.testResults.map((test) => (
-                    <div
-                      key={test.id}
-                      className="flex items-center gap-4 p-4 rounded-lg border-2"
-                      style={{
-                        borderColor: secondaryColor,
-                        backgroundColor: surfaceColor,
-                      }}
-                    >
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1" style={{ color: textColor }}>
-                          {test.testTitle}
-                        </h3>
-                        <p className="text-sm" style={{ color: textColor, opacity: 0.7 }}>
-                          {format(new Date(test.completedAt), "dd MMMM yyyy à HH:mm", { locale: fr })}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        {test.percentage !== undefined && (
-                          <>
-                            <p className="text-2xl font-bold" style={{ color: primaryColor }}>
-                              {test.percentage.toFixed(0)}%
-                            </p>
-                            {test.score !== undefined && (
-                              <p className="text-xs" style={{ color: textColor, opacity: 0.6 }}>
-                                Score: {test.score}
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          />
         </TabsContent>
       </Tabs>
     </div>

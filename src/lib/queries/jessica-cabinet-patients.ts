@@ -141,6 +141,31 @@ export async function getJessicaCabinetPatientDetails(
   return mapDetailRow(data as Record<string, unknown>, profileEmail);
 }
 
+export async function getJessicaCabinetPatientByProfileId(
+  profileId: string,
+): Promise<JessicaCabinetPatientDetails | null> {
+  if (!(await isSuperAdmin())) return null;
+
+  const supabase = getServiceRoleClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("jessica_cabinet_patients")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  return mapDetailRow(data as Record<string, unknown>, profile?.email ? String(profile.email) : null);
+}
+
 export async function getJessicaCabinetPatientsStats(): Promise<{
   total: number;
   withLmsAccount: number;

@@ -2,11 +2,11 @@ import { redirect } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient } from "@/lib/supabase/server";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
-import { getJessicaUsersList } from "@/lib/queries/jessica-users";
+import { getJessicaCrmContacts, getJessicaCrmRevenueSummary } from "@/lib/queries/jessica-crm-contacts";
 import { getJessicaResources } from "@/lib/queries/jessica-resources";
 import { JessicaCrmUsersList } from "@/components/jessica-contentin/crm/jessica-crm-users-list";
 import { JessicaSuperPage, JessicaSuperButton, JessicaSuperStatCard } from "@/components/jessica-contentin/super/jessica-super-ui";
-import { Plus, Users, Stethoscope } from "lucide-react";
+import { Plus, Users, Euro } from "lucide-react";
 
 export const revalidate = 0;
 
@@ -22,40 +22,63 @@ export default async function JessicaCrmPage() {
     redirect("/super");
   }
 
-  const [users, resources] = await Promise.all([getJessicaUsersList(), getJessicaResources()]);
+  const [contacts, resources, revenue] = await Promise.all([
+    getJessicaCrmContacts(),
+    getJessicaResources(),
+    getJessicaCrmRevenueSummary(),
+  ]);
+
+  const withLms = contacts.filter((c) => c.contactKind !== "patient").length;
+  const recentMonths = revenue.monthly.slice(-3);
 
   return (
     <JessicaSuperPage
       title="CRM — Clients"
-      subtitle="Gérez vos clients et assignez des formations visibles sur Mon compte."
+      subtitle="Patients cabinet et comptes LMS — CA formations + consultations (75€/h)."
       actions={
-        <>
-          <JessicaSuperButton href="/super/jessica-crm/patients" variant="outline">
-            <Stethoscope className="h-4 w-4" />
-            Patients cabinet
-          </JessicaSuperButton>
-          <JessicaSuperButton href="/super/jessica-crm/new">
-            <Plus className="h-4 w-4" />
-            Ajouter un client
-          </JessicaSuperButton>
-        </>
+        <JessicaSuperButton href="/super/jessica-crm/new">
+          <Plus className="h-4 w-4" />
+          Ajouter un client
+        </JessicaSuperButton>
       }
     >
-      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <JessicaSuperStatCard label="Clients" value={contacts.length} icon={<Users className="h-5 w-5" />} />
         <JessicaSuperStatCard
-          label="Clients"
-          value={users.length}
-          icon={<Users className="h-5 w-5" />}
-        />
-        <JessicaSuperStatCard label="Formations disponibles" value={resources.length} />
-        <JessicaSuperStatCard
-          label="Assignations actives"
-          value={users.reduce((s, u) => s + u.purchaseCount, 0)}
+          label="CA cabinet (RDV)"
+          value={`${revenue.totalCabinetRevenue.toFixed(0)}€`}
           accent
+          icon={<Euro className="h-5 w-5" />}
+          hint={`${revenue.hourlyRate}€/h`}
+        />
+        <JessicaSuperStatCard label="CA formations" value={`${revenue.totalLmsRevenue.toFixed(0)}€`} />
+        <JessicaSuperStatCard
+          label="CA total"
+          value={`${revenue.totalRevenue.toFixed(0)}€`}
+          accent
+          hint={`${withLms} avec compte LMS`}
         />
       </div>
 
-      <JessicaCrmUsersList initialUsers={users} availableResources={resources} />
+      {recentMonths.length > 0 && (
+        <div className="mb-8 grid grid-cols-1 gap-3 md:grid-cols-3">
+          {recentMonths.map((m) => (
+            <JessicaSuperStatCard
+              key={m.month}
+              label={m.label}
+              value={`${m.totalRevenue.toFixed(0)}€`}
+              hint={
+                <span>
+                  Cabinet {m.cabinetRevenue.toFixed(0)}€ · Formations {m.lmsRevenue.toFixed(0)}€
+                  {m.appointmentHours > 0 ? ` · ${m.appointmentHours.toFixed(1)}h` : ""}
+                </span>
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      <JessicaCrmUsersList initialUsers={contacts} availableResources={resources} />
     </JessicaSuperPage>
   );
 }

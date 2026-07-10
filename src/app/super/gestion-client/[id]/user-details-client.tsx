@@ -12,6 +12,8 @@ import type { JessicaResource } from "@/lib/queries/jessica-resources";
 import { TestResultsViewer } from "@/components/catalogue/test-results-viewer";
 import { LearnerDossierPanel } from "@/components/super-admin/learner-dossier-panel";
 import type { LearnerDossier } from "@/lib/queries/learner-dossier-types";
+import type { JessicaCabinetPatientDetails } from "@/lib/queries/jessica-cabinet-patients";
+import { JESSICA_CABINET_HOURLY_RATE } from "@/lib/jessica-contentin/cabinet-revenue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,14 +23,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { JESSICA_SUPER } from "@/lib/jessica-contentin/super-theme";
 
 type UserDetailsClientProps = {
   userDetails: JessicaUserDetails;
   availableResources: JessicaResource[];
   dossier?: LearnerDossier | null;
+  cabinetPatient?: JessicaCabinetPatientDetails | null;
 };
 
-export function UserDetailsClient({ userDetails, availableResources, dossier }: UserDetailsClientProps) {
+export function UserDetailsClient({ userDetails, availableResources, dossier, cabinetPatient }: UserDetailsClientProps) {
   const [activeTab, setActiveTab] = useState(dossier ? "suivi" : "overview");
   const [isAssigning, setIsAssigning] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -39,6 +43,10 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
   const [savingPurchaseId, setSavingPurchaseId] = useState<string | null>(null);
 
   const totalRevenue = purchases.reduce((sum, p) => sum + p.price, 0);
+  const cabinetRevenueEstimate = cabinetPatient
+    ? Math.round((cabinetPatient.pastAppointmentsCount || 0) * JESSICA_CABINET_HOURLY_RATE * 100) / 100
+    : 0;
+  const combinedRevenue = totalRevenue + cabinetRevenueEstimate;
 
   // Couleurs design system Jessica /super
   const bgColor = JESSICA_SUPER.bg;
@@ -375,10 +383,13 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
                   className="text-3xl font-bold"
                   style={{ color: primaryColor }}
                 >
-                  {totalRevenue.toFixed(2)}€
+                  {combinedRevenue.toFixed(2)}€
                 </p>
                 <p className="text-xs mt-1" style={{ color: textColor, opacity: 0.55 }}>
-                  Modifiable par formation (onglet Achats, icône crayon)
+                  Formations {totalRevenue.toFixed(2)}€
+                  {cabinetRevenueEstimate > 0
+                    ? ` · Cabinet ~${cabinetRevenueEstimate.toFixed(2)}€ (${JESSICA_CABINET_HOURLY_RATE}€/h)`
+                    : ""}
                 </p>
               </div>
             </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Search, Mail, Phone, Calendar, Loader2, Clock, ClipboardCheck } from "lucide-react";
-import type { JessicaUserListItem } from "@/lib/queries/jessica-users";
+import type { JessicaCrmContact } from "@/lib/queries/jessica-crm-contacts";
 import type { JessicaResource } from "@/lib/queries/jessica-resources";
 import { formatClientName } from "@/lib/jessica-contentin/parse-client-name";
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
@@ -13,7 +13,7 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 
 type JessicaCrmUsersListProps = {
-  initialUsers: JessicaUserListItem[];
+  initialUsers: JessicaCrmContact[];
   availableResources: JessicaResource[];
 };
 
@@ -136,46 +136,63 @@ export function JessicaCrmUsersList({ initialUsers, availableResources }: Jessic
                           <ClipboardCheck className="h-3.5 w-3.5" />
                           {user.testCount} quiz / test{user.testCount > 1 ? "s" : ""}
                         </span>
+                        {(user.cabinetRevenue > 0 || user.lmsRevenue > 0) && (
+                          <span className="font-medium text-indigo-700">
+                            CA {user.totalRevenue.toFixed(0)}€
+                            {user.cabinetRevenue > 0 && user.lmsRevenue > 0
+                              ? ` (cabinet ${user.cabinetRevenue.toFixed(0)}€ + LMS ${user.lmsRevenue.toFixed(0)}€)`
+                              : user.cabinetRevenue > 0
+                                ? ` (cabinet)`
+                                : ` (LMS)`}
+                          </span>
+                        )}
+                        {user.pastAppointmentsCount > 0 && (
+                          <span className="text-neutral-400">{user.pastAppointmentsCount} RDV passés</span>
+                        )}
                       </div>
                     </div>
                   </Link>
 
-                  <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                    <label className="text-xs font-medium text-neutral-500">Assigner une formation</label>
-                    {assigningUserId === user.id ? (
-                      <div className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-600">
-                        <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
-                        Assignation…
-                      </div>
-                    ) : (
-                      <select
-                        className="min-w-[220px] rounded-full border border-black/[0.08] bg-neutral-50 px-4 py-2.5 text-sm text-black focus:border-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
-                        defaultValue=""
-                        disabled={availableResources.length === 0 || toAssign.length === 0}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value) void handleAssign(user.id, value);
-                          e.target.value = "";
-                        }}
-                      >
-                        <option value="" disabled>
-                          {availableResources.length === 0
-                            ? "Aucune formation disponible"
-                            : toAssign.length === 0
-                              ? "Toutes les formations assignées"
-                              : "Choisir une formation…"}
-                        </option>
-                        {toAssign.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.title}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <p className="text-[11px] text-neutral-400 sm:max-w-[140px]">
-                      {user.purchaseCount} formation{user.purchaseCount > 1 ? "s" : ""} · Mon compte
-                    </p>
-                  </div>
+                    <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                      {user.contactKind !== "patient" && (
+                        <>
+                          <label className="text-xs font-medium text-neutral-500">Assigner une formation</label>
+                          {assigningUserId === user.id ? (
+                            <div className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-600">
+                              <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+                              Assignation…
+                            </div>
+                          ) : (
+                            <select
+                              className="min-w-[220px] rounded-full border border-black/[0.08] bg-neutral-50 px-4 py-2.5 text-sm text-black focus:border-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+                              defaultValue=""
+                              disabled={availableResources.length === 0 || toAssign.length === 0}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value) void handleAssign(user.id, value);
+                                e.target.value = "";
+                              }}
+                            >
+                              <option value="" disabled>
+                                {availableResources.length === 0
+                                  ? "Aucune formation disponible"
+                                  : toAssign.length === 0
+                                    ? "Toutes les formations assignées"
+                                    : "Choisir une formation…"}
+                              </option>
+                              {toAssign.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.title}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          <p className="text-[11px] text-neutral-400 sm:max-w-[140px]">
+                            {user.purchaseCount} formation{user.purchaseCount > 1 ? "s" : ""} · Mon compte
+                          </p>
+                        </>
+                      )}
+                    </div>
                 </div>
               </div>
             );

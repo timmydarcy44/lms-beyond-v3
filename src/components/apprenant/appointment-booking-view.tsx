@@ -287,11 +287,13 @@ export function AppointmentBookingView({ superAdminId }: { superAdminId: string 
           start_time: selectedSlot.start.toISOString(),
           end_time: selectedSlot.end.toISOString(),
           subject: `${bookingForm.firstName} ${bookingForm.lastName} - ${bookingForm.classe}`,
-          learner_notes: bookingForm.notes 
+          learner_notes: bookingForm.notes
             ? `${bookingForm.notes}\n\nClasse: ${bookingForm.classe}\nEmail: ${bookingForm.email}`
             : `Classe: ${bookingForm.classe}\nEmail: ${bookingForm.email}`,
           notes: `Email: ${bookingForm.email}\nClasse: ${bookingForm.classe}\n\n${bookingForm.notes || ""}`,
           email: bookingForm.email,
+          first_name: bookingForm.firstName,
+          last_name: bookingForm.lastName,
         }),
       });
 

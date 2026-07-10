@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import {
+  linkAppointmentToPatient,
+  pushAppointmentToGoogleCalendar,
+} from "@/lib/jessica-contentin/appointment-sync";
 
 /**
  * API route pour créer un rendez-vous anonyme
@@ -17,25 +21,19 @@ export async function POST(request: NextRequest) {
       learner_notes,
       notes,
       email,
+      first_name,
+      last_name,
     } = body;
 
     if (!super_admin_id || !slot_id || !start_time || !end_time) {
-      return NextResponse.json(
-        { error: "Paramètres manquants" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
     }
 
-    // Utiliser le service role client pour bypass RLS
     const supabase = getServiceRoleClient();
     if (!supabase) {
-      return NextResponse.json(
-        { error: "Service client non disponible" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Service client non disponible" }, { status: 500 });
     }
 
-    // Vérifier que le slot existe et est disponible
     const { data: slot, error: slotError } = await supabase
       .from("appointment_slots")
       .select("*")
@@ -44,13 +42,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (slotError || !slot) {
-      return NextResponse.json(
-        { error: "Créneau non disponible" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Créneau non disponible" }, { status: 400 });
     }
 
-    // Vérifier qu'il n'y a pas déjà un rendez-vous pour ce slot
     const { data: existingAppointment } = await supabase
       .from("appointments")
       .select("id")
@@ -59,18 +53,25 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existingAppointment) {
-      return NextResponse.json(
-        { error: "Ce créneau est déjà réservé" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Ce créneau est déjà réservé" }, { status: 400 });
     }
 
-    // Créer le rendez-vous avec learner_id = NULL
+    const guestEmail = email ? String(email).toLowerCase() : null;
+    const guestName = [first_name, last_name].filter(Boolean).join(" ").trim() || null;
+
+    const patient = guestEmail
+      ? await supabase
+          .from("jessica_cabinet_patients")
+          .select("id")
+          .ilike("email", guestEmail)
+          .maybeSingle()
+      : { data: null };
+
     const { data: appointment, error: appointmentError } = await supabase
       .from("appointments")
       .insert({
         super_admin_id,
-        learner_id: null, // Réservation anonyme
+        learner_id: null,
         slot_id,
         start_time,
         end_time,
@@ -78,33 +79,51 @@ export async function POST(request: NextRequest) {
         subject: subject || null,
         learner_notes: learner_notes || null,
         notes: notes || null,
+        guest_email: guestEmail,
+        guest_name: guestName,
+        cabinet_patient_id: patient.data?.id ?? null,
       })
       .select()
       .single();
 
-    if (appointmentError) {
+    if (appointmentError || !appointment) {
       console.error("[api/appointments/create-anonymous] Error:", appointmentError);
       return NextResponse.json(
-        { error: "Erreur lors de la création du rendez-vous", details: appointmentError.message },
-        { status: 500 }
+        { error: "Erreur lors de la création du rendez-vous", details: appointmentError?.message },
+        { status: 500 },
       );
     }
 
-    console.log("[api/appointments/create-anonymous] ✅ Appointment created:", appointment.id);
+    await linkAppointmentToPatient(supabase, appointment.id, {
+      email: guestEmail,
+      guestName,
+    });
+
+    const googleEventId = await pushAppointmentToGoogleCalendar({
+      userId: super_admin_id,
+      summary: subject || guestName || "Rendez-vous cabinet",
+      description: notes || learner_notes || undefined,
+      startIso: start_time,
+      endIso: end_time,
+      attendeeEmail: guestEmail ?? undefined,
+    });
+
+    if (googleEventId) {
+      await supabase
+        .from("appointments")
+        .update({ google_event_id: googleEventId })
+        .eq("id", appointment.id);
+    }
 
     return NextResponse.json({
       success: true,
-      appointment,
+      appointment: { ...appointment, google_event_id: googleEventId },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[api/appointments/create-anonymous] Unexpected error:", error);
     return NextResponse.json(
-      { error: "Erreur serveur", details: error.message },
-      { status: 500 }
+      { error: "Erreur serveur", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
     );
   }
 }
-
-
-
-

@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   formatLearnerDuration,
   type LearnerDossier,
-} from "@/lib/queries/learner-dossier";
+} from "@/lib/queries/learner-dossier-types";
 
 type LearnerDossierPanelProps = {
   dossier: LearnerDossier;

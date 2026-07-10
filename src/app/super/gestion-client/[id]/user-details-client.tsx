@@ -11,7 +11,7 @@ import type { JessicaUserDetails } from "@/lib/queries/jessica-users";
 import type { JessicaResource } from "@/lib/queries/jessica-resources";
 import { TestResultsViewer } from "@/components/catalogue/test-results-viewer";
 import { LearnerDossierPanel } from "@/components/super-admin/learner-dossier-panel";
-import type { LearnerDossier } from "@/lib/queries/learner-dossier";
+import type { LearnerDossier } from "@/lib/queries/learner-dossier-types";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

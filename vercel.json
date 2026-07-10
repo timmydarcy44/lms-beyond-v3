@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/radar-equipe-compute",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/jessica-cabinet-emails",
+      "schedule": "0 * * * *"
     }
   ]
 }

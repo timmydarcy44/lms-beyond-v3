@@ -2,6 +2,9 @@ import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 
 const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
+const JESSICA_OAUTH_DEFAULT_REDIRECT =
+  "https://jessicacontentin.fr/api/jessica/google-calendar/callback";
+
 /** ID du calendrier cabinet (URL iCal Google ou variable dédiée). */
 export function getJessicaGoogleCalendarId(): string {
   const explicit = process.env.GOOGLE_CALENDAR_ID?.trim();
@@ -20,14 +23,20 @@ function requireGoogleOAuthConfig() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri =
-    process.env.GOOGLE_CALENDAR_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_URL || "http://localhost:3001"}/api/jessica/google-calendar/callback`;
+    process.env.GOOGLE_CALENDAR_REDIRECT_URI?.trim() ||
+    (process.env.JESSICA_APP_URL?.trim()
+      ? `${process.env.JESSICA_APP_URL.replace(/\/$/, "")}/api/jessica/google-calendar/callback`
+      : JESSICA_OAUTH_DEFAULT_REDIRECT);
 
   if (!clientId || !clientSecret) {
     throw new Error("GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET requis");
   }
 
   return { clientId, clientSecret, redirectUri };
+}
+
+export function getGoogleCalendarRedirectUri(): string {
+  return requireGoogleOAuthConfig().redirectUri;
 }
 
 export function getGoogleCalendarAuthUrl(state: string): string {
@@ -150,6 +159,7 @@ export async function listGoogleCalendarEvents(params: {
   }
   return (data.items ?? []) as Array<{
     id: string;
+    status?: string;
     summary?: string;
     description?: string;
     start?: { dateTime?: string; date?: string };

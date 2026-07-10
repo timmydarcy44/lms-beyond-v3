@@ -2,6 +2,20 @@
 
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import {
+  appointmentRevenue,
+  appointmentDurationHours,
+  isCountableCabinetAppointment,
+  JESSICA_CABINET_YEAR_2026,
+} from "@/lib/jessica-contentin/cabinet-revenue";
+import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
+
+export type PatientCabinetRevenue = {
+  totalRevenue: number;
+  year2026Revenue: number;
+  appointmentHours: number;
+  appointmentCount: number;
+};
 
 export type JessicaCabinetPatientListItem = {
   id: string;
@@ -164,6 +178,136 @@ export async function getJessicaCabinetPatientByProfileId(
     .maybeSingle();
 
   return mapDetailRow(data as Record<string, unknown>, profile?.email ? String(profile.email) : null);
+}
+
+async function fetchPatientAppointments(
+  supabase: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+  patientId: string,
+  patientEmail: string | null,
+) {
+  const { data: byPatient } = await supabase
+    .from("appointments")
+    .select("start_time, end_time, status")
+    .eq("cabinet_patient_id", patientId);
+  const rows = [...(byPatient ?? [])];
+
+  if (patientEmail) {
+    const { data: byEmail } = await supabase
+      .from("appointments")
+      .select("start_time, end_time, status")
+      .ilike("guest_email", patientEmail.trim());
+    for (const row of byEmail ?? []) {
+      rows.push(row);
+    }
+  }
+
+  return rows;
+}
+
+export async function getPatientCabinetRevenue(
+  patientId: string,
+  patientEmail?: string | null,
+): Promise<PatientCabinetRevenue> {
+  if (!(await isSuperAdmin())) {
+    return { totalRevenue: 0, year2026Revenue: 0, appointmentHours: 0, appointmentCount: 0 };
+  }
+
+  const supabase = getServiceRoleClient();
+  if (!supabase) {
+    return { totalRevenue: 0, year2026Revenue: 0, appointmentHours: 0, appointmentCount: 0 };
+  }
+
+  const rows = await fetchPatientAppointments(supabase, patientId, patientEmail ?? null);
+  const now = new Date();
+  const yearStart = new Date(JESSICA_CABINET_YEAR_2026.start);
+  const yearEnd = new Date(JESSICA_CABINET_YEAR_2026.end);
+
+  let totalRevenue = 0;
+  let year2026Revenue = 0;
+  let appointmentHours = 0;
+  let appointmentCount = 0;
+
+  const seen = new Set<string>();
+
+  for (const apt of rows) {
+    const key = `${apt.start_time}|${apt.end_time}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    if (!isCountableCabinetAppointment(String(apt.status), String(apt.end_time), now)) continue;
+
+    const rev = appointmentRevenue(String(apt.start_time), String(apt.end_time));
+    const hours = appointmentDurationHours(String(apt.start_time), String(apt.end_time));
+    totalRevenue += rev;
+    appointmentHours += hours;
+    appointmentCount += 1;
+
+    const start = new Date(String(apt.start_time));
+    if (start >= yearStart && start <= yearEnd) {
+      year2026Revenue += rev;
+    }
+  }
+
+  return {
+    totalRevenue: Math.round(totalRevenue * 100) / 100,
+    year2026Revenue: Math.round(year2026Revenue * 100) / 100,
+    appointmentHours: Math.round(appointmentHours * 100) / 100,
+    appointmentCount,
+  };
+}
+
+export async function getJessicaCabinetYearRevenue(year = 2026): Promise<{
+  revenue: number;
+  hours: number;
+  appointmentCount: number;
+}> {
+  if (!(await isSuperAdmin())) {
+    return { revenue: 0, hours: 0, appointmentCount: 0 };
+  }
+
+  const supabase = getServiceRoleClient();
+  if (!supabase) return { revenue: 0, hours: 0, appointmentCount: 0 };
+
+  const { data: jessicaProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", JESSICA_CONTENTIN_EMAIL)
+    .maybeSingle();
+
+  if (!jessicaProfile?.id) return { revenue: 0, hours: 0, appointmentCount: 0 };
+
+  const yearStart = `${year}-01-01T00:00:00+01:00`;
+  const yearEnd = `${year}-12-31T23:59:59+01:00`;
+  const now = new Date();
+
+  const { data: appointments, error } = await supabase
+    .from("appointments")
+    .select("start_time, end_time, status")
+    .eq("super_admin_id", jessicaProfile.id)
+    .gte("start_time", yearStart)
+    .lte("start_time", yearEnd);
+
+  if (error) {
+    console.error("[getJessicaCabinetYearRevenue]", error.message);
+    return { revenue: 0, hours: 0, appointmentCount: 0 };
+  }
+
+  let revenue = 0;
+  let hours = 0;
+  let appointmentCount = 0;
+
+  for (const apt of appointments ?? []) {
+    if (!isCountableCabinetAppointment(String(apt.status), String(apt.end_time), now)) continue;
+    revenue += appointmentRevenue(String(apt.start_time), String(apt.end_time));
+    hours += appointmentDurationHours(String(apt.start_time), String(apt.end_time));
+    appointmentCount += 1;
+  }
+
+  return {
+    revenue: Math.round(revenue * 100) / 100,
+    hours: Math.round(hours * 100) / 100,
+    appointmentCount,
+  };
 }
 
 export async function getJessicaCabinetPatientsStats(): Promise<{

@@ -1,9 +1,12 @@
-import type { JessicaCabinetPatientDetails } from "@/lib/queries/jessica-cabinet-patients";
+import type {
+  JessicaCabinetPatientDetails,
+  PatientCabinetRevenue,
+} from "@/lib/queries/jessica-cabinet-patients";
 import { JessicaSuperCard } from "@/components/jessica-contentin/super/jessica-super-ui";
 import { JESSICA_CABINET_HOURLY_RATE } from "@/lib/jessica-contentin/cabinet-revenue";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Mail, Phone, MapPin } from "lucide-react";
+import { Calendar, Mail, Phone, MapPin, Euro } from "lucide-react";
 
 function fmtDateTime(value: string | null): string {
   if (!value) return "—";
@@ -16,12 +19,14 @@ function fmtDateTime(value: string | null): string {
 
 type Props = {
   patient: JessicaCabinetPatientDetails;
+  revenue?: PatientCabinetRevenue;
   compact?: boolean;
 };
 
-export function JessicaCabinetPatientPanel({ patient, compact }: Props) {
-  const estimatedCabinetRevenue =
-    Math.round(((patient.pastAppointmentsCount || 0) * 1) * JESSICA_CABINET_HOURLY_RATE * 100) / 100;
+export function JessicaCabinetPatientPanel({ patient, revenue, compact }: Props) {
+  const cabinetRevenue = revenue?.totalRevenue ?? 0;
+  const year2026Revenue = revenue?.year2026Revenue ?? 0;
+  const appointmentHours = revenue?.appointmentHours ?? 0;
 
   if (compact) {
     return (
@@ -31,7 +36,13 @@ export function JessicaCabinetPatientPanel({ patient, compact }: Props) {
             <strong>{patient.pastAppointmentsCount}</strong> RDV passés
           </span>
           <span>Prochain : {fmtDateTime(patient.nextAppointmentAt)}</span>
-          <span className="text-indigo-700 font-medium">Cabinet ~{estimatedCabinetRevenue}€ ({JESSICA_CABINET_HOURLY_RATE}€/h)</span>
+          <span className="font-medium text-indigo-700">
+            CA cabinet : {cabinetRevenue.toFixed(0)}€ ({JESSICA_CABINET_HOURLY_RATE}€/h
+            {appointmentHours > 0 ? ` · ${appointmentHours.toFixed(1)}h` : ""})
+          </span>
+          {year2026Revenue > 0 && (
+            <span className="text-indigo-600">CA 2026 : {year2026Revenue.toFixed(0)}€</span>
+          )}
           {patient.lastAppointmentReason && (
             <span className="text-neutral-500">{patient.lastAppointmentReason}</span>
           )}
@@ -73,9 +84,12 @@ export function JessicaCabinetPatientPanel({ patient, compact }: Props) {
           </div>
           <div>Dernier : {fmtDateTime(patient.lastAppointmentAt)}</div>
           <div>Prochain : {fmtDateTime(patient.nextAppointmentAt)}</div>
-          <div className="font-semibold text-indigo-700">
-            CA estimé cabinet : ~{estimatedCabinetRevenue}€ ({JESSICA_CABINET_HOURLY_RATE}€/h)
+          <div className="flex items-center gap-2 font-semibold text-indigo-700">
+            <Euro className="h-4 w-4" />
+            CA cabinet : {cabinetRevenue.toFixed(0)}€
+            {appointmentHours > 0 ? ` (${appointmentHours.toFixed(1)}h · ${JESSICA_CABINET_HOURLY_RATE}€/h)` : ""}
           </div>
+          <div className="font-medium text-indigo-600">CA 2026 : {year2026Revenue.toFixed(0)}€</div>
           {patient.lastAppointmentReason && (
             <div className="text-neutral-500">Motif : {patient.lastAppointmentReason}</div>
           )}

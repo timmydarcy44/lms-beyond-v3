@@ -8,7 +8,10 @@ import {
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
-  const base = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_URL || "http://localhost:3001";
+  const base =
+    process.env.JESSICA_APP_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    "https://jessicacontentin.fr";
 
   if (!code || !state) {
     return NextResponse.redirect(`${base}/super/agenda?google=error`);

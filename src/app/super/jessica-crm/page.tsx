@@ -3,6 +3,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient } from "@/lib/supabase/server";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 import { getJessicaCrmContacts, getJessicaCrmRevenueSummary } from "@/lib/queries/jessica-crm-contacts";
+import { getJessicaCabinetYearRevenue } from "@/lib/queries/jessica-cabinet-patients";
 import { getJessicaResources } from "@/lib/queries/jessica-resources";
 import { JessicaCrmUsersList } from "@/components/jessica-contentin/crm/jessica-crm-users-list";
 import { JessicaSuperPage, JessicaSuperButton, JessicaSuperStatCard } from "@/components/jessica-contentin/super/jessica-super-ui";
@@ -22,7 +23,7 @@ export default async function JessicaCrmPage() {
     redirect("/super");
   }
 
-  const [contacts, resources, revenue] = await Promise.all([
+  const [contacts, resources, revenue, year2026] = await Promise.all([
     getJessicaCrmContacts().catch((e) => {
       console.error("[jessica-crm] contacts error:", e);
       return [];
@@ -37,6 +38,10 @@ export default async function JessicaCrmPage() {
         totalRevenue: 0,
         monthly: [],
       };
+    }),
+    getJessicaCabinetYearRevenue(2026).catch((e) => {
+      console.error("[jessica-crm] year revenue error:", e);
+      return { revenue: 0, hours: 0, appointmentCount: 0 };
     }),
   ]);
 
@@ -54,12 +59,22 @@ export default async function JessicaCrmPage() {
         </JessicaSuperButton>
       }
     >
-      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
         <JessicaSuperStatCard label="Clients" value={contacts.length} icon={<Users className="h-5 w-5" />} />
         <JessicaSuperStatCard
-          label="CA cabinet (RDV)"
-          value={`${revenue.totalCabinetRevenue.toFixed(0)}€`}
+          label="CA cabinet 2026"
+          value={`${year2026.revenue.toFixed(0)}€`}
           accent
+          icon={<Euro className="h-5 w-5" />}
+          hint={
+            year2026.appointmentCount > 0
+              ? `${year2026.appointmentCount} RDV · ${year2026.hours.toFixed(1)}h`
+              : "01/01 – 31/12/2026"
+          }
+        />
+        <JessicaSuperStatCard
+          label="CA cabinet (total)"
+          value={`${revenue.totalCabinetRevenue.toFixed(0)}€`}
           icon={<Euro className="h-5 w-5" />}
           hint={`${revenue.hourlyRate}€/h`}
         />

@@ -8,6 +8,7 @@ import { getLearnerDossier } from "@/lib/queries/learner-dossier";
 import {
   getJessicaCabinetPatientDetails,
   getJessicaCabinetPatientByProfileId,
+  getPatientCabinetRevenue,
 } from "@/lib/queries/jessica-cabinet-patients";
 import { UserDetailsClient } from "@/app/super/gestion-client/[id]/user-details-client";
 import { JessicaCabinetPatientPanel } from "@/components/jessica-contentin/crm/jessica-cabinet-patient-panel";
@@ -42,6 +43,10 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
 
   const patient = patientById ?? (userDetails ? await getJessicaCabinetPatientByProfileId(id) : null);
 
+  const patientRevenue = patient
+    ? await getPatientCabinetRevenue(patient.id, patient.email)
+    : null;
+
   if (!userDetails && !patient) notFound();
 
   let dossier = null;
@@ -62,7 +67,9 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
         backHref="/super/jessica-crm"
         backLabel="Retour au CRM"
       >
-        {patient ? <JessicaCabinetPatientPanel patient={patient} compact /> : null}
+        {patient ? (
+          <JessicaCabinetPatientPanel patient={patient} revenue={patientRevenue ?? undefined} compact />
+        ) : null}
         <UserDetailsClient
           userDetails={userDetails}
           availableResources={resources}
@@ -82,7 +89,7 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
       backHref="/super/jessica-crm"
       backLabel="Retour au CRM"
     >
-      <JessicaCabinetPatientPanel patient={patient!} />
+      <JessicaCabinetPatientPanel patient={patient!} revenue={patientRevenue ?? undefined} />
     </JessicaSuperPage>
   );
 }

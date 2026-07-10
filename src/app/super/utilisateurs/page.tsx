@@ -10,7 +10,10 @@ export default async function UsersPage({
   const initialRoleParam = params?.role;
   const initialRole = Array.isArray(initialRoleParam) ? initialRoleParam[0] : initialRoleParam;
 
-  const users = await getCrmUsers();
+  const users = await getCrmUsers().catch((e) => {
+    console.error("[utilisateurs] getCrmUsers:", e);
+    return [];
+  });
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6 px-6 py-8">

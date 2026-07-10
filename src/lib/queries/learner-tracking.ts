@@ -84,10 +84,20 @@ export async function fetchTestCountForUserIds(
   const map = new Map<string, number>();
   if (userIds.length === 0) return map;
 
-  const [{ data: testAttempts }, { data: mentalHealthAssessments }] = await Promise.all([
+  const [testRes, mentalRes] = await Promise.all([
     supabase.from("test_attempts").select("user_id").in("user_id", userIds),
     supabase.from("mental_health_assessments").select("user_id").in("user_id", userIds),
   ]);
+
+  if (testRes.error) {
+    console.error("[fetchTestCountForUserIds] test_attempts:", testRes.error.message);
+  }
+  if (mentalRes.error) {
+    console.error("[fetchTestCountForUserIds] mental_health_assessments:", mentalRes.error.message);
+  }
+
+  const testAttempts = testRes.data ?? [];
+  const mentalHealthAssessments = mentalRes.data ?? [];
 
   for (const row of testAttempts ?? []) {
     map.set(row.user_id, (map.get(row.user_id) ?? 0) + 1);

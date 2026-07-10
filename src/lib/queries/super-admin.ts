@@ -5,7 +5,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import type { FormateurContentLibrary } from "@/lib/queries/formateur";
 import { splitFullName, type CrmUserListItem } from "@/lib/crm/crm-shared";
 import {
-  fetchLastSignInMap,
+  fetchLastSignInForUserIds,
   fetchLastSignInForUser,
   fetchTestCountForUserIds,
 } from "@/lib/queries/learner-tracking";
@@ -734,52 +734,83 @@ export async function getOrganizationFullDetails(orgId: string): Promise<Organiz
 // ============================================================================
 
 export async function getCrmUsers(): Promise<CrmUserListItem[]> {
-  const baseUsers = await getAllUsers();
-  if (baseUsers.length === 0) return [];
+  try {
+    const baseUsers = await getAllUsers();
+    if (baseUsers.length === 0) return [];
 
-  const supabase = getServiceRoleClient() ?? (await getServerClient());
-  if (!supabase) {
-    return baseUsers.map((u) => ({
-      ...u,
-      ...splitFullName(u.fullName),
-      createdAt: null,
-      lastSignInAt: null,
-      totalRevenue: 0,
-      testCount: 0,
-    }));
+    const supabase = getServiceRoleClient() ?? (await getServerClient());
+    if (!supabase) {
+      return baseUsers.map((u) => ({
+        ...u,
+        organizations: u.organizations ?? [],
+        ...splitFullName(u.fullName),
+        createdAt: null,
+        lastSignInAt: null,
+        totalRevenue: 0,
+        testCount: 0,
+      }));
+    }
+
+    const userIds = baseUsers.map((u) => u.id);
+
+    const [profileRows, revenueByUser, lastSignInByUser, testCountByUser] = await Promise.all([
+      fetchProfileCreatedAtMap(supabase, userIds),
+      fetchUserRevenueMap(supabase, userIds).catch((e) => {
+        console.error("[getCrmUsers] revenue:", e);
+        return new Map<string, number>();
+      }),
+      fetchLastSignInForUserIds(supabase, userIds.slice(0, 200)).catch((e) => {
+        console.error("[getCrmUsers] lastSignIn:", e);
+        return new Map<string, string>();
+      }),
+      fetchTestCountForUserIds(supabase, userIds).catch((e) => {
+        console.error("[getCrmUsers] testCount:", e);
+        return new Map<string, number>();
+      }),
+    ]);
+
+    return baseUsers.map((user) => {
+      const { firstName, lastName } = splitFullName(user.fullName);
+      return {
+        ...user,
+        organizations: user.organizations ?? [],
+        firstName,
+        lastName,
+        createdAt: profileRows.get(user.id) ?? null,
+        lastSignInAt: lastSignInByUser.get(user.id) ?? null,
+        totalRevenue: revenueByUser.get(user.id) ?? 0,
+        testCount: testCountByUser.get(user.id) ?? 0,
+      };
+    });
+  } catch (error) {
+    console.error("[getCrmUsers] fatal:", error);
+    return [];
   }
+}
 
-  const userIds = baseUsers.map((u) => u.id);
+async function fetchProfileCreatedAtMap(
+  supabase: NonNullable<Awaited<ReturnType<typeof getServerClient>>>,
+  userIds: string[],
+): Promise<Map<string, string | null>> {
+  const map = new Map<string, string | null>();
+  if (userIds.length === 0) return map;
 
-  const [{ data: profileRows }, revenueByUser, lastSignInByUser, testCountByUser] = await Promise.all([
-    supabase
+  const chunkSize = 100;
+  for (let i = 0; i < userIds.length; i += chunkSize) {
+    const chunk = userIds.slice(i, i + chunkSize);
+    const { data, error } = await supabase
       .from("profiles")
-      .select("id, created_at, full_name")
-      .in("id", userIds),
-    fetchUserRevenueMap(supabase, userIds),
-    fetchLastSignInMap(supabase),
-    fetchTestCountForUserIds(supabase, userIds),
-  ]);
-
-  const createdAtMap = new Map(
-    (profileRows ?? []).map((p: { id: string; created_at?: string }) => [
-      p.id,
-      p.created_at ?? null,
-    ]),
-  );
-
-  return baseUsers.map((user) => {
-    const { firstName, lastName } = splitFullName(user.fullName);
-    return {
-      ...user,
-      firstName,
-      lastName,
-      createdAt: createdAtMap.get(user.id) ?? null,
-      lastSignInAt: lastSignInByUser.get(user.id) ?? null,
-      totalRevenue: revenueByUser.get(user.id) ?? 0,
-      testCount: testCountByUser.get(user.id) ?? 0,
-    };
-  });
+      .select("id, created_at")
+      .in("id", chunk);
+    if (error) {
+      console.error("[getCrmUsers] profiles chunk:", error.message);
+      continue;
+    }
+    for (const row of data ?? []) {
+      map.set(row.id, row.created_at ?? null);
+    }
+  }
+  return map;
 }
 
 async function fetchUserRevenueMap(
@@ -789,18 +820,27 @@ async function fetchUserRevenueMap(
   const map = new Map<string, number>();
   if (userIds.length === 0) return map;
 
-  const { data: accessRows } = await supabase
-    .from("catalog_access")
-    .select("user_id, access_status, catalog_items ( price )")
-    .in("user_id", userIds)
-    .in("access_status", ["purchased", "manually_granted"]);
+  const chunkSize = 100;
+  for (let i = 0; i < userIds.length; i += chunkSize) {
+    const chunk = userIds.slice(i, i + chunkSize);
+    const { data: accessRows, error } = await supabase
+      .from("catalog_access")
+      .select("user_id, access_status, catalog_items ( price )")
+      .in("user_id", chunk)
+      .in("access_status", ["purchased", "manually_granted"]);
 
-  for (const row of accessRows ?? []) {
-    const uid = (row as { user_id?: string }).user_id;
-    if (!uid) continue;
-    const item = (row as { catalog_items?: { price?: number } | { price?: number }[] }).catalog_items;
-    const price = Array.isArray(item) ? Number(item[0]?.price ?? 0) : Number(item?.price ?? 0);
-    map.set(uid, (map.get(uid) ?? 0) + price);
+    if (error) {
+      console.error("[fetchUserRevenueMap]", error.message);
+      continue;
+    }
+
+    for (const row of accessRows ?? []) {
+      const uid = (row as { user_id?: string }).user_id;
+      if (!uid) continue;
+      const item = (row as { catalog_items?: { price?: number } | { price?: number }[] }).catalog_items;
+      const price = Array.isArray(item) ? Number(item[0]?.price ?? 0) : Number(item?.price ?? 0);
+      map.set(uid, (map.get(uid) ?? 0) + price);
+    }
   }
 
   return map;

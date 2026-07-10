@@ -78,7 +78,7 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: UsersPage
       const roleOk = selectedRole === "all" || user.role === selectedRole;
       if (!roleOk) return false;
       if (!q) return true;
-      const orgNames = user.organizations.map((o) => o.name).join(" ");
+      const orgNames = (user.organizations ?? []).map((o) => o.name).join(" ");
       const haystack = [
         user.firstName,
         user.lastName,
@@ -172,8 +172,8 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: UsersPage
                 const roleStyle =
                   ROLE_BADGE_STYLES[user.role] ?? "bg-gray-100 text-gray-700 border-gray-200";
                 const orgLabel =
-                  user.organizations.length > 0
-                    ? user.organizations.map((o) => o.name).join(", ")
+                  (user.organizations ?? []).length > 0
+                    ? user.organizations!.map((o) => o.name).join(", ")
                     : "—";
 
                 return (

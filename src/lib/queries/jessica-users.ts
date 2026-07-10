@@ -13,6 +13,7 @@ import {
   fetchLastSignInForUser,
   fetchLastSignInForUserIds,
 } from "@/lib/queries/learner-tracking";
+import { resolveJessicaPurchaseAmount } from "@/lib/jessica-contentin/purchase-revenue";
 
 const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 const JESSICA_SIGNUP_SOURCE = "jessica_contentin";
@@ -180,6 +181,7 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
           catalog_item_id,
           granted_at,
           access_status,
+          purchase_amount,
           catalog_items!inner (id, creator_id, created_by, item_type, content_id, price)
         `)
         .in("access_status", ["purchased", "manually_granted"])
@@ -204,12 +206,36 @@ export async function getJessicaUsersList(): Promise<JessicaUserListItem[]> {
       const userAccess = (accessData || []).filter((a: { user_id?: string }) => a.user_id === profile.id);
       const userEnrollments = courseEnrollments.filter((e) => e.user_id === profile.id);
       const enrolledCourseIds = new Set(userEnrollments.map((e) => e.course_id));
-      const purchasedAccess = userAccess.filter(
-        (a: { access_status?: string }) => a.access_status === "purchased",
+      const catalogContentIdsFromAccess = new Set(
+        userAccess
+          .map((a: { catalog_items?: { content_id?: string } }) => a.catalog_items?.content_id)
+          .filter(Boolean) as string[],
       );
-      const totalRevenue = purchasedAccess.reduce((sum: number, a: { catalog_items?: { price?: number } }) => {
-        return sum + (a.catalog_items?.price || 0);
+
+      const revenueFromAccess = userAccess.reduce((sum: number, a: Record<string, unknown>) => {
+        const item = a.catalog_items as { price?: number } | undefined;
+        return (
+          sum +
+          resolveJessicaPurchaseAmount({
+            accessStatus: a.access_status as string | undefined,
+            purchaseAmount: a.purchase_amount as number | undefined,
+            catalogPrice: item?.price,
+          })
+        );
       }, 0);
+
+      const revenueFromEnrollments = userEnrollments
+        .filter((e) => !catalogContentIdsFromAccess.has(e.course_id))
+        .reduce(
+          (sum, e) =>
+            sum +
+            resolveJessicaPurchaseAmount({
+              purchaseAmount: (e as { purchase_amount?: number | null }).purchase_amount,
+            }),
+          0,
+        );
+
+      const totalRevenue = revenueFromAccess + revenueFromEnrollments;
       const { firstName, lastName } = parseClientName(profile.full_name);
 
       const assignedFromCatalog = userAccess
@@ -315,6 +341,7 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
           catalog_item_id,
           granted_at,
           access_status,
+          purchase_amount,
           catalog_items!inner (
             id, title, item_type, price, creator_id, created_by, content_id
           )
@@ -335,16 +362,23 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
       });
     }
 
-    const purchasesFromCatalog = (accessData || []).map((a: any) => ({
-      id: a.id,
-      catalogItemId: a.catalog_item_id,
-      title: a.catalog_items?.title || "Titre inconnu",
-      itemType: a.catalog_items?.item_type || "unknown",
-      price: a.catalog_items?.price || 0,
-      purchasedAt: a.granted_at || new Date().toISOString(),
-      status: a.access_status === "manually_granted" ? "manually_granted" : "completed",
-      accessStatus: a.access_status || "purchased",
-    }));
+    const purchasesFromCatalog = (accessData || []).map((a: Record<string, unknown>) => {
+      const item = a.catalog_items as { title?: string; item_type?: string; price?: number } | undefined;
+      return {
+        id: a.id as string,
+        catalogItemId: a.catalog_item_id as string,
+        title: item?.title || "Titre inconnu",
+        itemType: item?.item_type || "unknown",
+        price: resolveJessicaPurchaseAmount({
+          accessStatus: a.access_status as string | undefined,
+          purchaseAmount: a.purchase_amount as number | undefined,
+          catalogPrice: item?.price,
+        }),
+        purchasedAt: (a.granted_at as string) || new Date().toISOString(),
+        status: a.access_status === "manually_granted" ? "manually_granted" : "completed",
+        accessStatus: (a.access_status as string) || "purchased",
+      };
+    });
 
     const enrollments = await fetchJessicaCourseEnrollmentsForUsers(supabase, [userId]);
     const catalogContentIds = new Set(
@@ -361,7 +395,9 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
         catalogItemId: e.course_id,
         title: e.courses?.title || "Formation",
         itemType: "module",
-        price: 0,
+        price: resolveJessicaPurchaseAmount({
+          purchaseAmount: (e as { purchase_amount?: number | null }).purchase_amount,
+        }),
         purchasedAt: e.created_at || new Date().toISOString(),
         status: "manually_granted",
         accessStatus: "manually_granted",
@@ -431,9 +467,7 @@ export async function getJessicaUserDetails(userId: string): Promise<JessicaUser
     });
 
     // Calculer les statistiques
-    const totalRevenue = purchases
-      .filter((p) => p.accessStatus === "purchased")
-      .reduce((sum, p) => sum + p.price, 0);
+    const totalRevenue = purchases.reduce((sum, p) => sum + p.price, 0);
     const purchaseCount = purchases.length;
     const testCount = testResults.length;
     const { firstName, lastName } = parseClientName(profile.full_name);

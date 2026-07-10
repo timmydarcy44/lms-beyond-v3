@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Euro, ShoppingBag, FileText, Calendar, Mail, Phone, User, Plus, Loader2, X, Clock } from "lucide-react";
+import { Euro, ShoppingBag, FileText, Calendar, Mail, Phone, User, Plus, Loader2, X, Clock, Pencil, Check } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -13,6 +13,7 @@ import { TestResultsViewer } from "@/components/catalogue/test-results-viewer";
 import { LearnerDossierPanel } from "@/components/super-admin/learner-dossier-panel";
 import type { LearnerDossier } from "@/lib/queries/learner-dossier-types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,12 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
   const [isAssigning, setIsAssigning] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [purchases, setPurchases] = useState(userDetails.purchases);
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [savingPurchaseId, setSavingPurchaseId] = useState<string | null>(null);
+
+  const totalRevenue = purchases.reduce((sum, p) => sum + p.price, 0);
 
   // Couleurs de branding Jessica Contentin
   const bgColor = "#FFFFFF";
@@ -74,7 +81,6 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
         throw new Error(data.error || "Erreur lors de l'assignation");
       }
 
-      // Afficher un message différent selon si l'email a été envoyé ou non
       if (data.emailSent) {
         toast.success("Ressource assignée avec succès ! Un email a été envoyé au client.");
       } else {
@@ -84,7 +90,6 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
         console.error("[UserDetailsClient] Email not sent:", data.emailError);
       }
       
-      // Recharger la page pour mettre à jour les données
       window.location.reload();
     } catch (error: any) {
       console.error("[UserDetailsClient] Error assigning resource:", error);
@@ -92,6 +97,101 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
     } finally {
       setIsAssigning(false);
     }
+  };
+
+  const handleSavePurchaseAmount = async (purchaseId: string) => {
+    const amount = Number(editAmount.replace(",", "."));
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error("Montant invalide");
+      return;
+    }
+
+    setSavingPurchaseId(purchaseId);
+    try {
+      const response = await fetch("/api/admin/jessica-client/update-purchase-amount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userDetails.id,
+          purchaseId,
+          amountEur: amount,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Erreur lors de la mise à jour");
+
+      setPurchases((prev) =>
+        prev.map((p) => (p.id === purchaseId ? { ...p, price: amount } : p)),
+      );
+      setEditingPurchaseId(null);
+      setEditAmount("");
+      toast.success("Montant enregistré");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Erreur lors de la mise à jour");
+    } finally {
+      setSavingPurchaseId(null);
+    }
+  };
+
+  const renderPurchaseAmount = (purchase: JessicaUserDetails["purchases"][number]) => {
+    const isEditing = editingPurchaseId === purchase.id;
+    const isSaving = savingPurchaseId === purchase.id;
+
+    if (isEditing) {
+      return (
+        <div className="flex items-center gap-2">
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={editAmount}
+            onChange={(e) => setEditAmount(e.target.value)}
+            className="w-24 h-9 text-right rounded-full border-2"
+            style={{ borderColor: secondaryColor }}
+            placeholder="0"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleSavePurchaseAmount(purchase.id);
+              if (e.key === "Escape") {
+                setEditingPurchaseId(null);
+                setEditAmount("");
+              }
+            }}
+          />
+          <span className="text-sm" style={{ color: textColor }}>€</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={isSaving}
+            className="h-8 w-8 p-0 rounded-full"
+            onClick={() => void handleSavePurchaseAmount(purchase.id)}
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2">
+        <p className="text-2xl font-bold" style={{ color: primaryColor }}>
+          {purchase.price.toFixed(2)}€
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0 rounded-full opacity-60 hover:opacity-100"
+          title="Modifier le montant (vente cabinet)"
+          onClick={() => {
+            setEditingPurchaseId(purchase.id);
+            setEditAmount(purchase.price > 0 ? String(purchase.price) : "");
+          }}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
   };
 
   const handleRevokeResource = async (catalogItemId: string, purchaseId: string) => {
@@ -129,7 +229,7 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
   };
 
   // Filtrer les ressources déjà assignées
-  const assignedResourceIds = new Set(userDetails.purchases.map(p => p.catalogItemId));
+  const assignedResourceIds = new Set(purchases.map((p) => p.catalogItemId));
   const availableToAssign = availableResources.filter(r => !assignedResourceIds.has(r.id));
 
   console.log("[UserDetailsClient] Component render:", {
@@ -275,7 +375,10 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
                   className="text-3xl font-bold"
                   style={{ color: primaryColor }}
                 >
-                  {userDetails.totalRevenue.toFixed(2)}€
+                  {totalRevenue.toFixed(2)}€
+                </p>
+                <p className="text-xs mt-1" style={{ color: textColor, opacity: 0.55 }}>
+                  Modifiable par formation (onglet Achats, icône crayon)
                 </p>
               </div>
             </div>
@@ -308,7 +411,7 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
                   className="text-3xl font-bold"
                   style={{ color: textColor }}
                 >
-                  {userDetails.purchaseCount}
+                  {purchases.length}
                 </p>
               </div>
             </div>
@@ -438,7 +541,7 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
               color: activeTab === "purchases" ? "white" : textColor,
             }}
           >
-            Achats ({userDetails.purchases.length})
+            Achats ({purchases.length})
           </TabsTrigger>
           <TabsTrigger
             value="tests"
@@ -472,13 +575,13 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
                 <CardTitle style={{ color: textColor }}>Derniers achats</CardTitle>
               </CardHeader>
               <CardContent>
-                {userDetails.purchases.slice(0, 5).length === 0 ? (
+                {purchases.slice(0, 5).length === 0 ? (
                   <p style={{ color: textColor, opacity: 0.7 }}>
                     Aucun achat pour le moment
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {userDetails.purchases.slice(0, 5).map((purchase) => (
+                    {purchases.slice(0, 5).map((purchase) => (
                       <div
                         key={purchase.id}
                         className="flex items-center justify-between p-3 rounded-lg"
@@ -589,17 +692,17 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
           >
             <CardHeader>
               <CardTitle style={{ color: textColor }}>
-                Historique des achats ({userDetails.purchases.length})
+                Historique des achats ({purchases.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {userDetails.purchases.length === 0 ? (
+              {purchases.length === 0 ? (
                 <p style={{ color: textColor, opacity: 0.7 }}>
                   Aucun achat pour le moment
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {userDetails.purchases.map((purchase) => (
+                  {purchases.map((purchase) => (
                     <div
                       key={purchase.id}
                       className="flex items-center gap-4 p-4 rounded-lg border-2"
@@ -644,11 +747,15 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="text-2xl font-bold" style={{ color: primaryColor }}>
-                            {purchase.price.toFixed(2)}€
-                          </p>
+                          {renderPurchaseAmount(purchase)}
                           <p className="text-xs" style={{ color: textColor, opacity: 0.6 }}>
-                            {purchase.status === "completed" ? "Payé" : purchase.status}
+                            {purchase.accessStatus === "purchased" && purchase.price > 0
+                              ? "Payé"
+                              : purchase.price > 0
+                                ? "Vente cabinet"
+                                : purchase.status === "completed"
+                                  ? "Payé"
+                                  : purchase.status}
                           </p>
                         </div>
                         {purchase.accessStatus === "manually_granted" && (

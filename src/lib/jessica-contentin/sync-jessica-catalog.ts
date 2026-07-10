@@ -284,6 +284,7 @@ export async function fetchJessicaCourseEnrollmentsForUsers(
     user_id: string;
     course_id: string;
     created_at: string | null;
+    purchase_amount?: number | null;
     courses: { id: string; title: string; cover_image: string | null } | null;
   }>
 > {
@@ -293,7 +294,7 @@ export async function fetchJessicaCourseEnrollmentsForUsers(
 
   const { data, error } = await supabase
     .from("course_enrollments")
-    .select("id, user_id, course_id, created_at, courses(id, title, cover_image)")
+    .select("id, user_id, course_id, created_at, purchase_amount, courses(id, title, cover_image)")
     .in("user_id", userIds)
     .in("course_id", Array.from(studioCourseIds));
 
@@ -306,6 +307,7 @@ export async function fetchJessicaCourseEnrollmentsForUsers(
     user_id: string;
     course_id: string;
     created_at: string | null;
+    purchase_amount?: number | null;
     courses: { id: string; title: string; cover_image: string | null } | null;
   }>;
 }

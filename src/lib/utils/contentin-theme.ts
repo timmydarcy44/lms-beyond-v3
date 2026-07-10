@@ -1,36 +1,26 @@
 /**
- * Utilitaires pour le thème beige/marron/doré de contentin.cabinet@gmail.com
+ * Thème /super Jessica Contentin — blanc & noir, accents indigo/violet.
  */
 
 export const CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
 export const CONTENTIN_COLORS = {
-  // Beige
-  beigeLight: "#F5F5DC", // Background principal
-  beigeMedium: "#E8E8D3", // Surfaces
-  beigeDark: "#D2B48C", // Bordures
-  
-  // Marron
-  brownLight: "#A0522D", // Texte principal
-  brownDark: "#8B4513", // Texte secondaire
-  brownDarker: "#654321", // Texte très foncé
-  
-  // Doré
-  gold: "#D4AF37", // Accents, liens actifs
-  goldLight: "#F4A460", // Hover
-  goldDark: "#B8860B", // États actifs
+  bg: "#FFFFFF",
+  bgMuted: "#F5F5F7",
+  bgSubtle: "#FAFAFA",
+  text: "#000000",
+  textSecondary: "#6E6E73",
+  border: "rgba(0,0,0,0.08)",
+  primary: "#5B21B6",
+  primaryLight: "#EDE9FE",
+  primaryDark: "#1E1B4B",
+  accent: "#6366F1",
 };
 
-/**
- * Vérifie si l'email correspond à contentin.cabinet@gmail.com
- */
 export function isContentinEmail(email: string | null | undefined): boolean {
   return email === CONTENTIN_EMAIL;
 }
 
-/**
- * Retourne les classes CSS pour le thème contentin
- */
 export function getContentinThemeClasses(isContentin: boolean) {
   if (!isContentin) {
     return {
@@ -47,18 +37,14 @@ export function getContentinThemeClasses(isContentin: boolean) {
   }
 
   return {
-    background: "bg-[#F5F5DC]",
-    backgroundSecondary: "bg-[#E8E8D3]",
-    text: "text-[#8B4513]",
-    textSecondary: "text-[#A0522D]",
-    border: "border-[#D2B48C]",
-    accent: "text-[#D4AF37]",
-    accentHover: "hover:text-[#F4A460]",
-    accentBg: "bg-[#D4AF37]",
-    accentBgHover: "hover:bg-[#F4A460]",
+    background: "bg-white",
+    backgroundSecondary: "bg-neutral-50",
+    text: "text-black",
+    textSecondary: "text-neutral-500",
+    border: "border-black/[0.08]",
+    accent: "text-indigo-600",
+    accentHover: "hover:text-violet-700",
+    accentBg: "bg-gradient-to-br from-[#0B1426] via-[#1E1B4B] to-[#5B21B6]",
+    accentBgHover: "hover:brightness-110",
   };
 }
-
-
-
-

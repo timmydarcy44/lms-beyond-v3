@@ -4,36 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, BookOpen, FileText, ClipboardList, Route } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 
 export function FloatingCreateButton() {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
 
   const menuItems = [
-    {
-      label: "Créer un module",
-      icon: BookOpen,
-      href: "/super/studio/modules/new/choose",
-      color: "text-[#C6A664]",
-    },
-    {
-      label: "Créer une ressource",
-      icon: FileText,
-      href: "/super/studio/ressources/new",
-      color: "text-[#C6A664]",
-    },
-    {
-      label: "Créer un test",
-      icon: ClipboardList,
-      href: "/super/studio/tests/new",
-      color: "text-[#C6A664]",
-    },
-    {
-      label: "Créer un parcours",
-      icon: Route,
-      href: "/super/studio/parcours/new",
-      color: "text-[#C6A664]",
-    },
+    { label: "Créer un module", icon: BookOpen, href: "/super/studio/modules/new/choose" },
+    { label: "Créer une ressource", icon: FileText, href: "/super/studio/ressources/new" },
+    { label: "Créer un test", icon: ClipboardList, href: "/super/studio/tests/new" },
+    { label: "Créer un parcours", icon: Route, href: "/super/studio/parcours/new" },
   ];
 
   return (
@@ -42,73 +23,41 @@ export function FloatingCreateButton() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Menu déroulant */}
-      {isHovered && (
-        <div 
-          className="absolute bottom-20 right-0 mb-2 min-w-[200px] rounded-2xl border-2 shadow-2xl transition-all duration-200"
-          style={{
-            borderColor: "#E6D9C6",
-            backgroundColor: "#FFFFFF",
-            opacity: isHovered ? 1 : 0,
-            transform: isHovered ? "translateY(0)" : "translateY(10px)",
-          }}
-        >
-          <div className="p-2">
-            {menuItems.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => router.push(item.href)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:shadow-md",
-                    "text-left",
-                    index === menuItems.length - 1 ? "" : "mb-1"
-                  )}
-                  style={{
-                    backgroundColor: isHovered ? "#F8F5F0" : "transparent",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#E6D9C6";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#F8F5F0";
-                  }}
-                >
-                  <Icon className={cn("h-5 w-5", item.color)} />
-                  <span 
-                    className="text-sm font-medium"
-                    style={{ color: "#2F2A25" }}
-                  >
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Bouton principal */}
-      <button
-        className={cn(
-          "flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300",
-          "hover:scale-110 hover:shadow-xl"
-        )}
-        style={{
-          backgroundColor: "#C6A664",
-          color: "white",
-        }}
-        onClick={() => setIsHovered(!isHovered)}
-      >
-        <Plus 
+      {isHovered ? (
+        <div
           className={cn(
-            "h-6 w-6 transition-transform duration-300",
-            isHovered && "rotate-45"
-          )} 
-        />
+            jessicaSuper.card,
+            "absolute bottom-20 right-0 mb-2 min-w-[220px] overflow-hidden p-2 shadow-[0_12px_40px_rgba(0,0,0,0.12)]",
+          )}
+        >
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => router.push(item.href)}
+                className="mb-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-black transition last:mb-0 hover:bg-neutral-50"
+              >
+                <Icon className="h-5 w-5 text-indigo-600" />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        className={cn(
+          jessicaSuper.cta,
+          "h-14 w-14 rounded-full p-0 shadow-[0_8px_28px_rgba(30,27,75,0.35)] hover:scale-105",
+        )}
+        onClick={() => setIsHovered(!isHovered)}
+        aria-label="Créer du contenu"
+      >
+        <Plus className={cn("h-6 w-6 transition-transform duration-300", isHovered && "rotate-45")} />
       </button>
     </div>
   );
 }
-

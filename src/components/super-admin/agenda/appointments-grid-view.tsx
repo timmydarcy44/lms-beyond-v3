@@ -205,7 +205,7 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className={cn("h-8 w-8 animate-spin", isContentin ? "text-[#A0522D]" : "text-gray-600")} />
+        <Loader2 className={cn("h-8 w-8 animate-spin", isContentin ? "text-neutral-500" : "text-gray-600")} />
       </div>
     );
   }
@@ -215,11 +215,11 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
       <div className={cn(
         "rounded-lg border p-12 text-center",
         isContentin 
-          ? "border-[#D2B48C] bg-[#E8E8D3]" 
+          ? "border-black/[0.08] bg-neutral-50" 
           : "border-gray-200 bg-white"
       )}>
-        <User className={cn("mx-auto h-12 w-12 mb-4", isContentin ? "text-[#A0522D]" : "text-gray-400")} />
-        <p className={isContentin ? "text-[#8B4513]" : "text-gray-600"}>Aucun rendez-vous pour le moment</p>
+        <User className={cn("mx-auto h-12 w-12 mb-4", isContentin ? "text-neutral-500" : "text-gray-400")} />
+        <p className={isContentin ? "text-black" : "text-gray-600"}>Aucun rendez-vous pour le moment</p>
       </div>
     );
   }
@@ -232,36 +232,36 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
     <div className="space-y-6">
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className={isContentin ? "border-[#D2B48C] bg-[#E8E8D3]" : ""}>
+        <Card className={isContentin ? "border-black/[0.08] bg-neutral-50" : ""}>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className={cn("text-sm mb-1", isContentin ? "text-[#A0522D]" : "text-gray-600")}>Total</p>
-              <p className={cn("text-2xl font-bold", isContentin ? "text-[#8B4513]" : "text-gray-900")}>{appointments.length}</p>
+              <p className={cn("text-sm mb-1", isContentin ? "text-neutral-500" : "text-gray-600")}>Total</p>
+              <p className={cn("text-2xl font-bold", isContentin ? "text-black" : "text-gray-900")}>{appointments.length}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className={isContentin ? "border-[#D2B48C] bg-[#E8E8D3]" : ""}>
+        <Card className={isContentin ? "border-black/[0.08] bg-neutral-50" : ""}>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className={cn("text-sm mb-1", isContentin ? "text-[#A0522D]" : "text-gray-600")}>À venir</p>
-              <p className={cn("text-2xl font-bold", isContentin ? "text-[#D4AF37]" : "text-blue-600")}>{upcomingAppointments.length}</p>
+              <p className={cn("text-sm mb-1", isContentin ? "text-neutral-500" : "text-gray-600")}>À venir</p>
+              <p className={cn("text-2xl font-bold", isContentin ? "text-indigo-600" : "text-blue-600")}>{upcomingAppointments.length}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className={isContentin ? "border-[#D2B48C] bg-[#E8E8D3]" : ""}>
+        <Card className={isContentin ? "border-black/[0.08] bg-neutral-50" : ""}>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className={cn("text-sm mb-1", isContentin ? "text-[#A0522D]" : "text-gray-600")}>Passés</p>
-              <p className={cn("text-2xl font-bold", isContentin ? "text-[#8B4513]" : "text-gray-600")}>{pastAppointments.length}</p>
+              <p className={cn("text-sm mb-1", isContentin ? "text-neutral-500" : "text-gray-600")}>Passés</p>
+              <p className={cn("text-2xl font-bold", isContentin ? "text-black" : "text-gray-600")}>{pastAppointments.length}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Liste des rendez-vous */}
-      <Card className={isContentin ? "border-[#D2B48C] bg-[#E8E8D3]" : ""}>
+      <Card className={isContentin ? "border-black/[0.08] bg-neutral-50" : ""}>
           <CardHeader>
-          <CardTitle className={cn("text-xl font-semibold", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+          <CardTitle className={cn("text-xl font-semibold", isContentin ? "text-black" : "text-gray-900")}>
             Liste des rendez-vous
                 </CardTitle>
         </CardHeader>
@@ -269,24 +269,24 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
           {/* En-tête du tableau (masqué sur mobile) */}
           <div className={cn(
             "hidden md:grid md:grid-cols-6 gap-4 pb-3 mb-3 border-b",
-            isContentin ? "border-[#D2B48C]" : "border-gray-200"
+            isContentin ? "border-black/[0.08]" : "border-gray-200"
           )}>
-            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-[#A0522D]" : "text-gray-500")}>
+            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-neutral-500" : "text-gray-500")}>
               Nom & Prénom
             </div>
-            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-[#A0522D]" : "text-gray-500")}>
+            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-neutral-500" : "text-gray-500")}>
               Email
             </div>
-            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-[#A0522D]" : "text-gray-500")}>
+            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-neutral-500" : "text-gray-500")}>
               Date
             </div>
-            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-[#A0522D]" : "text-gray-500")}>
+            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-neutral-500" : "text-gray-500")}>
               Heure
             </div>
-            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-[#A0522D]" : "text-gray-500")}>
+            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-neutral-500" : "text-gray-500")}>
               Statut
             </div>
-            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-[#A0522D]" : "text-gray-500")}>
+            <div className={cn("text-xs font-semibold uppercase tracking-wider", isContentin ? "text-neutral-500" : "text-gray-500")}>
               Actions
             </div>
           </div>
@@ -331,8 +331,8 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                     "flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer",
                     isContentin
                       ? isUpcoming
-                        ? "border-[#D4AF37]/50 bg-[#F5F5DC]/50 hover:bg-[#F5F5DC]"
-                        : "border-[#D2B48C] bg-[#E8E8D3]/50 hover:bg-[#E8E8D3]"
+                        ? "border-indigo-200/50 bg-white/50 hover:bg-white"
+                        : "border-black/[0.08] bg-neutral-50/50 hover:bg-neutral-50"
                       : isUpcoming
                         ? "border-blue-200 bg-blue-50/50 hover:bg-blue-50"
                         : "border-gray-200 bg-gray-50/50 hover:bg-gray-50"
@@ -341,13 +341,13 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-4">
                     {/* Nom et Prénom */}
                     <div className="flex items-start gap-2">
-                      <User className={cn("h-4 w-4 flex-shrink-0 mt-0.5", isContentin ? "text-[#A0522D]" : "text-gray-400")} />
+                      <User className={cn("h-4 w-4 flex-shrink-0 mt-0.5", isContentin ? "text-neutral-500" : "text-gray-400")} />
                       <div className="min-w-0">
-                        <p className={cn("text-sm font-semibold", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                        <p className={cn("text-sm font-semibold", isContentin ? "text-black" : "text-gray-900")}>
                           {apt.firstName || apt.lastName ? `${apt.firstName} ${apt.lastName}`.trim() : "Non renseigné"}
                         </p>
                         {apt.isAnonymous && (
-                          <Badge variant="outline" className={cn("text-xs mt-1", isContentin ? "border-[#D2B48C] text-[#A0522D]" : "")}>
+                          <Badge variant="outline" className={cn("text-xs mt-1", isContentin ? "border-black/[0.08] text-neutral-500" : "")}>
                             Anonyme
                           </Badge>
                         )}
@@ -356,22 +356,22 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
 
                     {/* Email */}
                     <div className="flex items-start gap-2">
-                      <Mail className={cn("h-4 w-4 flex-shrink-0 mt-0.5", isContentin ? "text-[#A0522D]" : "text-gray-400")} />
-                      <p className={cn("text-sm break-all", isContentin ? "text-[#8B4513]" : "text-gray-700")}>{apt.email || "Non renseigné"}</p>
+                      <Mail className={cn("h-4 w-4 flex-shrink-0 mt-0.5", isContentin ? "text-neutral-500" : "text-gray-400")} />
+                      <p className={cn("text-sm break-all", isContentin ? "text-black" : "text-gray-700")}>{apt.email || "Non renseigné"}</p>
                     </div>
 
                     {/* Date */}
                     <div className="flex items-start gap-2">
-                      <Calendar className={cn("h-4 w-4 flex-shrink-0 mt-0.5", isContentin ? "text-[#A0522D]" : "text-gray-400")} />
-                      <p className={cn("text-sm font-medium", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                      <Calendar className={cn("h-4 w-4 flex-shrink-0 mt-0.5", isContentin ? "text-neutral-500" : "text-gray-400")} />
+                      <p className={cn("text-sm font-medium", isContentin ? "text-black" : "text-gray-900")}>
                         {format(appointmentDate, "d MMM yyyy", { locale: fr })}
                       </p>
                     </div>
 
                     {/* Heure */}
                     <div className="flex items-start gap-2">
-                      <Clock className={cn("h-4 w-4 flex-shrink-0 mt-0.5", isContentin ? "text-[#A0522D]" : "text-gray-400")} />
-                      <p className={cn("text-sm font-medium", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                      <Clock className={cn("h-4 w-4 flex-shrink-0 mt-0.5", isContentin ? "text-neutral-500" : "text-gray-400")} />
+                      <p className={cn("text-sm font-medium", isContentin ? "text-black" : "text-gray-900")}>
                         {format(appointmentDate, "HH:mm", { locale: fr })}
                       </p>
                     </div>
@@ -383,8 +383,8 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                         className={cn(
                           isContentin
                             ? isUpcoming
-                              ? "bg-[#D4AF37]/20 text-[#8B4513] border-[#D4AF37]"
-                              : "bg-[#D2B48C]/20 text-[#8B4513] border-[#D2B48C]"
+                              ? "bg-[#D4AF37]/20 text-black border-indigo-200"
+                              : "bg-indigo-50 text-indigo-800 border-black/[0.08]"
                             : isUpcoming
                               ? "bg-blue-100 text-blue-800 border-blue-200"
                               : "bg-gray-100 text-gray-800 border-gray-200"
@@ -423,7 +423,7 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                         className={cn(
                           "h-8 w-8 p-0",
                           isContentin
-                            ? "text-[#A0522D] hover:text-[#8B4513] hover:bg-[#E8E8D3]"
+                            ? "text-neutral-500 hover:text-black hover:bg-neutral-50"
                             : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                         )}
                       >
@@ -442,13 +442,13 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
         <Dialog open={showLearnerModal} onOpenChange={setShowLearnerModal}>
           <DialogContent className={cn(
             "max-w-2xl max-h-[90vh] overflow-y-auto",
-            isContentin ? "bg-[#F5F5DC] border-[#D2B48C]" : "bg-white"
+            isContentin ? "bg-white border-black/[0.08]" : "bg-white"
           )}>
             <DialogHeader>
-              <DialogTitle className={cn("text-xl font-semibold", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+              <DialogTitle className={cn("text-xl font-semibold", isContentin ? "text-black" : "text-gray-900")}>
                 Informations de l'apprenant
               </DialogTitle>
-              <DialogDescription className={isContentin ? "text-[#A0522D]" : "text-gray-600"}>
+              <DialogDescription className={isContentin ? "text-neutral-500" : "text-gray-600"}>
                 Détails et historique des rendez-vous
               </DialogDescription>
             </DialogHeader>
@@ -458,29 +458,29 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                 {/* Informations personnelles */}
                 <div className={cn(
                   "rounded-lg border p-4",
-                  isContentin ? "border-[#D2B48C] bg-[#E8E8D3]" : "border-gray-200 bg-gray-50"
+                  isContentin ? "border-black/[0.08] bg-neutral-50" : "border-gray-200 bg-gray-50"
                 )}>
-                  <h3 className={cn("text-lg font-semibold mb-4", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                  <h3 className={cn("text-lg font-semibold mb-4", isContentin ? "text-black" : "text-gray-900")}>
                     Informations personnelles
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className={cn("text-sm font-medium mb-1", isContentin ? "text-[#A0522D]" : "text-gray-600")}>Nom complet</p>
-                      <p className={cn("text-base", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                      <p className={cn("text-sm font-medium mb-1", isContentin ? "text-neutral-500" : "text-gray-600")}>Nom complet</p>
+                      <p className={cn("text-base", isContentin ? "text-black" : "text-gray-900")}>
                         {selectedLearner.firstName || selectedLearner.lastName 
                           ? `${selectedLearner.firstName} ${selectedLearner.lastName}`.trim() 
                           : "Non renseigné"}
                       </p>
                     </div>
                     <div>
-                      <p className={cn("text-sm font-medium mb-1", isContentin ? "text-[#A0522D]" : "text-gray-600")}>Email</p>
-                      <p className={cn("text-base", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                      <p className={cn("text-sm font-medium mb-1", isContentin ? "text-neutral-500" : "text-gray-600")}>Email</p>
+                      <p className={cn("text-base", isContentin ? "text-black" : "text-gray-900")}>
                         {selectedLearner.email || "Non renseigné"}
                       </p>
                     </div>
                     {selectedLearner.isAnonymous && (
                       <div className="md:col-span-2">
-                        <Badge variant="outline" className={cn(isContentin ? "border-[#D2B48C] text-[#A0522D]" : "")}>
+                        <Badge variant="outline" className={cn(isContentin ? "border-black/[0.08] text-neutral-500" : "")}>
                           Réservation anonyme
                         </Badge>
                       </div>
@@ -491,29 +491,29 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                 {/* Statistiques */}
                 <div className={cn(
                   "rounded-lg border p-4",
-                  isContentin ? "border-[#D2B48C] bg-[#E8E8D3]" : "border-gray-200 bg-gray-50"
+                  isContentin ? "border-black/[0.08] bg-neutral-50" : "border-gray-200 bg-gray-50"
                 )}>
-                  <h3 className={cn("text-lg font-semibold mb-4", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                  <h3 className={cn("text-lg font-semibold mb-4", isContentin ? "text-black" : "text-gray-900")}>
                     Statistiques
                   </h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <p className={cn("text-2xl font-bold", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                      <p className={cn("text-2xl font-bold", isContentin ? "text-black" : "text-gray-900")}>
                         {selectedLearner.totalAppointments}
                       </p>
-                      <p className={cn("text-sm", isContentin ? "text-[#A0522D]" : "text-gray-600")}>Total</p>
+                      <p className={cn("text-sm", isContentin ? "text-neutral-500" : "text-gray-600")}>Total</p>
                     </div>
                     <div className="text-center">
-                      <p className={cn("text-2xl font-bold", isContentin ? "text-[#D4AF37]" : "text-blue-600")}>
+                      <p className={cn("text-2xl font-bold", isContentin ? "text-indigo-600" : "text-blue-600")}>
                         {selectedLearner.upcomingAppointments.length}
                       </p>
-                      <p className={cn("text-sm", isContentin ? "text-[#A0522D]" : "text-gray-600")}>À venir</p>
+                      <p className={cn("text-sm", isContentin ? "text-neutral-500" : "text-gray-600")}>À venir</p>
                     </div>
                     <div className="text-center">
-                      <p className={cn("text-2xl font-bold", isContentin ? "text-[#8B4513]" : "text-gray-600")}>
+                      <p className={cn("text-2xl font-bold", isContentin ? "text-black" : "text-gray-600")}>
                         {selectedLearner.pastAppointments.length}
                       </p>
-                      <p className={cn("text-sm", isContentin ? "text-[#A0522D]" : "text-gray-600")}>Passés</p>
+                      <p className={cn("text-sm", isContentin ? "text-neutral-500" : "text-gray-600")}>Passés</p>
                     </div>
                   </div>
                 </div>
@@ -522,18 +522,18 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                 {selectedLearner.nextAppointment && (
                   <div className={cn(
                     "rounded-lg border p-4",
-                    isContentin ? "border-[#D4AF37] bg-[#F5F5DC]" : "border-blue-200 bg-blue-50"
+                    isContentin ? "border-indigo-200 bg-white" : "border-blue-200 bg-blue-50"
                   )}>
-                    <h3 className={cn("text-lg font-semibold mb-3", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                    <h3 className={cn("text-lg font-semibold mb-3", isContentin ? "text-black" : "text-gray-900")}>
                       Prochain rendez-vous
                     </h3>
                     <div className="flex items-center gap-4">
-                      <Calendar className={cn("h-5 w-5", isContentin ? "text-[#A0522D]" : "text-gray-600")} />
+                      <Calendar className={cn("h-5 w-5", isContentin ? "text-neutral-500" : "text-gray-600")} />
                       <div>
-                        <p className={cn("font-medium", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                        <p className={cn("font-medium", isContentin ? "text-black" : "text-gray-900")}>
                           {format(new Date(selectedLearner.nextAppointment.startTime), "EEEE d MMMM yyyy", { locale: fr })}
                         </p>
-                        <p className={cn("text-sm", isContentin ? "text-[#A0522D]" : "text-gray-600")}>
+                        <p className={cn("text-sm", isContentin ? "text-neutral-500" : "text-gray-600")}>
                           {format(new Date(selectedLearner.nextAppointment.startTime), "HH:mm", { locale: fr })}
                         </p>
                       </div>
@@ -544,9 +544,9 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                 {/* Historique des rendez-vous */}
                 <div className={cn(
                   "rounded-lg border p-4",
-                  isContentin ? "border-[#D2B48C] bg-[#E8E8D3]" : "border-gray-200 bg-gray-50"
+                  isContentin ? "border-black/[0.08] bg-neutral-50" : "border-gray-200 bg-gray-50"
                 )}>
-                  <h3 className={cn("text-lg font-semibold mb-4", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                  <h3 className={cn("text-lg font-semibold mb-4", isContentin ? "text-black" : "text-gray-900")}>
                     Historique des rendez-vous ({selectedLearner.allAppointments.length})
                   </h3>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -560,17 +560,17 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                             "flex items-center justify-between p-3 rounded-lg border",
                             isContentin
                               ? isPast
-                                ? "border-[#D2B48C] bg-[#F5F5DC]/50"
-                                : "border-[#D4AF37] bg-[#F5F5DC]"
+                                ? "border-black/[0.08] bg-white/50"
+                                : "border-indigo-200 bg-white"
                               : isPast
                                 ? "border-gray-200 bg-gray-50"
                                 : "border-blue-200 bg-blue-50"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <Calendar className={cn("h-4 w-4", isContentin ? "text-[#A0522D]" : "text-gray-600")} />
+                            <Calendar className={cn("h-4 w-4", isContentin ? "text-neutral-500" : "text-gray-600")} />
                             <div>
-                              <p className={cn("text-sm font-medium", isContentin ? "text-[#8B4513]" : "text-gray-900")}>
+                              <p className={cn("text-sm font-medium", isContentin ? "text-black" : "text-gray-900")}>
                                 {format(aptDate, "d MMM yyyy", { locale: fr })} à {format(aptDate, "HH:mm", { locale: fr })}
                               </p>
                             </div>
@@ -580,8 +580,8 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                             className={cn(
                               isContentin
                                 ? isPast
-                                  ? "bg-[#D2B48C]/20 text-[#8B4513] border-[#D2B48C]"
-                                  : "bg-[#D4AF37]/20 text-[#8B4513] border-[#D4AF37]"
+                                  ? "bg-indigo-50 text-indigo-800 border-black/[0.08]"
+                                  : "bg-[#D4AF37]/20 text-black border-indigo-200"
                                 : isPast
                                   ? "bg-gray-100 text-gray-800"
                                   : "bg-blue-100 text-blue-800"
@@ -603,7 +603,7 @@ export function AppointmentsGridView({ superAdminId }: { superAdminId: string })
                 onClick={() => setShowLearnerModal(false)}
                 className={cn(
                   isContentin
-                    ? "border-[#D2B48C] text-[#8B4513] hover:bg-[#E8E8D3]"
+                    ? "border-black/[0.08] text-black hover:bg-neutral-50"
                     : ""
                 )}
               >

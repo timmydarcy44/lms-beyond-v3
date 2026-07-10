@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Button } from "@/components/ui/button";
+import { JessicaSuperButton, JessicaSuperCard } from "@/components/jessica-contentin/super/jessica-super-ui";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -62,69 +61,55 @@ export function JessicaCrmCreateClientForm() {
     }
   };
 
-  const textColor = "#2F2A25";
-  const primaryColor = "#C6A664";
-  const secondaryColor = "#E6D9C6";
-
   return (
-    <Card className="rounded-2xl border-2" style={{ borderColor: secondaryColor, backgroundColor: "#FFFFFF" }}>
-      <CardHeader>
-        <CardTitle style={{ color: textColor }}>Nouveau client</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <JessicaSuperCard title="Nouveau client">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="firstName">Prénom *</Label>
-              <Input id="firstName" {...register("firstName")} className="rounded-lg border-2" />
+              <Input id="firstName" {...register("firstName")} className="rounded-xl border-black/[0.08]" />
               {errors.firstName ? <p className="text-sm text-red-500">{errors.firstName.message}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Nom *</Label>
-              <Input id="lastName" {...register("lastName")} className="rounded-lg border-2" />
+              <Input id="lastName" {...register("lastName")} className="rounded-xl border-black/[0.08]" />
               {errors.lastName ? <p className="text-sm text-red-500">{errors.lastName.message}</p> : null}
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Adresse email *</Label>
-            <Input id="email" type="email" {...register("email")} className="rounded-lg border-2" />
+            <Input id="email" type="email" {...register("email")} className="rounded-xl border-black/[0.08]" />
             {errors.email ? <p className="text-sm text-red-500">{errors.email.message}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Téléphone</Label>
-            <Input id="phone" type="tel" {...register("phone")} className="rounded-lg border-2" />
+            <Input id="phone" type="tel" {...register("phone")} className="rounded-xl border-black/[0.08]" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Mot de passe initial *</Label>
-            <Input id="password" type="password" {...register("password")} className="rounded-lg border-2" />
+            <Input id="password" type="password" {...register("password")} className="rounded-xl border-black/[0.08]" />
             {errors.password ? <p className="text-sm text-red-500">{errors.password.message}</p> : null}
-            <p className="text-xs opacity-60">Le client pourra le modifier depuis Mon compte.</p>
+            <p className="text-xs text-neutral-500">Le client pourra le modifier depuis Mon compte.</p>
           </div>
           <div className="flex gap-4 pt-4">
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="rounded-full px-8"
-              style={{ backgroundColor: primaryColor, color: "white" }}
-            >
+            <JessicaSuperButton type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Création…
                 </>
               ) : (
                 <>
-                  <UserPlus className="h-5 w-5 mr-2" />
+                  <UserPlus className="h-5 w-5" />
                   Créer le client
                 </>
               )}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()} className="rounded-full px-8">
+            </JessicaSuperButton>
+            <JessicaSuperButton type="button" variant="outline" onClick={() => router.back()}>
               Annuler
-            </Button>
+            </JessicaSuperButton>
           </div>
         </form>
-      </CardContent>
-    </Card>
+    </JessicaSuperCard>
   );
 }

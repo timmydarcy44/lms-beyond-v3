@@ -48,10 +48,10 @@ import { SEOIndicator } from "@/components/blog/seo-indicator";
 import { calculateSEOScore, getSEORecommendations } from "@/lib/seo/calculate-seo-score";
 import { useMemo } from "react";
 
-const bgColor = "#F8F5F0";
-const textColor = "#2F2A25";
-const primaryColor = "#C6A664";
-const secondaryColor = "#E6D9C6";
+const bgColor = "#FFFFFF";
+const textColor = "#000000";
+const primaryColor = "#5B21B6";
+const secondaryColor = "rgba(0,0,0,0.08)";
 
 export function BlogEditor() {
   const router = useRouter();
@@ -100,7 +100,7 @@ export function BlogEditor() {
       attributes: {
         class: cn(
           "prose max-w-none focus:outline-none min-h-[400px] p-6",
-          "prose-headings:text-[#2F2A25] prose-p:text-[#2F2A25] prose-strong:text-[#2F2A25]",
+          "prose-headings:text-black prose-p:text-black prose-strong:text-black",
           "prose-a:text-blue-600 prose-img:rounded-lg prose-img:max-w-full",
         ),
       },
@@ -728,7 +728,7 @@ export function BlogEditor() {
                   {showColorPicker && (
                     <div className="absolute left-0 top-full z-50 mt-1 flex flex-wrap gap-1 rounded-lg border-2 p-2 shadow-lg" style={{ borderColor: secondaryColor, backgroundColor: "#FFFFFF" }}>
                       {[
-                        { name: "Noir", value: "#2F2A25" },
+                        { name: "Noir", value: "#000000" },
                         { name: "Rouge", value: "#EF4444" },
                         { name: "Orange", value: "#F97316" },
                         { name: "Jaune", value: "#EAB308" },

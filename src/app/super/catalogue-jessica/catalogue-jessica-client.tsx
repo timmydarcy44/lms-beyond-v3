@@ -27,10 +27,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const bgColor = "#F8F5F0";
-const textColor = "#2F2A25";
-const primaryColor = "#C6A664";
-const secondaryColor = "#E6D9C6";
+import { JESSICA_SUPER } from "@/lib/jessica-contentin/super-theme";
+
+const bgColor = JESSICA_SUPER.bg;
+const textColor = JESSICA_SUPER.text;
+const primaryColor = JESSICA_SUPER.ctaTo;
+const secondaryColor = JESSICA_SUPER.border;
 
 type CatalogItem = {
   id: string;
@@ -169,20 +171,12 @@ export function CatalogueJessicaClient({ items, jessicaProfileId }: CatalogueJes
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div>
+      <div className="mx-auto max-w-7xl px-6 py-10 md:py-12">
         {/* Header */}
         <div className="mb-8">
-          <h1 
-            className="text-4xl font-bold mb-2"
-            style={{ color: textColor }}
-          >
-            Catalogue
-          </h1>
-          <p 
-            className="text-lg"
-            style={{ color: textColor, opacity: 0.7 }}
-          >
+          <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">Catalogue</h1>
+          <p className="mt-1.5 text-base text-neutral-500">
             Gérez vos ressources, modules, tests et parcours
           </p>
         </div>

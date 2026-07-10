@@ -38,7 +38,7 @@ export default async function SuperLayout({
 
   return (
     <BrandingProvider initialBranding={branding}>
-      <div className={`min-h-screen ${isContentin ? "bg-[#F5F5DC]" : "bg-white"}`}>
+      <div className="min-h-screen bg-white">
         {isContentin ? <JessicaHeader /> : <SuperAdminHeaderApple />}
         <CrmAreaWrapper>
           <Suspense fallback={null}>

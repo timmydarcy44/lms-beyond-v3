@@ -7,9 +7,7 @@ import { getJessicaResources } from "@/lib/queries/jessica-resources";
 import { getLearnerDossier } from "@/lib/queries/learner-dossier";
 import { UserDetailsClient } from "@/app/super/gestion-client/[id]/user-details-client";
 import { formatClientName } from "@/lib/jessica-contentin/parse-client-name";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { JessicaSuperPage } from "@/components/jessica-contentin/super/jessica-super-ui";
 
 export const revalidate = 0;
 
@@ -22,7 +20,9 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
   if (!hasAccess) redirect("/dashboard");
 
   const supabase = await getServerClient();
-  const { data: { user } } = await supabase!.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase!.auth.getUser();
   if (user?.email?.toLowerCase() !== JESSICA_CONTENTIN_EMAIL) {
     redirect("/super");
   }
@@ -39,25 +39,13 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
   const displayName = formatClientName(userDetails.firstName, userDetails.lastName);
 
   return (
-    <div className="min-h-screen bg-[#F8F5F0]">
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="mb-8">
-          <Link href="/super/jessica-crm">
-            <Button variant="ghost" className="mb-4" style={{ color: "#C6A664" }}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour au CRM
-            </Button>
-          </Link>
-          <h1 className="text-4xl font-bold mb-2" style={{ color: "#2F2A25" }}>
-            {displayName}
-          </h1>
-          <p className="text-lg" style={{ color: "#2F2A25", opacity: 0.7 }}>
-            {userDetails.email}
-            {userDetails.phone ? ` · ${userDetails.phone}` : ""}
-          </p>
-        </div>
-        <UserDetailsClient userDetails={userDetails} availableResources={resources} dossier={dossier} />
-      </div>
-    </div>
+    <JessicaSuperPage
+      title={displayName}
+      subtitle={[userDetails.email, userDetails.phone].filter(Boolean).join(" · ")}
+      backHref="/super/jessica-crm"
+      backLabel="Retour au CRM"
+    >
+      <UserDetailsClient userDetails={userDetails} availableResources={resources} dossier={dossier} />
+    </JessicaSuperPage>
   );
 }

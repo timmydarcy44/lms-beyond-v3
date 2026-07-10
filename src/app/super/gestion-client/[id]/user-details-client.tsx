@@ -40,12 +40,12 @@ export function UserDetailsClient({ userDetails, availableResources, dossier }: 
 
   const totalRevenue = purchases.reduce((sum, p) => sum + p.price, 0);
 
-  // Couleurs de branding Jessica Contentin
-  const bgColor = "#FFFFFF";
-  const surfaceColor = "#F8F5F0";
-  const textColor = "#2F2A25";
-  const primaryColor = "#C6A664";
-  const secondaryColor = "#E6D9C6";
+  // Couleurs design system Jessica /super
+  const bgColor = JESSICA_SUPER.bg;
+  const surfaceColor = JESSICA_SUPER.bgMuted;
+  const textColor = JESSICA_SUPER.text;
+  const primaryColor = JESSICA_SUPER.ctaTo;
+  const secondaryColor = JESSICA_SUPER.border;
 
   const handleAssignResource = async (catalogItemId: string) => {
     console.log("[UserDetailsClient] ====== handleAssignResource START ======");

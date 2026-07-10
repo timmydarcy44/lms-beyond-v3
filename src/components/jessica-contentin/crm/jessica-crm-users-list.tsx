@@ -20,10 +20,31 @@ type JessicaCrmUsersListProps = {
 function formatTrackingDate(value: string | null): string {
   if (!value) return "Jamais connecté";
   try {
-    return format(new Date(value), "dd MMM yyyy", { locale: fr });
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return format(d, "dd MMM yyyy", { locale: fr });
   } catch {
     return "—";
   }
+}
+
+function formatCreatedAt(value: string | null | undefined): string {
+  if (!value) return "—";
+  try {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return format(d, "dd MMM yyyy", { locale: fr });
+  } catch {
+    return "—";
+  }
+}
+
+function getContactInitials(user: JessicaCrmContact): string {
+  const first = user.firstName?.[0]?.toUpperCase();
+  const last = user.lastName?.[0]?.toUpperCase();
+  if (first || last) return `${first ?? ""}${last ?? ""}`;
+  const emailChar = user.email?.[0]?.toUpperCase();
+  return emailChar ?? "?";
 }
 
 export function JessicaCrmUsersList({ initialUsers, availableResources }: JessicaCrmUsersListProps) {
@@ -34,8 +55,9 @@ export function JessicaCrmUsersList({ initialUsers, availableResources }: Jessic
   const filteredUsers = users.filter((user) => {
     const query = searchQuery.toLowerCase();
     const full = formatClientName(user.firstName, user.lastName, "").toLowerCase();
+    const email = (user.email ?? "").toLowerCase();
     return (
-      user.email.toLowerCase().includes(query) ||
+      email.includes(query) ||
       full.includes(query) ||
       (user.phone && user.phone.includes(query))
     );
@@ -108,15 +130,14 @@ export function JessicaCrmUsersList({ initialUsers, availableResources }: Jessic
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <Link href={`/super/jessica-crm/${user.id}`} className="flex min-w-0 flex-1 items-center gap-4">
                     <div className={jessicaSuper.avatar}>
-                      {(user.firstName?.[0] ?? user.email[0]).toUpperCase()}
-                      {user.lastName?.[0]?.toUpperCase() ?? ""}
+                      {getContactInitials(user)}
                     </div>
                     <div className="min-w-0">
                       <h3 className="truncate text-lg font-semibold text-black">{displayName}</h3>
                       <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-500">
                         <span className="flex items-center gap-1.5 truncate">
                           <Mail className="h-3.5 w-3.5" />
-                          {user.email}
+                          {user.email || "Email non renseigné"}
                         </span>
                         {user.phone ? (
                           <span className="flex items-center gap-1.5">
@@ -126,7 +147,7 @@ export function JessicaCrmUsersList({ initialUsers, availableResources }: Jessic
                         ) : null}
                         <span className="flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5" />
-                          Inscrit le {format(new Date(user.createdAt), "dd MMM yyyy", { locale: fr })}
+                          Inscrit le {formatCreatedAt(user.createdAt)}
                         </span>
                         <span className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5" />

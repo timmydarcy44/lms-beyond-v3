@@ -2,6 +2,20 @@ import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 
 const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
+/** ID du calendrier cabinet (URL iCal Google ou variable dédiée). */
+export function getJessicaGoogleCalendarId(): string {
+  const explicit = process.env.GOOGLE_CALENDAR_ID?.trim();
+  if (explicit) return explicit;
+
+  const icalUrl = process.env.GOOGLE_CALENDAR_ICAL_URL?.trim();
+  if (icalUrl) {
+    const match = icalUrl.match(/\/ical\/([^/]+)\//);
+    if (match?.[1]) return decodeURIComponent(match[1]);
+  }
+
+  return "primary";
+}
+
 function requireGoogleOAuthConfig() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;

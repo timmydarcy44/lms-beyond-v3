@@ -93,13 +93,17 @@ export async function getJessicaCrmContacts(): Promise<JessicaCrmContact[]> {
 
   let appointments: AppointmentRow[] = [];
   if (jessicaId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("appointments")
       .select(
         "id, start_time, end_time, status, guest_email, learner_id, notes, learner_notes, cabinet_patient_id",
       )
       .eq("super_admin_id", jessicaId);
-    appointments = (data ?? []) as AppointmentRow[];
+    if (error) {
+      console.error("[getJessicaCrmContacts] appointments:", error.message);
+    } else {
+      appointments = (data ?? []) as AppointmentRow[];
+    }
   }
 
   const now = new Date();
@@ -121,7 +125,7 @@ export async function getJessicaCrmContacts(): Promise<JessicaCrmContact[]> {
       lastName: p.last_name ? String(p.last_name) : lms?.lastName ?? null,
       fullName: lms?.fullName ?? ([p.first_name, p.last_name].filter(Boolean).join(" ") || null),
       phone: p.phone ? String(p.phone) : lms?.phone ?? null,
-      createdAt: lms?.createdAt ?? String(p.imported_at),
+      createdAt: lms?.createdAt ?? (p.imported_at ? String(p.imported_at) : new Date().toISOString()),
       lastSignInAt: lms?.lastSignInAt ?? null,
       lmsRevenue: lms?.totalRevenue ?? 0,
       totalRevenue: lms?.totalRevenue ?? 0,
@@ -140,7 +144,8 @@ export async function getJessicaCrmContacts(): Promise<JessicaCrmContact[]> {
 
   for (const u of lmsUsers) {
     const key = u.id;
-    if (merged.has(key) || merged.has(u.email.toLowerCase())) continue;
+    const emailKey = u.email?.toLowerCase();
+    if (merged.has(key) || (emailKey && merged.has(emailKey))) continue;
     merged.set(key, {
       ...u,
       patientId: null,
@@ -169,7 +174,7 @@ export async function getJessicaCrmContacts(): Promise<JessicaCrmContact[]> {
       contact = merged.get(apt.learner_id);
     }
     if (!contact && email) {
-      contact = [...merged.values()].find((c) => c.email.toLowerCase() === email);
+      contact = [...merged.values()].find((c) => c.email && c.email.toLowerCase() === email);
     }
 
     if (contact) {

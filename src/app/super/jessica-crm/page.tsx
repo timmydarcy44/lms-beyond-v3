@@ -23,9 +23,21 @@ export default async function JessicaCrmPage() {
   }
 
   const [contacts, resources, revenue] = await Promise.all([
-    getJessicaCrmContacts(),
+    getJessicaCrmContacts().catch((e) => {
+      console.error("[jessica-crm] contacts error:", e);
+      return [];
+    }),
     getJessicaResources(),
-    getJessicaCrmRevenueSummary(),
+    getJessicaCrmRevenueSummary().catch((e) => {
+      console.error("[jessica-crm] revenue error:", e);
+      return {
+        hourlyRate: 75,
+        totalCabinetRevenue: 0,
+        totalLmsRevenue: 0,
+        totalRevenue: 0,
+        monthly: [],
+      };
+    }),
   ]);
 
   const withLms = contacts.filter((c) => c.contactKind !== "patient").length;

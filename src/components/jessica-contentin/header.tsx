@@ -452,8 +452,10 @@ export function JessicaContentinHeader() {
         {mobileMenuOpen && (
           <div
             className={cn(
-              "border-t py-4 lg:hidden",
-              headerOverHero ? "border-white/20 bg-[#2F2A25]/90 backdrop-blur-md" : "border-[#E6D9C6] bg-[#F8F5F0]",
+              "mx-3 mb-3 overflow-hidden rounded-2xl border py-4 lg:hidden",
+              headerOverHero
+                ? "border-white/20 bg-[#2F2A25]/95 shadow-2xl backdrop-blur-xl"
+                : "border-[#E6D9C6] bg-[#F8F5F0] shadow-lg",
             )}
           >
             <div className="flex flex-col gap-2">
@@ -472,12 +474,17 @@ export function JessicaContentinHeader() {
                     {item.label}
                   </Link>
                   {item.submenuItems ? (
-                    <div className="pl-4 mt-2 space-y-1">
+                    <div className="mt-2 space-y-1 pl-4">
                       {item.submenuItems.map((subItem) => (
                         <Link
                           key={subItem.href}
                           href={subItem.href}
-                          className="block px-4 py-2 text-sm text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
+                          className={cn(
+                            "block rounded-lg px-4 py-2 text-sm",
+                            headerOverHero
+                              ? "text-white/75 hover:bg-white/10 hover:text-white"
+                              : "text-[#5C5348] hover:bg-[#E6D9C6]/50 hover:text-[#2F2A25]",
+                          )}
                           onClick={closeMenus}
                         >
                           {subItem.label}
@@ -489,7 +496,12 @@ export function JessicaContentinHeader() {
                     <div className="pl-6 mt-3 space-y-4">
                       {item.submenuColumns.map((column) => (
                         <div key={column.title} className="space-y-2">
-                          <div className="text-xs font-semibold text-[#8B6F47] uppercase tracking-wider">
+                          <div
+                            className={cn(
+                              "text-xs font-semibold uppercase tracking-wider",
+                              headerOverHero ? "text-white/50" : "text-[#8B6F47]",
+                            )}
+                          >
                             {column.title}
                           </div>
                           <div className="space-y-1">
@@ -497,7 +509,12 @@ export function JessicaContentinHeader() {
                               <Link
                                 key={subItem.href + subItem.label}
                                 href={subItem.href}
-                                className="block px-4 py-2 text-sm text-[#2F2A25] rounded-lg hover:bg-[#E6D9C6]/50"
+                                className={cn(
+                                  "block rounded-lg px-4 py-2 text-sm",
+                                  headerOverHero
+                                    ? "text-white/75 hover:bg-white/10 hover:text-white"
+                                    : "text-[#5C5348] hover:bg-[#E6D9C6]/50 hover:text-[#2F2A25]",
+                                )}
                                 onClick={closeMenus}
                               >
                                 {subItem.label}
@@ -527,7 +544,10 @@ export function JessicaContentinHeader() {
                 {isMounted && isAuthenticated && userFirstName ? (
                   <Link 
                     href="/jessica-contentin/mon-compte"
-                    className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
+                    className={cn(
+                      "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
+                      headerOverHero ? "text-white/80 hover:text-white" : "text-[#2F2A25] hover:text-[#C6A664]",
+                    )}
                     style={{
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                     }}
@@ -538,7 +558,10 @@ export function JessicaContentinHeader() {
                 ) : (
                   <Link 
                     href="/jessica-contentin/mon-compte"
-                    className="text-sm text-[#2F2A25] hover:text-[#C6A664] transition-colors flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap"
+                    className={cn(
+                      "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
+                      headerOverHero ? "text-white/80 hover:text-white" : "text-[#2F2A25] hover:text-[#C6A664]",
+                    )}
                     style={{
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                     }}

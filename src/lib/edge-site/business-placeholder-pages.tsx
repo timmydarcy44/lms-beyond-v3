@@ -44,12 +44,6 @@ export const BUSINESS_PLACEHOLDER_PAGES = {
       "Valorisez les acquis avec des certifications reconnues et alignées sur vos standards internes.",
     label: "Développer",
   },
-  "open-badges": {
-    title: "Open Badges",
-    description:
-      "Attribuez des badges certifiants pour rendre visibles les compétences acquises et partagées.",
-    label: "Développer",
-  },
   "developpement-talents": {
     title: "Développement des talents",
     description:

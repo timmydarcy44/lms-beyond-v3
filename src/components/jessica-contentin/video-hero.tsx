@@ -109,7 +109,7 @@ export function VideoHero() {
             <Button
               asChild
               size="lg"
-              className="rounded-full bg-[#C6A664] px-8 py-6 text-base text-white hover:bg-[#B88A44] md:text-lg"
+              className="rounded-full bg-[#C4704B] px-8 py-6 text-base text-white hover:bg-[#A85A38] md:text-lg"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}

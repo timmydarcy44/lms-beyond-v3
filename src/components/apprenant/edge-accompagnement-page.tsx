@@ -314,8 +314,8 @@ export function EdgeAccompagnementPage() {
     }>
   >([]);
 
-  const membershipOffer = EDGE_ACCOMPAGNEMENT_OFFERS.find((o) => o.id === "membership")!;
-  const secondaryOffers = EDGE_ACCOMPAGNEMENT_OFFERS.filter((o) => o.id !== "membership");
+  const featuredOffer = EDGE_ACCOMPAGNEMENT_OFFERS.find((o) => o.id === "progression")!;
+  const secondaryOffers = EDGE_ACCOMPAGNEMENT_OFFERS.filter((o) => o.id !== "progression");
 
   useEffect(() => {
     void fetch("/api/edge/accompagnement/reservations")
@@ -357,7 +357,7 @@ export function EdgeAccompagnementPage() {
           viewport={{ once: true, margin: "-40px" }}
           variants={{ show: { transition: { staggerChildren: 0.06 } } }}
         >
-          <MembershipCard offer={membershipOffer} />
+          <MembershipCard offer={featuredOffer} />
         </motion.div>
 
         <motion.div
@@ -388,17 +388,15 @@ export function EdgeAccompagnementPage() {
               <thead>
                 <tr className="border-b border-[#EEF0F2] text-[10px] font-medium uppercase tracking-wider text-[#8B919A]">
                   <th className="px-5 py-2.5 text-left font-medium">Inclus</th>
-                  <th className="px-3 py-2.5 text-center font-medium">Membership</th>
-                  <th className="px-3 py-2.5 text-center font-medium">Coaching</th>
+                  <th className="px-3 py-2.5 text-center font-medium">Expert 49 €</th>
                   <th className="px-3 py-2.5 text-center font-medium">Mission EDGE</th>
-                  <th className="px-3 py-2.5 text-center font-medium">Programme</th>
+                  <th className="px-3 py-2.5 text-center font-medium">Sur devis</th>
                 </tr>
               </thead>
               <tbody>
                 {EDGE_OFFER_COMPARISON.map((row) => (
                   <tr key={row.label} className="border-b border-[#EEF0F2] last:border-b-0">
                     <td className="px-5 py-2.5 text-[#5C6370]">{row.label}</td>
-                    <td className="px-3 py-2.5 text-center"><ComparisonCell value={row.membership} /></td>
                     <td className="px-3 py-2.5 text-center"><ComparisonCell value={row.progression} /></td>
                     <td className="px-3 py-2.5 text-center"><ComparisonCell value={row.simulation} /></td>
                     <td className="px-3 py-2.5 text-center"><ComparisonCell value={row.programme} /></td>

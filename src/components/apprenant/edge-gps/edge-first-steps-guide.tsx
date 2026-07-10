@@ -5,6 +5,8 @@ import { CheckCircle2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EdgeProgressionGps } from "@/lib/apprenant/edge-progression-gps";
 import type { OnboardingRowHighlight } from "@/components/apprenant/edge-gps/edge-skills-gap-table";
+import { EDGE_EXPERT_PARCOURS_CTA, getExpertParcoursHref } from "@/lib/particulier/coaching-config";
+import Link from "next/link";
 
 export type FirstStepsStep = "objective" | "gaps" | "build" | "form" | "done";
 
@@ -14,7 +16,6 @@ type Props = {
   onStepChange: (step: FirstStepsStep) => void;
   gps: EdgeProgressionGps;
   onClose: () => void;
-  onRequestParcours: () => void;
   onComplete?: () => void;
   onObjectiveConfirmed?: (objective: string) => void;
   objectiveDraft?: string;
@@ -47,7 +48,6 @@ export function EdgeFirstStepsGuide({
   onStepChange,
   gps,
   onClose,
-  onRequestParcours,
   onComplete,
   onObjectiveConfirmed,
   objectiveDraft: objectiveDraftProp,
@@ -188,10 +188,7 @@ export function EdgeFirstStepsGuide({
           ) : null}
 
           {step === "form" ? (
-            <FormStep
-              onOpenForm={() => onRequestParcours()}
-              onSkip={() => onStepChange("done")}
-            />
+            <FormStep onSkip={() => onStepChange("done")} />
           ) : null}
 
           <button
@@ -300,42 +297,41 @@ function GapsStep({
 function BuildStep({ onContinue }: { onContinue: () => void }) {
   return (
     <div>
-      <h3 className="text-base font-semibold text-white">Construire mon parcours EDGE</h3>
+      <h3 className="text-base font-semibold text-white">{EDGE_EXPERT_PARCOURS_CTA}</h3>
       <p className="mt-2 text-sm leading-relaxed text-white/55">
-        EDGE identifie vos écarts. Un expert EDGE peut ensuite construire un parcours personnalisé
-        adapté à votre situation — pas un catalogue générique.
+        EDGE identifie vos écarts. Un expert peut ensuite construire un plan personnalisé adapté à votre
+        situation — pas un catalogue générique.
       </p>
       <button
         type="button"
         onClick={onContinue}
         className="mt-4 w-full rounded-lg bg-white py-2.5 text-sm font-medium text-[#0a0a0a] hover:bg-white/90"
       >
-        Demander une recommandation personnalisée
+        {EDGE_EXPERT_PARCOURS_CTA}
       </button>
     </div>
   );
 }
 
-function FormStep({ onOpenForm, onSkip }: { onOpenForm: () => void; onSkip: () => void }) {
+function FormStep({ onSkip }: { onSkip: () => void }) {
   return (
     <div>
-      <h3 className="text-base font-semibold text-white">Demander mon parcours personnalisé</h3>
+      <h3 className="text-base font-semibold text-white">{EDGE_EXPERT_PARCOURS_CTA}</h3>
       <p className="mt-2 text-sm text-white/55">
-        Complétez le formulaire en 2 minutes. Un conseiller EDGE analysera votre profil.
+        Réservez un créneau avec un expert EDGE pour construire votre plan d&apos;action.
       </p>
-      <button
-        type="button"
-        onClick={onOpenForm}
-        className="mt-4 w-full rounded-lg bg-[#3D7BFF] py-2.5 text-sm font-medium text-white hover:bg-[#2F6AE8]"
+      <Link
+        href={getExpertParcoursHref()}
+        className="mt-4 flex w-full items-center justify-center rounded-lg bg-[#3D7BFF] py-2.5 text-sm font-medium text-white hover:bg-[#2F6AE8]"
       >
-        Ouvrir le formulaire
-      </button>
+        {EDGE_EXPERT_PARCOURS_CTA}
+      </Link>
       <button
         type="button"
         onClick={onSkip}
         className="mt-2 w-full rounded-lg border border-white/15 py-2.5 text-sm text-white/60 hover:bg-white/[0.04]"
       >
-        Terminer sans envoyer
+        Terminer sans réserver
       </button>
     </div>
   );

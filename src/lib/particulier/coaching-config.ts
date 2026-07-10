@@ -6,6 +6,9 @@ import {
   type EdgeAccompagnementOfferSlug,
 } from "@/lib/particulier/accompagnement-booking";
 
+/** CTA unique particulier — réservation avec un expert EDGE. */
+export const EDGE_EXPERT_PARCOURS_CTA = "Construire mon parcours avec un expert";
+
 export type EdgeAccompagnementOfferId = "membership" | "progression" | "simulation" | "programme";
 
 export type OfferTier = "principal" | "ponctuel" | "cible" | "longue-duree";
@@ -53,19 +56,20 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
   },
   {
     id: "progression",
-    title: "Coaching Progression",
-    price: "149 €",
+    title: "Construire mon parcours avec un expert",
+    price: "49 €",
     duration: "60 min",
-    tier: "ponctuel",
-    tierLabel: "Séance ponctuelle",
-    description: "Une séance pour analyser votre profil et définir un plan d'action.",
-    valueProposition: "Clarifier vos priorités et structurer les prochaines étapes.",
+    tier: "principal",
+    tierLabel: "Séance avec un expert",
+    description: "Échange individuel en visioconférence avec un expert EDGE.",
+    valueProposition:
+      "Analyser votre profil, clarifier vos priorités et définir les prochaines étapes concrètes.",
     benefits: [
-      "Analyse de votre profil EDGE",
-      "Priorisation des compétences",
-      "Plan d'action sur 30 jours",
+      "Analyse de votre profil EDGE et de vos écarts",
+      "Priorisation des compétences à travailler",
+      "Recommandations personnalisées pour la suite",
     ],
-    ctaLabel: "Réserver une séance",
+    ctaLabel: "Réserver avec un expert — 49 €",
     icon: "target",
   },
   {
@@ -87,19 +91,19 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
   },
   {
     id: "programme",
-    title: "Programme Progression",
-    price: "390 €",
-    priceSuffix: "+",
+    title: "Création du parcours & développement des compétences",
+    price: "Sur devis",
     tier: "longue-duree",
-    tierLabel: "Accompagnement longue durée",
-    description: "Plusieurs séances sur une période définie, avec suivi entre les rendez-vous.",
-    valueProposition: "Un accompagnement structuré dans la durée.",
+    tierLabel: "Accompagnement sur mesure",
+    description: "Parcours personnalisé et plan de développement des compétences — tarif établi après échange.",
+    valueProposition:
+      "Un accompagnement structuré dans la durée, adapté à votre objectif et à votre rythme.",
     benefits: [
-      "Séances individuelles planifiées",
-      "Suivi et exercices entre les séances",
-      "Réévaluation des compétences",
+      "Création d'un parcours personnalisé",
+      "Plan de développement des compétences",
+      "Suivi et réévaluation avec un expert EDGE",
     ],
-    ctaLabel: "Construire un programme",
+    ctaLabel: "Demander un devis",
     icon: "layers",
   },
 ];
@@ -113,15 +117,20 @@ export type ComparisonFeature = {
 };
 
 export const EDGE_OFFER_COMPARISON: ComparisonFeature[] = [
-  { label: "Coaching individuel", membership: "1×/mois", progression: "1 séance", simulation: "—", programme: "Multi-séances" },
+  { label: "Échange expert", membership: "1×/mois", progression: "49 € · 60 min", simulation: "179 €", programme: "Sur devis" },
   { label: "Analyse profil EDGE", membership: true, progression: true, simulation: true, programme: true },
   { label: "Plan d'action", membership: true, progression: true, simulation: false, programme: true },
-  { label: "Mission EDGE (expert)", membership: true, progression: false, simulation: true, programme: true },
+  { label: "Création du parcours", membership: false, progression: false, simulation: false, programme: true },
+  { label: "Développement des compétences", membership: false, progression: false, simulation: false, programme: true },
   { label: "Suivi dans la durée", membership: true, progression: false, simulation: false, programme: true },
-  { label: "Réévaluation compétences", membership: "Trimestrielle", progression: false, simulation: false, programme: true },
 ];
 
 export const EDGE_ACCOMPAGNEMENT_FAQ = [
+  {
+    question: "Combien coûte la séance avec un expert ?",
+    answer:
+      "La construction de votre plan avec un expert EDGE est à 49 € (60 min en visioconférence). La création d'un parcours complet ou d'un plan de développement des compétences sur la durée se fait sur devis, après un premier échange.",
+  },
   {
     question: "Quelle est la différence entre l'analyse EDGE et un accompagnement ?",
     answer:
@@ -147,6 +156,10 @@ export function getCoachingBookingHref(offerId?: EdgeAccompagnementOfferId): str
   if (offerId === "programme") return getProgrammeRequestHref();
   if (offerId === "membership") return `${getProgrammeRequestHref()}?offer=edge-membership`;
   return getReservationPageHref(OFFER_ID_TO_SLUG[offerId]);
+}
+
+export function getExpertParcoursHref(): string {
+  return getCoachingBookingHref("progression");
 }
 
 /** @deprecated Utiliser EDGE_ACCOMPAGNEMENT_OFFERS */

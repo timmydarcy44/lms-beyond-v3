@@ -1331,7 +1331,6 @@ export function ApprenantDashboardClient({
 
               <PersonalizedActionPlanSection
                 plan={personalizedPlan}
-                parcoursHref="/dashboard/apprenant/parcours"
                 className="opacity-90"
               />
 

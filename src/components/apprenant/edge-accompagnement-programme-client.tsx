@@ -75,12 +75,13 @@ export function EdgeAccompagnementProgrammeClient({ defaultName, defaultEmail }:
       </Link>
 
       <header className="space-y-3">
-        <p className={APPRENANT_CARD_KICKER}>Programme sur mesure</p>
+        <p className={APPRENANT_CARD_KICKER}>Sur devis</p>
         <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
-          Programme Progression EDGE
+          Création du parcours & développement des compétences
         </h1>
         <p className="text-sm leading-relaxed text-white/50">
-          Décrivez votre objectif. Nous vous proposerons un accompagnement adapté — paiement après échange.
+          Décrivez votre objectif. Un expert EDGE vous proposera un accompagnement sur mesure — tarif établi
+          après échange.
         </p>
       </header>
 

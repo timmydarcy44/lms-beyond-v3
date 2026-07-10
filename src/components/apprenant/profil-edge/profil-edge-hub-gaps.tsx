@@ -143,7 +143,7 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
             href={RESERVATION_HREF}
             className={`${CONNECT_BTN_SECONDARY} inline-flex items-center justify-center gap-2`}
           >
-            Construire mon parcours EDGE avec un expert
+            Construire mon parcours avec un expert
           </Link>
         </div>
       </section>

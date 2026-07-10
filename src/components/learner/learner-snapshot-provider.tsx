@@ -13,6 +13,7 @@ import {
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
 import { buildPersonalizedActionPlan } from "@/lib/learner/personalized-action-plan";
+import { getExpertParcoursHref } from "@/lib/particulier/coaching-config";
 
 export type LearnerSnapshot = {
   userId: string;
@@ -147,7 +148,7 @@ export function usePersonalizedActionPlanFromSnapshot(surface: "apprenant" | "sa
   );
 
   const parcoursHref =
-    surface === "salarie" ? "/dashboard/salarie/parcours" : "/dashboard/apprenant/parcours";
+    surface === "salarie" ? "/dashboard/salarie/parcours" : getExpertParcoursHref();
 
   return {
     loading,

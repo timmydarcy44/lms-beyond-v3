@@ -43,7 +43,7 @@ export function ProfilEdgeHubActionPlan({ matching }: Props) {
         href={getCoachingBookingHref("progression")}
         className={`${CONNECT_BTN_PRIMARY} mt-6 inline-flex w-full items-center justify-center gap-2 sm:w-auto`}
       >
-        Construire mon parcours EDGE avec un expert
+        Construire mon parcours avec un expert
         <ArrowRight className="h-4 w-4" />
       </Link>
     </section>

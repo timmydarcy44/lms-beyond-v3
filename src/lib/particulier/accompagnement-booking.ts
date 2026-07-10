@@ -45,12 +45,12 @@ export const EDGE_ADMIN_EMAIL = "timmydarcy44@gmail.com";
 export const EDGE_BOOKABLE_OFFERS: BookableEdgeOffer[] = [
   {
     slug: "coaching-progression",
-    title: "Coaching Progression EDGE",
-    priceLabel: "149 €",
-    priceCents: 14900,
+    title: "Construire mon parcours avec un expert",
+    priceLabel: "49 €",
+    priceCents: 4900,
     duration: "60 min",
     description:
-      "Un accompagnement individuel pour construire votre feuille de route de progression.",
+      "Un échange individuel avec un expert EDGE pour analyser votre profil et structurer vos prochaines étapes.",
     stripePriceIdEnv: "STRIPE_PRICE_ID_COACHING_PROGRESS",
     bookable: true,
   },
@@ -66,11 +66,12 @@ export const EDGE_BOOKABLE_OFFERS: BookableEdgeOffer[] = [
   },
   {
     slug: "programme-progression",
-    title: "Programme Progression EDGE",
-    priceLabel: "À partir de 390 €",
-    priceCents: 39000,
+    title: "Création du parcours & développement des compétences",
+    priceLabel: "Sur devis",
+    priceCents: 0,
     duration: "Sur mesure",
-    description: "Un accompagnement dans la durée pour accélérer votre évolution.",
+    description:
+      "Accompagnement personnalisé dans la durée — parcours sur mesure et plan de développement des compétences.",
     bookable: false,
   },
 ];

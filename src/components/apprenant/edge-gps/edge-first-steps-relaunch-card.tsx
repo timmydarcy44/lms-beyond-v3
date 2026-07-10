@@ -15,8 +15,8 @@ export function EdgeFirstStepsRelaunchCard() {
       <div>
         <p className="text-sm font-semibold text-white">Premiers pas EDGE</p>
         <p className="mt-1 text-sm text-white/55">
-          Relancez le parcours guidé pour confirmer votre objectif, comprendre vos écarts et demander un
-          parcours personnalisé.
+          Relancez le parcours guidé pour confirmer votre objectif, comprendre vos écarts et construire
+          votre plan avec un expert.
         </p>
       </div>
     </Link>

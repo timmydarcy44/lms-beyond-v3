@@ -11,7 +11,7 @@
  *   STRIPE_EDGE_ACCOMPAGNEMENT_WEBHOOK_SECRET=…    ← optionnel, dédié accompagnement
  *
  * Optionnel (sinon price_data automatique) :
- *   STRIPE_PRICE_ID_COACHING_PROGRESS=price_…
+ *   STRIPE_PRICE_ID_COACHING_PROGRESS=price_…   ← séance expert 49 €
  *   STRIPE_PRICE_ID_SIMULATION_PRO=price_…
  *
  * Webhook Stripe Dashboard → URL :

@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { ArrowRight, Award, BookOpen, Sparkles, Users } from "lucide-react";
 import type { PersonalizedActionPlan } from "@/lib/learner/personalized-action-plan";
+import { EDGE_EXPERT_PARCOURS_CTA, getExpertParcoursHref } from "@/lib/particulier/coaching-config";
 import { cn } from "@/lib/utils";
 
 type Props = {
   plan: PersonalizedActionPlan | null;
   loading?: boolean;
-  parcoursHref: string;
+  /** Lien CTA principal — défaut : réservation expert (particulier). */
+  expertHref?: string;
+  /** @deprecated Préférer expertHref */
+  parcoursHref?: string;
   className?: string;
 };
 
@@ -22,9 +26,11 @@ const KIND_ICON = {
 export function PersonalizedActionPlanSection({
   plan,
   loading,
+  expertHref,
   parcoursHref,
   className,
 }: Props) {
+  const ctaHref = expertHref ?? parcoursHref ?? getExpertParcoursHref();
   if (loading) {
     return (
       <div className={cn("rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8", className)}>
@@ -39,8 +45,8 @@ export function PersonalizedActionPlanSection({
       <div className={cn("rounded-2xl border border-violet-400/20 bg-violet-500/[0.06] p-6", className)}>
         <p className="text-sm font-semibold text-white">Plan d&apos;action personnalisé</p>
         <p className="mt-2 text-sm text-white/60">
-          Passez vos tests DISC, IDMC et Soft Skills pour recevoir des parcours EDGE, accompagnements et
-          badges adaptés à votre profil.
+          Passez vos tests DISC, IDMC et Soft Skills pour recevoir un accompagnement et des badges adaptés à
+          votre profil.
         </p>
       </div>
     );
@@ -90,10 +96,10 @@ export function PersonalizedActionPlanSection({
           </ul>
         ) : null}
         <Link
-          href={parcoursHref}
+          href={ctaHref}
           className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-950 hover:bg-white/90"
         >
-          Voir mes parcours EDGE
+          {EDGE_EXPERT_PARCOURS_CTA}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>

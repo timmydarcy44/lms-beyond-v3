@@ -10,7 +10,6 @@ import {
   EdgeFirstStepsGuide,
   type FirstStepsStep,
 } from "@/components/apprenant/edge-gps/edge-first-steps-guide";
-import { EdgeParcoursRequestModal } from "@/components/apprenant/edge-gps/edge-parcours-request-modal";
 import { EdgeWhatNowFab } from "@/components/apprenant/edge-gps/edge-what-now-fab";
 import { EdgeWhatNowModal } from "@/components/apprenant/edge-gps/edge-what-now-modal";
 import type { StoredHardSkillMeta } from "@/lib/hard-skills/hard-skills-portfolio";
@@ -45,7 +44,6 @@ function scrollToSkillsGaps() {
 export function EdgeDashboardGpsContainer(props: Props) {
   const searchParams = useSearchParams();
   const [whatNowOpen, setWhatNowOpen] = useState(false);
-  const [parcoursRequestOpen, setParcoursRequestOpen] = useState(false);
   const [firstStepsActive, setFirstStepsActive] = useState(false);
   const [firstStepsStep, setFirstStepsStep] = useState<FirstStepsStep>("objective");
   const [confirmedObjective, setConfirmedObjective] = useState<string | null>(null);
@@ -75,27 +73,10 @@ export function EdgeDashboardGpsContainer(props: Props) {
     }
   }, [loading, searchParams]);
 
-  useEffect(() => {
-    if (firstStepsActive && firstStepsStep === "form") {
-      setParcoursRequestOpen(true);
-    }
-  }, [firstStepsActive, firstStepsStep]);
-
-  const prioritySkills = useMemo(
-    () =>
-      gps.skills
-        .filter((s) => s.status === "priority" || s.status === "to_develop")
-        .slice(0, 5)
-        .map((s) => s.name),
-    [gps.skills],
-  );
-
   const onboardingHighlights = useMemo(
     () => buildOnboardingHighlights(gps, firstStepsStep),
     [gps, firstStepsStep],
   );
-
-  const openParcoursRequest = useCallback(() => setParcoursRequestOpen(true), []);
 
   const persistFirstSteps = useCallback(() => {
     writeFirstStepsState({
@@ -114,12 +95,6 @@ export function EdgeDashboardGpsContainer(props: Props) {
     [persistFirstSteps],
   );
 
-  const handleParcoursSubmitted = useCallback(() => {
-    persistFirstSteps();
-    setFirstStepsStep("done");
-    setFirstStepsActive(true);
-  }, [persistFirstSteps]);
-
   return (
     <>
       <EdgeFirstStepsGuide
@@ -128,7 +103,6 @@ export function EdgeDashboardGpsContainer(props: Props) {
         onStepChange={handleStepChange}
         gps={gps}
         onClose={() => setFirstStepsActive(false)}
-        onRequestParcours={openParcoursRequest}
         onComplete={() => setFirstStepsActive(false)}
         onObjectiveConfirmed={setConfirmedObjective}
         objectiveDraft={objectiveDraft}
@@ -139,7 +113,6 @@ export function EdgeDashboardGpsContainer(props: Props) {
         gps={gps}
         loading={loading}
         onWhatNow={() => setWhatNowOpen(true)}
-        onRequestParcours={openParcoursRequest}
         onViewGaps={scrollToSkillsGaps}
         firstStepsStep={firstStepsActive ? firstStepsStep : null}
         onboardingHighlights={firstStepsActive ? onboardingHighlights : undefined}
@@ -150,21 +123,7 @@ export function EdgeDashboardGpsContainer(props: Props) {
         open={whatNowOpen}
         onClose={() => setWhatNowOpen(false)}
         gps={gps}
-        onRequestParcours={openParcoursRequest}
         onViewSkills={scrollToSkillsGaps}
-      />
-      <EdgeParcoursRequestModal
-        open={parcoursRequestOpen}
-        onClose={() => setParcoursRequestOpen(false)}
-        defaultObjective={
-          confirmedObjective ??
-          (objectiveDraft.trim() ||
-            (gps.objectiveTitle !== "Objectif professionnel" ? gps.objectiveTitle : ""))
-        }
-        prioritySkills={
-          prioritySkills.length ? prioritySkills : gps.prioritySkill ? [gps.prioritySkill] : []
-        }
-        onSubmittedSuccess={firstStepsActive ? handleParcoursSubmitted : undefined}
       />
     </>
   );

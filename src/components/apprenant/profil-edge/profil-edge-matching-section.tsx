@@ -7,8 +7,8 @@ import {
   EDGE_CTA_START_PARCOURS,
   PARCOURS_EDGE_INCLUDES,
   premiumSkillTitle,
-  skillProgressionCta,
 } from "@/lib/edge-skill-progression-copy";
+import { getExpertParcoursHref } from "@/lib/particulier/coaching-config";
 import { PROFIL_EDGE_SECTION_HREFS } from "@/lib/particulier/profil-edge-maturity";
 
 const TONE_CLASS: Record<CareerSkillRow["tone"], string> = {
@@ -37,7 +37,7 @@ function SkillList({ items, emptyLabel }: { items: string[]; emptyLabel: string 
 
 function priorityActionHref(actionType: CareerNextPriority["actionType"]): string {
   if (actionType === "evaluation" || actionType === "proof") return PROFIL_EDGE_SECTION_HREFS.hard_skills;
-  return "/dashboard/apprenant/parcours";
+  return getExpertParcoursHref();
 }
 
 type Props = {
@@ -139,7 +139,8 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Accompagnement personnalisé</p>
             <p className="mt-2 max-w-2xl text-sm text-white/55">
-              Chaque compétence identifiée ouvre un parcours EDGE structuré — pas une simple liste de contenus.
+              Chaque compétence identifiée peut être travaillée avec un expert EDGE — pas une simple liste de
+              contenus.
             </p>
           </div>
           <div className="grid gap-5 lg:grid-cols-2">
@@ -165,7 +166,7 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
                   ))}
                 </ul>
                 <Link
-                  href="/dashboard/apprenant/parcours"
+                  href={getExpertParcoursHref()}
                   className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-gray-950 transition hover:bg-white/90"
                 >
                   {EDGE_CTA_START_PARCOURS}
@@ -195,10 +196,10 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
               ))}
             </ul>
             <Link
-              href="/dashboard/apprenant/parcours"
+              href={getExpertParcoursHref()}
               className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-violet-200 hover:text-white"
             >
-              {skillProgressionCta("parcours")}
+              {EDGE_CTA_START_PARCOURS}
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>

@@ -127,7 +127,58 @@ export async function sendAccompagnementConfirmationEmails(data: AccompagnementR
 
   await sendEmail({
     to: EDGE_ADMIN_EMAIL,
-    subject: "Nouvelle réservation accompagnement EDGE",
+    subject: `Nouveau rendez-vous EDGE — ${data.userName}`,
+    html: adminHtml,
+    skipBcc: true,
+  });
+}
+
+export async function sendPersonalizedPathRequestEmails(params: {
+  requestId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  objective: string;
+  currentStatus: string;
+  deadline: string;
+  supportPreference: string;
+  message?: string;
+  prioritySkills?: string[];
+}) {
+  const userHtml = buildEdgeEmailShell({
+    title: "Demande reçue",
+    preheader: "Construire mon parcours avec un expert",
+    bodyHtml: `<p>Bonjour ${escapeEdgeEmailHtml(params.userName)},</p>
+      <p>Nous avons bien reçu votre demande. Un expert EDGE vous recontactera sous 48 h ouvrées.</p>`,
+    cta: { label: "Réserver un créneau", href: `${publicAppUrl()}/dashboard/accompagnement/reserver?offer=coaching-progression` },
+  });
+
+  await sendEmail({
+    to: params.userEmail,
+    subject: "Votre demande EDGE est enregistrée",
+    html: userHtml,
+    skipBcc: true,
+  });
+
+  const adminHtml = buildEdgeEmailShell({
+    title: "Nouvelle demande parcours expert EDGE",
+    preheader: params.userEmail,
+    bodyHtml: `<ul style="margin:20px 0;padding-left:20px;text-align:left;line-height:1.8;">
+        <li><strong>Nom :</strong> ${escapeEdgeEmailHtml(params.userName)}</li>
+        <li><strong>Email :</strong> ${escapeEdgeEmailHtml(params.userEmail)}</li>
+        <li><strong>Objectif :</strong> ${escapeEdgeEmailHtml(params.objective)}</li>
+        <li><strong>Situation :</strong> ${escapeEdgeEmailHtml(params.currentStatus)}</li>
+        <li><strong>Échéance :</strong> ${escapeEdgeEmailHtml(params.deadline)}</li>
+        <li><strong>Préférence :</strong> ${escapeEdgeEmailHtml(params.supportPreference)}</li>
+        ${params.prioritySkills?.length ? `<li><strong>Compétences :</strong> ${escapeEdgeEmailHtml(params.prioritySkills.join(", "))}</li>` : ""}
+        ${params.message ? `<li><strong>Message :</strong> ${escapeEdgeEmailHtml(params.message)}</li>` : ""}
+      </ul>`,
+    cta: { label: "Voir le profil", href: accompagnementProfileAdminUrl(params.userId) },
+  });
+
+  await sendEmail({
+    to: EDGE_ADMIN_EMAIL,
+    subject: `Nouvelle demande parcours expert — ${params.userName}`,
     html: adminHtml,
     skipBcc: true,
   });
@@ -145,7 +196,7 @@ export async function sendProgrammeRequestEmails(params: {
 }) {
   const userHtml = buildEdgeEmailShell({
     title: "Demande reçue",
-    preheader: "Programme Progression EDGE",
+    preheader: "Création du parcours — sur devis",
     bodyHtml: `<p>Bonjour ${escapeEdgeEmailHtml(params.userName)},</p>
       <p>Nous avons bien reçu votre demande de programme personnalisé.</p>
       <p style="font-size:15px;color:#4A4A4A;">Un expert EDGE vous recontactera sous 48 h ouvrées.</p>`,

@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
+import { EDGE_EXPERT_PARCOURS_CTA, getExpertParcoursHref } from "@/lib/particulier/coaching-config";
 
 type Props = {
-  onRequestParcours?: () => void;
   highlighted?: boolean;
 };
 
-export function EdgeAccompagnementNudge({ onRequestParcours, highlighted }: Props) {
+export function EdgeAccompagnementNudge({ highlighted }: Props) {
   return (
     <aside
       id="edge-accompagnement-nudge"
@@ -26,27 +26,17 @@ export function EdgeAccompagnementNudge({ onRequestParcours, highlighted }: Prop
           <div>
             <p className="text-sm font-medium text-white">Besoin d&apos;être accompagné ?</p>
             <p className="mt-1 max-w-lg text-sm leading-relaxed text-white/50">
-              Un conseiller EDGE peut vous aider à valider votre objectif, comprendre vos écarts et construire un
-              parcours personnalisé.
+              Un expert EDGE peut vous aider à valider votre objectif, comprendre vos écarts et construire un
+              plan d&apos;action personnalisé.
             </p>
           </div>
         </div>
-        {onRequestParcours ? (
-          <button
-            type="button"
-            onClick={onRequestParcours}
-            className="shrink-0 rounded-lg border border-white/15 px-4 py-2.5 text-center text-sm font-medium text-white/80 transition hover:bg-white/[0.05] hover:text-white"
-          >
-            Demander mon parcours personnalisé
-          </button>
-        ) : (
-          <Link
-            href="/dashboard/apprenant/coaching"
-            className="shrink-0 rounded-lg border border-white/15 px-4 py-2.5 text-center text-sm font-medium text-white/80 transition hover:bg-white/[0.05] hover:text-white"
-          >
-            Demander un échange
-          </Link>
-        )}
+        <Link
+          href={getExpertParcoursHref()}
+          className="shrink-0 rounded-lg border border-white/15 bg-white px-4 py-2.5 text-center text-sm font-medium text-[#0a0a0a] transition hover:bg-white/90"
+        >
+          {EDGE_EXPERT_PARCOURS_CTA}
+        </Link>
       </div>
     </aside>
   );

@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { Clock, Target, X } from "lucide-react";
 import type { EdgeProgressionGps } from "@/lib/apprenant/edge-progression-gps";
+import { EDGE_EXPERT_PARCOURS_CTA, getExpertParcoursHref } from "@/lib/particulier/coaching-config";
 
 type Props = {
   open: boolean;
@@ -10,23 +12,11 @@ type Props = {
     EdgeProgressionGps,
     "objectiveTitle" | "prioritySkill" | "gapsCount" | "hasObjective"
   >;
-  onRequestParcours?: () => void;
   onViewSkills?: () => void;
 };
 
-export function EdgeWhatNowModal({
-  open,
-  onClose,
-  gps,
-  onRequestParcours,
-  onViewSkills,
-}: Props) {
+export function EdgeWhatNowModal({ open, onClose, gps, onViewSkills }: Props) {
   if (!open) return null;
-
-  const handleRequest = () => {
-    onClose();
-    onRequestParcours?.();
-  };
 
   const handleViewSkills = () => {
     onClose();
@@ -52,8 +42,8 @@ export function EdgeWhatNowModal({
           Que faire maintenant ?
         </p>
         <p className="mt-3 text-sm leading-relaxed text-white/65">
-          Votre profil est analysé. La prochaine étape consiste à transformer vos résultats en parcours
-          concret.
+          Votre profil est analysé. La prochaine étape consiste à construire un plan d&apos;action avec un
+          expert EDGE.
         </p>
 
         <div className="mt-5 space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
@@ -89,15 +79,13 @@ export function EdgeWhatNowModal({
         </div>
 
         <div className="mt-6 space-y-2">
-          {onRequestParcours ? (
-            <button
-              type="button"
-              onClick={handleRequest}
-              className="flex w-full items-center justify-center rounded-lg bg-[#3D7BFF] py-3 text-sm font-semibold text-white hover:bg-[#2F6AE8]"
-            >
-              Demander mon parcours personnalisé
-            </button>
-          ) : null}
+          <Link
+            href={getExpertParcoursHref()}
+            onClick={onClose}
+            className="flex w-full items-center justify-center rounded-lg bg-[#3D7BFF] py-3 text-sm font-semibold text-white hover:bg-[#2F6AE8]"
+          >
+            {EDGE_EXPERT_PARCOURS_CTA}
+          </Link>
           {onViewSkills ? (
             <button
               type="button"

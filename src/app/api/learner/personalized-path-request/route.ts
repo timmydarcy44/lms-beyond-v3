@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { sendPersonalizedPathRequestEmails } from "@/lib/particulier/accompagnement-emails";
 import type { PersonalizedPathRequestPayload } from "@/lib/apprenant/edge-personalized-path-request";
 
 export async function POST(request: NextRequest) {
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user?.id) {
+    if (!user?.id || !user.email) {
       return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
     }
 
@@ -27,19 +28,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
     }
 
-    const service = getServiceRoleClient();
-    if (!service) {
-      // TODO: brancher notification email conseiller EDGE quand le flux admin sera prêt
-      console.warn("[personalized-path-request] service role unavailable — request logged only", {
-        userId: user.id,
-        objective,
-      });
-      return NextResponse.json({ success: true, id: "mock", mocked: true });
-    }
-
     const prioritySkills = Array.isArray(body.prioritySkills)
       ? body.prioritySkills.map(String).filter(Boolean)
       : [];
+
+    const userName =
+      String(user.user_metadata?.full_name ?? "").trim() ||
+      user.email.split("@")[0];
+
+    const service = getServiceRoleClient();
+    if (!service) {
+      await sendPersonalizedPathRequestEmails({
+        requestId: "offline",
+        userId: user.id,
+        userName,
+        userEmail: user.email,
+        objective,
+        currentStatus,
+        deadline,
+        supportPreference,
+        message: body.message?.trim(),
+        prioritySkills,
+      }).catch((err) => console.error("[personalized-path-request] email:", err));
+
+      return NextResponse.json({ success: true, id: "mock", mocked: true });
+    }
 
     const { data: row, error } = await service
       .from("edge_personalized_path_requests")
@@ -58,15 +71,37 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("[personalized-path-request] insert:", error);
-      // Fallback si migration non appliquée en prod
       if (error.code === "42P01") {
-        console.warn("[personalized-path-request] table missing — apply migration 20260706220000");
+        await sendPersonalizedPathRequestEmails({
+          requestId: "pending-migration",
+          userId: user.id,
+          userName,
+          userEmail: user.email,
+          objective,
+          currentStatus,
+          deadline,
+          supportPreference,
+          message: body.message?.trim(),
+          prioritySkills,
+        }).catch((err) => console.error("[personalized-path-request] email:", err));
+
         return NextResponse.json({ success: true, id: "pending-migration", mocked: true });
       }
       return NextResponse.json({ error: "Impossible d'enregistrer la demande" }, { status: 500 });
     }
 
-    // TODO: envoyer email notification au conseiller EDGE
+    await sendPersonalizedPathRequestEmails({
+      requestId: row.id,
+      userId: user.id,
+      userName,
+      userEmail: user.email,
+      objective,
+      currentStatus,
+      deadline,
+      supportPreference,
+      message: body.message?.trim(),
+      prioritySkills,
+    }).catch((err) => console.error("[personalized-path-request] email:", err));
 
     return NextResponse.json({ success: true, id: row.id });
   } catch (error) {

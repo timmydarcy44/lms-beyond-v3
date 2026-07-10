@@ -99,7 +99,7 @@ export function EdgeParcoursRequestModal({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-5 py-4">
           <h2 className="text-base font-semibold text-white">
-            {confirmed ? "Demande envoyée" : "Demander mon parcours personnalisé"}
+            {confirmed ? "Demande envoyée" : "Construire mon parcours avec un expert"}
           </h2>
           <button
             type="button"

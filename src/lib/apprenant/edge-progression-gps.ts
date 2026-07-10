@@ -23,6 +23,8 @@ import {
 } from "@/lib/particulier/professional-project-fields";
 import type { Diplome, ExperiencePro } from "@/lib/particulier/profil-edge-maturity";
 import { parseProfessionalProject } from "@/lib/particulier/profil-edge-maturity";
+import { getExpertParcoursHref } from "@/lib/particulier/coaching-config";
+import { EDGE_CTA_START_PARCOURS } from "@/lib/edge-skill-progression-copy";
 import {
   gapSeverityFrom,
   levelScoreFromLabel,
@@ -240,8 +242,8 @@ function buildNextStep(
       skill: p.skill,
       subPriority: p.actionType === "micro_formation" ? "Micro-formation recommandée" : undefined,
       why: `Cette compétence est actuellement le principal écart entre votre profil et votre objectif « ${objectiveTitle} ».`,
-      actionLabel: "Demander une recommandation personnalisée",
-      actionHref: "/dashboard/apprenant/parcours",
+      actionLabel: EDGE_CTA_START_PARCOURS,
+      actionHref: getExpertParcoursHref(),
       estimatedMinutes: 2,
       expectedOutcome:
         "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
@@ -253,8 +255,8 @@ function buildNextStep(
     return {
       skill,
       why: plan.nextStep.title,
-      actionLabel: "Demander une recommandation personnalisée",
-      actionHref: "/dashboard/apprenant/parcours",
+      actionLabel: EDGE_CTA_START_PARCOURS,
+      actionHref: getExpertParcoursHref(),
       estimatedMinutes: 2,
       expectedOutcome:
         "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
@@ -266,8 +268,8 @@ function buildNextStep(
     return {
       skill,
       why: `Compétence prioritaire pour votre objectif « ${objectiveTitle} ».`,
-      actionLabel: "Demander une recommandation personnalisée",
-      actionHref: "/dashboard/apprenant/parcours",
+      actionLabel: EDGE_CTA_START_PARCOURS,
+      actionHref: getExpertParcoursHref(),
       estimatedMinutes: 2,
       expectedOutcome:
         "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
@@ -429,7 +431,7 @@ export function buildEdgeProgressionGps(params: {
           actionHref:
             status === "validated"
               ? "/dashboard/apprenant/profil-comportemental/hard-skills"
-              : "/dashboard/apprenant/parcours",
+              : getExpertParcoursHref(),
           whyImportant: `Compétence clé pour « ${objectiveTitle} » — niveau actuel : ${row.userLevel}.`,
           currentResult: `${row.userLevel} · ${row.source}`,
           resources: buildResources(row.skill, params.personalizedPlan, params.visibleBadges),
@@ -489,7 +491,7 @@ export function buildEdgeProgressionGps(params: {
     gapsCount,
     prioritySkill: nextStep.skill,
     summarySentence,
-    parcoursHref: "/dashboard/apprenant/parcours",
+    parcoursHref: getExpertParcoursHref(),
     nextStep,
     timeline,
     skills: skillRows,

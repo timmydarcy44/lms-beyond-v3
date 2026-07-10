@@ -21,7 +21,7 @@ const STEP_ICON = {
 } as const;
 
 export default function ApprenantParcoursPage() {
-  const { loading, plan, parcoursHref } = usePersonalizedActionPlanFromSnapshot("apprenant");
+  const { loading, plan } = usePersonalizedActionPlanFromSnapshot("apprenant");
 
   return (
     <div className={APPRENANT_PAGE_SHELL}>
@@ -35,12 +35,7 @@ export default function ApprenantParcoursPage() {
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/55">{PARCOURS_CONCIERGE_INTRO}</p>
       </section>
 
-      <PersonalizedActionPlanSection
-        loading={loading}
-        plan={plan}
-        parcoursHref={parcoursHref}
-        className="mb-10"
-      />
+      <PersonalizedActionPlanSection loading={loading} plan={plan} className="mb-10" />
 
       {plan?.parcoursSteps.length ? (
         <section className="space-y-4">

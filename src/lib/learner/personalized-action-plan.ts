@@ -10,8 +10,10 @@ import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 import { getParcours } from "@/lib/parcours";
 import {
   EDGE_CTA_LAUNCH_PROGRESSION,
+  EDGE_CTA_START_PARCOURS,
   premiumSkillTitle,
 } from "@/lib/edge-skill-progression-copy";
+import { getExpertParcoursHref } from "@/lib/particulier/coaching-config";
 
 export type ActionPlanItemKind = "formation" | "coaching" | "badge" | "micro_formation";
 
@@ -133,6 +135,7 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
   const items: ActionPlanItem[] = [];
   const coachings: CoachingRecommendation[] = [];
   const root = basePath(surface);
+  const expertHref = surface === "apprenant" ? getExpertParcoursHref() : `${root}/parcours`;
 
   const weakSkills = [...softSkills]
     .filter((s) => s.score < SOFT_SKILL_THRESHOLDS)
@@ -142,9 +145,12 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
     const mapping = SKILL_COACHING_MAP[skill.skill];
     if (!mapping) continue;
     needs.push(mapping.coaching);
-    const parcoursHref = mapping.slug
-      ? `/edge-lab/parcours/${mapping.slug}`
-      : `${root}/parcours?focus=${encodeURIComponent(skill.skill)}`;
+    const parcoursHref =
+      surface === "apprenant"
+        ? expertHref
+        : mapping.slug
+          ? `/edge-lab/parcours/${mapping.slug}`
+          : `${root}/parcours?focus=${encodeURIComponent(skill.skill)}`;
     const parcours = mapping.slug ? getParcours(mapping.slug) : null;
     items.push({
       id: `formation-${skill.skill}`,
@@ -182,7 +188,7 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
         description: formation
           ? `${formation.description} (axe ${weakest[0]} : ${weakest[1]} %).`
           : `${need} (axe ${weakest[0]} : ${weakest[1]} %).`,
-        href: formation?.href ?? `${root}/parcours?focus=idmc`,
+        href: formation?.href ?? (surface === "apprenant" ? expertHref : `${root}/parcours?focus=idmc`),
         reason: need,
         priority: 100 - weakest[1],
       });
@@ -222,7 +228,7 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
         kind: "formation",
         title: parcours.titre,
         description: parcours.description.slice(0, 140) + "…",
-        href: `/edge-lab/parcours/${parcours.slug}`,
+        href: surface === "apprenant" ? expertHref : `/edge-lab/parcours/${parcours.slug}`,
         reason: `Aligné avec votre poste : ${jobTitle}`,
         priority: 30,
       });
@@ -263,11 +269,13 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
           title: "Votre prochaine étape",
           impactPercent: Math.min(12, Math.max(5, Math.round((SOFT_SKILL_THRESHOLDS - (weakSkills[0]?.score ?? 40)) * 0.2))),
           skills: topSkills.map((s) => premiumSkillTitle(s)),
-          primaryHref: topItem.href,
+          primaryHref: surface === "apprenant" ? expertHref : topItem.href,
           primaryLabel:
-            topItem.kind === "coaching"
-              ? "Réserver un accompagnement"
-              : EDGE_CTA_LAUNCH_PROGRESSION,
+            surface === "apprenant"
+              ? EDGE_CTA_START_PARCOURS
+              : topItem.kind === "coaching"
+                ? "Réserver un accompagnement"
+                : EDGE_CTA_LAUNCH_PROGRESSION,
         }
       : null;
 

@@ -7,6 +7,7 @@ import { getJessicaUsersList, type JessicaUserListItem } from "@/lib/queries/jes
 import {
   appointmentDurationHours,
   appointmentRevenue,
+  estimateCabinetRevenueFromPastCount,
   extractEmailFromAppointmentNotes,
   JESSICA_CABINET_HOURLY_RATE,
 } from "@/lib/jessica-contentin/cabinet-revenue";
@@ -162,8 +163,6 @@ export async function getJessicaCrmContacts(): Promise<JessicaCrmContact[]> {
 
   for (const apt of appointments) {
     if (!isCountableAppointment(apt, now)) continue;
-    const hours = appointmentDurationHours(apt.start_time, apt.end_time);
-    const revenue = appointmentRevenue(apt.start_time, apt.end_time);
     const email = resolveAppointmentEmail(apt);
 
     let contact: JessicaCrmContact | undefined;
@@ -178,8 +177,27 @@ export async function getJessicaCrmContacts(): Promise<JessicaCrmContact[]> {
     }
 
     if (contact) {
-      contact.appointmentHours += hours;
-      contact.cabinetRevenue += revenue;
+      const hours = Math.max(0, appointmentDurationHours(apt.start_time, apt.end_time));
+      const revenue = Math.max(0, appointmentRevenue(apt.start_time, apt.end_time));
+      if (revenue > 0) {
+        contact.appointmentHours += hours;
+        contact.cabinetRevenue += revenue;
+        contact.totalRevenue = contact.lmsRevenue + contact.cabinetRevenue;
+      }
+    }
+  }
+
+  for (const contact of merged.values()) {
+    if (contact.cabinetRevenue <= 0 && contact.pastAppointmentsCount > 0) {
+      const est = estimateCabinetRevenueFromPastCount(
+        contact.pastAppointmentsCount,
+        contact.lastAppointmentAt,
+      );
+      contact.appointmentHours = est.appointmentHours;
+      contact.cabinetRevenue = est.totalRevenue;
+      contact.totalRevenue = contact.lmsRevenue + contact.cabinetRevenue;
+    } else {
+      contact.cabinetRevenue = Math.max(0, contact.cabinetRevenue);
       contact.totalRevenue = contact.lmsRevenue + contact.cabinetRevenue;
     }
   }

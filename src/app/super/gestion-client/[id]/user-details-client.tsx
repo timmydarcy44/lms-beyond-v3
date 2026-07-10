@@ -3,16 +3,15 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Euro, ShoppingBag, FileText, Calendar, Mail, Phone, User, Plus, Loader2, X, Clock, Pencil, Check } from "lucide-react";
+import { Euro, ShoppingBag, Calendar, Mail, Phone, User, Plus, Loader2, X, Clock, Pencil, Check } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { JessicaUserDetails } from "@/lib/queries/jessica-users";
 import type { JessicaResource } from "@/lib/queries/jessica-resources";
-import { TestResultsViewer } from "@/components/catalogue/test-results-viewer";
 import { LearnerDossierPanel } from "@/components/super-admin/learner-dossier-panel";
 import type { LearnerDossier } from "@/lib/queries/learner-dossier-types";
-import type { JessicaCabinetPatientDetails } from "@/lib/queries/jessica-cabinet-patients";
+import type { JessicaCabinetPatientDetails, PatientCabinetRevenue } from "@/lib/queries/jessica-cabinet-patients";
 import { JESSICA_CABINET_HOURLY_RATE } from "@/lib/jessica-contentin/cabinet-revenue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,9 +29,16 @@ type UserDetailsClientProps = {
   availableResources: JessicaResource[];
   dossier?: LearnerDossier | null;
   cabinetPatient?: JessicaCabinetPatientDetails | null;
+  patientRevenue?: PatientCabinetRevenue | null;
 };
 
-export function UserDetailsClient({ userDetails, availableResources, dossier, cabinetPatient }: UserDetailsClientProps) {
+export function UserDetailsClient({
+  userDetails,
+  availableResources,
+  dossier,
+  cabinetPatient,
+  patientRevenue,
+}: UserDetailsClientProps) {
   const [activeTab, setActiveTab] = useState(dossier ? "suivi" : "overview");
   const [isAssigning, setIsAssigning] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -43,10 +49,12 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
   const [savingPurchaseId, setSavingPurchaseId] = useState<string | null>(null);
 
   const totalRevenue = purchases.reduce((sum, p) => sum + p.price, 0);
-  const cabinetRevenueEstimate = cabinetPatient
-    ? Math.round((cabinetPatient.pastAppointmentsCount || 0) * JESSICA_CABINET_HOURLY_RATE * 100) / 100
-    : 0;
-  const combinedRevenue = totalRevenue + cabinetRevenueEstimate;
+  const cabinetRevenue =
+    patientRevenue?.totalRevenue ??
+    (cabinetPatient
+      ? Math.round((cabinetPatient.pastAppointmentsCount || 0) * JESSICA_CABINET_HOURLY_RATE * 100) / 100
+      : 0);
+  const combinedRevenue = totalRevenue + cabinetRevenue;
 
   // Couleurs design system Jessica /super
   const bgColor = JESSICA_SUPER.bg;
@@ -356,7 +364,7 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
         </CardContent>
       </Card>
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card
           className="rounded-2xl border-2"
           style={{
@@ -387,8 +395,8 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
                 </p>
                 <p className="text-xs mt-1" style={{ color: textColor, opacity: 0.55 }}>
                   Formations {totalRevenue.toFixed(2)}€
-                  {cabinetRevenueEstimate > 0
-                    ? ` · Cabinet ~${cabinetRevenueEstimate.toFixed(2)}€ (${JESSICA_CABINET_HOURLY_RATE}€/h)`
+                  {cabinetRevenue > 0
+                    ? ` · Cabinet ${cabinetRevenue.toFixed(2)}€ (${JESSICA_CABINET_HOURLY_RATE}€/h)`
                     : ""}
                 </p>
               </div>
@@ -429,38 +437,6 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
           </CardContent>
         </Card>
 
-        <Card
-          className="rounded-2xl border-2"
-          style={{
-            borderColor: secondaryColor,
-            backgroundColor: bgColor,
-          }}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div
-                className="p-3 rounded-full"
-                style={{ backgroundColor: `${primaryColor}20` }}
-              >
-                <FileText className="h-6 w-6" style={{ color: primaryColor }} />
-              </div>
-              <div>
-                <p
-                  className="text-sm font-medium mb-1"
-                  style={{ color: textColor, opacity: 0.7 }}
-                >
-                  Tests réalisés
-                </p>
-                <p
-                  className="text-3xl font-bold"
-                  style={{ color: textColor }}
-                >
-                  {userDetails.testCount}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Informations utilisateur */}
@@ -528,7 +504,7 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
         </CardContent>
       </Card>
 
-      {/* Tabs pour Achats et Tests */}
+      {/* Tabs pour Achats */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList
           className="rounded-full p-1"
@@ -554,16 +530,6 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
           >
             Achats ({purchases.length})
           </TabsTrigger>
-          <TabsTrigger
-            value="tests"
-            className="rounded-full px-6"
-            style={{
-              backgroundColor: activeTab === "tests" ? primaryColor : "transparent",
-              color: activeTab === "tests" ? "white" : textColor,
-            }}
-          >
-            Tests ({userDetails.testResults.length})
-          </TabsTrigger>
         </TabsList>
 
         {dossier ? (
@@ -573,9 +539,7 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
         ) : null}
 
         <TabsContent value="overview" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Derniers achats */}
-            <Card
+          <Card
               className="rounded-2xl border-2"
               style={{
                 borderColor: secondaryColor,
@@ -646,51 +610,6 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
                 )}
               </CardContent>
             </Card>
-
-            {/* Derniers tests */}
-            <Card
-              className="rounded-2xl border-2"
-              style={{
-                borderColor: secondaryColor,
-                backgroundColor: bgColor,
-              }}
-            >
-              <CardHeader>
-                <CardTitle style={{ color: textColor }}>Derniers tests</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {userDetails.testResults.slice(0, 5).length === 0 ? (
-                  <p style={{ color: textColor, opacity: 0.7 }}>
-                    Aucun test réalisé pour le moment
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {userDetails.testResults.slice(0, 5).map((test) => (
-                      <div
-                        key={test.id}
-                        className="flex items-center justify-between p-3 rounded-lg"
-                        style={{ backgroundColor: surfaceColor }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate" style={{ color: textColor }}>
-                            {test.testTitle}
-                          </p>
-                          <p className="text-sm" style={{ color: textColor, opacity: 0.7 }}>
-                            {format(new Date(test.completedAt), "dd MMM yyyy", { locale: fr })}
-                          </p>
-                        </div>
-                        {test.percentage !== undefined && (
-                          <p className="font-bold ml-4" style={{ color: primaryColor }}>
-                            {test.percentage.toFixed(0)}%
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="purchases" className="mt-6">
@@ -801,22 +720,6 @@ export function UserDetailsClient({ userDetails, availableResources, dossier, ca
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="tests" className="mt-6">
-          <TestResultsViewer
-            userId={userDetails.id}
-            showHeader
-            colors={{
-              primary: primaryColor,
-              secondary: secondaryColor,
-              accent: primaryColor,
-              text: textColor,
-              textSecondary: textColor,
-              surface: surfaceColor,
-              background: bgColor,
-            }}
-          />
         </TabsContent>
       </Tabs>
     </div>

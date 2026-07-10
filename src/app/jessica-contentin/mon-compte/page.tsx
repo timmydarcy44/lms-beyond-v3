@@ -26,16 +26,18 @@ export default async function JessicaContentinAccountPage() {
     .eq("email", JESSICA_CONTENTIN_EMAIL)
     .maybeSingle();
 
-  console.log("[jessica-contentin/mon-compte] Jessica profile:", {
-    found: !!jessicaProfile,
-    id: jessicaProfile?.id,
-    email: jessicaProfile?.email,
-    userId: user.id,
-    userEmail: user.email,
-  });
+  const { data: userProfile } = await clientToUse
+    .from("profiles")
+    .select("first_name")
+    .eq("id", user.id)
+    .maybeSingle();
 
   return (
-    <JessicaContentinAccountContent userId={user.id} jessicaProfileId={jessicaProfile?.id} />
+    <JessicaContentinAccountContent
+      userId={user.id}
+      jessicaProfileId={jessicaProfile?.id}
+      firstName={userProfile?.first_name}
+    />
   );
 }
 

@@ -7,6 +7,7 @@ import {
   appointmentDurationHours,
   isCountableCabinetAppointment,
   JESSICA_CABINET_YEAR_2026,
+  resolvePatientCabinetRevenue,
 } from "@/lib/jessica-contentin/cabinet-revenue";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 
@@ -207,6 +208,7 @@ async function fetchPatientAppointments(
 export async function getPatientCabinetRevenue(
   patientId: string,
   patientEmail?: string | null,
+  patientStats?: { pastAppointmentsCount?: number; lastAppointmentAt?: string | null },
 ): Promise<PatientCabinetRevenue> {
   if (!(await isSuperAdmin())) {
     return { totalRevenue: 0, year2026Revenue: 0, appointmentHours: 0, appointmentCount: 0 };
@@ -238,6 +240,7 @@ export async function getPatientCabinetRevenue(
 
     const rev = appointmentRevenue(String(apt.start_time), String(apt.end_time));
     const hours = appointmentDurationHours(String(apt.start_time), String(apt.end_time));
+    if (rev <= 0) continue;
     totalRevenue += rev;
     appointmentHours += hours;
     appointmentCount += 1;
@@ -248,12 +251,16 @@ export async function getPatientCabinetRevenue(
     }
   }
 
-  return {
-    totalRevenue: Math.round(totalRevenue * 100) / 100,
-    year2026Revenue: Math.round(year2026Revenue * 100) / 100,
-    appointmentHours: Math.round(appointmentHours * 100) / 100,
-    appointmentCount,
-  };
+  return resolvePatientCabinetRevenue(
+    {
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      year2026Revenue: Math.round(year2026Revenue * 100) / 100,
+      appointmentHours: Math.round(appointmentHours * 100) / 100,
+      appointmentCount,
+    },
+    patientStats?.pastAppointmentsCount ?? 0,
+    patientStats?.lastAppointmentAt ?? null,
+  );
 }
 
 export async function getJessicaCabinetYearRevenue(year = 2026): Promise<{

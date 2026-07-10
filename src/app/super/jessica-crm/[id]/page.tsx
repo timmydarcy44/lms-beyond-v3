@@ -44,7 +44,10 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
   const patient = patientById ?? (userDetails ? await getJessicaCabinetPatientByProfileId(id) : null);
 
   const patientRevenue = patient
-    ? await getPatientCabinetRevenue(patient.id, patient.email)
+    ? await getPatientCabinetRevenue(patient.id, patient.email, {
+        pastAppointmentsCount: patient.pastAppointmentsCount,
+        lastAppointmentAt: patient.lastAppointmentAt,
+      })
     : null;
 
   if (!userDetails && !patient) notFound();
@@ -75,6 +78,7 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
           availableResources={resources}
           dossier={dossier}
           cabinetPatient={patient}
+          patientRevenue={patientRevenue}
         />
       </JessicaSuperPage>
     );

@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { getParisDateTime } from "@/lib/jessica-contentin/jessica-calendar-events";
-import {
-  sendJessicaDailyAppointmentsEmail,
-  sendJessicaWeeklyRecapEmail,
-} from "@/lib/jessica-contentin/jessica-cabinet-emails";
+import { sendJessicaDailyAppointmentsEmail } from "@/lib/jessica-contentin/jessica-cabinet-emails";
 
 function isAuthorizedCron(request: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
@@ -12,9 +9,7 @@ function isAuthorizedCron(request: Request): boolean {
 }
 
 /**
- * Cron horaire (Europe/Paris) :
- * - Lun–Ven 7h : email des RDV du jour (Google Agenda)
- * - Ven 17h : récap hebdomadaire (nombre de RDV + CA)
+ * Cron quotidien lun–ven ~7h Paris (5h UTC été) : email des RDV du jour.
  */
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) {
@@ -24,12 +19,8 @@ export async function GET(request: Request) {
   const paris = getParisDateTime();
   const results: Record<string, unknown> = { paris };
 
-  if (paris.weekday >= 1 && paris.weekday <= 5 && paris.hour === 7) {
+  if (paris.weekday >= 1 && paris.weekday <= 5) {
     results.daily = await sendJessicaDailyAppointmentsEmail();
-  }
-
-  if (paris.weekday === 5 && paris.hour === 17) {
-    results.weekly = await sendJessicaWeeklyRecapEmail();
   }
 
   return NextResponse.json({ ok: true, ...results });

@@ -7,8 +7,10 @@ import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { TrendChart } from "@/components/super-admin/trend-chart";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { BTOB_CATALOGUE_STAGE_SLUG } from "@/lib/crm/pipeline-shared";
+import { getPipelineBtobSummary } from "@/lib/crm/pipeline-btob-mcp";
 
 export default async function SuperDashboard() {
   const supabase = await getServerClient();
@@ -23,11 +25,22 @@ export default async function SuperDashboard() {
     redirect("/super/jessica-dashboard");
   }
 
-  const [stats, news, trends30d, topPerformers] = await Promise.all([
+  const [stats, news, trends30d, topPerformers, pipelineSummary, catalogueCount] = await Promise.all([
     getSuperAdminStats(),
     getTrainingSectorNews(),
     getTrends("30d"),
     getTopPerformers(),
+    getPipelineBtobSummary().catch(() => null),
+    (async () => {
+      const service = getServiceRoleClient();
+      if (!service) return 0;
+      const { count } = await service
+        .from("crm_pipeline_deals")
+        .select("*", { count: "exact", head: true })
+        .eq("pipeline_type", "btob")
+        .eq("stage_slug", BTOB_CATALOGUE_STAGE_SLUG);
+      return count ?? 0;
+    })(),
   ]);
 
   type QuickAction = {
@@ -71,22 +84,13 @@ export default async function SuperDashboard() {
   // Actions rapides pour les autres super admins
   const defaultQuickActions: QuickAction[] = [
     {
-      title: "Créer une Organisation",
-      description: "Initialiser une nouvelle structure organisationnelle",
-      href: "/super/organisations/new",
-      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80",
-      icon: Building2,
-      category: "Organisation",
-      color: "from-blue-500/20 via-blue-400/30 to-transparent",
-    },
-    {
-      title: "Créer un Administrateur",
-      description: "Ajouter un administrateur d'organisation",
-      href: "/super/utilisateurs/new?role=admin",
-      image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80",
+      title: "Pipeline commercial",
+      description: "Kanban ventes : A appeler → Proposition → Réussi",
+      href: "/super/crm/pipeline",
+      image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&q=80",
       icon: Users,
-      category: "Administration",
-      color: "from-purple-500/20 via-purple-400/30 to-transparent",
+      category: "CRM",
+      color: "from-cyan-500/20 via-cyan-400/30 to-transparent",
     },
     {
       title: "CRM — Contacts",
@@ -98,24 +102,6 @@ export default async function SuperDashboard() {
       color: "from-green-500/20 via-green-400/30 to-transparent",
     },
     {
-      title: "Gérer les Open Badges",
-      description: "Créer des badges, définir critères, suivre les demandes et émettre.",
-      href: "/super/open-badges/badgeclasses",
-      image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
-      icon: Award,
-      category: "Certifications",
-      color: "from-amber-500/20 via-amber-400/30 to-transparent",
-    },
-    {
-      title: "Pipeline commercial",
-      description: "Kanban ventes : A appeler → Proposition → Réussi",
-      href: "/super/crm/pipeline",
-      image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&q=80",
-      icon: Users,
-      category: "CRM",
-      color: "from-cyan-500/20 via-cyan-400/30 to-transparent",
-    },
-    {
       title: "Emails (Resend)",
       description: "Envoyer un email à tous les contacts, un segment ou une personne",
       href: "/super/crm/emails",
@@ -124,6 +110,15 @@ export default async function SuperDashboard() {
       category: "CRM",
       color: "from-orange-500/20 via-orange-400/30 to-transparent",
     },
+    {
+      title: "Gérer les Open Badges",
+      description: "Créer des badges, définir critères, suivre les demandes et émettre.",
+      href: "/super/open-badges/badgeclasses",
+      image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
+      icon: Award,
+      category: "Certifications",
+      color: "from-amber-500/20 via-amber-400/30 to-transparent",
+    },
   ];
 
   const quickActions = isContentin ? contentinQuickActions : defaultQuickActions;
@@ -131,13 +126,68 @@ export default async function SuperDashboard() {
   return (
     <div className="space-y-8">
       {/* Header centré avec gradient */}
-      <div className="flex flex-col items-center justify-center space-y-4 py-8">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-          Dashboard
-        </h1>
-        <p className="text-sm text-gray-600 text-center">
-          {isContentin ? "Gestion de votre catalogue et de votre site" : "Vue d'ensemble du système"}
-        </p>
+      <div className="flex flex-col gap-4 py-8 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col items-center justify-center space-y-2 md:items-start">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+            Dashboard
+          </h1>
+          <p className="text-sm text-gray-600 text-center md:text-left">
+            {isContentin ? "Gestion de votre catalogue et de votre site" : "Vue d'ensemble du système"}
+          </p>
+        </div>
+
+        {!isContentin && (
+          <div className="w-full md:w-[420px]">
+            <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-indigo-50/40 p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Synthèse commerciale</p>
+                  <p className="mt-1 text-sm text-gray-700">Pipeline BTOB</p>
+                </div>
+                {catalogueCount > 0 ? (
+                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+                    {catalogueCount} à relancer
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900">
+                    OK
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <div className="rounded-xl border border-gray-200 bg-white px-3 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Prospects</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">{pipelineSummary?.total ?? "—"}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white px-3 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Aujourd’hui</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">{pipelineSummary?.actions_today ?? "—"}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white px-3 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Retard</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">{pipelineSummary?.actions_overdue ?? "—"}</p>
+                </div>
+              </div>
+
+              {catalogueCount > 0 ? (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Alertes “Mail envoyé + catalogue”
+                  </p>
+                  <p className="mt-1 text-xs text-amber-900/80">
+                    {catalogueCount} prospect(s) sont à cette étape.
+                  </p>
+                  <div className="mt-2">
+                    <Link href="/super/crm/pipeline" className="text-xs font-semibold text-amber-900 underline">
+                      Ouvrir le pipeline
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions Rapides - Style Apple */}

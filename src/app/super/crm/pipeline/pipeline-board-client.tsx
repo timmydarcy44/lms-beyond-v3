@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,6 +85,8 @@ export function PipelineBoardClient({
 }) {
   const isBtoc = pipelineType === "btoc";
   const defaultStage = isBtoc ? "inscription" : "a_appeler";
+  const normUserEmail = currentUserEmail?.trim().toLowerCase() ?? null;
+  const isJerome = normUserEmail === "jerome.picot@edgebs.fr";
 
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [deals, setDeals] = useState<PipelineDeal[]>([]);
@@ -96,6 +98,8 @@ export function PipelineBoardClient({
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
   const [stageLabelDraft, setStageLabelDraft] = useState("");
   const [siretLoading, setSiretLoading] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [nextActionFilter, setNextActionFilter] = useState<"all" | "only_with_date">("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +116,13 @@ export function PipelineBoardClient({
       setLoading(false);
     }
   }, [pipelineType, isBtoc]);
+
+  useEffect(() => {
+    if (isBtoc) return;
+    // Par défaut: Jérôme voit ses deals uniquement; Timmy voit tout.
+    if (isJerome) setOwnerFilter("jerome.picot@edgebs.fr");
+    else setOwnerFilter("all");
+  }, [isBtoc, isJerome]);
 
   useEffect(() => {
     void load();
@@ -149,18 +160,63 @@ export function PipelineBoardClient({
     return map;
   }, [stages, deals]);
 
-  const showCa = !isBtoc && shouldShowRevenueBar(deals);
-  const caTotal = computePipelineRevenueCents(deals);
+  const filteredDeals = useMemo(() => {
+    if (isBtoc) return deals;
+    let list = deals;
+    if (ownerFilter !== "all") {
+      const norm = ownerFilter.trim().toLowerCase();
+      list = list.filter((d) => (d.contact_owner_email ?? "").trim().toLowerCase() === norm);
+    }
+    if (nextActionFilter === "only_with_date") {
+      list = list.filter((d) => Boolean(d.next_action_date));
+    }
+    return list;
+  }, [deals, isBtoc, ownerFilter, nextActionFilter]);
+
+  const filteredDealsByStage = useMemo(() => {
+    const map = new Map<string, PipelineDeal[]>();
+    for (const s of stages) map.set(s.slug, []);
+    for (const d of filteredDeals) {
+      const list = map.get(d.stage_slug) ?? [];
+      list.push(d);
+      map.set(d.stage_slug, list);
+    }
+    return map;
+  }, [stages, filteredDeals]);
+
+  const showCa = !isBtoc && shouldShowRevenueBar(filteredDeals);
+  const caTotal = computePipelineRevenueCents(filteredDeals);
 
   const kpis = useMemo(() => {
     if (isBtoc) return null;
-    const totalProspects = deals.length;
-    const norm = currentUserEmail?.trim().toLowerCase() ?? null;
+    const totalProspects = filteredDeals.length;
     const myProspects = norm
-      ? deals.filter((d) => (d.contact_owner_email ?? "").trim().toLowerCase() === norm).length
+      ? filteredDeals.filter((d) => (d.contact_owner_email ?? "").trim().toLowerCase() === norm).length
       : 0;
-    return { totalProspects, myProspects };
-  }, [deals, currentUserEmail, isBtoc]);
+    const overdue = filteredDeals.filter((d) => isNextActionOverdue(d.next_action_date)).length;
+    const today = new Date().toISOString().slice(0, 10);
+    const actionsToday = filteredDeals.filter((d) => (d.next_action_date ?? "").slice(0, 10) === today).length;
+    const actionsWithDate = filteredDeals.filter((d) => Boolean(d.next_action_date)).length;
+    return { totalProspects, myProspects, overdue, actionsToday, actionsWithDate };
+  }, [filteredDeals, norm, isBtoc]);
+
+  const nextActions = useMemo(() => {
+    if (isBtoc) return [];
+    const today = new Date().toISOString().slice(0, 10);
+    return filteredDeals
+      .filter((d) => Boolean(d.next_action_date) && Boolean(d.next_action))
+      .map((d) => ({
+        id: d.id,
+        company: d.company_name,
+        owner: d.contact_owner_email ?? null,
+        nextAction: d.next_action ?? "",
+        date: (d.next_action_date ?? "").slice(0, 10),
+        isOverdue: (d.next_action_date ?? "") < today,
+        stage: d.stage_slug,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 8);
+  }, [filteredDeals, isBtoc]);
 
   const openCreate = (stageSlug: string) => {
     setForm(emptyDeal(stageSlug));
@@ -325,25 +381,140 @@ export function PipelineBoardClient({
 
   return (
     <div className="space-y-4">
+      {!isBtoc ? (
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <select
+                className="bg-transparent text-sm text-gray-900 outline-none"
+                value={ownerFilter}
+                onChange={(e) => setOwnerFilter(e.target.value)}
+              >
+                <option value="all">Tous</option>
+                {PIPELINE_BTOB_CONTACT_OWNERS.map((o) => (
+                  <option
+                    key={o.email}
+                    value={o.email}
+                    disabled={isJerome && o.email !== "jerome.picot@edgebs.fr" && o.email !== "timmydarcy44@gmail.com"}
+                  >
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              className={`rounded-2xl border px-3 py-2 text-sm shadow-sm transition ${
+                nextActionFilter === "only_with_date"
+                  ? "border-indigo-200 bg-indigo-50 text-indigo-900"
+                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+              onClick={() =>
+                setNextActionFilter((v) => (v === "all" ? "only_with_date" : "all"))
+              }
+              title="Filtrer les cartes avec une prochaine action"
+            >
+              <CalendarClock className="mr-2 inline-block h-4 w-4" />
+              Prochaines actions
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {kpis ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Prospects (total)</p>
-              <Users className="h-4 w-4 text-gray-400" />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-indigo-50/60 px-5 py-4 shadow-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.18),transparent_55%)]" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Prospects</p>
+                <Users className="h-4 w-4 text-indigo-500" />
+              </div>
+              <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.totalProspects}</p>
+              <p className="mt-1 text-xs text-gray-500">Selon le filtre</p>
             </div>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.totalProspects}</p>
           </div>
-          <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white px-5 py-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-indigo-700">Mes prospects</p>
-              <Users className="h-4 w-4 text-indigo-600" />
+
+          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-violet-50/70 px-5 py-4 shadow-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_10%,rgba(139,92,246,0.18),transparent_55%)]" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Mes prospects</p>
+                <Users className="h-4 w-4 text-violet-500" />
+              </div>
+              <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.myProspects}</p>
+              <p className="mt-1 text-xs text-gray-500">{currentUserEmail ? pipelineOwnerLabel(normUserEmail) : "—"}</p>
             </div>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.myProspects}</p>
-            <p className="mt-1 text-xs text-gray-500">
-              {currentUserEmail ? currentUserEmail : "Utilisateur non identifié"}
-            </p>
           </div>
+
+          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-amber-50/70 px-5 py-4 shadow-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,158,11,0.18),transparent_55%)]" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Actions aujourd’hui</p>
+                <CalendarClock className="h-4 w-4 text-amber-600" />
+              </div>
+              <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.actionsToday}</p>
+              <p className="mt-1 text-xs text-gray-500">{kpis.actionsWithDate} planifiées</p>
+            </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-rose-50/70 px-5 py-4 shadow-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(244,63,94,0.18),transparent_55%)]" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">En retard</p>
+                <AlertTriangle className="h-4 w-4 text-rose-600" />
+              </div>
+              <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.overdue}</p>
+              <p className="mt-1 text-xs text-gray-500">À traiter</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {!isBtoc ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Prochaines actions
+              </p>
+              <p className="text-sm text-gray-700">Basé sur “Date prochaine action”</p>
+            </div>
+            <span className="text-xs text-gray-500">{nextActions.length} à venir</span>
+          </div>
+          {nextActions.length === 0 ? (
+            <p className="mt-4 text-sm text-gray-500">Aucune action planifiée sur le filtre actuel.</p>
+          ) : (
+            <div className="mt-4 grid gap-2 md:grid-cols-2">
+              {nextActions.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/super/crm/pipeline-btob/${a.id}`}
+                  className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 transition hover:bg-gray-50 ${
+                    a.isOverdue ? "border-rose-200 bg-rose-50/40" : "border-gray-200 bg-white"
+                  }`}
+                  title="Ouvrir la fiche prospect"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-900">{a.company}</p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">→ {a.nextAction}</p>
+                    {a.owner ? (
+                      <p className="mt-1 text-[11px] text-indigo-700">{pipelineOwnerLabel(a.owner)}</p>
+                    ) : null}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className={`text-sm font-semibold ${a.isOverdue ? "text-rose-700" : "text-gray-900"}`}>
+                      {a.date}
+                    </p>
+                    <p className="text-[11px] text-gray-500">{a.isOverdue ? "retard" : "prévu"}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -361,7 +532,7 @@ export function PipelineBoardClient({
       ) : null}
 
       {showCa ? (
-        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-6 py-4 shadow-sm">
+        <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-6 py-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
               <DollarSign className="h-5 w-5" />
@@ -379,13 +550,13 @@ export function PipelineBoardClient({
 
       <div className="flex gap-3 overflow-x-auto pb-4">
         {stages.map((stage) => {
-          const columnDeals = dealsByStage.get(stage.slug) ?? [];
+          const columnDeals = filteredDealsByStage.get(stage.slug) ?? [];
           const columnTotal = columnDeals.reduce((s, d) => s + d.amount_cents, 0);
 
           return (
             <div
               key={stage.slug}
-              className="flex w-[280px] shrink-0 flex-col rounded-lg border border-gray-200 bg-gray-50/80"
+              className="flex w-[280px] shrink-0 flex-col rounded-2xl border border-gray-200 bg-gray-50/70"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
@@ -393,7 +564,7 @@ export function PipelineBoardClient({
                 if (dealId) void moveDeal(dealId, stage.slug);
               }}
             >
-              <div className="border-b border-gray-200 bg-white px-3 py-2 rounded-t-lg">
+              <div className="border-b border-gray-200 bg-white px-3 py-2 rounded-t-2xl">
                 <div className="flex items-start justify-between gap-1">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{stage.label}</p>

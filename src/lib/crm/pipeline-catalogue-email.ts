@@ -95,3 +95,35 @@ export async function sendBtobCatalogueEmail(
     attachments: [{ filename, content: pdf }],
   });
 }
+
+export async function sendBtobCatalogueFollowupEmail(deal: CatalogueDealInput): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const recipient = deal.email?.trim();
+  if (!recipient) {
+    return { success: false, error: "Email du contact manquant" };
+  }
+
+  const firstName = deal.contact_first_name?.trim();
+  const greeting = firstName ? `Bonjour ${firstName},` : "Bonjour,";
+  const companyLine = deal.company_name?.trim()
+    ? `<p>Je me permets de revenir vers vous suite à l'envoi de notre catalogue pour <strong>${deal.company_name}</strong>.</p>`
+    : "<p>Je me permets de revenir vers vous suite à l'envoi de notre catalogue.</p>";
+
+  const html = `
+    <div style="font-family: system-ui, sans-serif; line-height: 1.6; color: #111;">
+      <p>${greeting}</p>
+      ${companyLine}
+      <p>Souhaitez-vous que l'on planifie un échange de 15 minutes pour voir si une formation correspond à vos besoins ?</p>
+      <p>Bien cordialement,<br />L'équipe EDGE</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: recipient,
+    subject: "Suite à l’envoi du catalogue EDGE",
+    html,
+    from: "Timmy Darcy <darcy@edgebs.fr>",
+  });
+}

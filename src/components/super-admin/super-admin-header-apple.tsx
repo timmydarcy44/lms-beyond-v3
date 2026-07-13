@@ -36,11 +36,17 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/super" },
-  { label: "Gestion des formations", href: "/super/formations" },
-  { label: "Référentiel métiers", href: "/super/metiers" },
-  { label: "Experts / Formateurs", href: "/super/experts" },
+  {
+    label: "Gestion",
+    href: "/super/formations",
+    children: [
+      { label: "Gestion des formations", href: "/super/formations" },
+      { label: "Référentiel métier", href: "/super/metiers" },
+      { label: "Experts / Formateurs", href: "/super/experts" },
+      { label: "Open badge", href: "/super/open-badges/badgeclasses" },
+    ],
+  },
   { label: "CRM", href: "/super/utilisateurs" },
-  { label: "Open Badges", href: "/super/open-badges/badgeclasses" },
   { label: "IA", href: "/super/ia" },
   { label: "Chiffre d'affaires", href: "/super/chiffre-affaires" },
   { label: "Statistiques", href: "/super/statistiques" },
@@ -161,35 +167,76 @@ export function SuperAdminHeaderApple() {
                     {isHovered && item.children && (
                       <div 
                         className={cn(
-                          "absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[200px] rounded-lg border backdrop-blur-xl shadow-lg py-1.5",
+                          item.label === "Gestion"
+                            ? "absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[min(720px,calc(100vw-2rem))] rounded-2xl border backdrop-blur-xl shadow-xl p-4"
+                            : "absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[200px] rounded-lg border backdrop-blur-xl shadow-lg py-1.5",
                           isContentin
                             ? "border-[#D2B48C]/50 bg-[#E8E8D3]/95"
                             : "border-gray-200/50 bg-gray-50/95"
                         )}
                         style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
                       >
-                        {item.children.map((child) => {
-                          const isChildActive = pathname === child.href || pathname?.startsWith(child.href + "/");
-                          return (
-                            <Link
-                              key={child.href}
-                              href={child.href}
-                              className={cn(
-                                "block px-3 py-1.5 text-[13px] font-normal transition-colors",
-                                isContentin
-                                  ? isChildActive
-                                    ? "text-[#D4AF37]"
-                                    : "text-[#A0522D] hover:text-[#D4AF37]"
-                                  : isChildActive
-                                    ? "text-gray-900"
-                                    : "text-gray-700 hover:text-gray-900",
-                              )}
-                              onClick={() => setHoveredItem(null)}
-                            >
-                              {child.label}
-                            </Link>
-                          );
-                        })}
+                        {item.label === "Gestion" ? (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {item.children.map((child) => {
+                              const isChildActive = pathname === child.href || pathname?.startsWith(child.href + "/");
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  className={cn(
+                                    "group rounded-xl border px-4 py-3 transition",
+                                    isContentin
+                                      ? "border-[#D2B48C]/40 bg-white/60 hover:bg-white"
+                                      : "border-gray-200/60 bg-white/70 hover:bg-white",
+                                  )}
+                                  onClick={() => setHoveredItem(null)}
+                                >
+                                  <p
+                                    className={cn(
+                                      "text-[13px] font-semibold",
+                                      isContentin
+                                        ? isChildActive
+                                          ? "text-[#D4AF37]"
+                                          : "text-[#2F2A25]"
+                                        : isChildActive
+                                          ? "text-gray-900"
+                                          : "text-gray-900",
+                                    )}
+                                  >
+                                    {child.label}
+                                  </p>
+                                  <p className={cn("mt-1 text-[12px]", isContentin ? "text-[#2F2A25]/70" : "text-gray-600")}>
+                                    Accès rapide
+                                  </p>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          item.children.map((child) => {
+                            const isChildActive = pathname === child.href || pathname?.startsWith(child.href + "/");
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                className={cn(
+                                  "block px-3 py-1.5 text-[13px] font-normal transition-colors",
+                                  isContentin
+                                    ? isChildActive
+                                      ? "text-[#D4AF37]"
+                                      : "text-[#A0522D] hover:text-[#D4AF37]"
+                                    : isChildActive
+                                      ? "text-gray-900"
+                                      : "text-gray-700 hover:text-gray-900",
+                                )}
+                                onClick={() => setHoveredItem(null)}
+                              >
+                                {child.label}
+                              </Link>
+                            );
+                          })
+                        )}
                       </div>
                     )}
 

@@ -73,6 +73,8 @@ export async function GET(request: NextRequest) {
       redirectPath = "/login?view=update_password";
     } else if (isInvite) {
       redirectPath = `/auth/set-password?next=${encodeURIComponent(targetNext)}&flow=${flow}`;
+    } else {
+      redirectPath = `/auth/hello?next=${encodeURIComponent(targetNext)}`;
     }
 
     const response = NextResponse.redirect(new URL(redirectPath, url.origin));

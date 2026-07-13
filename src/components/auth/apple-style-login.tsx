@@ -54,7 +54,7 @@ export function AppleStyleLogin() {
       });
       const payload = (await res.json().catch(() => ({}))) as { destination?: string };
       const dest = payload.destination ?? "/dashboard/entreprise";
-      router.push(dest);
+      router.push(`/auth/hello?next=${encodeURIComponent(dest)}`);
     } catch {
       setError("Impossible de se connecter.");
     } finally {

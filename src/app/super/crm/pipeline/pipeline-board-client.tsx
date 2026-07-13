@@ -43,6 +43,7 @@ import {
   PIPELINE_BTOB_CONTACT_OWNERS,
   pipelineOwnerLabel,
 } from "@/lib/crm/pipeline-btob-owners";
+import { Users } from "lucide-react";
 
 type DealForm = {
   id?: string;
@@ -75,7 +76,13 @@ const emptyDeal = (stage: string): DealForm => ({
   notes: "",
 });
 
-export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineType }) {
+export function PipelineBoardClient({
+  pipelineType,
+  currentUserEmail,
+}: {
+  pipelineType: PipelineType;
+  currentUserEmail: string | null;
+}) {
   const isBtoc = pipelineType === "btoc";
   const defaultStage = isBtoc ? "inscription" : "a_appeler";
 
@@ -144,6 +151,16 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
 
   const showCa = !isBtoc && shouldShowRevenueBar(deals);
   const caTotal = computePipelineRevenueCents(deals);
+
+  const kpis = useMemo(() => {
+    if (isBtoc) return null;
+    const totalProspects = deals.length;
+    const norm = currentUserEmail?.trim().toLowerCase() ?? null;
+    const myProspects = norm
+      ? deals.filter((d) => (d.contact_owner_email ?? "").trim().toLowerCase() === norm).length
+      : 0;
+    return { totalProspects, myProspects };
+  }, [deals, currentUserEmail, isBtoc]);
 
   const openCreate = (stageSlug: string) => {
     setForm(emptyDeal(stageSlug));
@@ -308,6 +325,28 @@ export function PipelineBoardClient({ pipelineType }: { pipelineType: PipelineTy
 
   return (
     <div className="space-y-4">
+      {kpis ? (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Prospects (total)</p>
+              <Users className="h-4 w-4 text-gray-400" />
+            </div>
+            <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.totalProspects}</p>
+          </div>
+          <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white px-5 py-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-indigo-700">Mes prospects</p>
+              <Users className="h-4 w-4 text-indigo-600" />
+            </div>
+            <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.myProspects}</p>
+            <p className="mt-1 text-xs text-gray-500">
+              {currentUserEmail ? currentUserEmail : "Utilisateur non identifié"}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {isBtoc ? (
         <div className="flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
           <span>

@@ -65,6 +65,15 @@ export function AiAssistant() {
   }, []);
 
   useEffect(() => {
+    const onOpenBriefing = () => {
+      setIsOpen(false);
+      setShowBriefing(true);
+    };
+    window.addEventListener("jarvis-open-briefing", onOpenBriefing);
+    return () => window.removeEventListener("jarvis-open-briefing", onOpenBriefing);
+  }, [setIsOpen]);
+
+  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 

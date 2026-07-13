@@ -12,15 +12,18 @@ export const DEFAULT_BTOC_PIPELINE_STAGES = [
   { slug: "paiement", label: "Paiement", sort_order: 2 },
 ] as const;
 
+export const BTOB_CATALOGUE_STAGE_SLUG = "mail_envoye_catalogue";
+
 export const DEFAULT_PIPELINE_STAGES = [
   { slug: "a_appeler", label: "A appeler", sort_order: 0 },
   { slug: "envoi_mail", label: "Envoi mail", sort_order: 1 },
-  { slug: "presentation_programmee", label: "Présentation programmée", sort_order: 2 },
-  { slug: "demo_realisee", label: "Démo réalisée", sort_order: 3 },
-  { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 4 },
-  { slug: "proposition_envoyee", label: "Proposition envoyée", sort_order: 5 },
-  { slug: "reussi", label: "Réussi", sort_order: 6 },
-  { slug: "echec", label: "Échec", sort_order: 7 },
+  { slug: BTOB_CATALOGUE_STAGE_SLUG, label: "Mail envoyé + catalogue", sort_order: 2 },
+  { slug: "presentation_programmee", label: "Présentation programmée", sort_order: 3 },
+  { slug: "demo_realisee", label: "Démo réalisée", sort_order: 4 },
+  { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 5 },
+  { slug: "proposition_envoyee", label: "Proposition envoyée", sort_order: 6 },
+  { slug: "reussi", label: "Réussi", sort_order: 7 },
+  { slug: "echec", label: "Échec", sort_order: 8 },
 ] as const;
 
 export type PipelineStage = {
@@ -69,6 +72,7 @@ export type PipelineDeal = PipelineDealCommercial & {
   amount_cents: number;
   sort_order: number;
   notes: string | null;
+  catalog_email_sent_at?: string | null;
   created_at: string;
   updated_at: string;
 };

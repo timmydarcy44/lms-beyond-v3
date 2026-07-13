@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendNewPipelineProspectNotification } from "@/lib/crm/pipeline-prospect-emails";
+import {
+  sendBtobCatalogueEmail,
+  shouldSendBtobCatalogueEmail,
+} from "@/lib/crm/pipeline-catalogue-email";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
   DEFAULT_BTOC_PIPELINE_STAGES,
@@ -137,6 +141,33 @@ export async function POST(req: NextRequest) {
       siret: data.siret ? String(data.siret) : null,
       opco_name: data.opco_name ? String(data.opco_name) : null,
     }).catch((err) => console.error("[crm/pipeline] notification email:", err));
+
+    if (
+      shouldSendBtobCatalogueEmail({
+        pipeline_type: "btob",
+        stage_slug: String(data.stage_slug),
+        catalog_email_sent_at: data.catalog_email_sent_at
+          ? String(data.catalog_email_sent_at)
+          : null,
+      })
+    ) {
+      void sendBtobCatalogueEmail({
+        email: data.email ? String(data.email) : null,
+        contact_first_name: data.contact_first_name ? String(data.contact_first_name) : null,
+        company_name: String(data.company_name),
+      })
+        .then(async (result) => {
+          if (!result.success) {
+            console.error("[crm/pipeline] catalogue email:", result.error);
+            return;
+          }
+          await supabase
+            .from("crm_pipeline_deals")
+            .update({ catalog_email_sent_at: new Date().toISOString() })
+            .eq("id", data.id);
+        })
+        .catch((err) => console.error("[crm/pipeline] catalogue email:", err));
+    }
   }
 
   return NextResponse.json({ deal: data });

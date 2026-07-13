@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
+import {
+  sendBtobCatalogueEmail,
+  shouldSendBtobCatalogueEmail,
+} from "@/lib/crm/pipeline-catalogue-email";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -52,6 +56,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   applyCommercialFieldsFromBody(patch, body, { partial: true });
 
+  const { data: existing } = await supabase
+    .from("crm_pipeline_deals")
+    .select("pipeline_type, stage_slug, catalog_email_sent_at, email, contact_first_name, company_name")
+    .eq("id", id)
+    .maybeSingle();
+
   const { data, error } = await supabase
     .from("crm_pipeline_deals")
     .update(patch)
@@ -60,6 +70,40 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  const nextStage = String(data.stage_slug);
+  const shouldSendCatalogue =
+    existing &&
+    shouldSendBtobCatalogueEmail({
+      pipeline_type: data.pipeline_type ? String(data.pipeline_type) : existing.pipeline_type,
+      previous_stage_slug: existing.stage_slug ? String(existing.stage_slug) : null,
+      stage_slug: nextStage,
+      catalog_email_sent_at: data.catalog_email_sent_at
+        ? String(data.catalog_email_sent_at)
+        : existing.catalog_email_sent_at
+          ? String(existing.catalog_email_sent_at)
+          : null,
+    });
+
+  if (shouldSendCatalogue) {
+    void sendBtobCatalogueEmail({
+      email: data.email ? String(data.email) : null,
+      contact_first_name: data.contact_first_name ? String(data.contact_first_name) : null,
+      company_name: String(data.company_name),
+    })
+      .then(async (result) => {
+        if (!result.success) {
+          console.error("[crm/pipeline/deals] catalogue email:", result.error);
+          return;
+        }
+        await supabase
+          .from("crm_pipeline_deals")
+          .update({ catalog_email_sent_at: new Date().toISOString() })
+          .eq("id", id);
+      })
+      .catch((err) => console.error("[crm/pipeline/deals] catalogue email:", err));
+  }
+
   return NextResponse.json({ deal: data });
 }
 

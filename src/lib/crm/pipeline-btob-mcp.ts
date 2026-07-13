@@ -1,4 +1,8 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import {
+  sendBtobCatalogueEmail,
+  shouldSendBtobCatalogueEmail,
+} from "@/lib/crm/pipeline-catalogue-email";
 import { sendNewPipelineProspectNotification } from "@/lib/crm/pipeline-prospect-emails";
 
 export type PipelineBtobPriority = "haute" | "moyenne" | "standard";
@@ -221,12 +225,55 @@ export async function createPipelineBtobDeal(input: McpPipelineBtobInput) {
     opco_name: data.opco_name ? String(data.opco_name) : null,
   }).catch((err) => console.error("[pipeline-btob-mcp] notification email:", err));
 
+  void maybeSendCatalogueEmailForDeal(supabase, data);
+
   return data;
+}
+
+async function maybeSendCatalogueEmailForDeal(
+  supabase: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+  deal: Record<string, unknown>,
+  previousStageSlug?: string | null,
+) {
+  if (
+    !shouldSendBtobCatalogueEmail({
+      pipeline_type: "btob",
+      previous_stage_slug: previousStageSlug,
+      stage_slug: String(deal.stage_slug),
+      catalog_email_sent_at: deal.catalog_email_sent_at ? String(deal.catalog_email_sent_at) : null,
+    })
+  ) {
+    return;
+  }
+
+  void sendBtobCatalogueEmail({
+    email: deal.email ? String(deal.email) : null,
+    contact_first_name: deal.contact_first_name ? String(deal.contact_first_name) : null,
+    company_name: String(deal.company_name),
+  })
+    .then(async (result) => {
+      if (!result.success) {
+        console.error("[pipeline-btob-mcp] catalogue email:", result.error);
+        return;
+      }
+      await supabase
+        .from("crm_pipeline_deals")
+        .update({ catalog_email_sent_at: new Date().toISOString() })
+        .eq("id", deal.id);
+    })
+    .catch((err) => console.error("[pipeline-btob-mcp] catalogue email:", err));
 }
 
 export async function updatePipelineBtobDeal(id: string, input: McpPipelineBtobInput) {
   const supabase = getServiceRoleClient();
   if (!supabase) throw new Error("Supabase indisponible");
+
+  const { data: existing } = await supabase
+    .from("crm_pipeline_deals")
+    .select("stage_slug, catalog_email_sent_at")
+    .eq("id", id)
+    .eq("pipeline_type", BTOB_PIPELINE)
+    .maybeSingle();
 
   const patch = mapMcpInputToDealRow(input, { partial: true });
   if (Object.keys(patch).length === 0) throw new Error("Aucun champ à mettre à jour");
@@ -240,6 +287,13 @@ export async function updatePipelineBtobDeal(id: string, input: McpPipelineBtobI
     .single();
 
   if (error) throw new Error(error.message);
+
+  void maybeSendCatalogueEmailForDeal(
+    supabase,
+    data,
+    existing?.stage_slug ? String(existing.stage_slug) : null,
+  );
+
   return data;
 }
 

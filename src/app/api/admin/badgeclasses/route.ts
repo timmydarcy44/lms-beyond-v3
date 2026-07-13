@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma, resolveAndApplyDatabaseUrl } from "@/lib/prisma";
 import { getDatabaseConfigError } from "@/lib/db/database-url";
 import { requireRole } from "@/lib/auth/require-role";
-import { BadgeClassStatus, ReceivabilityReviewMode, UserRole } from "@prisma/client";
+import { BadgeClassStatus, ReceivabilityReviewMode } from "@prisma/client";
+import { UserRole } from "@/lib/auth/user-role";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { getBadgeCriteriaUrl, getBaseUrl } from "@/lib/openbadges/urls";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
@@ -128,19 +129,8 @@ export async function POST(request: Request) {
     if (!payload.receivability || typeof payload.receivability !== "object") {
       validationIssues.push("receivability manquant");
     }
-
-    const evaluationConfig = parseBadgeEvaluationConfig(payload);
-    if (!evaluationConfig.ok) {
-      validationIssues.push(...evaluationConfig.issues);
-    }
     if (!payload.imageUrl && !payload.imageTemplateUrl) {
       validationIssues.push("imageUrl manquant");
-    }
-    if (validationIssues.length > 0) {
-      return NextResponse.json(
-        { ok: false, error: "VALIDATION_ERROR", details: validationIssues },
-        { status: 400 },
-      );
     }
 
     if (requiresEnrollment && !requiredCourseId) {
@@ -160,6 +150,20 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json({ ok: false, error: "AI_PROMPT_REQUIRED" }, { status: 400 });
     }
+
+    if (validationIssues.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: "VALIDATION_ERROR", details: validationIssues },
+        { status: 400 },
+      );
+    }
+
+    const evaluationConfig =
+      Object.prototype.hasOwnProperty.call(payload, "level")
+      || Object.prototype.hasOwnProperty.call(payload, "evaluationMethods")
+      || Object.prototype.hasOwnProperty.call(payload, "validatorExpertId")
+        ? parseBadgeEvaluationConfig(payload)
+        : ({ ok: true as const, data: null } as const);
 
     if (requiresEnrollment && requiredCourseId) {
       const supabase = await getServiceRoleClientOrFallback();
@@ -289,7 +293,7 @@ export async function POST(request: Request) {
           alignment: payload.alignment ?? null,
           tags: Array.isArray(payload.tags) ? payload.tags : [],
           version: payload.version ?? 1,
-          status: (payload.status as BadgeClassStatus) ?? BadgeClassStatus.DRAFT,
+          status: (payload.status as BadgeClassStatus) ?? "DRAFT",
           receivabilityReviewMode,
           requiresEnrollment,
           requiredCourseId: requiresEnrollment ? requiredCourseId : null,

@@ -24,6 +24,7 @@ vi.mock("@/lib/prisma", () => ({
       createMany: mockCreateMany,
     },
   },
+  resolveAndApplyDatabaseUrl: () => true,
 }));
 
 const mockIsEnrolled = vi.hoisted(() => vi.fn());

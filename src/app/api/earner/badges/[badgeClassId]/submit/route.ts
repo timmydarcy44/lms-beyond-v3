@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, resolveAndApplyDatabaseUrl } from "@/lib/prisma";
 import { requireEarnerSession } from "@/lib/auth/earner-session";
-import { AssessmentStatus, EvidenceType } from "@prisma/client";
+import { EvidenceType } from "@prisma/client";
 import { isLearnerEnrolled } from "@/lib/openbadges/enrollment";
 import { evaluateIntegrityMetrics } from "@/lib/openbadges/badge-assessment-integrity";
 import {
@@ -169,13 +169,13 @@ export async function POST(
       where: {
         badgeClassId: String(badgeRow.id),
         earnerId: auth.user.id,
-        status: AssessmentStatus.NEEDS_INFO,
+        status: "NEEDS_INFO",
       },
       orderBy: { updatedAt: "desc" },
     });
 
     const assessmentData = {
-      status: AssessmentStatus.SUBMITTED,
+      status: "SUBMITTED",
       integrityMetrics,
       methodResponses,
       notes: integrityMetrics.integrityFailed
@@ -197,6 +197,7 @@ export async function POST(
         });
 
     if (Array.isArray(payload?.evidence)) {
+      const allowedEvidenceTypes = new Set(["FILE", "URL", "TEXT"]);
       const evidenceRows = (payload.evidence as Array<Record<string, unknown>>)
         .map((item) => ({
           assessmentId: assessment.id,
@@ -208,7 +209,7 @@ export async function POST(
           description: (item.description as string | undefined) ?? null,
           submittedById: auth.user.id,
         }))
-        .filter((item) => Object.values(EvidenceType).includes(item.type));
+        .filter((item) => allowedEvidenceTypes.has(String(item.type ?? "").trim().toUpperCase()));
 
       if (evidenceRows.length > 0) {
         await prisma.evidence.createMany({ data: evidenceRows });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/auth/user-role";
 
 export type RequestUser = {
   id: string;

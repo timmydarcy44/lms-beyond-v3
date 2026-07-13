@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, resolveAndApplyDatabaseUrl } from "@/lib/prisma";
 import { getRequestUser, requireRole } from "@/lib/auth/require-role";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { BadgeClassStatus, UserRole } from "@prisma/client";
+import { BadgeClassStatus } from "@prisma/client";
+import { UserRole } from "@/lib/auth/user-role";
 import {
   canUseOpenBadgesSupabaseRepo,
   getBadgeClassViaSupabase,

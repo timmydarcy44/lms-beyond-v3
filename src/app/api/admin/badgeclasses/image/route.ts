@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { requireRole } from "@/lib/auth/require-role";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/auth/user-role";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { uploadBuffer } from "@/lib/storage/s3";
 

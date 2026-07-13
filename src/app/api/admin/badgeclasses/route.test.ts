@@ -44,6 +44,7 @@ vi.mock("@/lib/prisma", () => ({
       }),
     ),
   },
+  resolveAndApplyDatabaseUrl: () => true,
 }));
 
 describe("POST /api/admin/badgeclasses validation", () => {

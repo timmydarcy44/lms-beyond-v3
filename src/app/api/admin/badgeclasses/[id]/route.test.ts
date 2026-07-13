@@ -25,6 +25,7 @@ vi.mock("@/lib/prisma", () => ({
         badgeReceivability: { upsert: vi.fn() },
       }),
   },
+  resolveAndApplyDatabaseUrl: () => true,
 }));
 
 describe("PUT /api/admin/badgeclasses/[id] validation", () => {

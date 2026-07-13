@@ -2,6 +2,7 @@
  * Tests légers pour le routage edgebs.fr (fonctions pures, sans Next.js).
  * Exécuter : node middleware-edgebs.test.mjs
  */
+import { describe, expect, it } from "vitest";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -44,11 +45,16 @@ function edgeLabToClean(pathname) {
   return stripped;
 }
 
-assert.equal(edgeLabToClean("/edge-lab/alternance"), "/alternance");
-assert.equal(edgeLabToClean("/edge-lab/formateurs-experts"), "/formateurs-experts");
-assert.equal(edgeLabToClean("/edge-lab/tarifs"), "/tarifs");
-assert.equal(edgeLabToClean("/edge-lab/edge-logo-white.png"), null);
-assert.equal(isMarketing("/alternance"), true);
-assert.equal(isMarketing("/unknown"), false);
+describe("middleware-edgebs (routing helpers)", () => {
+  it("maps edge-lab marketing paths to clean paths", () => {
+    expect(edgeLabToClean("/edge-lab/alternance")).toBe("/alternance");
+    expect(edgeLabToClean("/edge-lab/formateurs-experts")).toBe("/formateurs-experts");
+    expect(edgeLabToClean("/edge-lab/tarifs")).toBe("/tarifs");
+    expect(edgeLabToClean("/edge-lab/edge-logo-white.png")).toBe(null);
+  });
 
-console.log("middleware-edgebs.test.mjs: OK");
+  it("detects marketing paths", () => {
+    expect(isMarketing("/alternance")).toBe(true);
+    expect(isMarketing("/unknown")).toBe(false);
+  });
+});

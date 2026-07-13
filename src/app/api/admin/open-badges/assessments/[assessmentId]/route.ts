@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/require-role";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/auth/user-role";
 import { getBaseUrl } from "@/lib/openbadges/urls";
 
 type RouteParams = { assessmentId: string };

@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/require-role";
 import { issueBadge } from "@/lib/openbadges/issue";
 import { getBaseUrl } from "@/lib/openbadges/urls";
-import { AssessmentStatus, UserRole } from "@prisma/client";
+import { AssessmentStatus } from "@prisma/client";
+import { UserRole } from "@/lib/auth/user-role";
 import { canAutoApproveBadge, evaluateIntegrityMetrics } from "@/lib/openbadges/badge-assessment-integrity";
 
 type RouteParams = { assessmentId: string };

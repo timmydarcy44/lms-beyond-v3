@@ -3,7 +3,8 @@ import { prisma, resolveAndApplyDatabaseUrl } from "@/lib/prisma";
 import { getDatabaseConfigError } from "@/lib/db/database-url";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { requireRole } from "@/lib/auth/require-role";
-import { BadgeClassStatus, ReceivabilityReviewMode, UserRole } from "@prisma/client";
+import { BadgeClassStatus, ReceivabilityReviewMode } from "@prisma/client";
+import { UserRole } from "@/lib/auth/user-role";
 import { getBaseUrl } from "@/lib/openbadges/urls";
 import { parseBadgeEvaluationConfig } from "@/lib/openbadges/badge-class-payload";
 import {
@@ -179,10 +180,8 @@ export async function PUT(
   if (requiresEnrollment === false && requiredCourseId) {
     return NextResponse.json({ error: "REQUIRED_COURSE_NOT_ALLOWED" }, { status: 400 });
   }
-  if (
-    receivabilityReviewMode
-    && !Object.values(ReceivabilityReviewMode).includes(receivabilityReviewMode)
-  ) {
+  const allowedReviewModes: readonly string[] = ["HUMAN", "AI", "MIXED"];
+  if (receivabilityReviewMode && !allowedReviewModes.includes(String(receivabilityReviewMode))) {
     return NextResponse.json({ error: "INVALID_REVIEW_MODE" }, { status: 400 });
   }
   const hasMethodConfigs =
@@ -190,8 +189,7 @@ export async function PUT(
     || Array.isArray(payload.receivability?.methodConfigs) && payload.receivability.methodConfigs.length > 0;
 
   if (
-    (receivabilityReviewMode === ReceivabilityReviewMode.AI
-      || receivabilityReviewMode === ReceivabilityReviewMode.MIXED)
+    (receivabilityReviewMode === "AI" || receivabilityReviewMode === "MIXED")
     && !hasMethodConfigs
     && (!payload.receivability?.aiEvaluationPrompt || payload.receivability.aiEvaluationPrompt.trim().length === 0)
   ) {

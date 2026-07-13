@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/require-role";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/auth/user-role";
 
 export async function GET(request: Request) {
   const auth = requireRole(request, [UserRole.ADMIN, UserRole.SUPER_ADMIN]);

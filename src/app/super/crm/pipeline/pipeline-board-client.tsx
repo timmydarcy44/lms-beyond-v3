@@ -190,15 +190,15 @@ export function PipelineBoardClient({
   const kpis = useMemo(() => {
     if (isBtoc) return null;
     const totalProspects = filteredDeals.length;
-    const myProspects = norm
-      ? filteredDeals.filter((d) => (d.contact_owner_email ?? "").trim().toLowerCase() === norm).length
+    const myProspects = normUserEmail
+      ? filteredDeals.filter((d) => (d.contact_owner_email ?? "").trim().toLowerCase() === normUserEmail).length
       : 0;
     const overdue = filteredDeals.filter((d) => isNextActionOverdue(d.next_action_date)).length;
     const today = new Date().toISOString().slice(0, 10);
     const actionsToday = filteredDeals.filter((d) => (d.next_action_date ?? "").slice(0, 10) === today).length;
     const actionsWithDate = filteredDeals.filter((d) => Boolean(d.next_action_date)).length;
     return { totalProspects, myProspects, overdue, actionsToday, actionsWithDate };
-  }, [filteredDeals, norm, isBtoc]);
+  }, [filteredDeals, normUserEmail, isBtoc]);
 
   const nextActions = useMemo(() => {
     if (isBtoc) return [];

@@ -48,6 +48,7 @@ import { Users } from "lucide-react";
 import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsible-section";
 import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pipeline-deal-sheet";
 import { PipelineDealIntelligencePanel } from "@/components/crm/pipeline-deal-intelligence-panel";
+import { PipelineDealActionsSection } from "@/components/crm/pipeline-deal-actions-section";
 import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
 import { PipelineNafAnalytics } from "@/components/crm/pipeline-naf-analytics";
@@ -120,6 +121,9 @@ export function PipelineBoardClient({
   const [siretLoading, setSiretLoading] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [nextActionFilter, setNextActionFilter] = useState<"all" | "only_with_date">("all");
+  const [aiProspectSummary, setAiProspectSummary] = useState<string | null>(null);
+  const [aiProspectSummaryAt, setAiProspectSummaryAt] = useState<string | null>(null);
+  const [generatingAiSummary, setGeneratingAiSummary] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -302,6 +306,8 @@ export function PipelineBoardClient({
     setForm(emptyDeal(stageSlug));
     setCommercial(emptyBtobCommercial());
     setEditingDealMeta({});
+    setAiProspectSummary(null);
+    setAiProspectSummaryAt(null);
     setDialogOpen(true);
   };
 
@@ -330,7 +336,31 @@ export function PipelineBoardClient({
       updated_at: deal.updated_at,
       catalog_email_sent_at: deal.catalog_email_sent_at,
     });
+    setAiProspectSummary(deal.ai_prospect_summary ?? null);
+    setAiProspectSummaryAt(deal.ai_prospect_summary_at ?? null);
     setDialogOpen(true);
+  };
+
+  const generateAiSummary = async () => {
+    if (!form.id) {
+      toast.error("Enregistrez la fiche avant de générer la synthèse IA.");
+      return;
+    }
+    setGeneratingAiSummary(true);
+    try {
+      const res = await fetch(`/api/super-admin/crm/pipeline/deals/${form.id}/ai-summary`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setAiProspectSummary(json.summary ?? null);
+      setAiProspectSummaryAt(json.generated_at ?? new Date().toISOString());
+      toast.success("Synthèse IA globale générée");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Synthèse IA impossible");
+    } finally {
+      setGeneratingAiSummary(false);
+    }
   };
 
   const lookupSiret = async () => {
@@ -851,6 +881,10 @@ export function PipelineBoardClient({
             onApplyNextBestAction={(action) =>
               setCommercial((c) => ({ ...c, next_action: action }))
             }
+            aiProspectSummary={aiProspectSummary}
+            aiProspectSummaryAt={aiProspectSummaryAt}
+            onGenerateAiSummary={form.id ? generateAiSummary : undefined}
+            generatingAiSummary={generatingAiSummary}
           />
         ) : null}
         <div className="space-y-3">
@@ -968,6 +1002,21 @@ export function PipelineBoardClient({
               <Label>Notes</Label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
+            {!isBtoc ? (
+              <PipelineDealActionsSection
+                dealId={form.id}
+                phone={form.phone}
+                companyName={form.company_name || "Prospect"}
+                contactName={form.contact_first_name}
+                currentUserEmail={currentUserEmail}
+                onActionsChange={() => {
+                  setCommercial((c) => ({
+                    ...c,
+                    last_contact_date: new Date().toISOString().slice(0, 10),
+                  }));
+                }}
+              />
+            ) : null}
             {!isBtoc ? (
               <PipelineBtobCommercialFields
                 value={commercial}

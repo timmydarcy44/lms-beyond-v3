@@ -10,9 +10,11 @@ import {
   Heart,
   Mail,
   Phone,
+  Sparkles,
   TrendingUp,
   Users,
   XCircle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -32,9 +34,17 @@ const NBA_ICONS = {
 export function PipelineDealIntelligencePanel({
   input,
   onApplyNextBestAction,
+  aiProspectSummary,
+  aiProspectSummaryAt,
+  onGenerateAiSummary,
+  generatingAiSummary,
 }: {
   input: DealIntelligenceInput;
   onApplyNextBestAction?: (action: string) => void;
+  aiProspectSummary?: string | null;
+  aiProspectSummaryAt?: string | null;
+  onGenerateAiSummary?: () => void;
+  generatingAiSummary?: boolean;
 }) {
   const intel = useMemo(() => computeDealIntelligence(input), [input]);
   const NbaIcon = NBA_ICONS[intel.nextBestIcon];
@@ -106,6 +116,38 @@ export function PipelineDealIntelligencePanel({
           </p>
         ) : null}
       </div>
+
+      {aiProspectSummary ? (
+        <div className="relative rounded-xl border border-emerald-400/20 bg-emerald-950/30 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-200/80">
+            Synthèse IA du prospect
+          </p>
+          {aiProspectSummaryAt ? (
+            <p className="mt-0.5 text-[10px] text-slate-400">
+              Générée le {aiProspectSummaryAt.slice(0, 10)}
+            </p>
+          ) : null}
+          <p className="mt-2 whitespace-pre-wrap text-sm text-slate-200">{aiProspectSummary}</p>
+        </div>
+      ) : null}
+
+      {onGenerateAiSummary ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="relative bg-white/10 text-white hover:bg-white/20"
+          disabled={generatingAiSummary}
+          onClick={onGenerateAiSummary}
+        >
+          {generatingAiSummary ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          {aiProspectSummary ? "Régénérer la synthèse IA" : "Générer la synthèse IA globale"}
+        </Button>
+      ) : null}
 
       {/* Next Best Action */}
       <div className="relative rounded-xl border border-violet-400/20 bg-violet-950/30 p-4">

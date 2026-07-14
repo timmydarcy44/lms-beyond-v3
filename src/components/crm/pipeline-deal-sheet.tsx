@@ -20,7 +20,7 @@ function SheetOverlay({
   );
 }
 
-/** Panneau gauche qui glisse de la droite vers la gauche (slow motion). */
+/** Panneau gauche — animation lente du bas vers le haut. */
 export function PipelineDealSheet({
   open,
   onOpenChange,
@@ -40,7 +40,7 @@ export function PipelineDealSheet({
           className={cn(
             "fixed inset-y-0 left-0 z-50 flex h-full w-full max-w-xl flex-col border-r border-slate-200 bg-white shadow-2xl outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
+            "data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
             "data-[state=open]:duration-700 data-[state=closed]:duration-500 ease-out",
           )}
           aria-describedby={undefined}

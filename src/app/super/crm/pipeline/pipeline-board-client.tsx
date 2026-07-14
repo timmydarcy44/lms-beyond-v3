@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   computePipelineRevenueCents,
+  DEPRECATED_PIPELINE_STAGE_SLUGS,
   formatDealAmount,
   shouldShowRevenueBar,
   type PipelineDeal,
@@ -44,6 +45,10 @@ import {
   pipelineOwnerLabel,
 } from "@/lib/crm/pipeline-btob-owners";
 import { Users } from "lucide-react";
+import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
+import { PipelineNafAnalytics } from "@/components/crm/pipeline-naf-analytics";
+import { PipelineQuoteFormations } from "@/components/crm/pipeline-quote-formations";
+import { centroidFromZip } from "@/lib/crm/french-geo";
 
 type DealForm = {
   id?: string;
@@ -59,6 +64,9 @@ type DealForm = {
   phone: string;
   amount: string;
   notes: string;
+  city: string;
+  zip_code: string;
+  quoted_course_ids: string[];
 };
 
 const emptyDeal = (stage: string): DealForm => ({
@@ -74,6 +82,9 @@ const emptyDeal = (stage: string): DealForm => ({
   phone: "",
   amount: "",
   notes: "",
+  city: "",
+  zip_code: "",
+  quoted_course_ids: [],
 });
 
 export function PipelineBoardClient({
@@ -149,16 +160,26 @@ export function PipelineBoardClient({
     }
   };
 
+  const visibleStages = useMemo(
+    () =>
+      stages.filter(
+        (s) => !DEPRECATED_PIPELINE_STAGE_SLUGS.includes(
+          s.slug as (typeof DEPRECATED_PIPELINE_STAGE_SLUGS)[number],
+        ),
+      ),
+    [stages],
+  );
+
   const dealsByStage = useMemo(() => {
     const map = new Map<string, PipelineDeal[]>();
-    for (const s of stages) map.set(s.slug, []);
+    for (const s of visibleStages) map.set(s.slug, []);
     for (const d of deals) {
       const list = map.get(d.stage_slug) ?? [];
       list.push(d);
       map.set(d.stage_slug, list);
     }
     return map;
-  }, [stages, deals]);
+  }, [visibleStages, deals]);
 
   const filteredDeals = useMemo(() => {
     if (isBtoc) return deals;
@@ -175,14 +196,14 @@ export function PipelineBoardClient({
 
   const filteredDealsByStage = useMemo(() => {
     const map = new Map<string, PipelineDeal[]>();
-    for (const s of stages) map.set(s.slug, []);
+    for (const s of visibleStages) map.set(s.slug, []);
     for (const d of filteredDeals) {
       const list = map.get(d.stage_slug) ?? [];
       list.push(d);
       map.set(d.stage_slug, list);
     }
     return map;
-  }, [stages, filteredDeals]);
+  }, [visibleStages, filteredDeals]);
 
   const showCa = !isBtoc && shouldShowRevenueBar(filteredDeals);
   const caTotal = computePipelineRevenueCents(filteredDeals);
@@ -239,6 +260,9 @@ export function PipelineBoardClient({
       phone: deal.phone ?? "",
       amount: deal.amount_cents ? String(deal.amount_cents / 100) : "",
       notes: deal.notes ?? "",
+      city: deal.city ?? "",
+      zip_code: deal.zip_code ?? "",
+      quoted_course_ids: deal.quoted_course_ids ?? [],
     });
     setCommercial(commercialFromDeal(deal));
     setDialogOpen(true);
@@ -275,11 +299,14 @@ export function PipelineBoardClient({
       naf_code: d.naf_code,
       opco_name: d.opco_name,
       company_name: d.company_name || prev.company_name,
+      city: d.city ?? prev.city,
+      zip_code: d.zip_code ?? prev.zip_code,
       notes: enrichNotes ? (prev.notes ? `${prev.notes}\n${enrichNotes}` : enrichNotes) : prev.notes,
     }));
     setCommercial((prev) => ({
       ...prev,
       location: location || prev.location,
+      sector: d.sector || prev.sector,
       why_target: d.sector ? (prev.why_target || `Secteur : ${d.sector}`) : prev.why_target,
     }));
     toast.success("Fiche entreprise récupérée.");
@@ -290,6 +317,8 @@ export function PipelineBoardClient({
       toast.error("Nom de l'entreprise requis");
       return;
     }
+    const zip = form.zip_code.trim() || null;
+    const centroid = zip ? centroidFromZip(zip) : null;
     const payload = {
       stage_slug: form.stage_slug,
       contact_owner_email: form.contact_owner_email || null,
@@ -301,6 +330,11 @@ export function PipelineBoardClient({
       contact_first_name: form.contact_first_name,
       email: form.email || null,
       phone: form.phone || null,
+      city: form.city.trim() || null,
+      zip_code: zip,
+      latitude: centroid?.lat ?? null,
+      longitude: centroid?.lng ?? null,
+      quoted_course_ids: form.quoted_course_ids,
       amount: form.amount,
       notes: form.notes || null,
       ...(!isBtoc ? commercialToPayload(commercial) : {}),
@@ -423,93 +457,103 @@ export function PipelineBoardClient({
       ) : null}
 
       {kpis ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-indigo-50/60 px-5 py-4 shadow-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.18),transparent_55%)]" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-4 text-white shadow-xl sm:px-5">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.28),transparent_55%)]" />
             <div className="relative">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Prospects</p>
-                <Users className="h-4 w-4 text-indigo-500" />
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80 sm:text-[11px]">Prospects</p>
+                <Users className="h-4 w-4 text-indigo-300" />
               </div>
-              <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.totalProspects}</p>
-              <p className="mt-1 text-xs text-gray-500">Selon le filtre</p>
+              <p className="mt-2 text-2xl font-bold sm:text-3xl">{kpis.totalProspects}</p>
+              <p className="mt-1 text-xs text-slate-400">Selon le filtre</p>
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-violet-50/70 px-5 py-4 shadow-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_10%,rgba(139,92,246,0.18),transparent_55%)]" />
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950 px-4 py-4 text-white shadow-xl sm:px-5">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_10%,rgba(139,92,246,0.25),transparent_55%)]" />
             <div className="relative">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Mes prospects</p>
-                <Users className="h-4 w-4 text-violet-500" />
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-200/80 sm:text-[11px]">Mes prospects</p>
+                <Users className="h-4 w-4 text-violet-300" />
               </div>
-              <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.myProspects}</p>
-              <p className="mt-1 text-xs text-gray-500">{currentUserEmail ? pipelineOwnerLabel(normUserEmail) : "—"}</p>
+              <p className="mt-2 text-2xl font-bold sm:text-3xl">{kpis.myProspects}</p>
+              <p className="mt-1 text-xs text-slate-400">{currentUserEmail ? pipelineOwnerLabel(normUserEmail) : "—"}</p>
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-amber-50/70 px-5 py-4 shadow-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,158,11,0.18),transparent_55%)]" />
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 px-4 py-4 text-white shadow-xl sm:px-5">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,158,11,0.22),transparent_55%)]" />
             <div className="relative">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Actions aujourd’hui</p>
-                <CalendarClock className="h-4 w-4 text-amber-600" />
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-200/80 sm:text-[11px]">Actions aujourd’hui</p>
+                <CalendarClock className="h-4 w-4 text-amber-300" />
               </div>
-              <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.actionsToday}</p>
-              <p className="mt-1 text-xs text-gray-500">{kpis.actionsWithDate} planifiées</p>
+              <p className="mt-2 text-2xl font-bold sm:text-3xl">{kpis.actionsToday}</p>
+              <p className="mt-1 text-xs text-slate-400">{kpis.actionsWithDate} planifiées</p>
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-rose-50/70 px-5 py-4 shadow-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(244,63,94,0.18),transparent_55%)]" />
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-rose-950 px-4 py-4 text-white shadow-xl sm:px-5">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(244,63,94,0.22),transparent_55%)]" />
             <div className="relative">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">En retard</p>
-                <AlertTriangle className="h-4 w-4 text-rose-600" />
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/80 sm:text-[11px]">En retard</p>
+                <AlertTriangle className="h-4 w-4 text-rose-300" />
               </div>
-              <p className="mt-2 text-3xl font-bold text-gray-900">{kpis.overdue}</p>
-              <p className="mt-1 text-xs text-gray-500">À traiter</p>
+              <p className="mt-2 text-2xl font-bold sm:text-3xl">{kpis.overdue}</p>
+              <p className="mt-1 text-xs text-slate-400">À traiter</p>
             </div>
           </div>
         </div>
       ) : null}
 
       {!isBtoc ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <PipelineFranceMap deals={filteredDeals} />
+          <PipelineNafAnalytics deals={filteredDeals} />
+        </div>
+      ) : null}
+
+      {!isBtoc ? (
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-4 text-white shadow-xl sm:p-5">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(99,102,241,0.2),transparent_55%)]" />
+          <div className="relative flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-200/80">
                 Prochaines actions
               </p>
-              <p className="text-sm text-gray-700">Basé sur “Date prochaine action”</p>
+              <p className="text-sm text-slate-300">Basé sur « Date prochaine action »</p>
             </div>
-            <span className="text-xs text-gray-500">{nextActions.length} à venir</span>
+            <span className="text-xs text-slate-400">{nextActions.length} à venir</span>
           </div>
           {nextActions.length === 0 ? (
-            <p className="mt-4 text-sm text-gray-500">Aucune action planifiée sur le filtre actuel.</p>
+            <p className="relative mt-4 text-sm text-slate-400">Aucune action planifiée sur le filtre actuel.</p>
           ) : (
-            <div className="mt-4 grid gap-2 md:grid-cols-2">
+            <div className="relative mt-4 grid gap-2 md:grid-cols-2">
               {nextActions.map((a) => (
                 <Link
                   key={a.id}
                   href={`/super/crm/pipeline-btob/${a.id}`}
-                  className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 transition hover:bg-gray-50 ${
-                    a.isOverdue ? "border-rose-200 bg-rose-50/40" : "border-gray-200 bg-white"
+                  className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 transition ${
+                    a.isOverdue
+                      ? "border-rose-400/30 bg-rose-950/40 hover:bg-rose-950/60"
+                      : "border-white/10 bg-white/5 hover:bg-white/10"
                   }`}
                   title="Ouvrir la fiche prospect"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-gray-900">{a.company}</p>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">→ {a.nextAction}</p>
+                    <p className="truncate text-sm font-semibold text-white">{a.company}</p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-300">→ {a.nextAction}</p>
                     {a.owner ? (
-                      <p className="mt-1 text-[11px] text-indigo-700">{pipelineOwnerLabel(a.owner)}</p>
+                      <p className="mt-1 text-[11px] text-indigo-300">{pipelineOwnerLabel(a.owner)}</p>
                     ) : null}
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className={`text-sm font-semibold ${a.isOverdue ? "text-rose-700" : "text-gray-900"}`}>
+                    <p className={`text-sm font-semibold ${a.isOverdue ? "text-rose-300" : "text-white"}`}>
                       {a.date}
                     </p>
-                    <p className="text-[11px] text-gray-500">{a.isOverdue ? "retard" : "prévu"}</p>
+                    <p className="text-[11px] text-slate-400">{a.isOverdue ? "retard" : "prévu"}</p>
                   </div>
                 </Link>
               ))}
@@ -548,15 +592,15 @@ export function PipelineBoardClient({
         </div>
       ) : null}
 
-      <div className="flex gap-3 overflow-x-auto pb-4">
-        {stages.map((stage) => {
+      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 -mx-1 px-1">
+        {visibleStages.map((stage) => {
           const columnDeals = filteredDealsByStage.get(stage.slug) ?? [];
           const columnTotal = columnDeals.reduce((s, d) => s + d.amount_cents, 0);
 
           return (
             <div
               key={stage.slug}
-              className="flex w-[280px] shrink-0 flex-col rounded-2xl border border-gray-200 bg-gray-50/70"
+              className="flex w-[min(280px,calc(100vw-2.5rem))] shrink-0 snap-start flex-col rounded-2xl border border-slate-200 bg-slate-100/80 sm:w-[280px]"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
@@ -592,19 +636,41 @@ export function PipelineBoardClient({
                     key={deal.id}
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData("dealId", deal.id)}
-                    className="cursor-grab rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:border-gray-300 active:cursor-grabbing"
+                    className="relative cursor-grab overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-3 text-white shadow-lg active:cursor-grabbing"
                   >
-                    <p className="font-medium text-gray-900 text-sm">{deal.company_name}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">{deal.contact_first_name}</p>
-                    {!isBtoc && deal.contact_owner_email ? (
-                      <p className="text-[10px] text-indigo-600 mt-0.5">
-                        {pipelineOwnerLabel(deal.contact_owner_email)}
-                      </p>
-                    ) : null}
-                    {deal.email ? (
-                      <p className="text-xs text-gray-500 truncate mt-1">{deal.email}</p>
-                    ) : null}
-                    {deal.phone ? <p className="text-xs text-gray-500">{deal.phone}</p> : null}
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(99,102,241,0.22),transparent_60%)]" />
+                    <div className="relative">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-sm leading-tight">{deal.company_name}</p>
+                        {deal.phone ? (
+                          <a
+                            href={`tel:${deal.phone.replace(/\s/g, "")}`}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-indigo-200 hover:bg-white/20 md:hidden"
+                            title={`Appeler ${deal.phone}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Phone className="h-4 w-4" />
+                          </a>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-slate-300 mt-0.5">{deal.contact_first_name}</p>
+                      {!isBtoc && deal.contact_owner_email ? (
+                        <p className="text-[10px] text-indigo-300 mt-0.5">
+                          {pipelineOwnerLabel(deal.contact_owner_email)}
+                        </p>
+                      ) : null}
+                      {deal.naf_code ? (
+                        <p className="text-[10px] text-violet-300 mt-0.5 font-mono">NAF {deal.naf_code}</p>
+                      ) : null}
+                      {deal.location ? (
+                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{deal.location}</p>
+                      ) : null}
+                      {deal.email ? (
+                        <p className="text-xs text-slate-400 truncate mt-1 hidden sm:block">{deal.email}</p>
+                      ) : null}
+                      {deal.phone ? (
+                        <p className="text-xs text-slate-400 hidden sm:block">{deal.phone}</p>
+                      ) : null}
                     {!isBtoc && (deal.sector || deal.priority) ? (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {deal.sector ? (
@@ -624,7 +690,7 @@ export function PipelineBoardClient({
                           </Badge>
                         ) : null}
                         {typeof deal.engagement_score === "number" ? (
-                          <span className="text-[10px] text-gray-500" title="Score engagement">
+                          <span className="text-[10px] text-slate-400" title="Score engagement">
                             ● {deal.engagement_score}/3
                           </span>
                         ) : null}
@@ -634,8 +700,8 @@ export function PipelineBoardClient({
                       <p
                         className={`text-[10px] mt-1 line-clamp-2 ${
                           isNextActionOverdue(deal.next_action_date)
-                            ? "text-red-600 font-medium"
-                            : "text-gray-500"
+                            ? "text-rose-300 font-medium"
+                            : "text-slate-400"
                         }`}
                       >
                         → {deal.next_action}
@@ -643,34 +709,35 @@ export function PipelineBoardClient({
                       </p>
                     ) : null}
                     {deal.source === "auto" ? (
-                      <Badge variant="secondary" className="mt-1 text-[10px]">
+                      <Badge variant="secondary" className="mt-1 text-[10px] bg-white/10 text-slate-200 border-0">
                         Auto
                       </Badge>
                     ) : null}
                     {deal.amount_cents > 0 ? (
-                      <p className="text-xs font-semibold text-emerald-700 mt-2">
+                      <p className="text-xs font-semibold text-emerald-300 mt-2">
                         {formatDealAmount(deal.amount_cents)}
                       </p>
                     ) : null}
                     <div className="mt-2 flex gap-1">
                       {!isBtoc ? (
-                        <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-slate-300 hover:text-white hover:bg-white/10" asChild>
                           <Link href={`/super/crm/pipeline-btob/${deal.id}`} title="Fiche prospect">
                             <ExternalLink className="h-3 w-3" />
                           </Link>
                         </Button>
                       ) : null}
-                      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => openEdit(deal)}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-slate-300 hover:text-white hover:bg-white/10" onClick={() => openEdit(deal)}>
                         <Pencil className="h-3 w-3" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 px-2 text-red-600"
+                        className="h-7 px-2 text-rose-300 hover:text-rose-200 hover:bg-white/10"
                         onClick={() => void deleteDeal(deal.id)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
+                    </div>
                     </div>
                   </div>
                 ))}
@@ -705,7 +772,7 @@ export function PipelineBoardClient({
                 value={form.stage_slug}
                 onChange={(e) => setForm({ ...form, stage_slug: e.target.value })}
               >
-                {stages.map((s) => (
+                {visibleStages.map((s) => (
                   <option key={s.slug} value={s.slug}>
                     {s.label}
                   </option>
@@ -765,7 +832,7 @@ export function PipelineBoardClient({
                 onChange={(e) => setForm({ ...form, contact_first_name: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
@@ -775,6 +842,22 @@ export function PipelineBoardClient({
                 <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </div>
             </div>
+            {!isBtoc ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Ville</Label>
+                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Code postal</Label>
+                  <Input
+                    value={form.zip_code}
+                    onChange={(e) => setForm({ ...form, zip_code: e.target.value })}
+                    placeholder="75001"
+                  />
+                </div>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label>Montant (€) — pour le CA</Label>
               <Input
@@ -785,6 +868,17 @@ export function PipelineBoardClient({
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
               />
             </div>
+            {!isBtoc ? (
+              <PipelineQuoteFormations
+                selectedIds={form.quoted_course_ids}
+                onChange={(ids) => setForm((f) => ({ ...f, quoted_course_ids: ids }))}
+                onTotalChange={(cents) => {
+                  if (cents > 0) {
+                    setForm((f) => ({ ...f, amount: String(cents / 100) }));
+                  }
+                }}
+              />
+            ) : null}
             <div className="space-y-2">
               <Label>Notes</Label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />

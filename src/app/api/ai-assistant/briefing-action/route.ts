@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       last_contact_date: today,
       notes: mergedNotes,
       engagement_score: engagementScore,
-      ...(actionType === "email_sent" ? { stage_slug: "envoi_mail" } : {}),
+      ...(actionType === "email_sent" ? { stage_slug: "mail_envoye_catalogue" } : {}),
     };
 
     const prospect = await updatePipelineBtobDeal(prospectId, patch);

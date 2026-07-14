@@ -16,15 +16,17 @@ export const BTOB_CATALOGUE_STAGE_SLUG = "mail_envoye_catalogue";
 
 export const DEFAULT_PIPELINE_STAGES = [
   { slug: "a_appeler", label: "A appeler", sort_order: 0 },
-  { slug: "envoi_mail", label: "Envoi mail", sort_order: 1 },
-  { slug: BTOB_CATALOGUE_STAGE_SLUG, label: "Mail envoyé + catalogue", sort_order: 2 },
-  { slug: "presentation_programmee", label: "Présentation programmée", sort_order: 3 },
-  { slug: "demo_realisee", label: "Démo réalisée", sort_order: 4 },
-  { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 5 },
-  { slug: "proposition_envoyee", label: "Proposition envoyée", sort_order: 6 },
-  { slug: "reussi", label: "Réussi", sort_order: 7 },
-  { slug: "echec", label: "Échec", sort_order: 8 },
+  { slug: BTOB_CATALOGUE_STAGE_SLUG, label: "Mail envoyé + catalogue", sort_order: 1 },
+  { slug: "presentation_programmee", label: "Présentation programmée", sort_order: 2 },
+  { slug: "demo_realisee", label: "Démo réalisée", sort_order: 3 },
+  { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 4 },
+  { slug: "proposition_envoyee", label: "Proposition envoyée", sort_order: 5 },
+  { slug: "reussi", label: "Réussi", sort_order: 6 },
+  { slug: "echec", label: "Échec", sort_order: 7 },
 ] as const;
+
+/** Étapes retirées du pipe (legacy). */
+export const DEPRECATED_PIPELINE_STAGE_SLUGS = ["envoi_mail"] as const;
 
 export type PipelineStage = {
   pipeline_type?: string;
@@ -42,6 +44,11 @@ export type PipelineDealCommercial = {
   sector?: string | null;
   employee_count?: string | null;
   location?: string | null;
+  city?: string | null;
+  zip_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  quoted_course_ids?: string[] | null;
   priority?: string | null;
   why_target?: string | null;
   training_needs?: string[] | null;

@@ -5,7 +5,7 @@ type PipelineDealRow = Record<string, unknown>;
 
 const ACTIVE_STAGES = new Set([
   "a_appeler",
-  "envoi_mail",
+  "mail_envoye_catalogue",
   "presentation_programmee",
   "demo_realisee",
   "proposition_a_faire",
@@ -14,7 +14,7 @@ const ACTIVE_STAGES = new Set([
 
 const STAGE_LABELS: Record<string, string> = {
   a_appeler: "À appeler",
-  envoi_mail: "Envoi mail",
+  mail_envoye_catalogue: "Mail envoyé + catalogue",
   presentation_programmee: "Présentation programmée",
   demo_realisee: "Démo réalisée",
   proposition_a_faire: "Proposition à faire",
@@ -37,7 +37,7 @@ function pickActionType(deal: PipelineDealRow): BriefingActionType {
   const stage = String(deal.stage_slug ?? "");
   const email = deal.email ? String(deal.email) : "";
   const linkedin = deal.contact_linkedin ? String(deal.contact_linkedin) : "";
-  if (stage === "envoi_mail" && email) return "email";
+  if (stage === "mail_envoye_catalogue" && email) return "email";
   if (linkedin) return "linkedin";
   if (deal.phone) return "call";
   if (email) return "email";

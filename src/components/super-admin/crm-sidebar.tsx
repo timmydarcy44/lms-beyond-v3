@@ -67,9 +67,10 @@ export function CrmSidebar() {
   }, [isJerome]);
 
   return (
-    <aside className="w-56 shrink-0 border-r border-gray-200 bg-gray-50/90 min-h-[calc(100vh-3rem)]">
-      <div className="sticky top-12 p-4 space-y-1">
-        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">CRM</p>
+    <aside className="w-full shrink-0 border-b border-gray-200 bg-gray-50/90 lg:w-56 lg:border-b-0 lg:border-r lg:min-h-[calc(100vh-3rem)]">
+      <div className="sticky top-12 p-2 lg:p-4">
+        <p className="hidden px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 lg:block">CRM</p>
+        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:block lg:space-y-1 lg:overflow-visible lg:px-0 lg:pb-0">
         {links.map((item) => {
           const Icon = item.icon;
           const isPipelineBtoc = item.href.includes("type=btoc");
@@ -90,7 +91,7 @@ export function CrmSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors lg:shrink lg:w-full",
                 isActive
                   ? item.featured
                     ? "bg-indigo-600 text-white shadow-sm border border-indigo-600"
@@ -115,6 +116,7 @@ export function CrmSidebar() {
             </Link>
           );
         })}
+        </div>
       </div>
     </aside>
   );

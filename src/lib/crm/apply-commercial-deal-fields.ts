@@ -7,6 +7,11 @@ const COMMERCIAL_KEYS = [
   "sector",
   "employee_count",
   "location",
+  "city",
+  "zip_code",
+  "latitude",
+  "longitude",
+  "quoted_course_ids",
   "priority",
   "why_target",
   "training_needs",
@@ -46,6 +51,13 @@ export function applyCommercialFieldsFromBody(
       target.training_needs = Array.isArray(body.training_needs)
         ? body.training_needs.map((n) => String(n).trim()).filter(Boolean)
         : [];
+    } else if (key === "quoted_course_ids") {
+      target.quoted_course_ids = Array.isArray(body.quoted_course_ids)
+        ? body.quoted_course_ids.map((id) => String(id).trim()).filter(Boolean)
+        : [];
+    } else if (key === "latitude" || key === "longitude") {
+      const n = Number(body[key]);
+      target[key] = Number.isFinite(n) ? n : null;
     } else if (key === "decision_maker_identified") {
       target.decision_maker_identified = Boolean(body.decision_maker_identified);
     } else if (key === "engagement_score") {

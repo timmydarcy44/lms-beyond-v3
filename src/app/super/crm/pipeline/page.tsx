@@ -26,11 +26,11 @@ export default async function CrmPipelinePage({
   }
 
   return (
-    <div className="space-y-6 px-6 py-8">
+    <div className="space-y-6 px-3 py-6 sm:px-6 sm:py-8">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-wider text-gray-500">CRM / Pipeline</p>
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
           {pipelineType === "btoc" ? "Pipeline BTOC" : "Pipeline BTOB"}
         </h1>
         <p className="text-sm text-gray-600">

@@ -46,6 +46,9 @@ import {
 } from "@/lib/crm/pipeline-btob-owners";
 import { Users } from "lucide-react";
 import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsible-section";
+import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pipeline-deal-sheet";
+import { PipelineDealIntelligencePanel } from "@/components/crm/pipeline-deal-intelligence-panel";
+import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
 import { PipelineNafAnalytics } from "@/components/crm/pipeline-naf-analytics";
 import { PipelineQuoteFormations } from "@/components/crm/pipeline-quote-formations";
@@ -108,6 +111,11 @@ export function PipelineBoardClient({
   const [form, setForm] = useState<DealForm>(emptyDeal(defaultStage));
   const [commercial, setCommercial] = useState<BtobCommercialFormState>(emptyBtobCommercial());
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
+  const [editingDealMeta, setEditingDealMeta] = useState<{
+    created_at?: string;
+    updated_at?: string;
+    catalog_email_sent_at?: string | null;
+  }>({});
   const [stageLabelDraft, setStageLabelDraft] = useState("");
   const [siretLoading, setSiretLoading] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
@@ -259,9 +267,41 @@ export function PipelineBoardClient({
     });
   }, []);
 
+  const intelligenceInput = useMemo(
+    () => ({
+      stage_slug: form.stage_slug,
+      company_name: form.company_name,
+      contact_first_name: form.contact_first_name,
+      email: form.email || null,
+      phone: form.phone || null,
+      amount_cents: form.amount ? Math.round(Number.parseFloat(form.amount) * 100) : 0,
+      created_at: editingDealMeta.created_at ?? null,
+      updated_at: editingDealMeta.updated_at ?? null,
+      catalog_email_sent_at: editingDealMeta.catalog_email_sent_at ?? null,
+      quoted_course_ids: form.quoted_course_ids,
+      decision_maker_identified: commercial.decision_maker_identified,
+      decision_maker_name: commercial.decision_maker_name,
+      champion_name: commercial.champion_name,
+      blocker_name: commercial.blocker_name,
+      finance_contact: commercial.finance_contact,
+      engagement_score: commercial.engagement_score,
+      last_contact_date: commercial.last_contact_date || null,
+      next_action: commercial.next_action || null,
+      next_action_date: commercial.next_action_date || null,
+      estimated_budget: commercial.estimated_budget || null,
+      estimated_users: commercial.estimated_users ? Number(commercial.estimated_users) : null,
+      employee_count: commercial.employee_count || null,
+      contact_role: commercial.contact_role || null,
+      contact_linkedin: commercial.contact_linkedin || null,
+      lost_reason: commercial.lost_reason || null,
+    }),
+    [form, commercial, editingDealMeta],
+  );
+
   const openCreate = (stageSlug: string) => {
     setForm(emptyDeal(stageSlug));
     setCommercial(emptyBtobCommercial());
+    setEditingDealMeta({});
     setDialogOpen(true);
   };
 
@@ -285,6 +325,11 @@ export function PipelineBoardClient({
       quoted_course_ids: deal.quoted_course_ids ?? [],
     });
     setCommercial(commercialFromDeal(deal));
+    setEditingDealMeta({
+      created_at: deal.created_at,
+      updated_at: deal.updated_at,
+      catalog_email_sent_at: deal.catalog_email_sent_at,
+    });
     setDialogOpen(true);
   };
 
@@ -343,6 +388,7 @@ export function PipelineBoardClient({
       || parseZipFromText(form.city)
       || null;
     const centroid = zip ? centroidFromZip(zip) : null;
+    const nba = computeDealIntelligence(intelligenceInput).nextBestAction;
     const payload = {
       stage_slug: form.stage_slug,
       contact_owner_email: form.contact_owner_email || null,
@@ -361,6 +407,7 @@ export function PipelineBoardClient({
       quoted_course_ids: form.quoted_course_ids,
       amount: form.amount,
       notes: form.notes || null,
+      next_best_action: nba,
       ...(!isBtoc ? commercialToPayload(commercial) : {}),
     };
 
@@ -793,12 +840,20 @@ export function PipelineBoardClient({
         })}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className={isBtoc ? "max-w-md" : "max-w-2xl max-h-[90vh] overflow-y-auto"}>
-          <DialogHeader>
-            <DialogTitle>{form.id ? "Modifier la carte" : "Nouvelle opportunité"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
+      <PipelineDealSheet
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={form.id ? "Modifier la carte" : "Nouvelle opportunité"}
+      >
+        {!isBtoc ? (
+          <PipelineDealIntelligencePanel
+            input={intelligenceInput}
+            onApplyNextBestAction={(action) =>
+              setCommercial((c) => ({ ...c, next_action: action }))
+            }
+          />
+        ) : null}
+        <div className="space-y-3">
             <div className="space-y-2">
               <Label>Étape</Label>
               <select
@@ -914,17 +969,21 @@ export function PipelineBoardClient({
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
             {!isBtoc ? (
-              <PipelineBtobCommercialFields value={commercial} onChange={setCommercial} />
+              <PipelineBtobCommercialFields
+                value={commercial}
+                onChange={setCommercial}
+                stageSlug={form.stage_slug}
+                contactFirstName={form.contact_first_name}
+              />
             ) : null}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+        <PipelineDealSheetFooter>
+            <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={() => void saveDeal()}>Enregistrer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button type="button" onClick={() => void saveDeal()}>Enregistrer</Button>
+        </PipelineDealSheetFooter>
+      </PipelineDealSheet>
 
       <Dialog open={!!editingStage} onOpenChange={(v) => !v && setEditingStage(null)}>
         <DialogContent>

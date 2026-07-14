@@ -57,6 +57,14 @@ export type PipelineDealCommercial = {
   company_linkedin?: string | null;
   approach_channel?: string | null;
   decision_maker_identified?: boolean | null;
+  decision_maker_name?: string | null;
+  champion_name?: string | null;
+  blocker_name?: string | null;
+  finance_contact?: string | null;
+  lost_reason?: string | null;
+  lost_reason_detail?: string | null;
+  lost_competitor?: string | null;
+  next_best_action?: string | null;
   engagement_score?: number | null;
   last_contact_date?: string | null;
   next_action?: string | null;

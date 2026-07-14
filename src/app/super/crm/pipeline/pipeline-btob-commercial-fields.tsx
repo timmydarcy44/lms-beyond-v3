@@ -7,6 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { AlertTriangle, Crown, DollarSign, ExternalLink, Heart } from "lucide-react";
+import {
+  LOST_COMPETITOR_OPTIONS,
+  LOST_REASON_OPTIONS,
+} from "@/lib/crm/pipeline-lost-reason-options";
+import { normalizeLinkedInUrl } from "@/lib/crm/pipeline-deal-intelligence";
 import {
   BTOB_APPROACH_CHANNEL_OPTIONS,
   BTOB_BUDGET_OPTIONS,
@@ -28,12 +34,19 @@ export type BtobCommercialFormState = {
   company_linkedin: string;
   approach_channel: string;
   decision_maker_identified: boolean;
+  decision_maker_name: string;
+  champion_name: string;
+  blocker_name: string;
+  finance_contact: string;
   engagement_score: number;
   last_contact_date: string;
   next_action: string;
   next_action_date: string;
   estimated_budget: string;
   estimated_users: string;
+  lost_reason: string;
+  lost_reason_detail: string;
+  lost_competitor: string;
 };
 
 export const emptyBtobCommercial = (): BtobCommercialFormState => ({
@@ -48,12 +61,19 @@ export const emptyBtobCommercial = (): BtobCommercialFormState => ({
   company_linkedin: "",
   approach_channel: "",
   decision_maker_identified: false,
+  decision_maker_name: "",
+  champion_name: "",
+  blocker_name: "",
+  finance_contact: "",
   engagement_score: 0,
   last_contact_date: "",
   next_action: "",
   next_action_date: "",
   estimated_budget: "",
   estimated_users: "",
+  lost_reason: "",
+  lost_reason_detail: "",
+  lost_competitor: "",
 });
 
 function SelectField({
@@ -88,12 +108,52 @@ function SelectField({
   );
 }
 
+function LinkedInField({
+  label,
+  value,
+  onChange,
+  viewLabel = "Voir le compte",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  viewLabel?: string;
+}) {
+  const href = normalizeLinkedInUrl(value);
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex gap-2">
+        <Input
+          type="url"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="https://linkedin.com/in/..."
+          className="min-w-0 flex-1"
+        />
+        {href ? (
+          <Button type="button" variant="outline" size="sm" className="shrink-0" asChild>
+            <a href={href} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-1 h-3.5 w-3.5" />
+              {viewLabel}
+            </a>
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function PipelineBtobCommercialFields({
   value,
   onChange,
+  stageSlug,
+  contactFirstName,
 }: {
   value: BtobCommercialFormState;
   onChange: (next: BtobCommercialFormState) => void;
+  stageSlug?: string;
+  contactFirstName?: string;
 }) {
   const [trainingDraft, setTrainingDraft] = useState("");
 
@@ -176,6 +236,31 @@ export function PipelineBtobCommercialFields({
         Décideur identifié
       </label>
 
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {[
+          { key: "decision_maker_name" as const, icon: Crown, title: "Décideur", placeholder: contactFirstName || "Jean Dupont" },
+          { key: "champion_name" as const, icon: Heart, title: "Champion", placeholder: "Marie Martin" },
+          { key: "blocker_name" as const, icon: AlertTriangle, title: "Bloqueur", placeholder: "Service informatique" },
+          { key: "finance_contact" as const, icon: DollarSign, title: "Finance", placeholder: "DAF inconnu" },
+        ].map((card) => {
+          const Icon = card.icon;
+          return (
+            <div key={card.key} className="rounded-xl border border-gray-200 bg-slate-50/80 p-3">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <Icon className="h-3.5 w-3.5" />
+                {card.title}
+              </div>
+              <Input
+                className="mt-2 bg-white"
+                value={value[card.key]}
+                placeholder={card.placeholder}
+                onChange={(e) => patch({ [card.key]: e.target.value })}
+              />
+            </div>
+          );
+        })}
+      </div>
+
       <SelectField
         label="Canal d'approche"
         value={value.approach_channel}
@@ -228,23 +313,18 @@ export function PipelineBtobCommercialFields({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label>LinkedIn contact</Label>
-          <Input
-            type="url"
-            value={value.contact_linkedin}
-            onChange={(e) => patch({ contact_linkedin: e.target.value })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>LinkedIn société</Label>
-          <Input
-            type="url"
-            value={value.company_linkedin}
-            onChange={(e) => patch({ company_linkedin: e.target.value })}
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <LinkedInField
+          label="LinkedIn contact"
+          value={value.contact_linkedin}
+          onChange={(contact_linkedin) => patch({ contact_linkedin })}
+        />
+        <LinkedInField
+          label="LinkedIn société"
+          value={value.company_linkedin}
+          onChange={(company_linkedin) => patch({ company_linkedin })}
+          viewLabel="Voir la page"
+        />
         <div className="space-y-2">
           <Label>Rôle du contact</Label>
           <Input value={value.contact_role} onChange={(e) => patch({ contact_role: e.target.value })} />
@@ -267,8 +347,9 @@ export function PipelineBtobCommercialFields({
       </div>
 
       <div className="space-y-2">
-        <Label>Prochaine action</Label>
+        <Label>Prochaine meilleure action</Label>
         <Input value={value.next_action} onChange={(e) => patch({ next_action: e.target.value })} />
+        <p className="text-xs text-gray-500">EDGE suggère une action en haut de la fiche — vous pouvez la personnaliser ici.</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
@@ -288,6 +369,37 @@ export function PipelineBtobCommercialFields({
           />
         </div>
       </div>
+
+      {stageSlug === "echec" ? (
+        <div className="space-y-3 rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+          <p className="text-sm font-semibold text-rose-900">Lost reason</p>
+          <SelectField
+            label="Cause principale"
+            value={value.lost_reason}
+            onChange={(lost_reason) => patch({ lost_reason })}
+            options={LOST_REASON_OPTIONS}
+            placeholder="Sélectionner…"
+          />
+          {value.lost_reason === "concurrent" ? (
+            <SelectField
+              label="Concurrent"
+              value={value.lost_competitor}
+              onChange={(lost_competitor) => patch({ lost_competitor })}
+              options={LOST_COMPETITOR_OPTIONS.map((c) => ({ value: c, label: c }))}
+              placeholder="Choisir…"
+            />
+          ) : null}
+          <div className="space-y-2">
+            <Label>Détail / sous-catégorie</Label>
+            <Textarea
+              value={value.lost_reason_detail}
+              onChange={(e) => patch({ lost_reason_detail: e.target.value })}
+              rows={2}
+              placeholder="Précisions sur la perte…"
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -304,6 +416,13 @@ export function commercialFromDeal(deal: {
   company_linkedin?: string | null;
   approach_channel?: string | null;
   decision_maker_identified?: boolean | null;
+  decision_maker_name?: string | null;
+  champion_name?: string | null;
+  blocker_name?: string | null;
+  finance_contact?: string | null;
+  lost_reason?: string | null;
+  lost_reason_detail?: string | null;
+  lost_competitor?: string | null;
   engagement_score?: number | null;
   last_contact_date?: string | null;
   next_action?: string | null;
@@ -323,12 +442,19 @@ export function commercialFromDeal(deal: {
     company_linkedin: deal.company_linkedin ?? "",
     approach_channel: deal.approach_channel ?? "",
     decision_maker_identified: Boolean(deal.decision_maker_identified),
+    decision_maker_name: deal.decision_maker_name ?? "",
+    champion_name: deal.champion_name ?? "",
+    blocker_name: deal.blocker_name ?? "",
+    finance_contact: deal.finance_contact ?? "",
     engagement_score: deal.engagement_score ?? 0,
     last_contact_date: deal.last_contact_date?.slice(0, 10) ?? "",
     next_action: deal.next_action ?? "",
     next_action_date: deal.next_action_date?.slice(0, 10) ?? "",
     estimated_budget: deal.estimated_budget ?? "",
     estimated_users: deal.estimated_users != null ? String(deal.estimated_users) : "",
+    lost_reason: deal.lost_reason ?? "",
+    lost_reason_detail: deal.lost_reason_detail ?? "",
+    lost_competitor: deal.lost_competitor ?? "",
   };
 }
 
@@ -345,6 +471,13 @@ export function commercialToPayload(c: BtobCommercialFormState): Record<string, 
     company_linkedin: c.company_linkedin || null,
     approach_channel: c.approach_channel || null,
     decision_maker_identified: c.decision_maker_identified,
+    decision_maker_name: c.decision_maker_name || null,
+    champion_name: c.champion_name || null,
+    blocker_name: c.blocker_name || null,
+    finance_contact: c.finance_contact || null,
+    lost_reason: c.lost_reason || null,
+    lost_reason_detail: c.lost_reason_detail || null,
+    lost_competitor: c.lost_competitor || null,
     engagement_score: c.engagement_score,
     last_contact_date: c.last_contact_date || null,
     next_action: c.next_action || null,

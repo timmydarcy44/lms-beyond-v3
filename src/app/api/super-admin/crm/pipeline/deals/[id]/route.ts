@@ -42,6 +42,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (body?.source != null) patch.source = String(body.source);
   if (body?.company_name != null) patch.company_name = String(body.company_name).trim();
   if (body?.contact_first_name != null) patch.contact_first_name = String(body.contact_first_name).trim();
+  if (body?.contact_last_name !== undefined) {
+    patch.contact_last_name = body.contact_last_name ? String(body.contact_last_name).trim() : null;
+  }
   if (body?.email !== undefined) patch.email = body.email ? String(body.email).trim() : null;
   if (body?.phone !== undefined) patch.phone = body.phone ? String(body.phone).trim() : null;
   if (body?.notes !== undefined) patch.notes = body.notes ? String(body.notes).trim() : null;

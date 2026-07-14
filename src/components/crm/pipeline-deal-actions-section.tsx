@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { Loader2, Mic, MicOff, PenLine, Phone, Sparkles } from "lucide-react";
+import { Loader2, Mic, MicOff, PenLine, Phone, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,8 +19,10 @@ import {
 import {
   PIPELINE_ACTION_TYPES,
   pipelineActionLabel,
+  isCallActionType,
   type PipelineActionType,
 } from "@/lib/crm/pipeline-deal-action-types";
+import { pipelineOwnerLabel } from "@/lib/crm/pipeline-btob-owners";
 
 export type PipelineDealAction = {
   id: string;
@@ -33,38 +37,54 @@ export type PipelineDealAction = {
 
 type OverlayMode = "choose" | "dictate" | "write";
 
+function formatActionWhen(iso: string): string {
+  try {
+    return format(new Date(iso), "d MMM yyyy · HH:mm", { locale: fr });
+  } catch {
+    return iso.slice(0, 16).replace("T", " ");
+  }
+}
+
 function formatRecordingTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function actionMeta(type: string) {
+  return PIPELINE_ACTION_TYPES.find((t) => t.value === type);
+}
+
 export function PipelineDealActionsSection({
   dealId,
   phone,
   companyName,
-  contactName,
+  contactFirstName,
+  contactLastName,
   currentUserEmail,
   onActionsChange,
 }: {
   dealId?: string;
   phone?: string | null;
   companyName: string;
-  contactName: string;
+  contactFirstName: string;
+  contactLastName?: string;
   currentUserEmail: string | null;
   onActionsChange?: () => void;
 }) {
   const [actions, setActions] = useState<PipelineDealAction[]>([]);
   const [loading, setLoading] = useState(false);
-  const [actionType, setActionType] = useState<PipelineActionType>("call_success");
-  const [notes, setNotes] = useState("");
-  const [callActive, setCallActive] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [draftType, setDraftType] = useState<PipelineActionType>("call_success");
+  const [draftNotes, setDraftNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   const [postCallOverlayOpen, setPostCallOverlayOpen] = useState(false);
   const [overlayMode, setOverlayMode] = useState<OverlayMode>("choose");
+  const [callActive, setCallActive] = useState(false);
   const [recording, setRecording] = useState(false);
   const [hasRecording, setHasRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -72,7 +92,8 @@ export function PipelineDealActionsSection({
   const leftPageRef = useRef(false);
   const dictateAutoStartedRef = useRef(false);
 
-  const displayContact = contactName.trim() || companyName;
+  const displayContact =
+    [contactFirstName, contactLastName].filter(Boolean).join(" ").trim() || companyName;
 
   const load = useCallback(async () => {
     if (!dealId) return;
@@ -114,29 +135,18 @@ export function PipelineDealActionsSection({
   const openPostCallOverlay = useCallback(() => {
     setPostCallOverlayOpen(true);
     setOverlayMode("choose");
+    setAddOpen(false);
   }, []);
 
   useEffect(() => {
     if (!callActive) return;
-
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        leftPageRef.current = true;
-      } else if (
-        document.visibilityState === "visible" &&
-        callPendingRef.current &&
-        leftPageRef.current
-      ) {
-        openPostCallOverlay();
-      }
+      if (document.visibilityState === "hidden") leftPageRef.current = true;
+      else if (callPendingRef.current && leftPageRef.current) openPostCallOverlay();
     };
-
     const onFocus = () => {
-      if (callPendingRef.current && leftPageRef.current) {
-        openPostCallOverlay();
-      }
+      if (callPendingRef.current && leftPageRef.current) openPostCallOverlay();
     };
-
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onFocus);
     return () => {
@@ -169,7 +179,7 @@ export function PipelineDealActionsSection({
       setRecordingSeconds(0);
       setHasRecording(false);
     } catch {
-      toast.error("Microphone inaccessible — autorisez l'accès ou choisissez « Écrire ».");
+      toast.error("Microphone inaccessible.");
     }
   }, []);
 
@@ -202,14 +212,14 @@ export function PipelineDealActionsSection({
     window.location.href = `tel:${phone.replace(/\s/g, "")}`;
   };
 
-  const submitNotes = async (withAi: boolean) => {
+  const createAction = async (opts: {
+    actionType: PipelineActionType;
+    notes?: string;
+    withAi?: boolean;
+  }) => {
     if (!dealId) {
       toast.error("Enregistrez la fiche avant d'ajouter une action.");
-      return;
-    }
-    if (!notes.trim()) {
-      toast.error("Ajoutez un compte-rendu.");
-      return;
+      return false;
     }
     setSubmitting(true);
     try {
@@ -217,31 +227,55 @@ export function PipelineDealActionsSection({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action_type: actionType,
-          notes: notes.trim(),
-          with_ai_summary: withAi,
+          action_type: opts.actionType,
+          notes: opts.notes?.trim() || null,
+          with_ai_summary: opts.withAi === true,
           created_by_email: currentUserEmail,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      setNotes("");
-      finishCallFlow();
       await load();
       onActionsChange?.();
-      toast.success(withAi ? "Synthèse IA enregistrée" : "Action enregistrée");
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
+      return false;
     } finally {
       setSubmitting(false);
     }
   };
 
-  const submitAudio = async () => {
-    if (!dealId) {
-      toast.error("Enregistrez la fiche d'abord.");
+  const submitDraft = async (withAi: boolean) => {
+    const ok = await createAction({
+      actionType: draftType,
+      notes: draftNotes,
+      withAi,
+    });
+    if (!ok) return;
+    setAddOpen(false);
+    setDraftNotes("");
+    toast.success(withAi ? "Action enregistrée avec synthèse IA" : "Action enregistrée");
+  };
+
+  const submitPostCallNotes = async (withAi: boolean) => {
+    if (!draftNotes.trim() && withAi) {
+      toast.error("Ajoutez un compte-rendu ou choisissez « Dicter ».");
       return;
     }
+    const ok = await createAction({
+      actionType: draftType,
+      notes: draftNotes,
+      withAi,
+    });
+    if (!ok) return;
+    setDraftNotes("");
+    finishCallFlow();
+    toast.success(withAi ? "Synthèse IA enregistrée" : "Action enregistrée");
+  };
+
+  const submitAudio = async () => {
+    if (!dealId) return;
     const blob = new Blob(chunksRef.current, { type: "audio/webm" });
     if (blob.size < 1000) {
       toast.error("Enregistrement audio trop court.");
@@ -251,8 +285,8 @@ export function PipelineDealActionsSection({
     try {
       const form = new FormData();
       form.append("audio", blob, "call.webm");
-      form.append("action_type", actionType);
-      if (notes.trim()) form.append("notes", notes.trim());
+      form.append("action_type", draftType);
+      if (draftNotes.trim()) form.append("notes", draftNotes.trim());
       if (currentUserEmail) form.append("created_by_email", currentUserEmail);
 
       const res = await fetch(
@@ -261,7 +295,7 @@ export function PipelineDealActionsSection({
       );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      setNotes("");
+      setDraftNotes("");
       finishCallFlow();
       await load();
       onActionsChange?.();
@@ -273,167 +307,178 @@ export function PipelineDealActionsSection({
     }
   };
 
-  const closeOverlayLater = () => {
-    if (recording) stopRecording();
-    setPostCallOverlayOpen(false);
-    setOverlayMode("choose");
-    resetRecordingState();
+  const handlePickType = (type: PipelineActionType) => {
+    setDraftType(type);
+    if (type === "call_success" && phone?.trim()) {
+      startCall();
+    }
   };
-
-  const actionTypePicker = (
-    <div className="space-y-2">
-      <Label>Résultat de l&apos;appel</Label>
-      <div className="flex flex-wrap gap-1.5">
-        {PIPELINE_ACTION_TYPES.filter((t) =>
-          ["call_success", "call_no_answer", "call_voicemail", "call_busy", "call_failed"].includes(
-            t.value,
-          ),
-        ).map((t) => (
-          <button
-            key={t.value}
-            type="button"
-            className={`rounded-full border px-2.5 py-1 text-xs transition ${
-              actionType === t.value
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-gray-200 bg-white text-gray-700 hover:border-indigo-300"
-            }`}
-            onClick={() => setActionType(t.value)}
-          >
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
 
   if (!dealId) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
-        Enregistrez la fiche pour journaliser les appels et actions commerciales.
-      </div>
+      <section className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+        Enregistrez la fiche pour journaliser les actions commerciales.
+      </section>
     );
   }
 
   return (
     <>
-      <div className="space-y-4 border-t border-gray-200 pt-4">
-        <div>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-gray-900">Actions</p>
-          <p className="text-xs text-gray-500">
-            Appels, synthèses IA et historique pour {companyName}
-          </p>
-        </div>
-
-        {callActive && !postCallOverlayOpen ? (
-          <div className="flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-indigo-900">
-              Appel avec <span className="font-semibold">{displayContact}</span>
-            </p>
-            <Button type="button" size="sm" onClick={openPostCallOverlay}>
-              Résumer l&apos;appel
-            </Button>
-          </div>
-        ) : null}
-
-        <div className="flex flex-wrap gap-2">
-          {phone?.trim() ? (
-            <Button type="button" variant="default" size="sm" onClick={startCall}>
-              <Phone className="mr-2 h-4 w-4" />
-              Appeler via EDGE
-            </Button>
-          ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <Label>Type d&apos;action</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {PIPELINE_ACTION_TYPES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                className={`rounded-full border px-2.5 py-1 text-xs transition ${
-                  actionType === t.value
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-gray-200 bg-white text-gray-700 hover:border-indigo-300"
-                }`}
-                onClick={() => setActionType(t.value)}
-              >
-                {t.icon} {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Notes / compte-rendu</Label>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="Synthèse, objections, prochaines étapes…"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             size="sm"
             variant="outline"
-            disabled={submitting}
-            onClick={() => void submitNotes(false)}
+            className="h-8 gap-1"
+            onClick={() => {
+              setDraftType("call_success");
+              setDraftNotes("");
+              setAddOpen(true);
+            }}
           >
-            Enregistrer
-          </Button>
-          <Button type="button" size="sm" disabled={submitting} onClick={() => void submitNotes(true)}>
-            {submitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            Synthèse IA
+            <Plus className="h-4 w-4" />
+            Ajouter
           </Button>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Historique</p>
-          {loading ? (
-            <p className="text-sm text-gray-500">Chargement…</p>
-          ) : actions.length === 0 ? (
-            <p className="text-sm text-gray-500">Aucune action enregistrée.</p>
-          ) : (
-            <ul className="space-y-2">
-              {actions.map((a) => (
-                <li key={a.id} className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-gray-900">
-                      {pipelineActionLabel(a.action_type)}
-                    </span>
-                    <span className="text-xs text-gray-500">{a.created_at.slice(0, 10)}</span>
+        {callActive && !postCallOverlayOpen ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm text-indigo-900">
+            <span>Appel avec {displayContact}</span>
+            <Button type="button" size="sm" variant="secondary" onClick={openPostCallOverlay}>
+              Résumer
+            </Button>
+          </div>
+        ) : null}
+
+        {loading ? (
+          <p className="text-sm text-gray-500">Chargement…</p>
+        ) : actions.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+            Aucune action consignée. Cliquez sur + pour journaliser un appel, un email ou une note.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {actions.map((a) => {
+              const meta = actionMeta(a.action_type);
+              return (
+                <li
+                  key={a.id}
+                  className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <span aria-hidden>{meta?.icon ?? "•"}</span>
+                        {pipelineActionLabel(a.action_type)}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {formatActionWhen(a.created_at)}
+                        {a.created_by_email
+                          ? ` · ${pipelineOwnerLabel(a.created_by_email)}`
+                          : null}
+                      </p>
+                    </div>
                   </div>
                   {a.ai_summary ? (
-                    <p className="mt-2 whitespace-pre-wrap text-xs text-gray-700">{a.ai_summary}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{a.ai_summary}</p>
                   ) : a.notes ? (
-                    <p className="mt-2 text-xs text-gray-600">{a.notes}</p>
+                    <p className="mt-2 text-sm text-gray-600">{a.notes}</p>
                   ) : null}
                 </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
+      {/* Ajouter une action */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="gap-4 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nouvelle action</DialogTitle>
+            <DialogDescription>
+              Choisissez le type — date, heure et auteur seront enregistrés automatiquement.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-2">
+            {PIPELINE_ACTION_TYPES.map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                className={`rounded-lg border px-3 py-2.5 text-left text-sm transition ${
+                  draftType === t.value
+                    ? "border-indigo-600 bg-indigo-50 font-medium text-indigo-900"
+                    : "border-gray-200 hover:border-indigo-300"
+                }`}
+                onClick={() => handlePickType(t.value)}
+              >
+                <span className="mr-1.5">{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {isCallActionType(draftType) && phone?.trim() ? (
+            <Button type="button" variant="outline" size="sm" onClick={startCall}>
+              <Phone className="mr-2 h-4 w-4" />
+              Appeler {displayContact}
+            </Button>
+          ) : null}
+
+          <div className="space-y-2">
+            <Label>Détails (optionnel)</Label>
+            <Textarea
+              value={draftNotes}
+              onChange={(e) => setDraftNotes(e.target.value)}
+              rows={3}
+              placeholder="Compte-rendu, objections, prochaine étape…"
+            />
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => void submitDraft(false)}
+            >
+              Enregistrer
+            </Button>
+            <Button type="button" disabled={submitting} onClick={() => void submitDraft(true)}>
+              {submitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Synthèse IA
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Post-appel */}
       <Dialog
         open={postCallOverlayOpen}
         onOpenChange={(open) => {
-          if (!open) closeOverlayLater();
+          if (!open) {
+            if (recording) stopRecording();
+            resetRecordingState();
+            setPostCallOverlayOpen(false);
+            setOverlayMode("choose");
+          }
         }}
       >
-        <DialogContent className="gap-5 sm:max-w-md" showCloseButton>
+        <DialogContent className="gap-5 sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Maintenant, résumons l&apos;appel</DialogTitle>
             <DialogDescription>
-              Avec {displayContact} — dictez ou écrivez ce qui s&apos;est passé, l&apos;IA
-              structurera la synthèse.
+              Avec {displayContact} — dictez ou écrivez ce qui s&apos;est passé.
             </DialogDescription>
           </DialogHeader>
 
@@ -441,106 +486,69 @@ export function PipelineDealActionsSection({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                className="flex flex-col items-center gap-3 rounded-xl border-2 border-indigo-100 bg-indigo-50/80 p-5 text-center transition hover:border-indigo-400 hover:bg-indigo-50"
+                className="flex flex-col items-center gap-2 rounded-xl border-2 border-indigo-100 bg-indigo-50/80 p-5 text-center transition hover:border-indigo-400"
                 onClick={() => setOverlayMode("dictate")}
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white">
-                  <Mic className="h-6 w-6" />
-                </span>
-                <span className="font-semibold text-gray-900">Dicter</span>
-                <span className="text-xs text-gray-600">
-                  Enregistrez un résumé oral — transcription &amp; synthèse IA
-                </span>
+                <Mic className="h-8 w-8 text-indigo-600" />
+                <span className="font-semibold">Dicter</span>
               </button>
               <button
                 type="button"
-                className="flex flex-col items-center gap-3 rounded-xl border-2 border-slate-100 bg-slate-50/80 p-5 text-center transition hover:border-slate-300 hover:bg-slate-50"
+                className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-100 bg-slate-50/80 p-5 text-center transition hover:border-slate-300"
                 onClick={() => setOverlayMode("write")}
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-white">
-                  <PenLine className="h-6 w-6" />
-                </span>
-                <span className="font-semibold text-gray-900">Écrire</span>
-                <span className="text-xs text-gray-600">
-                  Saisissez vos notes — synthèse IA en un clic
-                </span>
+                <PenLine className="h-8 w-8 text-slate-700" />
+                <span className="font-semibold">Écrire</span>
               </button>
             </div>
           ) : null}
 
-          {overlayMode !== "choose" ? actionTypePicker : null}
-
           {overlayMode === "dictate" ? (
-            <div className="space-y-4">
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-6">
+            <div className="space-y-3">
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50/50 py-5">
                 {recording ? (
                   <>
-                    <span className="relative flex h-16 w-16 items-center justify-center">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-30" />
-                      <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600 text-white">
-                        <Mic className="h-7 w-7" />
-                      </span>
-                    </span>
-                    <p className="font-mono text-lg font-semibold text-indigo-900">
+                    <Mic className="h-8 w-8 animate-pulse text-indigo-600" />
+                    <p className="font-mono text-lg font-semibold">
                       {formatRecordingTime(recordingSeconds)}
-                    </p>
-                    <p className="text-center text-sm text-indigo-800">
-                      Parlez librement : points clés, objections, prochaine étape…
                     </p>
                     <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
                       <MicOff className="mr-2 h-4 w-4" />
-                      Terminer l&apos;enregistrement
+                      Terminer
                     </Button>
                   </>
                 ) : hasRecording ? (
-                  <>
-                    <p className="text-sm font-medium text-gray-900">
-                      Enregistrement prêt ({formatRecordingTime(recordingSeconds)})
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={submitting}
-                      onClick={() => void submitAudio()}
-                    >
-                      {submitting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                      )}
-                      Transcrire &amp; synthétiser
-                    </Button>
-                  </>
+                  <Button type="button" disabled={submitting} onClick={() => void submitAudio()}>
+                    {submitting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-4 w-4" />
+                    )}
+                    Transcrire &amp; synthétiser
+                  </Button>
                 ) : (
                   <Button type="button" size="sm" onClick={() => void startRecording()}>
-                    <Mic className="mr-2 h-4 w-4" />
                     Relancer le micro
                   </Button>
                 )}
               </div>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                placeholder="Notes complémentaires (optionnel)"
-              />
             </div>
           ) : null}
 
           {overlayMode === "write" ? (
             <div className="space-y-3">
               <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                value={draftNotes}
+                onChange={(e) => setDraftNotes(e.target.value)}
                 rows={5}
                 autoFocus
-                placeholder="Que s'est-il passé ? Objections, décisions, prochaine étape…"
+                placeholder="Que s'est-il passé ?"
               />
               <Button
                 type="button"
                 className="w-full"
-                disabled={submitting || !notes.trim()}
-                onClick={() => void submitNotes(true)}
+                disabled={submitting || !draftNotes.trim()}
+                onClick={() => void submitPostCallNotes(true)}
               >
                 {submitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -552,12 +560,11 @@ export function PipelineDealActionsSection({
             </div>
           ) : null}
 
-          <DialogFooter className="gap-2 sm:justify-between">
+          <DialogFooter>
             {overlayMode !== "choose" ? (
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
                 onClick={() => {
                   if (recording) stopRecording();
                   resetRecordingState();
@@ -566,10 +573,8 @@ export function PipelineDealActionsSection({
               >
                 Retour
               </Button>
-            ) : (
-              <span />
-            )}
-            <Button type="button" variant="outline" size="sm" onClick={closeOverlayLater}>
+            ) : null}
+            <Button type="button" variant="outline" onClick={() => finishCallFlow()}>
               Plus tard
             </Button>
           </DialogFooter>

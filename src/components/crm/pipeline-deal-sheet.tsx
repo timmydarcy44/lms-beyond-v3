@@ -20,7 +20,7 @@ function SheetOverlay({
   );
 }
 
-/** Panneau gauche — animation lente du bas vers le haut. */
+/** Panneau droit — animation lente du bas vers le haut. */
 export function PipelineDealSheet({
   open,
   onOpenChange,
@@ -38,7 +38,7 @@ export function PipelineDealSheet({
         <SheetOverlay />
         <SheetPrimitive.Content
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-full w-full max-w-xl flex-col border-r border-slate-200 bg-white shadow-2xl outline-none",
+            "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-white shadow-2xl outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
             "data-[state=open]:duration-700 data-[state=closed]:duration-500 ease-out",

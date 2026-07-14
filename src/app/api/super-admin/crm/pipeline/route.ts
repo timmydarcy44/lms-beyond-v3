@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
   const stage_slug = String(body?.stage_slug ?? (pipeline_type === "btoc" ? "inscription" : "a_appeler")).trim();
   const company_name = String(body?.company_name ?? "").trim();
   const contact_first_name = String(body?.contact_first_name ?? "").trim();
+  const contact_last_name = body?.contact_last_name ? String(body.contact_last_name).trim() : null;
 
   if (!company_name) {
     return NextResponse.json({ error: "Nom de l'entreprise requis" }, { status: 400 });
@@ -110,6 +111,7 @@ export async function POST(req: NextRequest) {
     stage_slug,
     company_name,
     contact_first_name,
+    contact_last_name,
     email: body?.email ? String(body.email).trim() : null,
     phone: body?.phone ? String(body.phone).trim() : null,
     amount_cents,

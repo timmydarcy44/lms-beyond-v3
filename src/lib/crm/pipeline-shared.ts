@@ -82,6 +82,7 @@ export type PipelineDeal = PipelineDealCommercial & {
   source?: string;
   company_name: string;
   contact_first_name: string;
+  contact_last_name?: string | null;
   email: string | null;
   phone: string | null;
   amount_cents: number;

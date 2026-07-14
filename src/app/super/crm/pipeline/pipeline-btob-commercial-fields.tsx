@@ -149,11 +149,13 @@ export function PipelineBtobCommercialFields({
   onChange,
   stageSlug,
   contactFirstName,
+  hideLinkedIn = false,
 }: {
   value: BtobCommercialFormState;
   onChange: (next: BtobCommercialFormState) => void;
   stageSlug?: string;
   contactFirstName?: string;
+  hideLinkedIn?: boolean;
 }) {
   const [trainingDraft, setTrainingDraft] = useState("");
 
@@ -314,17 +316,21 @@ export function PipelineBtobCommercialFields({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <LinkedInField
-          label="LinkedIn contact"
-          value={value.contact_linkedin}
-          onChange={(contact_linkedin) => patch({ contact_linkedin })}
-        />
-        <LinkedInField
-          label="LinkedIn société"
-          value={value.company_linkedin}
-          onChange={(company_linkedin) => patch({ company_linkedin })}
-          viewLabel="Voir la page"
-        />
+        {!hideLinkedIn ? (
+          <>
+            <LinkedInField
+              label="LinkedIn contact"
+              value={value.contact_linkedin}
+              onChange={(contact_linkedin) => patch({ contact_linkedin })}
+            />
+            <LinkedInField
+              label="LinkedIn société"
+              value={value.company_linkedin}
+              onChange={(company_linkedin) => patch({ company_linkedin })}
+              viewLabel="Voir la page"
+            />
+          </>
+        ) : null}
         <div className="space-y-2">
           <Label>Rôle du contact</Label>
           <Input value={value.contact_role} onChange={(e) => patch({ contact_role: e.target.value })} />

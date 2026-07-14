@@ -3,14 +3,19 @@
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
-  CalendarClock,
+  CheckCircle2,
+  Circle,
   ExternalLink,
+  Heart,
   Loader2,
   Mail,
   Phone,
   Sparkles,
+  TrendingUp,
   UserPlus,
+  XCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -54,6 +59,29 @@ export type DealCockpitForm = {
   company_creation_date: string;
   quoted_course_ids: string[];
 };
+
+function healthVisual(score: number, level: string) {
+  if (level === "green" || score >= 70) {
+    return { emoji: "🟢", text: "text-emerald-400", bg: "bg-emerald-500/15", border: "border-emerald-400/30" };
+  }
+  if (level === "amber" || score >= 40) {
+    return { emoji: "🟠", text: "text-amber-300", bg: "bg-amber-500/15", border: "border-amber-400/30" };
+  }
+  return { emoji: "🔴", text: "text-rose-300", bg: "bg-rose-500/20", border: "border-rose-400/40" };
+}
+
+export function sanitizeHumanNotes(notes: string | null | undefined): string {
+  if (!notes) return "";
+  return notes
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return false;
+      return !/^(OPCO|NAF|Adresse|Effectif|SIRET|Secteur)\s*:/i.test(t);
+    })
+    .join("\n")
+    .trim();
+}
 
 function formatSiret(raw: string): string {
   const d = raw.replace(/\s/g, "");
@@ -176,64 +204,174 @@ export function PipelineDealCockpit({
   ].filter(Boolean) as string[];
 
   const missingItems = intel.missingFields.slice(0, 6).map((f) => f.label);
+  const hv = healthVisual(intel.healthScore, intel.healthLevel);
+  const nextActionOverdue =
+    commercial.next_action_date && commercial.next_action_date < new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-4 text-gray-900">
-      {/* Prochaine action — priorité absolue */}
-      <section
-        className={`rounded-xl border p-4 ${commercial.next_action?.trim() ? "border-indigo-200 bg-indigo-50/80" : "border-amber-200 bg-amber-50/80"}`}
-      >
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Prochaine action</p>
-        {commercial.next_action?.trim() ? (
-          <>
-            <p className="mt-1 text-base font-semibold text-gray-900">{commercial.next_action}</p>
-            {nextActionDateLabel ? (
-              <p className="mt-1 text-sm text-gray-600">À réaliser avant le {nextActionDateLabel}</p>
-            ) : null}
-          </>
-        ) : (
-          <p className="mt-1 flex items-center gap-2 text-sm font-medium text-amber-800">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            Aucune prochaine action planifiée
-          </p>
-        )}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Input
-            className="h-9 max-w-xs bg-white text-sm"
-            placeholder="Action à mener…"
-            value={commercial.next_action}
-            onChange={(e) => setCommercial((c) => ({ ...c, next_action: e.target.value }))}
-          />
-          <Input
-            type="date"
-            className="h-9 w-auto bg-white text-sm"
-            value={commercial.next_action_date}
-            onChange={(e) => setCommercial((c) => ({ ...c, next_action_date: e.target.value }))}
-          />
-        </div>
-      </section>
+      {/* Bandeau intelligence EDGE — impact visuel */}
+      <div className="relative -mx-4 -mt-4 mb-2 overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-5 text-white sm:-mx-6 sm:-mt-6 sm:px-6">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.25),transparent_55%)]" />
 
-      {/* SIRET — outil d'enrichissement */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-gray-500">SIRET</Label>
-        <div className="mt-1.5 flex gap-2">
-          <Input
-            value={form.siret}
-            onChange={(e) => setForm((f) => ({ ...f, siret: e.target.value }))}
-            placeholder="14 chiffres — ou laissez vide si inconnu"
-            className="font-mono text-sm"
-          />
-          <Button type="button" variant="outline" disabled={siretLoading} onClick={onLookupSiret}>
-            {siretLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rechercher"}
-          </Button>
+        {/* Prochaine action */}
+        <div
+          className={cn(
+            "relative mb-4 rounded-xl border p-4",
+            commercial.next_action?.trim()
+              ? nextActionOverdue
+                ? "border-rose-400/50 bg-rose-950/40"
+                : "border-violet-400/30 bg-violet-950/35"
+              : "border-amber-400/40 bg-amber-950/35",
+          )}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-200/90">
+            Prochaine action
+          </p>
+          {commercial.next_action?.trim() ? (
+            <>
+              <p className="mt-1 text-base font-bold text-white">{commercial.next_action}</p>
+              {nextActionDateLabel ? (
+                <p
+                  className={cn(
+                    "mt-1 text-sm",
+                    nextActionOverdue ? "font-semibold text-rose-300" : "text-slate-300",
+                  )}
+                >
+                  {nextActionOverdue ? "⚠ En retard — " : "À réaliser avant le "}
+                  {nextActionDateLabel}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-amber-200">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+              Aucune prochaine action planifiée
+            </p>
+          )}
+          <div className="relative mt-3 flex flex-wrap gap-2">
+            <Input
+              className="h-9 max-w-xs border-white/20 bg-white/10 text-sm text-white placeholder:text-slate-400"
+              placeholder="Action à mener…"
+              value={commercial.next_action}
+              onChange={(e) => setCommercial((c) => ({ ...c, next_action: e.target.value }))}
+            />
+            <Input
+              type="date"
+              className="h-9 w-auto border-white/20 bg-white/10 text-sm text-white"
+              value={commercial.next_action_date}
+              onChange={(e) => setCommercial((c) => ({ ...c, next_action_date: e.target.value }))}
+            />
+          </div>
         </div>
-        <p className="mt-1.5 text-xs text-gray-500">
-          Remplit automatiquement raison sociale, adresse, NAF, effectif et OPCO.
-        </p>
-      </section>
+
+        {/* Dossier incomplet */}
+        {intel.missingFields.length > 0 ? (
+          <div className="relative mb-4 rounded-xl border border-amber-400/35 bg-amber-950/30 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+              Dossier incomplet — {intel.completenessScore}%
+            </p>
+            <ul className="mt-2 space-y-1">
+              {intel.missingFields.slice(0, 4).map((f) => (
+                <li key={f.key} className="flex items-center gap-2 text-xs text-amber-100/90">
+                  <Circle className="h-3 w-3 shrink-0" />
+                  {f.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="relative mb-4 flex items-center gap-2 text-xs text-emerald-300">
+            <CheckCircle2 className="h-4 w-4" />
+            Dossier complet ({intel.completenessScore}%)
+          </div>
+        )}
+
+        {/* Health Score */}
+        <div className={cn("relative mb-4 rounded-xl border p-4", hv.bg, hv.border)}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-200/80">
+                Health Score
+              </p>
+              <p className={cn("mt-1 text-4xl font-bold", hv.text)}>
+                {intel.healthScore}
+                <span className="text-xl font-normal text-slate-400">/100</span> {hv.emoji}
+              </p>
+              <p className="mt-1 text-sm text-slate-300">
+                Probabilité de signature :{" "}
+                <span className="font-semibold text-white">{intel.signatureProbability}%</span>
+              </p>
+            </div>
+            <TrendingUp className="h-6 w-6 shrink-0 text-indigo-300" />
+          </div>
+          <ul className="mt-3 grid gap-1 sm:grid-cols-2">
+            {intel.checks.slice(0, 6).map((c) => (
+              <li key={c.label} className="flex items-start gap-2 text-xs">
+                {c.ok ? (
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                ) : (
+                  <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
+                )}
+                <span className={c.ok ? "text-slate-300" : "text-rose-200"}>{c.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {intel.atRisk ? (
+          <div className="relative mb-4 flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-950/50 px-4 py-3 text-sm font-semibold text-rose-100">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-rose-400" />
+            Attention : deal en risque — action requise.
+          </div>
+        ) : null}
+
+        <div className="relative grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-center text-sm">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">Étape</p>
+            <p className="font-semibold text-white">{stageLabel}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">Priorité</p>
+            <p className="font-semibold text-white">{priorityLabel(commercial.priority)}</p>
+          </div>
+          <div className="flex flex-col items-center">
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">Relation</p>
+            <p className="flex items-center gap-1 font-semibold text-white">
+              <Heart className="h-3.5 w-3.5 text-rose-400" />
+              {intel.relationshipScore}%
+            </p>
+          </div>
+        </div>
+
+        {/* SIRET compact dans le bandeau */}
+        <div className="relative mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            Enrichir via SIRET
+          </p>
+          <div className="mt-1.5 flex gap-2">
+            <Input
+              value={form.siret}
+              onChange={(e) => setForm((f) => ({ ...f, siret: e.target.value }))}
+              placeholder="14 chiffres"
+              className="h-8 border-white/15 bg-white/10 font-mono text-xs text-white placeholder:text-slate-500"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 shrink-0 bg-white/15 text-white hover:bg-white/25"
+              disabled={siretLoading}
+              onClick={onLookupSiret}
+            >
+              {siretLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rechercher"}
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* En-tête prospect */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4">
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <Input
@@ -250,7 +388,7 @@ export function PipelineDealCockpit({
           </div>
           <div className="flex flex-wrap gap-1.5">
             {form.phone?.trim() ? (
-              <Button type="button" size="sm" variant="outline" asChild>
+              <Button type="button" size="sm" className="bg-indigo-600 hover:bg-indigo-700" asChild>
                 <a href={`tel:${form.phone.replace(/\s/g, "")}`}>
                   <Phone className="mr-1.5 h-4 w-4" />
                   Appeler
@@ -285,31 +423,6 @@ export function PipelineDealCockpit({
           </div>
         </div>
 
-        {/* Bandeau commercial */}
-        <div className="mt-4 grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-3 text-center text-sm">
-          <div>
-            <p className="text-xs text-gray-500">Health Score</p>
-            <p className="font-bold text-gray-900">
-              {intel.healthScore}/100
-              {intel.atRisk ? " ⚠" : ""}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Étape</p>
-            <p className="font-semibold text-gray-900">{stageLabel}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Priorité</p>
-            <p className="font-semibold text-gray-900">{priorityLabel(commercial.priority)}</p>
-          </div>
-        </div>
-        <p className="mt-2 text-xs text-gray-500">
-          Probabilité de signature : {intel.signatureProbability}%
-          {commercial.last_contact_date
-            ? ` · Dernier contact : ${commercial.last_contact_date}`
-            : " · Dernier contact : aucun"}
-        </p>
-
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="space-y-1">
             <Label className="text-xs text-gray-500">Étape pipeline</Label>
@@ -343,14 +456,14 @@ export function PipelineDealCockpit({
       </section>
 
       {/* Synthèse EDGE */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4">
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-gray-900">Synthèse EDGE</p>
           {onGenerateAiSummary ? (
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              className="bg-indigo-600 hover:bg-indigo-700"
               disabled={generatingAiSummary || !form.id}
               onClick={onGenerateAiSummary}
             >
@@ -365,27 +478,29 @@ export function PipelineDealCockpit({
         </div>
 
         {aiProspectSummary ? (
-          <p className="mt-3 whitespace-pre-wrap text-sm text-gray-700">{aiProspectSummary}</p>
+          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/80 p-3">
+            <p className="whitespace-pre-wrap text-sm text-emerald-950">{aiProspectSummary}</p>
+          </div>
         ) : (
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold uppercase text-gray-500">Ce que nous savons</p>
-              <ul className="mt-2 space-y-1 text-sm text-gray-700">
+            <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
+              <p className="text-xs font-semibold uppercase text-indigo-800">Ce que nous savons</p>
+              <ul className="mt-2 space-y-1.5 text-sm text-indigo-950/90">
                 {knowsItems.map((item) => (
                   <li key={item} className="flex gap-2">
-                    <span className="text-indigo-500">•</span>
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
                     {item}
                   </li>
                 ))}
               </ul>
             </div>
             {missingItems.length > 0 ? (
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">Ce qu&apos;il manque</p>
-                <ul className="mt-2 space-y-1 text-sm text-gray-700">
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                <p className="text-xs font-semibold uppercase text-amber-900">Ce qu&apos;il manque</p>
+                <ul className="mt-2 space-y-1.5 text-sm text-amber-950">
                   {missingItems.map((item) => (
                     <li key={item} className="flex gap-2">
-                      <span className="text-amber-500">•</span>
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                       {item}
                     </li>
                   ))}
@@ -486,7 +601,7 @@ export function PipelineDealCockpit({
       </section>
 
       {/* Activité */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 to-white p-4 shadow-sm">
         <PipelineDealActionsSection
           dealId={form.id}
           phone={form.phone}
@@ -705,12 +820,13 @@ export function PipelineDealCockpit({
         <PipelineLightSection
           title="Informations à compléter"
           badge={`${missingItems.length}`}
+          tone="warning"
           defaultOpen={false}
         >
-          <ul className="space-y-1 text-sm text-gray-700">
+          <ul className="space-y-1.5 text-sm text-amber-950">
             {missingItems.map((item) => (
               <li key={item} className="flex gap-2">
-                <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                 {item}
               </li>
             ))}

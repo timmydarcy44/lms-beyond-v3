@@ -46,7 +46,7 @@ import {
 import { Users } from "lucide-react";
 import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsible-section";
 import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pipeline-deal-sheet";
-import { PipelineDealCockpit } from "@/components/crm/pipeline-deal-cockpit";
+import { PipelineDealCockpit, sanitizeHumanNotes } from "@/components/crm/pipeline-deal-cockpit";
 import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
 import { PipelineNafAnalytics } from "@/components/crm/pipeline-naf-analytics";
@@ -327,7 +327,7 @@ export function PipelineBoardClient({
       email: deal.email ?? "",
       phone: deal.phone ?? "",
       amount: deal.amount_cents ? String(deal.amount_cents / 100) : "",
-      notes: deal.notes ?? "",
+      notes: sanitizeHumanNotes(deal.notes) || "",
       city: deal.city ?? "",
       zip_code: deal.zip_code ?? "",
       company_creation_date: (deal.company_creation_date ?? "") as string,

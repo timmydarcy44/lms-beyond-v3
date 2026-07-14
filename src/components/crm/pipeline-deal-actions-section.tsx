@@ -353,7 +353,7 @@ export function PipelineDealActionsSection({
           <Button
             type="button"
             size="sm"
-            variant="default"
+            variant="destructive"
             disabled={!phone?.trim()}
             onClick={() => void quickLog("call_success")}
           >

@@ -12,6 +12,7 @@ const withPWA = require("next-pwa")({
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  transpilePackages: ["@svg-maps/france.departments"],
   typescript: {
     ignoreBuildErrors: true,
   },

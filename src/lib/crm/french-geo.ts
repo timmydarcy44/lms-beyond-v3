@@ -1,3 +1,7 @@
+import { coordsFromCityName, extractCityCandidates } from "@/lib/crm/french-cities";
+
+export const FRANCE_MAP_VIEWBOX = { width: 613, height: 585 };
+
 /** Coordonnées approximatives (centroïde département métropole) pour cartographie pipeline. */
 const DEPARTMENT_CENTROIDS: Record<string, { lat: number; lng: number }> = {
   "01": { lat: 46.2, lng: 5.22 },
@@ -97,8 +101,22 @@ const DEPARTMENT_CENTROIDS: Record<string, { lat: number; lng: number }> = {
 };
 
 export function parseZipFromText(raw: string | null | undefined): string | null {
-  const match = String(raw ?? "").match(/\b(\d{5})\b/);
-  return match?.[1] ?? null;
+  const text = String(raw ?? "");
+  const match = text.match(/\b(\d{5})\b/);
+  if (match?.[1]) return match[1];
+  const spaced = text.match(/\b(\d{2})\s?(\d{3})\b/);
+  if (spaced) return `${spaced[1]}${spaced[2]}`;
+  return null;
+}
+
+function coordsFromCityFields(
+  ...parts: Array<string | null | undefined>
+): { lat: number; lng: number } | null {
+  for (const candidate of extractCityCandidates(...parts)) {
+    const coords = coordsFromCityName(candidate);
+    if (coords) return coords;
+  }
+  return null;
 }
 
 export function departmentFromZip(zip: string | null | undefined): string | null {
@@ -119,16 +137,30 @@ export function centroidFromZip(zip: string | null | undefined): { lat: number; 
 export function projectLatLngToSvg(
   lat: number,
   lng: number,
-  width: number,
-  height: number,
+  width = FRANCE_MAP_VIEWBOX.width,
+  height = FRANCE_MAP_VIEWBOX.height,
 ): { x: number; y: number } {
   const minLat = 41.0;
-  const maxLat = 51.2;
-  const minLng = -5.5;
-  const maxLng = 9.8;
+  const maxLat = 51.1;
+  const minLng = -5.2;
+  const maxLng = 9.5;
   const x = ((lng - minLng) / (maxLng - minLng)) * width;
   const y = ((maxLat - lat) / (maxLat - minLat)) * height;
   return { x: Math.max(4, Math.min(width - 4, x)), y: Math.max(4, Math.min(height - 4, y)) };
+}
+
+function jitterCoords(
+  lat: number,
+  lng: number,
+  index: number,
+): { lat: number; lng: number } {
+  if (index === 0) return { lat, lng };
+  const angle = index * 1.7;
+  const radius = 0.12 + index * 0.04;
+  return {
+    lat: lat + Math.sin(angle) * radius,
+    lng: lng + Math.cos(angle) * radius,
+  };
 }
 
 export type DealGeoPoint = {
@@ -143,7 +175,9 @@ export function resolveDealGeoPoint(deal: {
   id: string;
   company_name: string;
   location?: string | null;
+  city?: string | null;
   zip_code?: string | null;
+  notes?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   naf_code?: string | null;
@@ -157,14 +191,62 @@ export function resolveDealGeoPoint(deal: {
       naf_code: deal.naf_code,
     };
   }
-  const zip = deal.zip_code ?? parseZipFromText(deal.location);
-  const centroid = centroidFromZip(zip);
-  if (!centroid) return null;
-  return {
-    id: deal.id,
-    company_name: deal.company_name,
-    lat: centroid.lat,
-    lng: centroid.lng,
-    naf_code: deal.naf_code,
-  };
+
+  const zip =
+    deal.zip_code
+    ?? parseZipFromText(deal.location)
+    ?? parseZipFromText(deal.city)
+    ?? parseZipFromText(deal.notes);
+  const fromZip = centroidFromZip(zip);
+  if (fromZip) {
+    return {
+      id: deal.id,
+      company_name: deal.company_name,
+      lat: fromZip.lat,
+      lng: fromZip.lng,
+      naf_code: deal.naf_code,
+    };
+  }
+
+  const fromCity = coordsFromCityFields(deal.city, deal.location, deal.notes);
+  if (fromCity) {
+    return {
+      id: deal.id,
+      company_name: deal.company_name,
+      lat: fromCity.lat,
+      lng: fromCity.lng,
+      naf_code: deal.naf_code,
+    };
+  }
+
+  return null;
+}
+
+export function resolveAllDealGeoPoints(
+  deals: Array<{
+    id: string;
+    company_name: string;
+    location?: string | null;
+    city?: string | null;
+    zip_code?: string | null;
+    notes?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    naf_code?: string | null;
+  }>,
+): DealGeoPoint[] {
+  const bucketCounts = new Map<string, number>();
+  const points: DealGeoPoint[] = [];
+
+  for (const deal of deals) {
+    const base = resolveDealGeoPoint(deal);
+    if (!base) continue;
+    const key = `${base.lat.toFixed(2)}_${base.lng.toFixed(2)}`;
+    const index = bucketCounts.get(key) ?? 0;
+    bucketCounts.set(key, index + 1);
+    const jittered = jitterCoords(base.lat, base.lng, index);
+    points.push({ ...base, ...jittered });
+  }
+
+  return points;
 }

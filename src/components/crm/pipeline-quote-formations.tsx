@@ -24,6 +24,15 @@ function parsePrice(raw: unknown): number {
   return 0;
 }
 
+function computeTotalCents(courses: TrainingCourseOption[], ids: string[]): number {
+  return courses
+    .filter((c) => ids.includes(c.id))
+    .reduce((sum, c) => {
+      const price = parsePrice(c.intra_price) || parsePrice(c.inter_price);
+      return sum + Math.round(price * 100);
+    }, 0);
+}
+
 export function PipelineQuoteFormations({
   selectedIds,
   onChange,
@@ -87,24 +96,16 @@ export function PipelineQuoteFormations({
   );
 
   const totalCents = useMemo(
-    () =>
-      selectedCourses.reduce((sum, c) => {
-        const price = parsePrice(c.intra_price) || parsePrice(c.inter_price);
-        return sum + Math.round(price * 100);
-      }, 0),
-    [selectedCourses],
+    () => computeTotalCents(courses, selectedIds),
+    [courses, selectedIds],
   );
 
-  useEffect(() => {
-    onTotalChange?.(totalCents);
-  }, [totalCents, onTotalChange]);
-
   const toggle = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((x) => x !== id));
-    } else {
-      onChange([...selectedIds, id]);
-    }
+    const nextIds = selectedIds.includes(id)
+      ? selectedIds.filter((x) => x !== id)
+      : [...selectedIds, id];
+    onChange(nextIds);
+    onTotalChange?.(computeTotalCents(courses, nextIds));
   };
 
   return (
@@ -138,18 +139,22 @@ export function PipelineQuoteFormations({
               const checked = selectedIds.includes(course.id);
               const price = parsePrice(course.intra_price) || parsePrice(course.inter_price);
               return (
-                <label
+                <button
                   key={course.id}
-                  className={`flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm transition ${
+                  type="button"
+                  className={`flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-left text-sm transition ${
                     checked ? "bg-indigo-50" : "hover:bg-gray-50"
                   }`}
+                  onClick={() => toggle(course.id)}
                 >
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={checked}
-                    onChange={() => toggle(course.id)}
-                  />
+                  <span
+                    className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                      checked ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white"
+                    }`}
+                    aria-hidden
+                  >
+                    {checked ? "✓" : ""}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="font-medium text-gray-900">{course.title}</span>
                     {course.domain ? (
@@ -162,7 +167,7 @@ export function PipelineQuoteFormations({
                       </span>
                     ) : null}
                   </span>
-                </label>
+                </button>
               );
             })
           )}

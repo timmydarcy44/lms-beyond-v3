@@ -45,10 +45,11 @@ import {
   pipelineOwnerLabel,
 } from "@/lib/crm/pipeline-btob-owners";
 import { Users } from "lucide-react";
+import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsible-section";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
 import { PipelineNafAnalytics } from "@/components/crm/pipeline-naf-analytics";
 import { PipelineQuoteFormations } from "@/components/crm/pipeline-quote-formations";
-import { centroidFromZip } from "@/lib/crm/french-geo";
+import { centroidFromZip, parseZipFromText, resolveAllDealGeoPoints } from "@/lib/crm/french-geo";
 
 type DealForm = {
   id?: string;
@@ -239,6 +240,25 @@ export function PipelineBoardClient({
       .slice(0, 8);
   }, [filteredDeals, isBtoc]);
 
+  const geoPointsCount = useMemo(
+    () => resolveAllDealGeoPoints(filteredDeals).length,
+    [filteredDeals],
+  );
+
+  const nafCount = useMemo(
+    () => filteredDeals.filter((d) => d.naf_code?.trim()).length,
+    [filteredDeals],
+  );
+
+  const handleQuoteTotalChange = useCallback((cents: number) => {
+    if (cents <= 0) return;
+    setForm((f) => {
+      const next = String(cents / 100);
+      if (f.amount === next) return f;
+      return { ...f, amount: next };
+    });
+  }, []);
+
   const openCreate = (stageSlug: string) => {
     setForm(emptyDeal(stageSlug));
     setCommercial(emptyBtobCommercial());
@@ -317,7 +337,11 @@ export function PipelineBoardClient({
       toast.error("Nom de l'entreprise requis");
       return;
     }
-    const zip = form.zip_code.trim() || null;
+    const zip =
+      form.zip_code.trim()
+      || parseZipFromText(commercial.location)
+      || parseZipFromText(form.city)
+      || null;
     const centroid = zip ? centroidFromZip(zip) : null;
     const payload = {
       stage_slug: form.stage_slug,
@@ -510,27 +534,37 @@ export function PipelineBoardClient({
 
       {!isBtoc ? (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-          <PipelineFranceMap deals={filteredDeals} />
-          <PipelineNafAnalytics deals={filteredDeals} />
+          <PipelineCollapsibleSection
+            title="Carte France"
+            subtitle={`${geoPointsCount}/${filteredDeals.length} entreprises géolocalisées`}
+            badge={`${geoPointsCount} pts`}
+            defaultOpen
+          >
+            <PipelineFranceMap deals={filteredDeals} contentOnly />
+          </PipelineCollapsibleSection>
+          <PipelineCollapsibleSection
+            title="Secteurs NAF"
+            subtitle={`${nafCount} fiche${nafCount > 1 ? "s" : ""} avec code NAF`}
+            badge={`${nafCount}`}
+            defaultOpen
+            className="bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950"
+          >
+            <PipelineNafAnalytics deals={filteredDeals} contentOnly />
+          </PipelineCollapsibleSection>
         </div>
       ) : null}
 
       {!isBtoc ? (
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-4 text-white shadow-xl sm:p-5">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(99,102,241,0.2),transparent_55%)]" />
-          <div className="relative flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-200/80">
-                Prochaines actions
-              </p>
-              <p className="text-sm text-slate-300">Basé sur « Date prochaine action »</p>
-            </div>
-            <span className="text-xs text-slate-400">{nextActions.length} à venir</span>
-          </div>
+        <PipelineCollapsibleSection
+          title="Prochaines actions"
+          subtitle="Basé sur « Date prochaine action »"
+          badge={`${nextActions.length} à venir`}
+          defaultOpen
+        >
           {nextActions.length === 0 ? (
-            <p className="relative mt-4 text-sm text-slate-400">Aucune action planifiée sur le filtre actuel.</p>
+            <p className="text-sm text-slate-400">Aucune action planifiée sur le filtre actuel.</p>
           ) : (
-            <div className="relative mt-4 grid gap-2 md:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-2">
               {nextActions.map((a) => (
                 <Link
                   key={a.id}
@@ -559,7 +593,7 @@ export function PipelineBoardClient({
               ))}
             </div>
           )}
-        </div>
+        </PipelineCollapsibleSection>
       ) : null}
 
       {isBtoc ? (
@@ -872,11 +906,7 @@ export function PipelineBoardClient({
               <PipelineQuoteFormations
                 selectedIds={form.quoted_course_ids}
                 onChange={(ids) => setForm((f) => ({ ...f, quoted_course_ids: ids }))}
-                onTotalChange={(cents) => {
-                  if (cents > 0) {
-                    setForm((f) => ({ ...f, amount: String(cents / 100) }));
-                  }
-                }}
+                onTotalChange={handleQuoteTotalChange}
               />
             ) : null}
             <div className="space-y-2">

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { Loader2, Mic, MicOff, PenLine, Phone, Plus, Sparkles } from "lucide-react";
+import { Loader2, Mail, Mic, MicOff, PenLine, Phone, Plus, Sparkles, StickyNote, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +58,7 @@ function actionMeta(type: string) {
 export function PipelineDealActionsSection({
   dealId,
   phone,
+  email,
   companyName,
   contactFirstName,
   contactLastName,
@@ -66,6 +67,7 @@ export function PipelineDealActionsSection({
 }: {
   dealId?: string;
   phone?: string | null;
+  email?: string | null;
   companyName: string;
   contactFirstName: string;
   contactLastName?: string;
@@ -314,6 +316,26 @@ export function PipelineDealActionsSection({
     }
   };
 
+  const openQuickAdd = (type: PipelineActionType) => {
+    setDraftType(type);
+    setDraftNotes("");
+    setAddOpen(true);
+  };
+
+  const quickLog = async (type: PipelineActionType) => {
+    if (type === "call_success" && phone?.trim()) {
+      setDraftType(type);
+      startCall();
+      return;
+    }
+    if (type === "email" && email?.trim()) {
+      window.location.href = `mailto:${email.trim()}`;
+      await createAction({ actionType: "email", notes: `Email envoyé à ${email.trim()}` });
+      return;
+    }
+    openQuickAdd(type);
+  };
+
   if (!dealId) {
     return (
       <section className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
@@ -325,21 +347,46 @@ export function PipelineDealActionsSection({
   return (
     <>
       <section className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-gray-900">Actions</p>
+        <p className="text-sm font-semibold text-gray-900">Activité</p>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            disabled={!phone?.trim()}
+            onClick={() => void quickLog("call_success")}
+          >
+            <Phone className="mr-1.5 h-4 w-4" />
+            Appeler
+          </Button>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 gap-1"
-            onClick={() => {
-              setDraftType("call_success");
-              setDraftNotes("");
-              setAddOpen(true);
-            }}
+            disabled={!email?.trim()}
+            onClick={() => void quickLog("email")}
           >
-            <Plus className="h-4 w-4" />
-            Ajouter
+            <Mail className="mr-1.5 h-4 w-4" />
+            Email
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => openQuickAdd("note")}>
+            <StickyNote className="mr-1.5 h-4 w-4" />
+            Note
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => openQuickAdd("meeting")}>
+            <CalendarClock className="mr-1.5 h-4 w-4" />
+            Planifier
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="ml-auto"
+            onClick={() => openQuickAdd("call_no_answer")}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Autre
           </Button>
         </div>
 
@@ -355,9 +402,7 @@ export function PipelineDealActionsSection({
         {loading ? (
           <p className="text-sm text-gray-500">Chargement…</p>
         ) : actions.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
-            Aucune action consignée. Cliquez sur + pour journaliser un appel, un email ou une note.
-          </p>
+          <p className="text-sm text-gray-500">Aucune interaction enregistrée.</p>
         ) : (
           <ul className="space-y-2">
             {actions.map((a) => {

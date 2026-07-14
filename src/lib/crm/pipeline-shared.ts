@@ -90,6 +90,7 @@ export type PipelineDeal = PipelineDealCommercial & {
   notes: string | null;
   ai_prospect_summary?: string | null;
   ai_prospect_summary_at?: string | null;
+  company_creation_date?: string | null;
   catalog_email_sent_at?: string | null;
   created_at: string;
   updated_at: string;

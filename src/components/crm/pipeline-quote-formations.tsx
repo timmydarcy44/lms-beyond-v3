@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Plus, Pencil, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { formatDealAmount } from "@/lib/crm/pipeline-shared";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export type TrainingCourseOption = {
   id: string;
@@ -33,18 +40,9 @@ function computeTotalCents(courses: TrainingCourseOption[], ids: string[]): numb
     }, 0);
 }
 
-export function PipelineQuoteFormations({
-  selectedIds,
-  onChange,
-  onTotalChange,
-}: {
-  selectedIds: string[];
-  onChange: (ids: string[]) => void;
-  onTotalChange?: (totalCents: number) => void;
-}) {
+function useTrainingCourses() {
   const [courses, setCourses] = useState<TrainingCourseOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -80,25 +78,45 @@ export function PipelineQuoteFormations({
     };
   }, []);
 
+  return { courses, loading };
+}
+
+function FormationPickerModal({
+  open,
+  onOpenChange,
+  courses,
+  loading,
+  selectedIds,
+  onChange,
+  onTotalChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  courses: TrainingCourseOption[];
+  loading: boolean;
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  onTotalChange?: (totalCents: number) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [domainFilter, setDomainFilter] = useState<string>("all");
+
+  const domains = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of courses) {
+      if (c.domain?.trim()) set.add(c.domain.trim());
+    }
+    return Array.from(set).sort();
+  }, [courses]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return courses;
-    return courses.filter(
-      (c) =>
-        c.title.toLowerCase().includes(q)
-        || (c.domain ?? "").toLowerCase().includes(q),
-    );
-  }, [courses, query]);
-
-  const selectedCourses = useMemo(
-    () => courses.filter((c) => selectedIds.includes(c.id)),
-    [courses, selectedIds],
-  );
-
-  const totalCents = useMemo(
-    () => computeTotalCents(courses, selectedIds),
-    [courses, selectedIds],
-  );
+    return courses.filter((c) => {
+      if (domainFilter !== "all" && (c.domain ?? "") !== domainFilter) return false;
+      if (!q) return true;
+      return c.title.toLowerCase().includes(q) || (c.domain ?? "").toLowerCase().includes(q);
+    });
+  }, [courses, query, domainFilter]);
 
   const toggle = (id: string) => {
     const nextIds = selectedIds.includes(id)
@@ -109,31 +127,48 @@ export function PipelineQuoteFormations({
   };
 
   return (
-    <div className="space-y-3 border-t border-gray-200 pt-4">
-      <div>
-        <p className="text-sm font-semibold text-gray-900">Devis — formations catalogue</p>
-        <p className="text-xs text-gray-500">
-          Sélectionnez une ou plusieurs formations (Gestion des formations).
-        </p>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[85vh] max-w-lg flex-col gap-4">
+        <DialogHeader>
+          <DialogTitle>Ajouter une formation</DialogTitle>
+        </DialogHeader>
 
-      <div className="space-y-2">
-        <Label>Rechercher une formation</Label>
-        <input
-          type="search"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          placeholder="Titre, domaine…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
+        <div className="space-y-2">
+          <input
+            type="search"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Rechercher par titre ou domaine…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {domains.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                className={`rounded-full px-2.5 py-1 text-xs ${domainFilter === "all" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}
+                onClick={() => setDomainFilter("all")}
+              >
+                Tous
+              </button>
+              {domains.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={`rounded-full px-2.5 py-1 text-xs ${domainFilter === d ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}
+                  onClick={() => setDomainFilter(d)}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
-      {loading ? (
-        <p className="text-sm text-gray-500">Chargement du catalogue…</p>
-      ) : (
-        <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2">
-          {filtered.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-gray-500">Aucune formation trouvée.</p>
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-gray-200">
+          {loading ? (
+            <p className="p-4 text-sm text-gray-500">Chargement…</p>
+          ) : filtered.length === 0 ? (
+            <p className="p-4 text-sm text-gray-500">Aucune formation trouvée.</p>
           ) : (
             filtered.map((course) => {
               const checked = selectedIds.includes(course.id);
@@ -142,23 +177,18 @@ export function PipelineQuoteFormations({
                 <button
                   key={course.id}
                   type="button"
-                  className={`flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-left text-sm transition ${
-                    checked ? "bg-indigo-50" : "hover:bg-gray-50"
-                  }`}
+                  className={`flex w-full items-start gap-3 border-b border-gray-100 px-3 py-3 text-left last:border-0 hover:bg-gray-50 ${checked ? "bg-indigo-50/60" : ""}`}
                   onClick={() => toggle(course.id)}
                 >
                   <span
-                    className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                      checked ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white"
-                    }`}
-                    aria-hidden
+                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] ${checked ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300"}`}
                   >
                     {checked ? "✓" : ""}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="font-medium text-gray-900">{course.title}</span>
+                    <span className="block text-sm font-medium text-gray-900">{course.title}</span>
                     {course.domain ? (
-                      <span className="ml-2 text-xs text-gray-500">{course.domain}</span>
+                      <span className="text-xs text-gray-500">{course.domain}</span>
                     ) : null}
                     {price > 0 ? (
                       <span className="mt-0.5 block text-xs text-emerald-700">
@@ -172,31 +202,108 @@ export function PipelineQuoteFormations({
             })
           )}
         </div>
+
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            Valider la sélection
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Vue compacte : sélection uniquement + modale catalogue. */
+export function PipelineQuoteFormationsCompact({
+  selectedIds,
+  onChange,
+  onTotalChange,
+}: {
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  onTotalChange?: (totalCents: number) => void;
+}) {
+  const { courses, loading } = useTrainingCourses();
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const selectedCourses = useMemo(
+    () => courses.filter((c) => selectedIds.includes(c.id)),
+    [courses, selectedIds],
+  );
+
+  const totalCents = useMemo(
+    () => computeTotalCents(courses, selectedIds),
+    [courses, selectedIds],
+  );
+
+  return (
+    <div className="space-y-3">
+      {selectedCourses.length === 0 ? (
+        <p className="text-sm text-gray-500">Aucune formation sélectionnée</p>
+      ) : (
+        <ul className="space-y-2">
+          {selectedCourses.map((c) => {
+            const price = parsePrice(c.intra_price) || parsePrice(c.inter_price);
+            return (
+              <li key={c.id} className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5 text-sm">
+                <p className="font-medium text-gray-900">{c.title}</p>
+                <p className="text-xs text-gray-600">
+                  {c.duration ?? "Durée à confirmer"}
+                  {price > 0 ? ` — ${formatDealAmount(Math.round(price * 100))}` : ""}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
-      {selectedCourses.length > 0 ? (
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-1">
-            {selectedCourses.map((c) => (
-              <Badge key={c.id} variant="secondary" className="gap-1">
-                {c.title}
-                <button
-                  type="button"
-                  className="ml-1 text-gray-500 hover:text-gray-900"
-                  onClick={() => toggle(c.id)}
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-          </div>
-          {totalCents > 0 ? (
-            <p className="text-sm font-semibold text-gray-900">
-              Total devis indicatif : {formatDealAmount(totalCents)}
-            </p>
-          ) : null}
-        </div>
+      {totalCents > 0 ? (
+        <p className="text-sm font-semibold text-gray-900">
+          Montant estimé : {formatDealAmount(totalCents)}
+        </p>
       ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          {selectedCourses.length === 0 ? "Ajouter une formation" : "Modifier"}
+        </Button>
+        {selectedCourses.length > 0 ? (
+          <Button type="button" size="sm" variant="secondary" disabled>
+            <FileText className="mr-1.5 h-4 w-4" />
+            Générer le devis
+          </Button>
+        ) : null}
+      </div>
+
+      <FormationPickerModal
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        courses={courses}
+        loading={loading}
+        selectedIds={selectedIds}
+        onChange={onChange}
+        onTotalChange={onTotalChange}
+      />
     </div>
+  );
+}
+
+/** Legacy inline picker — conservé pour compatibilité. */
+export function PipelineQuoteFormations({
+  selectedIds,
+  onChange,
+  onTotalChange,
+}: {
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  onTotalChange?: (totalCents: number) => void;
+}) {
+  return (
+    <PipelineQuoteFormationsCompact
+      selectedIds={selectedIds}
+      onChange={onChange}
+      onTotalChange={onTotalChange}
+    />
   );
 }

@@ -35,7 +35,6 @@ import {
   commercialFromDeal,
   commercialToPayload,
   emptyBtobCommercial,
-  PipelineBtobCommercialFields,
   type BtobCommercialFormState,
 } from "./pipeline-btob-commercial-fields";
 import { fetchSiretCompany } from "@/lib/ecole/fetch-siret-company";
@@ -47,13 +46,10 @@ import {
 import { Users } from "lucide-react";
 import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsible-section";
 import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pipeline-deal-sheet";
-import { PipelineDealIntelligencePanel } from "@/components/crm/pipeline-deal-intelligence-panel";
-import { PipelineDealActionsSection } from "@/components/crm/pipeline-deal-actions-section";
-import { PipelineDealIdentityFields } from "@/components/crm/pipeline-deal-identity-fields";
+import { PipelineDealCockpit } from "@/components/crm/pipeline-deal-cockpit";
 import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
 import { PipelineNafAnalytics } from "@/components/crm/pipeline-naf-analytics";
-import { PipelineQuoteFormations } from "@/components/crm/pipeline-quote-formations";
 import { centroidFromZip, parseZipFromText, resolveAllDealGeoPoints } from "@/lib/crm/french-geo";
 
 type DealForm = {
@@ -73,6 +69,7 @@ type DealForm = {
   notes: string;
   city: string;
   zip_code: string;
+  company_creation_date: string;
   quoted_course_ids: string[];
 };
 
@@ -92,6 +89,7 @@ const emptyDeal = (stage: string): DealForm => ({
   notes: "",
   city: "",
   zip_code: "",
+  company_creation_date: "",
   quoted_course_ids: [],
 });
 
@@ -332,6 +330,7 @@ export function PipelineBoardClient({
       notes: deal.notes ?? "",
       city: deal.city ?? "",
       zip_code: deal.zip_code ?? "",
+      company_creation_date: (deal.company_creation_date ?? "") as string,
       quoted_course_ids: deal.quoted_course_ids ?? [],
     });
     setCommercial(commercialFromDeal(deal));
@@ -381,16 +380,7 @@ export function PipelineBoardClient({
       return;
     }
     const d = res.data;
-    const location = [d.zip_code, d.city].filter(Boolean).join(" ");
-    const enrichNotes = [
-      d.opco_name ? `OPCO : ${d.opco_name}` : null,
-      d.naf_code ? `NAF : ${d.naf_code}` : null,
-      d.address ? `Adresse : ${d.address}` : null,
-      d.tranche_effectif ? `Effectif : ${d.tranche_effectif}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
+    const location = [d.address, d.zip_code, d.city].filter(Boolean).join(", ");
     setForm((prev) => ({
       ...prev,
       siret: d.siret,
@@ -400,12 +390,13 @@ export function PipelineBoardClient({
       company_name: d.company_name || prev.company_name,
       city: d.city ?? prev.city,
       zip_code: d.zip_code ?? prev.zip_code,
-      notes: enrichNotes ? (prev.notes ? `${prev.notes}\n${enrichNotes}` : enrichNotes) : prev.notes,
+      company_creation_date: d.creation_date ?? prev.company_creation_date,
     }));
     setCommercial((prev) => ({
       ...prev,
       location: location || prev.location,
       sector: d.sector || prev.sector,
+      employee_count: d.tranche_effectif || prev.employee_count,
       why_target: d.sector ? (prev.why_target || `Secteur : ${d.sector}`) : prev.why_target,
     }));
     toast.success("Fiche entreprise récupérée.");
@@ -440,6 +431,7 @@ export function PipelineBoardClient({
       latitude: centroid?.lat ?? null,
       longitude: centroid?.lng ?? null,
       quoted_course_ids: form.quoted_course_ids,
+      company_creation_date: form.company_creation_date || null,
       amount: form.amount,
       notes: form.notes || null,
       contact_linkedin: commercial.contact_linkedin || null,
@@ -880,173 +872,89 @@ export function PipelineBoardClient({
       <PipelineDealSheet
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        title={form.id ? "Modifier la carte" : "Nouvelle opportunité"}
+        title={form.id ? form.company_name || "Fiche prospect" : "Nouvelle opportunité"}
       >
         {!isBtoc ? (
-          <PipelineDealIntelligencePanel
-            input={intelligenceInput}
-            onApplyNextBestAction={(action) =>
-              setCommercial((c) => ({ ...c, next_action: action }))
-            }
+          <PipelineDealCockpit
+            form={form}
+            setForm={setForm}
+            commercial={commercial}
+            setCommercial={setCommercial}
+            visibleStages={visibleStages}
+            intelligenceInput={intelligenceInput}
+            editingDealMeta={editingDealMeta}
+            siretLoading={siretLoading}
+            onLookupSiret={() => void lookupSiret()}
+            currentUserEmail={currentUserEmail}
             aiProspectSummary={aiProspectSummary}
             aiProspectSummaryAt={aiProspectSummaryAt}
             onGenerateAiSummary={form.id ? generateAiSummary : undefined}
             generatingAiSummary={generatingAiSummary}
+            onQuoteTotalChange={handleQuoteTotalChange}
+            onActionsChange={() => {
+              setCommercial((c) => ({
+                ...c,
+                last_contact_date: new Date().toISOString().slice(0, 10),
+              }));
+            }}
           />
-        ) : null}
-        <div className="space-y-5">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Étape</Label>
-                <select
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  value={form.stage_slug}
-                  onChange={(e) => setForm({ ...form, stage_slug: e.target.value })}
-                >
-                  {visibleStages.map((s) => (
-                    <option key={s.slug} value={s.slug}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {!isBtoc ? (
-                <div className="space-y-2">
-                  <Label>Propriétaire</Label>
-                  <select
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                    value={form.contact_owner_email}
-                    onChange={(e) => setForm({ ...form, contact_owner_email: e.target.value })}
-                  >
-                    {PIPELINE_BTOB_CONTACT_OWNERS.map((o) => (
-                      <option key={o.email} value={o.email}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Étape</Label>
+              <select
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                value={form.stage_slug}
+                onChange={(e) => setForm({ ...form, stage_slug: e.target.value })}
+              >
+                {visibleStages.map((s) => (
+                  <option key={s.slug} value={s.slug}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
             </div>
-
-            {!isBtoc ? (
-              <PipelineDealIdentityFields
-                value={{
-                  siret: form.siret,
-                  company_name: form.company_name,
-                  contact_first_name: form.contact_first_name,
-                  contact_last_name: form.contact_last_name,
-                  phone: form.phone,
-                  email: form.email,
-                  city: form.city,
-                  zip_code: form.zip_code,
-                  contact_linkedin: commercial.contact_linkedin,
-                  company_linkedin: commercial.company_linkedin,
-                  opco_name: form.opco_name,
-                  naf_code: form.naf_code,
-                }}
-                onChange={(patch) => {
-                  if ("contact_linkedin" in patch || "company_linkedin" in patch) {
-                    setCommercial((c) => ({
-                      ...c,
-                      ...(patch.contact_linkedin !== undefined
-                        ? { contact_linkedin: patch.contact_linkedin }
-                        : {}),
-                      ...(patch.company_linkedin !== undefined
-                        ? { company_linkedin: patch.company_linkedin }
-                        : {}),
-                    }));
-                  }
-                  const { contact_linkedin: _cl, company_linkedin: _co, ...formPatch } = patch;
-                  if (Object.keys(formPatch).length > 0) {
-                    setForm((f) => ({ ...f, ...formPatch }));
-                  }
-                }}
-                siretLoading={siretLoading}
-                onLookupSiret={() => void lookupSiret()}
+            <div className="space-y-2">
+              <Label>Nom / libellé *</Label>
+              <Input
+                value={form.company_name}
+                onChange={(e) => setForm({ ...form, company_name: e.target.value })}
               />
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label>Nom / libellé *</Label>
-                  <Input
-                    value={form.company_name}
-                    onChange={(e) => setForm({ ...form, company_name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Prénom du contact</Label>
-                  <Input
-                    value={form.contact_first_name}
-                    onChange={(e) => setForm({ ...form, contact_first_name: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Téléphone</Label>
-                    <Input
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            {!isBtoc ? (
-              <PipelineDealActionsSection
-                dealId={form.id}
-                phone={form.phone}
-                companyName={form.company_name || "Prospect"}
-                contactFirstName={form.contact_first_name}
-                contactLastName={form.contact_last_name}
-                currentUserEmail={currentUserEmail}
-                onActionsChange={() => {
-                  setCommercial((c) => ({
-                    ...c,
-                    last_contact_date: new Date().toISOString().slice(0, 10),
-                  }));
-                }}
+            </div>
+            <div className="space-y-2">
+              <Label>Prénom du contact</Label>
+              <Input
+                value={form.contact_first_name}
+                onChange={(e) => setForm({ ...form, contact_first_name: e.target.value })}
               />
-            ) : null}
-
-            {!isBtoc ? (
-              <PipelineCollapsibleSection title="Devis formations" defaultOpen={false}>
-                <PipelineQuoteFormations
-                  selectedIds={form.quoted_course_ids}
-                  onChange={(ids) => setForm((f) => ({ ...f, quoted_course_ids: ids }))}
-                  onTotalChange={handleQuoteTotalChange}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
-              </PipelineCollapsibleSection>
-            ) : null}
-
-            <PipelineCollapsibleSection title="Notes internes" defaultOpen={false}>
+              </div>
+              <div className="space-y-2">
+                <Label>Téléphone</Label>
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
               <Textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 rows={3}
               />
-            </PipelineCollapsibleSection>
-
-            {!isBtoc ? (
-              <PipelineCollapsibleSection title="Qualification commerciale" defaultOpen={false}>
-                <PipelineBtobCommercialFields
-                  value={commercial}
-                  onChange={setCommercial}
-                  stageSlug={form.stage_slug}
-                  contactFirstName={form.contact_first_name}
-                  hideLinkedIn
-                />
-              </PipelineCollapsibleSection>
-            ) : null}
+            </div>
           </div>
+        )}
         <PipelineDealSheetFooter>
             <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
               Annuler

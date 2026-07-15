@@ -100,6 +100,7 @@ export function JessicaContentinHeader() {
     pathname?.replace(/\/$/, "") === "/jessica-contentin";
   
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileOpenCategory, setMobileOpenCategory] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -198,8 +199,18 @@ export function JessicaContentinHeader() {
     }
     setActiveDropdown(null);
     setMobileMenuOpen(false);
+    setMobileOpenCategory(null);
   };
-  
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileMenuOpen]);
+ 
   const menuItems = [
     {
       label: "Apprentissage et méthodologie",
@@ -452,67 +463,108 @@ export function JessicaContentinHeader() {
         {mobileMenuOpen && (
           <div
             className={cn(
-              "mx-3 mb-3 overflow-hidden rounded-2xl border py-4 lg:hidden",
+              "mx-3 mb-3 max-h-[min(70dvh,calc(100dvh-5.5rem))] overflow-y-auto overscroll-contain rounded-2xl border py-3 lg:hidden",
               headerOverHero
                 ? "border-white/20 bg-[#2F2A25]/95 shadow-2xl backdrop-blur-xl"
                 : "border-[#E6D9C6] bg-[#F8F5F0] shadow-lg",
             )}
           >
-            <div className="flex flex-col gap-2">
-              {menuItems.map((item) => (
-                <div key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "block rounded-lg px-4 py-2 text-sm font-medium",
-                      headerOverHero
-                        ? "text-white hover:bg-white/10"
-                        : "text-[#2F2A25] hover:bg-[#E6D9C6]/50",
-                    )}
-                    onClick={closeMenus}
-                  >
-                    {item.label}
-                  </Link>
-                  {item.submenuItems ? (
-                    <div className="mt-2 space-y-1 pl-4">
-                      {item.submenuItems.map((subItem) => (
+            <div className="flex flex-col gap-1 px-1">
+              {menuItems.map((item) => {
+                const hasSub =
+                  Boolean(item.submenuItems?.length) || Boolean(item.submenuColumns?.length);
+                const isOpen = mobileOpenCategory === item.href;
+
+                if (!hasSub) {
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "block rounded-lg px-4 py-3 text-sm font-medium",
+                        headerOverHero
+                          ? "text-white hover:bg-white/10"
+                          : "text-[#2F2A25] hover:bg-[#E6D9C6]/50",
+                      )}
+                      onClick={closeMenus}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div key={item.href} className="border-b border-black/5 last:border-0">
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium",
+                        headerOverHero
+                          ? "text-white hover:bg-white/10"
+                          : "text-[#2F2A25] hover:bg-[#E6D9C6]/50",
+                      )}
+                      onClick={() =>
+                        setMobileOpenCategory((prev) => (prev === item.href ? null : item.href))
+                      }
+                      aria-expanded={isOpen}
+                    >
+                      <span>{item.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 shrink-0 transition-transform",
+                          isOpen && "rotate-180",
+                          headerOverHero ? "text-white/70" : "text-[#8B6F47]",
+                        )}
+                      />
+                    </button>
+
+                    {isOpen ? (
+                      <div className="space-y-1 pb-3 pl-2 pr-2">
                         <Link
-                          key={subItem.href}
-                          href={subItem.href}
+                          href={item.href}
                           className={cn(
-                            "block rounded-lg px-4 py-2 text-sm",
+                            "block rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wide",
                             headerOverHero
-                              ? "text-white/75 hover:bg-white/10 hover:text-white"
-                              : "text-[#5C5348] hover:bg-[#E6D9C6]/50 hover:text-[#2F2A25]",
+                              ? "text-white/55 hover:bg-white/10 hover:text-white"
+                              : "text-[#8B6F47] hover:bg-[#E6D9C6]/50",
                           )}
                           onClick={closeMenus}
                         >
-                          {subItem.label}
+                          Voir la page
                         </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                  {item.submenuColumns ? (
-                    <div className="pl-6 mt-3 space-y-4">
-                      {item.submenuColumns.map((column) => (
-                        <div key={column.title} className="space-y-2">
-                          <div
+                        {item.submenuItems?.map((subItem, idx) => (
+                          <Link
+                            key={`${subItem.href}-${subItem.label}-${idx}`}
+                            href={subItem.href}
                             className={cn(
-                              "text-xs font-semibold uppercase tracking-wider",
-                              headerOverHero ? "text-white/50" : "text-[#8B6F47]",
+                              "block rounded-lg px-4 py-2.5 text-sm",
+                              headerOverHero
+                                ? "text-white/80 hover:bg-white/10 hover:text-white"
+                                : "text-[#5C5348] hover:bg-[#E6D9C6]/50 hover:text-[#2F2A25]",
                             )}
+                            onClick={closeMenus}
                           >
-                            {column.title}
-                          </div>
-                          <div className="space-y-1">
+                            {subItem.label}
+                          </Link>
+                        ))}
+                        {item.submenuColumns?.map((column) => (
+                          <div key={column.title} className="space-y-1 pt-1">
+                            <div
+                              className={cn(
+                                "px-4 pt-2 text-xs font-semibold uppercase tracking-wider",
+                                headerOverHero ? "text-white/50" : "text-[#8B6F47]",
+                              )}
+                            >
+                              {column.title}
+                            </div>
                             {column.items.map((subItem) => (
                               <Link
                                 key={subItem.href + subItem.label}
                                 href={subItem.href}
                                 className={cn(
-                                  "block rounded-lg px-4 py-2 text-sm",
+                                  "block rounded-lg px-4 py-2.5 text-sm",
                                   headerOverHero
-                                    ? "text-white/75 hover:bg-white/10 hover:text-white"
+                                    ? "text-white/80 hover:bg-white/10 hover:text-white"
                                     : "text-[#5C5348] hover:bg-[#E6D9C6]/50 hover:text-[#2F2A25]",
                                 )}
                                 onClick={closeMenus}
@@ -521,13 +573,14 @@ export function JessicaContentinHeader() {
                               </Link>
                             ))}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-              <div className="mt-4 flex flex-col gap-3">
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              <div className="mt-3 flex flex-col gap-3 px-3 pb-2">
                 <Button
                   asChild
                   className="!rounded-full !border !border-[#2F2A25]/15 !bg-white !text-[#2F2A25] hover:!bg-white/90"
@@ -539,10 +592,8 @@ export function JessicaContentinHeader() {
                     Prendre rendez-vous
                   </a>
                 </Button>
-                {/* Mon compte - plus petit, sans bordure */}
-                {/* Utiliser isMounted pour éviter les problèmes d'hydratation */}
                 {isMounted && isAuthenticated && userFirstName ? (
-                  <Link 
+                  <Link
                     href="/jessica-contentin/mon-compte"
                     className={cn(
                       "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
@@ -556,7 +607,7 @@ export function JessicaContentinHeader() {
                     Bonjour {userFirstName}
                   </Link>
                 ) : (
-                  <Link 
+                  <Link
                     href="/jessica-contentin/mon-compte"
                     className={cn(
                       "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",

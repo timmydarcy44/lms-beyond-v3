@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, FileText, Package, Contact } from "lucide-react";
+import { Calendar, FileText, Package, Contact, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 
 const NAV = [
   { href: "/super/jessica-crm", label: "CRM", icon: Contact, match: "/super/jessica-crm" },
+  { href: "/super/jessica-factures", label: "Factures", icon: Receipt, match: "/super/jessica-factures" },
   { href: "/super/agenda", label: "Agenda", icon: Calendar, match: "/super/agenda" },
   { href: "/super/catalogue-jessica", label: "Catalogue", icon: Package, match: "/super/catalogue-jessica" },
   { href: "/super/blog/new", label: "Blog", icon: FileText, match: "/super/blog" },

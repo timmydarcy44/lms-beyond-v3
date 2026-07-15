@@ -3,6 +3,9 @@ import type { PipelineType } from "@/lib/crm/pipeline-shared";
 import { getServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { JarvisTodoCta } from "./jarvis-todo-cta";
+import { Suspense } from "react";
+import { PipelineBtobSubnav } from "@/components/super-admin/pipeline-btob-subnav";
+import { isPipelinePrescripteurUser } from "@/lib/crm/pipeline-prescripteur-access";
 
 export default async function CrmPipelinePage({
   searchParams,
@@ -27,21 +30,28 @@ export default async function CrmPipelinePage({
 
   return (
     <div className="space-y-6 px-3 py-6 sm:px-6 sm:py-8">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-wider text-gray-500">CRM / Pipeline</p>
-        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-          {pipelineType === "btoc" ? "Pipeline BTOC" : "Pipeline BTOB"}
-        </h1>
-        <p className="text-sm text-gray-600">
-          {pipelineType === "btoc"
-            ? "Parcours apprenants B2C — mis à jour depuis la base (inscription, badge, paiement)."
-            : "Glissez les cartes entre les colonnes. Modifiez les étapes et les fiches à tout moment."}
-        </p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-1">
+          <p className="text-xs font-medium uppercase tracking-wider text-gray-500">CRM / Pipeline</p>
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+            {pipelineType === "btoc" ? "Pipeline BTOC" : "Pipeline BTOB"}
+          </h1>
+          <p className="text-sm text-gray-600">
+            {pipelineType === "btoc"
+              ? "Parcours apprenants B2C — mis à jour depuis la base (inscription, badge, paiement)."
+              : "Glissez les cartes entre les colonnes. Modifiez les étapes et les fiches à tout moment."}
+          </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <JarvisTodoCta />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <JarvisTodoCta />
-        </div>
+        {pipelineType === "btob" && isPipelinePrescripteurUser(userEmail) ? (
+          <Suspense fallback={null}>
+            <PipelineBtobSubnav />
+          </Suspense>
+        ) : null}
       </div>
       <PipelineBoardClient pipelineType={pipelineType} currentUserEmail={userEmail} />
     </div>

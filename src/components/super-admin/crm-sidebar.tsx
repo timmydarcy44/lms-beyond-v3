@@ -14,13 +14,16 @@ import {
   UserCheck,
   ShoppingBag,
   Rocket,
+  Handshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { isPipelinePrescripteurUser } from "@/lib/crm/pipeline-prescripteur-access";
 
 const CRM_LINKS = [
   { href: "/super/utilisateurs", label: "Contacts", icon: Users },
   { href: "/super/crm/pipeline", label: "Pipeline BTOB", icon: Kanban, match: "/super/crm/pipeline", featured: true },
+  { href: "/super/crm/pipeline/prescripteurs", label: "Prescripteur", icon: Handshake, nested: true, prescripteurOnly: true },
   { href: "/super/crm/pipeline?type=btoc", label: "Pipeline BTOC", icon: ShoppingBag },
   { href: "/super/crm/onboarding", label: "Onboarding clients", icon: Rocket },
   { href: "/super/crm/validators", label: "Validateurs", icon: ShieldCheck },
@@ -57,14 +60,20 @@ export function CrmSidebar() {
   const isJerome = userEmail === "jerome.picot@edgebs.fr";
 
   const links = useMemo(() => {
-    if (!isJerome) return CRM_LINKS;
-    return CRM_LINKS.filter((l) => {
-      if (l.href === "/super/crm/validators") return false;
-      if (l.href === "/super/utilisateurs?role=tutor") return false;
-      if (l.href.includes("/super/crm/pipeline?type=btoc")) return false;
-      return true;
-    });
-  }, [isJerome]);
+    let filtered = CRM_LINKS;
+    if (isJerome) {
+      filtered = filtered.filter((l) => {
+        if (l.href === "/super/crm/validators") return false;
+        if (l.href === "/super/utilisateurs?role=tutor") return false;
+        if (l.href.includes("/super/crm/pipeline?type=btoc")) return false;
+        return true;
+      });
+    }
+    if (!isPipelinePrescripteurUser(userEmail)) {
+      filtered = filtered.filter((l) => !l.prescripteurOnly);
+    }
+    return filtered;
+  }, [isJerome, userEmail]);
 
   return (
     <aside className="w-full shrink-0 border-b border-gray-200 bg-gray-50/90 lg:w-56 lg:border-b-0 lg:border-r lg:min-h-[calc(100vh-3rem)]">
@@ -75,11 +84,14 @@ export function CrmSidebar() {
           const Icon = item.icon;
           const isPipelineBtoc = item.href.includes("type=btoc");
           const isPipelineBtob = item.label === "Pipeline BTOB";
+          const isPrescripteur = item.href === "/super/crm/pipeline/prescripteurs";
           let isActive = pathname === item.href.split("?")[0];
           if (isPipelineBtoc) {
             isActive = pathname === "/super/crm/pipeline" && typeParam === "btoc";
           } else if (isPipelineBtob) {
             isActive = pathname === "/super/crm/pipeline" && typeParam !== "btoc";
+          } else if (isPrescripteur) {
+            isActive = pathname.startsWith("/super/crm/pipeline/prescripteurs");
           } else if (item.href.includes("?role=")) {
             isActive =
               pathname === "/super/utilisateurs" &&
@@ -92,6 +104,7 @@ export function CrmSidebar() {
               href={item.href}
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors lg:shrink lg:w-full",
+                item.nested ? "ml-4 lg:ml-2 lg:border-l-2 lg:border-indigo-100 lg:pl-4" : "",
                 isActive
                   ? item.featured
                     ? "bg-indigo-600 text-white shadow-sm border border-indigo-600"

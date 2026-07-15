@@ -2,7 +2,7 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle, Phone } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,6 +96,10 @@ const emptyDeal = (stage: string): DealForm => ({
   company_creation_date: "",
   quoted_course_ids: [],
 });
+
+function formatDealContactName(deal: PipelineDeal): string {
+  return [deal.contact_last_name, deal.contact_first_name].filter(Boolean).join(" ").trim();
+}
 
 export type PipelineBoardHandle = {
   openCreateProspect: () => void;
@@ -868,7 +872,9 @@ export const PipelineBoardClient = forwardRef<
               </div>
 
               <div className="flex-1 space-y-2 p-2 min-h-[120px]">
-                {columnDeals.map((deal) => (
+                {columnDeals.map((deal) => {
+                  const contactName = formatDealContactName(deal);
+                  return (
                   <div
                     key={deal.id}
                     draggable
@@ -890,14 +896,16 @@ export const PipelineBoardClient = forwardRef<
                           </a>
                         ) : null}
                       </div>
-                      <p className="text-xs text-slate-300 mt-0.5">{deal.contact_first_name}</p>
+                      {contactName ? (
+                        <p className="text-xs text-slate-300 mt-0.5">{contactName}</p>
+                      ) : null}
                       {!isBtoc && deal.contact_owner_email ? (
                         <p className="text-[10px] text-indigo-300 mt-0.5">
                           {pipelineOwnerLabel(deal.contact_owner_email)}
                         </p>
                       ) : null}
-                      {deal.naf_code ? (
-                        <p className="text-[10px] text-violet-300 mt-0.5 font-mono">NAF {deal.naf_code}</p>
+                      {!isBtoc && deal.opco_name ? (
+                        <p className="text-[10px] text-violet-300 mt-0.5">OPCO {deal.opco_name}</p>
                       ) : null}
                       {deal.location ? (
                         <p className="text-[10px] text-slate-400 mt-0.5 truncate">{deal.location}</p>
@@ -978,7 +986,8 @@ export const PipelineBoardClient = forwardRef<
                     </div>
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
 
               <div className="p-2 border-t border-gray-200">

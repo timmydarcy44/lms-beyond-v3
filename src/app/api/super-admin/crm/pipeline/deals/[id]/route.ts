@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
+import { updatePipelineDeal } from "@/lib/crm/pipeline-deal-update";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -63,12 +64,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   applyCommercialFieldsFromBody(patch, body, { partial: true });
 
-  const { data, error } = await supabase
-    .from("crm_pipeline_deals")
-    .update(patch)
-    .eq("id", id)
-    .select("*")
-    .single();
+  const { data, error } = await updatePipelineDeal(supabase, id, patch);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 

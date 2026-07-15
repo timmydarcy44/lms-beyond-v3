@@ -1,5 +1,4 @@
-export const DEFAULT_CATALOGUE_EMAIL_BODY = `Bonjour,
-Nous avons le plaisir de vous transmettre le catalogue de formation 2027 de EDGE.
+export const DEFAULT_CATALOGUE_EMAIL_BODY = `Nous avons le plaisir de vous transmettre le catalogue de formation 2027 de EDGE.
 Nous restons à votre disposition pour échanger ensemble sur vos besoins en formation.
 Cordialement`;
 
@@ -22,14 +21,20 @@ export function buildCatalogueGreeting(deal: CatalogueGreetingInput): string {
   return "Bonjour,";
 }
 
+export function stripCatalogueGreetingLine(bodyText: string): string {
+  const lines = bodyText.split("\n");
+  if (lines[0]?.trim().toLowerCase().startsWith("bonjour")) {
+    return lines.slice(1).join("\n").trimStart();
+  }
+  return bodyText;
+}
+
 export function buildCatalogueEmailPreview(bodyText: string, deal: CatalogueGreetingInput): string {
   const greeting = buildCatalogueGreeting(deal);
-  const lines = bodyText
-    .trim()
+  const bodyLines = stripCatalogueGreetingLine(bodyText)
     .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
+    .map((l) => l.trimEnd())
+    .filter((l, i, arr) => l.trim() !== "" || (i > 0 && i < arr.length - 1));
 
-  const bodyLines = lines[0]?.toLowerCase().startsWith("bonjour") ? lines.slice(1) : lines;
-  return [greeting, ...bodyLines].join("\n");
+  return [greeting, ...bodyLines.filter((l) => l.trim())].join("\n");
 }

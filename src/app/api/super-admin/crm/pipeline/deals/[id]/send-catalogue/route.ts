@@ -11,6 +11,7 @@ import {
   resolveCatalogueFromForCurrentUser,
 } from "@/lib/crm/pipeline-btob-owners";
 import { BTOB_CATALOGUE_STAGE_SLUG } from "@/lib/crm/pipeline-shared";
+import { updatePipelineDeal } from "@/lib/crm/pipeline-deal-update";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -71,18 +72,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
 
   const now = new Date().toISOString();
-  const { data: updated, error: updateError } = await supabase
-    .from("crm_pipeline_deals")
-    .update({
-      stage_slug: BTOB_CATALOGUE_STAGE_SLUG,
-      catalog_email_sent_at: now,
-      updated_at: now,
-      ...(toEmailOverride ? { email: toEmailOverride } : {}),
-      ...(civilityOverride ? { contact_civility: civilityOverride } : {}),
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
+  const updatePatch: Record<string, unknown> = {
+    stage_slug: BTOB_CATALOGUE_STAGE_SLUG,
+    catalog_email_sent_at: now,
+    updated_at: now,
+    ...(toEmailOverride ? { email: toEmailOverride } : {}),
+    ...(civilityOverride ? { contact_civility: civilityOverride } : {}),
+  };
+
+  const { data: updated, error: updateError } = await updatePipelineDeal(supabase, id, updatePatch);
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });

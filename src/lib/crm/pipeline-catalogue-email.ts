@@ -3,6 +3,7 @@ import {
   buildCatalogueGreeting,
   DEFAULT_CATALOGUE_EMAIL_BODY,
   DEFAULT_CATALOGUE_EMAIL_SUBJECT,
+  stripCatalogueGreetingLine,
 } from "@/lib/crm/pipeline-catalogue-email-shared";
 import { BTOB_CATALOGUE_STAGE_SLUG } from "@/lib/crm/pipeline-shared";
 import { readFile } from "fs/promises";
@@ -43,15 +44,10 @@ export function shouldSendBtobCatalogueEmail(params: {
 
 export function buildCatalogueEmailHtml(bodyText: string, deal: CatalogueDealInput): string {
   const greeting = buildCatalogueGreeting(deal);
-  const lines = bodyText
-    .trim()
+  const bodyLines = stripCatalogueGreetingLine(bodyText)
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-
-  const bodyLines = lines[0]?.toLowerCase().startsWith("bonjour")
-    ? lines.slice(1)
-    : lines;
 
   const paragraphs = bodyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
 

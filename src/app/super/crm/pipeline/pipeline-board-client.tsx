@@ -2,8 +2,7 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
-import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle, Phone } from "lucide-react";
+import { Plus, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +52,7 @@ import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
 import { PipelineNafAnalytics } from "@/components/crm/pipeline-naf-analytics";
 import { centroidFromZip, parseZipFromText, resolveAllDealGeoPoints } from "@/lib/crm/french-geo";
+import { parseFetchJson } from "@/lib/api/parse-fetch-json";
 
 type DealForm = {
   id?: string;
@@ -144,7 +144,7 @@ export const PipelineBoardClient = forwardRef<
     try {
       const sync = isBtoc ? "&sync=1" : "";
       const res = await fetch(`/api/super-admin/crm/pipeline?type=${pipelineType}${sync}`);
-      const json = await res.json();
+      const json = await parseFetchJson<{ error?: string; stages?: PipelineStage[]; deals?: PipelineDeal[] }>(res);
       if (!res.ok) throw new Error(json.error);
       setStages(json.stages ?? []);
       setDeals(json.deals ?? []);
@@ -176,7 +176,7 @@ export const PipelineBoardClient = forwardRef<
     setSyncing(true);
     try {
       const res = await fetch("/api/super-admin/crm/pipeline/sync-btoc", { method: "POST" });
-      const json = await res.json();
+      const json = await parseFetchJson<{ error?: string; synced?: number }>(res);
       if (!res.ok) throw new Error(json.error);
       toast.success(`Synchronisation BTOC : ${json.synced ?? 0} contact(s)`);
       await load();
@@ -388,7 +388,7 @@ export const PipelineBoardClient = forwardRef<
       const res = await fetch(`/api/super-admin/crm/pipeline/deals/${form.id}/ai-summary`, {
         method: "POST",
       });
-      const json = await res.json();
+      const json = await parseFetchJson<{ error?: string; summary?: string; generated_at?: string }>(res);
       if (!res.ok) throw new Error(json.error);
       setAiProspectSummary(json.summary ?? null);
       setAiProspectSummaryAt(json.generated_at ?? new Date().toISOString());
@@ -508,7 +508,7 @@ export const PipelineBoardClient = forwardRef<
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, pipeline_type: pipelineType }),
         });
-        const json = await res.json();
+        const json = await parseFetchJson<{ error?: string; deal?: PipelineDeal }>(res);
         if (!res.ok) throw new Error(json.error);
       } else {
         const res = await fetch("/api/super-admin/crm/pipeline", {
@@ -516,7 +516,7 @@ export const PipelineBoardClient = forwardRef<
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, pipeline_type: pipelineType }),
         });
-        const json = await res.json();
+        const json = await parseFetchJson<{ error?: string; deal?: PipelineDeal }>(res);
         if (!res.ok) throw new Error(json.error);
       }
       setDialogOpen(false);
@@ -599,7 +599,7 @@ export const PipelineBoardClient = forwardRef<
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, pipeline_type: pipelineType }),
         });
-        const json = await res.json();
+        const json = await parseFetchJson<{ error?: string; deal?: PipelineDeal }>(res);
         if (!res.ok) throw new Error(json.error);
         setDialogOpen(false);
         await load();
@@ -622,7 +622,7 @@ export const PipelineBoardClient = forwardRef<
         body: JSON.stringify({ label: stageLabelDraft }),
       },
     );
-    const json = await res.json();
+    const json = await parseFetchJson<{ error?: string }>(res);
     if (!res.ok) {
       toast.error(json.error ?? "Erreur");
       return;
@@ -764,16 +764,19 @@ export const PipelineBoardClient = forwardRef<
             <p className="text-sm text-slate-400">Aucune action planifiée sur le filtre actuel.</p>
           ) : (
             <div className="grid gap-2 md:grid-cols-2">
-              {nextActions.map((a) => (
-                <Link
+              {nextActions.map((a) => {
+                const deal = deals.find((d) => d.id === a.id);
+                return (
+                <button
                   key={a.id}
-                  href={`/super/crm/pipeline-btob/${a.id}`}
-                  className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 transition ${
+                  type="button"
+                  className={`flex w-full items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
                     a.isOverdue
                       ? "border-rose-400/30 bg-rose-950/40 hover:bg-rose-950/60"
                       : "border-white/10 bg-white/5 hover:bg-white/10"
                   }`}
                   title="Ouvrir la fiche prospect"
+                  onClick={() => deal && openEdit(deal)}
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white">{a.company}</p>
@@ -788,8 +791,9 @@ export const PipelineBoardClient = forwardRef<
                     </p>
                     <p className="text-[11px] text-slate-400">{a.isOverdue ? "retard" : "prévu"}</p>
                   </div>
-                </Link>
-              ))}
+                </button>
+                );
+              })}
             </div>
           )}
         </PipelineCollapsibleSection>
@@ -953,15 +957,16 @@ export const PipelineBoardClient = forwardRef<
                     ) : null}
                     <div className="mt-2 flex gap-1">
                       {!isBtoc ? (
-                        <Button variant="ghost" size="sm" className="h-7 px-2 text-slate-300 hover:text-white hover:bg-white/10" asChild>
-                          <Link href={`/super/crm/pipeline-btob/${deal.id}`} title="Fiche prospect">
-                            <ExternalLink className="h-3 w-3" />
-                          </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-slate-300 hover:text-white hover:bg-white/10"
+                          title="Voir la fiche"
+                          onClick={() => openEdit(deal)}
+                        >
+                          <ExternalLink className="h-3 w-3" />
                         </Button>
                       ) : null}
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-slate-300 hover:text-white hover:bg-white/10" onClick={() => openEdit(deal)}>
-                        <Pencil className="h-3 w-3" />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

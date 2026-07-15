@@ -9,6 +9,76 @@ import {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+async function fetchPrescripteurWithClients(supabase: NonNullable<ReturnType<typeof getServiceRoleClient>>, id: string) {
+  const { data: prescripteur, error } = await supabase
+    .from("crm_pipeline_prescripteurs")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!prescripteur) return null;
+
+  const { data: links, error: linksError } = await supabase
+    .from("crm_pipeline_prescripteur_clients")
+    .select(
+      `
+      id,
+      prescripteur_id,
+      deal_id,
+      commission_type,
+      commission_value,
+      notes,
+      created_at,
+      updated_at,
+      deal:crm_pipeline_deals (
+        id,
+        company_name,
+        contact_first_name,
+        contact_last_name,
+        email,
+        stage_slug,
+        amount_cents
+      )
+    `,
+    )
+    .eq("prescripteur_id", id)
+    .order("created_at", { ascending: false });
+
+  if (linksError && linksError.code !== "42P01") throw linksError;
+
+  return {
+    prescripteur,
+    linked_clients: links ?? [],
+  };
+}
+
+export async function GET(_req: NextRequest, context: RouteContext) {
+  if (!(await requirePipelinePrescripteurAccess())) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
+  const { id } = await context.params;
+  const supabase = getServiceRoleClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+  }
+
+  try {
+    const result = await fetchPrescripteurWithClients(supabase, id);
+    if (!result) {
+      return NextResponse.json({ error: "Prescripteur introuvable" }, { status: 404 });
+    }
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[prescripteurs GET id]", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Erreur" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function PATCH(req: NextRequest, context: RouteContext) {
   if (!(await requirePipelinePrescripteurAccess())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });

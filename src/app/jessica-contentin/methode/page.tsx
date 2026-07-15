@@ -1,15 +1,43 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Brain, Heart, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Brain, Heart, ListOrdered, Monitor, Sparkles, Users } from "lucide-react";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
 export const metadata: Metadata = {
   title: "Ma méthode — Neuroéducation & accompagnement personnalisé",
   description:
-    "Découvrez l'approche de Jessica Contentin : parcours, vision de la neuroéducation, accompagnement présentiel et outils numériques comme NEVO.",
+    "Approche fondée sur les neurosciences : comprendre son fonctionnement cognitif et émotionnel pour construire des stratégies personnalisées et durables.",
 };
+
+const STEPS = [
+  {
+    title: "Comprendre votre fonctionnement",
+    text: "Nous identifions ensemble vos difficultés, vos ressources et vos objectifs grâce à une analyse approfondie de votre situation.",
+  },
+  {
+    title: "Construire des stratégies adaptées",
+    text: "Des outils concrets sont mis en place pour améliorer les apprentissages, l'organisation, la gestion des émotions ou les fonctions exécutives selon vos besoins.",
+  },
+  {
+    title: "Expérimenter au quotidien",
+    text: "Les stratégies sont appliquées entre les séances afin d'observer leur efficacité dans les situations réelles.",
+  },
+  {
+    title: "Ajuster et consolider",
+    text: "Chaque rendez-vous permet d'analyser les progrès réalisés, d'affiner les outils et de développer progressivement votre autonomie.",
+  },
+] as const;
+
+const DIGITAL_TOOLS = [
+  "des parcours personnalisés sur NEVO",
+  "des fiches de synthèse",
+  "des exercices ciblés",
+  "des quiz interactifs",
+  "des ressources adaptées à votre profil",
+  "des outils méthodologiques réutilisables au quotidien",
+] as const;
 
 export default function JessicaMethodePage() {
   return (
@@ -18,72 +46,140 @@ export default function JessicaMethodePage() {
         <div className="mx-auto max-w-4xl px-6 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#9A7B52]">Méthode</p>
           <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#2F2A25] md:text-5xl">
-            Une approche qui relie science, bienveillance et résultats concrets
+            Une approche fondée sur les neurosciences pour comprendre avant d&apos;agir
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#5C5348]">
-            Cette page présente ma philosophie d&apos;accompagnement : comprendre le fonctionnement de chaque
-            personne pour construire des stratégies durables, en cabinet et entre les séances.
+          <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-[#5C5348]">
+            Chaque personne apprend, réfléchit et s&apos;adapte différemment. Mon approche consiste à
+            analyser votre fonctionnement cognitif, émotionnel et comportemental afin de construire des
+            stratégies personnalisées, scientifiquement fondées et applicables au quotidien.
+          </p>
+          <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-[#5C5348]">
+            Mon objectif n&apos;est pas de multiplier les conseils, mais de vous donner les outils pour
+            devenir progressivement autonome dans vos apprentissages, votre organisation et votre gestion
+            des difficultés.
           </p>
         </div>
       </section>
 
       <section className="py-16 md:py-20">
-        <div className="mx-auto grid max-w-6xl gap-10 px-6 md:grid-cols-2">
-          <article className="rounded-3xl border border-[#E6D9C6] bg-white p-8 shadow-sm">
+        <div className="mx-auto grid max-w-6xl gap-8 px-6 md:grid-cols-2">
+          <article className="rounded-3xl border border-[#E6D9C6] bg-white p-8 shadow-sm md:col-span-2">
             <Users className="mb-4 h-8 w-8 text-[#C6A664]" />
             <h2 className="text-2xl font-semibold text-[#2F2A25]">Qui je suis</h2>
+            <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-[#9A7B52]">
+              Une expertise à la croisée de la santé, des sciences cognitives et de la pédagogie
+            </p>
             <p className="mt-4 leading-relaxed text-[#5C5348]">
-              Professeure en santé, psychopédagogue et certifiée en neuroéducation, j&apos;accompagne enfants,
-              adolescents, étudiants et familles depuis plus de dix ans. Mon parcours mêcle terrain éducatif,
-              clinique et ingénierie pédagogique.
+              Professeure en santé et psychopédagogue certifiée en neuroéducation, j&apos;accompagne depuis
+              plus de dix ans des enfants, adolescents, étudiants et adultes confrontés à des difficultés
+              d&apos;apprentissage, de fonctionnement exécutif, de régulation émotionnelle ou
+              d&apos;orientation.
+            </p>
+            <p className="mt-4 leading-relaxed text-[#5C5348]">
+              Mon approche s&apos;appuie sur les connaissances actuelles issues des neurosciences
+              cognitives, de la psychologie du développement, des sciences de l&apos;éducation et de la
+              santé publique afin de proposer un accompagnement rigoureux, individualisé et durable.
             </p>
           </article>
 
           <article className="rounded-3xl border border-[#E6D9C6] bg-white p-8 shadow-sm">
             <Brain className="mb-4 h-8 w-8 text-[#C6A664]" />
             <h2 className="text-2xl font-semibold text-[#2F2A25]">Ma vision de la neuroéducation</h2>
+            <p className="mt-2 text-sm font-semibold text-[#8B6F47]">Comprendre son cerveau pour apprendre autrement</p>
             <p className="mt-4 leading-relaxed text-[#5C5348]">
-              Apprendre, c&apos;est aussi apprendre à se connaître. Je m&apos;appuie sur les sciences cognitives et
-              affectives pour proposer des stratégies réalistes, adaptées au profil de chacun — pas des recettes
-              génériques.
+              Les difficultés scolaires ou professionnelles ne sont jamais le fruit d&apos;un manque de
+              volonté à elles seules. Elles résultent souvent d&apos;un fonctionnement cognitif,
+              attentionnel ou émotionnel qui mérite d&apos;être compris avant d&apos;être corrigé.
+            </p>
+            <p className="mt-4 leading-relaxed text-[#5C5348]">
+              La neuroéducation permet de transformer les connaissances issues de la recherche
+              scientifique en stratégies concrètes pour apprendre plus efficacement, développer son
+              autonomie et retrouver durablement confiance en ses capacités.
+            </p>
+            <p className="mt-4 leading-relaxed font-medium text-[#2F2A25]">
+              Chaque accompagnement est construit autour du fonctionnement réel de la personne, jamais
+              autour d&apos;une méthode standardisée.
             </p>
           </article>
 
           <article className="rounded-3xl border border-[#E6D9C6] bg-white p-8 shadow-sm">
-            <Sparkles className="mb-4 h-8 w-8 text-[#C6A664]" />
+            <ListOrdered className="mb-4 h-8 w-8 text-[#C6A664]" />
             <h2 className="text-2xl font-semibold text-[#2F2A25]">Comment se déroule un accompagnement</h2>
-            <ul className="mt-4 space-y-3 text-[#5C5348]">
-              <li>• Bilan des besoins et des objectifs</li>
-              <li>• Mise en place de stratégies concrètes et mesurables</li>
-              <li>• Suivi régulier avec ajustements progressifs</li>
-              <li>• Implication des parents ou de l&apos;entourage quand c&apos;est pertinent</li>
-            </ul>
-          </article>
-
-          <article className="rounded-3xl border border-[#E6D9C6] bg-white p-8 shadow-sm">
-            <Heart className="mb-4 h-8 w-8 text-[#C6A664]" />
-            <h2 className="text-2xl font-semibold text-[#2F2A25]">Présentiel + outils numériques</h2>
-            <p className="mt-4 leading-relaxed text-[#5C5348]">
-              Les séances en cabinet ou en visio posent le cadre. Entre deux rendez-vous, des ressources et la
-              plateforme <strong>NEVO</strong> prolongent le travail : révisions, quiz, fiches et routines
-              d&apos;apprentissage adaptées.
+            <p className="mt-2 text-sm font-semibold text-[#8B6F47]">
+              Une méthode progressive, personnalisée et mesurable
             </p>
-            <Link
-              href="/ressources/application-neuro-adaptee"
-              className="mt-4 inline-flex text-sm font-semibold text-[#8B6F47] hover:underline"
-            >
-              Découvrir NEVO →
-            </Link>
+            <ol className="mt-5 space-y-4">
+              {STEPS.map((step, index) => (
+                <li key={step.title} className="flex gap-4">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5EFE6] text-sm font-bold text-[#8B6F47]">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <p className="font-semibold text-[#2F2A25]">{step.title}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-[#5C5348]">{step.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-5 text-sm leading-relaxed text-[#5C5348]">
+              L&apos;objectif n&apos;est pas de créer une dépendance à l&apos;accompagnement, mais de vous
+              transmettre des méthodes durables que vous pourrez mobiliser de façon autonome.
+            </p>
           </article>
         </div>
       </section>
 
-      <section className="border-t border-[#E6D9C6]/50 bg-white py-16">
+      <section className="border-y border-[#E6D9C6]/50 bg-white py-16 md:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-10 md:grid-cols-2 md:items-start">
+            <div>
+              <Monitor className="mb-4 h-8 w-8 text-[#C6A664]" />
+              <h2 className="text-2xl font-semibold text-[#2F2A25]">Présentiel & outils numériques</h2>
+              <p className="mt-2 text-sm font-semibold text-[#8B6F47]">
+                L&apos;accompagnement continue entre les séances
+              </p>
+              <p className="mt-4 leading-relaxed text-[#5C5348]">
+                Le travail ne s&apos;arrête pas à la fin d&apos;un rendez-vous.
+              </p>
+              <p className="mt-4 leading-relaxed text-[#5C5348]">
+                Entre deux séances, vous bénéficiez d&apos;un environnement numérique conçu pour favoriser
+                la consolidation des apprentissages et maintenir une progression régulière.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-[#E6D9C6] bg-[#FFFCF9] p-8">
+              <p className="text-sm font-semibold text-[#2F2A25]">Selon votre accompagnement, vous pouvez accéder à :</p>
+              <ul className="mt-4 space-y-2.5 text-[#5C5348]">
+                {DIGITAL_TOOLS.map((item) => (
+                  <li key={item} className="flex gap-2 text-sm leading-relaxed">
+                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#C6A664]" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-5 text-sm leading-relaxed text-[#5C5348]">
+                Cette continuité permet d&apos;ancrer progressivement les nouvelles stratégies et de
+                favoriser leur transfert dans la vie scolaire, universitaire ou professionnelle.
+              </p>
+              <Link
+                href="/ressources/application-neuro-adaptee"
+                className="mt-5 inline-flex text-sm font-semibold text-[#8B6F47] hover:underline"
+              >
+                Découvrir NEVO →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 md:py-20">
         <div className="mx-auto max-w-3xl px-6 text-center">
-          <h2 className="text-2xl font-bold text-[#2F2A25] md:text-3xl">Les résultats que je vise</h2>
+          <Heart className="mx-auto h-8 w-8 text-[#C6A664]" />
+          <h2 className="mt-4 text-2xl font-bold text-[#2F2A25] md:text-3xl">
+            Un accompagnement pour gagner en autonomie
+          </h2>
           <p className="mt-4 text-lg leading-relaxed text-[#5C5348]">
-            Plus d&apos;autonomie, moins de stress, une meilleure compréhension de soi et des outils réutilisables
-            dans la durée — à l&apos;école, à la maison et dans la vie quotidienne.
+            Comprendre son fonctionnement, expérimenter des stratégies concrètes et consolider les acquis —
+            en cabinet et entre les séances.
           </p>
           <Button
             asChild

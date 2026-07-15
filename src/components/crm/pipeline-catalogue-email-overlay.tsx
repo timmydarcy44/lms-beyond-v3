@@ -14,12 +14,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { parseFetchJson } from "@/lib/api/parse-fetch-json";
 import {
   buildCatalogueEmailPreview,
   DEFAULT_CATALOGUE_EMAIL_BODY,
   DEFAULT_CATALOGUE_EMAIL_SUBJECT,
+  stripCatalogueGreetingLine,
 } from "@/lib/crm/pipeline-catalogue-email-shared";
-import { resolveCatalogueFromForCurrentUser } from "@/lib/crm/pipeline-btob-owners";
+import {
+  CONTACT_CIVILITY_OPTIONS,
+  resolveCatalogueFromForCurrentUser,
+} from "@/lib/crm/pipeline-btob-owners";
 
 export type CatalogueEmailDeal = {
   id: string;
@@ -44,6 +49,7 @@ export function PipelineCatalogueEmailOverlay({
   onSent: () => void | Promise<void>;
 }) {
   const [toEmail, setToEmail] = useState("");
+  const [contactCivility, setContactCivility] = useState("");
   const [bodyText, setBodyText] = useState(DEFAULT_CATALOGUE_EMAIL_BODY);
   const [sending, setSending] = useState(false);
 
@@ -52,15 +58,27 @@ export function PipelineCatalogueEmailOverlay({
     [currentUserEmail],
   );
 
-  const preview = useMemo(() => {
-    if (!deal) return "";
-    return buildCatalogueEmailPreview(bodyText, deal);
-  }, [bodyText, deal]);
+  const previewDeal = useMemo(
+    () =>
+      deal
+        ? {
+            ...deal,
+            contact_civility: contactCivility || deal.contact_civility || null,
+          }
+        : null,
+    [deal, contactCivility],
+  );
+
+  const previewBody = useMemo(() => {
+    if (!previewDeal) return "";
+    return buildCatalogueEmailPreview(bodyText, previewDeal);
+  }, [bodyText, previewDeal]);
 
   useEffect(() => {
     if (!open || !deal) return;
     setToEmail(deal.email?.trim() ?? "");
-    setBodyText(DEFAULT_CATALOGUE_EMAIL_BODY);
+    setContactCivility(deal.contact_civility?.trim() ?? "");
+    setBodyText(stripCatalogueGreetingLine(DEFAULT_CATALOGUE_EMAIL_BODY));
   }, [open, deal]);
 
   const sendCatalogue = async () => {
@@ -80,10 +98,10 @@ export function PipelineCatalogueEmailOverlay({
           from_email: from.email,
           to_email: recipient,
           body_text: bodyText,
-          contact_civility: deal.contact_civility ?? null,
+          contact_civility: contactCivility || null,
         }),
       });
-      const json = await res.json();
+      const json = await parseFetchJson<{ error?: string }>(res);
       if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
       toast.success("Catalogue envoyé par email");
       onOpenChange(false);
@@ -132,6 +150,24 @@ export function PipelineCatalogueEmailOverlay({
             </div>
 
             <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-slate-400">Civilité</Label>
+              <select
+                className="w-full rounded-md border border-white/15 bg-white/10 px-2 py-2 text-sm text-white"
+                value={contactCivility}
+                onChange={(e) => setContactCivility(e.target.value)}
+              >
+                <option value="" className="bg-slate-900">
+                  —
+                </option>
+                {CONTACT_CIVILITY_OPTIONS.map((c) => (
+                  <option key={c} value={c} className="bg-slate-900">
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wide text-slate-400">Objet</Label>
               <Input
                 readOnly
@@ -149,7 +185,7 @@ export function PipelineCatalogueEmailOverlay({
                 className="border-white/15 bg-white/10 font-mono text-sm text-white placeholder:text-slate-500"
               />
               <p className="text-[11px] text-slate-400">
-                La salutation (Bonjour Monsieur/Madame…) est ajoutée automatiquement selon la civilité.
+                La salutation est ajoutée automatiquement dans l&apos;aperçu ci-dessous.
               </p>
             </div>
 
@@ -157,7 +193,16 @@ export function PipelineCatalogueEmailOverlay({
               <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-200/80">
                 Aperçu
               </p>
-              <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-slate-200">{preview}</pre>
+              <p className="mt-2 text-xs text-slate-400">
+                <span className="font-medium text-slate-300">Objet :</span>{" "}
+                {DEFAULT_CATALOGUE_EMAIL_SUBJECT}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                <span className="font-medium text-slate-300">À :</span> {toEmail || "—"}
+              </p>
+              <pre className="mt-3 whitespace-pre-wrap font-sans text-sm text-slate-200">
+                {previewBody}
+              </pre>
             </div>
 
             <div className="flex items-center gap-2 text-xs text-slate-400">

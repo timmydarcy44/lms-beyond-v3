@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
     company_name,
     contact_first_name,
     contact_last_name,
+    contact_civility: body?.contact_civility ? String(body.contact_civility).trim() : null,
     company_creation_date: body?.company_creation_date
       ? String(body.company_creation_date).trim()
       : null,

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { parseFetchJson } from "@/lib/api/parse-fetch-json";
 import { toast } from "sonner";
 import { Loader2, Mail, Mic, MicOff, PenLine, Phone, Plus, Sparkles, StickyNote, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -102,7 +103,7 @@ export function PipelineDealActionsSection({
     setLoading(true);
     try {
       const res = await fetch(`/api/super-admin/crm/pipeline/deals/${dealId}/actions`);
-      const json = await res.json();
+      const json = await parseFetchJson<{ error?: string; actions?: PipelineDealAction[] }>(res);
       if (!res.ok) throw new Error(json.error);
       setActions(json.actions ?? []);
     } catch (e) {
@@ -235,7 +236,7 @@ export function PipelineDealActionsSection({
           created_by_email: currentUserEmail,
         }),
       });
-      const json = await res.json();
+      const json = await parseFetchJson<{ error?: string; actions?: PipelineDealAction[] }>(res);
       if (!res.ok) throw new Error(json.error);
       await load();
       onActionsChange?.();
@@ -295,7 +296,7 @@ export function PipelineDealActionsSection({
         `/api/super-admin/crm/pipeline/deals/${dealId}/actions/transcribe`,
         { method: "POST", body: form },
       );
-      const json = await res.json();
+      const json = await parseFetchJson<{ error?: string; actions?: PipelineDealAction[] }>(res);
       if (!res.ok) throw new Error(json.error);
       setDraftNotes("");
       finishCallFlow();

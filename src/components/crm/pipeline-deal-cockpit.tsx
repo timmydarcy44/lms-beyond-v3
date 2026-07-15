@@ -36,7 +36,7 @@ import {
   BTOB_PRIORITY_OPTIONS,
   BTOB_SECTOR_OPTIONS,
 } from "@/lib/crm/pipeline-btob-commercial-options";
-import { PIPELINE_BTOB_CONTACT_OWNERS } from "@/lib/crm/pipeline-btob-owners";
+import { PIPELINE_BTOB_CONTACT_OWNERS, CONTACT_CIVILITY_OPTIONS } from "@/lib/crm/pipeline-btob-owners";
 import type { BtobCommercialFormState } from "@/app/super/crm/pipeline/pipeline-btob-commercial-fields";
 import type { PipelineStage } from "@/lib/crm/pipeline-shared";
 
@@ -51,6 +51,7 @@ export type DealCockpitForm = {
   company_name: string;
   contact_first_name: string;
   contact_last_name: string;
+  contact_civility: string;
   email: string;
   phone: string;
   notes: string;
@@ -209,7 +210,7 @@ export function PipelineDealCockpit({
     commercial.next_action_date && commercial.next_action_date < new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="space-y-4 text-gray-900">
+    <div className="space-y-4 text-white">
       {/* Bandeau intelligence EDGE — impact visuel */}
       <div className="relative -mx-4 -mt-4 mb-2 overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-5 text-white sm:-mx-6 sm:-mt-6 sm:px-6">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.25),transparent_55%)]" />
@@ -371,19 +372,19 @@ export function PipelineDealCockpit({
       </div>
 
       {/* En-tête prospect */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <Input
-              className="border-0 p-0 text-lg font-bold shadow-none focus-visible:ring-0"
+              className="border-0 bg-transparent p-0 text-lg font-bold text-white shadow-none placeholder:text-slate-500 focus-visible:ring-0"
               placeholder="Nom de l'entreprise *"
               value={form.company_name}
               onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
             />
             {subtitleParts.length > 0 ? (
-              <p className="mt-1 text-sm text-gray-600">{subtitleParts.join(" · ")}</p>
+              <p className="mt-1 text-sm text-slate-300">{subtitleParts.join(" · ")}</p>
             ) : (
-              <p className="mt-1 text-sm text-gray-400">Complétez via SIRET ou saisie manuelle</p>
+              <p className="mt-1 text-sm text-slate-500">Complétez via SIRET ou saisie manuelle</p>
             )}
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -425,28 +426,28 @@ export function PipelineDealCockpit({
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <Label className="text-xs text-gray-500">Étape pipeline</Label>
+            <Label className="text-xs text-slate-400">Étape pipeline</Label>
             <select
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white"
               value={form.stage_slug}
               onChange={(e) => setForm((f) => ({ ...f, stage_slug: e.target.value }))}
             >
               {visibleStages.map((s) => (
-                <option key={s.slug} value={s.slug}>
+                <option key={s.slug} value={s.slug} className="bg-slate-900">
                   {s.label}
                 </option>
               ))}
             </select>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-gray-500">Propriétaire</Label>
+            <Label className="text-xs text-slate-400">Propriétaire</Label>
             <select
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white"
               value={form.contact_owner_email}
               onChange={(e) => setForm((f) => ({ ...f, contact_owner_email: e.target.value }))}
             >
               {PIPELINE_BTOB_CONTACT_OWNERS.map((o) => (
-                <option key={o.email} value={o.email}>
+                <option key={o.email} value={o.email} className="bg-slate-900">
                   {o.label}
                 </option>
               ))}
@@ -456,9 +457,9 @@ export function PipelineDealCockpit({
       </section>
 
       {/* Synthèse EDGE */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-sm">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-gray-900">Synthèse EDGE</p>
+          <p className="text-sm font-semibold text-white">Synthèse EDGE</p>
           {onGenerateAiSummary ? (
             <Button
               type="button"
@@ -478,29 +479,29 @@ export function PipelineDealCockpit({
         </div>
 
         {aiProspectSummary ? (
-          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/80 p-3">
-            <p className="whitespace-pre-wrap text-sm text-emerald-950">{aiProspectSummary}</p>
+          <div className="mt-3 rounded-lg border border-emerald-400/30 bg-emerald-950/40 p-3">
+            <p className="whitespace-pre-wrap text-sm text-emerald-100">{aiProspectSummary}</p>
           </div>
         ) : (
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
-              <p className="text-xs font-semibold uppercase text-indigo-800">Ce que nous savons</p>
-              <ul className="mt-2 space-y-1.5 text-sm text-indigo-950/90">
+            <div className="rounded-lg border border-indigo-400/25 bg-indigo-950/40 p-3">
+              <p className="text-xs font-semibold uppercase text-indigo-200">Ce que nous savons</p>
+              <ul className="mt-2 space-y-1.5 text-sm text-indigo-50/90">
                 {knowsItems.map((item) => (
                   <li key={item} className="flex gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
                     {item}
                   </li>
                 ))}
               </ul>
             </div>
             {missingItems.length > 0 ? (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
-                <p className="text-xs font-semibold uppercase text-amber-900">Ce qu&apos;il manque</p>
-                <ul className="mt-2 space-y-1.5 text-sm text-amber-950">
+              <div className="rounded-lg border border-amber-400/30 bg-amber-950/35 p-3">
+                <p className="text-xs font-semibold uppercase text-amber-200">Ce qu&apos;il manque</p>
+                <ul className="mt-2 space-y-1.5 text-sm text-amber-50">
                   {missingItems.map((item) => (
                     <li key={item} className="flex gap-2">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                       {item}
                     </li>
                   ))}
@@ -510,17 +511,17 @@ export function PipelineDealCockpit({
           </div>
         )}
         {aiProspectSummaryAt ? (
-          <p className="mt-2 text-xs text-gray-400">
+          <p className="mt-2 text-xs text-slate-500">
             Synthèse du {aiProspectSummaryAt.slice(0, 10)}
           </p>
         ) : null}
       </section>
 
       {/* Besoins et offre */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4">
-        <p className="text-sm font-semibold text-gray-900">Besoins identifiés</p>
+      <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+        <p className="text-sm font-semibold text-white">Besoins identifiés</p>
         {commercial.training_needs.length === 0 ? (
-          <p className="mt-2 text-sm text-gray-500">Aucun besoin confirmé</p>
+          <p className="mt-2 text-sm text-slate-400">Aucun besoin confirmé</p>
         ) : (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {commercial.training_needs.map((tag) => (
@@ -545,7 +546,7 @@ export function PipelineDealCockpit({
         <div className="mt-2 flex gap-2">
           <Input
             placeholder="Ajouter un besoin…"
-            className="h-9 text-sm"
+            className="h-9 border-white/15 bg-white/10 text-sm text-white placeholder:text-slate-500"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -559,8 +560,8 @@ export function PipelineDealCockpit({
           />
         </div>
 
-        <div className="mt-5 border-t border-gray-100 pt-4">
-          <p className="text-sm font-semibold text-gray-900">Offre envisagée</p>
+        <div className="mt-5 border-t border-white/10 pt-4">
+          <p className="text-sm font-semibold text-white">Offre envisagée</p>
           <div className="mt-2">
             <PipelineQuoteFormationsCompact
               selectedIds={form.quoted_course_ids}
@@ -572,18 +573,18 @@ export function PipelineDealCockpit({
       </section>
 
       {/* Personnes impliquées */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4">
-        <p className="text-sm font-semibold text-gray-900">Personnes impliquées</p>
+      <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+        <p className="text-sm font-semibold text-white">Personnes impliquées</p>
         {people.length === 0 ? (
-          <p className="mt-2 text-sm text-gray-500">Aucun contact renseigné</p>
+          <p className="mt-2 text-sm text-slate-400">Aucun contact renseigné</p>
         ) : (
           <ul className="mt-3 space-y-3">
             {people.map((p) => (
-              <li key={p.name} className="rounded-lg border border-gray-100 bg-gray-50/80 p-3">
-                <p className="font-medium text-gray-900">{p.name}</p>
-                <p className="text-xs text-gray-600">{p.roles.join(" · ")}</p>
-                {p.phone ? <p className="mt-1 text-sm text-gray-700">{p.phone}</p> : null}
-                {p.email ? <p className="text-sm text-gray-700">{p.email}</p> : null}
+              <li key={p.name} className="rounded-lg border border-white/10 bg-slate-900/50 p-3">
+                <p className="font-medium text-white">{p.name}</p>
+                <p className="text-xs text-slate-400">{p.roles.join(" · ")}</p>
+                {p.phone ? <p className="mt-1 text-sm text-slate-300">{p.phone}</p> : null}
+                {p.email ? <p className="text-sm text-slate-300">{p.email}</p> : null}
               </li>
             ))}
           </ul>
@@ -601,7 +602,7 @@ export function PipelineDealCockpit({
       </section>
 
       {/* Activité */}
-      <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 to-white p-4 shadow-sm">
+      <div className="rounded-xl border border-indigo-400/20 bg-indigo-950/30 p-4 shadow-sm backdrop-blur-sm">
         <PipelineDealActionsSection
           dealId={form.id}
           phone={form.phone}
@@ -615,13 +616,13 @@ export function PipelineDealCockpit({
       </div>
 
       {/* Notes humaines */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4">
-        <Label className="text-sm font-semibold text-gray-900">Notes internes</Label>
-        <p className="mt-0.5 text-xs text-gray-500">
+      <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+        <Label className="text-sm font-semibold text-white">Notes internes</Label>
+        <p className="mt-0.5 text-xs text-slate-400">
           Observations commerciales uniquement — pas de données administratives.
         </p>
         <Textarea
-          className="mt-2"
+          className="mt-2 border-white/15 bg-white/10 text-white placeholder:text-slate-500"
           value={form.notes}
           onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
           rows={4}
@@ -632,29 +633,50 @@ export function PipelineDealCockpit({
       {/* Coordonnées — édition */}
       <PipelineLightSection
         title="Modifier les coordonnées"
-        subtitle="Prénom, nom, téléphone, email, LinkedIn"
+        subtitle="Civilité, prénom, nom, téléphone, email, LinkedIn"
         defaultOpen={editContactOpen}
+        tone="dark"
       >
         <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-400">Civilité</Label>
+            <select
+              className="w-full rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white"
+              value={form.contact_civility}
+              onChange={(e) => setForm((f) => ({ ...f, contact_civility: e.target.value }))}
+            >
+              <option value="" className="bg-slate-900">
+                —
+              </option>
+              {CONTACT_CIVILITY_OPTIONS.map((c) => (
+                <option key={c} value={c} className="bg-slate-900">
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Prénom</Label>
+              <Label className="text-xs text-slate-400">Prénom</Label>
               <Input
+                className="border-white/15 bg-white/10 text-white"
                 value={form.contact_first_name}
                 onChange={(e) => setForm((f) => ({ ...f, contact_first_name: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Nom</Label>
+              <Label className="text-xs text-slate-400">Nom</Label>
               <Input
+                className="border-white/15 bg-white/10 text-white"
                 value={form.contact_last_name}
                 onChange={(e) => setForm((f) => ({ ...f, contact_last_name: e.target.value }))}
               />
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Rôle du contact</Label>
+            <Label className="text-xs text-slate-400">Rôle du contact</Label>
             <Input
+              className="border-white/15 bg-white/10 text-white"
               value={commercial.contact_role}
               onChange={(e) => setCommercial((c) => ({ ...c, contact_role: e.target.value }))}
               placeholder="Dirigeant, DRH…"
@@ -662,16 +684,18 @@ export function PipelineDealCockpit({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Téléphone</Label>
+              <Label className="text-xs text-slate-400">Téléphone</Label>
               <Input
+                className="border-white/15 bg-white/10 text-white"
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Email</Label>
+              <Label className="text-xs text-slate-400">Email</Label>
               <Input
                 type="email"
+                className="border-white/15 bg-white/10 text-white"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               />
@@ -679,15 +703,17 @@ export function PipelineDealCockpit({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Ville</Label>
+              <Label className="text-xs text-slate-400">Ville</Label>
               <Input
+                className="border-white/15 bg-white/10 text-white"
                 value={form.city}
                 onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Code postal</Label>
+              <Label className="text-xs text-slate-400">Code postal</Label>
               <Input
+                className="border-white/15 bg-white/10 text-white"
                 value={form.zip_code}
                 onChange={(e) => setForm((f) => ({ ...f, zip_code: e.target.value }))}
               />

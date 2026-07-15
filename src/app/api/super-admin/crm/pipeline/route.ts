@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendNewPipelineProspectNotification } from "@/lib/crm/pipeline-prospect-emails";
-import {
-  sendBtobCatalogueEmail,
-  shouldSendBtobCatalogueEmail,
-} from "@/lib/crm/pipeline-catalogue-email";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
   DEFAULT_BTOC_PIPELINE_STAGES,

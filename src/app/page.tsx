@@ -50,9 +50,9 @@ export async function generateMetadata(): Promise<Metadata> {
   if (hostOnly === "beyondcenter.fr" && !isLocalhost) {
     return {
       metadataBase: new URL("https://beyondcenter.fr"),
-      title: "Beyond | Pilotez les compétences. Pas les intuitions.",
+      title: "Beyond — Optimisation de la performance commerciale",
       description:
-        "Plateforme d'intelligence des compétences pour entreprises, CFA et écoles : cartographie, écarts, parcours, Open Badges et pilotage par la donnée et l'IA.",
+        "CRM, pipeline, automatisation et IA pour accélérer la conversion et le pilotage commercial.",
       alternates: {
         canonical: "https://beyondcenter.fr/",
       },
@@ -75,6 +75,12 @@ export default async function Home() {
   const hostname = headersList.get('host') || '';
   const isLocalhost = hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1') || hostname.includes('localhost');
   const hostOnly = hostname.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
+
+  /** Beyond Center — agence développement sur mesure */
+  if (!isLocalhost && hostOnly === "beyondcenter.fr") {
+    const { BeyondAgencyHome } = await import("@/components/beyond-center/agency/beyond-agency-home");
+    return <BeyondAgencyHome />;
+  }
 
   /** EDGE Lab sur domaine dédié. */
   if (!isLocalhost && hostOnly === "edgebs.fr") {

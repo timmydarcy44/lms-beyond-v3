@@ -18,6 +18,7 @@ import {
 import {
   computePipelineRevenueCents,
   DEPRECATED_PIPELINE_STAGE_SLUGS,
+  BTOB_CATALOGUE_STAGE_SLUG,
   formatDealAmount,
   shouldShowRevenueBar,
   type PipelineDeal,
@@ -46,6 +47,7 @@ import {
 import { Users } from "lucide-react";
 import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsible-section";
 import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pipeline-deal-sheet";
+import { PipelineCatalogueEmailOverlay } from "@/components/crm/pipeline-catalogue-email-overlay";
 import { PipelineDealCockpit, sanitizeHumanNotes } from "@/components/crm/pipeline-deal-cockpit";
 import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
@@ -63,6 +65,7 @@ type DealForm = {
   company_name: string;
   contact_first_name: string;
   contact_last_name: string;
+  contact_civility: string;
   email: string;
   phone: string;
   amount: string;
@@ -83,6 +86,7 @@ const emptyDeal = (stage: string): DealForm => ({
   company_name: "",
   contact_first_name: "",
   contact_last_name: "",
+  contact_civility: "",
   email: "",
   phone: "",
   amount: "",
@@ -129,6 +133,11 @@ export const PipelineBoardClient = forwardRef<
   const [aiProspectSummary, setAiProspectSummary] = useState<string | null>(null);
   const [aiProspectSummaryAt, setAiProspectSummaryAt] = useState<string | null>(null);
   const [generatingAiSummary, setGeneratingAiSummary] = useState(false);
+  const [originalStageSlug, setOriginalStageSlug] = useState<string | null>(null);
+  const [catalogueOverlayOpen, setCatalogueOverlayOpen] = useState(false);
+  const [catalogueOverlayDeal, setCatalogueOverlayDeal] = useState<PipelineDeal | null>(null);
+  const [pendingStageSlug, setPendingStageSlug] = useState<string | null>(null);
+  const [saveAfterCatalogue, setSaveAfterCatalogue] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -311,6 +320,7 @@ export const PipelineBoardClient = forwardRef<
     setForm(emptyDeal(stageSlug));
     setCommercial(emptyBtobCommercial());
     setEditingDealMeta({});
+    setOriginalStageSlug(stageSlug);
     setAiProspectSummary(null);
     setAiProspectSummaryAt(null);
     setDialogOpen(true);
@@ -332,6 +342,7 @@ export const PipelineBoardClient = forwardRef<
       company_name: deal.company_name,
       contact_first_name: deal.contact_first_name,
       contact_last_name: deal.contact_last_name ?? "",
+      contact_civility: deal.contact_civility ?? "",
       email: deal.email ?? "",
       phone: deal.phone ?? "",
       amount: deal.amount_cents ? String(deal.amount_cents / 100) : "",
@@ -347,9 +358,24 @@ export const PipelineBoardClient = forwardRef<
       updated_at: deal.updated_at,
       catalog_email_sent_at: deal.catalog_email_sent_at,
     });
+    setOriginalStageSlug(deal.stage_slug);
     setAiProspectSummary(deal.ai_prospect_summary ?? null);
     setAiProspectSummaryAt(deal.ai_prospect_summary_at ?? null);
     setDialogOpen(true);
+  };
+
+  const shouldPromptCatalogueEmail = (deal: PipelineDeal, targetStage: string) => {
+    if (isBtoc) return false;
+    if (targetStage !== BTOB_CATALOGUE_STAGE_SLUG) return false;
+    if (deal.stage_slug === BTOB_CATALOGUE_STAGE_SLUG) return false;
+    if (deal.catalog_email_sent_at) return false;
+    return true;
+  };
+
+  const openCatalogueOverlay = (deal: PipelineDeal, targetStage: string) => {
+    setCatalogueOverlayDeal(deal);
+    setPendingStageSlug(targetStage);
+    setCatalogueOverlayOpen(true);
   };
 
   const generateAiSummary = async () => {
@@ -415,6 +441,32 @@ export const PipelineBoardClient = forwardRef<
       toast.error("Nom de l'entreprise requis");
       return;
     }
+
+    if (
+      !isBtoc &&
+      form.id &&
+      form.stage_slug === BTOB_CATALOGUE_STAGE_SLUG &&
+      originalStageSlug !== BTOB_CATALOGUE_STAGE_SLUG &&
+      !editingDealMeta.catalog_email_sent_at
+    ) {
+      const dealFromForm = deals.find((d) => d.id === form.id);
+      if (dealFromForm) {
+        openCatalogueOverlay(
+          {
+            ...dealFromForm,
+            company_name: form.company_name,
+            contact_first_name: form.contact_first_name,
+            contact_last_name: form.contact_last_name,
+            contact_civility: form.contact_civility || null,
+            email: form.email || null,
+          },
+          BTOB_CATALOGUE_STAGE_SLUG,
+        );
+        setSaveAfterCatalogue(true);
+        return;
+      }
+    }
+
     const zip =
       form.zip_code.trim()
       || parseZipFromText(commercial.location)
@@ -432,6 +484,7 @@ export const PipelineBoardClient = forwardRef<
       company_name: form.company_name,
       contact_first_name: form.contact_first_name,
       contact_last_name: form.contact_last_name || null,
+      contact_civility: form.contact_civility || null,
       email: form.email || null,
       phone: form.phone || null,
       city: form.city.trim() || null,
@@ -485,6 +538,12 @@ export const PipelineBoardClient = forwardRef<
   };
 
   const moveDeal = async (dealId: string, stageSlug: string) => {
+    const deal = deals.find((d) => d.id === dealId);
+    if (deal && shouldPromptCatalogueEmail(deal, stageSlug)) {
+      openCatalogueOverlay(deal, stageSlug);
+      return;
+    }
+
     const res = await fetch(`/api/super-admin/crm/pipeline/deals/${dealId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -495,6 +554,62 @@ export const PipelineBoardClient = forwardRef<
       return;
     }
     await load();
+  };
+
+  const handleCatalogueSent = async () => {
+    await load();
+    if (saveAfterCatalogue && form.id) {
+      setSaveAfterCatalogue(false);
+      const zip =
+        form.zip_code.trim()
+        || parseZipFromText(commercial.location)
+        || parseZipFromText(form.city)
+        || null;
+      const centroid = zip ? centroidFromZip(zip) : null;
+      const nba = computeDealIntelligence(intelligenceInput).nextBestAction;
+      const payload = {
+        stage_slug: BTOB_CATALOGUE_STAGE_SLUG,
+        contact_owner_email: form.contact_owner_email || null,
+        siret: form.siret || null,
+        siren: form.siren || null,
+        naf_code: form.naf_code || null,
+        opco_name: form.opco_name || null,
+        company_name: form.company_name,
+        contact_first_name: form.contact_first_name,
+        contact_last_name: form.contact_last_name || null,
+        contact_civility: form.contact_civility || null,
+        email: form.email || null,
+        phone: form.phone || null,
+        city: form.city.trim() || null,
+        zip_code: zip,
+        latitude: centroid?.lat ?? null,
+        longitude: centroid?.lng ?? null,
+        quoted_course_ids: form.quoted_course_ids,
+        company_creation_date: form.company_creation_date || null,
+        amount: form.amount,
+        notes: form.notes || null,
+        contact_linkedin: commercial.contact_linkedin || null,
+        company_linkedin: commercial.company_linkedin || null,
+        next_best_action: nba,
+        ...commercialToPayload(commercial),
+      };
+      try {
+        const res = await fetch(`/api/super-admin/crm/pipeline/deals/${form.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, pipeline_type: pipelineType }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
+        setDialogOpen(false);
+        await load();
+        toast.success("Enregistré");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Erreur");
+      }
+    }
+    setPendingStageSlug(null);
+    setCatalogueOverlayDeal(null);
   };
 
   const saveStageLabel = async () => {
@@ -964,10 +1079,10 @@ export const PipelineBoardClient = forwardRef<
           </div>
         )}
         <PipelineDealSheetFooter>
-            <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
+            <Button variant="outline" type="button" className="border-white/20 bg-transparent text-white hover:bg-white/10" onClick={() => setDialogOpen(false)}>
               Annuler
             </Button>
-            <Button type="button" onClick={() => void saveDeal()}>Enregistrer</Button>
+            <Button type="button" className="bg-indigo-600 hover:bg-indigo-500" onClick={() => void saveDeal()}>Enregistrer</Button>
         </PipelineDealSheetFooter>
       </PipelineDealSheet>
 
@@ -982,6 +1097,21 @@ export const PipelineBoardClient = forwardRef<
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PipelineCatalogueEmailOverlay
+        open={catalogueOverlayOpen}
+        onOpenChange={(open) => {
+          setCatalogueOverlayOpen(open);
+          if (!open) {
+            setSaveAfterCatalogue(false);
+            setCatalogueOverlayDeal(null);
+            setPendingStageSlug(null);
+          }
+        }}
+        deal={catalogueOverlayDeal}
+        currentUserEmail={currentUserEmail}
+        onSent={handleCatalogueSent}
+      />
     </div>
   );
 });

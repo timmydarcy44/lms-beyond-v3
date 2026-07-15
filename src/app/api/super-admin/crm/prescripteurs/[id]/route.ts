@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requirePipelinePrescripteurAccess } from "@/lib/crm/pipeline-prescripteur-access";
+import { requirePipelinePrescripteurAccess } from "@/lib/crm/pipeline-prescripteur-access.server";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
   DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle, Phone } from "lucide-react";
@@ -93,13 +93,17 @@ const emptyDeal = (stage: string): DealForm => ({
   quoted_course_ids: [],
 });
 
-export function PipelineBoardClient({
-  pipelineType,
-  currentUserEmail,
-}: {
-  pipelineType: PipelineType;
-  currentUserEmail: string | null;
-}) {
+export type PipelineBoardHandle = {
+  openCreateProspect: () => void;
+};
+
+export const PipelineBoardClient = forwardRef<
+  PipelineBoardHandle,
+  {
+    pipelineType: PipelineType;
+    currentUserEmail: string | null;
+  }
+>(function PipelineBoardClient({ pipelineType, currentUserEmail }, ref) {
   const isBtoc = pipelineType === "btoc";
   const defaultStage = isBtoc ? "inscription" : "a_appeler";
   const normUserEmail = currentUserEmail?.trim().toLowerCase() ?? null;
@@ -311,6 +315,10 @@ export function PipelineBoardClient({
     setAiProspectSummaryAt(null);
     setDialogOpen(true);
   };
+
+  useImperativeHandle(ref, () => ({
+    openCreateProspect: () => openCreate(defaultStage),
+  }));
 
   const openEdit = (deal: PipelineDeal) => {
     setForm({
@@ -976,4 +984,4 @@ export function PipelineBoardClient({
       </Dialog>
     </div>
   );
-}
+});

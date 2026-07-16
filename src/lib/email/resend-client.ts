@@ -51,6 +51,8 @@ export type EmailOptions = {
   bcc?: string | string[];
   skipBcc?: boolean;
   attachments?: EmailAttachment[];
+  /** Tags Resend (webhook email.opened, analytics). */
+  tags?: Record<string, string>;
 };
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -79,6 +81,12 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
           ...(options.bcc ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]) : []),
         ];
 
+    const tags = options.tags
+      ? Object.entries(options.tags)
+          .filter(([, value]) => Boolean(value?.trim()))
+          .map(([name, value]) => ({ name, value: value.trim() }))
+      : undefined;
+
     const result = await resend.emails.send({
       from: fromEmail,
       to: recipients,
@@ -86,6 +94,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       subject: options.subject,
       html: options.html,
       replyTo: options.replyTo,
+      tags: tags?.length ? tags : undefined,
       attachments: options.attachments?.map((a) => ({
         filename: a.filename,
         content: typeof a.content === "string" ? Buffer.from(a.content) : a.content,

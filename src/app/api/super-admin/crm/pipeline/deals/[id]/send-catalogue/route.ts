@@ -11,6 +11,7 @@ import {
   resolveCatalogueFromForCurrentUser,
 } from "@/lib/crm/pipeline-btob-owners";
 import { BTOB_CATALOGUE_STAGE_SLUG } from "@/lib/crm/pipeline-shared";
+import { markCatalogueEmailSent } from "@/lib/crm/mark-catalogue-email-sent";
 import { updatePipelineDeal } from "@/lib/crm/pipeline-deal-update";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     fromEmail: resolvedFrom,
     fromName: resolvedName,
     bodyText,
+    dealId: id,
   });
 
   if (!result.success) {
@@ -72,9 +74,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
 
   const now = new Date().toISOString();
+  const { error: markError } = await markCatalogueEmailSent(supabase, id, result.messageId);
+  if (markError) {
+    return NextResponse.json({ error: markError.message }, { status: 500 });
+  }
+
   const updatePatch: Record<string, unknown> = {
     stage_slug: BTOB_CATALOGUE_STAGE_SLUG,
-    catalog_email_sent_at: now,
     updated_at: now,
     ...(toEmailOverride ? { email: toEmailOverride } : {}),
     ...(civilityOverride ? { contact_civility: civilityOverride } : {}),
@@ -86,5 +92,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, deal: updated, sent_at: now });
+  return NextResponse.json({
+    success: true,
+    deal: updated,
+    sent_at: now,
+    message_id: result.messageId ?? null,
+  });
 }

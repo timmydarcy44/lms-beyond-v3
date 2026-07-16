@@ -46,6 +46,7 @@ import {
 import { Users } from "lucide-react";
 import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsible-section";
 import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pipeline-deal-sheet";
+import { CatalogueEmailOpenIndicator } from "@/components/crm/catalogue-email-open-indicator";
 import { PipelineCatalogueEmailOverlay } from "@/components/crm/pipeline-catalogue-email-overlay";
 import { PipelineDealCockpit, sanitizeHumanNotes } from "@/components/crm/pipeline-deal-cockpit";
 import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
@@ -129,6 +130,7 @@ export const PipelineBoardClient = forwardRef<
     created_at?: string;
     updated_at?: string;
     catalog_email_sent_at?: string | null;
+    catalog_email_opened_at?: string | null;
   }>({});
   const [stageLabelDraft, setStageLabelDraft] = useState("");
   const [siretLoading, setSiretLoading] = useState(false);
@@ -143,8 +145,8 @@ export const PipelineBoardClient = forwardRef<
   const [pendingStageSlug, setPendingStageSlug] = useState<string | null>(null);
   const [saveAfterCatalogue, setSaveAfterCatalogue] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const sync = isBtoc ? "&sync=1" : "";
       const res = await fetch(`/api/super-admin/crm/pipeline?type=${pipelineType}${sync}`);
@@ -153,9 +155,9 @@ export const PipelineBoardClient = forwardRef<
       setStages(json.stages ?? []);
       setDeals(json.deals ?? []);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Chargement impossible");
+      if (!opts?.silent) toast.error(e instanceof Error ? e.message : "Chargement impossible");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [pipelineType, isBtoc]);
 
@@ -169,6 +171,17 @@ export const PipelineBoardClient = forwardRef<
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Rafraîchit discrètement les ouvertures d'email catalogue.
+  useEffect(() => {
+    if (isBtoc) return;
+    const hasPendingOpen = deals.some(
+      (d) => d.catalog_email_sent_at && !d.catalog_email_opened_at,
+    );
+    if (!hasPendingOpen) return;
+    const timer = window.setInterval(() => void load({ silent: true }), 45_000);
+    return () => window.clearInterval(timer);
+  }, [deals, isBtoc, load]);
 
   useEffect(() => {
     const onCrmUpdated = () => void load();
@@ -361,6 +374,7 @@ export const PipelineBoardClient = forwardRef<
       created_at: deal.created_at,
       updated_at: deal.updated_at,
       catalog_email_sent_at: deal.catalog_email_sent_at,
+      catalog_email_opened_at: deal.catalog_email_opened_at,
     });
     setOriginalStageSlug(deal.stage_slug);
     setAiProspectSummary(deal.ai_prospect_summary ?? null);
@@ -885,16 +899,24 @@ export const PipelineBoardClient = forwardRef<
                     <div className="relative">
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-medium text-sm leading-tight">{deal.company_name}</p>
-                        {deal.phone ? (
-                          <a
-                            href={`tel:${deal.phone.replace(/\s/g, "")}`}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-indigo-200 hover:bg-white/20 md:hidden"
-                            title={`Appeler ${deal.phone}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Phone className="h-4 w-4" />
-                          </a>
-                        ) : null}
+                        <div className="flex shrink-0 items-center gap-1">
+                          {!isBtoc ? (
+                            <CatalogueEmailOpenIndicator
+                              sentAt={deal.catalog_email_sent_at}
+                              openedAt={deal.catalog_email_opened_at}
+                            />
+                          ) : null}
+                          {deal.phone ? (
+                            <a
+                              href={`tel:${deal.phone.replace(/\s/g, "")}`}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-indigo-200 hover:bg-white/20 md:hidden"
+                              title={`Appeler ${deal.phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Phone className="h-4 w-4" />
+                            </a>
+                          ) : null}
+                        </div>
                       </div>
                       {contactName ? (
                         <p className="text-xs text-slate-300 mt-0.5">{contactName}</p>

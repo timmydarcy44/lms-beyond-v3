@@ -16,6 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CatalogueEmailOpenIndicator } from "@/components/crm/catalogue-email-open-indicator";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -152,7 +153,11 @@ export function PipelineDealCockpit({
   setCommercial: React.Dispatch<React.SetStateAction<BtobCommercialFormState>>;
   visibleStages: PipelineStage[];
   intelligenceInput: DealIntelligenceInput;
-  editingDealMeta: { created_at?: string };
+  editingDealMeta: {
+    created_at?: string;
+    catalog_email_sent_at?: string | null;
+    catalog_email_opened_at?: string | null;
+  };
   siretLoading: boolean;
   onLookupSiret: () => void;
   currentUserEmail: string | null;
@@ -242,7 +247,12 @@ export function PipelineDealCockpit({
                 <p className="text-sm text-slate-300">{subtitleParts.join(" · ")}</p>
               ) : null}
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <CatalogueEmailOpenIndicator
+                sentAt={editingDealMeta.catalog_email_sent_at}
+                openedAt={editingDealMeta.catalog_email_opened_at}
+                size="md"
+              />
               {form.phone?.trim() ? (
                 <Button type="button" size="sm" className="bg-indigo-600 hover:bg-indigo-700" asChild>
                   <a href={`tel:${form.phone.replace(/\s/g, "")}`}>

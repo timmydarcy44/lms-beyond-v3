@@ -3,6 +3,11 @@ import {
   sendBtobCatalogueEmail,
   shouldSendBtobCatalogueEmail,
 } from "@/lib/crm/pipeline-catalogue-email";
+import { markCatalogueEmailSent } from "@/lib/crm/mark-catalogue-email-sent";
+import {
+  resolveCatalogueFromEmail,
+  resolveCatalogueFromName,
+} from "@/lib/crm/pipeline-btob-owners";
 import { sendNewPipelineProspectNotification } from "@/lib/crm/pipeline-prospect-emails";
 
 export type PipelineBtobPriority = "haute" | "moyenne" | "standard";
@@ -250,16 +255,25 @@ async function maybeSendCatalogueEmailForDeal(
     email: deal.email ? String(deal.email) : null,
     contact_first_name: deal.contact_first_name ? String(deal.contact_first_name) : null,
     company_name: String(deal.company_name),
+    fromEmail: resolveCatalogueFromEmail(
+      deal.contact_owner_email ? String(deal.contact_owner_email) : null,
+    ),
+    fromName: resolveCatalogueFromName(
+      deal.contact_owner_email ? String(deal.contact_owner_email) : null,
+    ),
+    dealId: String(deal.id),
   })
     .then(async (result) => {
       if (!result.success) {
         console.error("[pipeline-btob-mcp] catalogue email:", result.error);
         return;
       }
-      await supabase
-        .from("crm_pipeline_deals")
-        .update({ catalog_email_sent_at: new Date().toISOString() })
-        .eq("id", deal.id);
+      const { error: markError } = await markCatalogueEmailSent(
+        supabase,
+        String(deal.id),
+        result.messageId,
+      );
+      if (markError) console.error("[pipeline-btob-mcp] mark catalogue sent:", markError);
     })
     .catch((err) => console.error("[pipeline-btob-mcp] catalogue email:", err));
 }

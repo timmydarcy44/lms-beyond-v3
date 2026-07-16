@@ -27,6 +27,8 @@ export type SendCatalogueEmailOptions = CatalogueDealInput & {
   fromName?: string;
   bodyText?: string;
   subject?: string;
+  /** ID deal CRM — tag Resend pour le webhook d'ouverture. */
+  dealId?: string;
 };
 
 export function shouldSendBtobCatalogueEmail(params: {
@@ -95,7 +97,7 @@ async function loadCataloguePdfBuffer(): Promise<Buffer | null> {
 
 export async function sendBtobCatalogueEmail(
   options: SendCatalogueEmailOptions,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const recipient = options.email?.trim();
   if (!recipient) {
     return { success: false, error: "Email du contact manquant" };
@@ -127,7 +129,12 @@ export async function sendBtobCatalogueEmail(
     subject: options.subject?.trim() || DEFAULT_CATALOGUE_EMAIL_SUBJECT,
     html,
     from: `${fromName} <${fromEmail}>`,
+    replyTo: fromEmail,
     attachments: [{ filename, content: pdf }],
+    tags: {
+      kind: "catalogue",
+      ...(options.dealId ? { deal_id: options.dealId } : {}),
+    },
   });
 }
 
@@ -159,5 +166,6 @@ export async function sendBtobCatalogueFollowupEmail(deal: CatalogueDealInput): 
     subject: "Suite à l'envoi du catalogue EDGE",
     html,
     from: "EDGE <contact@edgebs.fr>",
+    replyTo: "contact@edgebs.fr",
   });
 }

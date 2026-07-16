@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import {
+  sendBtobCatalogueEmail,
+  shouldSendBtobCatalogueEmail,
+} from "@/lib/crm/pipeline-catalogue-email";
+import {
+  resolveCatalogueFromEmail,
+  resolveCatalogueFromName,
+} from "@/lib/crm/pipeline-btob-owners";
+import { markCatalogueEmailSent } from "@/lib/crm/mark-catalogue-email-sent";
 import { sendNewPipelineProspectNotification } from "@/lib/crm/pipeline-prospect-emails";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
@@ -123,52 +132,71 @@ export async function POST(req: NextRequest) {
     applyCommercialFieldsFromBody(insertRow, body);
   }
 
-  const { data, error } = await supabase
-    .from("crm_pipeline_deals")
-    .insert(insertRow)
-    .select("*")
-    .single();
+  const attemptInsert = async (row: Record<string, unknown>) =>
+    supabase.from("crm_pipeline_deals").insert(row).select("*").single();
+
+  let { data, error } = await attemptInsert(insertRow);
+
+  // Colonne contact_civility parfois absente si migration pas encore appliquée.
+  if (error && /contact_civility/i.test(error.message) && "contact_civility" in insertRow) {
+    const { contact_civility: _removed, ...withoutCivility } = insertRow;
+    ({ data, error } = await attemptInsert(withoutCivility));
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  // Side-effects after insert must never fail the HTTP response (deal already saved).
   if (pipeline_type === "btob" && data) {
-    void sendNewPipelineProspectNotification({
-      deal_id: String(data.id),
-      company_name: String(data.company_name),
-      contact_first_name: data.contact_first_name ? String(data.contact_first_name) : null,
-      email: data.email ? String(data.email) : null,
-      phone: data.phone ? String(data.phone) : null,
-      stage_slug: data.stage_slug ? String(data.stage_slug) : null,
-      contact_owner_email: data.contact_owner_email ? String(data.contact_owner_email) : null,
-      siret: data.siret ? String(data.siret) : null,
-      opco_name: data.opco_name ? String(data.opco_name) : null,
-    }).catch((err) => console.error("[crm/pipeline] notification email:", err));
-
-    if (
-      shouldSendBtobCatalogueEmail({
-        pipeline_type: "btob",
-        stage_slug: String(data.stage_slug),
-        catalog_email_sent_at: data.catalog_email_sent_at
-          ? String(data.catalog_email_sent_at)
-          : null,
-      })
-    ) {
-      void sendBtobCatalogueEmail({
-        email: data.email ? String(data.email) : null,
-        contact_first_name: data.contact_first_name ? String(data.contact_first_name) : null,
+    try {
+      void sendNewPipelineProspectNotification({
+        deal_id: String(data.id),
         company_name: String(data.company_name),
-      })
-        .then(async (result) => {
-          if (!result.success) {
-            console.error("[crm/pipeline] catalogue email:", result.error);
-            return;
-          }
-          await supabase
-            .from("crm_pipeline_deals")
-            .update({ catalog_email_sent_at: new Date().toISOString() })
-            .eq("id", data.id);
+        contact_first_name: data.contact_first_name ? String(data.contact_first_name) : null,
+        email: data.email ? String(data.email) : null,
+        phone: data.phone ? String(data.phone) : null,
+        stage_slug: data.stage_slug ? String(data.stage_slug) : null,
+        contact_owner_email: data.contact_owner_email ? String(data.contact_owner_email) : null,
+        siret: data.siret ? String(data.siret) : null,
+        opco_name: data.opco_name ? String(data.opco_name) : null,
+      }).catch((err) => console.error("[crm/pipeline] notification email:", err));
+
+      if (
+        shouldSendBtobCatalogueEmail({
+          pipeline_type: "btob",
+          stage_slug: String(data.stage_slug),
+          catalog_email_sent_at: data.catalog_email_sent_at
+            ? String(data.catalog_email_sent_at)
+            : null,
         })
-        .catch((err) => console.error("[crm/pipeline] catalogue email:", err));
+      ) {
+        void sendBtobCatalogueEmail({
+          email: data.email ? String(data.email) : null,
+          contact_first_name: data.contact_first_name ? String(data.contact_first_name) : null,
+          company_name: String(data.company_name),
+          fromEmail: resolveCatalogueFromEmail(
+            data.contact_owner_email ? String(data.contact_owner_email) : null,
+          ),
+          fromName: resolveCatalogueFromName(
+            data.contact_owner_email ? String(data.contact_owner_email) : null,
+          ),
+          dealId: String(data.id),
+        })
+          .then(async (result) => {
+            if (!result.success) {
+              console.error("[crm/pipeline] catalogue email:", result.error);
+              return;
+            }
+            const { error: markError } = await markCatalogueEmailSent(
+              supabase,
+              String(data.id),
+              result.messageId,
+            );
+            if (markError) console.error("[crm/pipeline] mark catalogue sent:", markError);
+          })
+          .catch((err) => console.error("[crm/pipeline] catalogue email:", err));
+      }
+    } catch (sideEffectError) {
+      console.error("[crm/pipeline] post-insert side effects:", sideEffectError);
     }
   }
 

@@ -411,7 +411,7 @@ export function JessicaFacturesClient({
                     disabled={!inv.client_email?.trim() || sendingId === inv.id}
                     title={
                       inv.client_email?.trim()
-                        ? "Envoyer par email depuis contentin.cabinet@gmail.com"
+                        ? "Envoyer par email (Resend cabinet Jessica)"
                         : "Client sans adresse email"
                     }
                     onClick={() => void sendInvoice(inv)}

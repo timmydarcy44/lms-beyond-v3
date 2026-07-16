@@ -1,10 +1,9 @@
-import { sendEmail } from "@/lib/emails/brevo";
 import { jessicaInvoicePdfBase64 } from "@/lib/jessica-contentin/jessica-invoice-pdf";
 import {
   storedInvoiceToPdfInput,
   type JessicaStoredInvoice,
 } from "@/lib/jessica-contentin/jessica-invoice-shared";
-import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
+import { sendJessicaResendEmail } from "@/lib/jessica-contentin/jessica-resend";
 
 function formatEuro(cents: number): string {
   return (cents / 100).toLocaleString("fr-FR", {
@@ -27,7 +26,7 @@ export async function sendJessicaInvoiceEmail(
   const pdfBase64 = jessicaInvoicePdfBase64(pdfInput);
   const amountLabel = formatEuro(invoice.amount_cents);
 
-  const htmlContent = `
+  const html = `
     <div style="font-family:Georgia,serif;color:#2F2A25;max-width:560px;line-height:1.6;">
       <p>Bonjour${invoice.client_label ? ` ${invoice.client_label.split(" ")[0]}` : ""},</p>
       <p>
@@ -46,23 +45,14 @@ export async function sendJessicaInvoiceEmail(
     </div>
   `;
 
-  return sendEmail({
+  return sendJessicaResendEmail({
     to,
     subject: `Facture ${invoice.invoice_number} — Jessica CONTENTIN`,
-    htmlContent,
-    from: {
-      name: "Jessica CONTENTIN",
-      email: JESSICA_CONTENTIN_EMAIL,
-    },
-    replyTo: {
-      name: "Jessica CONTENTIN",
-      email: JESSICA_CONTENTIN_EMAIL,
-    },
-    tags: ["jessica-facture"],
+    html,
     attachments: [
       {
-        name: `${invoice.invoice_number}.pdf`,
-        content: pdfBase64,
+        filename: `${invoice.invoice_number}.pdf`,
+        content: Buffer.from(pdfBase64, "base64"),
       },
     ],
   });

@@ -24,6 +24,7 @@ import {
   type PipelineActionType,
 } from "@/lib/crm/pipeline-deal-action-types";
 import { pipelineOwnerLabel } from "@/lib/crm/pipeline-btob-owners";
+import { PIPELINE_SHEET_BTN_OUTLINE } from "@/lib/crm/pipeline-shared";
 
 export type PipelineDealAction = {
   id: string;
@@ -65,6 +66,7 @@ export function PipelineDealActionsSection({
   contactLastName,
   currentUserEmail,
   onActionsChange,
+  theme = "light",
 }: {
   dealId?: string;
   phone?: string | null;
@@ -74,7 +76,10 @@ export function PipelineDealActionsSection({
   contactLastName?: string;
   currentUserEmail: string | null;
   onActionsChange?: () => void;
+  theme?: "light" | "dark";
 }) {
+  const isDark = theme === "dark";
+  const outlineBtn = isDark ? PIPELINE_SHEET_BTN_OUTLINE : undefined;
   const [actions, setActions] = useState<PipelineDealAction[]>([]);
   const [loading, setLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -348,7 +353,9 @@ export function PipelineDealActionsSection({
   return (
     <>
       <section className="space-y-3">
-        <p className="text-sm font-semibold text-gray-900">Activité</p>
+        <p className={isDark ? "text-sm font-semibold text-white" : "text-sm font-semibold text-gray-900"}>
+          Activité
+        </p>
 
         <div className="flex flex-wrap gap-2">
           <Button
@@ -365,17 +372,30 @@ export function PipelineDealActionsSection({
             type="button"
             size="sm"
             variant="outline"
+            className={outlineBtn}
             disabled={!email?.trim()}
             onClick={() => void quickLog("email")}
           >
             <Mail className="mr-1.5 h-4 w-4" />
             Email
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => openQuickAdd("note")}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className={outlineBtn}
+            onClick={() => openQuickAdd("note")}
+          >
             <StickyNote className="mr-1.5 h-4 w-4" />
             Note
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => openQuickAdd("meeting")}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className={outlineBtn}
+            onClick={() => openQuickAdd("meeting")}
+          >
             <CalendarClock className="mr-1.5 h-4 w-4" />
             Planifier
           </Button>
@@ -383,7 +403,7 @@ export function PipelineDealActionsSection({
             type="button"
             size="sm"
             variant="ghost"
-            className="ml-auto"
+            className={isDark ? "ml-auto text-slate-300 hover:bg-white/10 hover:text-white" : "ml-auto"}
             onClick={() => openQuickAdd("call_no_answer")}
           >
             <Plus className="mr-1 h-4 w-4" />
@@ -392,18 +412,32 @@ export function PipelineDealActionsSection({
         </div>
 
         {callActive && !postCallOverlayOpen ? (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm text-indigo-900">
+          <div
+            className={
+              isDark
+                ? "flex items-center justify-between gap-3 rounded-lg border border-indigo-400/30 bg-indigo-950/40 px-3 py-2.5 text-sm text-indigo-100"
+                : "flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm text-indigo-900"
+            }
+          >
             <span>Appel avec {displayContact}</span>
-            <Button type="button" size="sm" variant="secondary" onClick={openPostCallOverlay}>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className={isDark ? "bg-white/15 text-white hover:bg-white/25" : undefined}
+              onClick={openPostCallOverlay}
+            >
               Résumer
             </Button>
           </div>
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-gray-500">Chargement…</p>
+          <p className={isDark ? "text-sm text-slate-400" : "text-sm text-gray-500"}>Chargement…</p>
         ) : actions.length === 0 ? (
-          <p className="text-sm text-gray-500">Aucune interaction enregistrée.</p>
+          <p className={isDark ? "text-sm text-slate-400" : "text-sm text-gray-500"}>
+            Aucune interaction enregistrée.
+          </p>
         ) : (
           <ul className="space-y-2">
             {actions.map((a) => {
@@ -411,15 +445,25 @@ export function PipelineDealActionsSection({
               return (
                 <li
                   key={a.id}
-                  className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
+                  className={
+                    isDark
+                      ? "rounded-xl border border-white/10 bg-slate-900/60 p-3"
+                      : "rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
+                  }
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                      <p
+                        className={
+                          isDark
+                            ? "flex items-center gap-2 text-sm font-semibold text-white"
+                            : "flex items-center gap-2 text-sm font-semibold text-gray-900"
+                        }
+                      >
                         <span aria-hidden>{meta?.icon ?? "•"}</span>
                         {pipelineActionLabel(a.action_type)}
                       </p>
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className={isDark ? "mt-1 text-xs text-slate-400" : "mt-1 text-xs text-gray-500"}>
                         {formatActionWhen(a.created_at)}
                         {a.created_by_email
                           ? ` · ${pipelineOwnerLabel(a.created_by_email)}`
@@ -428,9 +472,19 @@ export function PipelineDealActionsSection({
                     </div>
                   </div>
                   {a.ai_summary ? (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{a.ai_summary}</p>
+                    <p
+                      className={
+                        isDark
+                          ? "mt-2 whitespace-pre-wrap text-sm text-slate-200"
+                          : "mt-2 whitespace-pre-wrap text-sm text-gray-700"
+                      }
+                    >
+                      {a.ai_summary}
+                    </p>
                   ) : a.notes ? (
-                    <p className="mt-2 text-sm text-gray-600">{a.notes}</p>
+                    <p className={isDark ? "mt-2 text-sm text-slate-300" : "mt-2 text-sm text-gray-600"}>
+                      {a.notes}
+                    </p>
                   ) : null}
                 </li>
               );

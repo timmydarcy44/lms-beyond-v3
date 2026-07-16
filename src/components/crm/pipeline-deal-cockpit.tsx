@@ -38,6 +38,7 @@ import {
 import { PIPELINE_BTOB_CONTACT_OWNERS, CONTACT_CIVILITY_OPTIONS } from "@/lib/crm/pipeline-btob-owners";
 import type { BtobCommercialFormState } from "@/app/super/crm/pipeline/pipeline-btob-commercial-fields";
 import type { PipelineStage } from "@/lib/crm/pipeline-shared";
+import { PIPELINE_SHEET_BADGE, PIPELINE_SHEET_BTN_OUTLINE } from "@/lib/crm/pipeline-shared";
 
 export type DealCockpitForm = {
   id?: string;
@@ -251,7 +252,7 @@ export function PipelineDealCockpit({
                 </Button>
               ) : null}
               {form.email?.trim() ? (
-                <Button type="button" size="sm" variant="outline" asChild>
+                <Button type="button" size="sm" variant="outline" className={PIPELINE_SHEET_BTN_OUTLINE} asChild>
                   <a href={`mailto:${form.email.trim()}`}>
                     <Mail className="mr-1.5 h-4 w-4" />
                     Email
@@ -259,7 +260,7 @@ export function PipelineDealCockpit({
                 </Button>
               ) : null}
               {contactLinkedIn ? (
-                <Button type="button" size="sm" variant="outline" asChild>
+                <Button type="button" size="sm" variant="outline" className={PIPELINE_SHEET_BTN_OUTLINE} asChild>
                   <a href={contactLinkedIn} target="_blank" rel="noopener noreferrer">
                     LinkedIn
                   </a>
@@ -362,7 +363,7 @@ export function PipelineDealCockpit({
                   value={commercial.contact_linkedin}
                   onChange={(e) => setCommercial((c) => ({ ...c, contact_linkedin: e.target.value }))}
                 />
-                <Button type="button" size="sm" variant="outline" asChild>
+                <Button type="button" size="sm" variant="outline" className={PIPELINE_SHEET_BTN_OUTLINE} asChild>
                   <a href={contactLinkedIn} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4" />
                   </a>
@@ -611,11 +612,11 @@ export function PipelineDealCockpit({
             ) : (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {commercial.training_needs.map((tag) => (
-                  <Badge key={tag} variant="secondary">
+                  <Badge key={tag} variant="outline" className={PIPELINE_SHEET_BADGE}>
                     {tag}
                     <button
                       type="button"
-                      className="ml-1 text-gray-500 hover:text-gray-900"
+                      className="ml-1 text-slate-400 hover:text-white"
                       onClick={() =>
                         setCommercial((c) => ({
                           ...c,
@@ -653,6 +654,7 @@ export function PipelineDealCockpit({
                   selectedIds={form.quoted_course_ids}
                   onChange={(ids) => setForm((f) => ({ ...f, quoted_course_ids: ids }))}
                   onTotalChange={onQuoteTotalChange}
+                  tone="dark"
                 />
               </div>
             </div>
@@ -678,7 +680,7 @@ export function PipelineDealCockpit({
               type="button"
               size="sm"
               variant="outline"
-              className="mt-3"
+              className={cn("mt-3", PIPELINE_SHEET_BTN_OUTLINE)}
               onClick={() => setActiveTab("admin")}
             >
               <UserPlus className="mr-1.5 h-4 w-4" />
@@ -696,6 +698,7 @@ export function PipelineDealCockpit({
               contactLastName={form.contact_last_name}
               currentUserEmail={currentUserEmail}
               onActionsChange={onActionsChange}
+              theme="dark"
             />
           </div>
 
@@ -856,7 +859,7 @@ export function PipelineDealCockpit({
                     value={commercial.company_linkedin}
                     onChange={(e) => setCommercial((c) => ({ ...c, company_linkedin: e.target.value }))}
                   />
-                  <Button type="button" size="sm" variant="outline" asChild>
+                  <Button type="button" size="sm" variant="outline" className={PIPELINE_SHEET_BTN_OUTLINE} asChild>
                     <a href={companyLinkedIn} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4" />
                     </a>

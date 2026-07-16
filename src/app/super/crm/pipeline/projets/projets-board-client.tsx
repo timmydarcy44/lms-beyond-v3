@@ -24,6 +24,11 @@ import {
   type CrmProjectStageSlug,
   type CrmProjectTopicSlug,
 } from "@/lib/crm/projects-shared";
+import {
+  DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,
+  PIPELINE_BTOB_CONTACT_OWNERS,
+  pipelineOwnerLabel,
+} from "@/lib/crm/pipeline-btob-owners";
 import { cn } from "@/lib/utils";
 
 type ProjectForm = {
@@ -31,6 +36,7 @@ type ProjectForm = {
   description: string;
   stage_slug: CrmProjectStageSlug;
   topic_slug: CrmProjectTopicSlug;
+  owner_email: string;
 };
 
 const emptyForm = (stage: CrmProjectStageSlug = "projet_a_definir"): ProjectForm => ({
@@ -38,6 +44,7 @@ const emptyForm = (stage: CrmProjectStageSlug = "projet_a_definir"): ProjectForm
   description: "",
   stage_slug: stage,
   topic_slug: "commercial",
+  owner_email: DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,
 });
 
 export function ProjetsBoardClient() {
@@ -89,6 +96,7 @@ export function ProjetsBoardClient() {
       description: project.description ?? "",
       stage_slug: project.stage_slug,
       topic_slug: project.topic_slug,
+      owner_email: project.owner_email ?? DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,
     });
     setDialogOpen(true);
   };
@@ -204,12 +212,19 @@ export function ProjetsBoardClient() {
                       {project.description ? (
                         <p className="mt-1 line-clamp-2 text-xs text-white/75">{project.description}</p>
                       ) : null}
-                      <Badge
-                        variant="outline"
-                        className={cn("mt-2 border-0 text-[10px]", topic.badgeClass)}
-                      >
-                        {topic.label}
-                      </Badge>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant="outline"
+                          className={cn("border-0 text-[10px]", topic.badgeClass)}
+                        >
+                          {topic.label}
+                        </Badge>
+                        {project.owner_email ? (
+                          <span className="text-[10px] text-white/70">
+                            Qui : {pipelineOwnerLabel(project.owner_email)}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   );
                 })}
@@ -256,6 +271,20 @@ export function ProjetsBoardClient() {
                 {CRM_PROJECT_TOPICS.map((t) => (
                   <option key={t.slug} value={t.slug}>
                     {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Qui ?</Label>
+              <select
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                value={form.owner_email}
+                onChange={(e) => setForm((f) => ({ ...f, owner_email: e.target.value }))}
+              >
+                {PIPELINE_BTOB_CONTACT_OWNERS.map((o) => (
+                  <option key={o.email} value={o.email}>
+                    {o.label}
                   </option>
                 ))}
               </select>

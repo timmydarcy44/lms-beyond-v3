@@ -10,11 +10,41 @@ export const CRM_PROJECT_STAGES = [
 export type CrmProjectStageSlug = (typeof CRM_PROJECT_STAGES)[number]["slug"];
 
 export const CRM_PROJECT_TOPICS = [
-  { slug: "communication", label: "Communication", cardClass: "from-sky-950 via-slate-900 to-sky-950 border-sky-400/30", badgeClass: "bg-sky-500/20 text-sky-200" },
-  { slug: "commercial", label: "Commercial", cardClass: "from-indigo-950 via-slate-900 to-violet-950 border-indigo-400/30", badgeClass: "bg-indigo-500/20 text-indigo-200" },
-  { slug: "marketing", label: "Marketing", cardClass: "from-fuchsia-950 via-slate-900 to-pink-950 border-fuchsia-400/30", badgeClass: "bg-fuchsia-500/20 text-fuchsia-200" },
-  { slug: "reunion_travail", label: "Réunion de travail", cardClass: "from-amber-950 via-slate-900 to-orange-950 border-amber-400/30", badgeClass: "bg-amber-500/20 text-amber-200" },
-  { slug: "autre", label: "Autre", cardClass: "from-slate-950 via-slate-900 to-slate-950 border-white/10", badgeClass: "bg-white/10 text-slate-200" },
+  {
+    slug: "communication",
+    label: "Communication",
+    cardClass:
+      "border-l-4 border-l-sky-400 border-sky-500/35 bg-gradient-to-br from-sky-700 via-sky-900 to-slate-950",
+    badgeClass: "bg-sky-500/30 text-sky-100",
+  },
+  {
+    slug: "commercial",
+    label: "Commercial",
+    cardClass:
+      "border-l-4 border-l-indigo-400 border-indigo-500/35 bg-gradient-to-br from-indigo-700 via-indigo-900 to-slate-950",
+    badgeClass: "bg-indigo-500/30 text-indigo-100",
+  },
+  {
+    slug: "marketing",
+    label: "Marketing",
+    cardClass:
+      "border-l-4 border-l-fuchsia-400 border-fuchsia-500/35 bg-gradient-to-br from-fuchsia-700 via-fuchsia-900 to-slate-950",
+    badgeClass: "bg-fuchsia-500/30 text-fuchsia-100",
+  },
+  {
+    slug: "reunion_travail",
+    label: "Réunion de travail",
+    cardClass:
+      "border-l-4 border-l-amber-400 border-amber-500/35 bg-gradient-to-br from-amber-700 via-amber-900 to-slate-950",
+    badgeClass: "bg-amber-500/30 text-amber-100",
+  },
+  {
+    slug: "autre",
+    label: "Autre",
+    cardClass:
+      "border-l-4 border-l-slate-400 border-white/15 bg-gradient-to-br from-slate-600 via-slate-800 to-slate-950",
+    badgeClass: "bg-white/15 text-slate-200",
+  },
 ] as const;
 
 export type CrmProjectTopicSlug = (typeof CRM_PROJECT_TOPICS)[number]["slug"];

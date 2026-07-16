@@ -13,6 +13,12 @@ if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
   console.log("[BREVO] Module loaded");
 }
 
+export type BrevoAttachment = {
+  name: string;
+  /** Contenu encodé en base64 */
+  content: string;
+};
+
 export interface EmailOptions {
   to: string | string[];
   subject: string;
@@ -27,6 +33,7 @@ export interface EmailOptions {
     email: string;
   };
   tags?: string[];
+  attachments?: BrevoAttachment[];
 }
 
 export interface TransactionalEmailOptions extends EmailOptions {
@@ -81,6 +88,13 @@ export async function sendEmail(
       },
     };
     
+    if (options.attachments?.length) {
+      payload.attachment = options.attachments.map((a) => ({
+        name: a.name,
+        content: a.content,
+      }));
+    }
+
     // Ne pas inclure tags s'il est vide (Brevo exige qu'il soit non vide s'il est présent)
     if (options.tags && options.tags.length > 0) {
       payload.tags = options.tags;

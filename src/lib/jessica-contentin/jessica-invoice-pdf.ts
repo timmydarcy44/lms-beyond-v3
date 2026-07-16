@@ -198,3 +198,10 @@ export function downloadJessicaInvoicePdf(input: JessicaInvoicePdfInput, filenam
   const doc = buildJessicaInvoicePdf(input);
   doc.save(filename ?? `${input.invoiceNumber}.pdf`);
 }
+
+/** PDF encodé base64 — envoi email côté serveur. */
+export function jessicaInvoicePdfBase64(input: JessicaInvoicePdfInput): string {
+  const doc = buildJessicaInvoicePdf(input);
+  const arrayBuffer = doc.output("arraybuffer") as ArrayBuffer;
+  return Buffer.from(arrayBuffer).toString("base64");
+}

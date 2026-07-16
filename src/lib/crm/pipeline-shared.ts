@@ -118,3 +118,9 @@ export function computePipelineRevenueCents(deals: PipelineDeal[]): number {
     )
     .reduce((sum, d) => sum + (d.amount_cents ?? 0), 0);
 }
+
+/** Boutons lisibles sur fond sombre (fiche prospect / panneau EDGE). */
+export const PIPELINE_SHEET_BTN_OUTLINE =
+  "border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white";
+export const PIPELINE_SHEET_BTN_SECONDARY = "bg-white/15 text-white hover:bg-white/25";
+export const PIPELINE_SHEET_BADGE = "border-white/20 bg-white/10 text-slate-100";

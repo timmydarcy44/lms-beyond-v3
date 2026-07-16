@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Trash2 } from "lucide-react";
+import { Download, Loader2, Mail, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
   JESSICA_PRESTATION_OPTIONS,
   emptyInvoiceLine,
   linesTotalCents,
+  storedInvoiceToPdfInput,
   type JessicaInvoiceLineItem,
   type JessicaPrestationType,
 } from "@/lib/jessica-contentin/jessica-invoice-shared";
@@ -48,23 +49,6 @@ type StoredInvoice = {
   consultation_date: string | null;
   created_at: string;
 };
-
-function invoiceToPdfInput(invoice: StoredInvoice) {
-  const lines = Array.isArray(invoice.line_items) && invoice.line_items.length > 0
-    ? invoice.line_items
-    : undefined;
-  return {
-    invoiceNumber: invoice.invoice_number,
-    clientLabel: invoice.client_label,
-    amountEuros: invoice.amount_cents / 100,
-    lineItems: lines,
-    sectionTitle: invoice.section_title ?? JESSICA_INVOICE_SECTION_TITLE_DEFAULT,
-    invoiceDate: new Date(invoice.invoice_date),
-    consultationDate: new Date(invoice.consultation_date ?? invoice.invoice_date),
-    paymentMethod: invoice.payment_method,
-    designation: invoice.designation,
-  };
-}
 
 function applyPrestationChange(
   line: JessicaInvoiceLineItem,
@@ -118,6 +102,7 @@ export function JessicaFacturesClient({
   const [sectionTitle, setSectionTitle] = useState(JESSICA_INVOICE_SECTION_TITLE_DEFAULT);
   const [lines, setLines] = useState<JessicaInvoiceLineItem[]>([emptyInvoiceLine()]);
   const [creating, setCreating] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState(initialInvoices);
 
   const selected = sortedClients.find((c) => c.id === clientId) ?? null;
@@ -157,13 +142,34 @@ export function JessicaFacturesClient({
       if (!res.ok || !json.invoice) throw new Error(json.error ?? "Création impossible");
 
       const invoice = json.invoice;
-      downloadJessicaInvoicePdf(invoiceToPdfInput(invoice));
+      downloadJessicaInvoicePdf(storedInvoiceToPdfInput(invoice));
       setInvoices((prev) => [invoice, ...prev]);
       toast.success(`Facture ${invoice.invoice_number} générée`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Création impossible");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const sendInvoice = async (invoice: StoredInvoice) => {
+    if (!invoice.client_email?.trim()) {
+      toast.error("Ce client n'a pas d'adresse email");
+      return;
+    }
+    setSendingId(invoice.id);
+    try {
+      const res = await fetch(`/api/admin/jessica-invoices/${invoice.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = (await res.json()) as { error?: string; sentTo?: string };
+      if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
+      toast.success(`Facture envoyée à ${json.sentTo ?? invoice.client_email}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Envoi impossible");
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -394,17 +400,39 @@ export function JessicaFacturesClient({
                   <p className="text-xs text-neutral-500">
                     {(inv.amount_cents / 100).toFixed(2)} € · {inv.invoice_date}
                     {inv.designation ? ` · ${inv.designation}` : ""}
+                    {inv.client_email ? ` · ${inv.client_email}` : " · pas d'email"}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadJessicaInvoicePdf(invoiceToPdfInput(inv))}
-                >
-                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                  PDF
-                </Button>
+                <div className="flex shrink-0 gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!inv.client_email?.trim() || sendingId === inv.id}
+                    title={
+                      inv.client_email?.trim()
+                        ? "Envoyer par email depuis contentin.cabinet@gmail.com"
+                        : "Client sans adresse email"
+                    }
+                    onClick={() => void sendInvoice(inv)}
+                  >
+                    {sendingId === inv.id ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Envoyer la facture
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadJessicaInvoicePdf(storedInvoiceToPdfInput(inv))}
+                  >
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                    PDF
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

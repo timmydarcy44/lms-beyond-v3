@@ -218,13 +218,16 @@ export function PipelineQuoteFormationsCompact({
   selectedIds,
   onChange,
   onTotalChange,
+  tone = "light",
 }: {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   onTotalChange?: (totalCents: number) => void;
+  tone?: "light" | "dark";
 }) {
   const { courses, loading } = useTrainingCourses();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const isDark = tone === "dark";
 
   const selectedCourses = useMemo(
     () => courses.filter((c) => selectedIds.includes(c.id)),
@@ -239,15 +242,26 @@ export function PipelineQuoteFormationsCompact({
   return (
     <div className="space-y-3">
       {selectedCourses.length === 0 ? (
-        <p className="text-sm text-gray-500">Aucune formation sélectionnée</p>
+        <p className={isDark ? "text-sm text-slate-400" : "text-sm text-gray-500"}>
+          Aucune formation sélectionnée
+        </p>
       ) : (
         <ul className="space-y-2">
           {selectedCourses.map((c) => {
             const price = parsePrice(c.intra_price) || parsePrice(c.inter_price);
             return (
-              <li key={c.id} className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5 text-sm">
-                <p className="font-medium text-gray-900">{c.title}</p>
-                <p className="text-xs text-gray-600">
+              <li
+                key={c.id}
+                className={
+                  isDark
+                    ? "rounded-lg border border-white/10 bg-slate-900/50 px-3 py-2.5 text-sm"
+                    : "rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5 text-sm"
+                }
+              >
+                <p className={isDark ? "font-medium text-white" : "font-medium text-gray-900"}>
+                  {c.title}
+                </p>
+                <p className={isDark ? "text-xs text-slate-400" : "text-xs text-gray-600"}>
                   {c.duration ?? "Durée à confirmer"}
                   {price > 0 ? ` — ${formatDealAmount(Math.round(price * 100))}` : ""}
                 </p>
@@ -258,18 +272,34 @@ export function PipelineQuoteFormationsCompact({
       )}
 
       {totalCents > 0 ? (
-        <p className="text-sm font-semibold text-gray-900">
+        <p className={isDark ? "text-sm font-semibold text-white" : "text-sm font-semibold text-gray-900"}>
           Montant estimé : {formatDealAmount(totalCents)}
         </p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className={
+            isDark
+              ? "border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              : undefined
+          }
+          onClick={() => setPickerOpen(true)}
+        >
           <Plus className="mr-1.5 h-4 w-4" />
           {selectedCourses.length === 0 ? "Ajouter une formation" : "Modifier"}
         </Button>
         {selectedCourses.length > 0 ? (
-          <Button type="button" size="sm" variant="secondary" disabled>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className={isDark ? "bg-white/15 text-white hover:bg-white/25" : undefined}
+            disabled
+          >
             <FileText className="mr-1.5 h-4 w-4" />
             Générer le devis
           </Button>

@@ -45,3 +45,34 @@ export function emptyInvoiceLine(today = new Date().toISOString().slice(0, 10)):
     service_date: today,
   };
 }
+
+export type JessicaStoredInvoice = {
+  invoice_number: string;
+  client_label: string;
+  client_email?: string | null;
+  amount_cents: number;
+  designation: string;
+  section_title?: string | null;
+  line_items?: JessicaInvoiceLineItem[] | null;
+  payment_method: string;
+  invoice_date: string;
+  consultation_date?: string | null;
+};
+
+export function storedInvoiceToPdfInput(invoice: JessicaStoredInvoice) {
+  const lines =
+    Array.isArray(invoice.line_items) && invoice.line_items.length > 0
+      ? invoice.line_items
+      : undefined;
+  return {
+    invoiceNumber: invoice.invoice_number,
+    clientLabel: invoice.client_label,
+    amountEuros: invoice.amount_cents / 100,
+    lineItems: lines,
+    sectionTitle: invoice.section_title ?? JESSICA_INVOICE_SECTION_TITLE_DEFAULT,
+    invoiceDate: new Date(invoice.invoice_date),
+    consultationDate: new Date(invoice.consultation_date ?? invoice.invoice_date),
+    paymentMethod: invoice.payment_method,
+    designation: invoice.designation,
+  };
+}

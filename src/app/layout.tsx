@@ -9,17 +9,61 @@ import { Toaster } from "sonner";
 import { headers } from "next/headers";
 import { getServerClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = {
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-  },
-};
+const EDGE_ICON = "/icons/edge/edge-icon-E.png";
+const EDGE_APPLE_ICON = "/icons/edge/apple-touch-icon-180.png";
 
-export const viewport: Viewport = {
-  themeColor: "#0d1b2e",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const host = h.get("host")?.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
+
+  if (host === "edgebs.fr") {
+    return {
+      metadataBase: new URL("https://edgebs.fr"),
+      title: {
+        default: "EDGE",
+        template: "%s · EDGE",
+      },
+      applicationName: "EDGE",
+      manifest: "/manifest-edge.json",
+      icons: {
+        icon: [
+          { url: `${EDGE_ICON}?v=2`, type: "image/png", sizes: "1024x1024" },
+        ],
+        shortcut: [`${EDGE_ICON}?v=2`],
+        apple: [
+          { url: `${EDGE_APPLE_ICON}?v=2`, sizes: "180x180", type: "image/png" },
+          { url: `${EDGE_ICON}?v=2`, sizes: "1024x1024", type: "image/png" },
+        ],
+      },
+      appleWebApp: {
+        capable: true,
+        statusBarStyle: "black-translucent",
+        title: "EDGE",
+      },
+      other: {
+        "apple-mobile-web-app-title": "EDGE",
+        "mobile-web-app-capable": "yes",
+      },
+    };
+  }
+
+  return {
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+    },
+  };
+}
+
+export async function generateViewport(): Promise<Viewport> {
+  const h = await headers();
+  const host = h.get("host")?.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
+  if (host === "edgebs.fr") {
+    return { themeColor: "#0a0a0a" };
+  }
+  return { themeColor: "#0d1b2e" };
+}
 
 export default async function RootLayout({
   children,

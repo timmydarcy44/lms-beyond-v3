@@ -1,12 +1,17 @@
 import { jsPDF } from "jspdf";
+import type { JessicaInvoiceLineItem } from "@/lib/jessica-contentin/jessica-invoice-shared";
+import { JESSICA_INVOICE_SECTION_TITLE_DEFAULT } from "@/lib/jessica-contentin/jessica-invoice-shared";
 
 export type JessicaInvoicePdfInput = {
   invoiceNumber: string;
   clientLabel: string;
-  amountEuros: number;
+  amountEuros?: number;
+  lineItems?: JessicaInvoiceLineItem[];
+  sectionTitle?: string;
   invoiceDate?: Date;
   consultationDate?: Date;
   paymentMethod?: string;
+  /** @deprecated utiliser lineItems */
   designation?: string;
 };
 
@@ -36,8 +41,25 @@ function formatLongDate(date: Date): string {
   });
 }
 
-function formatShortDate(date: Date): string {
-  return date.toLocaleDateString("fr-FR");
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("fr-FR");
+}
+
+function resolveLines(input: JessicaInvoicePdfInput): JessicaInvoiceLineItem[] {
+  if (input.lineItems?.length) return input.lineItems;
+  const amount = input.amountEuros ?? 0;
+  const date = (input.consultationDate ?? input.invoiceDate ?? new Date()).toISOString().slice(0, 10);
+  return [
+    {
+      prestation_type: "consultation",
+      designation: input.designation?.trim() || "Consultation",
+      quantity: 1,
+      unit_price_cents: Math.round(amount * 100),
+      service_date: date,
+    },
+  ];
 }
 
 /** Génère un PDF proche du modèle FACTURE ACQUITTEE Jessica Contentin. */
@@ -48,13 +70,12 @@ export function buildJessicaInvoicePdf(input: JessicaInvoicePdfInput): jsPDF {
   const right = pageW - margin;
 
   const invoiceDate = input.invoiceDate ?? new Date();
-  const consultationDate = input.consultationDate ?? invoiceDate;
   const paymentMethod = input.paymentMethod?.trim() || "Carte bancaire";
-  const designation = input.designation?.trim() || "Consultation";
-  const amount = Math.round(input.amountEuros * 100) / 100;
-  const amountLabel = `${formatEuro(amount)} €`;
+  const sectionTitle = input.sectionTitle?.trim() || JESSICA_INVOICE_SECTION_TITLE_DEFAULT;
+  const lines = resolveLines(input);
+  const total = lines.reduce((sum, l) => sum + l.quantity * l.unit_price_cents, 0) / 100;
+  const amountLabel = `${formatEuro(total)} €`;
 
-  // En-tête gauche
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.text(ISSUER.name, margin, 24);
@@ -69,7 +90,6 @@ export function buildJessicaInvoicePdf(input: JessicaInvoicePdfInput): jsPDF {
   doc.text(ISSUER.phone, margin, 58);
   doc.text(ISSUER.email, margin, 63);
 
-  // Titre droite
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.text("FACTURE ACQUITTEE", right, 24, { align: "right" });
@@ -93,12 +113,10 @@ export function buildJessicaInvoicePdf(input: JessicaInvoicePdfInput): jsPDF {
     doc.text(value, metaValueX, y, { align: "right" });
   });
 
-  // Sous-titre
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text("Accompagnement psychopédagogique", margin, 78);
+  doc.text(sectionTitle, margin, 78);
 
-  // Tableau
   const tableTop = 88;
   const colX = {
     designation: margin,
@@ -122,16 +140,22 @@ export function buildJessicaInvoicePdf(input: JessicaInvoicePdfInput): jsPDF {
   doc.setDrawColor(200, 200, 200);
   doc.line(margin, tableTop + 3, right, tableTop + 3);
 
-  const lineY = tableTop + 12;
+  let lineY = tableTop + 12;
   doc.setFont("helvetica", "normal");
-  doc.text(designation, colX.designation, lineY);
-  doc.text(formatShortDate(consultationDate), colX.date, lineY);
-  doc.text("1", colX.qty, lineY);
-  doc.text(amountLabel, colX.price, lineY);
-  doc.text(amountLabel, colX.total, lineY, { align: "right" });
+  for (const line of lines.slice(0, 6)) {
+    const unit = line.unit_price_cents / 100;
+    const lineTotal = unit * line.quantity;
+    const unitLabel = `${formatEuro(unit)} €`;
+    const totalLineLabel = `${formatEuro(lineTotal)} €`;
+    doc.text(line.designation.slice(0, 42), colX.designation, lineY);
+    doc.text(formatShortDate(line.service_date), colX.date, lineY);
+    doc.text(String(line.quantity), colX.qty, lineY);
+    doc.text(unitLabel, colX.price, lineY);
+    doc.text(totalLineLabel, colX.total, lineY, { align: "right" });
+    lineY += 8;
+  }
 
-  // Totaux
-  const totalsY = lineY + 24;
+  const totalsY = lineY + 16;
   const totalsLabelX = 130;
   doc.setFont("helvetica", "normal");
   doc.text("Sous total HT", totalsLabelX, totalsY);

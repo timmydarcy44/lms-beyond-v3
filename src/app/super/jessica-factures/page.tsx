@@ -4,12 +4,44 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
 import { getJessicaCrmContacts } from "@/lib/queries/jessica-crm-contacts";
 import { formatClientName } from "@/lib/jessica-contentin/parse-client-name";
+import { fetchJessicaAssignableCatalogItems } from "@/lib/jessica-contentin/sync-jessica-catalog";
 import {
   JessicaFacturesClient,
+  type JessicaFormationOption,
   type JessicaInvoiceClientOption,
 } from "@/components/jessica-contentin/jessica-factures-client";
+import type { JessicaInvoiceLineItem } from "@/lib/jessica-contentin/jessica-invoice-shared";
 
 export const revalidate = 0;
+
+async function loadFormationPrices(
+  service: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+  ids: string[],
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (ids.length === 0) return map;
+
+  const { data } = await service
+    .from("catalog_items")
+    .select("id, price")
+    .in("id", ids);
+
+  for (const row of data ?? []) {
+    const price = Number(row.price);
+    if (Number.isFinite(price) && price > 0) map.set(String(row.id), price);
+  }
+
+  const courseIds = ids.filter((id) => !map.has(id));
+  if (courseIds.length > 0) {
+    const { data: courses } = await service.from("courses").select("id, price").in("id", courseIds);
+    for (const row of courses ?? []) {
+      const price = Number(row.price);
+      if (Number.isFinite(price) && price > 0) map.set(String(row.id), price);
+    }
+  }
+
+  return map;
+}
 
 export default async function JessicaFacturesPage() {
   const hasAccess = await isSuperAdmin();
@@ -39,6 +71,7 @@ export default async function JessicaFacturesPage() {
   });
 
   const service = getServiceRoleClient();
+  let formations: JessicaFormationOption[] = [];
   let initialInvoices: Array<{
     id: string;
     invoice_number: string;
@@ -46,6 +79,8 @@ export default async function JessicaFacturesPage() {
     client_email: string | null;
     amount_cents: number;
     designation: string;
+    section_title?: string | null;
+    line_items?: JessicaInvoiceLineItem[] | null;
     payment_method: string;
     invoice_date: string;
     consultation_date: string | null;
@@ -53,6 +88,17 @@ export default async function JessicaFacturesPage() {
   }> = [];
 
   if (service) {
+    const catalogItems = await fetchJessicaAssignableCatalogItems(service);
+    const priceMap = await loadFormationPrices(
+      service,
+      catalogItems.map((c) => c.id),
+    );
+    formations = catalogItems.map((item) => ({
+      id: item.id,
+      title: String(item.title ?? "Formation"),
+      priceEuros: priceMap.get(item.id) ?? 0,
+    }));
+
     const { data, error } = await service
       .from("jessica_invoices")
       .select("*")
@@ -63,5 +109,11 @@ export default async function JessicaFacturesPage() {
     }
   }
 
-  return <JessicaFacturesClient clients={clients} initialInvoices={initialInvoices} />;
+  return (
+    <JessicaFacturesClient
+      clients={clients}
+      formations={formations}
+      initialInvoices={initialInvoices}
+    />
+  );
 }

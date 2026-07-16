@@ -9,6 +9,8 @@ const TABS = [
     path === "/super/crm/pipeline" && type !== "btoc" },
   { href: "/super/crm/pipeline/prescripteurs", label: "Prescripteur", match: (path: string) =>
     path.startsWith("/super/crm/pipeline/prescripteurs") },
+  { href: "/super/crm/pipeline/projets", label: "Projets", match: (path: string) =>
+    path.startsWith("/super/crm/pipeline/projets") },
 ] as const;
 
 export function PipelineBtobSubnav() {

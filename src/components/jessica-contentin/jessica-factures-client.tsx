@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Download, Loader2, Mail, Plus, Trash2 } from "lucide-react";
+import { Download, Loader2, Mail, Plus, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -180,9 +180,17 @@ export function JessicaFacturesClient({
       narrow
     >
       <JessicaSuperCard className="mb-8">
-        <div className="mb-4 flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          <h2 className="text-base font-semibold text-black">Créer une facture</h2>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            <h2 className="text-base font-semibold text-black">Créer une facture</h2>
+          </div>
+          <Button type="button" size="sm" variant="outline" asChild>
+            <a href="/super/jessica-crm/new">
+              <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+              Nouveau client
+            </a>
+          </Button>
         </div>
 
         <div className="space-y-5">

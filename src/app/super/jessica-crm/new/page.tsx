@@ -20,7 +20,7 @@ export default async function JessicaCrmNewClientPage() {
   return (
     <JessicaSuperPage
       title="Ajouter un client"
-      subtitle="Créez un compte LMS pour un nouveau client."
+      subtitle="Prénom, nom, email et téléphone — disponible ensuite pour les factures."
       backHref="/super/jessica-crm"
       backLabel="Retour au CRM"
       narrow

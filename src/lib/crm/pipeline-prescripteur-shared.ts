@@ -2,6 +2,15 @@ import { CRM_REVENUE_STAGE_SLUGS, formatDealAmount } from "@/lib/crm/pipeline-sh
 
 export type CommissionType = "percent" | "fixed";
 
+export type PrescripteurInterlocutor = {
+  id?: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  linkedin_url: string;
+};
+
 export type PipelinePrescripteur = {
   id: string;
   first_name: string;
@@ -9,11 +18,14 @@ export type PipelinePrescripteur = {
   company_name: string;
   email: string | null;
   phone: string | null;
+  link_url?: string | null;
+  cta_label?: string | null;
   next_action: string;
   notes: string | null;
   contact_owner_email: string | null;
   created_at: string;
   updated_at: string;
+  interlocutors?: PrescripteurInterlocutor[];
 };
 
 export type PrescripteurLinkedDeal = {
@@ -43,10 +55,23 @@ export type PrescripteurForm = {
   company_name: string;
   email: string;
   phone: string;
+  link_url: string;
+  cta_label: string;
   next_action: string;
   notes: string;
   contact_owner_email: string;
+  interlocutors: PrescripteurInterlocutor[];
 };
+
+export function emptyInterlocutor(): PrescripteurInterlocutor {
+  return {
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    linkedin_url: "",
+  };
+}
 
 export const emptyPrescripteurForm = (ownerEmail: string): PrescripteurForm => ({
   first_name: "",
@@ -54,10 +79,25 @@ export const emptyPrescripteurForm = (ownerEmail: string): PrescripteurForm => (
   company_name: "",
   email: "",
   phone: "",
+  link_url: "",
+  cta_label: "Ouvrir le lien",
   next_action: "",
   notes: "",
   contact_owner_email: ownerEmail,
+  interlocutors: [emptyInterlocutor()],
 });
+
+/** Sync Interlocuteur 1 → champs legacy pour cartes / validation. */
+export function syncPrimaryFromInterlocutors(form: PrescripteurForm): PrescripteurForm {
+  const primary = form.interlocutors[0] ?? emptyInterlocutor();
+  return {
+    ...form,
+    first_name: primary.first_name,
+    last_name: primary.last_name,
+    email: primary.email,
+    phone: primary.phone,
+  };
+}
 
 export function dealRevenueCents(amountCents: number, stageSlug: string): number {
   if (!CRM_REVENUE_STAGE_SLUGS.includes(stageSlug as (typeof CRM_REVENUE_STAGE_SLUGS)[number])) {

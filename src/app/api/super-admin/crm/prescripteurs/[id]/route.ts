@@ -6,6 +6,11 @@ import {
   DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,
   isValidPipelineOwnerEmail,
 } from "@/lib/crm/pipeline-btob-owners";
+import {
+  fetchPrescripteurInterlocutors,
+  parseInterlocutorsPayload,
+  replacePrescripteurInterlocutors,
+} from "@/lib/crm/prescripteur-interlocutors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -47,9 +52,23 @@ async function fetchPrescripteurWithClients(supabase: NonNullable<ReturnType<typ
 
   if (linksError && linksError.code !== "42P01") throw linksError;
 
+  let interlocutors = await fetchPrescripteurInterlocutors(supabase, id);
+  if (interlocutors.length === 0 && (prescripteur.first_name || prescripteur.last_name)) {
+    interlocutors = [
+      {
+        first_name: prescripteur.first_name ?? "",
+        last_name: prescripteur.last_name ?? "",
+        email: prescripteur.email ?? "",
+        phone: prescripteur.phone ?? "",
+        linkedin_url: "",
+      },
+    ];
+  }
+
   return {
-    prescripteur,
+    prescripteur: { ...prescripteur, interlocutors },
     linked_clients: links ?? [],
+    interlocutors,
   };
 }
 
@@ -95,13 +114,27 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Corps invalide" }, { status: 400 });
   }
 
+  const interlocutors =
+    body.interlocutors !== undefined ? parseInterlocutorsPayload(body.interlocutors) : null;
+  const primary = interlocutors?.[0];
+
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
-  if (body.first_name != null) patch.first_name = String(body.first_name).trim();
-  if (body.last_name != null) patch.last_name = String(body.last_name).trim();
+  if (body.first_name != null || primary) {
+    patch.first_name = String(body.first_name ?? primary?.first_name ?? "").trim();
+  }
+  if (body.last_name != null || primary) {
+    patch.last_name = String(body.last_name ?? primary?.last_name ?? "").trim();
+  }
   if (body.company_name != null) patch.company_name = String(body.company_name).trim();
-  if (body.email != null) patch.email = String(body.email).trim() || null;
-  if (body.phone != null) patch.phone = String(body.phone).trim() || null;
+  if (body.email != null || primary) {
+    patch.email = String(body.email ?? primary?.email ?? "").trim() || null;
+  }
+  if (body.phone != null || primary) {
+    patch.phone = String(body.phone ?? primary?.phone ?? "").trim() || null;
+  }
+  if (body.link_url != null) patch.link_url = String(body.link_url).trim() || null;
+  if (body.cta_label != null) patch.cta_label = String(body.cta_label).trim() || null;
   if (body.next_action != null) patch.next_action = String(body.next_action).trim();
   if (body.notes != null) patch.notes = String(body.notes).trim() || null;
 
@@ -112,19 +145,40 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       : DEFAULT_PIPELINE_BTOB_OWNER_EMAIL;
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("crm_pipeline_prescripteurs")
     .update(patch)
     .eq("id", id)
     .select("*")
     .single();
 
+  if (error && (error.message?.includes("link_url") || error.message?.includes("cta_label"))) {
+    const { link_url: _l, cta_label: _c, ...legacyPatch } = patch;
+    ({ data, error } = await supabase
+      .from("crm_pipeline_prescripteurs")
+      .update(legacyPatch)
+      .eq("id", id)
+      .select("*")
+      .single());
+  }
+
   if (error) {
     console.error("[prescripteurs PATCH]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ prescripteur: data });
+  if (interlocutors) {
+    const sync = await replacePrescripteurInterlocutors(supabase, id, interlocutors);
+    if (sync.error) {
+      console.error("[prescripteurs PATCH interlocutors]", sync.error);
+    }
+  }
+
+  const savedInterlocutors = interlocutors ?? (await fetchPrescripteurInterlocutors(supabase, id));
+
+  return NextResponse.json({
+    prescripteur: { ...data, interlocutors: savedInterlocutors },
+  });
 }
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {

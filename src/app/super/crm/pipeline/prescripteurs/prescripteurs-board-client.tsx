@@ -10,7 +10,9 @@ import {
   pipelineOwnerLabel,
 } from "@/lib/crm/pipeline-btob-owners";
 import {
+  emptyInterlocutor,
   emptyPrescripteurForm,
+  syncPrimaryFromInterlocutors,
   type PipelinePrescripteur,
   type PrescripteurForm,
   type PrescripteurLinkedDeal,
@@ -24,6 +26,26 @@ import {
 } from "@/components/crm/pipeline-prescripteur-cockpit";
 
 function prescripteurToForm(p: PipelinePrescripteur): PrescripteurForm {
+  const interlocutors =
+    p.interlocutors && p.interlocutors.length > 0
+      ? p.interlocutors.map((i) => ({
+          id: i.id,
+          first_name: i.first_name ?? "",
+          last_name: i.last_name ?? "",
+          email: i.email ?? "",
+          phone: i.phone ?? "",
+          linkedin_url: i.linkedin_url ?? "",
+        }))
+      : [
+          {
+            ...emptyInterlocutor(),
+            first_name: p.first_name ?? "",
+            last_name: p.last_name ?? "",
+            email: p.email ?? "",
+            phone: p.phone ?? "",
+          },
+        ];
+
   return {
     id: p.id,
     first_name: p.first_name,
@@ -31,9 +53,12 @@ function prescripteurToForm(p: PipelinePrescripteur): PrescripteurForm {
     company_name: p.company_name,
     email: p.email ?? "",
     phone: p.phone ?? "",
+    link_url: p.link_url ?? "",
+    cta_label: p.cta_label ?? "Ouvrir le lien",
     next_action: p.next_action,
     notes: p.notes ?? "",
     contact_owner_email: p.contact_owner_email ?? DEFAULT_PIPELINE_BTOB_OWNER_EMAIL,
+    interlocutors,
   };
 }
 
@@ -80,10 +105,25 @@ export function PrescripteursBoardClient({ currentUserEmail }: { currentUserEmai
     const res = await fetch(`/api/super-admin/crm/prescripteurs/${id}`);
     const json = (await res.json()) as {
       linked_clients?: PrescripteurLinkedDeal[];
+      interlocutors?: PrescripteurForm["interlocutors"];
+      prescripteur?: PipelinePrescripteur;
       error?: string;
     };
     if (!res.ok) throw new Error(json.error ?? "Chargement fiche impossible");
     setLinkedClients(json.linked_clients ?? []);
+    if (json.prescripteur) {
+      setForm(prescripteurToForm({
+        ...json.prescripteur,
+        interlocutors: json.interlocutors ?? json.prescripteur.interlocutors,
+      }));
+    } else if (json.interlocutors?.length) {
+      setForm((f) =>
+        syncPrimaryFromInterlocutors({
+          ...f,
+          interlocutors: json.interlocutors!,
+        }),
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -131,31 +171,34 @@ export function PrescripteursBoardClient({ currentUserEmail }: { currentUserEmai
   };
 
   const save = async () => {
-    if (!form.first_name.trim() || !form.last_name.trim() || !form.company_name.trim()) {
-      toast.error("Prénom, nom et entreprise sont requis.");
+    const payload = syncPrimaryFromInterlocutors(form);
+    if (!payload.first_name.trim() || !payload.last_name.trim() || !payload.company_name.trim()) {
+      toast.error("Entreprise et Interlocuteur 1 (prénom + nom) sont requis.");
       return;
     }
 
     setSaving(true);
     try {
-      const url = form.id
-        ? `/api/super-admin/crm/prescripteurs/${form.id}`
+      const url = payload.id
+        ? `/api/super-admin/crm/prescripteurs/${payload.id}`
         : "/api/super-admin/crm/prescripteurs";
-      const method = form.id ? "PATCH" : "POST";
+      const method = payload.id ? "PATCH" : "POST";
 
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const json = (await res.json()) as { prescripteur?: PipelinePrescripteur; error?: string };
       if (!res.ok) throw new Error(json.error ?? "Enregistrement impossible");
 
-      if (!form.id && json.prescripteur?.id) {
-        setForm((f) => ({ ...f, id: json.prescripteur!.id }));
+      if (!payload.id && json.prescripteur?.id) {
+        setForm(prescripteurToForm(json.prescripteur));
+      } else if (json.prescripteur) {
+        setForm(prescripteurToForm(json.prescripteur));
       }
 
-      toast.success(form.id ? "Prescripteur mis à jour" : "Prescripteur ajouté");
+      toast.success(payload.id ? "Prescripteur mis à jour" : "Prescripteur ajouté");
       await load();
       if (json.prescripteur?.id) {
         await loadPrescripteurDetail(json.prescripteur.id);
@@ -340,6 +383,19 @@ export function PrescripteursBoardClient({ currentUserEmail }: { currentUserEmai
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                    {p.link_url ? (
+                      <Button variant="outline" size="sm" className="border-white/20 text-white" asChild>
+                        <a
+                          href={
+                            p.link_url.startsWith("http") ? p.link_url : `https://${p.link_url}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {p.cta_label?.trim() || "Lien"}
+                        </a>
+                      </Button>
+                    ) : null}
                     {p.phone ? (
                       <Button variant="outline" size="sm" className="border-white/20 text-white" asChild>
                         <a href={`tel:${p.phone}`}>

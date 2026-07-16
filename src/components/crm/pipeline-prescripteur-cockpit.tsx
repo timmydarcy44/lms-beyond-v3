@@ -20,16 +20,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PipelineLightSection } from "@/components/crm/pipeline-light-section";
-import { PIPELINE_BTOB_CONTACT_OWNERS, pipelineOwnerLabel } from "@/lib/crm/pipeline-btob-owners";
+import { PIPELINE_BTOB_CONTACT_OWNERS } from "@/lib/crm/pipeline-btob-owners";
 import {
   computeClientCommissionCents,
+  emptyInterlocutor,
   formatCommissionAmount,
   formatCommissionLabel,
   sumLinkedCommissionsCents,
   type PrescripteurForm,
   type PrescripteurLinkedDeal,
 } from "@/lib/crm/pipeline-prescripteur-shared";
+import { normalizeLinkedInUrl } from "@/lib/crm/pipeline-deal-intelligence";
 import {
   DEFAULT_PIPELINE_STAGES,
   formatDealAmount,
@@ -85,7 +86,41 @@ export function PipelinePrescripteurCockpit({
 
   const totalCommissionCents = useMemo(() => sumLinkedCommissionsCents(linkedClients), [linkedClients]);
 
-  const displayName = [form.first_name, form.last_name].filter(Boolean).join(" ").trim() || "Prescripteur";
+  const displayName =
+    [form.interlocutors[0]?.first_name, form.interlocutors[0]?.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    [form.first_name, form.last_name].filter(Boolean).join(" ").trim() ||
+    "Prescripteur";
+
+  const primaryPhone = form.interlocutors[0]?.phone || form.phone;
+  const primaryEmail = form.interlocutors[0]?.email || form.email;
+  const linkHref = form.link_url.trim()
+    ? form.link_url.startsWith("http")
+      ? form.link_url.trim()
+      : `https://${form.link_url.trim()}`
+    : "";
+
+  const updateInterlocutor = (
+    index: number,
+    patch: Partial<(typeof form.interlocutors)[number]>,
+  ) => {
+    setForm((f) => {
+      const interlocutors = f.interlocutors.map((item, i) =>
+        i === index ? { ...item, ...patch } : item,
+      );
+      const primary = interlocutors[0] ?? emptyInterlocutor();
+      return {
+        ...f,
+        interlocutors,
+        first_name: primary.first_name,
+        last_name: primary.last_name,
+        email: primary.email,
+        phone: primary.phone,
+      };
+    });
+  };
 
   const handleAddClient = async () => {
     if (!selectedDealId || !form.id) return;
@@ -149,52 +184,43 @@ export function PipelinePrescripteurCockpit({
 
       <section className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-lg font-bold text-white">{displayName}</p>
-            <Input
-              className="mt-1 border-0 bg-transparent p-0 text-sm text-slate-300 shadow-none placeholder:text-slate-500 focus-visible:ring-0"
-              placeholder="Entreprise *"
-              value={form.company_name}
-              onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
-            />
-          </div>
+          <p className="text-lg font-bold text-white">{displayName}</p>
           <div className="flex flex-wrap gap-1.5">
-            {form.phone?.trim() ? (
+            {primaryPhone?.trim() ? (
               <Button type="button" size="sm" className="bg-indigo-600 hover:bg-indigo-700" asChild>
-                <a href={`tel:${form.phone.replace(/\s/g, "")}`}>
+                <a href={`tel:${primaryPhone.replace(/\s/g, "")}`}>
                   <Phone className="mr-1.5 h-4 w-4" />
                   Appeler
                 </a>
               </Button>
             ) : null}
-            {form.email?.trim() ? (
+            {primaryEmail?.trim() ? (
               <Button type="button" size="sm" variant="outline" className="border-white/20 text-white" asChild>
-                <a href={`mailto:${form.email.trim()}`}>
+                <a href={`mailto:${primaryEmail.trim()}`}>
                   <Mail className="mr-1.5 h-4 w-4" />
                   Email
+                </a>
+              </Button>
+            ) : null}
+            {linkHref ? (
+              <Button type="button" size="sm" variant="outline" className="border-white/20 text-white" asChild>
+                <a href={linkHref} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="mr-1.5 h-4 w-4" />
+                  {form.cta_label.trim() || "Ouvrir le lien"}
                 </a>
               </Button>
             ) : null}
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-400">Prénom</Label>
-            <Input
-              className="border-white/15 bg-white/10 text-white"
-              value={form.first_name}
-              onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-400">Nom</Label>
-            <Input
-              className="border-white/15 bg-white/10 text-white"
-              value={form.last_name}
-              onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
-            />
-          </div>
+        <div className="mt-3 space-y-1">
+          <Label className="text-xs text-slate-400">Entreprise *</Label>
+          <Input
+            className="border-white/15 bg-white/10 text-white"
+            placeholder="Nom de l'entreprise"
+            value={form.company_name}
+            onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
+          />
         </div>
 
         <div className="mt-3 space-y-1">
@@ -210,6 +236,160 @@ export function PipelinePrescripteurCockpit({
               </option>
             ))}
           </select>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+        <p className="text-sm font-semibold text-white">Lien & CTA</p>
+        <p className="mt-0.5 text-xs text-slate-400">Site, landing ou dossier partagé — bouton de redirection.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1 sm:col-span-2">
+            <Label className="text-xs text-slate-400">URL</Label>
+            <Input
+              className="border-white/15 bg-white/10 text-white"
+              placeholder="https://…"
+              value={form.link_url}
+              onChange={(e) => setForm((f) => ({ ...f, link_url: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-400">Libellé du bouton</Label>
+            <Input
+              className="border-white/15 bg-white/10 text-white"
+              placeholder="Ouvrir le lien"
+              value={form.cta_label}
+              onChange={(e) => setForm((f) => ({ ...f, cta_label: e.target.value }))}
+            />
+          </div>
+          <div className="flex items-end">
+            {linkHref ? (
+              <Button type="button" size="sm" className="w-full bg-indigo-600 hover:bg-indigo-500" asChild>
+                <a href={linkHref} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="mr-1.5 h-4 w-4" />
+                  {form.cta_label.trim() || "Ouvrir le lien"}
+                </a>
+              </Button>
+            ) : (
+              <p className="text-xs text-slate-500">Saisissez une URL pour activer le CTA.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold text-white">Interlocuteurs</p>
+            <p className="text-xs text-slate-400">Interlocuteur 1, puis ajoutez d&apos;autres contacts.</p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="border-white/20 text-white"
+            onClick={() =>
+              setForm((f) => ({ ...f, interlocutors: [...f.interlocutors, emptyInterlocutor()] }))
+            }
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Ajouter
+          </Button>
+        </div>
+
+        <div className="mt-3 space-y-4">
+          {form.interlocutors.map((person, index) => {
+            const linkedIn = normalizeLinkedInUrl(person.linkedin_url);
+            return (
+              <div
+                key={person.id ?? index}
+                className="space-y-3 rounded-xl border border-white/10 bg-slate-900/40 p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-200">
+                    Interlocuteur {index + 1}
+                  </p>
+                  {form.interlocutors.length > 1 ? (
+                    <button
+                      type="button"
+                      className="text-rose-300 hover:text-rose-200"
+                      onClick={() =>
+                        setForm((f) => {
+                          const interlocutors = f.interlocutors.filter((_, i) => i !== index);
+                          const primary = interlocutors[0] ?? emptyInterlocutor();
+                          return {
+                            ...f,
+                            interlocutors,
+                            first_name: primary.first_name,
+                            last_name: primary.last_name,
+                            email: primary.email,
+                            phone: primary.phone,
+                          };
+                        })
+                      }
+                      aria-label="Supprimer l'interlocuteur"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Prénom</Label>
+                    <Input
+                      className="border-white/15 bg-white/10 text-white"
+                      value={person.first_name}
+                      onChange={(e) => updateInterlocutor(index, { first_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Nom</Label>
+                    <Input
+                      className="border-white/15 bg-white/10 text-white"
+                      value={person.last_name}
+                      onChange={(e) => updateInterlocutor(index, { last_name: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Email</Label>
+                    <Input
+                      type="email"
+                      className="border-white/15 bg-white/10 text-white"
+                      value={person.email}
+                      onChange={(e) => updateInterlocutor(index, { email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Téléphone</Label>
+                    <Input
+                      className="border-white/15 bg-white/10 text-white"
+                      value={person.phone}
+                      onChange={(e) => updateInterlocutor(index, { phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-400">LinkedIn</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      className="border-white/15 bg-white/10 text-white"
+                      placeholder="https://www.linkedin.com/in/…"
+                      value={person.linkedin_url}
+                      onChange={(e) => updateInterlocutor(index, { linkedin_url: e.target.value })}
+                    />
+                    {linkedIn ? (
+                      <Button type="button" size="sm" variant="outline" className="border-white/20 text-white" asChild>
+                        <a href={linkedIn} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -413,28 +593,6 @@ export function PipelinePrescripteurCockpit({
           </div>
         ) : null}
       </section>
-
-      <PipelineLightSection title="Coordonnées" subtitle="E-mail, téléphone" defaultOpen tone="dark">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-400">E-mail</Label>
-            <Input
-              type="email"
-              className="border-white/15 bg-white/10 text-white"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-400">Téléphone</Label>
-            <Input
-              className="border-white/15 bg-white/10 text-white"
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            />
-          </div>
-        </div>
-      </PipelineLightSection>
 
       <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
         <Label className="text-sm font-semibold text-white">Notes internes</Label>

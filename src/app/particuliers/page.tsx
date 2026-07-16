@@ -1,43 +1,24 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BadgeCheck, BarChart3, Link2, Shield } from "lucide-react";
-import { EdgeButton } from "@/components/edge-site/edge-button";
+import { useEffect, useState } from "react";
+import { ArrowRight, Check } from "lucide-react";
 import { ParticuliersSignupOverlay } from "@/components/edge-site/particuliers-signup-overlay";
-import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
-
-const PHONE_SLIDES = [
-  {
-    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/tel%20home%202.png",
-    alt: "Résultats DISC et IDMC sur mobile",
-  },
-  {
-    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/Tel%20home.png",
-    alt: "Accueil espace profil EDGE",
-  },
-  {
-    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/tel%20home%203%20(2).png",
-    alt: "Open Badge EDGE sur mobile",
-  },
-] as const;
-
-const INCLUDED = [
-  "Test comportemental DISC complet",
-  "Bilan IDMC et soft skills",
-  "Profil public partageable",
-  "Open Badges et certifications",
-  "Matching opportunités",
-] as const;
+import { cn } from "@/lib/utils";
 
 type FormState = {
   first_name: string;
   last_name: string;
   email: string;
-  role: string;
   objectif: string;
 };
+
+const DREAM_GOALS = [
+  { value: "responsable-marketing", label: "Devenir responsable marketing" },
+  { value: "equipe-produit", label: "Rejoindre une équipe produit" },
+  { value: "reconversion", label: "Me reconvertir" },
+  { value: "autre", label: "Autre objectif" },
+] as const;
 
 function SignupForm({
   formState,
@@ -45,25 +26,19 @@ function SignupForm({
   onSubmit,
   isLoading,
   errorMessage,
-  compact,
 }: {
   formState: FormState;
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: () => void;
   isLoading: boolean;
   errorMessage: string | null;
-  compact?: boolean;
 }) {
-  const objectiveOptions = [
-    { value: "alternance", label: "Alternance" },
-    { value: "freelance", label: "Freelance" },
-    { value: "emploi", label: "Emploi" },
-    { value: "reconversion", label: "Reconversion" },
-    { value: "autre", label: "Autre" },
-  ];
-
   return (
-    <div className={compact ? "" : "rounded-3xl border border-black/[0.06] bg-white p-6 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.12)] sm:p-8"}>
+    <div
+      id="signup"
+      className="scroll-mt-28 mx-auto w-full max-w-md space-y-4 border-t border-black/10 pt-10"
+    >
+      <p className="text-[13px] text-black/45">Créez votre compte pour voir votre chemin.</p>
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <input
@@ -73,7 +48,7 @@ function SignupForm({
             value={formState.first_name}
             onChange={onChange}
             placeholder="Prénom"
-            className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] outline-none transition focus:border-edge-black/30"
+            className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-[15px] outline-none transition focus:border-black/30"
           />
           <input
             type="text"
@@ -82,7 +57,7 @@ function SignupForm({
             value={formState.last_name}
             onChange={onChange}
             placeholder="Nom"
-            className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] outline-none transition focus:border-edge-black/30"
+            className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-[15px] outline-none transition focus:border-black/30"
           />
         </div>
         <input
@@ -92,55 +67,86 @@ function SignupForm({
           value={formState.email}
           onChange={onChange}
           placeholder="Email"
-          className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] outline-none transition focus:border-edge-black/30"
+          className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-[15px] outline-none transition focus:border-black/30"
         />
-        <select
-          name="objectif"
-          required
-          value={formState.objectif}
-          onChange={onChange}
-          className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] text-black/80 outline-none transition focus:border-edge-black/30"
-        >
-          <option value="">Votre objectif</option>
-          {objectiveOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <input type="hidden" name="objectif" value={formState.objectif} readOnly />
         <button
           type="button"
           onClick={onSubmit}
           disabled={isLoading}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-edge-black px-6 py-3.5 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-edge-black px-6 py-4 text-[14px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {isLoading ? (
-            <>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Préparation de votre espace…
-            </>
-          ) : (
-            <>
-              Créer mon espace gratuitement
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </>
-          )}
+          {isLoading ? "Préparation…" : "Construire mon chemin"}
+          {!isLoading ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
         </button>
       </div>
-      <p className="mt-4 text-[12px] leading-relaxed text-black/40">
-        Inscription 100&nbsp;% gratuite · sans carte bancaire · sans engagement
-      </p>
-      <p className="mt-2 text-[12px] text-black/40">
-        Déjà un compte ?{" "}
+      <p className="text-[12px] text-black/40">
+        Gratuit · 2 minutes · aucun engagement.{" "}
         <Link href="/particuliers/login" className="font-medium text-edge-black underline-offset-2 hover:underline">
           Se connecter
         </Link>
       </p>
       {errorMessage ? (
-        <div className="mt-4 rounded-xl border border-black/10 bg-black/[0.03] px-4 py-3 text-[13px] text-edge-black">
-          {errorMessage}
-        </div>
+        <div className="rounded-2xl border border-black/10 bg-black/[0.03] px-4 py-3 text-[13px]">{errorMessage}</div>
       ) : null}
+    </div>
+  );
+}
+
+function PathMockup({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-[2rem] border border-black/8 bg-[#0a0a0a] text-white shadow-[0_40px_100px_-40px_rgba(0,0,0,0.55)]",
+        className,
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(255,255,255,0.08),transparent_50%)]" />
+      <div className="relative p-6 sm:p-8">
+        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/35">Votre chemin</p>
+        <p className="mt-3 text-[22px] font-medium tracking-[-0.03em] sm:text-[26px]">Responsable marketing</p>
+        <div className="mt-8 space-y-3">
+          {[
+            { label: "Votre objectif", detail: "Cible définie", done: true },
+            { label: "Ce qui manque", detail: "4 écarts prioritaires", done: true },
+            { label: "Plan ordonné", detail: "12 jalons", done: true },
+            { label: "Mission du jour", detail: "Écoute active · 10 min", done: false },
+          ].map((row) => (
+            <div
+              key={row.label}
+              className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5"
+            >
+              <div>
+                <p className="text-[12px] text-white/40">{row.label}</p>
+                <p className="mt-0.5 text-[14px] font-medium text-white/90">{row.detail}</p>
+              </div>
+              {row.done ? (
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10">
+                  <Check className="h-3.5 w-3.5 text-white/70" aria-hidden />
+                </span>
+              ) : (
+                <span className="h-2 w-2 rounded-full bg-white/80" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MissionMockup() {
+  return (
+    <div className="mx-auto max-w-lg overflow-hidden rounded-[2rem] border border-black/8 bg-white p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.35)]">
+      <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-black/35">Mission du jour</p>
+      <h3 className="mt-4 text-[28px] font-medium tracking-[-0.03em] text-edge-black">Écoute active</h3>
+      <p className="mt-3 text-[15px] leading-relaxed text-black/50">
+        Une conversation. Une reformulation. Dix minutes. Assez petite pour être faite. Assez précise pour compter.
+      </p>
+      <div className="mt-8 flex items-center justify-between border-t border-black/6 pt-5 text-[13px] text-black/40">
+        <span>Progression +6 pts</span>
+        <span className="rounded-full bg-edge-black px-4 py-2 text-[12px] font-medium text-white">Commencer</span>
+      </div>
     </div>
   );
 }
@@ -152,15 +158,15 @@ export default function ParticuliersPage() {
     first_name: "",
     last_name: "",
     email: "",
-    role: "PARTICULIER",
     objectif: "",
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showSignupOverlay, setShowSignupOverlay] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
+  const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
 
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 6);
+    const onScroll = () => setIsScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -170,14 +176,11 @@ export default function ParticuliersPage() {
     const params = new URLSearchParams(window.location.search);
     const authError = params.get("auth_error");
     if (!authError) return;
-
     const label =
       authError === "otp_expired"
-        ? "Ce lien de confirmation a expiré (valable 24 h). Réinscrivez-vous ci-dessous pour recevoir un nouvel email."
-        : "Le lien de confirmation est invalide ou a déjà été utilisé. Réinscrivez-vous pour recevoir un nouvel email.";
-
+        ? "Ce lien de confirmation a expiré. Réinscrivez-vous ci-dessous."
+        : "Le lien de confirmation est invalide. Réinscrivez-vous pour recevoir un nouvel email.";
     setErrorMessage(label);
-    setShowSignupOverlay(false);
     window.history.replaceState({}, "", "/particuliers#signup");
     requestAnimationFrame(() => {
       document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -185,98 +188,89 @@ export default function ParticuliersPage() {
   }, []);
 
   useEffect(() => {
-    const items = Array.from(document.querySelectorAll<HTMLElement>("[data-animate]"));
+    const items = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
     if (!items.length) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("opacity-100", "translate-y-0");
-            entry.target.classList.remove("opacity-0", "translate-y-6");
-            observer.unobserve(entry.target);
-          }
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("opacity-100", "translate-y-0");
+          entry.target.classList.remove("opacity-0", "translate-y-10");
+          observer.unobserve(entry.target);
         });
       },
-      { threshold: 0.15 },
+      { threshold: 0.14 },
     );
-
     items.forEach((item) => observer.observe(item));
     return () => observer.disconnect();
   }, []);
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    event?.stopPropagation();
+  const selectGoal = (value: string, label: string) => {
+    setSelectedGoal(value);
+    setFormState((prev) => ({ ...prev, objectif: label }));
+  };
+
+  const handleSubmit = async () => {
     setIsLoading(true);
     setErrorMessage(null);
     setShowSignupOverlay(false);
-
     try {
       const response = await fetch("/api/particuliers/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          first_name: formState.first_name,
-          last_name: formState.last_name,
-          email: formState.email,
-          objectif: formState.objectif,
-        }),
+        body: JSON.stringify(formState),
       });
-
-      const data = (await response.json()) as {
-        error?: string;
-        message?: string;
-        success?: boolean;
-        warning?: boolean;
-      };
-
-      if (!response.ok) {
-        throw new Error(data.error || "Une erreur est survenue. Réessayez.");
-      }
-
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Une erreur est survenue.");
       setSubmittedEmail(formState.email);
       setShowSignupOverlay(true);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Une erreur est survenue. Réessayez.");
+      setErrorMessage(error instanceof Error ? error.message : "Une erreur est survenue.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const features = useMemo(
-    () => [
-      {
-        icon: BarChart3,
-        title: "Tests & diagnostics",
-        desc: "DISC, IDMC et soft skills — comprenez votre profil en quelques minutes.",
-      },
-      {
-        icon: Link2,
-        title: "Un lien, partout",
-        desc: "Un profil public à partager sur LinkedIn, vos candidatures et votre CV.",
-      },
-      {
-        icon: BadgeCheck,
-        title: "Compétences prouvées",
-        desc: "Open Badges et certifications rattachés à votre espace.",
-      },
-      {
-        icon: Shield,
-        title: "Gratuit, pour toujours",
-        desc: "Votre espace est gratuit et le restera. Sans carte bancaire.",
-      },
-    ],
-    [],
-  );
+  const scrollToSignup = () => {
+    document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="bg-white font-sans text-edge-black antialiased">
+      <style jsx global>{`
+        @keyframes edgeHeroIn {
+          from {
+            opacity: 0;
+            transform: translateY(18px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes edgePathDraw {
+          from {
+            stroke-dashoffset: 420;
+          }
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        @keyframes edgeKenBurns {
+          from {
+            transform: scale(1);
+          }
+          to {
+            transform: scale(1.06);
+          }
+        }
+      `}</style>
+
       {showSignupOverlay ? (
         <ParticuliersSignupOverlay
           email={submittedEmail}
@@ -284,278 +278,318 @@ export default function ParticuliersPage() {
           onClose={() => setShowSignupOverlay(false)}
         />
       ) : null}
+
       <header
-        className={`sticky top-0 z-50 border-b border-black/[0.06] bg-white/90 backdrop-blur-md transition-shadow ${
-          isScrolled ? "shadow-sm" : ""
-        }`}
+        className={cn(
+          "sticky top-0 z-50 border-b border-transparent bg-white/75 backdrop-blur-xl transition-all",
+          isScrolled && "border-black/[0.06] shadow-[0_1px_0_rgba(0,0,0,0.03)]",
+        )}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link href="/edge-lab" className="text-[15px] font-semibold tracking-[-0.02em] text-edge-black">
+          <Link href="/particuliers" className="text-[17px] font-semibold tracking-[-0.04em]">
             EDGE
           </Link>
-          <a
-            href="#signup"
-            className="rounded-full bg-edge-red px-5 py-2 text-[12px] font-medium text-white transition hover:opacity-90"
-          >
-            Créer mon espace
-          </a>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/particuliers/login"
+              className="hidden text-[13px] text-black/45 transition hover:text-edge-black sm:inline"
+            >
+              Se connecter
+            </Link>
+            <button
+              type="button"
+              onClick={scrollToSignup}
+              className="rounded-full bg-edge-black px-5 py-2 text-[12px] font-medium text-white transition hover:opacity-90"
+            >
+              Commencer
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0">
-          <Image
-            src={EDGE_HERO_IMAGE_URL}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority
-          />
-          <div className="absolute inset-0 bg-edge-black/75" aria-hidden />
+      {/* 1 — Héros : promesse au visiteur */}
+      <section className="relative min-h-[92vh] overflow-hidden bg-edge-black text-white">
+        <div
+          className="pointer-events-none absolute inset-0 origin-center bg-[radial-gradient(ellipse_at_60%_30%,rgba(255,255,255,0.09),transparent_55%),radial-gradient(ellipse_at_10%_90%,rgba(255,59,48,0.14),transparent_45%)]"
+          style={{ animation: "edgeKenBurns 18s ease-in-out infinite alternate" }}
+        />
+        <div className="relative mx-auto flex min-h-[92vh] max-w-5xl flex-col justify-center px-5 py-24 sm:px-8">
+          <h1
+            className="max-w-3xl text-[clamp(2.6rem,7vw,5.2rem)] font-medium leading-[1.02] tracking-[-0.045em] opacity-0"
+            style={{ animation: "edgeHeroIn 0.9s ease forwards" }}
+          >
+            Vous savez où vous voulez aller.
+          </h1>
+          <p
+            className="mt-8 max-w-xl text-[17px] leading-[1.65] text-white/55 opacity-0 sm:text-[19px]"
+            style={{ animation: "edgeHeroIn 0.9s ease 0.12s forwards" }}
+          >
+            La plupart des gens apprennent au hasard.
+            <br />
+            <span className="text-white/85">EDGE construit le chemin le plus rapide pour atteindre votre objectif.</span>
+          </p>
+          <div
+            className="mt-12 flex flex-col items-start gap-3 opacity-0 sm:flex-row sm:items-center"
+            style={{ animation: "edgeHeroIn 0.9s ease 0.24s forwards" }}
+          >
+            <button
+              type="button"
+              onClick={scrollToSignup}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-[14px] font-medium text-edge-black transition hover:bg-white/90"
+            >
+              Construire mon chemin
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+            <p className="text-[13px] text-white/40">Gratuit · 2 minutes · aucun engagement</p>
+          </div>
         </div>
+      </section>
 
-        <div className="relative mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[1fr_420px] lg:items-center lg:gap-16 lg:py-28">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-[10px] font-normal uppercase tracking-[0.2em] text-white/70">
-              EDGE Powered Beyond
+      {/* 2 — Le rêve */}
+      <section className="mx-auto max-w-4xl px-5 py-28 sm:px-8 sm:py-36">
+        <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
+          <h2 className="text-[clamp(2rem,4vw,3rem)] font-medium tracking-[-0.04em]">Quel est votre objectif&nbsp;?</h2>
+          <div className="mt-10 grid gap-3 sm:grid-cols-2">
+            {DREAM_GOALS.map((goal) => {
+              const active = selectedGoal === goal.value;
+              return (
+                <button
+                  key={goal.value}
+                  type="button"
+                  onClick={() => selectGoal(goal.value, goal.label)}
+                  className={cn(
+                    "rounded-2xl border px-5 py-5 text-left text-[16px] transition",
+                    active
+                      ? "border-edge-black bg-edge-black text-white"
+                      : "border-black/10 bg-white text-edge-black hover:border-black/25",
+                  )}
+                >
+                  {goal.label}
+                </button>
+              );
+            })}
+          </div>
+          {selectedGoal ? (
+            <p className="mt-8 text-[16px] leading-relaxed text-black/55">
+              Très bien. On va mesurer l&apos;écart entre vous et ce rôle — puis construire le chemin.
             </p>
-            <h1 className="mt-8 text-[clamp(2.25rem,5vw,3.5rem)] font-medium leading-[1.05] tracking-[-0.03em] text-white">
-              Votre espace
-              <br />
-              compétences.
-            </h1>
-            <p className="mt-6 max-w-md text-[16px] leading-[1.7] text-white/50">
-              Créez gratuitement un espace dédié pour valoriser vos compétences, passer vos tests et partager vos
-              résultats.
-            </p>
-            <ul className="mt-10 space-y-3">
-              {["Inscription 100 % gratuite", "Tests DISC, IDMC & soft skills", "Profil public & Open Badges"].map(
-                (item) => (
-                  <li key={item} className="flex items-center gap-3 text-[14px] text-white/70">
-                    <span className="h-1 w-1 rounded-full bg-edge-red" aria-hidden />
-                    {item}
-                  </li>
-                ),
-              )}
+          ) : null}
+          <button
+            type="button"
+            onClick={scrollToSignup}
+            disabled={!selectedGoal}
+            className="mt-10 inline-flex items-center gap-2 rounded-full bg-edge-black px-6 py-3 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            Continuer
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      </section>
+
+      {/* 3 — Direction */}
+      <section className="border-y border-black/[0.06] bg-[#f7f7f5]">
+        <div className="mx-auto max-w-3xl px-5 py-28 sm:px-8 sm:py-36">
+          <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
+            <h2 className="text-[clamp(2rem,4vw,3.2rem)] font-medium leading-[1.1] tracking-[-0.04em]">
+              Vous n&apos;avez pas un problème de motivation.
+            </h2>
+            <p className="mt-6 text-[22px] tracking-[-0.02em] text-black/45">Vous avez un problème de direction.</p>
+            <ul className="mt-16 space-y-8 text-[18px] leading-relaxed text-black/60">
+              <li>Des formations qui n&apos;ont rien à voir avec le poste.</li>
+              <li>Des tests sans suite.</li>
+              <li>De l&apos;effort… sans trajectoire.</li>
             </ul>
           </div>
-
-          <div id="signup" className="scroll-mt-24">
-            <SignupForm
-              formState={formState}
-              onChange={handleChange}
-              onSubmit={() => void handleSubmit()}
-              isLoading={isLoading}
-              errorMessage={errorMessage}
-            />
-          </div>
         </div>
       </section>
 
-      {/* Phone showcase */}
-      <section className="border-b border-black/[0.06] bg-edge-grey px-5 py-16 sm:px-8 sm:py-20">
-        <div
-          data-animate
-          className="mx-auto max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
-        >
-          <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">Votre espace</p>
-          <h2 className="mt-3 max-w-lg text-[clamp(1.5rem,3vw,2rem)] font-medium tracking-[-0.02em] text-edge-black">
-            Tout votre profil, dans votre poche.
-          </h2>
-          <div
-            className="mt-10 flex gap-5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            style={{ scrollSnapType: "x mandatory" }}
-          >
-            {PHONE_SLIDES.map((slide) => (
-              <div
-                key={slide.src}
-                className="w-[min(72%,280px)] shrink-0 sm:w-[240px]"
-                style={{ scrollSnapAlign: "start" }}
-              >
-                <div className="relative aspect-[9/19.5] overflow-hidden rounded-[28px] shadow-[0_32px_80px_-24px_rgba(0,0,0,0.25)]">
-                  <Image src={slide.src} alt={slide.alt} fill className="object-cover" sizes="280px" />
-                </div>
+      {/* 4 — Avant / Après */}
+      <section className="mx-auto max-w-6xl px-5 py-28 sm:px-8 sm:py-36">
+        <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
+          <p className="text-center text-[15px] text-black/45">
+            Ce n&apos;est pas plus d&apos;apprentissage. C&apos;est le bon ordre.
+          </p>
+          <div className="mt-14 grid gap-6 lg:grid-cols-2">
+            <div className="rounded-[2rem] border border-black/8 bg-[#f3f3f1] p-8 sm:p-10">
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-black/35">Sans chemin</p>
+              <div className="mt-8 space-y-3">
+                {["Formation A", "Article LinkedIn", "Test random", "Tutoriel YouTube", "Encore une formation"].map(
+                  (item, i) => (
+                    <div
+                      key={item}
+                      className="rounded-xl border border-black/5 bg-white/70 px-4 py-3 text-[14px] text-black/45"
+                      style={{ transform: `translateX(${(i % 3) * 8}px)` }}
+                    >
+                      {item}
+                    </div>
+                  ),
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="bg-edge-black px-5 py-16 text-white sm:px-8 sm:py-20">
-        <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-3">
-          {[
-            { stat: "15 min", desc: "Pour compléter vos premiers tests" },
-            { stat: "0 €", desc: "Inscription gratuite, pour toujours" },
-            { stat: "1 lien", desc: "À partager partout" },
-          ].map((item) => (
-            <div key={item.stat} className="border-t border-white/10 pt-6">
-              <p className="text-[clamp(2rem,4vw,2.75rem)] font-medium tracking-[-0.03em]">{item.stat}</p>
-              <p className="mt-2 text-[14px] text-white/45">{item.desc}</p>
+              <p className="mt-8 text-[15px] text-black/45">Beaucoup d&apos;effort. Peu de progression mesurable.</p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="px-5 py-20 sm:px-8 sm:py-28">
-        <div
-          data-animate
-          className="mx-auto max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
-        >
-          <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">Inclus</p>
-          <h2 className="mt-3 max-w-xl text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.02em]">
-            Tout ce dont vous avez besoin. Gratuitement.
-          </h2>
-          <div className="mt-14 grid gap-6 sm:grid-cols-2">
-            {features.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-black/[0.06] p-8 transition hover:border-black/10"
-              >
-                <item.icon className="h-5 w-5 text-edge-red" strokeWidth={1.75} aria-hidden />
-                <h3 className="mt-5 text-[17px] font-medium tracking-[-0.01em]">{item.title}</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-black/45">{item.desc}</p>
+            <div className="rounded-[2rem] bg-edge-black p-8 text-white sm:p-10">
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/35">Avec un chemin</p>
+              <svg className="mt-10 h-24 w-full" viewBox="0 0 320 80" fill="none" aria-hidden>
+                <path
+                  d="M8 64 C 70 64, 90 16, 160 16 S 250 64, 312 16"
+                  stroke="rgba(255,255,255,0.85)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeDasharray="420"
+                  style={{ animation: "edgePathDraw 1.6s ease forwards" }}
+                />
+                <circle cx="8" cy="64" r="4" fill="white" />
+                <circle cx="160" cy="16" r="4" fill="white" />
+                <circle cx="312" cy="16" r="4" fill="white" />
+              </svg>
+              <div className="mt-4 flex justify-between text-[12px] text-white/40">
+                <span>Aujourd&apos;hui</span>
+                <span>Cette semaine</span>
+                <span>Objectif</span>
               </div>
-            ))}
+              <p className="mt-8 text-[15px] text-white/55">Chaque jour rapproche du rôle. Pas du catalogue.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Steps */}
-      <section className="border-t border-black/[0.06] bg-edge-grey px-5 py-20 sm:px-8 sm:py-28">
-        <div
-          data-animate
-          className="mx-auto max-w-6xl opacity-0 translate-y-6 transition-all duration-700"
-        >
-          <h2 className="text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.02em]">
-            Trois étapes. Quinze minutes.
-          </h2>
-          <ol className="mt-14 grid gap-10 md:grid-cols-3">
-            {[
-              {
-                step: "01",
-                title: "Créez votre espace",
-                desc: "Inscription gratuite en moins d'une minute.",
-              },
-              {
-                step: "02",
-                title: "Passez vos tests",
-                desc: "DISC, IDMC et soft skills depuis votre téléphone.",
-              },
-              {
-                step: "03",
-                title: "Partagez votre profil",
-                desc: "Un lien unique pour vos candidatures et LinkedIn.",
-              },
-            ].map((item) => (
-              <li key={item.step}>
-                <span className="text-[13px] font-medium text-edge-red">{item.step}</span>
-                <h3 className="mt-3 text-[17px] font-medium tracking-[-0.01em]">{item.title}</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-black/45">{item.desc}</p>
-              </li>
-            ))}
-          </ol>
+      {/* 5 — Mécanisme en 4 actes */}
+      <section className="border-y border-black/[0.06] bg-[#f7f7f5]">
+        <div className="mx-auto max-w-5xl px-5 py-28 sm:px-8 sm:py-36">
+          <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
+            <h2 className="max-w-2xl text-[clamp(2rem,4vw,3.2rem)] font-medium tracking-[-0.04em]">
+              EDGE ne vous vend rien.
+              <span className="mt-2 block text-black/40">EDGE aligne.</span>
+            </h2>
+            <ol className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { n: "01", title: "Profil", body: "On lit qui vous êtes aujourd’hui." },
+                { n: "02", title: "Métier", body: "On compare à la cible." },
+                { n: "03", title: "Plan", body: "On ordonne ce qu’il faut combler." },
+                { n: "04", title: "Jour", body: "On vous donne la prochaine mission." },
+              ].map((act) => (
+                <li key={act.n}>
+                  <p className="text-[12px] font-medium tracking-[0.16em] text-black/30">{act.n}</p>
+                  <p className="mt-3 text-[20px] font-medium tracking-[-0.02em]">{act.title}</p>
+                  <p className="mt-2 text-[15px] leading-relaxed text-black/50">{act.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </section>
 
-      {/* Included list */}
-      <section className="px-5 py-20 sm:px-8 sm:py-28">
-        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
-          <div>
-            <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">EDGE Powered Beyond</p>
-            <h2 className="mt-3 text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.02em]">
-              Un espace complet.
-              <br />
-              Sans frais cachés.
+      {/* 6 — Révélation produit */}
+      <section className="mx-auto max-w-5xl px-5 py-28 sm:px-8 sm:py-36">
+        <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
+          <h2 className="text-center text-[clamp(2rem,4vw,3.2rem)] font-medium tracking-[-0.04em]">
+            Votre chemin, enfin visible.
+          </h2>
+          <p className="mx-auto mt-5 max-w-lg text-center text-[16px] text-black/50">
+            Objectif → écarts → plan → mission du jour.
+          </p>
+          <PathMockup className="mt-14" />
+          <div className="mt-10 flex justify-center">
+            <button
+              type="button"
+              onClick={scrollToSignup}
+              className="inline-flex items-center gap-2 rounded-full bg-edge-black px-7 py-3.5 text-[14px] font-medium text-white transition hover:opacity-90"
+            >
+              Voir mon chemin
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* 7 — Rituel quotidien */}
+      <section className="bg-edge-black py-28 text-white sm:py-36">
+        <div className="mx-auto max-w-4xl px-5 sm:px-8">
+          <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
+            <h2 className="text-center text-[clamp(2rem,4vw,3.2rem)] font-medium tracking-[-0.04em]">
+              Pas un programme. Une journée.
             </h2>
-            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-black/45">
-              La technologie Beyond au service de votre employabilité — portée par EDGE.
+            <p className="mx-auto mt-6 max-w-md text-center text-[17px] leading-relaxed text-white/50">
+              Chaque matin, une mission.
+              <br />
+              Assez petite pour être faite.
+              <br />
+              Assez précise pour compter.
+            </p>
+            <div className="mt-14 text-edge-black">
+              <MissionMockup />
+            </div>
+            <p className="mx-auto mt-10 max-w-lg text-center text-[14px] text-white/40">
+              Les compétences se valident. Les écarts se ferment. L&apos;objectif se rapproche.
             </p>
           </div>
-          <ul className="space-y-4">
-            {INCLUDED.map((item) => (
-              <li key={item} className="flex items-center gap-3 border-b border-black/[0.06] pb-4 text-[15px]">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-edge-red/10 text-edge-red">
-                  ✓
-                </span>
-                {item}
-              </li>
-            ))}
-          </ul>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="border-t border-black/[0.06] bg-edge-grey px-5 py-20 sm:px-8">
-        <div className="mx-auto max-w-2xl">
-          <h2 className="text-[clamp(1.5rem,3vw,2rem)] font-medium tracking-[-0.02em]">Questions fréquentes</h2>
-          <div className="mt-8 space-y-3">
-            {[
-              {
-                q: "C'est quoi le test comportemental ?",
-                a: "Il mesure quatre dimensions — Dominance, Influence, Stabilité, Conformité — en environ 15 minutes.",
-              },
-              {
-                q: "Mon employeur peut voir mon profil ?",
-                a: "Uniquement si vous partagez votre lien. Vous contrôlez qui voit quoi.",
-              },
-              {
-                q: "C'est vraiment gratuit ?",
-                a: "Oui. L'inscription et votre espace sont 100 % gratuits, sans limite de durée et sans carte bancaire.",
-              },
-              {
-                q: "Qu'est-ce que EDGE Powered Beyond ?",
-                a: "C'est votre espace personnel propulsé par la technologie Beyond : tests, profil et badges, au sein de l'écosystème EDGE.",
-              },
-            ].map((item) => (
-              <details key={item.q} className="group rounded-2xl border border-black/[0.06] bg-white px-5 py-4">
-                <summary className="cursor-pointer list-none text-[14px] font-medium [&::-webkit-details-marker]:hidden">
-                  {item.q}
-                </summary>
-                <p className="mt-3 text-[14px] leading-relaxed text-black/50">{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="bg-edge-black px-5 py-20 text-white sm:px-8 sm:py-28">
-        <div className="mx-auto max-w-xl text-center">
-          <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-white/40">EDGE Powered Beyond</p>
-          <h2 className="mt-4 text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.02em]">
-            Votre espace vous attend.
+      {/* 8 — Expert */}
+      <section className="mx-auto max-w-3xl px-5 py-28 sm:px-8 sm:py-36">
+        <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out text-center">
+          <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-medium tracking-[-0.035em]">
+            Avancez seul. Demandez un expert quand ça bloque.
           </h2>
-          <p className="mt-4 text-[15px] text-white/45">Gratuit. Pour toujours.</p>
-          <div className="mt-10">
-            <EdgeButton href="#signup" variant="primary" ariaLabel="Créer mon espace gratuitement">
-              Créer mon espace gratuitement
-            </EdgeButton>
+          <p className="mx-auto mt-6 max-w-md text-[16px] leading-relaxed text-black/50">
+            Le chemin est automatique. L&apos;humain intervient quand c&apos;est nécessaire — pas par défaut.
+          </p>
+        </div>
+      </section>
+
+      {/* 9 — Preuve narrative */}
+      <section className="border-y border-black/[0.06] bg-[#f7f7f5]">
+        <div className="mx-auto max-w-4xl px-5 py-28 sm:px-8 sm:py-36">
+          <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
+            <blockquote className="text-[clamp(1.5rem,3vw,2.2rem)] font-medium leading-[1.35] tracking-[-0.03em] text-edge-black">
+              « Je savais que je voulais passer chef de projet. EDGE m&apos;a montré l&apos;écart. Puis la semaine. Puis
+              aujourd&apos;hui. »
+            </blockquote>
+            <p className="mt-8 text-[14px] text-black/45">— Camille · objectif chef de projet</p>
+            <div className="mt-12 max-w-xs">
+              <div className="flex items-end justify-between text-[13px] text-black/45">
+                <span>Compatibilité</span>
+                <span className="font-medium text-edge-black">34 % → 61 %</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/10">
+                <div className="h-full w-[61%] rounded-full bg-edge-black" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-white/10 bg-edge-black px-5 py-8 text-center text-[12px] text-white/35">
-        <p>© EDGE 2026 · EDGE Powered Beyond</p>
-        <p className="mt-1">
-          <Link href="/edge-lab" className="hover:text-white/60">
-            Retour à edgebs.fr
-          </Link>
-        </p>
+      {/* 10 — Close + signup (workflow inchangé) */}
+      <section className="mx-auto max-w-3xl px-5 py-28 sm:px-8 sm:py-40">
+        <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out text-center">
+          <h2 className="text-[clamp(2.2rem,5vw,3.6rem)] font-medium leading-[1.05] tracking-[-0.045em]">
+            Vous avez déjà l&apos;objectif.
+            <span className="mt-3 block text-black/40">Il vous manque le chemin.</span>
+          </h2>
+          <SignupForm
+            formState={formState}
+            onChange={handleChange}
+            onSubmit={() => void handleSubmit()}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+          />
+        </div>
+      </section>
+
+      <footer className="border-t border-black/[0.06] py-10">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 text-[13px] text-black/40 sm:flex-row sm:px-8">
+          <p>© EDGE {new Date().getFullYear()}</p>
+          <div className="flex gap-5">
+            <Link href="/particuliers/login" className="transition hover:text-edge-black">
+              Se connecter
+            </Link>
+            <Link href="https://edgebs.fr" className="transition hover:text-edge-black">
+              edgebs.fr
+            </Link>
+          </div>
+        </div>
       </footer>
-
-      <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4 md:hidden">
-        <a
-          href="#signup"
-          className="flex w-full max-w-sm items-center justify-center rounded-full bg-edge-red px-6 py-3.5 text-[13px] font-medium text-white shadow-lg"
-        >
-          Créer mon espace gratuitement
-        </a>
-      </div>
-
     </div>
   );
 }

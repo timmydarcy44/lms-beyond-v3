@@ -5,9 +5,9 @@ const EDGE_ICON = "/icons/edge/edge-icon-E.png?v=2";
 const EDGE_APPLE_ICON = "/icons/edge/apple-touch-icon-180.png?v=2";
 
 export const metadata: Metadata = {
-  title: "EDGE — Atteignez votre objectif professionnel",
+  title: "EDGE — Vous savez où vous voulez aller",
   description:
-    "EDGE analyse votre profil, mesure vos écarts de compétences et construit automatiquement votre plan de progression personnalisé.",
+    "La plupart des gens apprennent au hasard. EDGE construit le chemin le plus rapide pour atteindre votre objectif professionnel.",
   applicationName: "EDGE",
   manifest: "/manifest-edge.json",
   icons: {
@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-title": "EDGE",
   },
   openGraph: {
-    title: "EDGE — Atteignez votre objectif professionnel",
+    title: "Vous savez où vous voulez aller.",
     description:
-      "Vous avez un objectif professionnel. EDGE construit le chemin pour l'atteindre.",
+      "EDGE construit le chemin le plus rapide pour atteindre votre objectif professionnel.",
     url: "https://edgebs.fr/particuliers",
     siteName: "EDGE",
   },

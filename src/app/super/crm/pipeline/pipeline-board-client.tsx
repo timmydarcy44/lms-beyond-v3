@@ -2,7 +2,7 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle, Phone } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, ExternalLink, Loader2, Filter, CalendarClock, AlertTriangle, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -262,7 +262,22 @@ export const PipelineBoardClient = forwardRef<
     const today = new Date().toISOString().slice(0, 10);
     const actionsToday = filteredDeals.filter((d) => (d.next_action_date ?? "").slice(0, 10) === today).length;
     const actionsWithDate = filteredDeals.filter((d) => Boolean(d.next_action_date)).length;
-    return { totalProspects, myProspects, overdue, actionsToday, actionsWithDate };
+    const catalogueSent = filteredDeals.filter((d) => Boolean(d.catalog_email_sent_at)).length;
+    const catalogueOpened = filteredDeals.filter(
+      (d) => Boolean(d.catalog_email_sent_at) && Boolean(d.catalog_email_opened_at),
+    ).length;
+    const openRatePct =
+      catalogueSent > 0 ? Math.round((catalogueOpened / catalogueSent) * 100) : null;
+    return {
+      totalProspects,
+      myProspects,
+      overdue,
+      actionsToday,
+      actionsWithDate,
+      catalogueSent,
+      catalogueOpened,
+      openRatePct,
+    };
   }, [filteredDeals, normUserEmail, isBtoc]);
 
   const nextActions = useMemo(() => {
@@ -698,7 +713,7 @@ export const PipelineBoardClient = forwardRef<
       ) : null}
 
       {kpis ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-4 text-white shadow-xl sm:px-5">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.28),transparent_55%)]" />
             <div className="relative">
@@ -720,6 +735,26 @@ export const PipelineBoardClient = forwardRef<
               </div>
               <p className="mt-2 text-2xl font-bold sm:text-3xl">{kpis.myProspects}</p>
               <p className="mt-1 text-xs text-slate-400">{currentUserEmail ? pipelineOwnerLabel(normUserEmail) : "—"}</p>
+            </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-4 py-4 text-white shadow-xl sm:px-5">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_40%_0%,rgba(16,185,129,0.28),transparent_55%)]" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/80 sm:text-[11px]">
+                  Ouverture mails
+                </p>
+                <Mail className="h-4 w-4 text-emerald-300" />
+              </div>
+              <p className="mt-2 text-2xl font-bold sm:text-3xl">
+                {kpis.openRatePct == null ? "—" : `${kpis.openRatePct}%`}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                {kpis.catalogueSent === 0
+                  ? "Aucun catalogue envoyé"
+                  : `${kpis.catalogueOpened}/${kpis.catalogueSent} ouverts`}
+              </p>
             </div>
           </div>
 
@@ -755,7 +790,7 @@ export const PipelineBoardClient = forwardRef<
             title="Carte France"
             subtitle={`${geoPointsCount}/${filteredDeals.length} entreprises géolocalisées`}
             badge={`${geoPointsCount} pts`}
-            defaultOpen
+            defaultOpen={false}
           >
             <PipelineFranceMap deals={filteredDeals} contentOnly />
           </PipelineCollapsibleSection>
@@ -763,7 +798,7 @@ export const PipelineBoardClient = forwardRef<
             title="Secteurs NAF"
             subtitle={`${nafCount} fiche${nafCount > 1 ? "s" : ""} avec code NAF`}
             badge={`${nafCount}`}
-            defaultOpen
+            defaultOpen={false}
             className="bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950"
           >
             <PipelineNafAnalytics deals={filteredDeals} contentOnly />
@@ -776,7 +811,7 @@ export const PipelineBoardClient = forwardRef<
           title="Prochaines actions"
           subtitle="Basé sur « Date prochaine action »"
           badge={`${nextActions.length} à venir`}
-          defaultOpen
+          defaultOpen={false}
         >
           {nextActions.length === 0 ? (
             <p className="text-sm text-slate-400">Aucune action planifiée sur le filtre actuel.</p>

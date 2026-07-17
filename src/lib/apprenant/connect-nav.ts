@@ -40,14 +40,10 @@ export type ApprenantNavItem = {
 const PARCOURS_HREF = "/dashboard/apprenant/parcours";
 
 export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNavItem[] {
-  const items: ApprenantNavItem[] = [
-    { label: "Mon évolution", href: "/dashboard/apprenant", icon: LayoutDashboard },
+  void hasOrganisation;
+  return [
     { label: "Mon Profil EDGE", href: "/dashboard/apprenant/profil-comportemental", icon: UserCircle },
-    {
-      label: "Mes missions",
-      href: hasOrganisation ? "/dashboard/apprenant/missions" : "/dashboard/apprenant/mission",
-      icon: ClipboardList,
-    },
+    { label: "Mon évolution", href: "/dashboard/apprenant", icon: LayoutDashboard },
     {
       label: "Mes compétences",
       href: "/dashboard/apprenant/profil-comportemental/hard-skills",
@@ -61,8 +57,6 @@ export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNav
       action: "share-profile",
     },
   ];
-
-  return items;
 }
 
 const BASE: ApprenantNavItem[] = [

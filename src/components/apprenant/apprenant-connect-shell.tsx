@@ -255,7 +255,11 @@ export function ApprenantConnectShell({
         <ApprenantShellProvider value={shellContext}>
         <div
           data-connect-shell={isDiscImmersive ? "disc-immersive" : "open-badge-immersive"}
-          className={`min-h-screen ${isDiscImmersive ? "bg-white text-[#0a0a0a]" : "bg-[#030303] text-white"}`}
+          className={`min-h-screen ${
+            isDiscImmersive
+              ? "bg-white text-[#0a0a0a]"
+              : "bg-[#07090f] text-white [background-image:radial-gradient(ellipse_120%_70%_at_0%_-10%,rgba(37,99,235,0.22),transparent_50%),radial-gradient(ellipse_90%_60%_at_100%_0%,rgba(124,58,237,0.14),transparent_45%),linear-gradient(180deg,#0b1220_0%,#07090f_40%,#05060a_100%)]"
+          }`}
         >
           {children}
         </div>

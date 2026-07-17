@@ -23,7 +23,7 @@ export const PROFILE_ROLE_DESTINATIONS: Record<string, string> = {
   apprenant: "/dashboard/apprenant",
   student: "/dashboard/apprenant",
   learner: "/dashboard/apprenant",
-  particulier: "/dashboard/apprenant",
+  particulier: "/dashboard/apprenant/profil-comportemental",
   salarie: "/dashboard/salarie",
   collaborateur: "/dashboard/salarie",
   employee: "/dashboard/salarie",

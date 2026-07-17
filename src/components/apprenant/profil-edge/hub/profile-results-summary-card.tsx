@@ -24,14 +24,15 @@ function discPrimaryLabel(scores: DiscScores): string {
   return entries[0]?.[0] ?? "—";
 }
 
-function idmcHint(hasIdmc: boolean): string {
-  if (!hasIdmc) return "Test à réaliser";
-  return "Point fort : Connaissance de soi";
-}
-
-function softSkillsHint(hasSoftSkills: boolean, forcesCount: number, soft: Record<string, number> | null): string {
+function softSkillsHint(
+  hasSoftSkills: boolean,
+  forcesCount: number,
+  soft: Record<string, number> | null,
+): string {
   if (!hasSoftSkills || !soft) return "Test à réaliser";
-  if (forcesCount > 0) return `${forcesCount} force${forcesCount > 1 ? "s" : ""} principale${forcesCount > 1 ? "s" : ""} identifiée${forcesCount > 1 ? "s" : ""}`;
+  if (forcesCount > 0) {
+    return `${forcesCount} force${forcesCount > 1 ? "s" : ""} principale${forcesCount > 1 ? "s" : ""}`;
+  }
   const top = Object.entries(soft).sort((a, b) => b[1] - a[1])[0];
   return top ? `Point fort : ${top[0]}` : "Résultats disponibles";
 }
@@ -47,32 +48,28 @@ export function ProfileResultsSummaryCard({
     <section>
       <HubSectionHeader
         title="Mes résultats EDGE"
-        subtitle="Synthèse de vos diagnostics — le détail reste accessible."
+        subtitle="Synthèse — le détail reste accessible en un tap."
       />
       <div className="grid gap-3 sm:grid-cols-3">
-        <HubSurface tone="quiet" className="min-h-[140px] justify-between gap-3 !p-5">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/45">DISC</p>
-            <p className="mt-3 text-[16px] font-semibold text-white">
-              {discScores ? `Profil principal : ${discPrimaryLabel(discScores)}` : "Non renseigné"}
-            </p>
-          </div>
+        <HubSurface tone="ocean" className="min-h-[150px] justify-between gap-3 !p-5">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/70">DISC</p>
+          <p className="text-[16px] font-semibold leading-snug text-white">
+            {discScores ? `Profil : ${discPrimaryLabel(discScores)}` : "Non renseigné"}
+          </p>
         </HubSurface>
-        <HubSurface tone="quiet" className="min-h-[140px] justify-between gap-3 !p-5">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/45">IDMC</p>
-            <p className="mt-3 text-[16px] font-semibold text-white">{idmcHint(hasIdmc)}</p>
-          </div>
+        <HubSurface tone="violet" className="min-h-[150px] justify-between gap-3 !p-5">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/70">IDMC</p>
+          <p className="text-[16px] font-semibold leading-snug text-white">
+            {hasIdmc ? "Point fort : Connaissance de soi" : "Test à réaliser"}
+          </p>
         </HubSurface>
-        <HubSurface tone="quiet" className="min-h-[140px] justify-between gap-3 !p-5">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/45">
-              Soft skills
-            </p>
-            <p className="mt-3 text-[16px] font-semibold text-white">
-              {softSkillsHint(hasSoftSkills, forcesCount, softSkillsScores)}
-            </p>
-          </div>
+        <HubSurface tone="ember" className="min-h-[150px] justify-between gap-3 !p-5">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/70">
+            Soft skills
+          </p>
+          <p className="text-[16px] font-semibold leading-snug text-white">
+            {softSkillsHint(hasSoftSkills, forcesCount, softSkillsScores)}
+          </p>
         </HubSurface>
       </div>
       <div className="mt-4">

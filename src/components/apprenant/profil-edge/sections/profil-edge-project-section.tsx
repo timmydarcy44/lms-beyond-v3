@@ -64,13 +64,24 @@ export function ProfilEdgeProjectSection() {
   }, [load]);
 
   const setField = (key: string, value: string) => {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      if (key === EDGE_PROJECT_KEYS.profession && value !== "autre") {
+        next[EDGE_PROJECT_KEYS.professionLibre] = "";
+      }
+      if (key === EDGE_PROJECT_KEYS.secteur && value !== "autre") {
+        next[EDGE_PROJECT_KEYS.secteurLibre] = "";
+      }
+      return next;
+    });
     setError(null);
   };
 
   const save = async () => {
     if (!isEdgeProjectV2Complete(form)) {
-      setError("Renseignez la profession, le secteur et décrivez votre projet (20 caractères minimum).");
+      setError(
+        "Renseignez la profession, le secteur (et les précisions si « Autre ») puis décrivez votre projet (20 caractères minimum).",
+      );
       return;
     }
 
@@ -146,6 +157,21 @@ export function ProfilEdgeProjectSection() {
           />
         </div>
 
+        {form[EDGE_PROJECT_KEYS.profession] === "autre" ? (
+          <label className="block text-sm">
+            <span className="mb-1 block text-white/70">
+              Quel est votre métier&nbsp;? <span className="text-rose-400">*</span>
+            </span>
+            <input
+              className={inputClass}
+              placeholder="Ex. Responsable marketing financier, chef de projet digital…"
+              value={form[EDGE_PROJECT_KEYS.professionLibre] ?? ""}
+              onChange={(e) => setField(EDGE_PROJECT_KEYS.professionLibre, e.target.value)}
+              autoFocus
+            />
+          </label>
+        ) : null}
+
         <div className="block text-sm">
           <span className="mb-1 block text-white/70">Secteur</span>
           <EdgeSelect
@@ -155,6 +181,20 @@ export function ProfilEdgeProjectSection() {
             placeholder="Choisir un secteur…"
           />
         </div>
+
+        {form[EDGE_PROJECT_KEYS.secteur] === "autre" ? (
+          <label className="block text-sm">
+            <span className="mb-1 block text-white/70">
+              Précisez votre secteur <span className="text-rose-400">*</span>
+            </span>
+            <input
+              className={inputClass}
+              placeholder="Ex. Énergie renouvelable, agritech, médias…"
+              value={form[EDGE_PROJECT_KEYS.secteurLibre] ?? ""}
+              onChange={(e) => setField(EDGE_PROJECT_KEYS.secteurLibre, e.target.value)}
+            />
+          </label>
+        ) : null}
 
         <label className="block text-sm">
           <span className="mb-1 block text-white/70">Spécialité (optionnelle)</span>

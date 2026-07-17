@@ -23,7 +23,7 @@ export function SkillsSummaryCard({ hardSkills, skillsMetadata }: Props) {
   return (
     <section>
       <HubSectionHeader title="Mes compétences" subtitle="Synthèse — le détail reste dans votre portfolio." />
-      <HubSurface tone="slate" className="min-h-[280px] space-y-6">
+      <HubSurface tone="violet" className="min-h-[280px] space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-[4.5rem] font-bold tabular-nums tracking-[-0.06em] text-white leading-none">

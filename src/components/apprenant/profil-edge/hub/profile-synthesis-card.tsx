@@ -58,7 +58,7 @@ export function ProfileSynthesisCard({
   }, []);
 
   return (
-    <HubSurface tone="slate" className="space-y-6">
+    <HubSurface tone="ocean" className="space-y-6">
       <div className="flex items-start gap-4">
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-white/10">
           {avatarUrl ? (

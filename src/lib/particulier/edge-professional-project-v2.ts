@@ -5,6 +5,8 @@ export const EDGE_PROJECT_KEYS = {
   secteur: "edge_secteur",
   specialite: "edge_specialite",
   projetLibre: "edge_projet_libre",
+  professionLibre: "edge_profession_libre",
+  secteurLibre: "edge_secteur_libre",
 } as const;
 
 export const PROFESSION_OPTIONS = [
@@ -39,6 +41,8 @@ export type EdgeProjectFields = {
   edge_secteur?: string;
   edge_specialite?: string;
   edge_projet_libre?: string;
+  edge_profession_libre?: string;
+  edge_secteur_libre?: string;
 };
 
 function labelFor(
@@ -57,14 +61,22 @@ export function getEdgeProjectFromRecord(
     edge_secteur: project[EDGE_PROJECT_KEYS.secteur],
     edge_specialite: project[EDGE_PROJECT_KEYS.specialite],
     edge_projet_libre: project[EDGE_PROJECT_KEYS.projetLibre],
+    edge_profession_libre: project[EDGE_PROJECT_KEYS.professionLibre],
+    edge_secteur_libre: project[EDGE_PROJECT_KEYS.secteurLibre],
   };
 }
 
 /** Titre affiché à l'utilisateur — jamais le référentiel brut. */
 export function buildUserObjectiveDisplay(project: Record<string, string | undefined>): string {
   const p = getEdgeProjectFromRecord(project);
-  const profession = labelFor(PROFESSION_OPTIONS, p.edge_profession);
-  const secteur = labelFor(SECTEUR_V2_OPTIONS, p.edge_secteur);
+  const profession =
+    p.edge_profession === "autre"
+      ? p.edge_profession_libre?.trim() || "Autre"
+      : labelFor(PROFESSION_OPTIONS, p.edge_profession);
+  const secteur =
+    p.edge_secteur === "autre"
+      ? p.edge_secteur_libre?.trim() || "Autre"
+      : labelFor(SECTEUR_V2_OPTIONS, p.edge_secteur);
   const parts = [profession, secteur, p.edge_specialite?.trim()].filter(Boolean);
   if (parts.length) return parts.join(" · ");
   const libre = p.edge_projet_libre?.trim();
@@ -75,8 +87,14 @@ export function buildUserObjectiveDisplay(project: Record<string, string | undef
 /** Texte envoyé à l'IA pour identifier le métier EDGE le plus pertinent. */
 export function buildCareerResolvePrompt(project: Record<string, string | undefined>): string {
   const p = getEdgeProjectFromRecord(project);
-  const profession = labelFor(PROFESSION_OPTIONS, p.edge_profession);
-  const secteur = labelFor(SECTEUR_V2_OPTIONS, p.edge_secteur);
+  const profession =
+    p.edge_profession === "autre"
+      ? p.edge_profession_libre?.trim() || "Autre"
+      : labelFor(PROFESSION_OPTIONS, p.edge_profession);
+  const secteur =
+    p.edge_secteur === "autre"
+      ? p.edge_secteur_libre?.trim() || "Autre"
+      : labelFor(SECTEUR_V2_OPTIONS, p.edge_secteur);
   const lines = [
     profession ? `Profession : ${profession}` : null,
     secteur ? `Secteur : ${secteur}` : null,
@@ -88,9 +106,15 @@ export function buildCareerResolvePrompt(project: Record<string, string | undefi
 
 export function isEdgeProjectV2Complete(project: Record<string, string | undefined>): boolean {
   const p = getEdgeProjectFromRecord(project);
+  const professionOk =
+    Boolean(p.edge_profession?.trim()) &&
+    (p.edge_profession !== "autre" || Boolean(p.edge_profession_libre?.trim()));
+  const secteurOk =
+    Boolean(p.edge_secteur?.trim()) &&
+    (p.edge_secteur !== "autre" || Boolean(p.edge_secteur_libre?.trim()));
   return Boolean(
-    p.edge_profession?.trim() &&
-      p.edge_secteur?.trim() &&
+    professionOk &&
+      secteurOk &&
       p.edge_projet_libre?.trim() &&
       p.edge_projet_libre.trim().length >= 20,
   );

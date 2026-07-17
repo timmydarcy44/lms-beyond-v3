@@ -66,7 +66,7 @@ export function ProfileProgressCard({ maturity }: Props) {
         title="Ma progression"
         subtitle="Complétion du profil — distincte de l’alignement métier."
       />
-      <HubSurface tone="slate" className="space-y-6">
+      <HubSurface tone="forest" className="space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-[13px] font-medium text-white/70">Profil complété</p>

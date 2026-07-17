@@ -3,32 +3,33 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
 import { ProfilEdgeSectionShell } from "@/components/apprenant/profil-edge/profil-edge-section-shell";
-import { useProfilEdgeSaveReturn } from "@/components/apprenant/profil-edge/use-profil-edge-save-return";
 import { EdgeSelect } from "@/components/ui/edge-select";
+import { AddSkillDialog } from "@/components/hard-skills/add-skill-dialog";
 import { HardSkillCatalogModal } from "@/components/hard-skills/hard-skill-catalog-modal";
 import { HardSkillLevelModal } from "@/components/hard-skills/hard-skill-level-modal";
-import { HardSkillManualAddModal } from "@/components/hard-skills/hard-skill-manual-add-modal";
 import { HardSkillProofChoiceModal } from "@/components/hard-skills/hard-skill-proof-choice-modal";
 import { HardSkillInterviewModal } from "@/components/hard-skills/hard-skill-interview-modal";
 import { HardSkillProofModal } from "@/components/hard-skills/hard-skill-proof-modal";
-import { HardSkillsPortfolioTable } from "@/components/hard-skills/hard-skills-portfolio-table";
+import { SkillCard } from "@/components/hard-skills/skill-card";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
-import { extractCareerTitleFromProject, mergeObjectiveDetailsIntoProject } from "@/lib/particulier/professional-project-fields";
+import {
+  extractCareerTitleFromProject,
+  mergeObjectiveDetailsIntoProject,
+} from "@/lib/particulier/professional-project-fields";
 import { parseProfessionalProject } from "@/lib/particulier/profil-edge-maturity";
 import {
   buildHardSkillRecord,
   buildStoredMeta,
   computeHardSkillStats,
   HARD_SKILL_LEVELS,
+  levelToSelfAssessment,
   parseHardSkillPortfolio,
   resolveDisplayCategory,
-  levelToSelfAssessment,
   type HardSkillCatalogEntry,
   type HardSkillProof,
   type StoredHardSkillMeta,
 } from "@/lib/hard-skills/hard-skills-portfolio";
-import type { SkillValidationSession, SkillValidationVerdict } from "@/lib/hard-skills/skill-validation";
 import { verdictToProofLevel } from "@/lib/hard-skills/skill-validation";
 import {
   buildValidationSessionFromAnalysis,
@@ -39,8 +40,6 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 type AnalysisPayload = SkillAnalysisApiResult;
 
 type PendingAction =
-  | { mode: "add-catalog"; entry: HardSkillCatalogEntry }
-  | { mode: "add-manual" }
   | { mode: "edit"; skillName: string; level: HardSkillLevel }
   | { mode: "proof-choice"; skillName: string; level: HardSkillLevel }
   | { mode: "proof-interview"; skillName: string; level: HardSkillLevel }
@@ -48,16 +47,16 @@ type PendingAction =
 
 export function ProfilEdgeHardSkillsSection() {
   const supabase = createSupabaseBrowserClient();
-  const { savedMessage, finishSave } = useProfilEdgeSaveReturn();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
   const [hardSkills, setHardSkills] = useState<string[]>([]);
   const [metadata, setMetadata] = useState<Record<string, StoredHardSkillMeta>>({});
   const [careerTitle, setCareerTitle] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("");
+  const [addOpen, setAddOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
   const [pending, setPending] = useState<PendingAction | null>(null);
 
   const load = useCallback(async () => {
@@ -148,68 +147,52 @@ export function ProfilEdgeHardSkillsSection() {
     };
     await persist(hardSkills, nextMeta);
     setPending(null);
-    finishSave();
+    setFlash("Analyse enregistrée.");
   };
+
+  const addFromCatalog = async (entry: HardSkillCatalogEntry, level: HardSkillLevel) => {
+    if (hardSkills.some((s) => s.toLowerCase() === entry.name.toLowerCase())) return;
+    const record = buildHardSkillRecord(entry.name, {
+      level,
+      selfAssessment: levelToSelfAssessment(level),
+      category: resolveDisplayCategory(entry.name, entry.category),
+      referentialCategory: entry.category,
+      proofLevel: "declared",
+      source: "catalog",
+    });
+    const nextHard = [...hardSkills, entry.name];
+    const nextMeta = { ...metadata, [entry.name]: buildStoredMeta(record) };
+    await persist(nextHard, nextMeta);
+  };
+
+  const [catalogPending, setCatalogPending] = useState<HardSkillCatalogEntry | null>(null);
 
   const handleCatalogSelect = (entry: HardSkillCatalogEntry) => {
     setCatalogOpen(false);
-    setPending({ mode: "add-catalog", entry });
+    setAddOpen(false);
+    setCatalogPending(entry);
   };
 
-  const saveManual = async (name: string, level: HardSkillLevel) => {
-    if (hardSkills.some((s) => s.toLowerCase() === name.toLowerCase())) {
-      setManualOpen(false);
-      return;
-    }
-    const record = buildHardSkillRecord(name, {
+  const saveCatalogPendingLevel = async (level: HardSkillLevel) => {
+    if (!catalogPending) return;
+    const name = catalogPending.name;
+    await addFromCatalog(catalogPending, level);
+    setCatalogPending(null);
+    setFlash(`${name} ajouté · Auto-déclarée`);
+  };
+
+  const saveEditLevel = async (level: HardSkillLevel) => {
+    if (!pending || pending.mode !== "edit") return;
+    const existing = metadata[pending.skillName];
+    const record = buildHardSkillRecord(pending.skillName, {
+      ...existing,
       level,
       selfAssessment: levelToSelfAssessment(level),
-      category: resolveDisplayCategory(name, "Autre"),
-      referentialCategory: "Autre",
-      proofLevel: "declared",
-      source: "manual",
     });
-    const nextHard = [...hardSkills, name];
-    const nextMeta = { ...metadata, [name]: buildStoredMeta(record) };
-    await persist(nextHard, nextMeta);
-    setManualOpen(false);
-    finishSave();
-  };
-
-  const saveLevel = async (level: HardSkillLevel) => {
-    if (!pending || pending.mode === "proof-choice" || pending.mode === "proof-interview" || pending.mode === "proof-import") return;
-
-    if (pending.mode === "add-catalog") {
-      const { entry } = pending;
-      if (hardSkills.includes(entry.name)) {
-        setPending(null);
-        return;
-      }
-      const record = buildHardSkillRecord(entry.name, {
-        level,
-        selfAssessment: levelToSelfAssessment(level),
-        category: resolveDisplayCategory(entry.name, entry.category),
-        referentialCategory: entry.category,
-        proofLevel: "declared",
-        source: "catalog",
-      });
-      const nextHard = [...hardSkills, entry.name];
-      const nextMeta = { ...metadata, [entry.name]: buildStoredMeta(record) };
-      await persist(nextHard, nextMeta);
-      setPending(null);
-      finishSave();
-    } else if (pending.mode === "edit") {
-      const existing = metadata[pending.skillName];
-      const record = buildHardSkillRecord(pending.skillName, {
-        ...existing,
-        level,
-        selfAssessment: levelToSelfAssessment(level),
-      });
-      const nextMeta = { ...metadata, [pending.skillName]: buildStoredMeta(record, existing?.validation) };
-      await persist(hardSkills, nextMeta);
-      setPending(null);
-      finishSave();
-    }
+    const nextMeta = { ...metadata, [pending.skillName]: buildStoredMeta(record, existing?.validation) };
+    await persist(hardSkills, nextMeta);
+    setPending(null);
+    setFlash("Niveau mis à jour.");
   };
 
   const remove = async (skill: string) => {
@@ -219,24 +202,12 @@ export function ProfilEdgeHardSkillsSection() {
     await persist(nextHard, nextMeta);
   };
 
-  const reorder = async (name: string, direction: "up" | "down") => {
-    const idx = hardSkills.indexOf(name);
-    if (idx < 0) return;
-    const target = direction === "up" ? idx - 1 : idx + 1;
-    if (target < 0 || target >= hardSkills.length) return;
-    const next = [...hardSkills];
-    [next[idx], next[target]] = [next[target], next[idx]];
-    await persist(next, metadata);
-  };
-
   if (loading) return <p className="text-sm text-white/50">Chargement…</p>;
-
-  const levelModalOpen = pending?.mode === "add-catalog" || pending?.mode === "edit";
 
   return (
     <ProfilEdgeSectionShell
-      title="Hard Skills"
-      description="Portefeuille de compétences — déclarez, prouvez et validez vos compétences avec EDGE."
+      title="Mes compétences"
+      description="Ajoutez les compétences que vous possédez déjà. EDGE les utilise pour personnaliser votre profil et votre parcours."
     >
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -244,82 +215,118 @@ export function ProfilEdgeHardSkillsSection() {
             <p className="text-2xl font-bold text-white">
               {stats.total} compétence{stats.total !== 1 ? "s" : ""}
             </p>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/55">
-              <span>
-                <span className="text-emerald-300">Expert</span> : {stats.byLevel.Expert}
-              </span>
-              <span>
-                <span className="text-amber-300">Confirmé</span> : {stats.byLevel.Confirmé}
-              </span>
-              <span>
-                <span className="text-sky-300">Intermédiaire</span> : {stats.byLevel.Intermédiaire}
-              </span>
-              <span>
-                <span className="text-slate-300">Débutant</span> : {stats.byLevel.Débutant}
-              </span>
-            </div>
+            <p className="mt-1.5 text-sm text-white/45">
+              Niveau déclaré et statut (auto-déclarée, prouvée, évaluée, validée) sont distincts.
+            </p>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
+          <div className="flex shrink-0 flex-col gap-2 sm:items-end">
             <button
               type="button"
-              onClick={() => setManualOpen(true)}
-              className={`${CONNECT_BTN_SECONDARY} inline-flex items-center gap-2`}
+              onClick={() => setAddOpen(true)}
+              className={`${CONNECT_BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 sm:w-auto`}
             >
               <Plus className="h-4 w-4" />
-              Ajouter manuellement
+              Ajouter une compétence
             </button>
             <button
               type="button"
               onClick={() => setCatalogOpen(true)}
-              className={`${CONNECT_BTN_PRIMARY} inline-flex items-center gap-2`}
+              className={`${CONNECT_BTN_SECONDARY} inline-flex w-full items-center justify-center gap-2 sm:w-auto`}
             >
-              <Plus className="h-4 w-4" />
-              Catalogue EDGE
+              Explorer le catalogue
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher une compétence, catégorie ou niveau…"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#3D7BFF]/40"
-            />
+        {records.length > 0 ? (
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filtrer mes compétences…"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#3D7BFF]/40"
+              />
+            </div>
+            <div className="w-full sm:w-48">
+              <EdgeSelect
+                value={levelFilter}
+                onChange={setLevelFilter}
+                placeholder="Tous les niveaux"
+                options={[
+                  { value: "", label: "Tous les niveaux" },
+                  ...HARD_SKILL_LEVELS.map((l) => ({ value: l, label: l })),
+                ]}
+              />
+            </div>
           </div>
-          <div className="w-full sm:w-48">
-            <EdgeSelect
-              value={levelFilter}
-              onChange={setLevelFilter}
-              placeholder="Tous les niveaux"
-              options={[{ value: "", label: "Tous les niveaux" }, ...HARD_SKILL_LEVELS.map((l) => ({ value: l, label: l }))]}
-            />
-          </div>
-        </div>
+        ) : null}
 
-        <HardSkillsPortfolioTable
-          records={filteredRecords}
-          validationMeta={metadata}
-          onEdit={(record) => setPending({ mode: "edit", skillName: record.name, level: record.level })}
-          onAddProof={(record) =>
-            setPending({ mode: "proof-choice", skillName: record.name, level: record.level })
-          }
-          onDelete={(name) => void remove(name)}
-          onMoveUp={(name) => void reorder(name, "up")}
-          onMoveDown={(name) => void reorder(name, "down")}
-        />
+        {filteredRecords.length === 0 ? (
+          <div className="rounded-[22px] border border-dashed border-white/15 bg-white/[0.02] px-6 py-14 text-center">
+            <p className="text-[16px] font-semibold text-white/80">Aucune compétence pour l’instant</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-white/45">
+              Ajoutez une compétence que vous possédez déjà — elle sera enregistrée comme auto-déclarée.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              className={`${CONNECT_BTN_PRIMARY} mt-6 inline-flex items-center gap-2`}
+            >
+              <Plus className="h-4 w-4" />
+              Ajouter une compétence
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredRecords.map((record) => (
+              <SkillCard
+                key={record.name}
+                record={record}
+                meta={metadata[record.name]}
+                onEdit={() => setPending({ mode: "edit", skillName: record.name, level: record.level })}
+                onProof={() =>
+                  setPending({ mode: "proof-choice", skillName: record.name, level: record.level })
+                }
+                onEvaluate={() =>
+                  setPending({ mode: "proof-interview", skillName: record.name, level: record.level })
+                }
+                onDelete={() => void remove(record.name)}
+              />
+            ))}
+          </div>
+        )}
 
         {saving ? (
           <p className="flex items-center gap-2 text-xs text-white/40">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Enregistrement…
           </p>
-        ) : savedMessage ? (
-          <p className="text-sm text-emerald-400">{savedMessage}</p>
+        ) : flash ? (
+          <p className="text-sm text-emerald-400">{flash}</p>
         ) : null}
       </div>
+
+      <AddSkillDialog
+        open={addOpen}
+        existingSkills={hardSkills}
+        saving={saving}
+        onClose={() => setAddOpen(false)}
+        onAdd={addFromCatalog}
+        onExploreCatalog={() => {
+          setAddOpen(false);
+          setCatalogOpen(true);
+        }}
+        onProof={(skillName, level) => {
+          setAddOpen(false);
+          setPending({ mode: "proof-choice", skillName, level });
+        }}
+        onEvaluate={(skillName, level) => {
+          setAddOpen(false);
+          setPending({ mode: "proof-interview", skillName, level });
+        }}
+      />
 
       <HardSkillCatalogModal
         open={catalogOpen}
@@ -328,27 +335,21 @@ export function ProfilEdgeHardSkillsSection() {
         onSelectSkill={handleCatalogSelect}
       />
 
-      <HardSkillManualAddModal
-        open={manualOpen}
-        existingSkills={hardSkills}
-        saving={saving}
-        onClose={() => setManualOpen(false)}
-        onSave={(name, level) => void saveManual(name, level)}
-      />
-
       <HardSkillLevelModal
-        open={levelModalOpen}
+        open={Boolean(catalogPending) || pending?.mode === "edit"}
         skillName={
-          pending?.mode === "add-catalog"
-            ? pending.entry.name
-            : pending?.mode === "edit"
-              ? pending.skillName
-              : null
+          catalogPending?.name ?? (pending?.mode === "edit" ? pending.skillName : null)
         }
         initialLevel={pending?.mode === "edit" ? pending.level : "Intermédiaire"}
         saving={saving}
-        onClose={() => setPending(null)}
-        onSave={(level) => void saveLevel(level)}
+        onClose={() => {
+          setCatalogPending(null);
+          if (pending?.mode === "edit") setPending(null);
+        }}
+        onSave={(level) => {
+          if (catalogPending) void saveCatalogPendingLevel(level);
+          else void saveEditLevel(level);
+        }}
       />
 
       <HardSkillProofChoiceModal

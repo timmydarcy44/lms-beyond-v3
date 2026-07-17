@@ -63,7 +63,7 @@ export function SkillsSummaryCard({ hardSkills, skillsMetadata }: Props) {
 
         <Link href={PROFIL_EDGE_SECTION_HREFS.hard_skills}>
           <HubPillCta>
-            {stats.total > 0 ? "Gérer mes compétences" : "Ajouter des compétences"}
+            {stats.total > 0 ? "Gérer mes compétences" : "Ajouter une compétence"}
             <ArrowRight className="h-4 w-4" />
           </HubPillCta>
         </Link>

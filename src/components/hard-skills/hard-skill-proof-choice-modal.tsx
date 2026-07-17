@@ -14,9 +14,11 @@ export function HardSkillProofChoiceModal({ open, skillName, onClose, onChooseIn
   return (
     <div className="fixed inset-0 z-[145] flex items-center justify-center bg-black/75 px-4">
       <div className="w-full max-w-lg rounded-3xl border border-white/[0.12] bg-[#0D111A] p-6 shadow-2xl sm:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-white/40">Niveau de preuve</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-white/40">Faire reconnaître</p>
         <h3 className="mt-2 text-xl font-semibold text-white">{skillName}</h3>
-        <p className="mt-3 text-sm text-white/55">Comment souhaitez-vous démontrer cette compétence ?</p>
+        <p className="mt-3 text-sm text-white/55">
+          Votre compétence est auto-déclarée. Choisissez comment la faire reconnaître dans EDGE.
+        </p>
 
         <div className="mt-6 space-y-3">
           <button
@@ -29,8 +31,8 @@ export function HardSkillProofChoiceModal({ open, skillName, onClose, onChooseIn
                 <span className="h-2 w-2 rounded-full bg-[#3D7BFF]" />
               </span>
               <span>
-                <span className="block text-sm font-semibold text-white">Entretien expérientiel EDGE</span>
-                <span className="mt-0.5 block text-xs text-[#3D7BFF]/80">Recommandé</span>
+                <span className="block text-sm font-semibold text-white">Passer une évaluation</span>
+                <span className="mt-0.5 block text-xs text-[#3D7BFF]/80">Entretien expérientiel EDGE</span>
               </span>
             </span>
           </button>
@@ -42,7 +44,7 @@ export function HardSkillProofChoiceModal({ open, skillName, onClose, onChooseIn
           >
             <span className="flex items-center gap-3">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-white/30" />
-              <span className="text-sm font-semibold text-white">Importer une preuve</span>
+              <span className="text-sm font-semibold text-white">Déposer une preuve</span>
             </span>
           </button>
         </div>

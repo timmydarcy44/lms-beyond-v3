@@ -44,8 +44,8 @@ export function HardSkillCatalogModal({ open, existingSkills, onClose, onSelectS
         <div className="border-b border-white/10 px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div>
-              <div className="text-xs uppercase tracking-[0.3em] text-white/50">Ajouter une compétence</div>
-              <div className="mt-1 text-lg font-semibold text-white">Catalogue de compétences EDGE</div>
+              <div className="text-xs uppercase tracking-[0.3em] text-white/50">Explorer</div>
+              <div className="mt-1 text-lg font-semibold text-white">Catalogue de compétences</div>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <input
@@ -117,7 +117,7 @@ export function HardSkillCatalogModal({ open, existingSkills, onClose, onSelectS
                         ) : null}
                       </span>
                     </span>
-                    <span className="shrink-0 text-xs text-white/55">{already ? "Ajoutée" : "Configurer"}</span>
+                    <span className="shrink-0 text-xs text-white/55">{already ? "Ajoutée" : "Ajouter"}</span>
                   </button>
                 );
               })}

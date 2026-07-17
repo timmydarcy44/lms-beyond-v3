@@ -94,22 +94,74 @@ export const PROOF_LEVEL_CHIP: Record<
   { label: string; className: string; locked?: boolean }
 > = {
   declared: {
-    label: "Compétence déclarée",
-    className: "bg-white/8 text-white/55 border-white/15",
+    label: "Auto-déclarée",
+    className: "bg-sky-500/15 text-sky-100 border-sky-400/30",
   },
   justified: {
-    label: "Analyse terminée",
-    className: "bg-amber-500/20 text-amber-200 border-amber-400/35",
+    label: "Prouvée",
+    className: "bg-amber-500/20 text-amber-100 border-amber-400/35",
   },
   evaluated: {
-    label: "Compétence vérifiée",
-    className: "bg-emerald-500/20 text-emerald-200 border-emerald-400/35",
+    label: "Validée EDGE",
+    className: "bg-emerald-500/20 text-emerald-100 border-emerald-400/35",
   },
   certified: {
-    label: "EDGE Verified",
-    className: "bg-violet-500/20 text-violet-200 border-violet-400/35",
+    label: "Validée EDGE",
+    className: "bg-emerald-500/20 text-emerald-100 border-emerald-400/35",
   },
 };
+
+/** Statuts UX distincts — niveau ≠ statut. */
+export type SkillUxStatus = "auto_declared" | "evaluated" | "proved" | "validated";
+
+export const SKILL_UX_STATUS: Record<
+  SkillUxStatus,
+  { label: string; className: string }
+> = {
+  auto_declared: {
+    label: "Auto-déclarée",
+    className: "bg-sky-500/15 text-sky-100 border-sky-400/30",
+  },
+  evaluated: {
+    label: "Évaluée",
+    className: "bg-violet-500/20 text-violet-100 border-violet-400/35",
+  },
+  proved: {
+    label: "Prouvée",
+    className: "bg-amber-500/20 text-amber-100 border-amber-400/35",
+  },
+  validated: {
+    label: "Validée EDGE",
+    className: "bg-emerald-500/20 text-emerald-100 border-emerald-400/35",
+  },
+};
+
+/**
+ * Mapping rétrocompatible :
+ * - manuelle / catalog sans preuve → Auto-déclarée
+ * - preuve / analyse pending → Prouvée
+ * - analyse IA terminée (non validée) → Évaluée
+ * - verdict validated / certified → Validée EDGE
+ * Ne rétrograde jamais une compétence déjà prouvée ou validée.
+ */
+export function resolveSkillUxStatus(meta: StoredHardSkillMeta | undefined): SkillUxStatus {
+  const proofLevel = resolveProofLevel(meta);
+  if (
+    proofLevel === "certified" ||
+    meta?.validation?.expertValidated ||
+    meta?.validation?.verdict === "validated" ||
+    proofLevel === "evaluated"
+  ) {
+    return "validated";
+  }
+  if (meta?.validation?.status === "analyzed") {
+    return "evaluated";
+  }
+  if (proofLevel === "justified" || meta?.proof?.url || meta?.proof?.note) {
+    return "proved";
+  }
+  return "auto_declared";
+}
 
 function resolveProofLevel(meta: StoredHardSkillMeta | undefined): HardSkillProofLevel {
   if (meta?.validation?.verdict === "validated") return "evaluated";
@@ -240,14 +292,31 @@ export function listCatalogEntries(): HardSkillCatalogEntry[] {
 }
 
 export function searchCatalogEntries(query: string): HardSkillCatalogEntry[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return listCatalogEntries().filter(
-    (e) =>
-      e.name.toLowerCase().includes(q) ||
-      e.subtitle?.toLowerCase().includes(q) ||
-      e.category.toLowerCase().includes(q),
-  );
+  const raw = query.trim();
+  if (!raw) return [];
+  const fold = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase();
+  const tokens = fold(raw)
+    .split(/[\s,/]+/)
+    .filter(Boolean);
+  if (!tokens.length) return [];
+
+  return listCatalogEntries()
+    .map((e) => {
+      const hay = fold(`${e.name} ${e.subtitle ?? ""} ${e.category}`);
+      const score = tokens.reduce((acc, t) => {
+        if (fold(e.name).startsWith(t)) return acc + 3;
+        if (hay.includes(t)) return acc + 1;
+        return acc - 10;
+      }, 0);
+      return { e, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || a.e.name.localeCompare(b.e.name))
+    .map((x) => x.e);
 }
 
 export function computeHardSkillStats(records: LearnerHardSkillRecord[]) {

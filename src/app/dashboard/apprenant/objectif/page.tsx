@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Redirection — l'objectif est géré dans Mon Profil EDGE. */
+/** Redirection — l'objectif et la progression vivent dans Mon évolution. */
 export default function ParticulierObjectifRedirectPage() {
-  redirect("/dashboard/apprenant/profil-comportemental");
+  redirect("/dashboard/apprenant");
 }

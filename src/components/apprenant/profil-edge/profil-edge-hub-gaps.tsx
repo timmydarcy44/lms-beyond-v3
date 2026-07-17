@@ -102,7 +102,7 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
   return (
     <>
       <ProfilEdgeHubSection
-        title="Ce sur quoi vous progressez"
+        title="Mon plan d'action"
         subtitle="Vos forces d'abord, puis une priorité claire — sans tout traiter en même temps."
       >
         {firstAction ? (

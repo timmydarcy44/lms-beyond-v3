@@ -51,7 +51,7 @@ export function DailyMissionHeroCard({ matching, objective }: Props) {
     return (
       <section>
         <HubSectionHeader title="Ma mission" />
-        <HubSurface tone="ember" className="min-h-[260px] animate-pulse" />
+        <HubSurface tone="action" className="min-h-[260px] animate-pulse" />
       </section>
     );
   }
@@ -67,7 +67,7 @@ export function DailyMissionHeroCard({ matching, objective }: Props) {
   return (
     <section>
       <HubSectionHeader title="Ma mission" />
-      <HubSurface tone="ember" className="min-h-[300px] flex flex-col justify-between gap-6">
+      <HubSurface tone="action" className="min-h-[300px] flex flex-col justify-between gap-6">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/70">
             Aujourd&apos;hui

@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * Surfaces hub — hiérarchie visuelle :
+ * L1 = héro abstrait (composant dédié)
+ * L2 = action (slate / accent discret)
+ * L3 = synthèse
+ * L4 = navigation sobre
+ */
+
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -12,53 +20,77 @@ export function HubSectionHeader({
 }) {
   return (
     <div className="mb-4 px-0.5">
-      <h2 className="text-[28px] font-bold tracking-[-0.035em] text-white sm:text-[32px]">{title}</h2>
+      <h2 className="text-[24px] font-bold tracking-[-0.03em] text-white sm:text-[28px]">{title}</h2>
       {subtitle ? <p className="mt-1.5 text-[15px] leading-relaxed text-white/45">{subtitle}</p> : null}
     </div>
   );
 }
 
-/** Palettes immersives type Apple Music — une identité visuelle par carte. */
 export const APPLE_CARD = {
-  ocean: {
-    shell: "bg-gradient-to-b from-[#1c4ed8] via-[#1e3a8a] to-[#0f172a] shadow-[0_20px_50px_-20px_rgba(37,99,235,0.55)]",
-    glow: "bg-sky-400/30",
-    footer: "bg-[#0b1224]/55",
-  },
-  ember: {
-    shell: "bg-gradient-to-b from-[#ea580c] via-[#c2410c] to-[#7c2d12] shadow-[0_20px_50px_-20px_rgba(234,88,12,0.5)]",
-    glow: "bg-amber-300/25",
-    footer: "bg-[#3b1508]/50",
-  },
-  forest: {
-    shell: "bg-gradient-to-b from-[#059669] via-[#047857] to-[#064e3b] shadow-[0_20px_50px_-20px_rgba(16,185,129,0.45)]",
-    glow: "bg-emerald-300/25",
-    footer: "bg-[#022c22]/50",
-  },
-  violet: {
-    shell: "bg-gradient-to-b from-[#7c3aed] via-[#5b21b6] to-[#2e1065] shadow-[0_20px_50px_-20px_rgba(124,58,237,0.5)]",
-    glow: "bg-fuchsia-300/20",
-    footer: "bg-[#1e0a3c]/55",
-  },
-  rose: {
-    shell: "bg-gradient-to-b from-[#db2777] via-[#9d174d] to-[#4a044e] shadow-[0_20px_50px_-20px_rgba(219,39,119,0.5)]",
-    glow: "bg-pink-300/25",
-    footer: "bg-[#3b0764]/50",
-  },
-  gold: {
-    shell: "bg-gradient-to-b from-[#d97706] via-[#b45309] to-[#78350f] shadow-[0_20px_50px_-20px_rgba(217,119,6,0.45)]",
-    glow: "bg-yellow-200/20",
-    footer: "bg-[#451a03]/50",
-  },
   slate: {
-    shell: "bg-gradient-to-b from-[#475569] via-[#334155] to-[#0f172a] shadow-[0_16px_40px_-18px_rgba(0,0,0,0.65)]",
-    glow: "bg-slate-300/15",
+    shell:
+      "border border-white/[0.08] bg-[#14161C] shadow-[0_16px_40px_-22px_rgba(0,0,0,0.7)]",
+    glow: "bg-sky-400/10",
+    footer: "bg-black/30",
+  },
+  action: {
+    shell:
+      "border border-[#3D7BFF]/25 bg-gradient-to-b from-[#1a2744] to-[#12151c] shadow-[0_18px_44px_-22px_rgba(61,123,255,0.35)]",
+    glow: "bg-[#3D7BFF]/20",
     footer: "bg-black/35",
   },
+  success: {
+    shell:
+      "border border-emerald-500/20 bg-gradient-to-b from-[#123028] to-[#12151c] shadow-[0_16px_40px_-22px_rgba(16,185,129,0.25)]",
+    glow: "bg-emerald-400/15",
+    footer: "bg-black/30",
+  },
+  gold: {
+    shell:
+      "border border-amber-500/25 bg-gradient-to-b from-[#2a2114] to-[#14161C] shadow-[0_16px_40px_-22px_rgba(217,119,6,0.3)]",
+    glow: "bg-amber-300/15",
+    footer: "bg-black/30",
+  },
+  quiet: {
+    shell: "border border-white/[0.06] bg-[#12141A]",
+    glow: "bg-transparent",
+    footer: "bg-black/25",
+  },
+  /** aliases for existing call sites */
+  ocean: {
+    shell:
+      "border border-[#3D7BFF]/25 bg-gradient-to-b from-[#1a2744] to-[#12151c] shadow-[0_18px_44px_-22px_rgba(61,123,255,0.35)]",
+    glow: "bg-[#3D7BFF]/20",
+    footer: "bg-black/35",
+  },
+  ember: {
+    shell:
+      "border border-orange-400/20 bg-gradient-to-b from-[#2a1c14] to-[#14161C] shadow-[0_16px_40px_-22px_rgba(234,88,12,0.28)]",
+    glow: "bg-orange-400/12",
+    footer: "bg-black/30",
+  },
+  forest: {
+    shell:
+      "border border-emerald-500/20 bg-gradient-to-b from-[#123028] to-[#12151c] shadow-[0_16px_40px_-22px_rgba(16,185,129,0.25)]",
+    glow: "bg-emerald-400/15",
+    footer: "bg-black/30",
+  },
+  violet: {
+    shell:
+      "border border-white/[0.08] bg-[#14161C] shadow-[0_16px_40px_-22px_rgba(0,0,0,0.7)]",
+    glow: "bg-violet-400/10",
+    footer: "bg-black/30",
+  },
+  rose: {
+    shell:
+      "border border-fuchsia-500/20 bg-gradient-to-b from-[#2a1430] to-[#14161C] shadow-[0_16px_40px_-22px_rgba(219,39,119,0.28)]",
+    glow: "bg-fuchsia-400/12",
+    footer: "bg-black/30",
+  },
   ice: {
-    shell: "bg-gradient-to-b from-[#0ea5e9] via-[#0369a1] to-[#0c4a6e] shadow-[0_20px_50px_-20px_rgba(14,165,233,0.45)]",
-    glow: "bg-cyan-200/25",
-    footer: "bg-[#082f49]/55",
+    shell: "border border-white/[0.06] bg-[#12141A]",
+    glow: "bg-sky-300/8",
+    footer: "bg-black/25",
   },
 } as const;
 
@@ -70,7 +102,6 @@ type SurfaceProps = {
   href?: string;
   onClick?: () => void;
   tone?: AppleCardTone;
-  /** Désactive padding interne (pour layouts split type Music Radio). */
   flush?: boolean;
 };
 
@@ -84,7 +115,7 @@ export function HubSurface({
 }: SurfaceProps) {
   const palette = APPLE_CARD[tone];
   const base = cn(
-    "relative overflow-hidden rounded-[28px] text-white transition duration-200",
+    "relative overflow-hidden rounded-[24px] text-white transition duration-200",
     "motion-safe:active:scale-[0.985]",
     palette.shell,
     !flush && "p-6 sm:p-7",
@@ -97,7 +128,7 @@ export function HubSurface({
     <>
       <div
         className={cn(
-          "pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full blur-3xl",
+          "pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full blur-3xl",
           palette.glow,
         )}
         aria-hidden
@@ -133,7 +164,7 @@ export function HubCardFooter({
   className?: string;
 }) {
   return (
-    <div className={cn("mt-auto px-6 py-4 sm:px-7 sm:py-5", APPLE_CARD[tone].footer, className)}>
+    <div className={cn("mt-auto px-5 py-4 sm:px-6", APPLE_CARD[tone].footer, className)}>
       {children}
     </div>
   );
@@ -142,9 +173,9 @@ export function HubCardFooter({
 export function HubProgressBar({ value, className }: { value: number; className?: string }) {
   const clamped = Math.max(0, Math.min(100, value));
   return (
-    <div className={cn("h-2 overflow-hidden rounded-full bg-white/20", className)}>
+    <div className={cn("h-1.5 overflow-hidden rounded-full bg-white/12", className)}>
       <div
-        className="h-full rounded-full bg-white transition-[width] duration-700 ease-out motion-reduce:transition-none"
+        className="h-full rounded-full bg-[#3D7BFF] transition-[width] duration-700 ease-out motion-reduce:transition-none"
         style={{ width: `${clamped}%` }}
       />
     </div>
@@ -161,7 +192,7 @@ export function HubPillCta({
   return (
     <span
       className={cn(
-        "inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3.5 text-[15px] font-semibold text-black shadow-[0_8px_24px_-8px_rgba(0,0,0,0.35)]",
+        "inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#3D7BFF] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(61,123,255,0.45)]",
         className,
       )}
     >
@@ -180,7 +211,7 @@ export function HubGhostCta({
   return (
     <span
       className={cn(
-        "inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/35 bg-white/10 px-5 py-3.5 text-[15px] font-semibold text-white backdrop-blur-sm",
+        "inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-transparent px-5 py-3.5 text-[15px] font-semibold text-white",
         className,
       )}
     >

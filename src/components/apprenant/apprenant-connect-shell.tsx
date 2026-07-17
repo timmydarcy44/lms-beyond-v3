@@ -231,7 +231,9 @@ export function ApprenantConnectShell({
     if (!pathname) return "";
     const exact = navItems.find((item) => item.href === pathname);
     if (exact) return exact.label;
-    const nested = navItems.find((item) => pathname.startsWith(item.href + "/"));
+    const nested = [...navItems]
+      .filter((item) => !item.href.startsWith("#") && pathname.startsWith(`${item.href}/`))
+      .sort((a, b) => b.href.length - a.href.length)[0];
     return nested?.label ?? "";
   }, [navItems, pathname]);
 
@@ -332,9 +334,20 @@ export function ApprenantConnectShell({
                   const isMonAccompagnementEntry = item.label === "Mon accompagnement";
                   const isParcoursGuide = item.label === "Parcours guidé";
                   const isShareProfile = item.action === "share-profile";
+                  const longerMatchExists = Boolean(
+                    pathname &&
+                      navItems.some(
+                        (other) =>
+                          other.href !== item.href &&
+                          other.href.length > item.href.length &&
+                          (pathname === other.href || pathname.startsWith(`${other.href}/`)),
+                      ),
+                  );
                   const active =
                     !isShareProfile &&
+                    !longerMatchExists &&
                     (pathname === item.href ||
+                      pathname?.startsWith(`${item.href}/`) ||
                       (isParcoursGalaxy && Boolean(pathname?.startsWith("/g/edgelab"))) ||
                       (isMonAccompagnementEntry &&
                         Boolean(
@@ -537,9 +550,19 @@ export function ApprenantConnectShell({
                       <div className="mt-4 space-y-1 pb-6">
                         {navItems.map((item) => {
                           const isShareProfile = item.action === "share-profile";
+                          const longerMatchExists = Boolean(
+                            pathname &&
+                              navItems.some(
+                                (other) =>
+                                  other.href !== item.href &&
+                                  other.href.length > item.href.length &&
+                                  (pathname === other.href || pathname.startsWith(`${other.href}/`)),
+                              ),
+                          );
                           const active =
                             !isShareProfile &&
-                            (pathname === item.href || pathname?.startsWith(item.href + "/"));
+                            !longerMatchExists &&
+                            (pathname === item.href || pathname?.startsWith(`${item.href}/`));
                           const itemClass = `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
                             active ? theme.mobileNavActive : theme.mobileNavInactive
                           }`;

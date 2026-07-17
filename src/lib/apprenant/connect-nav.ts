@@ -43,10 +43,17 @@ export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNav
   const items: ApprenantNavItem[] = [
     { label: "Mon évolution", href: "/dashboard/apprenant", icon: LayoutDashboard },
     { label: "Mon Profil EDGE", href: "/dashboard/apprenant/profil-comportemental", icon: UserCircle },
-    { label: "Mes résultats", href: "/dashboard/apprenant/profil", icon: Award },
-    { label: "Mes badges", href: "/dashboard/apprenant/badges", icon: Award },
-    { label: "Mon plan de progression", href: "/dashboard/apprenant/coaching", icon: MonitorPlay },
-    { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
+    {
+      label: "Mes missions",
+      href: hasOrganisation ? "/dashboard/apprenant/missions" : "/dashboard/apprenant/mission",
+      icon: ClipboardList,
+    },
+    {
+      label: "Mes compétences",
+      href: "/dashboard/apprenant/profil-comportemental/hard-skills",
+      icon: Briefcase,
+    },
+    { label: "Mes réussites", href: "/dashboard/apprenant/badges", icon: Award },
     {
       label: "Partager mon profil",
       href: "#share-profile",
@@ -54,14 +61,6 @@ export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNav
       action: "share-profile",
     },
   ];
-
-  if (hasOrganisation) {
-    items.splice(6, 0, {
-      label: "Mes missions",
-      href: "/dashboard/apprenant/missions",
-      icon: ClipboardList,
-    });
-  }
 
   return items;
 }

@@ -41,6 +41,13 @@ const EdgeDashboardGpsContainer = dynamic(
     })),
   { ssr: false },
 );
+const MonEvolutionReport = dynamic(
+  () =>
+    import("@/components/apprenant/mon-evolution-report").then((m) => ({
+      default: m.MonEvolutionReport,
+    })),
+  { ssr: false },
+);
 import {
   ApprenantAssessmentResults,
   type DiscScores,
@@ -1282,7 +1289,13 @@ export function ApprenantDashboardClient({
           />
           {initialView === "home" ? (
             <>
-          {!isSalarieSurface && appShell?.variant !== "jessica" ? (
+          {!isSalarieSurface && appShell?.variant !== "jessica" && isParticulierUser ? (
+            <Suspense fallback={<div className="mb-8 h-40 animate-pulse rounded-2xl bg-white/[0.04]" />}>
+              <MonEvolutionReport />
+            </Suspense>
+          ) : null}
+
+          {!isSalarieSurface && appShell?.variant !== "jessica" && !isParticulierUser ? (
             <Suspense fallback={<div className="mb-8 h-40 animate-pulse rounded-2xl bg-white/[0.04]" />}>
               <EdgeDashboardGpsContainer
                 profile={(profile ?? null) as Record<string, unknown> | null}
@@ -1301,6 +1314,11 @@ export function ApprenantDashboardClient({
             </Suspense>
           ) : null}
 
+          {isParticulierUser && appShell?.variant !== "jessica" ? (
+            <section className="mt-10 space-y-8">
+              <PersonalizedActionPlanSection plan={personalizedPlan} className="opacity-90" />
+            </section>
+          ) : (
           <section
             id="dashboard-secondary-modules"
             className={
@@ -1367,6 +1385,7 @@ export function ApprenantDashboardClient({
                 ) : null}
               </div>
           </section>
+          )}
             </>
           ) : (
             <>

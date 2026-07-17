@@ -15,7 +15,7 @@ export function AchievementsCard({ testsComplete, badgeAwarded, badgeName }: Pro
 
   return (
     <section>
-      <HubSectionHeader title="Mes réussites" />
+      <HubSectionHeader title="Mes réussites" subtitle="Badges, validations et Wallet." />
       <HubSurface
         tone={unlocked ? "gold" : "slate"}
         className="flex min-h-[220px] flex-col justify-between gap-6"

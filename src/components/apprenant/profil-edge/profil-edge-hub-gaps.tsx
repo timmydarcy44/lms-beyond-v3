@@ -4,13 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ChevronDown,
-  ChevronRight,
-  X,
-  Play,
   FileCheck2,
   GraduationCap,
   MessageCircle,
+  Play,
   Sparkles,
+  X,
 } from "lucide-react";
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
 import { getCoachingBookingHref } from "@/lib/particulier/coaching-config";
@@ -25,12 +24,12 @@ import {
   coachingLevelDisplay,
   coachingWhyUseful,
   expectedLevelForObjective,
-  isUnevaluatedLevel,
 } from "@/lib/apprenant/edge-coaching-copy";
 import { getSkillEvidence } from "@/lib/apprenant/edge-skill-evidence";
 import { missionHref } from "@/lib/apprenant/edge-mission-types";
 import { EDGE_MISSION_LABEL } from "@/lib/apprenant/edge-missions";
 import type { SkillGapStatus } from "@/lib/apprenant/edge-progression-gps";
+import { ProfilEdgeHubCard, ProfilEdgeHubSection } from "./profil-edge-hub-card";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 
 type Props = {
@@ -98,148 +97,120 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
   const plan = selected ? getSkillProgressionPlan(selected.name) : [];
   const evidence = selected ? getSkillEvidence(selected.name, selected.status) : null;
 
-  const firstPriority = priorities[0]?.name ?? "à définir";
+  const firstAction = priorities[0] ?? forces[0] ?? null;
 
   return (
     <>
-      {/* Bloc résumé — hiérarchie de lecture positive */}
-      <section className="rounded-2xl border border-[#3D7BFF]/25 bg-gradient-to-br from-[#3D7BFF]/[0.12] to-transparent p-5 sm:p-6">
-        <div className="flex items-center gap-2 text-[#8BB4FF]">
-          <Sparkles className="h-4 w-4" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Votre progression</span>
-        </div>
-        <h2 className="mt-3 text-xl font-semibold text-white">Votre parcours commence déjà</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">
-          EDGE a identifié vos premières forces et vous propose de progresser étape par étape, sans tout
-          travailler en même temps.
-        </p>
-
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
-            <p className="text-2xl font-bold tabular-nums text-emerald-300">{forces.length}</p>
-            <p className="mt-1 text-[11px] text-white/55">Forces identifiées</p>
-          </div>
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
-            <p className="truncate text-sm font-semibold text-[#8BB4FF]">{firstPriority}</p>
-            <p className="mt-1 text-[11px] text-white/55">Priorité actuelle</p>
-          </div>
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
-            <p className="text-2xl font-bold tabular-nums text-white/70">{laterSkills.length}</p>
-            <p className="mt-1 text-[11px] text-white/55">À explorer plus tard</p>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => setSelected(priorities[0] ?? forces[0] ?? null)}
-            className={`${CONNECT_BTN_PRIMARY} inline-flex items-center justify-center gap-2`}
-            disabled={!priorities.length && !forces.length}
-          >
-            <Play className="h-4 w-4" />
-            Commencer ma prochaine action
-          </button>
-          <Link
-            href={RESERVATION_HREF}
-            className={`${CONNECT_BTN_SECONDARY} inline-flex items-center justify-center gap-2`}
-          >
-            Construire mon parcours avec un expert
-          </Link>
-        </div>
-      </section>
-
-      {/* Tableau principal : forces + priorités uniquement */}
-      {forces.length || priorities.length ? (
-        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">Vos forces &amp; priorités</p>
-
-          <div className="mt-4 hidden grid-cols-[1.1fr_1fr_1.4fr_1.2fr] gap-3 border-b border-white/[0.06] pb-2 text-[10px] font-semibold uppercase tracking-wider text-white/35 md:grid">
-            <span>Compétence</span>
-            <span>Situation actuelle</span>
-            <span>Pourquoi c&apos;est utile</span>
-            <span>Prochaine action</span>
-          </div>
-
-          <ul className="divide-y divide-white/[0.06]">
-            {[...forces, ...priorities].map((skill) => (
-              <li key={`${skill.kind}-${skill.name}`}>
-                <button
-                  type="button"
-                  onClick={() => setSelected(skill)}
-                  className="w-full py-3 text-left transition hover:bg-white/[0.03] md:grid md:grid-cols-[1.1fr_1fr_1.4fr_1.2fr] md:items-center md:gap-3"
-                >
-                  <span className="flex items-center justify-between gap-2 md:block">
-                    <span className="text-sm font-medium text-white">{skill.name}</span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-white/30 md:hidden" />
-                  </span>
-                  <span className="mt-1 block md:mt-0">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        skill.kind === "force"
-                          ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25"
-                          : "bg-[#3D7BFF]/20 text-[#8BB4FF] ring-1 ring-[#3D7BFF]/35"
-                      }`}
-                    >
-                      {skill.situation}
-                    </span>
-                  </span>
-                  <span className="mt-1 block text-xs text-white/55 md:mt-0">{skill.whyUseful}</span>
-                  <span className="mt-1 flex items-center gap-2 text-xs text-white/70 md:mt-0">
-                    {skill.nextAction}
-                    <ChevronRight className="hidden h-4 w-4 shrink-0 text-white/30 md:block" />
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {/* Bloc replié : compétences à explorer plus tard */}
-      {laterSkills.length ? (
-        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
-          <button
-            type="button"
-            onClick={() => setShowLater((v) => !v)}
-            className="flex w-full items-center justify-between gap-4 text-left"
-            aria-expanded={showLater}
-          >
-            <div>
-              <h3 className="text-sm font-semibold text-white">Compétences à explorer plus tard</h3>
-              <p className="mt-1 text-xs leading-relaxed text-white/50">
-                Ces compétences ne sont pas des lacunes. Elles seront évaluées progressivement si elles
-                deviennent utiles pour votre objectif professionnel.
-              </p>
-              <p className="mt-2 text-xs font-medium text-white/60">
-                {laterSkills.length} compétence{laterSkills.length > 1 ? "s" : ""} disponible
-                {laterSkills.length > 1 ? "s" : ""}
-              </p>
+      <ProfilEdgeHubSection
+        title="Ce sur quoi vous progressez"
+        subtitle="Vos forces d'abord, puis une priorité claire — sans tout traiter en même temps."
+      >
+        {firstAction ? (
+          <ProfilEdgeHubCard variant="accent" className="gap-5">
+            <div className="flex items-center gap-2 text-[#8BB4FF]">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-[11px] font-medium uppercase tracking-[0.16em]">Prochaine action</span>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-white/70">
-              {showLater ? "Masquer" : "Afficher"}
-              <ChevronDown className={`h-4 w-4 transition-transform ${showLater ? "rotate-180" : ""}`} />
-            </span>
-          </button>
+            <p className="text-2xl font-semibold tracking-[-0.02em] text-white">{firstAction.name}</p>
+            <p className="text-[15px] leading-relaxed text-white/55">{firstAction.whyUseful}</p>
+            <button
+              type="button"
+              onClick={() => setSelected(firstAction)}
+              className={`${CONNECT_BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 sm:w-auto`}
+            >
+              <Play className="h-4 w-4" />
+              Commencer ma prochaine action
+            </button>
+          </ProfilEdgeHubCard>
+        ) : null}
 
-          {showLater ? (
-            <ul className="mt-4 divide-y divide-white/[0.06]">
-              {laterSkills.map((skill) => (
-                <li key={skill} className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="text-sm text-white/75">{skill}</span>
-                  <Link
-                    href={missionHref(skill, { objective: objectiveLabel })}
-                    className="text-xs font-medium text-[#8BB4FF] hover:underline"
-                  >
-                    Évaluer si nécessaire
-                  </Link>
-                </li>
+        {forces.length ? (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-white/60">Vos forces</p>
+            <div className="-mx-1 flex gap-4 overflow-x-auto pb-2 px-1 snap-x snap-mandatory">
+              {forces.map((skill) => (
+                <ProfilEdgeHubCard
+                  key={skill.name}
+                  variant="success"
+                  onClick={() => setSelected(skill)}
+                  className="min-w-[240px] max-w-[280px] shrink-0 snap-start justify-between gap-4"
+                >
+                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-300/80">
+                    Force
+                  </p>
+                  <p className="text-lg font-semibold text-white">{skill.name}</p>
+                  <p className="line-clamp-2 text-[13px] leading-relaxed text-white/50">{skill.whyUseful}</p>
+                </ProfilEdgeHubCard>
               ))}
-            </ul>
-          ) : null}
-        </section>
-      ) : null}
+            </div>
+          </div>
+        ) : null}
 
-      {/* Drawer coaching (5 blocs) */}
+        {priorities.length ? (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-white/60">Priorités actuelles</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {priorities.map((skill) => (
+                <ProfilEdgeHubCard
+                  key={skill.name}
+                  variant="accent"
+                  onClick={() => setSelected(skill)}
+                  className="min-h-[160px] justify-between gap-4"
+                >
+                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#8BB4FF]">
+                    Priorité
+                  </p>
+                  <p className="text-lg font-semibold leading-snug text-white">{skill.name}</p>
+                  <p className="line-clamp-2 text-[13px] text-white/50">{skill.nextAction}</p>
+                </ProfilEdgeHubCard>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {laterSkills.length ? (
+          <ProfilEdgeHubCard variant="muted" className="gap-4">
+            <button
+              type="button"
+              onClick={() => setShowLater((v) => !v)}
+              className="flex w-full items-start justify-between gap-4 text-left"
+              aria-expanded={showLater}
+            >
+              <div>
+                <p className="text-[16px] font-semibold text-white">À explorer plus tard</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-white/45">
+                  {laterSkills.length} compétence{laterSkills.length > 1 ? "s" : ""} — évaluées si elles deviennent
+                  utiles pour votre objectif.
+                </p>
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-white/60">
+                {showLater ? "Masquer" : "Voir"}
+                <ChevronDown className={`h-4 w-4 transition-transform ${showLater ? "rotate-180" : ""}`} />
+              </span>
+            </button>
+
+            {showLater ? (
+              <ul className="space-y-2 border-t border-white/[0.06] pt-4">
+                {laterSkills.map((skill) => (
+                  <li
+                    key={skill}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3"
+                  >
+                    <span className="text-sm text-white/75">{skill}</span>
+                    <Link
+                      href={missionHref(skill, { objective: objectiveLabel })}
+                      className="text-xs font-medium text-[#8BB4FF] hover:underline"
+                    >
+                      Évaluer si nécessaire
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </ProfilEdgeHubCard>
+        ) : null}
+      </ProfilEdgeHubSection>
+
       {selected ? (
         <div className="fixed inset-0 z-[160] flex justify-end">
           <button
@@ -279,7 +250,6 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                 </div>
               </div>
 
-              {/* Pourquoi EDGE pense cela ? + niveau de confiance */}
               {evidence ? (
                 <div className="rounded-xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/[0.06] p-4">
                   <p className="text-sm font-semibold text-white">{evidence.title}</p>
@@ -332,7 +302,6 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                 </ul>
               </div>
 
-              {/* Mission EDGE — scénario personnalisé par le coach */}
               <div className="rounded-xl border border-[#3D7BFF]/25 bg-[#3D7BFF]/[0.06] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#8BB4FF]">
                   {EDGE_MISSION_LABEL}

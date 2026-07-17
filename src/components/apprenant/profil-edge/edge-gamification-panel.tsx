@@ -6,16 +6,12 @@ import { Flame, Trophy } from "lucide-react";
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
 import { edgeLevelFromXp } from "@/lib/apprenant/edge-gamification";
 import { EdgeDailyMissionCard } from "@/components/apprenant/profil-edge/edge-daily-mission-card";
+import { ProfilEdgeHubSection } from "./profil-edge-hub-card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Props = {
   matching: CareerMatchingResult;
   objective?: string;
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
 };
 
 export function EdgeGamificationPanel({ matching, objective }: Props) {
@@ -50,46 +46,44 @@ export function EdgeGamificationPanel({ matching, objective }: Props) {
   const level = edgeLevelFromXp(totalXp);
 
   return (
-    <div className="space-y-4">
+    <ProfilEdgeHubSection title="Aujourd'hui" subtitle="Une mission. Une progression. Chaque jour compte.">
       <EdgeDailyMissionCard matching={matching} objective={objective} />
 
-      <motion.section
-        initial="hidden"
-        animate="show"
-        variants={fadeUp}
-        className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5"
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-wrap items-center justify-between gap-4 rounded-[1.35rem] border border-white/[0.08] bg-[#17171F] px-6 py-5"
       >
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3D7BFF]/15 text-[#8BB4FF]">
-              <Trophy className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                Niveau {level.level} · {level.title}
-              </p>
-              <p className="text-sm text-white/60">
-                <span className="font-semibold text-white">{statsReady ? level.totalXp : "—"} XP</span>
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3D7BFF]/15 text-[#8BB4FF]">
+            <Trophy className="h-5 w-5" />
           </div>
-
-          <div className="flex items-center gap-2 rounded-full border border-orange-400/25 bg-orange-400/10 px-3 py-1">
-            <Flame className="h-3.5 w-3.5 text-orange-300" />
-            <span className="text-sm font-medium text-orange-200">
-              {statsReady ? streak : "—"} jour{streak > 1 ? "s" : ""}
-            </span>
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/40">
+              Niveau {level.level} · {level.title}
+            </p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-white">
+              {statsReady ? level.totalXp : "—"} XP
+            </p>
           </div>
         </div>
 
-        <div className="mt-3">
+        <div className="flex items-center gap-2 rounded-full border border-orange-400/25 bg-orange-400/10 px-4 py-2">
+          <Flame className="h-4 w-4 text-orange-300" />
+          <span className="text-sm font-medium text-orange-200">
+            {statsReady ? streak : "—"} jour{streak > 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <div className="w-full sm:max-w-md sm:ml-auto">
           <div className="flex items-center justify-between text-[10px] text-white/40">
-            <span>Progression</span>
+            <span>Prochain niveau</span>
             <span>
               {level.xpIntoLevel} / {level.xpForNextLevel} XP
             </span>
           </div>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
             <motion.div
               className="h-full rounded-full bg-[#3D7BFF]"
               initial={{ width: 0 }}
@@ -98,7 +92,7 @@ export function EdgeGamificationPanel({ matching, objective }: Props) {
             />
           </div>
         </div>
-      </motion.section>
-    </div>
+      </motion.div>
+    </ProfilEdgeHubSection>
   );
 }

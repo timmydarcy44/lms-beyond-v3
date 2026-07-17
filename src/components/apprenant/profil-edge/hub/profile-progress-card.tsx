@@ -6,9 +6,8 @@ import { ArrowRight } from "lucide-react";
 import type { ProfilEdgeMaturity } from "@/lib/particulier/profil-edge-maturity";
 import { edgeLevelFromXp } from "@/lib/apprenant/edge-gamification";
 import { PROFIL_EDGE_SECTION_HREFS } from "@/lib/particulier/profil-edge-maturity";
-import { CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { HubProgressBar, HubSectionHeader, HubSurface } from "./hub-ui";
+import { HubPillCta, HubProgressBar, HubSectionHeader, HubSurface } from "./hub-ui";
 
 type Props = {
   maturity: ProfilEdgeMaturity;
@@ -63,43 +62,45 @@ export function ProfileProgressCard({ maturity }: Props) {
 
   return (
     <section>
-      <HubSectionHeader title="Ma progression" subtitle="Complétion du profil — distincte de l’alignement métier." />
-      <HubSurface tone="action" className="space-y-5">
+      <HubSectionHeader
+        title="Ma progression"
+        subtitle="Complétion du profil — distincte de l’alignement métier."
+      />
+      <HubSurface tone="forest" className="space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-[12px] text-white/45">Profil complété</p>
-            <p className="mt-1 text-[2.75rem] font-semibold tabular-nums tracking-[-0.04em] text-white">
+            <p className="text-[13px] font-medium text-white/70">Profil complété</p>
+            <p className="mt-1 text-[4rem] font-bold tabular-nums tracking-[-0.05em] text-white leading-none">
               {maturity.totalPercent}
-              <span className="text-xl text-white/35">%</span>
+              <span className="text-[1.75rem] text-white/50">%</span>
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-[12px] text-white/45">
-              Niveau {ready ? level.level : "—"}
+          <div className="rounded-2xl bg-black/20 px-4 py-3 text-right backdrop-blur-sm">
+            <p className="text-[12px] text-white/65">Niveau {ready ? level.level : "—"}</p>
+            <p className="mt-1 text-[15px] font-semibold text-white">
+              {ready ? level.title : "…"}
             </p>
-            <p className="mt-1 text-[15px] font-medium text-white/80">
-              {ready ? level.title : "…"} · {ready ? level.totalXp : "—"} XP
-            </p>
+            <p className="mt-0.5 text-[13px] text-white/70">{ready ? `${level.totalXp} XP` : "—"}</p>
           </div>
         </div>
 
         <HubProgressBar value={maturity.totalPercent} />
 
         <div>
-          <div className="mb-1.5 flex justify-between text-[11px] text-white/40">
+          <div className="mb-1.5 flex justify-between text-[12px] text-white/65">
             <span>Prochain niveau</span>
-            <span>
-              {ready ? `${level.xpIntoLevel} / ${level.xpForNextLevel} XP` : "—"}
-            </span>
+            <span>{ready ? `${level.xpIntoLevel} / ${level.xpForNextLevel} XP` : "—"}</span>
           </div>
-          <HubProgressBar value={ready ? level.percentToNext : 0} className="bg-white/[0.06]" />
+          <HubProgressBar value={ready ? level.percentToNext : 0} />
         </div>
 
-        <p className="text-[14px] leading-relaxed text-white/55">{hint.text}</p>
+        <p className="text-[15px] leading-relaxed text-white/85">{hint.text}</p>
 
-        <Link href={hint.href} className={`${CONNECT_BTN_SECONDARY} w-full justify-center sm:w-auto`}>
-          Continuer mon profil
-          <ArrowRight className="ml-2 h-4 w-4" />
+        <Link href={hint.href}>
+          <HubPillCta>
+            Continuer mon profil
+            <ArrowRight className="h-4 w-4" />
+          </HubPillCta>
         </Link>
       </HubSurface>
     </section>

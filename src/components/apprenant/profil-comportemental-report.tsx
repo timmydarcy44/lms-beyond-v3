@@ -257,9 +257,9 @@ export function ProfilComportementalReport() {
 
   if (!discScores) {
     return (
-      <HubSurface tone="action" className="mx-auto max-w-lg space-y-4">
-        <p className="text-[12px] text-white/45">Profil EDGE</p>
-        <p className="text-[17px] leading-relaxed text-white/70">
+      <HubSurface tone="ocean" className="mx-auto max-w-lg space-y-5">
+        <p className="text-[13px] font-medium text-white/70">Profil EDGE</p>
+        <p className="text-[17px] leading-relaxed text-white/85">
           Complétez d&apos;abord le test comportemental pour accéder à votre parcours EDGE.
         </p>
         <Link
@@ -273,7 +273,7 @@ export function ProfilComportementalReport() {
   }
 
   return (
-    <div className={`${APPRENANT_PAGE_SHELL} mx-auto max-w-[42rem] space-y-10 pb-20 md:max-w-3xl md:space-y-12`}>
+    <div className={`${APPRENANT_PAGE_SHELL} mx-auto max-w-[42rem] space-y-12 pb-20 md:max-w-3xl md:space-y-14`}>
       {/* Shell header already shows title — keep page lead minimal */}
       <header className="space-y-1">
         <p className="text-[13px] text-white/40">Votre espace personnel</p>
@@ -288,9 +288,9 @@ export function ProfilComportementalReport() {
       />
 
       {!selectedCareer && extractCareerTitleFromProject(typeProfil, professionalProject) ? (
-        <HubSurface tone="quiet" className="text-[14px] leading-relaxed text-white/55">
+        <HubSurface tone="ice" className="text-[15px] leading-relaxed text-white/85">
           Votre projet n&apos;a pas encore été analysé.{" "}
-          <Link href={PROFIL_EDGE_SECTION_HREFS.projet} className="font-medium text-white hover:underline">
+          <Link href={PROFIL_EDGE_SECTION_HREFS.projet} className="font-semibold text-white underline underline-offset-2">
             Enregistrez votre projet professionnel
           </Link>{" "}
           pour activer l&apos;alignement métier.

@@ -8,8 +8,7 @@ import {
   type StoredHardSkillMeta,
 } from "@/lib/hard-skills/hard-skills-portfolio";
 import { PROFIL_EDGE_SECTION_HREFS } from "@/lib/particulier/profil-edge-maturity";
-import { CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
-import { HubSectionHeader, HubSurface } from "./hub-ui";
+import { HubPillCta, HubSectionHeader, HubSurface } from "./hub-ui";
 
 type Props = {
   hardSkills: string[];
@@ -24,18 +23,18 @@ export function SkillsSummaryCard({ hardSkills, skillsMetadata }: Props) {
   return (
     <section>
       <HubSectionHeader title="Mes compétences" subtitle="Synthèse — le détail reste dans votre portfolio." />
-      <HubSurface tone="secondary" className="space-y-5">
+      <HubSurface tone="violet" className="min-h-[280px] space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-[2.5rem] font-semibold tabular-nums tracking-[-0.04em] text-white">
+            <p className="text-[4.5rem] font-bold tabular-nums tracking-[-0.06em] text-white leading-none">
               {stats.total}
             </p>
-            <p className="text-[13px] text-white/45">
+            <p className="mt-2 text-[15px] text-white/70">
               compétence{stats.total > 1 ? "s" : ""} enregistrée{stats.total > 1 ? "s" : ""}
             </p>
           </div>
           {stats.total > 0 ? (
-            <div className="text-right text-[12px] leading-relaxed text-white/40">
+            <div className="rounded-2xl bg-black/25 px-4 py-3 text-right text-[13px] leading-relaxed text-white/80 backdrop-blur-sm">
               {stats.byLevel.Expert > 0 ? <p>{stats.byLevel.Expert} Expert</p> : null}
               {stats.byLevel.Confirmé > 0 ? <p>{stats.byLevel.Confirmé} Confirmé</p> : null}
               {stats.byLevel.Intermédiaire > 0 ? <p>{stats.byLevel.Intermédiaire} Intermédiaire</p> : null}
@@ -49,25 +48,24 @@ export function SkillsSummaryCard({ hardSkills, skillsMetadata }: Props) {
             {top.map((r) => (
               <li
                 key={r.name}
-                className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-3"
+                className="flex items-center justify-between gap-3 rounded-2xl bg-black/20 px-4 py-3.5 backdrop-blur-sm"
               >
-                <span className="truncate text-[14px] font-medium text-white">{r.name}</span>
-                <span className="shrink-0 text-[12px] text-white/45">{r.level}</span>
+                <span className="truncate text-[15px] font-semibold text-white">{r.name}</span>
+                <span className="shrink-0 text-[13px] text-white/70">{r.level}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-[14px] leading-relaxed text-white/50">
+          <p className="text-[15px] leading-relaxed text-white/75">
             Ajoutez vos hard skills pour enrichir votre matching et vos preuves.
           </p>
         )}
 
-        <Link
-          href={PROFIL_EDGE_SECTION_HREFS.hard_skills}
-          className={`${CONNECT_BTN_SECONDARY} w-full justify-center sm:w-auto`}
-        >
-          {stats.total > 0 ? "Gérer mes compétences" : "Ajouter des compétences"}
-          <ArrowRight className="ml-2 h-4 w-4" />
+        <Link href={PROFIL_EDGE_SECTION_HREFS.hard_skills}>
+          <HubPillCta>
+            {stats.total > 0 ? "Gérer mes compétences" : "Ajouter des compétences"}
+            <ArrowRight className="h-4 w-4" />
+          </HubPillCta>
         </Link>
       </HubSurface>
     </section>

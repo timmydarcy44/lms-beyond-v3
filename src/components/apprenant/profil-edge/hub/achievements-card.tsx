@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { Award, Lock } from "lucide-react";
-import { CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
-import { HubSectionHeader, HubSurface } from "./hub-ui";
+import { HubPillCta, HubSectionHeader, HubSurface } from "./hub-ui";
 
 type Props = {
   testsComplete: boolean;
@@ -12,51 +11,62 @@ type Props = {
 };
 
 export function AchievementsCard({ testsComplete, badgeAwarded, badgeName }: Props) {
+  const unlocked = testsComplete && badgeAwarded;
+
   return (
     <section>
       <HubSectionHeader title="Mes réussites" />
-      <HubSurface tone="quiet" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3.5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.05]">
-            {testsComplete && badgeAwarded ? (
-              <Award className="h-5 w-5 text-[#FF3B30]" />
+      <HubSurface
+        tone={unlocked ? "gold" : "slate"}
+        className="flex min-h-[220px] flex-col justify-between gap-6"
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-white/15 backdrop-blur-sm">
+            {unlocked ? (
+              <Award className="h-7 w-7 text-white" />
             ) : (
-              <Lock className="h-5 w-5 text-white/35" />
+              <Lock className="h-7 w-7 text-white/70" />
             )}
           </div>
           <div>
             {!testsComplete ? (
               <>
-                <p className="text-[16px] font-medium text-white">Profil EDGE en cours</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-white/45">
+                <p className="text-[1.35rem] font-bold tracking-[-0.02em] text-white">
+                  Profil EDGE en cours
+                </p>
+                <p className="mt-2 text-[15px] leading-relaxed text-white/75">
                   Badge délivré après les 3 tests EDGE.
                 </p>
               </>
-            ) : badgeAwarded ? (
+            ) : unlocked ? (
               <>
-                <p className="text-[16px] font-medium text-white">Votre profil comportemental EDGE est validé.</p>
-                <p className="mt-1 text-[13px] text-white/45">{badgeName}</p>
+                <p className="text-[1.35rem] font-bold tracking-[-0.02em] text-white">
+                  Votre profil comportemental EDGE est validé.
+                </p>
+                <p className="mt-2 text-[15px] text-white/75">{badgeName}</p>
               </>
             ) : (
               <>
-                <p className="text-[16px] font-medium text-white">Aucun badge disponible pour le moment</p>
-                <p className="mt-1 text-[13px] text-white/45">Terminez les explorations pour le débloquer.</p>
+                <p className="text-[1.35rem] font-bold tracking-[-0.02em] text-white">
+                  Badge bientôt disponible
+                </p>
+                <p className="mt-2 text-[15px] text-white/75">
+                  Terminez les explorations pour le débloquer.
+                </p>
               </>
             )}
           </div>
         </div>
-        {badgeAwarded ? (
-          <Link href="/dashboard/apprenant/badges" className={`${CONNECT_BTN_SECONDARY} shrink-0 justify-center`}>
-            Voir mon Wallet
-          </Link>
-        ) : (
-          <Link
-            href="/dashboard/apprenant/profil-comportemental/tests"
-            className={`${CONNECT_BTN_SECONDARY} shrink-0 justify-center`}
-          >
-            Voir mes tests
-          </Link>
-        )}
+
+        <Link
+          href={
+            unlocked
+              ? "/dashboard/apprenant/badges"
+              : "/dashboard/apprenant/profil-comportemental/tests"
+          }
+        >
+          <HubPillCta>{unlocked ? "Voir mon Wallet" : "Voir mes tests"}</HubPillCta>
+        </Link>
       </HubSurface>
     </section>
   );

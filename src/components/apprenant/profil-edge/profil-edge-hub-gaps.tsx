@@ -107,12 +107,12 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
       >
         {firstAction ? (
           <ProfilEdgeHubCard variant="accent" className="gap-5">
-            <div className="flex items-center gap-2 text-[#8BB4FF]">
+            <div className="flex items-center gap-2 text-white/80">
               <Sparkles className="h-4 w-4" />
-              <span className="text-[11px] font-medium uppercase tracking-[0.16em]">Prochaine action</span>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.14em]">Prochaine action</span>
             </div>
-            <p className="text-2xl font-semibold tracking-[-0.02em] text-white">{firstAction.name}</p>
-            <p className="text-[15px] leading-relaxed text-white/55">{firstAction.whyUseful}</p>
+            <p className="text-[1.85rem] font-bold tracking-[-0.035em] text-white">{firstAction.name}</p>
+            <p className="text-[15px] leading-relaxed text-white/80">{firstAction.whyUseful}</p>
             <button
               type="button"
               onClick={() => setSelected(firstAction)}
@@ -126,20 +126,20 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
 
         {forces.length ? (
           <div className="space-y-3">
-            <p className="text-sm font-medium text-white/60">Vos forces</p>
+            <p className="text-sm font-medium text-white/55">Vos forces</p>
             <div className="-mx-1 flex gap-4 overflow-x-auto pb-2 px-1 snap-x snap-mandatory">
               {forces.map((skill) => (
                 <ProfilEdgeHubCard
                   key={skill.name}
                   variant="success"
                   onClick={() => setSelected(skill)}
-                  className="min-w-[240px] max-w-[280px] shrink-0 snap-start justify-between gap-4"
+                  className="min-h-[180px] min-w-[240px] max-w-[280px] shrink-0 snap-start justify-between gap-4"
                 >
-                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-300/80">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-white/75">
                     Force
                   </p>
-                  <p className="text-lg font-semibold text-white">{skill.name}</p>
-                  <p className="line-clamp-2 text-[13px] leading-relaxed text-white/50">{skill.whyUseful}</p>
+                  <p className="text-lg font-bold text-white">{skill.name}</p>
+                  <p className="line-clamp-2 text-[13px] leading-relaxed text-white/75">{skill.whyUseful}</p>
                 </ProfilEdgeHubCard>
               ))}
             </div>
@@ -148,20 +148,20 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
 
         {priorities.length ? (
           <div className="space-y-3">
-            <p className="text-sm font-medium text-white/60">Priorités actuelles</p>
+            <p className="text-sm font-medium text-white/55">Priorités actuelles</p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {priorities.map((skill) => (
                 <ProfilEdgeHubCard
                   key={skill.name}
                   variant="accent"
                   onClick={() => setSelected(skill)}
-                  className="min-h-[160px] justify-between gap-4"
+                  className="min-h-[180px] justify-between gap-4"
                 >
-                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#8BB4FF]">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-white/75">
                     Priorité
                   </p>
-                  <p className="text-lg font-semibold leading-snug text-white">{skill.name}</p>
-                  <p className="line-clamp-2 text-[13px] text-white/50">{skill.nextAction}</p>
+                  <p className="text-lg font-bold leading-snug text-white">{skill.name}</p>
+                  <p className="line-clamp-2 text-[13px] text-white/75">{skill.nextAction}</p>
                 </ProfilEdgeHubCard>
               ))}
             </div>

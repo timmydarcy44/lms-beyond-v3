@@ -1,29 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { getCoachingBookingHref } from "@/lib/particulier/coaching-config";
-import { CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
-import { HubSurface } from "./hub-ui";
+import { HubPillCta, HubSurface } from "./hub-ui";
 
 export function ExpertCoachingCard() {
   return (
-    <HubSurface tone="action" className="space-y-4">
-      <p className="text-[12px] font-medium text-white/40">Accompagnement</p>
-      <h2 className="text-[1.35rem] font-semibold tracking-[-0.02em] text-white">
-        Besoin d&apos;un plan plus précis&nbsp;?
-      </h2>
-      <p className="max-w-xl text-[14px] leading-relaxed text-white/55">
-        Un spécialiste EDGE peut analyser vos priorités, valider votre diagnostic et construire avec vous une
-        feuille de route personnalisée.
-      </p>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link
-          href={getCoachingBookingHref("progression")}
-          className={`${CONNECT_BTN_PRIMARY} w-full justify-center sm:w-auto`}
-        >
-          Réserver ma séance stratégique
+    <HubSurface tone="rose" className="min-h-[280px] flex flex-col justify-between gap-6 text-center">
+      <div>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/70">
+          Accompagnement
+        </p>
+        <h2 className="mx-auto mt-4 max-w-md text-[1.85rem] font-bold leading-[1.15] tracking-[-0.035em] text-white sm:text-[2.1rem]">
+          Besoin d&apos;un plan plus précis&nbsp;?
+        </h2>
+        <p className="mx-auto mt-4 max-w-lg text-[16px] leading-relaxed text-white/80">
+          Un spécialiste EDGE analyse vos priorités, valide votre diagnostic et construit avec vous une
+          feuille de route personnalisée.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <Link href={getCoachingBookingHref("progression")}>
+          <HubPillCta>
+            Réserver ma séance stratégique
+            <ArrowRight className="h-4 w-4" />
+          </HubPillCta>
         </Link>
-        <p className="text-center text-[13px] text-white/40 sm:text-right">60 min · 49 €</p>
+        <p className="text-[14px] font-medium text-white/70">60 min · 49 €</p>
       </div>
     </HubSurface>
   );

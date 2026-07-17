@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export function ProfilEdgeHubKicker({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn("text-[11px] font-medium uppercase tracking-[0.18em] text-white/40", className)}>
+    <p className={cn("text-[12px] font-semibold uppercase tracking-[0.14em] text-white/70", className)}>
       {children}
     </p>
   );
@@ -25,8 +25,8 @@ export function ProfilEdgeHubSection({
   return (
     <section className={cn("space-y-5", className)}>
       <div>
-        <h2 className="text-xl font-semibold tracking-[-0.02em] text-white sm:text-2xl">{title}</h2>
-        {subtitle ? <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-white/45">{subtitle}</p> : null}
+        <h2 className="text-[28px] font-bold tracking-[-0.035em] text-white sm:text-[32px]">{title}</h2>
+        {subtitle ? <p className="mt-1.5 max-w-2xl text-[15px] leading-relaxed text-white/45">{subtitle}</p> : null}
       </div>
       {children}
     </section>
@@ -41,18 +41,24 @@ type HubCardProps = {
   variant?: "default" | "accent" | "success" | "muted";
 };
 
+/** Cartes immersives type Apple Music — pas des tuiles grises uniformes. */
 const VARIANTS = {
-  default: "border-white/[0.08] bg-[#17171F] hover:border-white/[0.14]",
-  accent: "border-[#3D7BFF]/25 bg-gradient-to-br from-[#3D7BFF]/[0.12] to-[#17171F] hover:border-[#3D7BFF]/40",
-  success: "border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] to-[#17171F] hover:border-emerald-500/35",
-  muted: "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]",
+  default:
+    "bg-gradient-to-b from-[#475569] via-[#334155] to-[#0f172a] shadow-[0_16px_40px_-18px_rgba(0,0,0,0.65)]",
+  accent:
+    "bg-gradient-to-b from-[#1c4ed8] via-[#1e3a8a] to-[#0f172a] shadow-[0_20px_50px_-20px_rgba(37,99,235,0.55)]",
+  success:
+    "bg-gradient-to-b from-[#059669] via-[#047857] to-[#064e3b] shadow-[0_20px_50px_-20px_rgba(16,185,129,0.45)]",
+  muted:
+    "bg-gradient-to-b from-[#64748b] via-[#334155] to-[#0f172a] shadow-[0_16px_40px_-18px_rgba(0,0,0,0.55)]",
 };
 
 export function ProfilEdgeHubCard({ children, className, href, onClick, variant = "default" }: HubCardProps) {
   const base = cn(
-    "group relative flex flex-col rounded-[1.35rem] border p-6 transition duration-200 sm:p-7",
+    "group relative flex flex-col overflow-hidden rounded-[28px] p-6 text-white transition duration-200 motion-safe:active:scale-[0.985] sm:p-7",
     VARIANTS[variant],
-    (href || onClick) && "cursor-pointer",
+    (href || onClick) &&
+      "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70",
     className,
   );
 
@@ -66,7 +72,7 @@ export function ProfilEdgeHubCard({ children, className, href, onClick, variant 
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={cn(base, "text-left w-full")}>
+      <button type="button" onClick={onClick} className={cn(base, "w-full text-left")}>
         {children}
       </button>
     );

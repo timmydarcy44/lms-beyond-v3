@@ -1,15 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Download, Loader2, Mail, Plus, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   JessicaSuperCard,
   JessicaSuperPage,
 } from "@/components/jessica-contentin/super/jessica-super-ui";
+import {
+  buildJessicaInvoiceEmailBodyText,
+  buildJessicaInvoiceEmailSubject,
+} from "@/lib/jessica-contentin/jessica-invoice-email-shared";
 import { downloadJessicaInvoicePdf } from "@/lib/jessica-contentin/jessica-invoice-pdf";
 import {
   JESSICA_INVOICE_SECTION_TITLE_DEFAULT,
@@ -19,6 +31,7 @@ import {
   storedInvoiceToPdfInput,
   type JessicaInvoiceLineItem,
   type JessicaPrestationType,
+  type JessicaStoredInvoice,
 } from "@/lib/jessica-contentin/jessica-invoice-shared";
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 import { cn } from "@/lib/utils";
@@ -49,6 +62,20 @@ type StoredInvoice = {
   consultation_date: string | null;
   created_at: string;
 };
+
+function priceCentsToDraft(cents: number): string {
+  if (!Number.isFinite(cents) || cents <= 0) return "";
+  const euros = cents / 100;
+  return Number.isInteger(euros) ? String(euros) : euros.toFixed(2).replace(/\.?0+$/, "") || String(euros);
+}
+
+function parsePriceDraft(raw: string): number | null {
+  const cleaned = raw.trim().replace(/\s/g, "").replace(",", ".");
+  if (!cleaned) return 0;
+  const v = Number(cleaned);
+  if (!Number.isFinite(v) || v < 0) return null;
+  return Math.round(v * 100);
+}
 
 function applyPrestationChange(
   line: JessicaInvoiceLineItem,
@@ -101,15 +128,48 @@ export function JessicaFacturesClient({
   const [clientId, setClientId] = useState("");
   const [sectionTitle, setSectionTitle] = useState(JESSICA_INVOICE_SECTION_TITLE_DEFAULT);
   const [lines, setLines] = useState<JessicaInvoiceLineItem[]>([emptyInvoiceLine()]);
+  const [priceDrafts, setPriceDrafts] = useState<string[]>(() =>
+    [emptyInvoiceLine()].map((l) => priceCentsToDraft(l.unit_price_cents)),
+  );
   const [creating, setCreating] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState(initialInvoices);
 
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendInvoiceDraft, setSendInvoiceDraft] = useState<StoredInvoice | null>(null);
+  const [sendTo, setSendTo] = useState("");
+  const [sendSubject, setSendSubject] = useState("");
+  const [sendBody, setSendBody] = useState("");
+
   const selected = sortedClients.find((c) => c.id === clientId) ?? null;
   const totalEuros = linesTotalCents(lines) / 100;
 
+  useEffect(() => {
+    setPriceDrafts((prev) => {
+      if (prev.length === lines.length) return prev;
+      return lines.map((l, i) => prev[i] ?? priceCentsToDraft(l.unit_price_cents));
+    });
+  }, [lines.length]);
+
   const updateLine = (index: number, patch: Partial<JessicaInvoiceLineItem>) => {
     setLines((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
+    if (patch.unit_price_cents != null) {
+      setPriceDrafts((prev) =>
+        prev.map((d, i) => (i === index ? priceCentsToDraft(patch.unit_price_cents!) : d)),
+      );
+    }
+  };
+
+  const commitPriceDraft = (index: number) => {
+    const cents = parsePriceDraft(priceDrafts[index] ?? "");
+    if (cents == null) {
+      setPriceDrafts((prev) =>
+        prev.map((d, i) => (i === index ? priceCentsToDraft(lines[index]?.unit_price_cents ?? 0) : d)),
+      );
+      return;
+    }
+    updateLine(index, { unit_price_cents: cents });
+    setPriceDrafts((prev) => prev.map((d, i) => (i === index ? priceCentsToDraft(cents) : d)));
   };
 
   const createInvoice = async () => {
@@ -152,20 +212,47 @@ export function JessicaFacturesClient({
     }
   };
 
-  const sendInvoice = async (invoice: StoredInvoice) => {
+  const openSendOverlay = (invoice: StoredInvoice) => {
     if (!invoice.client_email?.trim()) {
       toast.error("Ce client n'a pas d'adresse email");
       return;
     }
-    setSendingId(invoice.id);
+    const stored = invoice as unknown as JessicaStoredInvoice;
+    setSendInvoiceDraft(invoice);
+    setSendTo(invoice.client_email.trim());
+    setSendSubject(buildJessicaInvoiceEmailSubject(stored));
+    setSendBody(buildJessicaInvoiceEmailBodyText(stored));
+    setSendOpen(true);
+  };
+
+  const confirmSendInvoice = async () => {
+    if (!sendInvoiceDraft) return;
+    const to = sendTo.trim();
+    if (!to || !to.includes("@")) {
+      toast.error("Adresse email invalide");
+      return;
+    }
+    if (!sendSubject.trim() || !sendBody.trim()) {
+      toast.error("Objet et message sont requis");
+      return;
+    }
+
+    setSendingId(sendInvoiceDraft.id);
     try {
-      const res = await fetch(`/api/admin/jessica-invoices/${invoice.id}/send`, {
+      const res = await fetch(`/api/admin/jessica-invoices/${sendInvoiceDraft.id}/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: to,
+          subject: sendSubject.trim(),
+          body_text: sendBody.trim(),
+        }),
       });
       const json = (await res.json()) as { error?: string; sentTo?: string };
       if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
-      toast.success(`Facture envoyée à ${json.sentTo ?? invoice.client_email}`);
+      toast.success(`Facture envoyée à ${json.sentTo ?? to}`);
+      setSendOpen(false);
+      setSendInvoiceDraft(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Envoi impossible");
     } finally {
@@ -228,7 +315,11 @@ export function JessicaFacturesClient({
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => setLines((prev) => [...prev, emptyInvoiceLine()])}
+                onClick={() => {
+                  const next = emptyInvoiceLine();
+                  setLines((prev) => [...prev, next]);
+                  setPriceDrafts((prev) => [...prev, priceCentsToDraft(next.unit_price_cents)]);
+                }}
               >
                 <Plus className="mr-1 h-3.5 w-3.5" />
                 Ajouter une ligne
@@ -248,7 +339,10 @@ export function JessicaFacturesClient({
                     <button
                       type="button"
                       className="text-neutral-400 hover:text-rose-600"
-                      onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
+                      onClick={() => {
+                        setLines((prev) => prev.filter((_, i) => i !== index));
+                        setPriceDrafts((prev) => prev.filter((_, i) => i !== index));
+                      }}
                       aria-label="Supprimer la ligne"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -265,9 +359,16 @@ export function JessicaFacturesClient({
                       onChange={(e) => {
                         const type = e.target.value as JessicaPrestationType;
                         setLines((prev) =>
-                          prev.map((l, i) =>
-                            i === index ? applyPrestationChange(l, type, formations) : l,
-                          ),
+                          prev.map((l, i) => {
+                            if (i !== index) return l;
+                            const next = applyPrestationChange(l, type, formations);
+                            setPriceDrafts((drafts) =>
+                              drafts.map((d, di) =>
+                                di === index ? priceCentsToDraft(next.unit_price_cents) : d,
+                              ),
+                            );
+                            return next;
+                          }),
                         );
                       }}
                     >
@@ -288,10 +389,11 @@ export function JessicaFacturesClient({
                         onChange={(e) => {
                           const f = formations.find((x) => x.id === e.target.value);
                           if (!f) return;
+                          const cents = Math.round(f.priceEuros * 100) || line.unit_price_cents;
                           updateLine(index, {
                             formation_id: f.id,
                             designation: f.title,
-                            unit_price_cents: Math.round(f.priceEuros * 100) || line.unit_price_cents,
+                            unit_price_cents: cents,
                           });
                         }}
                       >
@@ -335,28 +437,40 @@ export function JessicaFacturesClient({
                   <div className="space-y-1.5">
                     <Label className="text-xs">Tarif unitaire (€)</Label>
                     <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={(line.unit_price_cents / 100).toFixed(2)}
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={priceDrafts[index] ?? ""}
                       onChange={(e) => {
-                        const v = Number(e.target.value.replace(",", "."));
-                        if (Number.isFinite(v) && v >= 0) {
-                          updateLine(index, { unit_price_cents: Math.round(v * 100) });
+                        const raw = e.target.value;
+                        if (raw !== "" && !/^[\d\s.,]*$/.test(raw)) return;
+                        setPriceDrafts((prev) => prev.map((d, i) => (i === index ? raw : d)));
+                        const cents = parsePriceDraft(raw);
+                        if (cents != null) {
+                          setLines((prev) =>
+                            prev.map((l, i) => (i === index ? { ...l, unit_price_cents: cents } : l)),
+                          );
                         }
                       }}
+                      onBlur={() => commitPriceDraft(index)}
                       className={jessicaSuper.input}
+                      placeholder="ex. 90 ou 90,50"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Quantité</Label>
                     <Input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={line.quantity}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={line.quantity || ""}
                       onChange={(e) => {
-                        const v = Number(e.target.value);
+                        const raw = e.target.value.replace(/\D/g, "");
+                        if (!raw) {
+                          updateLine(index, { quantity: 1 });
+                          return;
+                        }
+                        const v = Number(raw);
                         if (Number.isFinite(v) && v >= 1) updateLine(index, { quantity: Math.round(v) });
                       }}
                       className={jessicaSuper.input}
@@ -419,10 +533,10 @@ export function JessicaFacturesClient({
                     disabled={!inv.client_email?.trim() || sendingId === inv.id}
                     title={
                       inv.client_email?.trim()
-                        ? "Envoyer par email (Resend cabinet Jessica)"
+                        ? "Préparer et envoyer par email"
                         : "Client sans adresse email"
                     }
-                    onClick={() => void sendInvoice(inv)}
+                    onClick={() => openSendOverlay(inv)}
                   >
                     {sendingId === inv.id ? (
                       <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -446,6 +560,78 @@ export function JessicaFacturesClient({
           </ul>
         )}
       </JessicaSuperCard>
+
+      <Dialog
+        open={sendOpen}
+        onOpenChange={(open) => {
+          if (!open && sendingId) return;
+          setSendOpen(open);
+          if (!open) setSendInvoiceDraft(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-black/10 bg-white text-black sm:rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Envoyer la facture</DialogTitle>
+          </DialogHeader>
+          {sendInvoiceDraft ? (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-neutral-600">
+                {sendInvoiceDraft.invoice_number} · {(sendInvoiceDraft.amount_cents / 100).toFixed(2)} €
+                <span className="block text-xs text-neutral-400">Le PDF sera joint automatiquement.</span>
+              </p>
+              <div className="space-y-1.5">
+                <Label>Destinataire</Label>
+                <Input
+                  type="email"
+                  value={sendTo}
+                  onChange={(e) => setSendTo(e.target.value)}
+                  className={jessicaSuper.input}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Objet</Label>
+                <Input
+                  value={sendSubject}
+                  onChange={(e) => setSendSubject(e.target.value)}
+                  className={jessicaSuper.input}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Message (vouvoiement)</Label>
+                <Textarea
+                  value={sendBody}
+                  onChange={(e) => setSendBody(e.target.value)}
+                  rows={12}
+                  className={cn(jessicaSuper.input, "min-h-[220px] resize-y font-serif text-[15px] leading-relaxed")}
+                />
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={Boolean(sendingId)}
+              onClick={() => setSendOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              className={jessicaSuper.cta}
+              disabled={Boolean(sendingId)}
+              onClick={() => void confirmSendInvoice()}
+            >
+              {sendingId ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
+              Confirmer l&apos;envoi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </JessicaSuperPage>
   );
 }

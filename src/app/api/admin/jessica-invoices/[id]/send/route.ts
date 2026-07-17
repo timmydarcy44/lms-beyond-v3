@@ -28,6 +28,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const overrideEmail = body?.email ? String(body.email).trim() : null;
+  const subject = body?.subject != null ? String(body.subject) : undefined;
+  const bodyText =
+    body?.body_text != null
+      ? String(body.body_text)
+      : body?.bodyText != null
+        ? String(body.bodyText)
+        : undefined;
 
   const { data: invoice, error } = await supabase
     .from("jessica_invoices")
@@ -47,7 +54,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     );
   }
 
-  const result = await sendJessicaInvoiceEmail(invoice as JessicaStoredInvoice, recipient);
+  const result = await sendJessicaInvoiceEmail(invoice as JessicaStoredInvoice, {
+    recipientEmail: recipient,
+    subject,
+    bodyText,
+  });
   if (!result.success) {
     return NextResponse.json({ error: result.error ?? "Envoi impossible" }, { status: 502 });
   }

@@ -1,10 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
@@ -13,6 +8,11 @@ export async function POST(req: Request) {
 
     if (!nom || !email || !structure || !type_structure) {
       return NextResponse.json({ error: "Champs manquants" }, { status: 400 });
+    }
+
+    const supabase = getServiceRoleClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
     }
 
     const { error } = await supabase.from("demo_requests").insert({

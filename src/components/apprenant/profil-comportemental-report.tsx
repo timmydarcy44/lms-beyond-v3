@@ -2,28 +2,24 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Award, Lock, MessageCircle } from "lucide-react";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
-import { ProfilEdgeMaturityGauge } from "@/components/apprenant/profil-edge/profil-edge-maturity-gauge";
-import { ProfilEdgeHubActionPlan } from "@/components/apprenant/profil-edge/profil-edge-hub-action-plan";
+import { ProfileHeroCard } from "@/components/apprenant/profil-edge/hub/profile-hero-card";
+import { DailyMissionHeroCard } from "@/components/apprenant/profil-edge/hub/daily-mission-hero-card";
+import { ProfileProgressCard } from "@/components/apprenant/profil-edge/hub/profile-progress-card";
+import { ProfileNavigationSection } from "@/components/apprenant/profil-edge/hub/profile-navigation-section";
+import { SkillsSummaryCard } from "@/components/apprenant/profil-edge/hub/skills-summary-card";
+import { AchievementsCard } from "@/components/apprenant/profil-edge/hub/achievements-card";
+import { ExpertCoachingCard } from "@/components/apprenant/profil-edge/hub/expert-coaching-card";
+import { HubSurface } from "@/components/apprenant/profil-edge/hub/hub-ui";
 import { ProfilEdgeHubGaps } from "@/components/apprenant/profil-edge/profil-edge-hub-gaps";
-import { ProfilEdgeHubObjective } from "@/components/apprenant/profil-edge/profil-edge-hub-objective";
-import { ProfilEdgeHubResults } from "@/components/apprenant/profil-edge/profil-edge-hub-results";
-import { EdgeGamificationPanel } from "@/components/apprenant/profil-edge/edge-gamification-panel";
-import {
-  ProfilEdgeHubCard,
-  ProfilEdgeHubKicker,
-} from "@/components/apprenant/profil-edge/profil-edge-hub-card";
-import {
-  analyzeCareerMatching,
-} from "@/lib/career-profiles/career-profile-matching";
+import { analyzeCareerMatching } from "@/lib/career-profiles/career-profile-matching";
 import {
   getCareerProfileBySlug,
   type CareerProfile,
 } from "@/lib/career-profiles/career-profiles-data";
-import { getCoachingBookingHref } from "@/lib/particulier/coaching-config";
 import {
   computeProfilEdgeMaturity,
+  isProfessionalProjectComplete,
   parseProfessionalProject,
   PROFIL_EDGE_SECTION_HREFS,
   type Diplome,
@@ -34,14 +30,17 @@ import {
   extractCareerTitleFromProject,
   mergeObjectiveDetailsIntoProject,
 } from "@/lib/particulier/professional-project-fields";
-import { buildUserObjectiveDisplay, migrateLegacyProjectToV2 } from "@/lib/particulier/edge-professional-project-v2";
-import { buildProfilEdgeExplorations, isProfilEdgeComplete } from "@/lib/particulier/profil-edge-progress";
 import {
-  APPRENANT_PAGE_SHELL,
-  CONNECT_BTN_PRIMARY,
-  CONNECT_BTN_SECONDARY,
-} from "@/lib/apprenant/connect-nav";
+  buildUserObjectiveDisplay,
+  migrateLegacyProjectToV2,
+} from "@/lib/particulier/edge-professional-project-v2";
+import {
+  buildProfilEdgeExplorations,
+  isProfilEdgeComplete,
+} from "@/lib/particulier/profil-edge-progress";
+import { APPRENANT_PAGE_SHELL, CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { StoredHardSkillMeta } from "@/lib/hard-skills/hard-skills-portfolio";
 
 async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
   try {
@@ -147,7 +146,10 @@ export function ProfilComportementalReport() {
       setSelectedCareer(null);
     }
 
-    const completion = profile?.cross_profile_completion as { badge_id?: string; badge_awarded_at?: string } | null;
+    const completion = profile?.cross_profile_completion as {
+      badge_id?: string;
+      badge_awarded_at?: string;
+    } | null;
     const testsComplete = Boolean(discRes.data?.scores && idmcRes.data?.scores && softRes.data?.scores);
     setBadgeAwarded(Boolean(testsComplete && completion?.badge_awarded_at));
 
@@ -228,7 +230,16 @@ export function ProfilComportementalReport() {
       diplomas,
       hasIdmc,
     });
-  }, [discScores, selectedCareer, softSkillsScores, hardSkills, skillsMetadata, experiences, diplomas, hasIdmc]);
+  }, [
+    discScores,
+    selectedCareer,
+    softSkillsScores,
+    hardSkills,
+    skillsMetadata,
+    experiences,
+    diplomas,
+    hasIdmc,
+  ]);
 
   const objectiveLabel =
     buildUserObjectiveDisplay(professionalProject) ||
@@ -236,136 +247,89 @@ export function ProfilComportementalReport() {
     selectedCareer?.title ||
     "votre objectif professionnel";
 
+  const hasProject =
+    isProfessionalProjectComplete(professionalProject, typeProfil) ||
+    Boolean(buildUserObjectiveDisplay(professionalProject));
+
   if (loading) {
     return <p className="text-sm text-white/50">Chargement de votre Profil EDGE…</p>;
   }
 
   if (!discScores) {
     return (
-      <ProfilEdgeHubCard className="max-w-lg gap-5">
-        <ProfilEdgeHubKicker>Profil EDGE</ProfilEdgeHubKicker>
+      <HubSurface tone="action" className="mx-auto max-w-lg space-y-4">
+        <p className="text-[12px] text-white/45">Profil EDGE</p>
         <p className="text-[17px] leading-relaxed text-white/70">
           Complétez d&apos;abord le test comportemental pour accéder à votre parcours EDGE.
         </p>
-        <Link href="/dashboard/apprenant/test-comportemental-intro" className={`${CONNECT_BTN_PRIMARY} w-fit`}>
+        <Link
+          href="/dashboard/apprenant/test-comportemental-intro"
+          className={`${CONNECT_BTN_PRIMARY} w-fit`}
+        >
           Passer le test
         </Link>
-      </ProfilEdgeHubCard>
+      </HubSurface>
     );
   }
 
   return (
-    <div className={`${APPRENANT_PAGE_SHELL} mx-auto max-w-5xl pb-16`}>
-      <header className="space-y-3 pb-2">
-        <ProfilEdgeHubKicker>Mon parcours</ProfilEdgeHubKicker>
-        <h1 className="text-[clamp(1.75rem,4vw,2.5rem)] font-semibold tracking-[-0.03em] text-white">
-          Mon Profil EDGE
-        </h1>
-        <p className="max-w-2xl text-[15px] leading-relaxed text-white/45">
-          Suivez votre progression vers {objectiveLabel}. Une étape à la fois.
-        </p>
+    <div className={`${APPRENANT_PAGE_SHELL} mx-auto max-w-[42rem] space-y-10 pb-20 md:max-w-3xl md:space-y-12`}>
+      {/* Shell header already shows title — keep page lead minimal */}
+      <header className="space-y-1">
+        <p className="text-[13px] text-white/40">Votre espace personnel</p>
+        <h1 className="sr-only">Mon Profil EDGE</h1>
       </header>
 
-      {matching && selectedCareer ? (
-        <EdgeGamificationPanel matching={matching} objective={objectiveLabel} />
-      ) : null}
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ProfilEdgeHubObjective
-          project={professionalProject}
-          referentialTitle={selectedCareer?.title ?? null}
-        />
-        {matching && selectedCareer ? <ProfilEdgeHubResults matching={matching} /> : null}
-      </div>
+      <ProfileHeroCard
+        objectiveLabel={objectiveLabel}
+        referentialTitle={selectedCareer?.title ?? null}
+        matching={matching}
+        hasProject={hasProject}
+      />
 
       {!selectedCareer && extractCareerTitleFromProject(typeProfil, professionalProject) ? (
-        <ProfilEdgeHubCard variant="muted" className="gap-3">
-          <p className="text-[15px] leading-relaxed text-white/60">
-            Votre projet n&apos;a pas encore été analysé.{" "}
-            <Link href={PROFIL_EDGE_SECTION_HREFS.projet} className="font-medium text-[#8BB4FF] hover:underline">
-              Enregistrez votre projet professionnel
-            </Link>{" "}
-            pour activer l&apos;analyse de compatibilité.
-          </p>
-        </ProfilEdgeHubCard>
+        <HubSurface tone="quiet" className="text-[14px] leading-relaxed text-white/55">
+          Votre projet n&apos;a pas encore été analysé.{" "}
+          <Link href={PROFIL_EDGE_SECTION_HREFS.projet} className="font-medium text-white hover:underline">
+            Enregistrez votre projet professionnel
+          </Link>{" "}
+          pour activer l&apos;alignement métier.
+        </HubSurface>
       ) : null}
 
-      <ProfilEdgeMaturityGauge
+      {matching && selectedCareer ? (
+        <DailyMissionHeroCard matching={matching} objective={objectiveLabel} />
+      ) : null}
+
+      <ProfileProgressCard maturity={maturity} />
+
+      {matching && selectedCareer ? (
+        <section id="plan-action" className="scroll-mt-24 space-y-4">
+          <ProfilEdgeHubGaps matching={matching} objectiveLabel={objectiveLabel} />
+        </section>
+      ) : null}
+
+      <ProfileNavigationSection
         maturity={maturity}
         testsDone={testsDone}
         experiencesCount={experiences.length}
         diplomasCount={diplomas.length}
         hardSkillsCount={hardSkills.length}
+        projectLabel={hasProject ? objectiveLabel : null}
       />
 
-      {matching && selectedCareer ? (
-        <>
-          <ProfilEdgeHubGaps matching={matching} objectiveLabel={objectiveLabel} />
-          <ProfilEdgeHubActionPlan matching={matching} />
-        </>
-      ) : null}
+      <SkillsSummaryCard
+        hardSkills={hardSkills}
+        skillsMetadata={skillsMetadata as Record<string, StoredHardSkillMeta>}
+      />
 
-      <ProfilEdgeHubCard className="gap-5">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06]">
-            {profilTestsComplete && badgeAwarded ? (
-              <Award className="h-6 w-6 text-[#FF3B30]" />
-            ) : (
-              <Lock className="h-6 w-6 text-white/35" />
-            )}
-          </div>
-          <div>
-            <ProfilEdgeHubKicker>Reconnaissance</ProfilEdgeHubKicker>
-            {!profilTestsComplete ? (
-              <>
-                <p className="mt-2 text-xl font-semibold text-white">Profil EDGE en cours</p>
-                <p className="mt-2 text-[14px] leading-relaxed text-white/50">
-                  Le badge est délivré après les 3 tests EDGE : profil comportemental, soft skills et
-                  motivation / fonctionnement.
-                </p>
-              </>
-            ) : badgeAwarded ? (
-              <>
-                <p className="mt-2 text-xl font-semibold text-white">{badgeName}</p>
-                <p className="mt-2 text-[14px] text-white/50">Votre profil comportemental est certifié.</p>
-              </>
-            ) : (
-              <>
-                <p className="mt-2 text-xl font-semibold text-white">Aucun badge disponible pour le moment</p>
-                <p className="mt-2 text-[14px] text-white/50">Complétez les explorations pour débloquer votre badge.</p>
-              </>
-            )}
-          </div>
-        </div>
-        {badgeAwarded ? (
-          <Link href="/dashboard/apprenant/badges" className={`${CONNECT_BTN_SECONDARY} w-fit`}>
-            Voir mon Wallet
-          </Link>
-        ) : null}
-      </ProfilEdgeHubCard>
+      <AchievementsCard
+        testsComplete={profilTestsComplete}
+        badgeAwarded={badgeAwarded}
+        badgeName={badgeName}
+      />
 
-      {matching && selectedCareer ? (
-        <ProfilEdgeHubCard variant="accent" className="gap-5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#3D7BFF]/20 text-[#8BB4FF]">
-            <MessageCircle className="h-6 w-6" />
-          </div>
-          <div>
-            <ProfilEdgeHubKicker>Accompagnement</ProfilEdgeHubKicker>
-            <p className="mt-2 text-xl font-semibold text-white">Accélérer votre progression</p>
-            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-white/55">
-              Un spécialiste EDGE peut vous accompagner sur vos écarts prioritaires.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href={getCoachingBookingHref("progression")} className={CONNECT_BTN_PRIMARY}>
-              Être accompagné par un spécialiste EDGE
-            </Link>
-            <Link href="/dashboard/apprenant/coaching" className={CONNECT_BTN_SECONDARY}>
-              Découvrir les formules
-            </Link>
-          </div>
-        </ProfilEdgeHubCard>
-      ) : null}
+      {matching && selectedCareer ? <ExpertCoachingCard /> : null}
     </div>
   );
 }

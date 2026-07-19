@@ -7,6 +7,7 @@ import { PROGRAMMES, programmePresentationHref } from "@/lib/jessica-contentin/p
 import { GoogleReviewsSlider } from "@/components/jessica-contentin/google-reviews-slider";
 import { JessicaHomeAccompagnementSection } from "@/components/jessica-contentin/jessica-home-accompagnement-section";
 import { JessicaFullWidthVideoSection } from "@/components/jessica-contentin/jessica-full-width-video-section";
+import { JessicaPourquoiConsulterSection } from "@/components/jessica-contentin/jessica-pourquoi-consulter-section";
 import { motion } from "framer-motion";
 import Script from "next/script";
 
@@ -50,6 +51,8 @@ export default function JessicaContentinHomePage() {
       <JessicaHomeAccompagnementSection />
 
       <JessicaHomePresentation />
+
+      <JessicaPourquoiConsulterSection />
 
       <motion.section
         initial={{ opacity: 0, y: 24 }}

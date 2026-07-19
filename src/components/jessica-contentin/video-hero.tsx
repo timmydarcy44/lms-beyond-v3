@@ -74,18 +74,38 @@ export function VideoHero() {
           >
             Professeure en santé • Psychopédagogue • Certifiée en neuroéducation
           </p>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="mt-6 max-w-2xl text-base leading-relaxed text-[#2F2A25]/85 md:text-xl"
+          <p
+            className="mt-2 max-w-2xl text-sm leading-relaxed text-[#5C5348]/90 md:text-base"
             style={{
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
             }}
           >
-            J&apos;accompagne les enfants, adolescents, étudiants et familles afin de mieux comprendre leur fonctionnement
-            et de développer des stratégies adaptées à leurs besoins.
+            Une approche fondée sur les neurosciences cognitives et les sciences de l&apos;apprentissage.
+          </p>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.35 }}
+            className="mt-6 max-w-2xl text-2xl font-semibold leading-snug tracking-tight text-[#2F2A25] md:text-3xl lg:text-[2.15rem]"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+            }}
+          >
+            Comprendre le fonctionnement pour individualiser l&apos;accompagnement.
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.45 }}
+            className="mt-4 max-w-2xl text-base leading-relaxed text-[#2F2A25]/85 md:text-xl"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
+            }}
+          >
+            Chaque accompagnement est fondé sur une compréhension individualisée du fonctionnement cognitif,
+            attentionnel et émotionnel.
           </motion.p>
 
           <motion.div

@@ -27,7 +27,7 @@ export function JessicaHomePresentation() {
               Professeure en santé • Psychopédagogue • Certifiée en neuroéducation
             </p>
             <p className="mt-2 text-base text-[#5C5348] md:text-lg">
-              Une approche globale centrée sur les apprentissages, les émotions et le fonctionnement cognitif.
+              Une approche fondée sur les neurosciences cognitives et les sciences de l&apos;apprentissage.
             </p>
           </div>
 
@@ -133,9 +133,10 @@ export function JessicaHomePresentation() {
           </div>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            Au-delà des difficultés rencontrées, ma démarche vise avant tout à permettre à chacun de mieux comprendre son
-            fonctionnement afin de développer des stratégies adaptées, renforcer son autonomie et mobiliser pleinement ses
-            ressources dans les différents domaines de son quotidien.
+            Au-delà des difficultés rencontrées, ma démarche vise avant tout à permettre à chacun de{" "}
+            <strong className="font-semibold text-[#2F2A25]">mieux comprendre son fonctionnement</strong> afin
+            de développer des stratégies adaptées, renforcer son autonomie et mobiliser pleinement ses ressources
+            dans les différents domaines de son quotidien.
           </p>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">

@@ -11,6 +11,9 @@ const HERO_IMAGE_URL =
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=1920&q=80";
 
+const FONT =
+  '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif';
+
 export function VideoHero() {
   const [mediaFailed, setMediaFailed] = useState(false);
 
@@ -25,11 +28,8 @@ export function VideoHero() {
     >
       <div className="absolute inset-0">
         {mediaFailed ? (
-          <img
-            src={FALLBACK_IMAGE}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={FALLBACK_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
           <>
             <Image
@@ -47,7 +47,12 @@ export function VideoHero() {
             />
           </>
         )}
-        {mediaFailed ? <div className="absolute inset-0 bg-[#F8F2EA]/80" /> : null}
+        {/* Lisibilité du texte blanc sans encadré */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/55 via-black/30 to-transparent md:from-black/50 md:via-black/20"
+          aria-hidden
+        />
+        {mediaFailed ? <div className="absolute inset-0 bg-[#2F2A25]/55" /> : null}
       </div>
 
       <div className="relative z-10 flex min-h-screen items-center px-6 pt-24 pb-16 lg:px-16">
@@ -56,41 +61,15 @@ export function VideoHero() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="max-w-3xl rounded-2xl border border-white/55 bg-white/20 p-6 shadow-[0_18px_60px_-28px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8"
+          className="max-w-2xl"
         >
-          <p
-            className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9A7B52] md:text-base"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-            }}
-          >
-            JESSICA CONTENTIN
-          </p>
-          <p
-            className="mt-2 text-base font-medium text-[#5C5348] md:text-lg"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-            }}
-          >
-            Professeure en santé • Psychopédagogue • Certifiée en neuroéducation
-          </p>
-          <p
-            className="mt-2 max-w-2xl text-sm leading-relaxed text-[#5C5348]/90 md:text-base"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-            }}
-          >
-            Une approche fondée sur les neurosciences cognitives et les sciences de l&apos;apprentissage.
-          </p>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.35 }}
-            className="mt-6 max-w-2xl text-2xl font-semibold leading-snug tracking-tight text-[#2F2A25] md:text-3xl lg:text-[2.15rem]"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-            }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="text-3xl font-semibold leading-[1.15] tracking-tight text-white md:text-4xl lg:text-[2.75rem]"
+            style={{ fontFamily: FONT }}
           >
             Comprendre le fonctionnement pour individualiser l&apos;accompagnement.
           </motion.h1>
@@ -98,41 +77,26 @@ export function VideoHero() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.45 }}
-            className="mt-4 max-w-2xl text-base leading-relaxed text-[#2F2A25]/85 md:text-xl"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-            }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mt-5 max-w-xl text-base leading-relaxed text-white/90 md:text-lg"
+            style={{ fontFamily: FONT }}
           >
-            Chaque accompagnement est fondé sur une compréhension individualisée du fonctionnement cognitif,
-            attentionnel et émotionnel.
+            Chaque accompagnement est fondé sur une compréhension individualisée du fonctionnement
+            cognitif, attentionnel et émotionnel.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-8 flex flex-wrap gap-3"
+            transition={{ duration: 0.6, delay: 0.55 }}
+            className="mt-8"
           >
             <Button
               asChild
               size="lg"
-              variant="outline"
-              className="rounded-full border-[#C6A664]/60 bg-white px-8 py-6 text-base text-[#2F2A25] hover:bg-[#FDF9F3] md:text-lg"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              }}
-            >
-              <a href="#parcours">Découvrir les accompagnements</a>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              className="rounded-full bg-[#C4704B] px-8 py-6 text-base text-white hover:bg-[#A85A38] md:text-lg"
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-              }}
+              className="rounded-full bg-[#C4704B] px-8 py-6 text-base text-white shadow-[0_12px_32px_-12px_rgba(196,112,75,0.65)] hover:bg-[#A85A38] md:text-lg"
+              style={{ fontFamily: FONT }}
             >
               <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
                 Prendre rendez-vous

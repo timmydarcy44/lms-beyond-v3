@@ -102,7 +102,7 @@ export default function ClubEventsPage() {
           </div>
           <button
             onClick={() => setShowAddEvent(true)}
-            className="flex items-center gap-2 rounded-xl bg-[#C8102E] px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-[#a50d26]"
+            className="flex items-center gap-2 rounded-xl bg-[#EAB308] px-4 py-2 text-sm font-semibold text-[#0d1b2e] transition-all hover:bg-[#CA8A04]"
           >
             + Ajouter un événement
           </button>

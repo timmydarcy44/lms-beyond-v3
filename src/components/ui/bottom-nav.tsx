@@ -31,7 +31,7 @@ interface BottomNavProps {
   activeColor?: string;
 }
 
-export default function BottomNav({ variant = "club", activeColor = "#C8102E" }: BottomNavProps) {
+export default function BottomNav({ variant = "club", activeColor = "#EAB308" }: BottomNavProps) {
   const pathname = usePathname();
   const items = variant === "partenaire" ? partnerNav : clubNav;
 

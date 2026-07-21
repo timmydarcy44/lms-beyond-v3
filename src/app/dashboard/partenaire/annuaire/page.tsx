@@ -130,7 +130,7 @@ export default function PartenaireAnnuairePage() {
             <button
               key={partner.nom}
               onClick={() => router.push(`/dashboard/partenaire/annuaire/${slugify(partner.nom)}?tab=contact`)}
-              className="group cursor-pointer rounded-2xl border border-white/10 bg-[#111827] p-5 text-left transition-all hover:border-[#C8102E]/50"
+              className="group cursor-pointer rounded-2xl border border-white/10 bg-[#111827] p-5 text-left transition-all hover:border-[#EAB308]/50"
               type="button"
             >
               <div className="flex items-start justify-between">
@@ -158,7 +158,7 @@ export default function PartenaireAnnuairePage() {
                 <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">{partner.secteur}</span>
               </div>
               <div className="mt-4">
-              <span className="block w-full rounded-full bg-[#C8102E]/20 px-4 py-1.5 text-center text-sm text-[#C8102E] transition-all group-hover:bg-[#C8102E] group-hover:text-white">
+              <span className="block w-full rounded-full bg-[#EAB308]/20 px-4 py-1.5 text-center text-sm font-semibold text-[#EAB308] transition-all group-hover:bg-[#EAB308] group-hover:text-[#0d1b2e]">
                 🤝 Proposer un deal
               </span>
               </div>

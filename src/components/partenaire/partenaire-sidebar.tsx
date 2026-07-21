@@ -37,15 +37,18 @@ const navItems = [
   { label: "Annuaire partenaires", href: "/dashboard/partenaire/annuaire", icon: Users2 },
 ];
 
+const CLUB_PRIMARY = "#EAB308";
+const CLUB_TEXT = "#0d1b2e";
+
 export function PartenaireSidebar({ club, partner, activeItem, onClose }: PartenaireSidebarProps) {
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[220px] border-r border-white/10 bg-[#0d1b2e]">
+    <aside className="fixed left-0 top-0 bottom-0 w-[220px] border-r border-[#EAB308]/30 bg-[#1B2A4A]">
       <div className="flex h-full flex-col px-4 py-6 text-white">
         <div className="flex items-center gap-3">
           {club.logoUrl ? (
             <img src={club.logoUrl} alt={club.name} className="h-10 w-10 rounded-full object-cover" />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EAB308] text-sm font-bold text-[#0d1b2e]">
               {club.initials}
             </div>
           )}
@@ -68,8 +71,15 @@ export function PartenaireSidebar({ club, partner, activeItem, onClose }: Parten
                 onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all",
-                  isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+                  isActive
+                    ? "font-semibold"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                 )}
+                style={
+                  isActive
+                    ? { backgroundColor: CLUB_PRIMARY, color: CLUB_TEXT }
+                    : undefined
+                }
               >
                 <Icon className="h-4 w-4" />
                 <span>{item.label}</span>

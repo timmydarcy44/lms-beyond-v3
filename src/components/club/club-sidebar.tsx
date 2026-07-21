@@ -33,18 +33,24 @@ const navItems = [
     label: "Rapport DNCG",
     href: "/dashboard/club/dncg",
     icon: Shield,
-    activeColor: "#C8102E",
   },
 ];
 
 export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {
   return (
-    <aside className="fixed left-4 top-4 bottom-4 z-50 w-[220px] overflow-hidden rounded-2xl border border-[#C8102E]/30 bg-[#1B2A4A] backdrop-blur-2xl">
+    <aside
+      className="fixed left-4 top-4 bottom-4 z-50 w-[220px] overflow-hidden rounded-2xl border bg-[#1B2A4A] backdrop-blur-2xl"
+      style={{ borderColor: `${theme.couleur_primaire}4D` }}
+    >
       <div className="flex h-full flex-col px-4 py-5 text-white">
         <div className="flex flex-col items-center text-center">
           <div className="text-lg font-black tracking-tight text-white">{theme.app_name}</div>
-          <div className="mt-2 text-sm font-semibold text-white/80">{theme.nom}</div>
-          <div className="text-xs text-white/50">{theme.division}</div>
+          {theme.nom !== theme.app_name ? (
+            <div className="mt-2 text-sm font-semibold text-white/80">{theme.nom}</div>
+          ) : null}
+          <div className={cn("text-xs text-white/50", theme.nom === theme.app_name && "mt-2")}>
+            {theme.division}
+          </div>
         </div>
 
         <div className="my-5 h-px bg-white/10" />
@@ -60,12 +66,15 @@ export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {
                 onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
-                  isActive ? "font-semibold text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                  isActive
+                    ? "font-semibold"
+                    : "text-white/70 hover:bg-white/10 hover:text-white",
                 )}
                 style={
                   isActive
                     ? {
-                        backgroundColor: item.activeColor ?? theme.couleur_primaire,
+                        backgroundColor: theme.couleur_primaire,
+                        color: theme.couleur_texte || "#0d1b2e",
                       }
                     : undefined
                 }

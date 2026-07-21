@@ -71,7 +71,7 @@ export function ClassementWidget() {
                 key={row.club}
                 className={cn(
                   "border-t border-white/5",
-                  row.isClub && "bg-[#C8102E]/20 border border-[#C8102E]/40 font-bold text-white",
+                  row.isClub && "bg-[#EAB308]/20 border border-[#EAB308]/40 font-bold text-white",
                   !row.isClub && row.pos === 1 && "bg-green-500/10 text-green-300/70",
                   !row.isClub && row.pos >= 12 && "bg-red-500/10 text-red-300/70"
                 )}

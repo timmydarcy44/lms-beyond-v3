@@ -54,15 +54,15 @@ const demoMatches = [
   { date: "2025-09-29", opponent: "US Hérouville", home: "Extérieur", score_nous: 0, score_eux: 0, affluence: null },
   { date: "2025-10-13", opponent: "SO Caennais", home: "Domicile", score_nous: 3, score_eux: 1, affluence: 510 },
   { date: "2025-10-27", opponent: "FC Alençon", home: "Extérieur", score_nous: 1, score_eux: 2, affluence: null },
-  { date: "2025-11-10", opponent: "Bayeux FC", home: "Domicile", score_nous: 2, score_eux: 0, affluence: 380 },
+  { date: "2025-11-10", opponent: "US Granville", home: "Domicile", score_nous: 2, score_eux: 0, affluence: 380 },
   { date: "2026-03-15", opponent: "FC Caen B", home: "Domicile", score_nous: null, score_eux: null, affluence: null },
 ];
 
 const demoClub = {
   id: "demo-club",
-  nom: "SU Dives Cabourg",
+  nom: "Bayeux FC",
   division: "National 3",
-  slug: "su-dives-cabourg",
+  slug: "bayeux-fc",
   contact_prenom: "Responsable",
 };
 
@@ -90,7 +90,7 @@ export default function ClubDashboardPage() {
     colonne_tunnel: "prospects",
   });
   const theme = useMemo(
-    () => getClubTheme(club?.slug ?? club?.code ?? club?.nom_slug ?? "su-dives-cabourg"),
+    () => getClubTheme(club?.slug ?? club?.code ?? club?.nom_slug ?? "bayeux-fc"),
     [club?.slug, club?.code, club?.nom_slug]
   );
   useEffect(() => {
@@ -225,7 +225,7 @@ export default function ClubDashboardPage() {
     <ClubLayout activeItem="Dashboard">
       <div className="-mx-4 -my-4 min-h-screen bg-[#0d1b2e] px-4 pb-4 pt-6 text-white lg:-mx-8 lg:-my-8 lg:px-8 lg:pb-8 lg:pt-8">
         <section className="relative overflow-hidden rounded-3xl">
-          <div className="h-[250px] bg-gradient-to-r from-[#1B2A4A] to-[#C8102E] lg:h-[500px]" />
+          <div className="h-[250px] bg-gradient-to-r from-[#1B2A4A] to-[#EAB308] lg:h-[500px]" />
           <div className="absolute inset-0 flex flex-col justify-between p-6 text-white lg:flex-row lg:items-center lg:p-10">
             <div>
               <span className="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest">
@@ -254,7 +254,7 @@ export default function ClubDashboardPage() {
             >
               <div
                 className={`text-xl font-black lg:text-3xl ${
-                  kpi.highlight ? "text-[#C8102E]" : "text-white"
+                  kpi.highlight ? "text-[#EAB308]" : "text-white"
                 }`}
               >
                 {kpi.value}
@@ -262,7 +262,7 @@ export default function ClubDashboardPage() {
               <div className="mt-1 flex items-center gap-2 text-xs uppercase tracking-wider text-white/60">
                 {kpi.label}
                 {kpi.badge && Number(kpi.value) > 0 && (
-                  <span className="rounded-full bg-[#C8102E]/10 px-2 py-0.5 text-[10px] font-semibold text-[#C8102E]">
+                  <span className="rounded-full bg-[#EAB308]/10 px-2 py-0.5 text-[10px] font-semibold text-[#EAB308]">
                     +{kpi.value}
                   </span>
                 )}
@@ -348,7 +348,7 @@ export default function ClubDashboardPage() {
                           {match.attendance}
                         </span>
                       ) : match.home === "Domicile" ? (
-                        <button className="text-xs text-[#C8102E]">Saisir</button>
+                        <button className="text-xs text-[#EAB308]">Saisir</button>
                       ) : (
                         "—"
                       )}
@@ -411,7 +411,7 @@ export default function ClubDashboardPage() {
           {activities.map((activity) => (
               <div key={activity.label} className="flex items-center justify-between text-sm text-white/80">
                 <div className="flex items-center gap-3">
-                  <span className="h-2 w-2 rounded-full bg-[#C8102E]" />
+                  <span className="h-2 w-2 rounded-full bg-[#EAB308]" />
                   <span>{activity.label}</span>
                 </div>
                 <span className="text-white/50">{activity.time}</span>

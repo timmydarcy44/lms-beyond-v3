@@ -142,7 +142,7 @@ export default function ClubDncgPage() {
           produits_partenariats: "180000",
           charges_masse_salariale: "210000",
           resultat_n1: "15000",
-          nom_officiel: "SU Dives Cabourg",
+          nom_officiel: "Bayeux FC",
           numero_siret: "12345678900011",
           numero_fff: "012345",
           nb_licencies: "420",
@@ -260,7 +260,7 @@ export default function ClubDncgPage() {
               <div className="text-lg font-semibold text-white">Saison 2025-2026</div>
               <div className="mt-3 h-3 w-full rounded-full bg-white/10">
                 <div
-                  className="h-3 rounded-full bg-gradient-to-r from-[#C8102E] to-orange-500"
+                  className="h-3 rounded-full bg-gradient-to-r from-[#EAB308] to-orange-500"
                   style={{ width: `${completionPercent}%` }}
                 />
               </div>
@@ -268,7 +268,7 @@ export default function ClubDncgPage() {
             </div>
             <button
               onClick={handleSave}
-              className="rounded-full bg-[#C8102E] px-6 py-2.5 text-sm font-semibold text-white"
+              className="rounded-full bg-[#EAB308] px-6 py-2.5 text-sm font-semibold text-[#0d1b2e]"
             >
               Sauvegarder
             </button>

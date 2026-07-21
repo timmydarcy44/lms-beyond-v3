@@ -11,7 +11,7 @@ import { getMyClubContext, getClubPartners } from "@/lib/supabase/club-queries";
 const filters = ["Tous", "Signés", "Prospects", "En négociation", "À renouveler"];
 
 const statusStyles: Record<string, string> = {
-  "Signé": "bg-[#C8102E]/20 text-[#C8102E] border border-[#C8102E]/30",
+  "Signé": "bg-[#EAB308]/20 text-[#EAB308] border border-[#EAB308]/30",
   "Prospect": "bg-white/10 text-white/60",
   "En négociation": "bg-white/20 text-white border border-white/30",
   "À renouveler": "bg-red-500/20 text-red-300 border border-red-400/30 animate-pulse",
@@ -123,7 +123,7 @@ export default function ClubPartnersPage() {
               {partners.map((partner) => (
                 <div
                   key={partner.slug || partner.id}
-                  className="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-lg backdrop-blur-md transition-all duration-200 hover:border-[#C8102E]/40 hover:bg-white/20"
+                  className="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-lg backdrop-blur-md transition-all duration-200 hover:border-[#EAB308]/40 hover:bg-white/20"
                 >
                 <div className="flex items-center gap-3">
                   <div
@@ -139,7 +139,7 @@ export default function ClubPartnersPage() {
                     </span>
                   </div>
                 </div>
-                <div className="mt-3 text-lg font-black text-[#C8102E]">
+                <div className="mt-3 text-lg font-black text-[#EAB308]">
                   {partner.valeur.toLocaleString("fr-FR")}€
                 </div>
                 <div className="mt-3 text-sm text-white/60">

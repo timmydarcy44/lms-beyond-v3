@@ -403,7 +403,7 @@ export default function ClubNewsPage() {
                         checked={ctaStyle === "club"}
                         onChange={() => setCtaStyle("club")}
                       />
-                      Rouge club
+                      Jaune club
                     </label>
                     <label className="flex items-center gap-2">
                       <input
@@ -426,7 +426,7 @@ export default function ClubNewsPage() {
                     <button
                       className={`rounded-full px-4 py-2 text-sm ${
                         ctaStyle === "club"
-                          ? "bg-[#C8102E] text-white"
+                          ? "bg-[#EAB308] text-[#0d1b2e]"
                           : ctaStyle === "navy"
                             ? "bg-[#1B2A4A] text-white"
                             : "border border-white text-white"

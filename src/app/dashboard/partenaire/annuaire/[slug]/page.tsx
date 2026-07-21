@@ -98,7 +98,7 @@ function PartenaireDetailContent() {
     if (slug === "normandie-energie") {
       return {
         background:
-          "linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #e94560 100%)",
+          "linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #EAB308 100%)",
       };
     }
     return {
@@ -137,7 +137,7 @@ function PartenaireDetailContent() {
             {partenaire.logo ? (
               <img src={partenaire.logo} alt={partenaire.nom} className="h-16 w-16 rounded-xl object-cover" />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-yellow-500 text-lg font-black text-white lg:text-2xl">
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#EAB308] text-lg font-black text-[#0d1b2e] lg:text-2xl">
                 {partenaire.initiales}
               </div>
             )}
@@ -148,8 +148,8 @@ function PartenaireDetailContent() {
                 <span className="rounded-full bg-yellow-500/20 px-2 py-0.5 text-xs text-yellow-300">
                   ⚡ {partenaire.secteur}
                 </span>
-                <span className="rounded-full bg-[#C8102E]/20 px-2 py-0.5 text-xs text-[#C8102E]">
-                  Partenaire Maladrerie OS
+                <span className="rounded-full bg-[#EAB308]/20 px-2 py-0.5 text-xs text-[#EAB308]">
+                  Partenaire Bayeux FC
                 </span>
               </div>
             </div>
@@ -180,7 +180,7 @@ function PartenaireDetailContent() {
             >
               🌐 Site web
             </a>
-            <button className="rounded-full bg-[#C8102E] px-4 py-2 text-sm text-white">🤝 Proposer un deal</button>
+            <button className="rounded-full bg-[#EAB308] px-4 py-2 text-sm font-semibold text-[#0d1b2e]">🤝 Proposer un deal</button>
           </div>
         </div>
       </div>
@@ -204,8 +204,8 @@ function PartenaireDetailContent() {
       {activeTab === "about" && (
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-4 lg:grid-cols-[1fr_300px] lg:px-8 lg:py-8">
           <div>
-            <div className="border-l-4 border-[#C8102E] pl-6 text-lg font-light italic text-white/80 lg:text-2xl">
-              “Être partenaire de Maladrerie OS, c'est s'ancrer dans le tissu local...”
+            <div className="border-l-4 border-[#EAB308] pl-6 text-lg font-light italic text-white/80 lg:text-2xl">
+              “Être partenaire de Bayeux FC, c'est s'ancrer dans le tissu local...”
               <div className="mt-2 text-sm text-white/50">— Henri Blanc, Directeur Commercial</div>
             </div>
             <div className="mt-6 space-y-4 text-white/60 leading-relaxed">
@@ -214,7 +214,7 @@ function PartenaireDetailContent() {
               </p>
               <p>
                 Notre ancrage local est au cœur de notre identité — c'est pourquoi nous avons choisi de soutenir
-                Maladrerie OS, un club qui partage nos valeurs de proximité et d'engagement territorial.
+                Bayeux FC, un club qui partage nos valeurs de proximité et d'engagement territorial.
               </p>
             </div>
 
@@ -238,12 +238,12 @@ function PartenaireDetailContent() {
               {partenaire.services.map((service) => (
                 <div
                   key={service.titre}
-                  className="rounded-xl border border-transparent bg-[#111827] p-4 transition-all hover:border-[#C8102E]/40"
+                  className="rounded-xl border border-transparent bg-[#111827] p-4 transition-all hover:border-[#EAB308]/40"
                 >
                   <div className="text-lg lg:text-2xl">⚡</div>
                   <div className="mt-2 font-bold text-white">{service.titre}</div>
                   <div className="mt-1 text-sm text-white/60">{service.description}</div>
-                  <div className="mt-2 text-sm font-bold text-[#C8102E]">{service.prix}</div>
+                  <div className="mt-2 text-sm font-bold text-[#EAB308]">{service.prix}</div>
                 </div>
               ))}
             </div>
@@ -283,7 +283,7 @@ function PartenaireDetailContent() {
                   rows={3}
                   className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm text-white"
                 />
-                <button className="w-full rounded-xl bg-[#C8102E] px-4 py-2 text-sm text-white">Envoyer →</button>
+                <button className="w-full rounded-xl bg-[#EAB308] px-4 py-2 text-sm font-semibold text-[#0d1b2e]">Envoyer →</button>
               </div>
             </div>
             <div className="rounded-2xl bg-[#111827] p-5">

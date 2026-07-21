@@ -15,7 +15,7 @@ type ClubLayoutProps = {
 };
 
 export function ClubLayout({ children, activeItem, clubSlug }: ClubLayoutProps) {
-  const theme = getClubTheme(clubSlug ?? "su-dives-cabourg");
+  const theme = getClubTheme(clubSlug ?? "bayeux-fc");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (

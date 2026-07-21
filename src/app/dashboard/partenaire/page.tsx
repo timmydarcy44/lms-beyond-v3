@@ -34,7 +34,7 @@ const posts = [
     category: "Partenariat",
     title: "Bienvenue à notre nouveau partenaire !",
     text:
-      "Nous sommes fiers d'accueillir Normandie Énergie dans la famille Maladrerie OS. Un partenariat fort pour la saison 2025/2026.",
+      "Nous sommes fiers d'accueillir Normandie Énergie dans la famille Bayeux FC. Un partenariat fort pour la saison 2025/2026.",
     image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800",
     mentioned: false,
     likes: 23,
@@ -82,7 +82,7 @@ const posts = [
 const categoryStyles: Record<string, string> = {
   Résultat: "bg-green-500/20 text-green-300",
   Événement: "bg-blue-500/20 text-blue-300",
-  Partenariat: "bg-[#C8102E]/20 text-[#C8102E]",
+  Partenariat: "bg-[#EAB308]/20 text-[#EAB308]",
   Club: "bg-white/10 text-white/70",
 };
 
@@ -130,7 +130,7 @@ export default function PartenaireDashboardPage() {
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C8102E] text-xs font-bold text-white">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EAB308] text-xs font-bold text-[#0d1b2e]">
                     {partenaireClub.initials}
                   </div>
                 )}
@@ -147,7 +147,7 @@ export default function PartenaireDashboardPage() {
                 <div className="mb-1 text-base font-bold text-white">{post.title}</div>
                 <p className="text-sm leading-relaxed text-white/70">{post.text}</p>
                 {post.cta && (
-                  <button className="mt-3 rounded-full bg-[#C8102E] px-4 py-1.5 text-xs text-white">
+                  <button className="mt-3 rounded-full bg-[#EAB308] px-4 py-1.5 text-xs font-semibold text-[#0d1b2e]">
                     {post.cta}
                   </button>
                 )}
@@ -165,7 +165,7 @@ export default function PartenaireDashboardPage() {
                   </button>
                 </div>
                 {post.mentioned && (
-                  <span className="rounded-full bg-[#C8102E]/20 px-2 py-0.5 text-xs text-[#C8102E]">
+                  <span className="rounded-full bg-[#EAB308]/20 px-2 py-0.5 text-xs text-[#EAB308]">
                     Vous êtes mentionné
                   </span>
                 )}
@@ -189,10 +189,10 @@ export default function PartenaireDashboardPage() {
                 </div>
                 <div className="mt-4 text-xs text-white/60">Saison 2025/2026</div>
                 <div className="mt-2 h-1.5 rounded-full bg-white/10">
-                  <div className="h-1.5 w-[65%] rounded-full bg-[#C8102E]" />
+                  <div className="h-1.5 w-[65%] rounded-full bg-[#EAB308]" />
                 </div>
                 <div className="mt-2 text-xs text-white/50">65% de la saison écoulée</div>
-                <div className="mt-4 rounded-xl bg-[#C8102E]/10 p-3 text-xs text-white/70">
+                <div className="mt-4 rounded-xl bg-[#EAB308]/10 p-3 text-xs text-white/70">
                   <div className="font-semibold text-white">Soirée partenaires</div>
                   <div>28 mars — dans 21 jours</div>
                 </div>

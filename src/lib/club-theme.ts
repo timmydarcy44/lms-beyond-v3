@@ -13,37 +13,41 @@ export type ClubTheme = {
   division: string;
 };
 
+const DEFAULT_SLUG = "bayeux-fc";
+
 export const CLUB_THEMES: Record<string, ClubTheme> = {
-  "su-dives-cabourg": {
-    app_name: "Maladrerie OS",
-    nom: "SU Dives Cabourg",
-    slug: "su-dives-cabourg",
+  "bayeux-fc": {
+    app_name: "Bayeux FC",
+    nom: "Bayeux FC",
+    slug: "bayeux-fc",
     logo_url: null,
-    logo_initiales: "SD",
-    couleur_primaire: "#C8102E",
+    logo_initiales: "BFC",
+    /** Jaune club — remplace l’ancien rouge. */
+    couleur_primaire: "#EAB308",
     couleur_secondaire: "#1B2A4A",
     couleur_accent: "#FFFFFF",
-    couleur_texte: "#FFFFFF",
-    ville: "Dives-sur-Mer",
+    couleur_texte: "#0d1b2e",
+    ville: "Bayeux",
     division: "N3 — Normandie",
   },
-  "hac-football": {
-    app_name: "Maladrerie OS",
-    nom: "HAC Football",
-    slug: "hac-football",
+  /** Alias rétrocompat pour d’anciens slugs démo. */
+  "su-dives-cabourg": {
+    app_name: "Bayeux FC",
+    nom: "Bayeux FC",
+    slug: "bayeux-fc",
     logo_url: null,
-    logo_initiales: "HAC",
-    couleur_primaire: "#009AA6",
-    couleur_secondaire: "#1A1A1A",
+    logo_initiales: "BFC",
+    couleur_primaire: "#EAB308",
+    couleur_secondaire: "#1B2A4A",
     couleur_accent: "#FFFFFF",
-    couleur_texte: "#FFFFFF",
-    ville: "Le Havre",
-    division: "Ligue 1",
+    couleur_texte: "#0d1b2e",
+    ville: "Bayeux",
+    division: "N3 — Normandie",
   },
 };
 
 export function getClubTheme(slug: string): ClubTheme {
-  return CLUB_THEMES[slug] ?? CLUB_THEMES["su-dives-cabourg"];
+  return CLUB_THEMES[slug] ?? CLUB_THEMES[DEFAULT_SLUG];
 }
 
 export function getThemeVars(theme: ClubTheme): Record<string, string> {

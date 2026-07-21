@@ -29,7 +29,7 @@ export function PartenaireLayout({ children, club, partner, activeItem }: Parten
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0b1424] text-white">
+    <div className="flex h-screen overflow-hidden bg-[#0d1b2e] text-white">
       <MobileHeader title="Brasserie du Port" initials="BP" onMenuOpen={() => setDrawerOpen(true)} />
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
@@ -50,7 +50,7 @@ export function PartenaireLayout({ children, club, partner, activeItem }: Parten
         </main>
       </div>
 
-      <BottomNav variant="partenaire" activeColor="#C8102E" />
+      <BottomNav variant="partenaire" activeColor="#EAB308" />
     </div>
   );
 }

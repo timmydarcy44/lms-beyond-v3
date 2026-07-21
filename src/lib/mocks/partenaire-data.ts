@@ -39,11 +39,12 @@ export type PartnerEvent = {
 };
 
 export const partenaireClub: PartnerClub = {
-  id: "maladrerie-os",
-  name: "Maladrerie OS",
-  initials: "MO",
-  gradientFrom: "#C8102E",
-  gradientTo: "#1B2A4A",
+  id: "bayeux-fc",
+  name: "Bayeux FC",
+  initials: "BF",
+  /** Bleu → jaune (aligné dashboard club). */
+  gradientFrom: "#1B2A4A",
+  gradientTo: "#EAB308",
 };
 
 export const partenaireProfile: PartnerProfile = {

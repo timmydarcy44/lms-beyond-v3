@@ -354,7 +354,7 @@ export default function ClubAidesPage() {
   return (
     <ClubLayout activeItem="Aides & Formation">
       <div className="p-4 lg:p-8 pt-6 lg:pt-8 space-y-10">
-        <div className="mb-8 rounded-2xl border border-[#C8102E]/30 bg-gradient-to-br from-[#1a2942] to-[#0d1b2e] p-6">
+        <div className="mb-8 rounded-2xl border border-[#EAB308]/30 bg-gradient-to-br from-[#1a2942] to-[#0d1b2e] p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="mb-2 flex items-center gap-3">
@@ -372,7 +372,7 @@ export default function ClubAidesPage() {
             </div>
             <button
               onClick={() => setShowAudit(true)}
-              className="whitespace-nowrap rounded-xl bg-[#C8102E] px-6 py-3 font-semibold text-white transition-all hover:bg-[#a50d26]"
+              className="whitespace-nowrap rounded-xl bg-[#EAB308] px-6 py-3 font-semibold text-[#0d1b2e] transition-all hover:bg-[#CA8A04]"
             >
               Commencer l&apos;audit →
             </button>
@@ -390,7 +390,7 @@ export default function ClubAidesPage() {
               </div>
               <div className="rounded-xl bg-white/5 p-3">
                 <div className="mb-1 text-xs text-white/50">Score global</div>
-                <div className="text-sm font-semibold text-[#C8102E]">{auditResults.score}/100</div>
+                <div className="text-sm font-semibold text-[#EAB308]">{auditResults.score}/100</div>
               </div>
             </div>
           ) : null}
@@ -420,14 +420,14 @@ export default function ClubAidesPage() {
             <button className="mt-3 text-xs text-purple-300 underline">Simuler mon financement →</button>
           </div>
 
-          <div className="rounded-2xl border border-[#C8102E]/30 bg-gradient-to-br from-[#C8102E]/20 to-[#8B0000]/10 p-6">
+          <div className="rounded-2xl border border-[#EAB308]/30 bg-gradient-to-br from-[#EAB308]/20 to-[#A16207]/10 p-6">
             <div className="flex items-center gap-2">
-              <Medal className="h-5 w-5 text-[#C8102E]" />
-              <span className="rounded-full bg-[#C8102E]/20 px-3 py-1 text-xs text-[#C8102E]">Open Badges</span>
+              <Medal className="h-5 w-5 text-[#EAB308]" />
+              <span className="rounded-full bg-[#EAB308]/20 px-3 py-1 text-xs text-[#EAB308]">Open Badges</span>
             </div>
             <div className="mt-3 text-xl font-black text-white">Beyond Compétences</div>
             <div className="text-sm text-white/60">Compétences certifiées par Open Badge</div>
-            <div className="mt-3 text-xl font-black text-[#C8102E] lg:text-3xl">Jusqu'à 100% financé</div>
+            <div className="mt-3 text-xl font-black text-[#EAB308] lg:text-3xl">Jusqu'à 100% financé</div>
             <div className="mt-3 text-xs text-white/70">
               <ul className="space-y-1">
                 <li>• Référentiels validés par des pros du sport</li>
@@ -436,7 +436,7 @@ export default function ClubAidesPage() {
                 <li>• Éligible AFDAS Plan de Développement</li>
               </ul>
             </div>
-            <button className="mt-3 text-sm text-[#C8102E] underline">Voir les parcours Beyond →</button>
+            <button className="mt-3 text-sm text-[#EAB308] underline">Voir les parcours Beyond →</button>
           </div>
         </section>
 
@@ -476,7 +476,7 @@ export default function ClubAidesPage() {
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#1f2a44" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: "#94a3b8", fontSize: 12 }} />
-                    <Radar dataKey="value" stroke="#C8102E" fill="#C8102E" fillOpacity={0.3} />
+                    <Radar dataKey="value" stroke="#EAB308" fill="#EAB308" fillOpacity={0.3} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
@@ -484,7 +484,7 @@ export default function ClubAidesPage() {
                 <div className="rounded-xl bg-white/5 p-4">
                   <div className="text-xs text-white/50">Formation prioritaire</div>
                   <div className="text-sm font-semibold text-white">{auditResults.priorite1}</div>
-                  <button className="mt-3 rounded-full bg-[#C8102E] px-4 py-2 text-xs text-white">
+                  <button className="mt-3 rounded-full bg-[#EAB308] px-4 py-2 text-xs font-semibold text-[#0d1b2e]">
                     En savoir plus
                   </button>
                 </div>
@@ -582,7 +582,7 @@ export default function ClubAidesPage() {
             </button>
           </div>
 
-          <div className="rounded-2xl border border-[#C8102E]/30 bg-gradient-to-br from-[#C8102E]/20 to-[#8B0000]/10 p-6">
+          <div className="rounded-2xl border border-[#EAB308]/30 bg-gradient-to-br from-[#EAB308]/20 to-[#A16207]/10 p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white">B</div>
               <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs text-green-300">Éligible AFDAS</span>
@@ -592,7 +592,7 @@ export default function ClubAidesPage() {
               Référentiels validés par des professionnels du sport
             </div>
             <div className="my-4 h-px bg-white/10" />
-            <div className="text-sm font-bold uppercase tracking-wider text-[#C8102E]">Développement des revenus</div>
+            <div className="text-sm font-bold uppercase tracking-wider text-[#EAB308]">Développement des revenus</div>
             <div className="mt-2 flex flex-wrap gap-2 text-sm text-white">
               {[
                 "Prospecter de nouveaux partenaires",
@@ -603,13 +603,13 @@ export default function ClubAidesPage() {
               ].map((item) => (
                 <button
                   key={item}
-                  className="rounded-full bg-white/10 px-3 py-1 text-sm text-white hover:bg-[#C8102E]/30"
+                  className="rounded-full bg-white/10 px-3 py-1 text-sm text-white hover:bg-[#EAB308]/30"
                 >
                   {item}
                 </button>
               ))}
             </div>
-            <div className="mt-4 text-sm font-bold uppercase tracking-wider text-[#C8102E]">
+            <div className="mt-4 text-sm font-bold uppercase tracking-wider text-[#EAB308]">
               Communication & Réseaux
             </div>
             <div className="mt-2 flex flex-wrap gap-2 text-sm text-white">
@@ -621,7 +621,7 @@ export default function ClubAidesPage() {
               ].map((item) => (
                 <button
                   key={item}
-                  className="rounded-full bg-white/10 px-3 py-1 text-sm text-white hover:bg-[#C8102E]/30"
+                  className="rounded-full bg-white/10 px-3 py-1 text-sm text-white hover:bg-[#EAB308]/30"
                 >
                   {item}
                 </button>
@@ -629,14 +629,14 @@ export default function ClubAidesPage() {
             </div>
             <a
               href="/dashboard/formateur"
-              className="mt-4 inline-flex rounded-full bg-[#C8102E] px-5 py-2 text-sm font-semibold text-white"
+              className="mt-4 inline-flex rounded-full bg-[#EAB308] px-5 py-2 text-sm font-semibold text-[#0d1b2e]"
             >
               Voir tous les parcours Beyond →
             </a>
           </div>
         </section>
 
-        <section className="rounded-2xl bg-gradient-to-r from-[#C8102E] to-[#8B0000] p-4 lg:p-8">
+        <section className="rounded-2xl bg-gradient-to-r from-[#EAB308] to-[#A16207] p-4 lg:p-8">
           <div className="text-lg font-black text-white lg:text-2xl">Formez votre club avec Beyond</div>
           <div className="mt-2 max-w-2xl text-sm text-white/80">
             Parcours 100% en ligne, finançables AFDAS, conçus avec et pour les clubs sportifs professionnels et
@@ -653,7 +653,7 @@ export default function ClubAidesPage() {
           </div>
           <a
             href="mailto:contact@beyond.fr"
-            className="mt-6 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#8B0000]"
+            className="mt-6 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#A16207]"
           >
             Demander une démo Beyond
           </a>
@@ -695,7 +695,7 @@ export default function ClubAidesPage() {
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
                 <div
-                  className="h-full rounded-full bg-[#C8102E] transition-all"
+                  className="h-full rounded-full bg-[#EAB308] transition-all"
                   style={{
                     width: `${((currentQuestion + 1) / AUDIT_QUESTIONS.length) * 100}%`,
                   }}
@@ -705,7 +705,7 @@ export default function ClubAidesPage() {
 
             <div className="p-6">
               <div className="mb-2">
-                <span className="text-xs font-medium uppercase tracking-wider text-[#C8102E]">
+                <span className="text-xs font-medium uppercase tracking-wider text-[#EAB308]">
                   {AUDIT_QUESTIONS[currentQuestion].categorie}
                 </span>
               </div>
@@ -719,7 +719,7 @@ export default function ClubAidesPage() {
                     onClick={() => handleAnswer(currentQuestion, option.value)}
                     className={`w-full rounded-xl border p-4 text-left transition-all ${
                       answers[currentQuestion] === option.value
-                        ? "border-[#C8102E] bg-[#C8102E]/10 text-white"
+                        ? "border-[#EAB308] bg-[#EAB308]/10 text-white"
                         : "border-white/10 bg-white/5 text-white/70 hover:border-white/30"
                     }`}
                   >
@@ -740,7 +740,7 @@ export default function ClubAidesPage() {
                   <button
                     onClick={() => setCurrentQuestion(currentQuestion + 1)}
                     disabled={!answers[currentQuestion]}
-                    className="rounded-xl bg-[#C8102E] px-6 py-2 font-semibold text-white transition-all disabled:opacity-40"
+                    className="rounded-xl bg-[#EAB308] px-6 py-2 font-semibold text-[#0d1b2e] transition-all disabled:opacity-40"
                   >
                     Suivant →
                   </button>

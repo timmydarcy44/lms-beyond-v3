@@ -6,7 +6,7 @@ export async function GET() {
     { pos: 2, club: "FC Lisieux", pts: 45, j: 22, v: 13, n: 6, d: 3, bp: 38, bc: 22, diff: "+16" },
     {
       pos: 3,
-      club: "SU Dives Cabourg",
+      club: "Bayeux FC",
       pts: 41,
       j: 22,
       v: 12,
@@ -19,7 +19,7 @@ export async function GET() {
     },
     { pos: 4, club: "SO Caennais", pts: 38, j: 22, v: 11, n: 5, d: 6, bp: 33, bc: 28, diff: "+5" },
     { pos: 5, club: "AS Hérouville", pts: 35, j: 22, v: 10, n: 5, d: 7, bp: 31, bc: 30, diff: "+1" },
-    { pos: 6, club: "FC Bayeux", pts: 32, j: 22, v: 9, n: 5, d: 8, bp: 28, bc: 32, diff: "-4" },
+    { pos: 6, club: "US Dives", pts: 32, j: 22, v: 9, n: 5, d: 8, bp: 28, bc: 32, diff: "-4" },
     { pos: 7, club: "US Vire", pts: 29, j: 22, v: 8, n: 5, d: 9, bp: 26, bc: 34, diff: "-8" },
     { pos: 8, club: "FC Flers", pts: 26, j: 22, v: 7, n: 5, d: 10, bp: 24, bc: 36, diff: "-12" },
     { pos: 9, club: "Caen B", pts: 23, j: 22, v: 6, n: 5, d: 11, bp: 22, bc: 38, diff: "-16" },

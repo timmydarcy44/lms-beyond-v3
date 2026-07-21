@@ -413,7 +413,7 @@ export default function ClubOffersPage() {
               + Nouvelle prestation
             </button>
             <button
-              className="rounded-full bg-[#C8102E] px-6 py-3 text-base font-semibold text-white"
+              className="rounded-full bg-[#EAB308] px-6 py-3 text-base font-semibold text-[#0d1b2e]"
               onClick={() => setShowCustomOfferDialog(true)}
             >
               ✨ Créer une offre personnalisée
@@ -633,12 +633,12 @@ export default function ClubOffersPage() {
                 )}
               </div>
               <div className="my-2 h-px bg-white/10" />
-              <div className="text-xl font-black text-[#C8102E] lg:text-3xl">
+              <div className="text-xl font-black text-[#EAB308] lg:text-3xl">
                 {totalOffer.toLocaleString("fr-FR")}€
               </div>
               <div className="text-sm text-white/60">Total TTC : {totalOfferTtc.toLocaleString("fr-FR")}€</div>
               <button
-                className="w-full rounded-full bg-[#C8102E] px-4 py-2 text-sm font-semibold text-white"
+                className="w-full rounded-full bg-[#EAB308] px-4 py-2 text-sm font-semibold text-[#0d1b2e]"
                 onClick={saveCustomOffer}
               >
                 Sauvegarder l'offre
@@ -682,7 +682,7 @@ export default function ClubOffersPage() {
               Annuler
             </button>
             <button
-              className="rounded-full bg-[#C8102E] px-4 py-2 text-sm text-white"
+              className="rounded-full bg-[#EAB308] px-4 py-2 text-sm font-semibold text-[#0d1b2e]"
               onClick={addPrestation}
             >
               Ajouter

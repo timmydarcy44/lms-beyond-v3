@@ -3,8 +3,6 @@
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GOOGLE_REVIEW_COUNT } from "@/lib/jessica-contentin/google-reviews-data";
-
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
 export function JessicaFinalSocialProof() {
@@ -23,7 +21,7 @@ export function JessicaFinalSocialProof() {
           ))}
         </div>
         <p className="text-xl font-semibold tracking-tight text-[#2F2A25] md:text-2xl">
-          Plus de {GOOGLE_REVIEW_COUNT} familles nous ont déjà accordé leur confiance.
+          + de 100 familles accompagnées.
         </p>
         <Button
           asChild

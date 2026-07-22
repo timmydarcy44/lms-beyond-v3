@@ -43,15 +43,15 @@ export default function JessicaContentinHomePage() {
       <VideoHero />
       <JessicaHeroTrustBadges />
 
-      <JessicaHomePresentation />
-
-      <GoogleReviewsSection />
-
       <JessicaParcoursProgramCards
         cards={PARCOURS_CARDS}
         featuredVideoUrl={VIDEO_SOUS_PARCOURS}
         featuredVideoTitle="Un accompagnement personnalisé pour comprendre, ajuster et progresser"
       />
+
+      <JessicaHomePresentation />
+
+      <GoogleReviewsSection />
 
       <JessicaHomeAccompagnementSection />
 
@@ -103,7 +103,7 @@ export default function JessicaContentinHomePage() {
           <h2 className="text-3xl font-semibold text-[#2F2A25] md:text-4xl">Une expertise reconnue</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              "+ de 100 jeunes accompagnés",
+              "+ de 100 familles accompagnées",
               "Plus de dix ans d'expérience",
               "Spécialisée troubles du neurodéveloppement",
               "Professeure certifiée (CAPES)",

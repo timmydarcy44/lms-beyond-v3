@@ -409,10 +409,10 @@ export function JessicaContentinHeader() {
             <Button
               asChild
               className={cn(
-                "!rounded-full !px-6",
+                "!rounded-full !px-7 !py-5 !text-sm !font-semibold !shadow-[0_10px_28px_-12px_rgba(196,112,75,0.55)]",
                 headerOverHero
-                  ? "!border !border-white/90 !bg-white !text-[#2F2A25] hover:!bg-white/90"
-                  : "!border !border-[#C6A664] !bg-[#C6A664] !text-white hover:!bg-[#B88A44]",
+                  ? "!border-2 !border-white !bg-white !text-[#2F2A25] hover:!bg-white/95"
+                  : "!border-0 !bg-[#C4704B] !text-white hover:!bg-[#A85A38]",
               )}
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
@@ -583,7 +583,7 @@ export function JessicaContentinHeader() {
               <div className="mt-3 flex flex-col gap-3 px-3 pb-2">
                 <Button
                   asChild
-                  className="!rounded-full !border !border-[#2F2A25]/15 !bg-white !text-[#2F2A25] hover:!bg-white/90"
+                  className="!rounded-full !border-0 !bg-[#C4704B] !px-6 !py-5 !text-sm !font-semibold !text-white !shadow-md hover:!bg-[#A85A38]"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}

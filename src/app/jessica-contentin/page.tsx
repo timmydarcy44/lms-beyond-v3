@@ -1,17 +1,17 @@
 "use client";
 
 import { VideoHero } from "@/components/jessica-contentin/video-hero";
+import { JessicaHeroTrustBadges } from "@/components/jessica-contentin/jessica-hero-trust-badges";
 import { JessicaHomePresentation } from "@/components/jessica-contentin/jessica-home-presentation";
+import { GoogleReviewsSection } from "@/components/jessica-contentin/google-reviews-section";
 import { JessicaParcoursProgramCards, type ParcoursProgramCard } from "@/components/jessica-contentin/jessica-parcours-program-cards";
 import { PROGRAMMES, programmePresentationHref } from "@/lib/jessica-contentin/programmes-catalog";
-import { GoogleReviewsSlider } from "@/components/jessica-contentin/google-reviews-slider";
 import { JessicaHomeAccompagnementSection } from "@/components/jessica-contentin/jessica-home-accompagnement-section";
 import { JessicaFullWidthVideoSection } from "@/components/jessica-contentin/jessica-full-width-video-section";
 import { JessicaPourquoiConsulterSection } from "@/components/jessica-contentin/jessica-pourquoi-consulter-section";
+import { JessicaFinalSocialProof } from "@/components/jessica-contentin/jessica-final-social-proof";
 import { motion } from "framer-motion";
 import Script from "next/script";
-
-const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
 const VIDEO_SOUS_PARCOURS =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Design%20sans%20titre.mp4";
@@ -41,6 +41,11 @@ export default function JessicaContentinHomePage() {
   return (
     <div className="min-h-screen bg-white">
       <VideoHero />
+      <JessicaHeroTrustBadges />
+
+      <JessicaHomePresentation />
+
+      <GoogleReviewsSection />
 
       <JessicaParcoursProgramCards
         cards={PARCOURS_CARDS}
@@ -50,32 +55,18 @@ export default function JessicaContentinHomePage() {
 
       <JessicaHomeAccompagnementSection />
 
-      <JessicaHomePresentation />
-
       <JessicaPourquoiConsulterSection />
-
-      <motion.section
-        initial={{ opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.05 }}
-        className="mx-auto max-w-6xl px-4 py-12 md:px-8 md:py-16"
-      >
-        <div className="mx-auto max-w-6xl space-y-6">
-          <h2 className="text-2xl font-semibold text-[#2F2A25] md:text-3xl">Témoignages & avis</h2>
-          <GoogleReviewsSlider />
-        </div>
-      </motion.section>
 
       <JessicaFullWidthVideoSection
         videoUrl={VIDEO_NEVO}
-        title="Prolongez l'accompagnement entre les séances"
-        ctaLabel="Découvrir nevo."
+        title="L'accompagnement continue à la maison."
+        subtitle="Retrouvez dans Nevo des ressources personnalisées, des exercices et des outils pour poursuivre les stratégies mises en place lors des consultations."
+        footnote="Nevo est l'application qui prolonge l'accompagnement en dehors des consultations grâce à des ressources adaptées à chaque profil."
+        ctaLabel="Découvrir Nevo"
         ctaHref={NEVO_HREF}
-        ariaLabel="NEVO — prolonger l'accompagnement entre les séances"
+        ariaLabel="NEVO — l'accompagnement continue à la maison"
       />
 
-      {/* Méthode */}
       <motion.section
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -101,7 +92,6 @@ export default function JessicaContentinHomePage() {
         </div>
       </motion.section>
 
-      {/* Crédibilité */}
       <motion.section
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -123,13 +113,11 @@ export default function JessicaContentinHomePage() {
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-[#2F2A25]/70">
-            Découvrez aussi les retours détaillés dans la section témoignages ci-dessus.
-          </p>
         </div>
       </motion.section>
 
-      {/* Structured Data Schema.org */}
+      <JessicaFinalSocialProof />
+
       <Script
         id="structured-data-organization"
         type="application/ld+json"
@@ -156,6 +144,13 @@ export default function JessicaContentinHomePage() {
             "telephone": "+33683477174",
             "email": "contentin.cabinet@gmail.com",
             "priceRange": "€€",
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "5.0",
+              "reviewCount": "22",
+              "bestRating": "5",
+              "worstRating": "1",
+            },
             "areaServed": {
               "@type": "City",
               "name": "Caen",
@@ -206,4 +201,3 @@ export default function JessicaContentinHomePage() {
     </div>
   );
 }
-

@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  GOOGLE_RATING,
+  GOOGLE_REVIEW_COUNT,
+  GOOGLE_REVIEWS_URL,
+} from "@/lib/jessica-contentin/google-reviews-data";
 
 const HERO_IMAGE_URL =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/hero%20section%202%20(1).png";
@@ -47,7 +53,6 @@ export function VideoHero() {
             />
           </>
         )}
-        {/* Lisibilité du texte blanc sans encadré */}
         <div
           className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/55 via-black/30 to-transparent md:from-black/50 md:via-black/20"
           aria-hidden
@@ -95,13 +100,29 @@ export function VideoHero() {
             <Button
               asChild
               size="lg"
-              className="rounded-full bg-[#C4704B] px-8 py-6 text-base text-white shadow-[0_12px_32px_-12px_rgba(196,112,75,0.65)] hover:bg-[#A85A38] md:text-lg"
+              className="rounded-full bg-[#C4704B] px-10 py-7 text-base font-semibold text-white shadow-[0_14px_36px_-10px_rgba(196,112,75,0.75)] ring-2 ring-white/25 hover:bg-[#A85A38] md:text-lg"
               style={{ fontFamily: FONT }}
             >
               <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
                 Prendre rendez-vous
               </a>
             </Button>
+            <a
+              href={GOOGLE_REVIEWS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex flex-wrap items-center gap-2 text-sm text-white/90 transition hover:text-white md:text-[0.95rem]"
+              style={{ fontFamily: FONT }}
+            >
+              <span className="inline-flex items-center gap-0.5" aria-hidden>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className="h-3.5 w-3.5 fill-[#F5D78E] text-[#F5D78E]" />
+                ))}
+              </span>
+              <span>
+                {GOOGLE_RATING} sur Google • {GOOGLE_REVIEW_COUNT} avis
+              </span>
+            </a>
           </motion.div>
         </motion.div>
       </div>

@@ -7,6 +7,7 @@ type JessicaFullWidthVideoSectionProps = {
   videoUrl: string;
   title: string;
   subtitle?: string;
+  footnote?: string;
   ctaLabel?: string;
   ctaHref?: string;
   ariaLabel?: string;
@@ -17,6 +18,7 @@ export function JessicaFullWidthVideoSection({
   videoUrl,
   title,
   subtitle,
+  footnote,
   ctaLabel,
   ctaHref,
   ariaLabel,
@@ -55,6 +57,11 @@ export function JessicaFullWidthVideoSection({
           {subtitle ? (
             <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-white/85 md:text-lg">
               {subtitle}
+            </p>
+          ) : null}
+          {footnote ? (
+            <p className="mx-auto mt-4 max-w-xl text-xs leading-relaxed text-white/70 md:text-sm">
+              {footnote}
             </p>
           ) : null}
           {ctaLabel && ctaHref ? (

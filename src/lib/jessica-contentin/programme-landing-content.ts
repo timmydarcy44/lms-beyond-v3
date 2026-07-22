@@ -56,7 +56,7 @@ export const PROGRAMME_LANDING_BY_SLUG: Record<string, ProgrammeLandingContent> 
       { titre: "TDAH", def: "Touche l'attention, les fonctions exécutives et la régulation émotionnelle.", lien: "/specialites/tdah" },
       { titre: "TSA", def: "Modifie la communication, les interactions sociales et le traitement sensoriel.", lien: "/specialites/tsa" },
       { titre: "Troubles DYS", def: "Dyslexie, dyspraxie, dyscalculie — des apprentissages spécifiques affectés.", lien: "/specialites/tnd" },
-      { titre: "Haut potentiel", def: "Pas un trouble, mais un fonctionnement atypique souvent mal compris.", lien: "/specialites/haut-potentiel" },
+      { titre: "Haut potentiel intellectuel (HPI)", def: "Pas un trouble, mais un fonctionnement atypique souvent mal compris.", lien: "/specialites/haut-potentiel" },
     ],
     etapesTitle: "Trois étapes, un rythme adapté à votre enfant",
     etapes: [

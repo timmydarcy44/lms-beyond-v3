@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Brain, Heart, ListOrdered, Monitor, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Award, Brain, Heart, ListOrdered, Monitor, Sparkles, Users } from "lucide-react";
+import { CREDIBILITY_ITEMS } from "@/lib/jessica-contentin/specialty-offer-content";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
@@ -65,40 +66,54 @@ export default function JessicaMethodePage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-6 md:grid-cols-2">
           <article className="rounded-3xl border border-[#E6D9C6] bg-white p-8 shadow-sm md:col-span-2">
             <Users className="mb-4 h-8 w-8 text-[#C6A664]" />
-            <h2 className="text-2xl font-semibold text-[#2F2A25]">Qui je suis</h2>
-            <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-[#9A7B52]">
-              Une expertise à la croisée de la santé, des sciences cognitives et de la pédagogie
-            </p>
+            <h2 className="text-2xl font-semibold text-[#2F2A25]">Qui suis-je</h2>
             <p className="mt-4 leading-relaxed text-[#5C5348]">
-              Professeure en santé et psychopédagogue certifiée en neuroéducation, j&apos;accompagne depuis
-              plus de dix ans des enfants, adolescents, étudiants et adultes confrontés à des difficultés
-              d&apos;apprentissage, de fonctionnement exécutif, de régulation émotionnelle ou
+              Professeure certifiée de l&apos;Éducation nationale, psychopédagogue certifiée en
+              neuroéducation et titulaire de deux Masters universitaires, j&apos;accompagne depuis plus de
+              dix ans des enfants, des adolescents, des étudiants et des adultes confrontés à des
+              difficultés d&apos;apprentissage, de fonctionnement exécutif, de régulation émotionnelle ou
               d&apos;orientation.
             </p>
             <p className="mt-4 leading-relaxed text-[#5C5348]">
               Mon approche s&apos;appuie sur les connaissances actuelles issues des neurosciences
-              cognitives, de la psychologie du développement, des sciences de l&apos;éducation et de la
-              santé publique afin de proposer un accompagnement rigoureux, individualisé et durable.
+              cognitives, de la psychologie du développement et des sciences de l&apos;éducation afin de
+              proposer un accompagnement rigoureux, individualisé et durable.
             </p>
+          </article>
+
+          <article className="rounded-3xl border border-[#E6D9C6] bg-white p-8 shadow-sm md:col-span-2">
+            <Award className="mb-4 h-8 w-8 text-[#C6A664]" />
+            <h2 className="text-2xl font-semibold text-[#2F2A25]">
+              Une expertise fondée sur la science et l&apos;expérience
+            </h2>
+            <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+              {CREDIBILITY_ITEMS.map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-3 rounded-2xl border border-[#E6D9C6]/80 bg-[#FFFCF9] px-4 py-3 text-sm leading-relaxed text-[#2F2A25]"
+                >
+                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#C6A664]" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </article>
 
           <article className="rounded-3xl border border-[#E6D9C6] bg-white p-8 shadow-sm">
             <Brain className="mb-4 h-8 w-8 text-[#C6A664]" />
             <h2 className="text-2xl font-semibold text-[#2F2A25]">Ma vision de la neuroéducation</h2>
-            <p className="mt-2 text-sm font-semibold text-[#8B6F47]">Comprendre son cerveau pour apprendre autrement</p>
-            <p className="mt-4 leading-relaxed text-[#5C5348]">
-              Les difficultés scolaires ou professionnelles ne sont jamais le fruit d&apos;un manque de
-              volonté à elles seules. Elles résultent souvent d&apos;un fonctionnement cognitif,
-              attentionnel ou émotionnel qui mérite d&apos;être compris avant d&apos;être corrigé.
+            <p className="mt-2 text-sm font-semibold text-[#8B6F47]">
+              Comprendre le fonctionnement pour individualiser l&apos;accompagnement.
             </p>
             <p className="mt-4 leading-relaxed text-[#5C5348]">
-              La neuroéducation permet de transformer les connaissances issues de la recherche
-              scientifique en stratégies concrètes pour apprendre plus efficacement, développer son
-              autonomie et retrouver durablement confiance en ses capacités.
+              La neuroéducation repose sur une idée simple : apprendre efficacement nécessite d&apos;abord
+              de comprendre comment chacun fonctionne. Les difficultés d&apos;apprentissage, d&apos;attention
+              ou de régulation émotionnelle trouvent souvent leur origine dans des mécanismes cognitifs
+              qu&apos;il est possible d&apos;identifier et de prendre en compte.
             </p>
-            <p className="mt-4 leading-relaxed font-medium text-[#2F2A25]">
-              Chaque accompagnement est construit autour du fonctionnement réel de la personne, jamais
-              autour d&apos;une méthode standardisée.
+            <p className="mt-4 leading-relaxed text-[#5C5348]">
+              Mon approche s&apos;appuie sur les connaissances scientifiques actuelles afin de construire
+              des stratégies individualisées, durables et directement applicables au quotidien.
             </p>
           </article>
 

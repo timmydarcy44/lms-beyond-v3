@@ -33,18 +33,18 @@ const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-
 
 const apprentissageMegaMenu: { label: string; href: string; icon: LucideIcon }[] = [
   { label: "Difficultés d'apprentissage", href: "/specialites/strategie-apprentissage", icon: BookOpen },
-  { label: "Méthodologie de travail", href: "/specialites/strategie-apprentissage", icon: Target },
-  { label: "Collège", href: "/specialites/strategie-apprentissage", icon: BookOpen },
-  { label: "Lycée", href: "/specialites/strategie-apprentissage", icon: GraduationCap },
-  { label: "Études supérieures", href: "/specialites/orientation-professionnelle", icon: GraduationCap },
+  { label: "Méthodologie de travail", href: "/specialites/methodologie-de-travail", icon: Target },
+  { label: "Collège", href: "/specialites/college", icon: BookOpen },
+  { label: "Lycée", href: "/specialites/lycee", icon: GraduationCap },
+  { label: "Études supérieures", href: "/specialites/etudes-superieures", icon: GraduationCap },
   { label: "Orientation", href: "/specialites/orientation-professionnelle", icon: Compass },
 ];
 
 const neurodeveloppementMegaMenu: { label: string; href: string; icon: LucideIcon }[] = [
-  { label: "TDAH", href: "/specialites/tnd", icon: Brain },
-  { label: "Troubles DYS", href: "/specialites/tnd", icon: Puzzle },
-  { label: "TSA", href: "/specialites/tnd", icon: Puzzle },
-  { label: "Haut potentiel", href: "/specialites/tnd", icon: Sparkles },
+  { label: "TDAH", href: "/specialites/tdah", icon: Brain },
+  { label: "Troubles DYS", href: "/specialites/troubles-dys", icon: Puzzle },
+  { label: "TSA", href: "/specialites/tsa", icon: Puzzle },
+  { label: "Haut potentiel intellectuel (HPI)", href: "/specialites/haut-potentiel", icon: Sparkles },
 ];
 
 const emotionsMegaMenu: { label: string; href: string; icon: LucideIcon }[] = [
@@ -334,7 +334,7 @@ export function JessicaContentinHeader() {
                       <div className="space-y-1 px-3">
                         {item.submenuItems.map((subItem) => (
                           <Link
-                            key={subItem.href}
+                            key={`${subItem.href}-${subItem.label}`}
                             href={subItem.href}
                             onClick={closeMenus}
                             className="flex items-start gap-3 rounded-xl px-3 py-3 text-[#2F2A25] hover:bg-[#E6D9C6]/40 transition-colors"

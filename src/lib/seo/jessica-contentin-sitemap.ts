@@ -11,6 +11,10 @@ export const JESSICA_SPECIALITE_SLUGS = [
   "regulation-emotionnelle",
   "gestion-stress",
   "tnd",
+  "tdah",
+  "troubles-dys",
+  "tsa",
+  "haut-potentiel",
   "guidance-parentale",
   "tests",
   "harcelement",
@@ -18,6 +22,10 @@ export const JESSICA_SPECIALITE_SLUGS = [
   "therapie",
   "neuroeducation",
   "strategie-apprentissage",
+  "methodologie-de-travail",
+  "college",
+  "lycee",
+  "etudes-superieures",
 ] as const;
 
 type ChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;

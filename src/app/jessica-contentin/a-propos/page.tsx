@@ -177,7 +177,7 @@ export default function AProposPage() {
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}
                 >
-                  Diplômée d'un <strong>Master en Ingénierie des Politiques Sanitaires et Sociales (IAE de Caen)</strong> et d'un <strong>Master MEEF</strong>, je suis également <strong>professeure certifiée en santé, titulaire d'un concours national de l'Éducation nationale</strong>.
+                  Diplômée d'un <strong>Master en Ingénierie des Politiques Sanitaires et Sociales (IAE de Caen)</strong> et d'un <strong>Master MEEF</strong>, je suis également <strong>professeure certifiée de l'Éducation nationale (CAPES)</strong>.
                 </p>
               </motion.div>
 
@@ -423,7 +423,7 @@ export default function AProposPage() {
               {
                 "@type": "EducationalOccupationalCredential",
                 "credentialCategory": "Diplôme",
-                "name": "CAPES",
+                "name": "Professeure certifiée de l'Éducation nationale (CAPES)",
               },
             ],
           }),

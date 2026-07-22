@@ -24,12 +24,19 @@ export function JessicaHomePresentation() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#9A7B52]">Présentation</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">Jessica CONTENTIN</h2>
             <p className="mt-3 text-lg text-[#5C5348] md:text-xl">
-              Professeure en santé • Psychopédagogue • Certifiée en neuroéducation
+              Professeure certifiée de l&apos;Éducation nationale (CAPES) • Psychopédagogue certifiée en neuroéducation
             </p>
             <p className="mt-2 text-base text-[#5C5348] md:text-lg">
               Une approche fondée sur les neurosciences cognitives et les sciences de l&apos;apprentissage.
             </p>
           </div>
+
+          <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
+            Professeure certifiée de l&apos;Éducation nationale, psychopédagogue certifiée en neuroéducation et
+            titulaire de deux Masters universitaires, j&apos;accompagne depuis plus de dix ans des enfants, des
+            adolescents, des étudiants et des adultes confrontés à des difficultés d&apos;apprentissage, de
+            fonctionnement exécutif, de régulation émotionnelle ou d&apos;orientation.
+          </p>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
             J&apos;accompagne les enfants, les adolescents, les étudiants ainsi que leurs familles confrontés à des
@@ -51,10 +58,10 @@ export function JessicaHomePresentation() {
           </p>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            Professeure certifiée de l&apos;Éducation nationale dans le domaine de la santé et titulaire de deux Masters
-            universitaires, dont un Master en Ingénierie des Politiques Sanitaires et Sociales, j&apos;ai développé au cours de
-            mon parcours une expertise centrée sur les mécanismes des apprentissages, les fonctions exécutives, la régulation
-            émotionnelle et les{" "}
+            Professeure certifiée de l&apos;Éducation nationale (CAPES) et titulaire de deux Masters universitaires,
+            dont un obtenu avec la mention Très Bien, j&apos;ai développé au cours de mon parcours une expertise
+            centrée sur les mécanismes des apprentissages, les fonctions exécutives, la régulation émotionnelle et
+            les{" "}
             <Link href="/jessica-contentin/specialites/tnd" className="font-semibold text-[#8B6914] underline-offset-4 hover:underline">
               troubles du neurodéveloppement
             </Link>
@@ -92,7 +99,7 @@ export function JessicaHomePresentation() {
                 <Link href="/jessica-contentin/specialites/tnd" className="font-semibold text-[#8B6914] underline-offset-4 hover:underline">
                   troubles du neurodéveloppement
                 </Link>{" "}
-                (TDAH, TSA, troubles DYS, Haut Potentiel) ;
+                (TDAH, TSA, troubles DYS, Haut potentiel intellectuel) ;
               </li>
               <li>des difficultés attentionnelles, exécutives et organisationnelles ;</li>
               <li>

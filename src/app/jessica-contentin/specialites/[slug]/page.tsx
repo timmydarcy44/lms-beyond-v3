@@ -10,6 +10,8 @@ import { JessicaRemoteImage } from "@/components/jessica-contentin/jessica-remot
 import { jessicaStorageUrl } from "@/lib/jessica-contentin/media-urls";
 import { useState } from "react";
 import { StrategicInternalLinks } from "@/components/jessica-contentin/strategic-internal-links";
+import { SpecialtyOfferPage } from "@/components/jessica-contentin/specialty-offer-page";
+import { SPECIALTY_OFFER_CONTENT } from "@/lib/jessica-contentin/specialty-offer-content";
 import { SPECIALITY_SEO_CONFIG } from "@/lib/seo/link-juice-strategy";
 import Link from "next/link";
 import Script from "next/script";
@@ -76,7 +78,7 @@ const specialitesContent: Record<string, {
       description: "",
       details: [
         "Chaque étape est adaptée aux besoins, au rythme et aux objectifs de la personne accompagnée.",
-        "Accompagnement assuré par une professeure en santé et psychopédagogue certifiée en neuroéducation.",
+        "Accompagnement assuré par une professeure certifiée de l'Éducation nationale (CAPES) et psychopédagogue certifiée en neuroéducation.",
         "Présentiel ou visioconférence — Un accompagnement accessible partout en France, avec le même niveau de suivi et de personnalisation.",
       ],
     },
@@ -354,6 +356,11 @@ export default function SpecialiteDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
+  const offerContent = SPECIALTY_OFFER_CONTENT[slug];
+  if (offerContent) {
+    return <SpecialtyOfferPage content={offerContent} />;
+  }
+
   const content = specialitesContent[slug];
 
   if (!content) {

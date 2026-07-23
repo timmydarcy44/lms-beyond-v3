@@ -10,7 +10,11 @@ import {
   JESSICA_FEATURED_REVIEWS,
 } from "@/lib/jessica-contentin/google-reviews-data";
 
-const PREVIEW_LENGTH = 160;
+const STATS = [
+  { icon: "🧠", label: "100+ familles accompagnées" },
+  { icon: "⭐", label: `${GOOGLE_RATING}/5 sur Google` },
+  { icon: "🎓", label: "Plus de 10 ans d'expérience" },
+] as const;
 
 function Stars({ rating = 5, className = "h-4 w-4" }: { rating?: number; className?: string }) {
   return (
@@ -32,9 +36,6 @@ function ReviewCard({
   text,
 }: (typeof JESSICA_FEATURED_REVIEWS)[number]) {
   const [expanded, setExpanded] = useState(false);
-  const needsTruncation = text.length > PREVIEW_LENGTH;
-  const displayText =
-    !needsTruncation || expanded ? text : `${text.slice(0, PREVIEW_LENGTH).trimEnd()}…`;
 
   return (
     <article className="flex h-full flex-col rounded-2xl border border-[#E6D9C6] bg-white p-6 shadow-[0_12px_40px_-28px_rgba(60,48,36,0.28)]">
@@ -43,21 +44,18 @@ function ReviewCard({
         <h3 className="text-base font-semibold text-[#2F2A25]">{author_name}</h3>
         <time className="shrink-0 text-xs text-[#5C5348]/80">{relative_time_description}</time>
       </div>
-      <p className="mt-3 flex-1 text-sm leading-relaxed text-[#5C5348]">
-        &ldquo;{displayText}&rdquo;
-        {needsTruncation ? (
-          <>
-            {" "}
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="font-semibold text-[#8B6F47] underline-offset-2 hover:underline"
-            >
-              {expanded ? "Réduire" : "Lire la suite"}
-            </button>
-          </>
-        ) : null}
+      <p
+        className={`mt-3 text-sm leading-relaxed text-[#5C5348] ${expanded ? "" : "line-clamp-4"}`}
+      >
+        &ldquo;{text}&rdquo;
       </p>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="mt-3 self-start text-sm font-semibold text-[#8B6F47] transition hover:text-[#6F5636]"
+      >
+        {expanded ? "Réduire" : "Lire l'avis complet →"}
+      </button>
     </article>
   );
 }
@@ -69,6 +67,28 @@ export function GoogleReviewsSection() {
     <section className="border-y border-[#E6D9C6]/60 bg-[#F8F5F0] py-16 md:py-20" aria-labelledby="avis-google-title">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mb-12 grid gap-4 sm:grid-cols-3"
+        >
+          {STATS.map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-[#E6D9C6]/80 bg-white/80 px-5 py-5 text-center shadow-[0_8px_28px_-24px_rgba(60,48,36,0.35)]"
+            >
+              <p className="text-xl" aria-hidden>
+                {stat.icon}
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-snug text-[#2F2A25] md:text-base">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </motion.div>
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -76,21 +96,21 @@ export function GoogleReviewsSection() {
           className="mx-auto max-w-3xl text-center"
         >
           <h2 id="avis-google-title" className="text-3xl font-semibold tracking-tight text-[#2F2A25] md:text-4xl">
-            Ils m&apos;ont accordé leur confiance.
+            Plus de 100 familles accompagnées
           </h2>
           <p className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 text-sm text-[#2F2A25] md:text-base">
             <Stars className="h-[1.05rem] w-[1.05rem]" />
             <span className="font-semibold">
-              {GOOGLE_RATING}/5 sur Google – {GOOGLE_REVIEW_COUNT} avis
+              {GOOGLE_RATING}/5 sur Google – {GOOGLE_REVIEW_COUNT} avis vérifiés
             </span>
           </p>
           <a
             href={GOOGLE_REVIEWS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-flex text-sm font-semibold text-[#8B6F47] underline-offset-4 hover:underline"
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#C4704B] px-7 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_-14px_rgba(196,112,75,0.55)] transition hover:bg-[#A85A38]"
           >
-            Voir tous les avis Google
+            Consulter les {GOOGLE_REVIEW_COUNT} avis Google
           </a>
         </motion.div>
 

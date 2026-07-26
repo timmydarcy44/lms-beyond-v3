@@ -10,14 +10,16 @@ import { JessicaSendQuestionnaireDialog } from "@/components/jessica-contentin/j
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 import type { JessicaQuestionnaireDef } from "@/lib/jessica-contentin/questionnaires";
 import { getJessicaScoreBenchmark } from "@/lib/jessica-contentin/questionnaires";
+import type { SendQuestionnaireContact } from "@/components/jessica-contentin/jessica-send-questionnaire-dialog";
 import { cn } from "@/lib/utils";
 
 type Props = {
   questionnaires: (JessicaQuestionnaireDef & { id?: string })[];
   counts: Record<string, number>;
+  contacts?: SendQuestionnaireContact[];
 };
 
-export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
+export function JessicaTestsHubClient({ questionnaires, counts, contacts = [] }: Props) {
   const [importing, setImporting] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -147,7 +149,7 @@ export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
               </div>
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
                 <Link
-                  href={`/q/${q.slug}?preview=1`}
+                  href={`/super/jessica-tests/${q.slug}/apercu`}
                   target="_blank"
                   className={cn(jessicaSuper.cta, "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm")}
                 >
@@ -197,6 +199,7 @@ export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
         onOpenChange={setSendOpen}
         questionnaires={questionnaires.map((q) => ({ slug: q.slug, title: q.title }))}
         defaultSlug={sendSlug}
+        contacts={contacts}
       />
     </JessicaSuperPage>
   );

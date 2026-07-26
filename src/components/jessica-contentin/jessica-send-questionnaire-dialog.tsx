@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 import { cn } from "@/lib/utils";
 
 export type SendQuestionnaireContact = {
+  id?: string;
+  label?: string;
   email: string;
   firstName?: string | null;
   lastName?: string | null;
@@ -32,9 +34,11 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   questionnaires: QuestionnaireOption[];
-  /** Préselection */
   defaultSlug?: string;
+  /** Contact prérempli (fiche client) */
   contact?: SendQuestionnaireContact | null;
+  /** Liste CRM pour le dropdown */
+  contacts?: SendQuestionnaireContact[];
 };
 
 export function JessicaSendQuestionnaireDialog({
@@ -43,23 +47,66 @@ export function JessicaSendQuestionnaireDialog({
   questionnaires,
   defaultSlug,
   contact,
+  contacts = [],
 }: Props) {
   const [slug, setSlug] = useState(defaultSlug ?? questionnaires[0]?.slug ?? "");
+  const [contactId, setContactId] = useState("");
   const [email, setEmail] = useState(contact?.email ?? "");
   const [firstName, setFirstName] = useState(contact?.firstName ?? "");
+  const [lastName, setLastName] = useState(contact?.lastName ?? "");
+  const [profileId, setProfileId] = useState<string | null>(contact?.profileId ?? null);
+  const [patientId, setPatientId] = useState<string | null>(contact?.patientId ?? null);
   const [sending, setSending] = useState(false);
   const [lastLink, setLastLink] = useState<string | null>(null);
 
-  const sorted = useMemo(
+  const sortedQuestionnaires = useMemo(
     () => [...questionnaires].sort((a, b) => a.title.localeCompare(b.title, "fr")),
     [questionnaires],
   );
 
-  const resetFromProps = () => {
+  const sortedContacts = useMemo(
+    () =>
+      [...contacts]
+        .filter((c) => c.email?.includes("@"))
+        .sort((a, b) => (a.label || a.email).localeCompare(b.label || b.email, "fr")),
+    [contacts],
+  );
+
+  useEffect(() => {
+    if (!open) return;
     setSlug(defaultSlug ?? questionnaires[0]?.slug ?? "");
-    setEmail(contact?.email ?? "");
-    setFirstName(contact?.firstName ?? "");
     setLastLink(null);
+    if (contact?.email) {
+      setContactId(contact.id ?? "");
+      setEmail(contact.email);
+      setFirstName(contact.firstName ?? "");
+      setLastName(contact.lastName ?? "");
+      setProfileId(contact.profileId ?? null);
+      setPatientId(contact.patientId ?? null);
+    } else {
+      setContactId("");
+      setEmail("");
+      setFirstName("");
+      setLastName("");
+      setProfileId(null);
+      setPatientId(null);
+    }
+  }, [open, defaultSlug, questionnaires, contact]);
+
+  const onPickContact = (id: string) => {
+    setContactId(id);
+    if (!id) {
+      setProfileId(null);
+      setPatientId(null);
+      return;
+    }
+    const c = sortedContacts.find((x) => x.id === id);
+    if (!c) return;
+    setEmail(c.email);
+    setFirstName(c.firstName ?? "");
+    setLastName(c.lastName ?? "");
+    setProfileId(c.profileId ?? null);
+    setPatientId(c.patientId ?? null);
   };
 
   const handleSend = async (linkOnly: boolean) => {
@@ -68,7 +115,7 @@ export function JessicaSendQuestionnaireDialog({
       return;
     }
     if (!email.includes("@")) {
-      toast.error("Email invalide");
+      toast.error("Choisissez un client ou saisissez un email");
       return;
     }
     setSending(true);
@@ -80,9 +127,9 @@ export function JessicaSendQuestionnaireDialog({
           questionnaireSlug: slug,
           email: email.trim(),
           firstName: firstName.trim() || null,
-          lastName: contact?.lastName ?? null,
-          cabinetPatientId: contact?.patientId ?? null,
-          profileId: contact?.profileId ?? null,
+          lastName: lastName.trim() || null,
+          cabinetPatientId: patientId,
+          profileId,
           linkOnly,
         }),
       });
@@ -103,13 +150,7 @@ export function JessicaSendQuestionnaireDialog({
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (v) resetFromProps();
-        onOpenChange(v);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Envoyer un questionnaire</DialogTitle>
@@ -122,27 +163,54 @@ export function JessicaSendQuestionnaireDialog({
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
             >
-              {sorted.map((q) => (
+              {sortedQuestionnaires.map((q) => (
                 <option key={q.slug} value={q.slug}>
                   {q.title}
                 </option>
               ))}
             </select>
           </div>
+
+          {sortedContacts.length > 0 ? (
+            <div className="space-y-1.5">
+              <Label>Client CRM</Label>
+              <select
+                className={cn(jessicaSuper.input, "w-full")}
+                value={contactId}
+                onChange={(e) => onPickContact(e.target.value)}
+              >
+                <option value="">Choisir un client…</option>
+                {sortedContacts.map((c) => (
+                  <option key={c.id ?? c.email} value={c.id ?? ""}>
+                    {c.label || `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim() || c.email} —{" "}
+                    {c.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
           <div className="space-y-1.5">
-            <Label>Prénom</Label>
-            <Input
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className={jessicaSuper.input}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Email</Label>
+            <Label>Ou saisir une adresse email</Label>
             <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setContactId("");
+                setProfileId(null);
+                setPatientId(null);
+              }}
+              className={jessicaSuper.input}
+              placeholder="email@exemple.fr"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Prénom (optionnel)</Label>
+            <Input
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               className={jessicaSuper.input}
             />
           </div>

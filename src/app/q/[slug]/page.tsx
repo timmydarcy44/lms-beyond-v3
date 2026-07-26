@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getJessicaQuestionnaire } from "@/lib/jessica-contentin/questionnaires";
 import { resolveJessicaQuestionnaire } from "@/lib/queries/jessica-questionnaires";
 import { JessicaTypeformPlayer } from "@/components/jessica-contentin/jessica-typeform-player";
 
@@ -12,8 +13,10 @@ type Props = {
 export default async function PublicJessicaQuestionnairePage({ params, searchParams }: Props) {
   const { slug } = await params;
   const { preview } = await searchParams;
-  const questionnaire = await resolveJessicaQuestionnaire(slug);
-  if (!questionnaire || ("is_active" in questionnaire && questionnaire.is_active === false)) {
+  const questionnaire =
+    (await resolveJessicaQuestionnaire(slug)) ?? getJessicaQuestionnaire(slug);
+  if (!questionnaire) notFound();
+  if ("is_active" in questionnaire && (questionnaire as { is_active?: boolean }).is_active === false) {
     notFound();
   }
 

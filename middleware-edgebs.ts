@@ -42,6 +42,8 @@ export function shouldSkipEdgeBsMiddleware(pathname: string): boolean {
   if (!pathname) return true;
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/api")) return true;
+  if (pathname.startsWith("/q/") || pathname === "/q") return true;
+  if (pathname.startsWith("/super")) return true;
   if (pathname === "/favicon.ico") return true;
   if (pathname === "/robots.txt") return true;
   if (pathname === "/sitemap.xml") return true;

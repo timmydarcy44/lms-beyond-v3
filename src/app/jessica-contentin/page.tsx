@@ -9,7 +9,7 @@ import { PROGRAMMES, programmePresentationHref } from "@/lib/jessica-contentin/p
 import { JessicaHomeAccompagnementSection } from "@/components/jessica-contentin/jessica-home-accompagnement-section";
 import { JessicaFullWidthVideoSection } from "@/components/jessica-contentin/jessica-full-width-video-section";
 import { JessicaPourquoiConsulterSection } from "@/components/jessica-contentin/jessica-pourquoi-consulter-section";
-import { JessicaFinalSocialProof } from "@/components/jessica-contentin/jessica-final-social-proof";
+import { JessicaHomeContactForm } from "@/components/jessica-contentin/jessica-home-contact-form";
 import { motion } from "framer-motion";
 import Script from "next/script";
 
@@ -116,7 +116,7 @@ export default function JessicaContentinHomePage() {
         </div>
       </motion.section>
 
-      <JessicaFinalSocialProof />
+      <JessicaHomeContactForm />
 
       <Script
         id="structured-data-organization"

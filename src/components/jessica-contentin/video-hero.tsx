@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  GOOGLE_RATING,
   GOOGLE_REVIEW_COUNT,
   GOOGLE_REVIEWS_URL,
 } from "@/lib/jessica-contentin/google-reviews-data";
@@ -95,7 +94,7 @@ export function VideoHero() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.55 }}
-            className="mt-8"
+            className="mt-8 flex flex-col items-start gap-5"
           >
             <Button
               asChild
@@ -107,20 +106,23 @@ export function VideoHero() {
                 Prendre rendez-vous
               </a>
             </Button>
+
             <a
               href={GOOGLE_REVIEWS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-5 inline-flex flex-wrap items-center gap-2 text-sm text-white/90 transition hover:text-white md:text-[0.95rem]"
+              className="flex flex-col items-start gap-1.5 text-white/90 transition hover:text-white"
               style={{ fontFamily: FONT }}
             >
               <span className="inline-flex items-center gap-0.5" aria-hidden>
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-[#F5D78E] text-[#F5D78E]" />
+                  <Star key={i} className="h-4 w-4 fill-[#F5D78E] text-[#F5D78E]" />
                 ))}
               </span>
-              <span>
-                {GOOGLE_RATING} sur Google • {GOOGLE_REVIEW_COUNT} avis
+              <span className="text-sm md:text-[0.95rem]">
+                <span className="font-medium">5/5 sur Google</span>
+                <span className="text-white/50"> · </span>
+                <span>{GOOGLE_REVIEW_COUNT} avis</span>
               </span>
             </a>
           </motion.div>

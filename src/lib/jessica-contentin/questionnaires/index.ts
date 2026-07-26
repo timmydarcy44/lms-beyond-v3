@@ -97,16 +97,93 @@ export function scoreJessicaAnswers(
 
   if (!counted) return { score: null, scoreLabel: null };
 
-  let scoreLabel: string | null = null;
+  return { score, scoreLabel: interpretJessicaScore(slug, score) };
+}
+
+/** Repères issus des réponses Typeform historiques (cohortes Jessica). */
+export type JessicaScoreBenchmark = {
+  average: number;
+  sampleSize: number;
+  maxTheoretical: number | null;
+  /** Plus le score est élevé… */
+  higherMeans: "better" | "more_difficulty";
+  bands: { max: number; label: string }[];
+  hint: string;
+};
+
+export const JESSICA_SCORE_BENCHMARKS: Record<string, JessicaScoreBenchmark> = {
+  metacognition: {
+    average: 36,
+    sampleSize: 308,
+    maxTheoretical: 52,
+    higherMeans: "better",
+    bands: [
+      { max: 31, label: "sous la moyenne (compétences métacognitives à renforcer)" },
+      { max: 42, label: "dans la moyenne" },
+      { max: 999, label: "au-dessus de la moyenne (bon niveau métacognitif)" },
+    ],
+    hint: "Moyenne Typeform ≈ 36 / 52 (n=308). Un score plus élevé = meilleures stratégies d’apprentissage.",
+  },
+  "stress-academique": {
+    average: 28,
+    sampleSize: 280,
+    maxTheoretical: null,
+    higherMeans: "more_difficulty",
+    bands: [
+      { max: 22, label: "sous la moyenne (stress plutôt bas)" },
+      { max: 33, label: "dans la moyenne" },
+      { max: 999, label: "au-dessus de la moyenne (stress élevé)" },
+    ],
+    hint: "Moyenne Typeform ≈ 28 (n=280). Un score plus élevé = plus de stress académique perçu.",
+  },
+  "pre-diagnostic-dys": {
+    average: 28,
+    sampleSize: 278,
+    maxTheoretical: null,
+    higherMeans: "more_difficulty",
+    bands: [
+      { max: 22, label: "sous la moyenne (peu de signaux)" },
+      { max: 32, label: "dans la moyenne" },
+      { max: 999, label: "au-dessus de la moyenne (signaux plus marqués)" },
+    ],
+    hint: "Moyenne Typeform ≈ 28 (n=278). Un score plus élevé = davantage de difficultés signalées (pré-repérage, pas un diagnostic).",
+  },
+  tdah: {
+    average: 32,
+    sampleSize: 4,
+    maxTheoretical: 60,
+    higherMeans: "more_difficulty",
+    bands: [
+      { max: 15, label: "faible" },
+      { max: 30, label: "modéré" },
+      { max: 45, label: "élevé" },
+      { max: 999, label: "très élevé" },
+    ],
+    hint: "Échelle 0–60. ≤15 faible · 16–30 modéré · 31–45 élevé · ≥46 très élevé.",
+  },
+};
+
+export function interpretJessicaScore(slug: string, score: number): string {
+  const bench = JESSICA_SCORE_BENCHMARKS[slug];
+  if (!bench) return `Score ${score}`;
+
+  const band = bench.bands.find((b) => score <= b.max) ?? bench.bands[bench.bands.length - 1];
+  const vsAvg =
+    score > bench.average + 2
+      ? `au-dessus de la moyenne (${bench.average})`
+      : score < bench.average - 2
+        ? `sous la moyenne (${bench.average})`
+        : `proche de la moyenne (${bench.average})`;
+
   if (slug === "tdah") {
-    if (score <= 15) scoreLabel = "Score ≤ 15 (faible)";
-    else if (score <= 30) scoreLabel = "Score entre 16 et 30 (modéré)";
-    else scoreLabel = "Score > 30 (élevé)";
-  } else {
-    scoreLabel = `Score ${score}`;
+    return `Score ${score} — ${band.label} · ${vsAvg}`;
   }
 
-  return { score, scoreLabel };
+  return `Score ${score} — ${band.label} · ${vsAvg}`;
+}
+
+export function getJessicaScoreBenchmark(slug: string): JessicaScoreBenchmark | null {
+  return JESSICA_SCORE_BENCHMARKS[slug] ?? null;
 }
 
 export function listJessicaQuestionnaires(): JessicaQuestionnaireDef[] {

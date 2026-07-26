@@ -4,6 +4,7 @@ import Link from "next/link";
 import { JessicaSuperPage } from "@/components/jessica-contentin/super/jessica-super-ui";
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 import type { JessicaQuestionnaireDef } from "@/lib/jessica-contentin/questionnaires";
+import { interpretJessicaScore } from "@/lib/jessica-contentin/questionnaires";
 import type { JessicaQuestionnaireResponseRow } from "@/lib/queries/jessica-questionnaires";
 import { cn } from "@/lib/utils";
 
@@ -63,9 +64,10 @@ export function JessicaQuestionnaireResponsesClient({ questionnaire, responses }
                 </div>
                 <div className="text-right text-sm">
                   {row.score != null ? (
-                    <p className="font-semibold text-[#8B6F47]">Score {row.score}</p>
-                  ) : null}
-                  {row.score_label ? (
+                    <p className="max-w-xs font-semibold text-[#8B6F47]">
+                      {interpretJessicaScore(questionnaire.slug, Number(row.score))}
+                    </p>
+                  ) : row.score_label ? (
                     <p className="max-w-xs text-neutral-500">{row.score_label}</p>
                   ) : null}
                 </div>

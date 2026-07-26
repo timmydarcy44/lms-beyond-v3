@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ClipboardList, Download, Loader2, Pencil, Plus } from "lucide-react";
+import { ClipboardList, Download, Eye, Loader2, Pencil, Plus, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JessicaSuperPage } from "@/components/jessica-contentin/super/jessica-super-ui";
+import { JessicaSendQuestionnaireDialog } from "@/components/jessica-contentin/jessica-send-questionnaire-dialog";
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 import type { JessicaQuestionnaireDef } from "@/lib/jessica-contentin/questionnaires";
+import { getJessicaScoreBenchmark } from "@/lib/jessica-contentin/questionnaires";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -18,6 +20,8 @@ type Props = {
 export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
   const [importing, setImporting] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendSlug, setSendSlug] = useState<string | undefined>();
 
   const total = useMemo(
     () => Object.values(counts).reduce((a, b) => a + b, 0),
@@ -69,7 +73,7 @@ export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
   return (
     <JessicaSuperPage
       title="Tests / Questionnaires"
-      subtitle={`${total} réponse(s) — créez, modifiez et remplissez vos questionnaires`}
+      subtitle={`${total} réponse(s) — prévisualisation Typeform, partage et envoi Resend`}
       actions={
         <div className="flex flex-wrap gap-2">
           <Link
@@ -79,6 +83,18 @@ export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
             <Plus className="mr-1.5 h-4 w-4" />
             Nouveau
           </Link>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => {
+              setSendSlug(undefined);
+              setSendOpen(true);
+            }}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Envoyer
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -109,6 +125,7 @@ export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {questionnaires.map((q) => {
           const count = counts[q.slug] ?? 0;
+          const bench = getJessicaScoreBenchmark(q.slug);
           return (
             <div key={q.slug} className={cn(jessicaSuper.card, "flex flex-col p-5")}>
               <div className="mb-3 flex items-start gap-3">
@@ -121,14 +138,40 @@ export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
                   <p className="mt-2 text-xs text-neutral-400">
                     {q.questions.length} questions · {count} réponse(s)
                   </p>
+                  {bench ? (
+                    <p className="mt-2 text-xs leading-relaxed text-[#8B6F47]">
+                      {bench.hint}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
                 <Link
-                  href={`/super/jessica-tests/${q.slug}`}
-                  className={cn(jessicaSuper.cta, "inline-flex items-center rounded-full px-4 py-2 text-sm")}
+                  href={`/q/${q.slug}?preview=1`}
+                  target="_blank"
+                  className={cn(jessicaSuper.cta, "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm")}
                 >
-                  Remplir
+                  <Eye className="h-3.5 w-3.5" />
+                  Prévisualiser
+                </Link>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => {
+                    setSendSlug(q.slug);
+                    setSendOpen(true);
+                  }}
+                >
+                  <Send className="mr-1.5 h-3.5 w-3.5" />
+                  Envoyer
+                </Button>
+                <Link
+                  href={`/super/jessica-tests/${q.slug}`}
+                  className="inline-flex items-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium hover:bg-neutral-50"
+                >
+                  Remplir (admin)
                 </Link>
                 <Link
                   href={`/super/jessica-tests/${q.slug}/modifier`}
@@ -148,6 +191,13 @@ export function JessicaTestsHubClient({ questionnaires, counts }: Props) {
           );
         })}
       </div>
+
+      <JessicaSendQuestionnaireDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        questionnaires={questionnaires.map((q) => ({ slug: q.slug, title: q.title }))}
+        defaultSlug={sendSlug}
+      />
     </JessicaSuperPage>
   );
 }

@@ -4,6 +4,10 @@ import Link from "next/link";
 import { JessicaSuperPage } from "@/components/jessica-contentin/super/jessica-super-ui";
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 import type { JessicaQuestionnaireDef } from "@/lib/jessica-contentin/questionnaires";
+import {
+  getJessicaScoreBenchmark,
+  interpretJessicaScore,
+} from "@/lib/jessica-contentin/questionnaires";
 import type { JessicaQuestionnaireResponseRow } from "@/lib/queries/jessica-questionnaires";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +32,12 @@ export function JessicaQuestionnaireResponseDetailClient({ questionnaire, respon
     response.respondent_email ||
     "Réponse";
 
+  const bench = getJessicaScoreBenchmark(questionnaire.slug);
+  const interpreted =
+    response.score != null
+      ? interpretJessicaScore(questionnaire.slug, Number(response.score))
+      : null;
+
   return (
     <JessicaSuperPage
       title={title}
@@ -50,12 +60,15 @@ export function JessicaQuestionnaireResponseDetailClient({ questionnaire, respon
                   : "—"}
               </dd>
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <dt className="text-neutral-500">Score</dt>
               <dd className="font-medium text-[#8B6F47]">
-                {response.score != null ? response.score : "—"}
-                {response.score_label ? ` — ${response.score_label}` : ""}
+                {interpreted ||
+                  (response.score != null
+                    ? `${response.score}${response.score_label ? ` — ${response.score_label}` : ""}`
+                    : "—")}
               </dd>
+              {bench ? <p className="mt-1 text-xs text-neutral-500">{bench.hint}</p> : null}
             </div>
             <div>
               <dt className="text-neutral-500">Source</dt>

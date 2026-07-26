@@ -44,7 +44,7 @@ export async function POST(_req: NextRequest) {
       {
         error:
           seedDefs.error.includes("does not exist") || seedDefs.error.includes("schema cache")
-            ? "Table questionnaires absente. Exécutez d’abord la migration SQL (sans FK cabinet)."
+            ? "Table questionnaires absente sur le projet LMS (zmcefidiiqqppowymoqb). Les tables créées sur Nevo ne sont pas utilisées ici — relancez la migration SQL sur le bon projet Supabase, puis Settings → API → Reload schema."
             : seedDefs.error,
       },
       { status: 500 },

@@ -33,6 +33,7 @@ type UserDetailsClientProps = {
   cabinetPatient?: JessicaCabinetPatientDetails | null;
   patientRevenue?: PatientCabinetRevenue | null;
   questionnaireResponses?: JessicaQuestionnaireResponseRow[];
+  availableQuestionnaires?: { slug: string; title: string }[];
 };
 
 export function UserDetailsClient({
@@ -42,6 +43,7 @@ export function UserDetailsClient({
   cabinetPatient,
   patientRevenue,
   questionnaireResponses = [],
+  availableQuestionnaires = [],
 }: UserDetailsClientProps) {
   const [activeTab, setActiveTab] = useState(dossier ? "suivi" : "overview");
   const [isAssigning, setIsAssigning] = useState(false);
@@ -556,6 +558,12 @@ export function UserDetailsClient({
           <JessicaClientQuestionnairesPanel
             responses={questionnaireResponses}
             contactId={`user:${userDetails.id}`}
+            contactEmail={userDetails.email}
+            contactFirstName={userDetails.firstName}
+            contactLastName={userDetails.lastName}
+            profileId={userDetails.id}
+            patientId={cabinetPatient?.id ?? null}
+            availableQuestionnaires={availableQuestionnaires}
           />
         </TabsContent>
 

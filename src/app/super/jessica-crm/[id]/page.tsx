@@ -15,7 +15,7 @@ import { JessicaCabinetPatientPanel } from "@/components/jessica-contentin/crm/j
 import { JessicaClientQuestionnairesPanel } from "@/components/jessica-contentin/jessica-client-questionnaires-panel";
 import { formatClientName } from "@/lib/jessica-contentin/parse-client-name";
 import { JessicaSuperPage } from "@/components/jessica-contentin/super/jessica-super-ui";
-import { getJessicaQuestionnaireResponsesForClient } from "@/lib/queries/jessica-questionnaires";
+import { getJessicaQuestionnaireResponsesForClient, listResolvedJessicaQuestionnaires } from "@/lib/queries/jessica-questionnaires";
 
 export const revalidate = 0;
 
@@ -37,10 +37,11 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
 
   const { id } = await params;
 
-  const [userDetails, patientById, resources] = await Promise.all([
+  const [userDetails, patientById, resources, availableQuestionnaires] = await Promise.all([
     getJessicaUserDetails(id),
     getJessicaCabinetPatientDetails(id),
     getJessicaResources(),
+    listResolvedJessicaQuestionnaires(),
   ]);
 
   const patient = patientById ?? (userDetails ? await getJessicaCabinetPatientByProfileId(id) : null);
@@ -76,6 +77,11 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
     ),
   });
 
+  const questionnaireOptions = availableQuestionnaires.map((q) => ({
+    slug: q.slug,
+    title: q.title,
+  }));
+
   if (userDetails) {
     const displayName = formatClientName(userDetails.firstName, userDetails.lastName);
     return (
@@ -95,6 +101,7 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
           cabinetPatient={patient}
           patientRevenue={patientRevenue}
           questionnaireResponses={questionnaireResponses}
+          availableQuestionnaires={questionnaireOptions}
         />
       </JessicaSuperPage>
     );
@@ -114,6 +121,12 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
         <JessicaClientQuestionnairesPanel
           responses={questionnaireResponses}
           contactId={patient!.id ? `patient:${patient!.id}` : undefined}
+          contactEmail={patient!.email}
+          contactFirstName={patient!.firstName}
+          contactLastName={patient!.lastName}
+          patientId={patient!.id}
+          profileId={patient!.profileId}
+          availableQuestionnaires={questionnaireOptions}
         />
       </div>
     </JessicaSuperPage>

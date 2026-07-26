@@ -320,7 +320,7 @@ function QuestionInput({
               "flex h-12 w-12 items-center justify-center rounded-xl border text-lg transition",
               String(value) === String(n)
                 ? "border-[#8B6F47] bg-[#8B6F47] text-white"
-                : "border-black/10 bg-white/70 text-[#2F2A25] hover:border-[#8B6F47]/50",
+                : "border-[#E6D9C6] bg-white text-[#2F2A25] hover:border-[#8B6F47]/50",
             )}
           >
             {n}
@@ -345,7 +345,7 @@ function QuestionInput({
               "rounded-2xl border px-6 py-4 text-left text-lg transition",
               value === opt.v
                 ? "border-[#8B6F47] bg-[#8B6F47] text-white"
-                : "border-black/10 bg-white/80 text-[#2F2A25] hover:border-[#8B6F47]/40",
+                : "border-[#E6D9C6] bg-white text-[#2F2A25] shadow-sm hover:border-[#8B6F47]/40",
             )}
           >
             {opt.label}
@@ -364,7 +364,7 @@ function QuestionInput({
           "rounded-2xl border px-6 py-4 text-left text-lg transition",
           value
             ? "border-[#8B6F47] bg-[#8B6F47] text-white"
-            : "border-black/10 bg-white/80 text-[#2F2A25] hover:border-[#8B6F47]/40",
+            : "border-[#E6D9C6] bg-white text-[#2F2A25] shadow-sm hover:border-[#8B6F47]/40",
         )}
       >
         {value ? "✓ Sélectionné" : "Cocher si concerné"}
@@ -384,7 +384,7 @@ function QuestionInput({
             "rounded-2xl border px-5 py-4 text-left text-lg transition",
             value === opt
               ? "border-[#8B6F47] bg-[#8B6F47] text-white"
-              : "border-black/10 bg-white/80 text-[#2F2A25] hover:border-[#8B6F47]/40",
+              : "border-[#E6D9C6] bg-white text-[#2F2A25] shadow-sm hover:border-[#8B6F47]/40",
           )}
         >
           <span className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-md border border-current/30 text-sm">

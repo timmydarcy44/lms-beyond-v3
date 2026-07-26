@@ -104,8 +104,44 @@ function isYesNo01(vals) {
   return s.length > 0 && s.every((v) => v === "0" || v === "1" || v === "");
 }
 
+function looksLikeFreeTextLabel(label) {
+  const l = String(label || "").toLowerCase();
+  if (/^précision\s*\(autre\)/i.test(label)) return true;
+  if (/^other$/i.test(label)) return true;
+  if (/\bprofession\b/i.test(l)) return true;
+  if (
+    /^(nom|prénom|prenom|email|e-mail|téléphone|telephone|âge|age)\b/i.test(l) ||
+    l.startsWith("nom de") ||
+    l.startsWith("prénom") ||
+    l.startsWith("prenom")
+  ) {
+    return true;
+  }
+  if (
+    /décrivez|décrire brièvement|précisez|expliquez|centres d'intérêt|journée type|dans quelle école|en quelle classe/i.test(
+      l,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** QCM réellement prévus dans le Typeform situation (pas des réponses libres échantillonnées). */
+const SITUATION_SINGLE_RE = [
+  /réagit-il face à un changement/i,
+  /vit-il la socialisation/i,
+  /réagit-il face aux devoirs/i,
+  /signes de stress liés/i,
+  /facilement stressé/i,
+  /relation de votre enfant avec les autres membres/i,
+];
+
 function detectType(label, vals, kind) {
   const clean = [...vals].filter(Boolean);
+  if (looksLikeFreeTextLabel(label)) {
+    return { type: "text" };
+  }
   if (kind === "meta" && isYesNo01(vals)) {
     return { type: "boolean", options: ["0", "1"] };
   }
@@ -151,15 +187,14 @@ function detectType(label, vals, kind) {
     }
     return { type: "text" };
   }
-  // situation
+  // situation — ne jamais transformer des réponses libres (métiers, “autre”) en QCM
+  if (SITUATION_SINGLE_RE.some((re) => re.test(label))) {
+    return { type: "single", options: clean.sort() };
+  }
   if (clean.length <= 12 && clean.every((v) => v.length < 120)) {
-    // likely multiple choice single or checkbox where value == label
     const allMatchLabel = clean.every((v) => v === label || v === "1" || v === "0");
     if (allMatchLabel || (clean.includes(label) && clean.length <= 4)) {
       return { type: "checkbox", options: [label] };
-    }
-    if (clean.length >= 2 && clean.length <= 8 && clean.every((v) => v.length < 90)) {
-      return { type: "single", options: clean.sort() };
     }
   }
   return { type: "text" };

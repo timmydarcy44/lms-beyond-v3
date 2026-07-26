@@ -16,67 +16,30 @@ function Stars({ rating = 5 }: { rating?: number }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={`h-3.5 w-3.5 ${i < rating ? "fill-[#C6A664] text-[#C6A664]" : "text-white/20"}`}
+          className={`h-4 w-4 ${i < rating ? "fill-[#C6A664] text-[#C6A664]" : "text-[#E6D9C6]"}`}
         />
       ))}
     </span>
   );
 }
 
-const ACCENTS = ["#7C9A6D", "#C6A664", "#6B8CAE", "#C4704B", "#8B6F47", "#5B7C99", "#A67C52", "#6D8B74"];
-
-function ReviewPhoneCard({
+function ReviewCard({
   author_name,
   rating,
   relative_time_description,
   text,
-  accent,
-}: (typeof JESSICA_FEATURED_REVIEWS)[number] & { accent: string }) {
-  const excerpt = text.length > 160 ? `${text.slice(0, 157).trim()}…` : text;
+}: (typeof JESSICA_FEATURED_REVIEWS)[number]) {
+  const excerpt = text.length > 180 ? `${text.slice(0, 177).trim()}…` : text;
 
   return (
-    <article
-      className="relative flex h-[420px] w-[240px] shrink-0 flex-col overflow-hidden rounded-[2rem] border border-white/10 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,0,0.65)] sm:h-[460px] sm:w-[260px]"
-      style={{
-        background: `linear-gradient(165deg, #1a1a1c 0%, #0e0e10 55%, #121214 100%)`,
-      }}
-    >
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full opacity-40 blur-2xl"
-        style={{ background: accent }}
-      />
-      <div className="relative z-10 mb-5 flex items-center justify-between">
-        <div className="h-1.5 w-16 rounded-full bg-white/15" />
-        <div className="h-2 w-2 rounded-full" style={{ background: accent }} />
-      </div>
-
-      <div className="relative z-10">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Avis Google</p>
-        <p className="mt-3 text-3xl font-semibold tracking-tight text-white">{GOOGLE_RATING}</p>
-        <div className="mt-2">
-          <Stars rating={rating} />
-        </div>
-      </div>
-
-      <div
-        className="relative z-10 mt-6 flex h-28 items-center justify-center rounded-full border border-white/10"
-        style={{
-          background: `conic-gradient(from 210deg, ${accent} 0deg, ${accent} ${rating * 72}deg, rgba(255,255,255,0.08) ${rating * 72}deg)`,
-        }}
-      >
-        <div className="flex h-[4.5rem] w-[4.5rem] flex-col items-center justify-center rounded-full bg-[#121214] text-center">
-          <span className="text-lg font-semibold text-white">{rating}/5</span>
-          <span className="text-[10px] text-white/45">note</span>
-        </div>
-      </div>
-
-      <p className="relative z-10 mt-6 flex-1 text-[13px] leading-relaxed text-white/75">
+    <article className="flex h-[380px] w-[260px] shrink-0 flex-col rounded-[1.75rem] border border-[#E6D9C6] bg-white p-6 shadow-[0_18px_48px_-28px_rgba(60,48,36,0.35)] sm:h-[400px] sm:w-[280px]">
+      <Stars rating={rating} />
+      <p className="mt-5 flex-1 text-[15px] leading-relaxed text-[#5C5348]">
         &ldquo;{excerpt}&rdquo;
       </p>
-
-      <div className="relative z-10 mt-4 border-t border-white/10 pt-4">
-        <p className="text-sm font-semibold text-white">{author_name}</p>
-        <p className="mt-0.5 text-xs text-white/40">{relative_time_description}</p>
+      <div className="mt-5 border-t border-[#E6D9C6]/80 pt-4">
+        <p className="text-sm font-semibold text-[#2F2A25]">{author_name}</p>
+        <p className="mt-0.5 text-xs text-[#5C5348]/70">{relative_time_description}</p>
       </div>
     </article>
   );
@@ -89,7 +52,7 @@ export function GoogleReviewsSection() {
   const scrollBy = (dir: -1 | 1) => {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * 280, behavior: "smooth" });
+    el.scrollBy({ left: dir * 300, behavior: "smooth" });
   };
 
   return (
@@ -161,7 +124,7 @@ export function GoogleReviewsSection() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.45, delay: Math.min(index * 0.05, 0.25) }}
                 >
-                  <ReviewPhoneCard {...review} accent={ACCENTS[index % ACCENTS.length]} />
+                  <ReviewCard {...review} />
                 </motion.div>
               ))}
             </div>

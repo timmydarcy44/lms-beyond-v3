@@ -1,14 +1,14 @@
 import {
-  getJessicaQuestionnaire,
+  getJessicaQuestionnaire as getJessicaQuestionnaireRaw,
   JESSICA_QUESTIONNAIRES,
   JESSICA_QUESTIONNAIRE_SLUGS,
   type JessicaQuestionnaireDef,
   type JessicaQuestionnaireSlug,
   type JessicaQuestionDef,
+  type JessicaQuestionType,
 } from "@/lib/jessica-contentin/questionnaires/definitions.generated";
 
 export {
-  getJessicaQuestionnaire,
   JESSICA_QUESTIONNAIRES,
   JESSICA_QUESTIONNAIRE_SLUGS,
 };
@@ -18,6 +18,11 @@ export type {
   JessicaQuestionDef,
   JessicaQuestionType,
 };
+
+export function getJessicaQuestionnaire(slug: string): JessicaQuestionnaireDef | null {
+  const def = getJessicaQuestionnaireRaw(slug);
+  return def ? sanitizeJessicaQuestionnaire(def) : null;
+}
 
 const LIKERT4: Record<string, number> = {
   Jamais: 0,
@@ -186,8 +191,51 @@ export function getJessicaScoreBenchmark(slug: string): JessicaScoreBenchmark | 
   return JESSICA_SCORE_BENCHMARKS[slug] ?? null;
 }
 
+/** Champs Typeform en réponse libre (souvent mal typés en QCM via les réponses CSV). */
+export function shouldBeFreeTextQuestion(q: JessicaQuestionDef): boolean {
+  const label = q.label.trim();
+  const lower = label.toLowerCase();
+
+  if (/^précision\s*\(autre\)/i.test(label)) return true;
+  if (/^other$/i.test(label)) return true;
+  if (/\bprofession\b/i.test(lower)) return true;
+  if (
+    /^(nom|prénom|prenom|email|e-mail|téléphone|telephone|âge|age)\b/i.test(lower) ||
+    lower.startsWith("nom de") ||
+    lower.startsWith("prénom") ||
+    lower.startsWith("prenom")
+  ) {
+    return true;
+  }
+  if (
+    /décrivez|décrire brièvement|précisez|expliquez|centres d'intérêt|journée type|dans quelle école|en quelle classe/i.test(
+      lower,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Corrige les QCM fantômes (ex. professions issues des réponses Typeform). */
+export function sanitizeJessicaQuestions(questions: JessicaQuestionDef[]): JessicaQuestionDef[] {
+  return questions.map((q) => {
+    if (!shouldBeFreeTextQuestion(q)) return q;
+    if (q.type === "text" && !q.options?.length) return q;
+    return { id: q.id, label: q.label, type: "text" };
+  });
+}
+
+export function sanitizeJessicaQuestionnaire(
+  def: JessicaQuestionnaireDef,
+): JessicaQuestionnaireDef {
+  return { ...def, questions: sanitizeJessicaQuestions(def.questions) };
+}
+
 export function listJessicaQuestionnaires(): JessicaQuestionnaireDef[] {
-  return JESSICA_QUESTIONNAIRE_SLUGS.map((slug) => JESSICA_QUESTIONNAIRES[slug]);
+  return JESSICA_QUESTIONNAIRE_SLUGS.map((slug) =>
+    sanitizeJessicaQuestionnaire(JESSICA_QUESTIONNAIRES[slug]),
+  );
 }
 
 export function normalizePersonKey(value: string | null | undefined): string {

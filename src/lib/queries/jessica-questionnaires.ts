@@ -2,6 +2,8 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
   JESSICA_QUESTIONNAIRES,
   JESSICA_QUESTIONNAIRE_SLUGS,
+  sanitizeJessicaQuestionnaire,
+  sanitizeJessicaQuestions,
   type JessicaQuestionDef,
   type JessicaQuestionnaireDef,
   normalizePersonKey,
@@ -42,7 +44,7 @@ function mapQuestionnaireRow(row: Record<string, unknown>): JessicaQuestionnaire
     slug: String(row.slug),
     title: String(row.title),
     description: String(row.description ?? ""),
-    questions,
+    questions: sanitizeJessicaQuestions(questions),
     is_active: row.is_active !== false,
     created_at: row.created_at ? String(row.created_at) : undefined,
     updated_at: row.updated_at ? String(row.updated_at) : undefined,
@@ -93,13 +95,16 @@ export async function resolveJessicaQuestionnaire(
 ): Promise<JessicaQuestionnaireDef | null> {
   const fromDb = await getJessicaQuestionnaireFromDb(slug);
   if (fromDb) return fromDb;
-  return JESSICA_QUESTIONNAIRES[slug] ?? null;
+  const builtin = JESSICA_QUESTIONNAIRES[slug];
+  return builtin ? sanitizeJessicaQuestionnaire(builtin) : null;
 }
 
 export async function listResolvedJessicaQuestionnaires(): Promise<JessicaQuestionnaireDef[]> {
   const fromDb = await listJessicaQuestionnairesFromDb();
   if (fromDb.length > 0) return fromDb;
-  return JESSICA_QUESTIONNAIRE_SLUGS.map((slug) => JESSICA_QUESTIONNAIRES[slug]);
+  return JESSICA_QUESTIONNAIRE_SLUGS.map((slug) =>
+    sanitizeJessicaQuestionnaire(JESSICA_QUESTIONNAIRES[slug]),
+  );
 }
 
 /** Insère les 5 questionnaires Typeform s’ils n’existent pas encore. */
@@ -108,7 +113,7 @@ export async function seedBuiltinJessicaQuestionnaires(createdBy?: string) {
   if (!supabase) return { seeded: 0, error: "Supabase indisponible" };
 
   const rows = JESSICA_QUESTIONNAIRE_SLUGS.map((slug) => {
-    const def = JESSICA_QUESTIONNAIRES[slug];
+    const def = sanitizeJessicaQuestionnaire(JESSICA_QUESTIONNAIRES[slug]);
     return {
       slug: def.slug,
       title: def.title,
@@ -128,6 +133,23 @@ export async function seedBuiltinJessicaQuestionnaires(createdBy?: string) {
     console.error("[jessica-questionnaires] seed", error);
     return { seeded: 0, error: error.message };
   }
+
+  // Resynchronise le typage des questions natives (corrige les QCM fantômes déjà en base).
+  for (const row of rows) {
+    const { error: syncError } = await supabase
+      .from("jessica_questionnaires")
+      .update({
+        questions: row.questions,
+        title: row.title,
+        description: row.description,
+        updated_at: row.updated_at,
+      })
+      .eq("slug", row.slug);
+    if (syncError) {
+      console.error("[jessica-questionnaires] sync", row.slug, syncError.message);
+    }
+  }
+
   return { seeded: count ?? rows.length };
 }
 

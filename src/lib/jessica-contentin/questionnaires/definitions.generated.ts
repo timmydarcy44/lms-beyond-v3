@@ -42,22 +42,12 @@ export const JESSICA_QUESTIONNAIRES: Record<string, JessicaQuestionnaireDef> = {
       {
         "id": "situation-enfant_profession_parent_1_4",
         "label": "Profession parent 1",
-        "type": "single",
-        "options": [
-          "Assistante de direction",
-          "Directrice du pôle ressources",
-          "Gestionnaire de paie"
-        ]
+        "type": "text"
       },
       {
         "id": "situation-enfant_profession_parent_2_5",
         "label": "Profession parent 2",
-        "type": "single",
-        "options": [
-          "Artisan couvreur",
-          "Responsable antenne bureau d’étude",
-          "Responsable magasin pièces détachées"
-        ]
+        "type": "text"
       },
       {
         "id": "situation-enfant_en_quelle_classe_est_actuellement_votre_enfant_6",
@@ -171,10 +161,7 @@ export const JESSICA_QUESTIONNAIRES: Record<string, JessicaQuestionnaireDef> = {
       {
         "id": "situation-enfant_other_3_22",
         "label": "Précision (autre) #3",
-        "type": "checkbox",
-        "options": [
-          "Other"
-        ]
+        "type": "text"
       },
       {
         "id": "situation-enfant_avez_vous_eu_des_retours_de_la_part_des_enseigna_23",
@@ -231,14 +218,7 @@ export const JESSICA_QUESTIONNAIRES: Record<string, JessicaQuestionnaireDef> = {
       {
         "id": "situation-enfant_other_5_30",
         "label": "Précision (autre) #5",
-        "type": "single",
-        "options": [
-          "Exprime le besoin de bouger plus souvent",
-          "N’ose pas faire par elle même",
-          "Refus de suivre les consignes",
-          "difficultés avec les chiffres",
-          "non"
-        ]
+        "type": "text"
       },
       {
         "id": "situation-enfant_lecture_31",
@@ -267,12 +247,7 @@ export const JESSICA_QUESTIONNAIRES: Record<string, JessicaQuestionnaireDef> = {
       {
         "id": "situation-enfant_other_6_34",
         "label": "Précision (autre) #6",
-        "type": "single",
-        "options": [
-          "Aucune",
-          "Phonétique",
-          "non"
-        ]
+        "type": "text"
       },
       {
         "id": "situation-enfant_comment_votre_enfant_reagit_il_face_aux_devoirs__35",
@@ -287,11 +262,7 @@ export const JESSICA_QUESTIONNAIRES: Record<string, JessicaQuestionnaireDef> = {
       {
         "id": "situation-enfant_other_7_36",
         "label": "Précision (autre) #7",
-        "type": "single",
-        "options": [
-          "Pas encore de devoir",
-          "n'admet pas qu'on verifie quand il fait en autonomie"
-        ]
+        "type": "text"
       },
       {
         "id": "situation-enfant_avez_vous_remarque_des_signes_de_stress_lies_aux_37",

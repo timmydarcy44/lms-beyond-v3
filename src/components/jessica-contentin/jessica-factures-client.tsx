@@ -34,6 +34,7 @@ import {
   type JessicaStoredInvoice,
 } from "@/lib/jessica-contentin/jessica-invoice-shared";
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
+import { buildJessicaInvoiceMonthlyRevenue } from "@/lib/jessica-contentin/jessica-invoice-revenue";
 import { cn } from "@/lib/utils";
 
 export type JessicaInvoiceClientOption = {
@@ -133,6 +134,7 @@ export function JessicaFacturesClient({
   );
   const [creating, setCreating] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState(initialInvoices);
 
   const [sendOpen, setSendOpen] = useState(false);
@@ -143,6 +145,11 @@ export function JessicaFacturesClient({
 
   const selected = sortedClients.find((c) => c.id === clientId) ?? null;
   const totalEuros = linesTotalCents(lines) / 100;
+  const monthlyRevenue = useMemo(() => buildJessicaInvoiceMonthlyRevenue(invoices), [invoices]);
+  const yearTotalCents = useMemo(
+    () => monthlyRevenue.reduce((sum, m) => sum + m.totalCents, 0),
+    [monthlyRevenue],
+  );
 
   useEffect(() => {
     setPriceDrafts((prev) => {
@@ -257,6 +264,28 @@ export function JessicaFacturesClient({
       toast.error(e instanceof Error ? e.message : "Envoi impossible");
     } finally {
       setSendingId(null);
+    }
+  };
+
+  const deleteInvoice = async (invoice: StoredInvoice) => {
+    if (
+      !window.confirm(
+        `Supprimer définitivement la facture ${invoice.invoice_number} (${invoice.client_label}) ?`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(invoice.id);
+    try {
+      const res = await fetch(`/api/admin/jessica-invoices/${invoice.id}`, { method: "DELETE" });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Suppression impossible");
+      setInvoices((prev) => prev.filter((i) => i.id !== invoice.id));
+      toast.success(`Facture ${invoice.invoice_number} supprimée`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Suppression impossible");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -507,6 +536,36 @@ export function JessicaFacturesClient({
         </div>
       </JessicaSuperCard>
 
+      <JessicaSuperCard className="mb-8">
+        <h2 className="mb-1 text-base font-semibold text-black">Chiffre d&apos;affaires facturé</h2>
+        <p className="mb-4 text-sm text-neutral-500">
+          Total sur la période chargée :{" "}
+          <span className="font-semibold text-black">{(yearTotalCents / 100).toFixed(2)} €</span>
+        </p>
+        {monthlyRevenue.length === 0 ? (
+          <p className="text-sm text-neutral-500">Aucune facture à comptabiliser.</p>
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {monthlyRevenue.map((month) => (
+              <li
+                key={month.key}
+                className="rounded-xl border border-black/[0.06] bg-white px-4 py-3"
+              >
+                <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  {month.label}
+                </p>
+                <p className="mt-1 text-lg font-semibold text-black">
+                  {(month.totalCents / 100).toFixed(2)} €
+                </p>
+                <p className="text-xs text-neutral-500">
+                  {month.count} facture{month.count > 1 ? "s" : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </JessicaSuperCard>
+
       <JessicaSuperCard>
         <h2 className="mb-4 text-base font-semibold text-black">Dernières factures</h2>
         {invoices.length === 0 ? (
@@ -553,6 +612,20 @@ export function JessicaFacturesClient({
                   >
                     <Download className="mr-1.5 h-3.5 w-3.5" />
                     PDF
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={deletingId === inv.id}
+                    title="Supprimer la facture"
+                    onClick={() => void deleteInvoice(inv)}
+                  >
+                    {deletingId === inv.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                    )}
                   </Button>
                 </div>
               </li>

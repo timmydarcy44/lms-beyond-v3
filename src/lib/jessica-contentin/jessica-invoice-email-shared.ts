@@ -8,7 +8,7 @@ function formatEuro(cents: number): string {
   });
 }
 
-/** Corps d'email par défaut — vouvoiement patient. */
+/** Corps d'email par défaut — vouvoiement patient (sans numéro de facture). */
 export function buildJessicaInvoiceEmailBodyText(invoice: JessicaStoredInvoice): string {
   const amountLabel = formatEuro(invoice.amount_cents);
   const firstName = invoice.client_label?.trim().split(/\s+/)[0] ?? "";
@@ -16,7 +16,7 @@ export function buildJessicaInvoiceEmailBodyText(invoice: JessicaStoredInvoice):
 
   return `${greeting}
 
-Je vous prie de trouver ci-joint votre facture acquittée ${invoice.invoice_number}, d'un montant de ${amountLabel}.
+Je vous prie de trouver ci-joint votre facture acquittée, d'un montant de ${amountLabel}.
 
 Pour toute question, vous pouvez répondre directement à cet email.
 
@@ -25,8 +25,8 @@ Jessica CONTENTIN
 Psychopédagogue certifiée`;
 }
 
-export function buildJessicaInvoiceEmailSubject(invoice: JessicaStoredInvoice): string {
-  return `Facture ${invoice.invoice_number} — Jessica CONTENTIN`;
+export function buildJessicaInvoiceEmailSubject(_invoice?: JessicaStoredInvoice): string {
+  return "Facture";
 }
 
 function escapeHtml(value: string): string {

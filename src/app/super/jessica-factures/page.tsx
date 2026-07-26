@@ -103,7 +103,7 @@ export default async function JessicaFacturesPage() {
       .from("jessica_invoices")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(500);
     if (!error && data) {
       initialInvoices = data as typeof initialInvoices;
     }

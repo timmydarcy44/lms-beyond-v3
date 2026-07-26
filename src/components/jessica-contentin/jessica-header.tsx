@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, FileText, Package, Contact, Receipt, Mail, FolderKanban } from "lucide-react";
+import {
+  Calendar,
+  FileText,
+  Package,
+  Contact,
+  Receipt,
+  Mail,
+  FolderKanban,
+  ClipboardList,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { jessicaSuper } from "@/lib/jessica-contentin/super-theme";
 
@@ -15,6 +24,12 @@ const NAV = [
     label: "Administratif",
     icon: FolderKanban,
     match: "/super/jessica-administratif",
+  },
+  {
+    href: "/super/jessica-tests",
+    label: "Tests",
+    icon: ClipboardList,
+    match: "/super/jessica-tests",
   },
   { href: "/super/agenda", label: "Agenda", icon: Calendar, match: "/super/agenda" },
   { href: "/super/catalogue-jessica", label: "Catalogue", icon: Package, match: "/super/catalogue-jessica" },

@@ -314,8 +314,9 @@ export function JessicaAttestationClient({ contacts }: Props) {
 
               <div className="mt-16 text-right">
                 <p className="text-sm font-semibold text-[#2F2A25]">Madame CONTENTIN</p>
-                <p className="mt-1 text-xs text-neutral-500">134 rue Elise Deroche</p>
-                <p className="text-xs text-neutral-500">14760 Bretteville-sur-Odon</p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Professeure en santé et psychopédagogue certifiée
+                </p>
               </div>
             </article>
           </div>

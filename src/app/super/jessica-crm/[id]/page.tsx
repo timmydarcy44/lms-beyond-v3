@@ -12,8 +12,10 @@ import {
 } from "@/lib/queries/jessica-cabinet-patients";
 import { UserDetailsClient } from "@/app/super/gestion-client/[id]/user-details-client";
 import { JessicaCabinetPatientPanel } from "@/components/jessica-contentin/crm/jessica-cabinet-patient-panel";
+import { JessicaClientQuestionnairesPanel } from "@/components/jessica-contentin/jessica-client-questionnaires-panel";
 import { formatClientName } from "@/lib/jessica-contentin/parse-client-name";
 import { JessicaSuperPage } from "@/components/jessica-contentin/super/jessica-super-ui";
+import { getJessicaQuestionnaireResponsesForClient } from "@/lib/queries/jessica-questionnaires";
 
 export const revalidate = 0;
 
@@ -61,6 +63,19 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
     }
   }
 
+  const questionnaireResponses = await getJessicaQuestionnaireResponsesForClient({
+    profileId: userDetails?.id ?? patient?.profileId ?? null,
+    patientId: patient?.id ?? null,
+    email: userDetails?.email ?? patient?.email ?? null,
+    firstName: userDetails?.firstName ?? patient?.firstName ?? null,
+    lastName: userDetails?.lastName ?? patient?.lastName ?? null,
+    fullName: formatClientName(
+      userDetails?.firstName ?? patient?.firstName,
+      userDetails?.lastName ?? patient?.lastName,
+      userDetails?.email ?? patient?.email ?? "Client",
+    ),
+  });
+
   if (userDetails) {
     const displayName = formatClientName(userDetails.firstName, userDetails.lastName);
     return (
@@ -79,6 +94,7 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
           dossier={dossier}
           cabinetPatient={patient}
           patientRevenue={patientRevenue}
+          questionnaireResponses={questionnaireResponses}
         />
       </JessicaSuperPage>
     );
@@ -94,6 +110,12 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
       backLabel="Retour au CRM"
     >
       <JessicaCabinetPatientPanel patient={patient!} revenue={patientRevenue ?? undefined} />
+      <div className="mt-6">
+        <JessicaClientQuestionnairesPanel
+          responses={questionnaireResponses}
+          contactId={patient!.id ? `patient:${patient!.id}` : undefined}
+        />
+      </div>
     </JessicaSuperPage>
   );
 }

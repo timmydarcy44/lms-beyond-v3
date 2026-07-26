@@ -11,8 +11,6 @@ const ISSUER = {
   title: "Professeure en santé – Psychopédagogue certifiée en neuroéducation",
   city: "Bretteville-sur-Odon (Calvados)",
   siren: "SIREN : 981 184 898",
-  address1: "134 rue Elise Deroche",
-  address2: "14760 Bretteville-sur-Odon",
 };
 
 function wrapText(doc: jsPDF, text: string, maxWidth: number): string[] {
@@ -72,9 +70,9 @@ export function buildJessicaAttestationPdf(input: JessicaAttestationInput): jsPD
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(80, 80, 80);
-  doc.text(ISSUER.address1, pageW - margin, y, { align: "right" });
-  y += 4.5;
-  doc.text(ISSUER.address2, pageW - margin, y, { align: "right" });
+  doc.text("Professeure en santé et psychopédagogue certifiée", pageW - margin, y, {
+    align: "right",
+  });
   doc.setTextColor(0, 0, 0);
 
   return doc;

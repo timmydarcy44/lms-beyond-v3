@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { JESSICA_SUPER } from "@/lib/jessica-contentin/super-theme";
+import { JessicaClientQuestionnairesPanel } from "@/components/jessica-contentin/jessica-client-questionnaires-panel";
+import type { JessicaQuestionnaireResponseRow } from "@/lib/queries/jessica-questionnaires";
 
 type UserDetailsClientProps = {
   userDetails: JessicaUserDetails;
@@ -30,6 +32,7 @@ type UserDetailsClientProps = {
   dossier?: LearnerDossier | null;
   cabinetPatient?: JessicaCabinetPatientDetails | null;
   patientRevenue?: PatientCabinetRevenue | null;
+  questionnaireResponses?: JessicaQuestionnaireResponseRow[];
 };
 
 export function UserDetailsClient({
@@ -38,6 +41,7 @@ export function UserDetailsClient({
   dossier,
   cabinetPatient,
   patientRevenue,
+  questionnaireResponses = [],
 }: UserDetailsClientProps) {
   const [activeTab, setActiveTab] = useState(dossier ? "suivi" : "overview");
   const [isAssigning, setIsAssigning] = useState(false);
@@ -521,6 +525,16 @@ export function UserDetailsClient({
             Vue d'ensemble
           </TabsTrigger>
           <TabsTrigger
+            value="questionnaires"
+            className="rounded-full px-6"
+            style={{
+              backgroundColor: activeTab === "questionnaires" ? primaryColor : "transparent",
+              color: activeTab === "questionnaires" ? "white" : textColor,
+            }}
+          >
+            Questionnaires ({questionnaireResponses.length})
+          </TabsTrigger>
+          <TabsTrigger
             value="purchases"
             className="rounded-full px-6"
             style={{
@@ -537,6 +551,13 @@ export function UserDetailsClient({
             <LearnerDossierPanel dossier={dossier} variant="jessica" />
           </TabsContent>
         ) : null}
+
+        <TabsContent value="questionnaires" className="mt-6">
+          <JessicaClientQuestionnairesPanel
+            responses={questionnaireResponses}
+            contactId={`user:${userDetails.id}`}
+          />
+        </TabsContent>
 
         <TabsContent value="overview" className="mt-6">
           <Card

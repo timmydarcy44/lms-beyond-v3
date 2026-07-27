@@ -8,7 +8,8 @@ import { JessicaParcoursProgramCards, type ParcoursProgramCard } from "@/compone
 import { PROGRAMMES, programmePresentationHref } from "@/lib/jessica-contentin/programmes-catalog";
 import { JessicaHomeAccompagnementSection } from "@/components/jessica-contentin/jessica-home-accompagnement-section";
 import { JessicaFullWidthVideoSection } from "@/components/jessica-contentin/jessica-full-width-video-section";
-import { JessicaPourquoiConsulterSection } from "@/components/jessica-contentin/jessica-pourquoi-consulter-section";
+import { JessicaTroisPiliersSection } from "@/components/jessica-contentin/jessica-trois-piliers-section";
+import { JessicaParcoursSurMesureSection } from "@/components/jessica-contentin/jessica-parcours-sur-mesure-section";
 import { JessicaHomeContactForm } from "@/components/jessica-contentin/jessica-home-contact-form";
 import { motion } from "framer-motion";
 import Script from "next/script";
@@ -55,7 +56,9 @@ export default function JessicaContentinHomePage() {
 
       <JessicaHomeAccompagnementSection />
 
-      <JessicaPourquoiConsulterSection />
+      <JessicaTroisPiliersSection />
+
+      <JessicaParcoursSurMesureSection />
 
       <JessicaFullWidthVideoSection
         videoUrl={VIDEO_NEVO}
@@ -66,31 +69,6 @@ export default function JessicaContentinHomePage() {
         ctaHref={NEVO_HREF}
         ariaLabel="NEVO — l'accompagnement continue à la maison"
       />
-
-      <motion.section
-        initial={{ opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.07 }}
-        className="mx-auto max-w-5xl px-4 py-16 md:px-8 md:py-20"
-      >
-        <div className="mx-auto max-w-5xl space-y-6">
-          <h2 className="text-3xl font-semibold text-[#2F2A25] md:text-4xl">Une approche basée sur la neuroéducation</h2>
-          <ul className="grid gap-3 text-base leading-relaxed text-[#2F2A25]/85 md:grid-cols-2 md:text-lg">
-            {[
-              "Compréhension du fonctionnement cognitif",
-              "Identification des besoins réels",
-              "Outils concrets et personnalisés",
-              "Accompagnement progressif",
-            ].map((line) => (
-              <li key={line} className="flex gap-2 py-2">
-                <span className="font-semibold text-[#C6A664]">→</span>
-                {line}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </motion.section>
 
       <motion.section
         initial={{ opacity: 0, y: 24 }}

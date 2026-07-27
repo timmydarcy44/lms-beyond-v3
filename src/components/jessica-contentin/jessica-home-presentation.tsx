@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { JESSICA_CREAM_CTA, JESSICA_CREAM_CTA_OUTLINE } from "@/lib/jessica-contentin/cream-cta";
 
 const PORTRAIT_PHOTO_URL =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Photo%20presentation.png";
@@ -51,14 +52,10 @@ export function JessicaHomePresentation() {
           </p>
 
           <div className="flex flex-wrap gap-3 border-t border-[#E6D9C6]/80 pt-6">
-            <Button asChild className="rounded-full bg-[#C6A664] px-6 text-white hover:bg-[#B88A44]">
+            <Button asChild className={`${JESSICA_CREAM_CTA} px-6`}>
               <Link href="/jessica-contentin/a-propos">En savoir plus</Link>
             </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="rounded-full border-[#C6A664]/50 bg-[#FDF9F3] text-[#2F2A25] hover:bg-[#F8F2EA]"
-            >
+            <Button asChild variant="outline" className={`${JESSICA_CREAM_CTA_OUTLINE} px-6`}>
               <Link href="/jessica-contentin/specialites">Les accompagnements</Link>
             </Button>
           </div>

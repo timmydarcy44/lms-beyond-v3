@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { JESSICA_CREAM_CTA } from "@/lib/jessica-contentin/cream-cta";
 import { cn } from "@/lib/utils";
 
 type ConsultFor = "moi" | "tiers";
@@ -167,7 +168,7 @@ export function JessicaHomeContactForm() {
                     className={cn(
                       "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
                       consultFor === opt.value
-                        ? "border-[#C4704B] bg-white text-[#2F2A25] shadow-sm"
+                        ? "border-[#C6A664] bg-white text-[#2F2A25] shadow-sm"
                         : "border-[#E6D9C6] bg-white/70 text-[#5C5348] hover:border-[#C6A664]/60",
                     )}
                   >
@@ -177,7 +178,7 @@ export function JessicaHomeContactForm() {
                       value={opt.value}
                       checked={consultFor === opt.value}
                       onChange={() => setConsultFor(opt.value)}
-                      className="accent-[#C4704B]"
+                      className="accent-[#8B6F47]"
                     />
                     {opt.label}
                   </label>
@@ -230,7 +231,7 @@ export function JessicaHomeContactForm() {
                 type="submit"
                 disabled={submitting}
                 size="lg"
-                className="w-full rounded-full bg-[#C4704B] px-8 py-6 text-base text-white shadow-[0_12px_32px_-12px_rgba(196,112,75,0.55)] hover:bg-[#A85A38] md:text-lg"
+                className={cn(JESSICA_CREAM_CTA, "w-full px-8 py-6 text-base md:text-lg")}
               >
                 {submitting ? (
                   <>

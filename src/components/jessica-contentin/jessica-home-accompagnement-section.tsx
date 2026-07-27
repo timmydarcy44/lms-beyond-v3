@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { JESSICA_CREAM_CTA } from "@/lib/jessica-contentin/cream-cta";
 
 const VIDEO_CABINET =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/jessica%20contentin/Copie%20de%20Copie%20de%20Copie%20de%20Sans%20titre.mp4";
@@ -45,10 +46,7 @@ export function JessicaHomeAccompagnementSection() {
             L&apos;objectif : retrouver du sens, des leviers concrets et une dynamique positive — pour l&apos;élève,
             l&apos;adolescent ou la famille.
           </p>
-          <Button
-            asChild
-            className="w-fit rounded-full bg-[#C6A664] px-8 py-6 text-base font-semibold text-white hover:bg-[#B88A44]"
-          >
+          <Button asChild className={`${JESSICA_CREAM_CTA} w-fit px-8 py-6 text-base`}>
             <Link href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
               Commencer
             </Link>

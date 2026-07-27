@@ -108,8 +108,6 @@ export function JessicaContentinHeader() {
   const [isMounted, setIsMounted] = useState(false);
   const [scrolledPastHero, setScrolledPastHero] = useState(false);
 
-  const headerOverHero = isHomePage && !scrolledPastHero;
-  
   // S'assurer que le composant est monté côté client avant de faire des opérations client-side
   useEffect(() => {
     setIsMounted(true);
@@ -243,12 +241,12 @@ export function JessicaContentinHeader() {
       <div className={cn(isHomePage ? "fixed top-0 left-0 right-0 z-50" : "mx-4 mt-4")}>
         <header
           className={cn(
-            "transition-colors duration-300",
-            headerOverHero
-              ? "border-b border-white/10 bg-transparent shadow-none backdrop-blur-none"
-              : isHomePage
-                ? "border-b border-[#E6D9C6]/50 bg-[#F8F5F0]/95 shadow-md backdrop-blur-md"
-                : "sticky top-4 z-50 rounded-2xl border-b border-[#E6D9C6]/50 bg-[#F8F5F0]/90 shadow-lg backdrop-blur-md",
+            "border-b border-black/[0.06] bg-white/70 shadow-[0_8px_30px_-18px_rgba(47,42,37,0.35)] backdrop-blur-xl backdrop-saturate-150 transition-[background-color,box-shadow] duration-300",
+            isHomePage
+              ? scrolledPastHero
+                ? "bg-white/80 shadow-[0_10px_36px_-16px_rgba(47,42,37,0.4)]"
+                : "bg-white/65"
+              : "sticky top-4 z-50 mx-0 rounded-2xl bg-white/75 shadow-lg",
           )}
         >
         <nav className="mx-auto max-w-7xl px-6">
@@ -256,10 +254,7 @@ export function JessicaContentinHeader() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span
-              className={cn(
-                "text-xl font-normal whitespace-nowrap",
-                headerOverHero ? "text-white drop-shadow-sm" : "text-[#2F2A25]",
-              )}
+              className="whitespace-nowrap text-xl font-normal text-[#2F2A25]"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
@@ -298,11 +293,8 @@ export function JessicaContentinHeader() {
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors",
-                    headerOverHero
-                      ? "text-white hover:bg-white/15"
-                      : "text-[#2F2A25] hover:bg-[#E6D9C6]/50",
-                    activeDropdown === item.href && (headerOverHero ? "bg-white/15" : "bg-[#E6D9C6]/50"),
+                    "flex items-center gap-1 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-[#2F2A25] transition-colors hover:bg-black/[0.04]",
+                    activeDropdown === item.href && "bg-black/[0.04]",
                   )}
                 >
                   {item.label}
@@ -409,10 +401,7 @@ export function JessicaContentinHeader() {
             <Button
               asChild
               className={cn(
-                "!rounded-full !px-7 !py-5 !text-sm !font-semibold !shadow-[0_10px_28px_-12px_rgba(196,112,75,0.55)]",
-                headerOverHero
-                  ? "!border-2 !border-white !bg-white !text-[#2F2A25] hover:!bg-white/95"
-                  : "!border-0 !bg-[#C4704B] !text-white hover:!bg-[#A85A38]",
+                "!rounded-full !border !border-[#E5DED4] !bg-[#F5F0E9] !px-7 !py-5 !text-sm !font-semibold !text-[#2F2A25] !shadow-[0_10px_28px_-16px_rgba(60,48,36,0.3)] hover:!bg-[#EBE4D8]",
               )}
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
@@ -427,10 +416,7 @@ export function JessicaContentinHeader() {
             {isMounted && isAuthenticated && userFirstName ? (
               <Link 
                 href="/mon-compte"
-                className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
-                  headerOverHero ? "text-white hover:text-white/80" : "text-[#2F2A25] hover:text-[#C6A664]",
-                )}
+                className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm text-[#2F2A25] transition-colors hover:text-[#5C5348]"
                 style={{
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                 }}
@@ -440,10 +426,7 @@ export function JessicaContentinHeader() {
             ) : (
               <Link 
                 href="/mon-compte"
-                className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
-                  headerOverHero ? "text-white hover:text-white/80" : "text-[#2F2A25] hover:text-[#C6A664]",
-                )}
+                className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm text-[#2F2A25] transition-colors hover:text-[#5C5348]"
               >
                 <User className="h-3.5 w-3.5" />
               </Link>
@@ -452,7 +435,7 @@ export function JessicaContentinHeader() {
 
           {/* Mobile Menu Button */}
           <button
-            className={cn("p-2 lg:hidden", headerOverHero ? "text-white" : "text-[#2F2A25]")}
+            className="p-2 text-[#2F2A25] lg:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -461,14 +444,7 @@ export function JessicaContentinHeader() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div
-            className={cn(
-              "mx-3 mb-3 max-h-[min(70dvh,calc(100dvh-5.5rem))] overflow-y-auto overscroll-contain rounded-2xl border py-3 lg:hidden",
-              headerOverHero
-                ? "border-white/20 bg-[#2F2A25]/95 shadow-2xl backdrop-blur-xl"
-                : "border-[#E6D9C6] bg-[#F8F5F0] shadow-lg",
-            )}
-          >
+          <div className="mx-3 mb-3 max-h-[min(70dvh,calc(100dvh-5.5rem))] overflow-y-auto overscroll-contain rounded-2xl border border-black/[0.06] bg-white/80 py-3 shadow-lg backdrop-blur-xl lg:hidden">
             <div className="flex flex-col gap-1 px-1">
               {menuItems.map((item) => {
                 const hasSub =
@@ -480,12 +456,7 @@ export function JessicaContentinHeader() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={cn(
-                        "block rounded-lg px-4 py-3 text-sm font-medium",
-                        headerOverHero
-                          ? "text-white hover:bg-white/10"
-                          : "text-[#2F2A25] hover:bg-[#E6D9C6]/50",
-                      )}
+                      className="block rounded-lg px-4 py-3 text-sm font-medium text-[#2F2A25] hover:bg-black/[0.04]"
                       onClick={closeMenus}
                     >
                       {item.label}
@@ -497,12 +468,7 @@ export function JessicaContentinHeader() {
                   <div key={item.href} className="border-b border-black/5 last:border-0">
                     <button
                       type="button"
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium",
-                        headerOverHero
-                          ? "text-white hover:bg-white/10"
-                          : "text-[#2F2A25] hover:bg-[#E6D9C6]/50",
-                      )}
+                      className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium text-[#2F2A25] hover:bg-black/[0.04]"
                       onClick={() =>
                         setMobileOpenCategory((prev) => (prev === item.href ? null : item.href))
                       }
@@ -511,9 +477,8 @@ export function JessicaContentinHeader() {
                       <span>{item.label}</span>
                       <ChevronDown
                         className={cn(
-                          "h-4 w-4 shrink-0 transition-transform",
+                          "h-4 w-4 shrink-0 text-[#8B6F47] transition-transform",
                           isOpen && "rotate-180",
-                          headerOverHero ? "text-white/70" : "text-[#8B6F47]",
                         )}
                       />
                     </button>
@@ -522,12 +487,7 @@ export function JessicaContentinHeader() {
                       <div className="space-y-1 pb-3 pl-2 pr-2">
                         <Link
                           href={item.href}
-                          className={cn(
-                            "block rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wide",
-                            headerOverHero
-                              ? "text-white/55 hover:bg-white/10 hover:text-white"
-                              : "text-[#8B6F47] hover:bg-[#E6D9C6]/50",
-                          )}
+                          className="block rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#8B6F47] hover:bg-black/[0.04]"
                           onClick={closeMenus}
                         >
                           Voir la page
@@ -536,12 +496,7 @@ export function JessicaContentinHeader() {
                           <Link
                             key={`${subItem.href}-${subItem.label}-${idx}`}
                             href={subItem.href}
-                            className={cn(
-                              "block rounded-lg px-4 py-2.5 text-sm",
-                              headerOverHero
-                                ? "text-white/80 hover:bg-white/10 hover:text-white"
-                                : "text-[#5C5348] hover:bg-[#E6D9C6]/50 hover:text-[#2F2A25]",
-                            )}
+                            className="block rounded-lg px-4 py-2.5 text-sm text-[#5C5348] hover:bg-black/[0.04] hover:text-[#2F2A25]"
                             onClick={closeMenus}
                           >
                             {subItem.label}
@@ -549,24 +504,14 @@ export function JessicaContentinHeader() {
                         ))}
                         {item.submenuColumns?.map((column) => (
                           <div key={column.title} className="space-y-1 pt-1">
-                            <div
-                              className={cn(
-                                "px-4 pt-2 text-xs font-semibold uppercase tracking-wider",
-                                headerOverHero ? "text-white/50" : "text-[#8B6F47]",
-                              )}
-                            >
+                            <div className="px-4 pt-2 text-xs font-semibold uppercase tracking-wider text-[#8B6F47]">
                               {column.title}
                             </div>
                             {column.items.map((subItem) => (
                               <Link
                                 key={subItem.href + subItem.label}
                                 href={subItem.href}
-                                className={cn(
-                                  "block rounded-lg px-4 py-2.5 text-sm",
-                                  headerOverHero
-                                    ? "text-white/80 hover:bg-white/10 hover:text-white"
-                                    : "text-[#5C5348] hover:bg-[#E6D9C6]/50 hover:text-[#2F2A25]",
-                                )}
+                                className="block rounded-lg px-4 py-2.5 text-sm text-[#5C5348] hover:bg-black/[0.04] hover:text-[#2F2A25]"
                                 onClick={closeMenus}
                               >
                                 {subItem.label}
@@ -583,7 +528,7 @@ export function JessicaContentinHeader() {
               <div className="mt-3 flex flex-col gap-3 px-3 pb-2">
                 <Button
                   asChild
-                  className="!rounded-full !border-0 !bg-[#C4704B] !px-6 !py-5 !text-sm !font-semibold !text-white !shadow-md hover:!bg-[#A85A38]"
+                  className="!rounded-full !border !border-[#E5DED4] !bg-[#F5F0E9] !px-6 !py-5 !text-sm !font-semibold !text-[#2F2A25] !shadow-md hover:!bg-[#EBE4D8]"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                   }}
@@ -595,10 +540,7 @@ export function JessicaContentinHeader() {
                 {isMounted && isAuthenticated && userFirstName ? (
                   <Link
                     href="/jessica-contentin/mon-compte"
-                    className={cn(
-                      "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
-                      headerOverHero ? "text-white/80 hover:text-white" : "text-[#2F2A25] hover:text-[#C6A664]",
-                    )}
+                    className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm text-[#2F2A25] transition-colors hover:text-[#5C5348]"
                     style={{
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                     }}
@@ -609,10 +551,7 @@ export function JessicaContentinHeader() {
                 ) : (
                   <Link
                     href="/jessica-contentin/mon-compte"
-                    className={cn(
-                      "flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm transition-colors",
-                      headerOverHero ? "text-white/80 hover:text-white" : "text-[#2F2A25] hover:text-[#C6A664]",
-                    )}
+                    className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm text-[#2F2A25] transition-colors hover:text-[#5C5348]"
                     style={{
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
                     }}

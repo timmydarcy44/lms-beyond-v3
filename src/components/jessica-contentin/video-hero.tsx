@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
@@ -22,111 +22,153 @@ const FONT =
 
 export { JESSICA_CREAM_CTA };
 
+function HeroImage({
+  mediaFailed,
+  onError,
+  className,
+  fill = false,
+  style,
+}: {
+  mediaFailed: boolean;
+  onError: () => void;
+  className: string;
+  fill?: boolean;
+  style?: CSSProperties;
+}) {
+  if (mediaFailed) {
+  // eslint-disable-next-line @next/next/no-img-element
+    return <img src={FALLBACK_IMAGE} alt="" className={className} />;
+  }
+
+  if (fill) {
+    return (
+      <Image
+        src={HERO_IMAGE_URL}
+        alt="Jessica Contentin — psychopédagogue"
+        fill
+        priority
+        sizes="100vw"
+        className={className}
+        style={style}
+        onError={onError}
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={HERO_IMAGE_URL}
+      alt="Jessica Contentin — psychopédagogue"
+      width={2400}
+      height={1600}
+      priority
+      sizes="100vw"
+      className={className}
+      onError={onError}
+    />
+  );
+}
+
 export function VideoHero() {
   const [mediaFailed, setMediaFailed] = useState(false);
 
   return (
-    <motion.section
+    <section
       id="accueil-video"
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6 }}
-      className="relative w-full scroll-mt-0 overflow-hidden bg-[#F2ECE4]"
+      className="relative w-full scroll-mt-0 overflow-hidden bg-[#F2ECE4] min-h-[100dvh] md:min-h-0"
     >
-      {/* Image en intégralité : pas de object-cover qui coupe cheveux / chaussures */}
-      <div className="relative w-full">
-        {mediaFailed ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={FALLBACK_IMAGE} alt="" className="block h-auto w-full" />
-        ) : (
-          <Image
-            src={HERO_IMAGE_URL}
-            alt="Jessica Contentin — psychopédagogue"
-            width={2400}
-            height={1600}
-            priority
-            sizes="100vw"
-            className="block h-auto w-full"
-            onError={() => setMediaFailed(true)}
-          />
-        )}
+      {/* Mobile : image plein écran — cadrage sur la personne et le cahier nevo */}
+      <div className="absolute inset-0 md:hidden" aria-hidden>
+        <HeroImage
+          mediaFailed={mediaFailed}
+          onError={() => setMediaFailed(true)}
+          fill
+          className="object-cover"
+          style={{ objectPosition: "64% 46%" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#F2ECE4]/96 via-[#F2ECE4]/72 to-[#F2ECE4]/25" />
+      </div>
 
+      {/* Desktop : image en intégralité */}
+      <div className="relative hidden w-full md:block">
+        <HeroImage
+          mediaFailed={mediaFailed}
+          onError={() => setMediaFailed(true)}
+          className="block h-auto w-full"
+        />
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F2ECE4]/88 via-[#F2ECE4]/45 to-transparent md:from-[#F2ECE4]/78 md:via-[#F2ECE4]/28 md:to-transparent"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F2ECE4]/88 via-[#F2ECE4]/45 to-transparent"
           aria-hidden
         />
-
-        <div className="absolute inset-0 z-10 flex items-center px-6 pt-24 pb-16 lg:px-16">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="max-w-xl lg:max-w-2xl"
-          >
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="text-3xl font-semibold leading-[1.15] tracking-tight text-[#2F2A25] md:text-4xl lg:text-[2.75rem]"
-              style={{ fontFamily: FONT }}
-            >
-              Comprendre le fonctionnement pour individualiser l&apos;accompagnement.
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="mt-5 max-w-xl text-base leading-relaxed text-[#5C5348] md:text-lg"
-              style={{ fontFamily: FONT }}
-            >
-              Chaque accompagnement est fondé sur une compréhension individualisée du fonctionnement
-              cognitif, attentionnel et émotionnel.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.55 }}
-              className="mt-8 flex flex-col items-start gap-5"
-            >
-              <Button
-                asChild
-                size="lg"
-                className={`${JESSICA_CREAM_CTA} px-10 py-7 text-base md:text-lg`}
-                style={{ fontFamily: FONT }}
-              >
-                <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                  Prendre rendez-vous
-                </a>
-              </Button>
-
-              <a
-                href={GOOGLE_REVIEWS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-col items-start gap-1.5 text-[#5C5348] transition hover:text-[#2F2A25]"
-                style={{ fontFamily: FONT }}
-              >
-                <span className="inline-flex items-center gap-0.5" aria-hidden>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-[#C6A664] text-[#C6A664]" />
-                  ))}
-                </span>
-                <span className="text-sm md:text-[0.95rem]">
-                  <span className="font-medium">5/5 sur Google</span>
-                  <span className="text-[#5C5348]/45"> · </span>
-                  <span>{GOOGLE_REVIEW_COUNT} avis</span>
-                </span>
-              </a>
-            </motion.div>
-          </motion.div>
-        </div>
       </div>
-    </motion.section>
+
+      {/* Contenu — plein écran mobile, centré desktop */}
+      <div className="relative z-10 flex min-h-[100dvh] flex-col justify-end px-5 pb-10 pt-20 sm:px-6 sm:pb-12 md:absolute md:inset-0 md:min-h-0 md:justify-center md:px-16 md:pb-16 md:pt-24">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.15 }}
+          className="max-w-xl lg:max-w-2xl"
+        >
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.25 }}
+            className="text-[1.65rem] font-semibold leading-[1.12] tracking-tight text-[#2F2A25] sm:text-3xl md:text-4xl lg:text-[2.75rem]"
+            style={{ fontFamily: FONT }}
+          >
+            Comprendre le fonctionnement pour individualiser l&apos;accompagnement.
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.35 }}
+            className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-[#5C5348] sm:mt-5 sm:text-base md:text-lg"
+            style={{ fontFamily: FONT }}
+          >
+            Chaque accompagnement est fondé sur une compréhension individualisée du fonctionnement
+            cognitif, attentionnel et émotionnel.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.45 }}
+            className="mt-6 flex flex-col items-start gap-4 sm:mt-8 sm:gap-5"
+          >
+            <Button
+              asChild
+              size="lg"
+              className={`${JESSICA_CREAM_CTA} w-full px-8 py-6 text-base sm:w-auto sm:px-10 sm:py-7 md:text-lg`}
+              style={{ fontFamily: FONT }}
+            >
+              <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                Prendre rendez-vous
+              </a>
+            </Button>
+
+            <a
+              href={GOOGLE_REVIEWS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-start gap-1.5 text-[#5C5348] transition hover:text-[#2F2A25]"
+              style={{ fontFamily: FONT }}
+            >
+              <span className="inline-flex items-center gap-0.5" aria-hidden>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-[#C6A664] text-[#C6A664]" />
+                ))}
+              </span>
+              <span className="text-sm md:text-[0.95rem]">
+                <span className="font-medium">5/5 sur Google</span>
+                <span className="text-[#5C5348]/45"> · </span>
+                <span>{GOOGLE_REVIEW_COUNT} avis</span>
+              </span>
+            </a>
+          </motion.div>
+        </motion.div>
+      </div>
+    </section>
   );
 }

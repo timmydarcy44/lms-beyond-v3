@@ -19,7 +19,7 @@ const PILLARS = [
   {
     icon: TrendingUp,
     title: "Employabilité",
-    description: "90 % d'insertion, alternance structurée et matching compétences ↔ opportunités.",
+    description: "Matching compétences ↔ opportunités et insertion professionnelle mesurable.",
   },
   {
     icon: Award,
@@ -37,8 +37,8 @@ export function EdgePremiumBrandPillars({ variant = "light" }: { variant?: "ligh
         <p
           className={
             isDark
-              ? "text-[10px] font-medium uppercase tracking-[0.25em] text-[#3B82F6]/70"
-              : "text-[10px] font-medium uppercase tracking-[0.25em] text-edge-accent"
+              ? "text-[10px] font-medium uppercase tracking-[0.25em] text-white/40"
+              : "text-[10px] font-medium uppercase tracking-[0.25em] text-black/40"
           }
         >
           Ce qui nous différencie
@@ -56,11 +56,11 @@ export function EdgePremiumBrandPillars({ variant = "light" }: { variant?: "ligh
               className={
                 isDark
                   ? "rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-6 transition hover:border-white/[0.14]"
-                  : "rounded-[24px] border border-[#050505]/8 bg-[#F7F7F5] p-6 transition hover:shadow-[0_12px_40px_rgba(99,91,255,0.08)]"
+                  : "rounded-[24px] border border-[#050505]/8 bg-[#F7F7F5] p-6 transition hover:shadow-[0_12px_40px_rgba(5,5,5,0.06)]"
               }
             >
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDark ? "bg-[#635BFF]/15 text-[#a8a3ff]" : "bg-edge-accent/10 text-edge-accent"}`}
+                className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDark ? "bg-white/10 text-white" : "bg-black/[0.06] text-edge-black-deep"}`}
               >
                 <pillar.icon className="h-5 w-5" strokeWidth={1.5} />
               </div>

@@ -74,7 +74,7 @@ type Props = {
 
 export function EdgePremiumMobileMenu({ open, onClose, config, loginHref, discoverHref }: Props) {
   const tabs = getMobileRevolutTabs(config);
-  const [activeTab, setActiveTab] = useState<MobileRevolutTabId>("apprenants");
+  const [activeTab, setActiveTab] = useState<MobileRevolutTabId>("business");
   const [mounted, setMounted] = useState(false);
 
   const current = tabs.find((t) => t.id === activeTab) ?? tabs[0];
@@ -106,7 +106,7 @@ export function EdgePremiumMobileMenu({ open, onClose, config, loginHref, discov
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, #0a1628 0%, #0d1f3c 38%, #091525 72%, #060e1a 100%)",
+            "linear-gradient(180deg, #050505 0%, #0a0a0a 38%, #080808 72%, #050505 100%)",
         }}
         aria-hidden
       />
@@ -114,7 +114,7 @@ export function EdgePremiumMobileMenu({ open, onClose, config, loginHref, discov
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 90% 45% at 50% -5%, rgba(56, 120, 210, 0.22), transparent 60%)",
+            "radial-gradient(ellipse 90% 45% at 50% -5%, rgba(255, 255, 255, 0.08), transparent 60%)",
         }}
         aria-hidden
       />

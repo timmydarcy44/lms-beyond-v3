@@ -7,7 +7,7 @@ type Shape = "pill" | "revolut";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-edge-accent text-white hover:bg-edge-accent-light hover:shadow-[0_0_32px_rgba(99,91,255,0.35)]",
+    "bg-edge-black-deep text-white hover:bg-black hover:shadow-[0_0_32px_rgba(0,0,0,0.25)]",
   "secondary-dark":
     "border border-white/30 bg-transparent text-white hover:border-white/60 hover:bg-white/[0.04]",
   "secondary-light":

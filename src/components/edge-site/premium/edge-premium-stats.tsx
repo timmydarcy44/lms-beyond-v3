@@ -4,7 +4,7 @@ const STATS = [
   {
     icon: Users,
     value: "+25 000",
-    label: "apprenants formés",
+    label: "personnes formées",
   },
   {
     icon: Building2,
@@ -28,12 +28,11 @@ export function EdgePremiumStats() {
             <br />
             plus uniquement des diplômés.
             <br />
-            Elles recherchent des{" "}
-            <span className="text-edge-accent">compétences.</span>
+            Elles recherchent des compétences.
           </h2>
           <p className="mt-6 max-w-md text-base leading-relaxed text-black/50">
-            EDGE forme aux compétences recherchées par le marché — en alternance, en ligne et en
-            entreprise — pour des parcours concrets et des résultats mesurables.
+            EDGE forme aux compétences recherchées par le marché — en ligne et en entreprise —
+            pour des parcours concrets et des résultats mesurables.
           </p>
         </div>
 
@@ -41,7 +40,7 @@ export function EdgePremiumStats() {
           {STATS.map((stat) => (
             <div key={stat.label} className="group">
               <stat.icon
-                className="h-5 w-5 text-black/30 transition-colors group-hover:text-edge-accent"
+                className="h-5 w-5 text-black/30 transition-colors group-hover:text-black"
                 strokeWidth={1.5}
               />
               <p className="mt-4 text-3xl font-semibold tracking-tight text-edge-black-deep sm:text-4xl">

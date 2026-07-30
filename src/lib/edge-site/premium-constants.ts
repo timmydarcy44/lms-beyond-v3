@@ -16,7 +16,7 @@ export const EDGE_PREMIUM_IMAGES = {
   recruter:
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=85",
   certifier:
-    "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=85",
+    "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=85",
   apprenants:
     "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=85",
   business:
@@ -62,9 +62,9 @@ export function getEdgePremiumConfig(host?: string | null) {
     nav: {
       fonctionnalites: [
         { label: "Formations & parcours", href: R.formations },
-        { label: "Alternance", href: R.alternance },
         { label: "Certifications", href: R.certifications },
         { label: "Formations en ligne", href: R.online },
+        { label: "Open Badges", href: R.businessOpenBadges },
       ],
       ressources: [
         { label: "Blog", href: R.blog },
@@ -125,7 +125,7 @@ export function getEdgePremiumConfig(host?: string | null) {
         {
           title: "Former",
           links: [
-            { label: "Former vos équipes", href: R.businessFormerEquipes },
+            { label: "Former vos équipes", href: R.businessFormerEquipes, featured: true },
             { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
             { label: "Intra-entreprise", href: R.businessFormerEquipes },
             { label: "Inter-entreprises", href: R.businessFormerEquipes },
@@ -138,7 +138,7 @@ export function getEdgePremiumConfig(host?: string | null) {
             { label: "Cartographier les compétences", href: R.businessCompetences },
             { label: "Plans de progression", href: R.businessPlansProgression },
             { label: "Certifications", href: R.businessCertificationsBiz },
-            { label: "Open Badges", href: R.businessOpenBadges },
+            { label: "Open Badges", href: R.businessOpenBadges, featured: true },
           ],
         },
         {
@@ -146,7 +146,7 @@ export function getEdgePremiumConfig(host?: string | null) {
           links: [
             { label: "Identifier les talents", href: R.businessIdentifierTalents },
             { label: "Évaluer les compétences", href: R.businessEvaluerCompetences },
-            { label: "Alternance", href: R.alternance },
+            { label: "Matching compétences", href: R.businessRecrutement },
             { label: "Onboarding", href: R.businessOnboarding },
           ],
         },
@@ -193,7 +193,7 @@ export function getEdgePremiumConfig(host?: string | null) {
             { label: "Développer mes compétences", href: R.particulierDevelopper },
             { label: "EDGE Online", href: EDGE_ONLINE_EXTERNAL_URL },
             { label: "Micro-certifications", href: R.particulierMicroCertifications },
-            { label: "Open Badges", href: R.particulierOpenBadges },
+            { label: "Open Badges", href: R.particulierOpenBadges, featured: true },
           ],
         },
         {
@@ -247,21 +247,6 @@ export type EdgeMobileNavCategory = {
 export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNavCategory[] {
   const R = config.routes;
   return [
-    {
-      id: "apprenants",
-      label: "Apprenants",
-      links: [
-        { label: "Titres professionnels (Bac+2)", href: R.formationsTitresPro },
-        { label: "Bachelor (Bac+3)", href: R.formationsBachelor },
-        { label: "Mastère (Bac+5)", href: R.formationsMastere },
-        { label: "Bootcamps", href: R.onlineBootcamps },
-        { label: "Spécialités", href: R.formationsSpecialites },
-        { label: "Alternance", href: R.alternance },
-        { label: "Admissions", href: R.admissions },
-        { label: "Financement", href: R.financement },
-        { label: "Vie étudiante", href: R.vieEtudiante },
-      ],
-    },
     {
       id: "business",
       label: "Business",

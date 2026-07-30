@@ -4,7 +4,7 @@ export function EdgePremiumLogos() {
   return (
     <section className="bg-edge-cream py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-        <p className="text-center text-[10px] font-medium uppercase tracking-[0.25em] text-edge-accent">
+        <p className="text-center text-[10px] font-medium uppercase tracking-[0.25em] text-black/40">
           ILS NOUS FONT CONFIANCE
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 sm:gap-x-14">

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { EdgeMegaColumnsData } from "@/lib/edge-site/premium-constants";
 
 type PanelProps = {
@@ -20,7 +21,7 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose }: PanelProps) {
 
   return (
     <div
-      className="overflow-hidden rounded-[32px] border border-white/[0.12] bg-[linear-gradient(155deg,rgba(14,22,58,0.72)_0%,rgba(8,14,36,0.76)_42%,rgba(5,8,20,0.8)_100%)] shadow-[0_28px_90px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-3xl"
+      className="overflow-hidden rounded-[32px] border border-white/[0.12] bg-[linear-gradient(155deg,rgba(14,14,14,0.92)_0%,rgba(8,8,8,0.94)_42%,rgba(5,5,5,0.96)_100%)] shadow-[0_28px_90px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-3xl"
       role="menu"
     >
       <div className="px-8 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
@@ -31,7 +32,7 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose }: PanelProps) {
             onClick={onClose}
           >
             {data.headerTitle}
-            <ArrowRight className="h-4 w-4 text-white/70 transition-transform group-hover:translate-x-0.5 group-hover:text-edge-accent" />
+            <ArrowRight className="h-4 w-4 text-white/70 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
           </Link>
           {"headerSubtitle" in data && data.headerSubtitle ? (
             <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-white/42">
@@ -43,22 +44,33 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose }: PanelProps) {
         <div className={`mt-11 grid gap-10 ${gridClass} lg:gap-12`}>
           {data.columns.map((col) => (
             <div key={col.title}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8b9dc3]/90">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">
                 {col.title}
               </p>
               <ul className="mt-5 space-y-1">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="block rounded-xl px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.08] hover:text-white"
-                      role="menuitem"
-                      onClick={onClose}
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+                {col.links.map((link) => {
+                  const featured = "featured" in link && link.featured;
+                  return (
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
+                        className={cn(
+                          "block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                          featured
+                            ? "bg-white text-black shadow-[0_8px_24px_rgba(0,0,0,0.25)] hover:bg-white/92"
+                            : "text-white hover:bg-white/[0.08] hover:text-white",
+                        )}
+                        role="menuitem"
+                        onClick={onClose}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          {featured ? <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} /> : null}
+                          {link.label}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

@@ -17,13 +17,13 @@ export function EdgePremiumFooter() {
 
   const footerColumns = [
     {
-      title: "Apprenants",
+      title: "Particulier",
       links: [
         { label: "Formations", href: R.formations },
-        { label: "Alternance", href: R.alternance },
-        { label: "Admissions", href: R.admissions },
-        { label: "Vie étudiante", href: R.vieEtudiante },
+        { label: "Certifications", href: R.certifications },
+        { label: "EDGE Online", href: R.particulierEdgeOnline },
         { label: "Financement", href: R.financement },
+        { label: "Contact", href: R.contact },
       ],
     },
     {
@@ -70,7 +70,7 @@ export function EdgePremiumFooter() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-white/50 transition-all hover:border-edge-accent/40 hover:text-white"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-white/50 transition-all hover:border-white/40 hover:text-white"
                   aria-label={item.label}
                 >
                   <item.icon className="h-4 w-4" strokeWidth={1.5} />

@@ -5,11 +5,11 @@ import { EdgePremiumHome } from "@/components/edge-site/premium/edge-premium-hom
 export const metadata: Metadata = {
   title: "EDGE — Développons les compétences qui feront la différence demain",
   description:
-    "EDGE accompagne les apprenants et les organisations avec des formations innovantes, une technologie intelligente et une pédagogie orientée résultats.",
+    "Parce que les organismes de formation doivent évoluer. Identifier, former et valoriser les compétences — avec des résultats mesurables.",
   openGraph: {
     title: "EDGE — Formation & développement des compétences",
     description:
-      "Formations, alternance, certifications et solutions entreprise. +25 000 apprenants, 500+ organisations partenaires.",
+      "Identifications. Formations. Valorisations des compétences. +25 000 personnes formées, 500+ organisations partenaires.",
     type: "website",
   },
 };

@@ -27,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
       metadataBase: new URL("https://edgebs.fr"),
       title: "EDGE — Développons les compétences qui feront la différence demain",
       description:
-        "EDGE accompagne les apprenants et les organisations avec des formations innovantes, une technologie intelligente et une pédagogie orientée résultats.",
+        "Parce que les organismes de formation doivent évoluer. Identifier, former et valoriser les compétences — avec des résultats mesurables.",
       alternates: {
         canonical: "https://edgebs.fr/",
       },

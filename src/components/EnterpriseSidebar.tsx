@@ -15,6 +15,7 @@ import {
   Settings,
   Users,
   Zap,
+  BadgeCheck,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { label: "Salariés", href: "/dashboard/entreprise/salaries", icon: Users },
   { label: "Équipe Insight", href: "/dashboard/entreprise/equipe-insight", icon: BarChart3 },
   { label: "Mes Offres", href: "/dashboard/entreprise/offres", icon: Briefcase },
+  { label: "Métiers", href: "/dashboard/entreprise/metiers", icon: BadgeCheck },
   { label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
   { label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
 ];

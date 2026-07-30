@@ -14,7 +14,7 @@ import {
 import { EdgePremiumMobileMenu } from "@/components/edge-site/premium/edge-premium-mobile-menu";
 
 type DropdownKey = "fonctionnalites" | "ressources";
-type MegaKey = "apprenants" | "business" | "particulier";
+type MegaKey = "business" | "particulier";
 
 function NavDropdown({
   label,
@@ -75,7 +75,7 @@ type NavbarProps = {
 
 export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: NavbarProps) {
   const config = useEdgePremiumConfig();
-  const { links, nav, megaApprenants, megaBusiness, megaParticulier } = config;
+  const { links, nav, megaBusiness, megaParticulier } = config;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
   const [openMega, setOpenMega] = useState<MegaKey | null>(null);
@@ -144,11 +144,6 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
         <EdgePremiumLogo />
 
         <nav className="hidden items-center lg:flex" aria-label="Navigation principale">
-          <EdgePremiumMegaTrigger
-            label="Apprenants"
-            open={openMega === "apprenants"}
-            onOpen={() => openMegaMenu("apprenants")}
-          />
           <EdgePremiumMegaTrigger
             label="Business"
             open={openMega === "business"}
@@ -227,13 +222,7 @@ export function EdgePremiumNavbar({ overlay = false, pageScrolled = false }: Nav
           onMouseEnter={cancelMegaClose}
         >
           <EdgePremiumMegaColumnsPanel
-            data={
-              openMega === "apprenants"
-                ? megaApprenants
-                : openMega === "business"
-                  ? megaBusiness
-                  : megaParticulier
-            }
+            data={openMega === "business" ? megaBusiness : megaParticulier}
             onClose={() => setOpenMega(null)}
           />
         </div>

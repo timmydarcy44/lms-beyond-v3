@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EdgeMegaColumnsData } from "@/lib/edge-site/premium-constants";
 
@@ -57,16 +57,13 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose }: PanelProps) {
                         className={cn(
                           "block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                           featured
-                            ? "bg-white text-black shadow-[0_8px_24px_rgba(0,0,0,0.25)] hover:bg-white/92"
+                            ? "edge-mega-featured relative overflow-hidden text-white"
                             : "text-white hover:bg-white/[0.08] hover:text-white",
                         )}
                         role="menuitem"
                         onClick={onClose}
                       >
-                        <span className="inline-flex items-center gap-2">
-                          {featured ? <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} /> : null}
-                          {link.label}
-                        </span>
+                        <span className="relative z-[1]">{link.label}</span>
                       </Link>
                     </li>
                   );

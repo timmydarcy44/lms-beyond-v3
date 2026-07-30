@@ -287,15 +287,12 @@ export function ApprenantDashboardClient({
     }
   }, []);
 
+  const snapshotRetryRef = useRef(false);
   useEffect(() => {
-    if (useSnapshotTests && learnerSnapshotCtx) {
-      void learnerSnapshotCtx.refresh();
-    }
-  }, [learnerSnapshotCtx, useSnapshotTests]);
-
-  useEffect(() => {
-    if (!isSalarieSurface || !learnerSnapshotCtx || learnerSnapshotCtx.loading) return;
-    if (snapshotHasTests) return;
+    if (!isSalarieSurface || !learnerSnapshotCtx) return;
+    if (learnerSnapshotCtx.loading || snapshotHasTests) return;
+    if (snapshotRetryRef.current) return;
+    snapshotRetryRef.current = true;
     void learnerSnapshotCtx.refresh();
   }, [isSalarieSurface, learnerSnapshotCtx, learnerSnapshotCtx?.loading, snapshotHasTests]);
 
@@ -312,6 +309,9 @@ export function ApprenantDashboardClient({
       setCachedFirstName(s.firstName.trim());
     }
   }, [learnerSnapshotCtx?.snapshot, useSnapshotTests]);
+
+  const useSnapshotTestsRef = useRef(useSnapshotTests);
+  useSnapshotTestsRef.current = useSnapshotTests;
 
   useEffect(() => {
     const load = async () => {
@@ -515,7 +515,7 @@ export function ApprenantDashboardClient({
         }
 
         try {
-          if (!useSnapshotTests) {
+          if (!useSnapshotTestsRef.current) {
           let discResult: { scores?: Record<string, unknown> | null } | null = null;
           for (const candidateId of profileIdsToQuery) {
             const { data, error } = await supabase
@@ -543,11 +543,11 @@ export function ApprenantDashboardClient({
           }
           }
         } catch {
-          if (!useSnapshotTests) setDiscScores(null);
+          if (!useSnapshotTestsRef.current) setDiscScores(null);
         }
 
         try {
-          if (!useSnapshotTests) {
+          if (!useSnapshotTestsRef.current) {
           let idmcResult: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
             const { data, error } = await supabase
@@ -577,14 +577,14 @@ export function ApprenantDashboardClient({
           );
           }
         } catch {
-          if (!useSnapshotTests) {
+          if (!useSnapshotTestsRef.current) {
             setIdmcData(null);
             setIdmcAxes(null);
           }
         }
 
         try {
-          if (!useSnapshotTests) {
+          if (!useSnapshotTestsRef.current) {
           if (!userId) return;
           let latestSoftSkills: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
@@ -610,7 +610,7 @@ export function ApprenantDashboardClient({
           }
           }
         } catch {
-          if (!useSnapshotTests) {
+          if (!useSnapshotTestsRef.current) {
             setSoftSkillsData(null);
             setSoftSkillsRadar([]);
           }
@@ -652,7 +652,7 @@ export function ApprenantDashboardClient({
       }
     };
     load();
-  }, [supabase, useSnapshotTests, isSalarieSurface]);
+  }, [supabase, isSalarieSurface]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

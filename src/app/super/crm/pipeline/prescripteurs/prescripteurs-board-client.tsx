@@ -446,6 +446,7 @@ export function PrescripteursBoardClient({ currentUserEmail }: { currentUserEmai
           onAddClient={addClient}
           onUpdateLink={updateLink}
           onRemoveLink={removeLink}
+          currentUserEmail={currentUserEmail}
         />
         <PipelineDealSheetFooter>
           <Button

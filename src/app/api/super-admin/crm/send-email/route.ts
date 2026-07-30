@@ -54,7 +54,12 @@ export async function POST(req: NextRequest) {
 
   for (let i = 0; i < recipients.length; i += batchSize) {
     const batch = recipients.slice(i, i + batchSize);
-    const result = await sendEmail({ to: batch, subject, html });
+    const result = await sendEmail({
+      to: batch,
+      subject,
+      html,
+      replyTo: "contact@edgebs.fr",
+    });
     if (result.success) {
       sent += batch.length;
     } else {

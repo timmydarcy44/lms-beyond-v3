@@ -37,6 +37,7 @@ import {
   type PipelineDeal,
   type PipelineStage,
 } from "@/lib/crm/pipeline-shared";
+import { PipelinePrescripteurActionsSection } from "@/components/crm/pipeline-prescripteur-actions-section";
 
 type ProspectOption = Pick<
   PipelineDeal,
@@ -58,6 +59,7 @@ export function PipelinePrescripteurCockpit({
   onAddClient,
   onUpdateLink,
   onRemoveLink,
+  currentUserEmail,
 }: {
   form: PrescripteurForm;
   setForm: React.Dispatch<React.SetStateAction<PrescripteurForm>>;
@@ -72,6 +74,7 @@ export function PipelinePrescripteurCockpit({
     patch: { commission_type?: "percent" | "fixed"; commission_value?: number },
   ) => Promise<void>;
   onRemoveLink: (linkId: string) => Promise<void>;
+  currentUserEmail: string | null;
 }) {
   const [selectedDealId, setSelectedDealId] = useState("");
   const [newCommissionType, setNewCommissionType] = useState<"percent" | "fixed">("percent");
@@ -96,6 +99,8 @@ export function PipelinePrescripteurCockpit({
 
   const primaryPhone = form.interlocutors[0]?.phone || form.phone;
   const primaryEmail = form.interlocutors[0]?.email || form.email;
+  const primaryLinkedIn =
+    form.interlocutors.find((i) => i.linkedin_url?.trim())?.linkedin_url ?? "";
   const linkHref = form.link_url.trim()
     ? form.link_url.startsWith("http")
       ? form.link_url.trim()
@@ -594,6 +599,14 @@ export function PipelinePrescripteurCockpit({
         ) : null}
       </section>
 
+      <PipelinePrescripteurActionsSection
+        prescripteurId={form.id}
+        phone={primaryPhone}
+        email={primaryEmail}
+        linkedInUrl={primaryLinkedIn}
+        currentUserEmail={currentUserEmail}
+      />
+
       <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
         <Label className="text-sm font-semibold text-white">Notes internes</Label>
         <Textarea
@@ -601,7 +614,7 @@ export function PipelinePrescripteurCockpit({
           rows={4}
           value={form.notes}
           onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          placeholder="Contexte, historique, préférences de contact…"
+          placeholder="Contexte, préférences de contact…"
         />
       </section>
 

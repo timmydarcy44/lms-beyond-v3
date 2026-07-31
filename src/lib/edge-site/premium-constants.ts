@@ -135,6 +135,7 @@ export function getEdgePremiumConfig(host?: string | null) {
         {
           title: "Développer",
           links: [
+            { label: "Diagnostics de compétences", href: R.businessDiagnostics, featured: true },
             { label: "Cartographier les compétences", href: R.businessCompetences },
             { label: "Plans de progression", href: R.businessPlansProgression },
             { label: "Certifications", href: R.businessCertificationsBiz },
@@ -252,6 +253,7 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
       label: "Business",
       links: [
         { label: "Former vos équipes", href: R.businessFormerEquipes },
+        { label: "Diagnostics de compétences", href: R.businessDiagnostics },
         { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
         { label: "Blended learning", href: R.businessPresentielDistanciel },
         { label: "Recrutement", href: R.businessRecrutement },
@@ -276,6 +278,7 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
       links: [
         { label: "LMS", href: R.online },
         { label: "Certifications", href: R.certifications },
+        { label: "Diagnostics", href: R.businessDiagnostics },
         { label: "Open Badges", href: R.businessOpenBadges },
         { label: "Analytics", href: R.businessAnalytics },
         { label: "Matching", href: R.businessMatchingCandidats },

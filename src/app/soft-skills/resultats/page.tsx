@@ -58,7 +58,15 @@ export default function SoftSkillsResultsPage() {
       }
 
       sessionStorage.setItem("softSkillsError", "Aucun résultat soft skills trouvé.");
-      router.replace("/dashboard/apprenant/soft-skills-intro");
+      const from =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("from")
+          : null;
+      router.replace(
+        from === "salarie"
+          ? "/dashboard/salarie/test-soft-skills"
+          : "/dashboard/apprenant/soft-skills-intro",
+      );
     };
     load();
   }, [router]);

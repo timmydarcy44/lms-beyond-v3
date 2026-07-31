@@ -47,6 +47,7 @@ export function SalarieDashboardClient() {
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requests, setRequests] = useState<ActionRequestRow[]>([]);
   const [showPlan, setShowPlan] = useState(false);
+  const [correlatedAnalysis, setCorrelatedAnalysis] = useState<string | null>(null);
 
   const firstName = snapshot?.firstName?.trim() || "Apprenant";
   const discScores = snapshot?.discScores ?? null;
@@ -56,6 +57,37 @@ export function SalarieDashboardClient() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!snapshot?.userId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("ai_analysis")
+          .eq("id", snapshot.userId)
+          .maybeSingle();
+        if (cancelled) return;
+        const raw = data?.ai_analysis;
+        if (typeof raw !== "string" || !raw.trim()) {
+          setCorrelatedAnalysis(null);
+          return;
+        }
+        try {
+          const parsed = JSON.parse(raw) as { text?: string };
+          setCorrelatedAnalysis(parsed.text?.trim() || raw);
+        } catch {
+          setCorrelatedAnalysis(raw);
+        }
+      } catch {
+        if (!cancelled) setCorrelatedAnalysis(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [snapshot?.userId, supabase]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowPlan(true), 0);
@@ -163,6 +195,7 @@ export function SalarieDashboardClient() {
           discScores={discScores}
           idmcAxes={idmcAxes}
           softSkillsRadar={softSkillsRadar}
+          correlatedAnalysis={correlatedAnalysis}
         />
       )}
 

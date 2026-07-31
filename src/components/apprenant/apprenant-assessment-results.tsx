@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   IdmcRadarChart,
@@ -144,7 +144,7 @@ const TEST_PATHS: Record<
     disc: "/dashboard/salarie/test-disc",
     idmc: "/dashboard/salarie/test-idmc",
     soft_skills: "/dashboard/salarie/test-soft-skills",
-    profil: "/dashboard/salarie",
+    profil: "/dashboard/salarie/profil",
   },
 };
 
@@ -185,6 +185,34 @@ export function ApprenantAssessmentResults({
         ? correlatedAnalysis.trim().length > 0
         : true),
   );
+  const softResultsHref =
+    testSurface === "salarie"
+      ? "/soft-skills/resultats?from=salarie"
+      : "/soft-skills/resultats?from=apprenant";
+
+  const openAnalysisCtaClass = cockpit
+    ? `${CONNECT_BTN_PRIMARY} w-full`
+    : "inline-flex w-full items-center justify-center rounded-full bg-[#FF3B30] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90";
+
+  const secondaryCtaClass = cockpit
+    ? `${CONNECT_BTN_SECONDARY} w-full`
+    : "inline-flex w-full items-center justify-center rounded-full border border-[rgba(61,123,255,0.35)] bg-[rgba(61,123,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#3D7BFF] transition hover:bg-[rgba(61,123,255,0.12)]";
+
+  useEffect(() => {
+    if (publicMode || !hasCorrelatedAnalysis) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("analysis") === "open") {
+      setAnalysisOpen(true);
+    }
+  }, [publicMode, hasCorrelatedAnalysis]);
+
+  const openFullAnalysisButton =
+    !publicMode && hasCorrelatedAnalysis ? (
+      <button type="button" onClick={() => setAnalysisOpen(true)} className={secondaryCtaClass}>
+        Relire la synthèse croisée
+      </button>
+    ) : null;
 
   const inner = (
     <div className={`grid gap-4 ${compact ? "md:grid-cols-3" : "lg:grid-cols-3"}`}>
@@ -203,6 +231,10 @@ export function ApprenantAssessmentResults({
             </p>
             <DiscHistogram scores={discScores} compact={compact} cockpit={cockpit} />
             <Observation cockpit={cockpit}>{buildDiscObservation(discScores)}</Observation>
+            <p className={`text-xs ${cockpit ? "text-white/40" : "text-black/40"}`}>
+              Résumé court — la synthèse détaillée croise DISC, IDMC et soft skills.
+            </p>
+            {openFullAnalysisButton}
           </div>
         ) : (
           <div className="mt-4 space-y-3">
@@ -244,19 +276,10 @@ export function ApprenantAssessmentResults({
             ) : null}
             <IdmcRadarChart scores={idmcAxes} responsive variant={cockpit ? "light" : "light"} title="" />
             <Observation cockpit={cockpit}>{buildIdmcObservation(idmcAxes)}</Observation>
-            {hasCorrelatedAnalysis ? (
-              <button
-                type="button"
-                onClick={() => setAnalysisOpen(true)}
-                className={
-                  cockpit
-                    ? `${CONNECT_BTN_SECONDARY} w-full`
-                    : "inline-flex w-full items-center justify-center rounded-full border border-[rgba(61,123,255,0.35)] bg-[rgba(61,123,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#3D7BFF] transition hover:bg-[rgba(61,123,255,0.12)]"
-                }
-              >
-                Lire l&apos;analyse
-              </button>
-            ) : null}
+            <p className={`text-xs ${cockpit ? "text-white/40" : "text-black/40"}`}>
+              Résumé court — ouvrez la synthèse complète pour le détail.
+            </p>
+            {openFullAnalysisButton}
           </div>
         ) : (
           <div className="mt-4 space-y-3">
@@ -280,7 +303,7 @@ export function ApprenantAssessmentResults({
           {firstName ? `Soft skills — ${firstName}` : "Soft skills"}
         </h3>
         {topSoft.length ? (
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <ul className="space-y-2.5">
               {topSoft.map((item, index) => (
                 <li key={item.skill} className="flex items-center gap-3 text-sm">
@@ -315,11 +338,21 @@ export function ApprenantAssessmentResults({
                 </li>
               ))}
             </ul>
-            <Observation>{buildSoftSkillsObservation(topSoft, firstName)}</Observation>
+            <Observation cockpit={cockpit}>{buildSoftSkillsObservation(topSoft, firstName)}</Observation>
+            {!publicMode ? (
+              <Link href={softResultsHref} className={openAnalysisCtaClass}>
+                Relire la synthèse soft skills
+              </Link>
+            ) : null}
+            {hasCorrelatedAnalysis && !publicMode ? (
+              <button type="button" onClick={() => setAnalysisOpen(true)} className={secondaryCtaClass}>
+                Relire la synthèse croisée
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className="mt-4 space-y-3">
-            <p className="text-sm text-black/55">
+            <p className={`text-sm ${cockpit ? "text-white/55" : "text-black/55"}`}>
               {publicMode ? "Soft skills non renseignés." : "Aucun score soft skills disponible."}
             </p>
             {!publicMode ? (
@@ -342,12 +375,23 @@ export function ApprenantAssessmentResults({
         <section className={`${resultsSection} space-y-4`}>
           <div className="flex flex-wrap items-end justify-between gap-2">
             <h3 className="text-sm font-medium text-white">Mes résultats</h3>
-            <Link
-              href={paths.profil}
-              className="text-xs font-medium text-[#3D7BFF]/90 hover:underline"
-            >
-              Voir tout sur mon profil →
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              {hasCorrelatedAnalysis ? (
+                <button
+                  type="button"
+                  onClick={() => setAnalysisOpen(true)}
+                  className="text-xs font-medium text-[#3D7BFF]/90 hover:underline"
+                >
+                  Relire la synthèse complète
+                </button>
+              ) : null}
+              <Link
+                href={paths.profil}
+                className="text-xs font-medium text-[#3D7BFF]/90 hover:underline"
+              >
+                Voir tout sur mon profil →
+              </Link>
+            </div>
           </div>
           {inner}
         </section>
@@ -355,16 +399,31 @@ export function ApprenantAssessmentResults({
         <section className="space-y-4">{inner}</section>
       ) : (
         <section className="space-y-6">
-          <div>
-            <p className={cockpit ? APPRENANT_CARD_KICKER : "text-[10px] font-medium uppercase tracking-[0.2em] text-[#FF3B30]"}>
-              Bilans
-            </p>
-            <h2 className={`mt-1 text-lg font-medium ${cockpit ? "text-white" : "text-[#0a0a0a]"}`}>
-              Mes résultats de tests
-            </h2>
-            <p className={`mt-1 text-sm ${cockpit ? "text-white/55" : "text-black/55"}`}>
-              DISC, IDMC et soft skills — croisés pour votre profil EDGE.
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className={cockpit ? APPRENANT_CARD_KICKER : "text-[10px] font-medium uppercase tracking-[0.2em] text-[#FF3B30]"}>
+                Bilans
+              </p>
+              <h2 className={`mt-1 text-lg font-medium ${cockpit ? "text-white" : "text-[#0a0a0a]"}`}>
+                Mes résultats de tests
+              </h2>
+              <p className={`mt-1 text-sm ${cockpit ? "text-white/55" : "text-black/55"}`}>
+                Les cartes affichent un résumé. Relisez ici la synthèse exhaustive générée après vos tests.
+              </p>
+            </div>
+            {!publicMode && hasCorrelatedAnalysis ? (
+              <button
+                type="button"
+                onClick={() => setAnalysisOpen(true)}
+                className={
+                  cockpit
+                    ? CONNECT_BTN_PRIMARY
+                    : "inline-flex items-center justify-center rounded-full bg-[#FF3B30] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                }
+              >
+                Relire la synthèse complète
+              </button>
+            ) : null}
           </div>
           {inner}
         </section>

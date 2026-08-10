@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Check, ChevronDown, Minus, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -8,15 +7,17 @@ import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-b
 import {
   EDGE_ANNUAL_DISCOUNT,
   EDGE_FORMATIONATION_DAY_PRICE_HT,
-  EDGE_FORMATIONATION_DEFAULT_DAYS,
   EDGE_PLANS,
   EDGE_SEATS_DEFAULT,
   EDGE_SEATS_MAX,
   EDGE_SEATS_MIN,
   edgeAnnualTotal,
+  edgeFormationDays,
+  edgeFormationPriceHt,
   edgeFormationsTotalHt,
   edgeMonthlyTotal,
   edgeUnitPrice,
+  formatEdgeDays,
   formatEdgeEur,
   type EdgeBilling,
   type EdgePlanId,
@@ -80,7 +81,7 @@ function FormationsPicker({
   }, [query, domainTitle]);
 
   const selectedModules = EDGE_TRAINING_MODULES.filter((m) => selected.includes(m.id));
-  const formationsHt = edgeFormationsTotalHt(selected.length);
+  const formationsHt = edgeFormationsTotalHt(selectedModules);
 
   const toggle = (id: string) => {
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
@@ -121,7 +122,8 @@ function FormationsPicker({
             >
               <span className="truncate">{m.title}</span>
               <span className="shrink-0 text-neutral-400">
-                {EDGE_FORMATIONATION_DEFAULT_DAYS}j
+                {formatEdgeDays(edgeFormationDays(m.level))} ·{" "}
+                {formatEdgeEur(edgeFormationPriceHt(m.level))} €
               </span>
               <X className="h-3 w-3 shrink-0 opacity-50" />
             </button>
@@ -147,6 +149,8 @@ function FormationsPicker({
             ) : (
               filtered.map((m) => {
                 const active = selected.includes(m.id);
+                const days = edgeFormationDays(m.level);
+                const price = edgeFormationPriceHt(m.level);
                 return (
                   <li key={m.id}>
                     <button
@@ -175,16 +179,16 @@ function FormationsPicker({
                             active ? "text-white/55" : "text-neutral-400",
                           )}
                         >
-                          {domainTitle(m.domainId)} · {m.code}
+                          {domainTitle(m.domainId)} · {formatEdgeDays(days)}
                         </span>
                       </span>
                       <span
                         className={cn(
-                          "shrink-0 text-[11px] tabular-nums",
-                          active ? "text-white/70" : "text-neutral-400",
+                          "shrink-0 text-[11px] font-medium tabular-nums",
+                          active ? "text-white/80" : "text-neutral-600",
                         )}
                       >
-                        {formatEdgeEur(EDGE_FORMATIONATION_DAY_PRICE_HT)} €
+                        {formatEdgeEur(price)} €
                       </span>
                     </button>
                   </li>
@@ -214,7 +218,20 @@ export function EdgePremiumTarifs({ demoHref, contactHref }: Props) {
   const [formations, setFormations] = useState<string[]>([]);
 
   const annual = billing === "annual";
-  const formationsHt = edgeFormationsTotalHt(formations.length);
+  const selectedModules = useMemo(
+    () => EDGE_TRAINING_MODULES.filter((m) => formations.includes(m.id)),
+    [formations],
+  );
+  const formationsHt = edgeFormationsTotalHt(selectedModules);
+  const formationsDays = selectedModules.reduce((sum, m) => sum + edgeFormationDays(m.level), 0);
+
+  const selectedPlan = EDGE_PLANS.find((p) => p.id === selected) ?? EDGE_PLANS[1];
+  const selectedMonthly = edgeMonthlyTotal(selectedPlan.unitMonthly, seats, billing);
+  const selectedYearly = edgeAnnualTotal(selectedPlan.unitMonthly, seats);
+  const selectedFormations =
+    selectedPlan.formationsPicker && selectedModules.length > 0 ? formationsHt : 0;
+  const grandTotalYearOne =
+    (annual ? selectedYearly : selectedMonthly * 12) + selectedFormations;
 
   return (
     <div className="bg-white text-neutral-950">
@@ -331,7 +348,10 @@ export function EdgePremiumTarifs({ demoHref, contactHref }: Props) {
             const unit = edgeUnitPrice(plan.unitMonthly, billing);
             const monthlyTotal = edgeMonthlyTotal(plan.unitMonthly, seats, billing);
             const yearlyTotal = edgeAnnualTotal(plan.unitMonthly, seats);
-            const showFormations = Boolean(plan.formationsPicker && formations.length > 0);
+            const planFormationsHt =
+              plan.formationsPicker && selectedModules.length > 0 ? formationsHt : 0;
+            const planYearOne =
+              (annual ? yearlyTotal : monthlyTotal * 12) + planFormationsHt;
 
             return (
               <article
@@ -392,30 +412,55 @@ export function EdgePremiumTarifs({ demoHref, contactHref }: Props) {
                     </p>
                   ) : null}
 
-                  <div className="mt-5 rounded-2xl bg-neutral-50 px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                      Total estimé · {seats} collab.
-                    </p>
-                    <p className="mt-1 text-lg font-semibold tabular-nums tracking-[-0.02em]">
-                      {formatEdgeEur(monthlyTotal)} €{" "}
-                      <span className="text-sm font-medium text-neutral-500">/ mois</span>
-                    </p>
-                    {annual ? (
-                      <p className="mt-0.5 text-sm text-neutral-500 tabular-nums">
-                        soit {formatEdgeEur(yearlyTotal)} € / an HT
+                  <div className="mt-5 space-y-3 rounded-2xl bg-neutral-50 px-4 py-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                        Plateforme · {seats} collab.
                       </p>
-                    ) : (
-                      <p className="mt-0.5 text-sm text-neutral-500">HT · sans engagement</p>
-                    )}
-                    {showFormations ? (
-                      <p className="mt-2 border-t border-neutral-200/80 pt-2 text-sm text-neutral-700">
-                        + {formatEdgeEur(formationsHt)} € HT formations
-                        <span className="block text-xs text-neutral-500">
-                          {formations.length} × {EDGE_FORMATIONATION_DEFAULT_DAYS} j ×{" "}
-                          {formatEdgeEur(EDGE_FORMATIONATION_DAY_PRICE_HT)} €
-                        </span>
+                      <p className="mt-1 text-lg font-semibold tabular-nums tracking-[-0.02em]">
+                        {formatEdgeEur(monthlyTotal)} €{" "}
+                        <span className="text-sm font-medium text-neutral-500">/ mois</span>
                       </p>
+                      {annual ? (
+                        <p className="mt-0.5 text-sm text-neutral-500 tabular-nums">
+                          soit {formatEdgeEur(yearlyTotal)} € / an HT
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 text-sm text-neutral-500">HT · sans engagement</p>
+                      )}
+                    </div>
+
+                    {plan.formationsPicker && selectedModules.length > 0 ? (
+                      <div className="border-t border-neutral-200/80 pt-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                          Formations
+                        </p>
+                        <p className="mt-1 text-base font-semibold tabular-nums">
+                          {formatEdgeEur(formationsHt)} € HT
+                        </p>
+                        <p className="mt-0.5 text-xs text-neutral-500">
+                          {selectedModules.length} formation
+                          {selectedModules.length > 1 ? "s" : ""} · {formatEdgeDays(formationsDays)}{" "}
+                          · {formatEdgeEur(EDGE_FORMATIONATION_DAY_PRICE_HT)} € / jour
+                        </p>
+                      </div>
                     ) : null}
+
+                    <div className="border-t border-neutral-950/10 pt-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-950">
+                        Total
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-[-0.03em]">
+                        {formatEdgeEur(planYearOne)} €{" "}
+                        <span className="text-sm font-medium text-neutral-500">HT</span>
+                      </p>
+                      <p className="mt-0.5 text-xs text-neutral-500">
+                        {annual
+                          ? "Abonnement annuel"
+                          : "Abonnement × 12 mois"}
+                        {planFormationsHt > 0 ? " + formations" : ""}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -460,14 +505,61 @@ export function EdgePremiumTarifs({ demoHref, contactHref }: Props) {
           })}
         </div>
 
-        <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-neutral-500">
-          Prix indicatifs HT. Formations : {formatEdgeEur(EDGE_FORMATIONATION_DAY_PRICE_HT)} € HT /
-          journée par défaut. Volume important ou déploiement multi-sites ?{" "}
-          <Link href={contactHref} className="font-medium text-neutral-950 underline-offset-2 hover:underline">
-            Parlez à un conseiller
-          </Link>
-          .
-        </p>
+        <div className="mx-auto mt-10 max-w-6xl rounded-[28px] border border-neutral-200 bg-neutral-950 px-6 py-6 text-white sm:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
+                Récapitulatif · {selectedPlan.name}
+              </p>
+              <p className="mt-2 text-sm text-white/55">
+                {seats} collaborateurs · {annual ? "annuel" : "mensuel"}
+                {selectedFormations > 0
+                  ? ` · ${selectedModules.length} formation${selectedModules.length > 1 ? "s" : ""}`
+                  : ""}
+              </p>
+            </div>
+            <div className="text-left sm:text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                Total
+              </p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums tracking-[-0.03em]">
+                {formatEdgeEur(grandTotalYearOne)} €{" "}
+                <span className="text-base font-medium text-white/50">HT</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden px-5 py-20 sm:px-8 sm:py-24 lg:px-10">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, #0a1628 0%, #123a6b 42%, #1e6bb8 72%, #7ec8f5 100%)",
+          }}
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 70% at 20% 20%, rgba(126, 200, 245, 0.45), transparent 55%), radial-gradient(ellipse 70% 60% at 85% 80%, rgba(30, 107, 184, 0.5), transparent 50%)",
+          }}
+          aria-hidden
+        />
+        <div className="relative mx-auto max-w-3xl text-center">
+          <h2 className="font-edge-display text-[clamp(1.75rem,4vw,2.75rem)] leading-[1.1] tracking-[-0.03em] text-white">
+            Envie d&apos;une demande sur mesure&nbsp;?
+            <br />
+            Contactez l&apos;un de nos conseillers
+          </h2>
+          <div className="mt-8 flex justify-center">
+            <EdgePremiumButton href={contactHref} variant="white" shape="revolut">
+              Contacter un conseiller
+            </EdgePremiumButton>
+          </div>
+        </div>
       </section>
     </div>
   );

@@ -1,3 +1,5 @@
+import type { TrainingLevel } from "@/lib/edge-site/training-catalog";
+
 export type EdgePlanId = "skills" | "learning" | "learning-plus";
 export type EdgeBilling = "monthly" | "annual";
 
@@ -10,7 +12,7 @@ export type EdgePlan = {
   promise: string;
   includes: readonly string[];
   popular?: boolean;
-  /** Dropdown formations (EDGE Learning). */
+  /** Dropdown formations (EDGE Learning & Learning+). */
   formationsPicker?: boolean;
 };
 
@@ -21,9 +23,17 @@ export const EDGE_SEATS_MIN = 1;
 export const EDGE_SEATS_MAX = 500;
 export const EDGE_SEATS_DEFAULT = 25;
 
-/** Tarif formation présentielle / collective : 1 500 € HT la journée (défaut). */
+/** Tarif formation : 1 500 € HT la journée. */
 export const EDGE_FORMATIONATION_DAY_PRICE_HT = 1500;
-export const EDGE_FORMATIONATION_DEFAULT_DAYS = 1;
+
+/** Durée (jours) par niveau catalogue — alignée sur le catalog training. */
+export const EDGE_FORMATIONATION_DAYS_BY_LEVEL: Record<TrainingLevel, number> = {
+  1: 1,
+  2: 1.5,
+  3: 2,
+  4: 2.5,
+  5: 3,
+};
 
 export const EDGE_PLANS: readonly EdgePlan[] = [
   {
@@ -71,6 +81,7 @@ export const EDGE_PLANS: readonly EdgePlan[] = [
     unitMonthly: 20,
     tagline: "Tout EDGE Learning, avec la bibliothèque EDGE prête à l’emploi.",
     promise: "Diagnostiquer, recommander et former immédiatement, sans produire les contenus.",
+    formationsPicker: true,
     includes: [
       "Toutes les fonctionnalités EDGE Learning",
       "Bibliothèque EDGE de microlearning",
@@ -103,12 +114,26 @@ export function edgeAnnualTotal(unitMonthly: number, seats: number): number {
   return Math.round(edgeMonthlyTotal(unitMonthly, seats, "annual") * 12 * 100) / 100;
 }
 
-/** Coût formations : nb formations × jours (défaut 1) × 1 500 € HT / journée. */
+export function edgeFormationDays(level: TrainingLevel): number {
+  return EDGE_FORMATIONATION_DAYS_BY_LEVEL[level] ?? 1;
+}
+
+/** Prix HT d’une formation = jours × 1 500 €. */
+export function edgeFormationPriceHt(level: TrainingLevel): number {
+  return edgeFormationDays(level) * EDGE_FORMATIONATION_DAY_PRICE_HT;
+}
+
+/** Somme HT des formations sélectionnées (selon durée de chaque module). */
 export function edgeFormationsTotalHt(
-  formationCount: number,
-  daysPerFormation: number = EDGE_FORMATIONATION_DEFAULT_DAYS,
+  modules: readonly { level: TrainingLevel }[],
 ): number {
-  return formationCount * daysPerFormation * EDGE_FORMATIONATION_DAY_PRICE_HT;
+  return modules.reduce((sum, m) => sum + edgeFormationPriceHt(m.level), 0);
+}
+
+export function formatEdgeDays(days: number): string {
+  if (days === 1) return "1 jour";
+  if (Number.isInteger(days)) return `${days} jours`;
+  return `${String(days).replace(".", ",")} jours`;
 }
 
 export function formatEdgeEur(value: number): string {

@@ -1,6 +1,4 @@
 import { MARKETING_PAGE_REGISTRY } from "@/lib/edge-site/marketing-page-registry";
-import type { EdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
-import { EDGE_MARKETING_PATHS } from "@/lib/edge-site/marketing-routes";
 
 export const EDGE_LAB_INTERNAL_PREFIX = "/edge-lab";
 
@@ -65,25 +63,4 @@ export function shouldStripEdgeLabPrefix(pathname: string): boolean {
   if (isEdgeLabStaticAsset(pathname)) return false;
   const stripped = pathname.slice(EDGE_LAB_INTERNAL_PREFIX.length) || "/";
   return stripped === "/" || isEdgeBsMarketingPublicPath(stripped);
-}
-
-export function resolveMarketingContentHref(
-  path: string,
-  routes: EdgeMarketingRoutes,
-): string {
-  if (!path.startsWith("/") || path.startsWith("//")) return path;
-
-  const hashIndex = path.indexOf("#");
-  const pathOnly = hashIndex >= 0 ? path.slice(0, hashIndex) : path;
-  const hash = hashIndex >= 0 ? path.slice(hashIndex) : "";
-
-  for (const [key, segment] of Object.entries(EDGE_MARKETING_PATHS)) {
-    const segmentPath = segment.split("#")[0];
-    if (segmentPath === pathOnly || segment === path) {
-      const resolved = routes[key as keyof EdgeMarketingRoutes];
-      return hash ? `${resolved.split("#")[0]}${hash}` : resolved;
-    }
-  }
-
-  return path;
 }

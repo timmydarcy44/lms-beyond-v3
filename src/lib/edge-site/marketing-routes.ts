@@ -101,5 +101,23 @@ export function getEdgeMarketingRoutes(host?: string | null): EdgeMarketingRoute
   ) as EdgeMarketingRoutes;
 }
 
+export function resolveMarketingContentHref(path: string, routes: EdgeMarketingRoutes): string {
+  if (!path.startsWith("/") || path.startsWith("//")) return path;
+
+  const hashIndex = path.indexOf("#");
+  const pathOnly = hashIndex >= 0 ? path.slice(0, hashIndex) : path;
+  const hash = hashIndex >= 0 ? path.slice(hashIndex) : "";
+
+  for (const [key, segment] of Object.entries(EDGE_MARKETING_PATHS)) {
+    const segmentPath = segment.split("#")[0];
+    if (segmentPath === pathOnly || segment === path) {
+      const resolved = routes[key as keyof EdgeMarketingRoutes];
+      return hash ? `${resolved.split("#")[0]}${hash}` : resolved;
+    }
+  }
+
+  return path;
+}
+
 /** Liens par défaut (dev local avec préfixe /edge-lab). */
 export const EDGE_MARKETING_ROUTES = getEdgeMarketingRoutes(null);

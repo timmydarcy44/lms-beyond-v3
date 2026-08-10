@@ -5,7 +5,7 @@ import { EdgeDiagnosticsPage } from "@/components/edge-site/business/diagnostics
 export const metadata: Metadata = {
   title: "Diagnostics de compétences — EDGE Business",
   description:
-    "Plus de 40 diagnostics scientifiques pour mesurer les compétences cognitives, comportementales, émotionnelles et managériales, puis personnaliser les parcours de développement.",
+    "Évaluez Soft Skills, IDMC (Indice de Maîtrise Cognitive) et psychologie comportementale inspirée du DISC. Mesurez objectivement avant de développer et certifier les talents.",
 };
 
 export default function Page() {

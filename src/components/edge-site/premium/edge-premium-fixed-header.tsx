@@ -7,10 +7,12 @@ import { EdgePremiumTopBar } from "@/components/edge-site/premium/edge-premium-t
 
 type Props = {
   overlayNav?: boolean;
+  navChrome?: "dark" | "light";
 };
 
-export function EdgePremiumFixedHeader({ overlayNav = true }: Props) {
+export function EdgePremiumFixedHeader({ overlayNav = true, navChrome = "dark" }: Props) {
   const [pageScrolled, setPageScrolled] = useState(false);
+  const light = navChrome === "light";
 
   useEffect(() => {
     const onScroll = () => setPageScrolled(window.scrollY > 8);
@@ -25,11 +27,14 @@ export function EdgePremiumFixedHeader({ overlayNav = true }: Props) {
     <div
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow] duration-300",
-        solidChrome && "bg-edge-black-deep shadow-[0_1px_0_rgba(255,255,255,0.06)]",
+        solidChrome &&
+          (light
+            ? "bg-white shadow-[0_1px_0_rgba(0,0,0,0.06)]"
+            : "bg-edge-black-deep shadow-[0_1px_0_rgba(255,255,255,0.06)]"),
       )}
     >
-      <EdgePremiumTopBar solid={solidChrome} />
-      <EdgePremiumNavbar overlay={overlayNav} pageScrolled={pageScrolled} />
+      <EdgePremiumTopBar solid={solidChrome} light={light} />
+      <EdgePremiumNavbar overlay={overlayNav} pageScrolled={pageScrolled} light={light} />
     </div>
   );
 }

@@ -22,8 +22,8 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
   const Icon = diagnostic.icon;
 
   return (
-    <EdgePremiumShell overlayNav={false}>
-      <div className={cn(inter.className, "bg-white text-neutral-950 antialiased")}>
+    <EdgePremiumShell overlayNav={false} navChrome="light">
+      <div className={cn(inter.className, "font-edge-sf bg-white text-neutral-950 antialiased")}>
         <section className="border-b border-neutral-200 bg-white">
           <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14 lg:px-10">
             <Link
@@ -39,10 +39,10 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50">
                   <Icon className="h-5 w-5 text-neutral-800" strokeWidth={1.5} />
                 </div>
-                <p className="mt-6 text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-400">
+                <p className="mt-6 text-[12px] font-medium uppercase tracking-[0.22em] text-neutral-400">
                   Diagnostic
                 </p>
-                <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-neutral-950 sm:text-5xl">
+                <h1 className="font-edge-display mt-4 text-[clamp(2.5rem,6vw,4.5rem)] leading-[1.02] text-neutral-950">
                   {diagnostic.title}
                 </h1>
                 <p className="mt-5 max-w-xl text-base leading-relaxed text-neutral-500 sm:text-lg">

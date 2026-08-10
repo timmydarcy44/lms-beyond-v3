@@ -1,25 +1,22 @@
 import { Inter } from "next/font/google";
 import { headers } from "next/headers";
-import Link from "next/link";
+import Image from "next/image";
 import {
-  ArrowRight,
   Building2,
   GraduationCap,
   LandPlot,
-  LineChart,
   School,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Workflow,
 } from "lucide-react";
 
+import { EdgeDiagnosticsFlagship } from "@/components/edge-site/business/diagnostics/edge-diagnostics-flagship";
 import { EdgeDiagnosticsHero } from "@/components/edge-site/business/diagnostics/edge-diagnostics-hero";
+import { EdgeDiagnosticsOrbit } from "@/components/edge-site/business/diagnostics/edge-diagnostics-orbit";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
-import { getAllDiagnostics } from "@/lib/edge-site/diagnostics-catalog";
+import { getFlagshipDiagnostics } from "@/lib/edge-site/diagnostics-catalog";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import { getEdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
+import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
@@ -27,37 +24,25 @@ const inter = Inter({
   display: "swap",
 });
 
-const WHY_CARDS = [
+const POTENTIAL_STEPS = [
   {
-    icon: Target,
-    title: "Identifier les forces",
-    description: "Objectiver ce qui distingue déjà vos talents et vos équipes.",
+    n: "01",
+    title: "Objectiver le potentiel",
+    description:
+      "Remplacez l'intuition par des mesures scientifiques sur le comportement, la cognition et les soft skills.",
   },
   {
-    icon: TrendingUp,
-    title: "Repérer les axes de progression",
-    description: "Prioriser les leviers à travailler avec une lecture claire et actionnable.",
+    n: "02",
+    title: "Personnaliser le développement",
+    description:
+      "Chaque rapport ouvre sur des Open Badges, un Skills Wallet et un parcours IA adapté au profil.",
   },
   {
-    icon: Sparkles,
-    title: "Personnaliser les parcours IA",
-    description: "Transformer chaque diagnostic en recommandations et modules adaptés.",
+    n: "03",
+    title: "Mesurer la progression",
+    description:
+      "Réévaluez dans le temps, comparez les cohortes et pilotez le ROI compétences avec des analytics.",
   },
-  {
-    icon: LineChart,
-    title: "Mesurer les progrès dans le temps",
-    description: "Comparer les évaluations successives et piloter le ROI compétences.",
-  },
-] as const;
-
-const METHOD_STEPS = [
-  { title: "Diagnostic", description: "Évaluation scientifique ciblée" },
-  { title: "Analyse IA", description: "Lecture croisée et synthèse" },
-  { title: "Rapport personnalisé", description: "Forces, axes, scores" },
-  { title: "Open Badges", description: "Preuves vérifiables" },
-  { title: "Skills Wallet", description: "Portefeuille de compétences" },
-  { title: "Parcours personnalisé", description: "Développement guidé" },
-  { title: "Nouvelle évaluation", description: "Mesure de progression" },
 ] as const;
 
 const USE_CASES = [
@@ -98,136 +83,98 @@ const EDGE_PLATFORM = [
 export async function EdgeDiagnosticsPage() {
   const host = (await headers()).get("host");
   const routes = getEdgeMarketingRoutes(host);
-  const diagnostics = getAllDiagnostics();
-  const catalogueHref = `${routes.businessDiagnostics}#catalogue`;
+  const flagship = getFlagshipDiagnostics();
+  const productsHref = `${routes.businessDiagnostics}#produits`;
+
+  const hrefFor = (slug: string) => edgeMarketingHref(`/business/diagnostics/${slug}`, host);
 
   return (
-    <EdgePremiumShell overlayNav={false}>
-      <div className={cn(inter.className, "bg-white text-neutral-950 antialiased")}>
-        <EdgeDiagnosticsHero catalogueHref={catalogueHref} demoHref={routes.businessDemo} />
+    <EdgePremiumShell overlayNav={false} navChrome="light">
+      <div className={cn(inter.className, "font-edge-sf bg-white text-neutral-950 antialiased")}>
+        <EdgeDiagnosticsHero productsHref={productsHref} demoHref={routes.businessDemo} />
+
+        <EdgeDiagnosticsFlagship diagnostics={flagship} hrefFor={hrefFor} />
 
         <section className="border-b border-neutral-200 bg-white px-5 py-20 sm:px-8 lg:px-10">
           <div className="mx-auto max-w-6xl">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-400">
-                Enjeux
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
-                Pourquoi réaliser un diagnostic ?
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="font-edge-display text-[clamp(2.25rem,5.5vw,4rem)] leading-[1.05] text-neutral-950">
+                Débloquez le potentiel des individus et des organisations
               </h2>
+              <p className="mt-6 text-lg leading-relaxed text-neutral-500">
+                Soft Skills, IDMC et test comportemental forment la porte d&apos;entrée d&apos;un
+                écosystème complet de développement des talents.
+              </p>
             </div>
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {WHY_CARDS.map((card) => (
-                <article
-                  key={card.title}
-                  className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50">
-                    <card.icon className="h-4 w-4 text-neutral-800" strokeWidth={1.5} />
-                  </div>
-                  <h3 className="mt-5 text-base font-semibold tracking-[-0.02em] text-neutral-950">
-                    {card.title}
+
+            <div className="mt-12">
+              <EdgeDiagnosticsOrbit />
+            </div>
+
+            <div className="mt-12 grid gap-8 md:grid-cols-3">
+              {POTENTIAL_STEPS.map((step) => (
+                <article key={step.n} className="border-t border-neutral-200 pt-6">
+                  <p className="text-3xl font-semibold tracking-tight text-neutral-300">{step.n}</p>
+                  <h3 className="mt-4 text-lg font-semibold tracking-[-0.02em] text-neutral-950">
+                    {step.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-neutral-500">{card.description}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-neutral-500">{step.description}</p>
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section
-          id="catalogue"
-          className="scroll-mt-24 border-b border-neutral-200 bg-neutral-50 px-5 py-20 sm:px-8 lg:px-10"
-        >
-          <div className="mx-auto max-w-6xl">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-400">
-                Catalogue
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
-                Notre catalogue de diagnostics
-              </h2>
-              <p className="mt-4 text-base leading-relaxed text-neutral-500">
-                Une architecture extensible pour mesurer objectivement avant de développer —
-                du cognitif au managérial.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {diagnostics.map((item) => {
-                const href = edgeMarketingHref(`/business/diagnostics/${item.slug}`, host);
-                const Icon = item.icon;
-                return (
-                  <article
-                    key={item.slug}
-                    className="group flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
-                  >
-                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 transition duration-300 group-hover:border-neutral-300">
-                      <Icon className="h-4 w-4 text-neutral-800" strokeWidth={1.5} />
-                    </div>
-                    <h3 className="mt-4 text-base font-semibold tracking-[-0.02em] text-neutral-950">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 flex-1 text-sm leading-relaxed text-neutral-500">
-                      {item.shortDescription}
-                    </p>
-                    <Link
-                      href={href}
-                      className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-neutral-950 transition hover:gap-2"
-                    >
-                      Découvrir
-                      <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.75} />
-                    </Link>
-                  </article>
-                );
-              })}
+        <section className="border-b border-neutral-200 bg-neutral-950 px-5 py-12 sm:px-8 lg:px-10">
+          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+            <h2 className="max-w-xl font-edge-display text-[clamp(1.85rem,4vw,2.75rem)] leading-[1.08] text-white">
+              Prêt à transformer votre façon d&apos;évaluer les talents ?
+            </h2>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <EdgePremiumButton href={routes.businessDemo} showArrow shape="revolut" variant="white">
+                Demander une démonstration
+              </EdgePremiumButton>
+              <EdgePremiumButton href={productsHref} variant="outline-white" shape="revolut">
+                Voir les tests
+              </EdgePremiumButton>
             </div>
           </div>
         </section>
 
         <section className="border-b border-neutral-200 bg-white px-5 py-20 sm:px-8 lg:px-10">
-          <div className="mx-auto max-w-6xl">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-400">
-                Méthodologie
+          <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            <div>
+              <p className="font-edge-sf text-[12px] font-medium uppercase tracking-[0.22em] text-neutral-400">
+                Test comportemental
               </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
-                Notre méthodologie
+              <h2 className="font-edge-display mt-4 text-[clamp(2.25rem,5vw,3.75rem)] leading-[1.05] text-neutral-950">
+                Un profil comportemental clair, en quelques minutes.
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-neutral-500">
-                Le diagnostic n&apos;est pas une fin en soi : c&apos;est la porte d&apos;entrée d&apos;un
-                écosystème de développement.
+              <p className="mt-6 text-base leading-relaxed text-neutral-500 sm:text-lg">
+                Le test comportemental EDGE révèle les préférences d&apos;action, d&apos;influence, de
+                stabilité et de rigueur. Chaque réponse construit un profil actionnable pour manager,
+                recruter et collaborer plus efficacement.
               </p>
+              <div className="mt-8">
+                <EdgePremiumButton
+                  href={edgeMarketingHref("/business/diagnostics/test-comportemental", host)}
+                  showArrow
+                  shape="revolut"
+                >
+                  Découvrir le test
+                </EdgePremiumButton>
+              </div>
             </div>
-
-            <div className="mt-12 -mx-5 overflow-x-auto px-5 sm:mx-0 sm:overflow-visible sm:px-0">
-              <ol className="flex min-w-max gap-3 sm:min-w-0 sm:flex-wrap lg:grid lg:grid-cols-7 lg:gap-3">
-                {METHOD_STEPS.map((step, index) => (
-                  <li
-                    key={step.title}
-                    className="relative w-[168px] shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 sm:w-auto lg:w-auto"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-950 text-[11px] font-semibold text-white">
-                        {index + 1}
-                      </span>
-                      <Workflow className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.5} />
-                    </div>
-                    <p className="mt-3 text-sm font-semibold tracking-[-0.02em] text-neutral-950">
-                      {step.title}
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-neutral-500">{step.description}</p>
-                    {index < METHOD_STEPS.length - 1 ? (
-                      <span
-                        className="absolute -right-2 top-1/2 hidden -translate-y-1/2 text-neutral-300 lg:block"
-                        aria-hidden
-                      >
-                        →
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
+            <div className="relative mx-auto w-full max-w-[340px]">
+              <Image
+                src={EDGE_PREMIUM_IMAGES.diagComportemental}
+                alt="Aperçu du test comportemental EDGE sur mobile"
+                width={680}
+                height={1200}
+                className="h-auto w-full object-contain drop-shadow-[0_24px_48px_rgba(0,0,0,0.12)]"
+                sizes="(max-width: 768px) 80vw, 340px"
+                priority={false}
+              />
             </div>
           </div>
         </section>
@@ -238,7 +185,7 @@ export async function EdgeDiagnosticsPage() {
               <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-400">
                 Différenciation
               </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
+              <h2 className="font-edge-display mt-4 text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.05] text-neutral-950">
                 Pourquoi EDGE ?
               </h2>
             </div>
@@ -287,7 +234,7 @@ export async function EdgeDiagnosticsPage() {
               <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-400">
                 Cas d&apos;usage
               </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
+              <h2 className="font-edge-display mt-4 text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.05] text-neutral-950">
                 Cas d&apos;usage
               </h2>
             </div>
@@ -319,7 +266,7 @@ export async function EdgeDiagnosticsPage() {
         <section className="bg-white px-5 py-20 sm:px-8 lg:px-10">
           <div className="mx-auto max-w-6xl rounded-[1.75rem] border border-neutral-200 bg-neutral-50 px-6 py-12 sm:px-10 sm:py-14">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-semibold tracking-[-0.03em] text-neutral-950 sm:text-4xl">
+              <h2 className="font-edge-display text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.05] text-neutral-950">
                 Transformez vos évaluations en véritables leviers de développement.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-neutral-500">

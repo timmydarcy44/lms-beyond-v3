@@ -171,6 +171,25 @@
   animation: spin-slow 8s linear infinite;
 }
 
+@keyframes edge-orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes edge-orbit-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 [contenteditable]:empty:before {
   content: attr(data-placeholder);
   color: #9CA3AF;
@@ -299,6 +318,22 @@ body.light {
   font-weight: 700;
   font-synthesis: none;
   letter-spacing: -0.022em;
+}
+
+/* Diagnostics / pages produit — display Apple + corps Inter */
+.font-edge-sf {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue",
+    Arial, sans-serif;
+}
+
+.font-edge-display {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue",
+    Arial, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  font-synthesis: none;
 }
 
 @theme inline {

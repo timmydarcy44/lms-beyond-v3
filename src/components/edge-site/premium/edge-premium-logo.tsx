@@ -4,14 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
-import { EDGE_LOGO_PATH } from "@/lib/edge-site/premium-constants";
+import { EDGE_LOGO_BLACK_PATH, EDGE_LOGO_PATH } from "@/lib/edge-site/premium-constants";
 
 type Props = {
   className?: string;
   href?: string;
+  /** Logo noir pour chrome clair. */
+  light?: boolean;
 };
 
-export function EdgePremiumLogo({ className, href }: Props) {
+export function EdgePremiumLogo({ className, href, light = false }: Props) {
   const { links } = useEdgePremiumConfig();
   const homeHref = href ?? links.home;
 
@@ -22,7 +24,7 @@ export function EdgePremiumLogo({ className, href }: Props) {
       aria-label="EDGE — Accueil"
     >
       <Image
-        src={EDGE_LOGO_PATH}
+        src={light ? EDGE_LOGO_BLACK_PATH : EDGE_LOGO_PATH}
         alt="EDGE"
         width={88}
         height={28}

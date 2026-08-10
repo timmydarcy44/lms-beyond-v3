@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import { EdgeDiagnosticsDetailPage } from "@/components/edge-site/business/diagnostics/edge-diagnostics-detail-page";
 import {
@@ -33,6 +33,11 @@ export async function generateMetadata({
 
 export default async function Page({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
+  if (slug === "psychologie-comportementale") {
+    const host = (await headers()).get("host");
+    const routes = getEdgeMarketingRoutes(host);
+    permanentRedirect(`${routes.businessDiagnostics}/test-comportemental`);
+  }
   const diagnostic = getDiagnosticBySlug(slug);
   if (!diagnostic) notFound();
 

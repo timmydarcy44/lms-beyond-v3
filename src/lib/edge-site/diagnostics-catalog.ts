@@ -34,6 +34,9 @@ export type EdgeDiagnostic = {
   audiences: DiagnosticAudience[];
   skills: string[];
   reportItems: string[];
+  /** Code produit affiché sur les cartes phares (ex. IDMC, SOFT, COMP). */
+  productCode?: string;
+  flagship?: boolean;
 };
 
 const DEFAULT_REPORT_ITEMS = [
@@ -64,6 +67,45 @@ function d(
 /** Catalogue extensible — ajouter une entrée ici suffit pour exposer carte + fiche. */
 export const EDGE_DIAGNOSTICS: EdgeDiagnostic[] = [
   d({
+    slug: "soft-skills",
+    title: "Soft Skills",
+    productCode: "SOFT",
+    flagship: true,
+    icon: HeartHandshake,
+    durationMinutes: 20,
+    shortDescription:
+      "Évaluez les compétences comportementales qui font la différence au quotidien : coopération, communication, adaptabilité et leadership.",
+    longDescription:
+      "Le diagnostic Soft Skills EDGE cartographie les compétences comportementales critiques pour la performance collective. Chaque résultat alimente un rapport détaillé, des Open Badges et des recommandations IA pour personnaliser les parcours de développement.",
+    skills: ["Communication", "Collaboration", "Autonomie", "Créativité", "Résilience", "Leadership"],
+  }),
+  d({
+    slug: "idmc",
+    title: "IDMC — Indice de Maîtrise Cognitive",
+    productCode: "IDMC",
+    flagship: true,
+    icon: Brain,
+    durationMinutes: 25,
+    shortDescription:
+      "Mesurez les leviers cognitifs de la performance : attention, raisonnement, flexibilité et stratégies d'apprentissage.",
+    longDescription:
+      "L'IDMC (Indice de Maîtrise Cognitive) évalue la façon dont une personne traite l'information, apprend et décide. Il produit un profil multi-axes pour orienter formations, coaching et plans de progression — avec radar, synthèse IA et intégration Skills Wallet.",
+    skills: ["Attention", "Mémoire de travail", "Raisonnement", "Flexibilité", "Stratégies d'apprentissage"],
+  }),
+  d({
+    slug: "test-comportemental",
+    title: "Test comportemental",
+    productCode: "COMP",
+    flagship: true,
+    icon: Compass,
+    durationMinutes: 15,
+    shortDescription:
+      "Identifiez le style comportemental dominant pour mieux communiquer, manager et collaborer.",
+    longDescription:
+      "Le test comportemental EDGE révèle les préférences d'action, d'influence, de stabilité et de conformité. Il aide à comprendre les dynamiques d'équipe, à adapter le management et à fluidifier les interactions — avant d'engager un parcours de développement personnalisé.",
+    skills: ["Action", "Influence", "Stabilité", "Rigueur", "Adaptation relationnelle"],
+  }),
+  d({
     slug: "competences-cognitives",
     title: "Compétences cognitives",
     icon: Brain,
@@ -71,15 +113,6 @@ export const EDGE_DIAGNOSTICS: EdgeDiagnostic[] = [
     longDescription:
       "Évaluez les capacités cognitives fondamentales pour anticiper la performance en situations complexes. Le diagnostic produit un profil objectif pour personnaliser les parcours de montée en compétences.",
     skills: ["Attention", "Mémoire de travail", "Raisonnement", "Vitesse de traitement", "Flexibilité"],
-  }),
-  d({
-    slug: "soft-skills",
-    title: "Soft Skills",
-    icon: HeartHandshake,
-    shortDescription: "Cartographiez les compétences comportementales clés du collaborateur.",
-    longDescription:
-      "Identifiez les soft skills dominantes et les zones de vigilance pour aligner formation, coaching et mobilité interne sur des données mesurables.",
-    skills: ["Communication", "Collaboration", "Autonomie", "Créativité", "Résilience", "Leadership"],
   }),
   d({
     slug: "leadership",
@@ -249,7 +282,22 @@ export function getAllDiagnostics(): EdgeDiagnostic[] {
   return EDGE_DIAGNOSTICS;
 }
 
+export function getFlagshipDiagnostics(): EdgeDiagnostic[] {
+  const flagged = EDGE_DIAGNOSTICS.filter((item) => item.flagship);
+  const order = ["soft-skills", "idmc", "test-comportemental"];
+  return order
+    .map((slug) => flagged.find((item) => item.slug === slug))
+    .filter(Boolean) as EdgeDiagnostic[];
+}
+
+export function getCatalogDiagnostics(): EdgeDiagnostic[] {
+  return EDGE_DIAGNOSTICS.filter((item) => !item.flagship);
+}
+
 export function getDiagnosticBySlug(slug: string): EdgeDiagnostic | undefined {
+  if (slug === "psychologie-comportementale") {
+    return EDGE_DIAGNOSTICS.find((item) => item.slug === "test-comportemental");
+  }
   return EDGE_DIAGNOSTICS.find((item) => item.slug === slug);
 }
 

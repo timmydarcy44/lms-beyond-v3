@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import type { MarketingPageContent } from "@/lib/edge-site/marketing-content";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
-import { resolveMarketingContentHref } from "@/lib/edge-site/edge-marketing-path";
+import { resolveMarketingContentHref } from "@/lib/edge-site/marketing-routes";
 
 type Props = {
   content: MarketingPageContent;

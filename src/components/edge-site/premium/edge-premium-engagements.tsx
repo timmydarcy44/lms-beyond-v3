@@ -1,7 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Award, ClipboardList, GraduationCap } from "lucide-react";
-import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
+import {
+  EDGE_PREMIUM_IMAGES,
+  EDGE_PREMIUM_OPEN_BADGES_VIDEO,
+} from "@/lib/edge-site/premium-constants";
 
 const ENGAGEMENTS = [
   {
@@ -11,7 +14,7 @@ const ENGAGEMENTS = [
       "Diagnostics et analyses pour cartographier les compétences, les écarts et les priorités de développement.",
     image: EDGE_PREMIUM_IMAGES.developper,
     icon: ClipboardList,
-    href: "/edge-lab/business/analytics",
+    href: "/edge-lab/business/diagnostics",
   },
   {
     step: "02",
@@ -27,7 +30,7 @@ const ENGAGEMENTS = [
     title: "Valorisations des compétences",
     description:
       "Open Badges et certifications vérifiables pour rendre chaque acquis visible et crédible.",
-    image: EDGE_PREMIUM_IMAGES.certifier,
+    video: EDGE_PREMIUM_OPEN_BADGES_VIDEO,
     icon: Award,
     href: "/edge-lab/business/open-badges",
   },
@@ -55,13 +58,26 @@ export function EdgePremiumEngagements() {
               className="group flex flex-col overflow-hidden rounded-[24px] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_48px_rgba(5,5,5,0.08)]"
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-[#eceae6]">
-                <Image
-                  src={item.image}
-                  alt={item.title}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  sizes="(max-width: 640px) 90vw, 360px"
-                />
+                {"video" in item ? (
+                  <video
+                    src={item.video}
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    aria-label={item.title}
+                  />
+                ) : (
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    sizes="(max-width: 640px) 90vw, 360px"
+                  />
+                )}
                 <div className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-edge-black-deep">
                   {item.step}
                 </div>

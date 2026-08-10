@@ -1,6 +1,7 @@
 import { EdgePremiumAudience } from "@/components/edge-site/premium/edge-premium-audience";
 import { EdgePremiumBrandPillars } from "@/components/edge-site/premium/edge-premium-brand-pillars";
 import { EdgePremiumCta } from "@/components/edge-site/premium/edge-premium-cta";
+import { EdgePremiumDiagnosticsSection } from "@/components/edge-site/premium/edge-premium-diagnostics-section";
 import { EdgePremiumEngagements } from "@/components/edge-site/premium/edge-premium-engagements";
 import { EdgePremiumExpertSection } from "@/components/edge-site/premium/edge-premium-expert-section";
 import { EdgePremiumHero } from "@/components/edge-site/premium/edge-premium-hero";
@@ -14,6 +15,7 @@ export function EdgePremiumHome() {
     <EdgePremiumShell overlayNav>
       <EdgePremiumHero />
       <EdgePremiumEngagements />
+      <EdgePremiumDiagnosticsSection />
       <EdgePremiumBrandPillars />
       <EdgePremiumStats />
       <EdgePremiumVideo />

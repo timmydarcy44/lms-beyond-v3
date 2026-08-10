@@ -2,8 +2,12 @@ import { getEdgeMarketingRoutes, type EdgeMarketingRoutes } from "@/lib/edge-sit
 import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
 import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 
-/** Logo navbar / footer — asset local public. */
+/** Logo navbar / footer — asset local public (chrome sombre). */
 export const EDGE_LOGO_PATH = "/edge-lab/edge-logo-white.png";
+
+/** Logo noir transparent — chrome clair (menu blanc). */
+export const EDGE_LOGO_BLACK_PATH =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/EDGE_noir_sans_fond.png";
 
 export const EDGE_PREMIUM_IMAGES = {
   hero: EDGE_HERO_IMAGE_URL,
@@ -21,7 +25,14 @@ export const EDGE_PREMIUM_IMAGES = {
     "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=85",
   business:
     "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=900&q=85",
+  /** Capture UI test comportemental (téléphone). */
+  diagComportemental:
+    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/DIAG_IDMC.png",
 } as const;
+
+/** Vidéo carte « Valorisations des compétences » (home). */
+export const EDGE_PREMIUM_OPEN_BADGES_VIDEO =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/presentation%20OB.mp4";
 
 export const EDGE_PREMIUM_AVATARS = [
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",

@@ -1,9 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BookMarked,
   BookOpen,
   ClipboardList,
   Home,
+  Library,
   Route,
   UserCircle,
   Users,
@@ -22,6 +22,7 @@ export const SALARIE_NAV_ITEMS: SalarieNavItem[] = [
   { label: "Mes missions", href: "/dashboard/salarie/missions", icon: ClipboardList },
   { label: "Parcours", href: "/dashboard/salarie/parcours", icon: Route },
   { label: "Mes Formations", href: "/dashboard/salarie/formations", icon: BookOpen },
+  { label: "Bibliothèque", href: "/dashboard/salarie/bibliotheque", icon: Library },
   { label: "Mes Coachings", href: "/dashboard/salarie/coachings", icon: Users },
   { label: "Wallet", href: "/dashboard/salarie/badges", icon: Wallet },
 ];

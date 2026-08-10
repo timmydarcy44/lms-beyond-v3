@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import {
   ApprenantAssessmentResults,
 } from "@/components/apprenant/apprenant-assessment-results";
+import { CrossProfileBadgeCelebration } from "@/components/apprenant/cross-profile-badge-celebration";
 import { useLearnerSnapshot } from "@/components/learner/learner-snapshot-provider";
 import { MicroCheckinWidget } from "@/components/radar-equipe/micro-checkin-widget";
 import { ProfilPartageConsent } from "@/components/radar-equipe/profil-partage-consent";
@@ -48,6 +49,11 @@ export function SalarieDashboardClient() {
   const [requests, setRequests] = useState<ActionRequestRow[]>([]);
   const [showPlan, setShowPlan] = useState(false);
   const [correlatedAnalysis, setCorrelatedAnalysis] = useState<string | null>(null);
+  const [badgeCelebration, setBadgeCelebration] = useState<{
+    badgeName: string;
+    badgeImageUrl: string | null;
+    walletHref: string;
+  } | null>(null);
 
   const firstName = snapshot?.firstName?.trim() || "Apprenant";
   const discScores = snapshot?.discScores ?? null;
@@ -57,6 +63,50 @@ export function SalarieDashboardClient() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const res = await fetch("/api/dashboard/cross-profile-badge-celebration", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as {
+          pending?: boolean;
+          badgeName?: string;
+          badgeImageUrl?: string | null;
+          walletHref?: string;
+        };
+        if (json.pending && json.badgeName) {
+          setBadgeCelebration({
+            badgeName: json.badgeName,
+            badgeImageUrl: json.badgeImageUrl ?? null,
+            walletHref: json.walletHref ?? "/dashboard/salarie/badges",
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dismissBadgeCelebration = useCallback(async () => {
+    setBadgeCelebration(null);
+    try {
+      await fetch("/api/dashboard/cross-profile-badge-celebration", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     if (!snapshot?.userId) return;
@@ -243,6 +293,15 @@ export function SalarieDashboardClient() {
           Paramètres de confidentialité
         </Link>
       </p>
+
+      {badgeCelebration ? (
+        <CrossProfileBadgeCelebration
+          badgeName={badgeCelebration.badgeName}
+          badgeImageUrl={badgeCelebration.badgeImageUrl}
+          walletHref={badgeCelebration.walletHref}
+          onDismiss={() => void dismissBadgeCelebration()}
+        />
+      ) : null}
     </div>
   );
 }

@@ -50,13 +50,24 @@ export type CrossProfileTriggerResult =
   | { status: "completed"; badgeId: string; alreadyProcessed?: boolean }
   | { status: "error"; message: string };
 
-function isParticulierProfile(profile: {
+function isCrossProfileEligible(profile: {
   role?: string | null;
   role_type?: string | null;
 }): boolean {
   const role = String(profile.role ?? "").trim().toUpperCase();
   const roleType = String(profile.role_type ?? "").trim().toLowerCase();
-  return role === "PARTICULIER" || roleType === "particulier";
+  if (role === "PARTICULIER" || roleType === "particulier") return true;
+  if (role === "SALARIE" || roleType === "salarie" || roleType === "employee") return true;
+  return false;
+}
+
+function isSalarieProfile(profile: {
+  role?: string | null;
+  role_type?: string | null;
+}): boolean {
+  const role = String(profile.role ?? "").trim().toUpperCase();
+  const roleType = String(profile.role_type ?? "").trim().toLowerCase();
+  return role === "SALARIE" || roleType === "salarie" || roleType === "employee";
 }
 
 function parseCrossProfileCompletion(raw: unknown): CrossProfileCompletionRecord | null {
@@ -128,8 +139,8 @@ export async function maybeTriggerCrossProfileCompletion(
     return { status: "skipped", reason: "profile_not_found" };
   }
 
-  if (!isParticulierProfile(profile)) {
-    return { status: "skipped", reason: "not_particulier" };
+  if (!isCrossProfileEligible(profile)) {
+    return { status: "skipped", reason: "not_eligible" };
   }
 
   const existingCompletion = parseCrossProfileCompletion(profile.cross_profile_completion);
@@ -240,7 +251,9 @@ export async function maybeTriggerCrossProfileCompletion(
     }
   }
 
-  const profilHref = `${publicAppUrl().replace(/\/$/, "")}/dashboard/apprenant/profil-comportemental`;
+  const profilHref = isSalarieProfile(profile)
+    ? `${publicAppUrl().replace(/\/$/, "")}/dashboard/salarie/badges`
+    : `${publicAppUrl().replace(/\/$/, "")}/dashboard/apprenant/profil-comportemental`;
   const email = String(profile.email ?? "").trim();
   const firstName = String(profile.first_name ?? "").trim();
 

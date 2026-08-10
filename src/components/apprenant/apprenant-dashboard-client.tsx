@@ -677,7 +677,6 @@ export function ApprenantDashboardClient({
   }, [supabase]);
 
   useEffect(() => {
-    if (isSalarieSurface) return;
     let cancelled = false;
 
     const run = async () => {
@@ -697,7 +696,11 @@ export function ApprenantDashboardClient({
           setBadgeCelebration({
             badgeName: json.badgeName,
             badgeImageUrl: json.badgeImageUrl ?? null,
-            walletHref: json.walletHref ?? "/dashboard/apprenant/badges",
+            walletHref:
+              json.walletHref ??
+              (isSalarieSurface
+                ? "/dashboard/salarie/badges"
+                : "/dashboard/apprenant/badges"),
           });
         }
       } catch {

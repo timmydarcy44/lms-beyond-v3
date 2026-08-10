@@ -27,7 +27,7 @@ export async function GET() {
   const db = getServiceRoleClient() ?? authClient;
   const { data: profile } = await db
     .from("profiles")
-    .select("cross_profile_completion")
+    .select("cross_profile_completion, role, role_type")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -49,12 +49,19 @@ export async function GET() {
     badgeImageUrl = badgeRow?.image_url ? String(badgeRow.image_url) : null;
   }
 
+  const role = String(profile?.role ?? "").trim().toUpperCase();
+  const roleType = String(profile?.role_type ?? "").trim().toLowerCase();
+  const isSalarie =
+    role === "SALARIE" || roleType === "salarie" || roleType === "employee";
+
   return NextResponse.json({
     pending: true,
     badgeName: PROFIL_COMPORTEMENTAL_BADGE_NAME,
     badgeImageUrl,
     openingParagraph: completion?.opening_paragraph ?? null,
-    walletHref: "/dashboard/apprenant/profil-comportemental",
+    walletHref: isSalarie
+      ? "/dashboard/salarie/badges"
+      : "/dashboard/apprenant/profil-comportemental",
   });
 }
 

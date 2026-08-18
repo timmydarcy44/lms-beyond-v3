@@ -7,6 +7,12 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { addPartnerOffer } from "@/lib/club/partner-offers-store";
+import { downloadClubOfferPdf } from "@/lib/club/club-offer-pdf";
+import {
+  contractTypeLabel,
+  getClubAdminProfile,
+  type ClubContractType,
+} from "@/lib/club/club-admin-profile";
 import {
   allocatePrestations,
   getAllocationSnapshot,
@@ -26,7 +32,16 @@ type Pack = {
   border: string;
   avantages: string[];
   nb_souscripteurs: number;
+  totalHt?: number;
+  partnerName?: string;
+  contractType?: ClubContractType;
+  lines?: { label: string; price: number | null }[];
 };
+
+function parsePackAmount(prix: string) {
+  const digits = prix.replace(/[^\d]/g, "");
+  return digits ? Number(digits) : 0;
+}
 
 const initialPacks: Pack[] = [
   {
@@ -104,6 +119,8 @@ export default function ClubOffersPage() {
   const [customExpandedSection, setCustomExpandedSection] = useState<string | null>("match-day");
   const [customSelections, setCustomSelections] = useState<Record<string, number>>({});
   const [selectedPartner, setSelectedPartner] = useState("");
+  const [offerContractType, setOfferContractType] = useState<ClubContractType>("sponsoring");
+  const [pdfBusy, setPdfBusy] = useState(false);
   const allocations = useSyncExternalStore(
     subscribePrestationAllocations,
     getAllocationSnapshot,
@@ -143,6 +160,10 @@ export default function ClubOffersPage() {
     });
     localStorage.setItem("club_sponsorship_rates", JSON.stringify(rates));
   }, [prestations]);
+
+  useEffect(() => {
+    setOfferContractType(getClubAdminProfile().contractType);
+  }, []);
 
   const updatePrestationPrice = (category: keyof typeof prestations, id: string, price: number) => {
     setPrestations((prev) => ({
@@ -238,6 +259,61 @@ export default function ClubOffersPage() {
     setShowDialog(false);
   };
 
+  const offerLines = useMemo(
+    () => [
+      ...selectedOfferItems.map((item) => ({ label: item.label, price: item.price })),
+      ...includedOfferItems.map((item) => ({ label: item.label, price: null })),
+    ],
+    [selectedOfferItems, includedOfferItems]
+  );
+
+  const selectedPartnerName = partenaires.find((item) => item.id === selectedPartner)?.nom;
+
+  const downloadCurrentOfferPdf = async () => {
+    if (offerLines.length === 0) {
+      toast.error("Ajoutez au moins une prestation.");
+      return;
+    }
+    setPdfBusy(true);
+    try {
+      await downloadClubOfferPdf({
+        title: customOfferName || "Offre personnalisée",
+        partnerName: selectedPartnerName,
+        lines: offerLines,
+        totalHt: totalOffer,
+        contractType: offerContractType,
+      });
+      toast.success("PDF téléchargé");
+    } catch {
+      toast.error("Impossible de générer le PDF.");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
+  const downloadPackPdf = async (pack: Pack) => {
+    setPdfBusy(true);
+    try {
+      await downloadClubOfferPdf({
+        title: pack.nom,
+        partnerName: pack.partnerName,
+        lines:
+          pack.lines ??
+          pack.avantages.map((label) => ({
+            label,
+            price: null,
+          })),
+        totalHt: pack.totalHt ?? parsePackAmount(pack.prix),
+        contractType: pack.contractType ?? getClubAdminProfile().contractType,
+      });
+      toast.success("PDF téléchargé");
+    } catch {
+      toast.error("Impossible de générer le PDF.");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   const saveCustomOffer = () => {
     if (selectedOfferItems.length === 0) return;
     const nextPack: Pack = {
@@ -250,6 +326,10 @@ export default function ClubOffersPage() {
       nb_souscripteurs: 0,
       gradient: "from-slate-800/60 to-slate-600/40",
       border: "border-white/10",
+      totalHt: totalOffer,
+      partnerName: selectedPartnerName,
+      contractType: offerContractType,
+      lines: offerLines,
     };
     setPacks((prev) => [nextPack, ...prev]);
     allocatePrestations(selectedOfferItems.map((item) => item.id));
@@ -261,6 +341,9 @@ export default function ClubOffersPage() {
         name: nextPack.nom,
         totalHt: totalOffer,
         createdAt: new Date().toISOString(),
+        partnerName: partner?.nom,
+        contractType: offerContractType,
+        lines: offerLines,
       });
       toast.success(`Offre sauvegardée dans la fiche de ${partner?.nom ?? "ce partenaire"} ✓`);
     } else {
@@ -270,6 +353,7 @@ export default function ClubOffersPage() {
     setCustomSelections({});
     setCustomExpandedSection("match-day");
     setSelectedPartner("");
+    setOfferContractType(getClubAdminProfile().contractType);
   };
 
   if (status !== "allowed") {
@@ -316,8 +400,12 @@ export default function ClubOffersPage() {
                 >
                   Modifier
                 </button>
-                <button className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white">
-                  Générer PDF
+                <button
+                  className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white disabled:opacity-50"
+                  disabled={pdfBusy}
+                  onClick={() => void downloadPackPdf(pack)}
+                >
+                  Télécharger PDF
                 </button>
               </div>
             </div>
@@ -666,6 +754,17 @@ export default function ClubOffersPage() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="mb-1 block text-xs text-white/60">Type de contrat</label>
+                <select
+                  value={offerContractType}
+                  onChange={(event) => setOfferContractType(event.target.value as ClubContractType)}
+                  className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white"
+                >
+                  <option value="sponsoring">{contractTypeLabel("sponsoring")}</option>
+                  <option value="mecenat">{contractTypeLabel("mecenat")}</option>
+                </select>
+              </div>
               <Input
                 value={customOfferName}
                 onChange={(event) => setCustomOfferName(event.target.value)}
@@ -715,7 +814,18 @@ export default function ClubOffersPage() {
               <div className="text-xl font-black text-[#8B1A2B] lg:text-3xl">
                 {totalOffer.toLocaleString("fr-FR")}€
               </div>
-              <div className="text-sm text-white/60">Total TTC : {totalOfferTtc.toLocaleString("fr-FR")}€</div>
+              <div className="text-sm text-white/60">
+                {offerContractType === "mecenat"
+                  ? "Mécénat — hors TVA, reçu fiscal"
+                  : `Total TTC : ${totalOfferTtc.toLocaleString("fr-FR")}€`}
+              </div>
+              <button
+                className="w-full rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                disabled={pdfBusy}
+                onClick={() => void downloadCurrentOfferPdf()}
+              >
+                {pdfBusy ? "PDF…" : "Télécharger le PDF"}
+              </button>
               <button
                 className="w-full rounded-full bg-[#8B1A2B] px-4 py-2 text-sm font-semibold text-white"
                 onClick={saveCustomOffer}

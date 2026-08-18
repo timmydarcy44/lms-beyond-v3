@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Shield,
   CircleUser,
+  Building2,
 } from "lucide-react";
 import type { ClubTheme } from "@/lib/club-theme";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const navItems = [
   { label: "Prospection", href: "/dashboard/club/tunnel", icon: GitBranch },
   { label: "News Club", href: "/dashboard/club/news", icon: Newspaper },
   { label: "Offres", href: "/dashboard/club/offres", icon: Gift },
+  { label: "Administratif", href: "/dashboard/club/admin", icon: Building2 },
   { label: "Aides & Formation", href: "/dashboard/club/aides", icon: GraduationCap },
   { label: "Événements", href: "/dashboard/club/evenements", icon: Calendar },
   { label: "ROI & Reporting", href: "/dashboard/club/roi", icon: BarChart2 },

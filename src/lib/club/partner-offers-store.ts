@@ -5,6 +5,9 @@ export type PartnerOffer = {
   name: string;
   totalHt: number;
   createdAt: string;
+  partnerName?: string;
+  contractType?: "sponsoring" | "mecenat";
+  lines?: { label: string; price: number | null }[];
 };
 
 const partnerOffersByKey: Record<string, PartnerOffer[]> = {};

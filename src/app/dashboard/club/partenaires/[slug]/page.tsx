@@ -14,6 +14,7 @@ import { clubPartners } from "@/lib/mocks/club-partners";
 import type { ClubPartner } from "@/lib/mocks/club-partners";
 import { cn } from "@/lib/utils";
 import { usePartnerOffers } from "@/lib/club/partner-offers-store";
+import { downloadClubOfferPdf } from "@/lib/club/club-offer-pdf";
 import {
   findClubPartnerLocal,
   subscribeClubPartners,
@@ -255,6 +256,22 @@ export default function ClubPartnerDetailPage() {
             >
               Modifier l'offre
             </button>
+            <button
+              className="mt-2 w-full rounded-full bg-[#8B1A2B] px-4 py-2 text-sm font-semibold text-white"
+              onClick={() => {
+                void downloadClubOfferPdf({
+                  title: `Pack ${packLabel}`,
+                  partnerName: partner.nom,
+                  lines: prestations.map((label) => ({ label, price: null })),
+                  totalHt: partner.valeur,
+                }).then(
+                  () => toast.success("PDF téléchargé"),
+                  () => toast.error("Impossible de générer le PDF.")
+                );
+              }}
+            >
+              Télécharger le PDF
+            </button>
           </div>
           </div>
         </div>
@@ -278,12 +295,34 @@ export default function ClubPartnerDetailPage() {
                         {new Date(offer.createdAt).toLocaleDateString("fr-FR")}
                       </div>
                     </div>
-                    <Link
-                      href="/dashboard/club/offres"
-                      className="rounded-full bg-white/10 px-4 py-2 text-xs text-white"
-                    >
-                      Voir le catalogue
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded-full bg-[#8B1A2B] px-4 py-2 text-xs font-semibold text-white"
+                        onClick={() => {
+                          void downloadClubOfferPdf({
+                            title: offer.name,
+                            partnerName: partner.nom,
+                            lines:
+                              offer.lines ??
+                              (partner.prestations ?? []).map((label) => ({ label, price: null })),
+                            totalHt: offer.totalHt,
+                            contractType: offer.contractType,
+                          }).then(
+                            () => toast.success("PDF téléchargé"),
+                            () => toast.error("Impossible de générer le PDF.")
+                          );
+                        }}
+                      >
+                        Télécharger PDF
+                      </button>
+                      <Link
+                        href="/dashboard/club/offres"
+                        className="rounded-full bg-white/10 px-4 py-2 text-xs text-white"
+                      >
+                        Voir le catalogue
+                      </Link>
+                    </div>
                   </div>
                 ))}
               </div>

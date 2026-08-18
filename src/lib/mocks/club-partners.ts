@@ -1,10 +1,17 @@
+export type ClubPartnerStatut = "Signé" | "Prospect" | "En négociation" | "À renouveler";
+export type ClubPartnerPack = "Bronze" | "Argent" | "Or" | "Personnalisé";
+
 export type ClubPartner = {
+  id?: string;
   slug: string;
   nom: string;
   secteur: string;
   valeur: number;
-  statut: string;
+  statut: ClubPartnerStatut | string;
   renouvellement: string;
+  date_signature?: string;
+  modalite_paiement?: string;
+  pack?: ClubPartnerPack | string;
   contact_prenom: string;
   contact_nom: string;
   contact_email: string;
@@ -13,6 +20,7 @@ export type ClubPartner = {
   prestations: string[];
   logo_initiales: string;
   logo_couleur: string;
+  colonne_tunnel?: string;
 };
 
 export const clubPartners: ClubPartner[] = [

@@ -9,6 +9,7 @@ import {
   BarChart2,
   GraduationCap,
   Shield,
+  CircleUser,
 } from "lucide-react";
 import type { ClubTheme } from "@/lib/club-theme";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const navItems = [
     href: "/dashboard/club/dncg",
     icon: Shield,
   },
+  { label: "Mon compte", href: "/dashboard/club/compte", icon: CircleUser },
 ];
 
 export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {

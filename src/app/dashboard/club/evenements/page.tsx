@@ -20,6 +20,7 @@ type ClubEvent = {
 export default function ClubEventsPage() {
   const status = useClubGuard();
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<ClubEvent | null>(null);
   const [clubId, setClubId] = useState<string | null>(null);
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [formEvent, setFormEvent] = useState({
@@ -50,26 +51,84 @@ export default function ClubEventsPage() {
     load();
   }, []);
 
-  const handleCreateEvent = async () => {
-    if (!clubId || !formEvent.titre.trim() || !formEvent.objectifs.trim()) return;
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) return;
-    await supabase.from("club_events").insert({
-      club_id: clubId,
-      titre: formEvent.titre,
-      objectifs: formEvent.objectifs,
-      lieu: formEvent.lieu || null,
-      date_event: formEvent.date_event || null,
-      description: formEvent.description || null,
-    });
-    const { data: clubEvents } = await supabase
-      .from("club_events")
-      .select("*")
-      .eq("club_id", clubId)
-      .order("date_event", { ascending: true });
-    setEvents((clubEvents as ClubEvent[]) || []);
-    setShowAddEvent(false);
+  const resetEventForm = () => {
     setFormEvent({ titre: "", objectifs: "", lieu: "", date_event: "", description: "" });
+    setEditingEvent(null);
+  };
+
+  const openEditEvent = (event: ClubEvent) => {
+    setEditingEvent(event);
+    setFormEvent({
+      titre: event.titre,
+      objectifs: event.objectifs,
+      lieu: event.lieu || "",
+      date_event: event.date_event ? event.date_event.slice(0, 16) : "",
+      description: event.description || "",
+    });
+    setShowAddEvent(true);
+  };
+
+  const handleCreateEvent = async () => {
+    if (!formEvent.titre.trim() || !formEvent.objectifs.trim()) return;
+    const supabase = createSupabaseBrowserClient();
+    if (clubId && supabase) {
+      if (editingEvent) {
+        await supabase
+          .from("club_events")
+          .update({
+            titre: formEvent.titre,
+            objectifs: formEvent.objectifs,
+            lieu: formEvent.lieu || null,
+            date_event: formEvent.date_event || null,
+            description: formEvent.description || null,
+          })
+          .eq("id", editingEvent.id);
+      } else {
+        await supabase.from("club_events").insert({
+          club_id: clubId,
+          titre: formEvent.titre,
+          objectifs: formEvent.objectifs,
+          lieu: formEvent.lieu || null,
+          date_event: formEvent.date_event || null,
+          description: formEvent.description || null,
+        });
+      }
+      const { data: clubEvents } = await supabase
+        .from("club_events")
+        .select("*")
+        .eq("club_id", clubId)
+        .order("date_event", { ascending: true });
+      setEvents((clubEvents as ClubEvent[]) || []);
+    } else if (editingEvent) {
+      setEvents((prev) =>
+        prev.map((event) =>
+          event.id === editingEvent.id
+            ? {
+                ...event,
+                titre: formEvent.titre,
+                objectifs: formEvent.objectifs,
+                lieu: formEvent.lieu,
+                date_event: formEvent.date_event,
+                description: formEvent.description,
+              }
+            : event,
+        ),
+      );
+    } else {
+      setEvents((prev) => [
+        {
+          id: `demo-${Date.now()}`,
+          titre: formEvent.titre,
+          objectifs: formEvent.objectifs,
+          lieu: formEvent.lieu,
+          date_event: formEvent.date_event,
+          description: formEvent.description,
+        },
+        ...prev,
+      ]);
+    }
+    setShowAddEvent(false);
+    resetEventForm();
   };
 
   const getStatus = (dateValue?: string | null) => {
@@ -131,7 +190,10 @@ export default function ClubEventsPage() {
                 <div className="mt-1 text-xs text-white/50">{event.lieu || "Lieu à confirmer"}</div>
                 <div className="mt-1 text-xs text-white/50">{event.dateLabel}</div>
                 <p className="mt-3 line-clamp-2 text-sm text-white/70">{event.description || event.objectifs}</p>
-                <button className="mt-4 rounded-full bg-white/10 px-4 py-2 text-xs text-white">
+                <button
+                  className="mt-4 rounded-full bg-white/10 px-4 py-2 text-xs text-white"
+                  onClick={() => openEditEvent(event)}
+                >
                   Voir / Modifier
                 </button>
               </div>
@@ -140,10 +202,16 @@ export default function ClubEventsPage() {
         </div>
       </div>
 
-      <Dialog open={showAddEvent} onOpenChange={setShowAddEvent}>
+      <Dialog
+        open={showAddEvent}
+        onOpenChange={(open) => {
+          setShowAddEvent(open);
+          if (!open) resetEventForm();
+        }}
+      >
         <DialogContent className="max-w-xl bg-[#111] text-white">
           <DialogHeader>
-            <DialogTitle>Créer un événement</DialogTitle>
+            <DialogTitle>{editingEvent ? "Modifier l'événement" : "Créer un événement"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Input
@@ -191,7 +259,7 @@ export default function ClubEventsPage() {
               style={{ backgroundColor: "var(--club-primary)" }}
               onClick={handleCreateEvent}
             >
-              Créer l'événement
+              {editingEvent ? "Enregistrer" : "Créer l'événement"}
             </button>
           </DialogFooter>
         </DialogContent>

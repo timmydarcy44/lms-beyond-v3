@@ -4,9 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ClubLayout } from "@/components/club/club-layout";
 import { ClubGuardGate, useClubGuard } from "@/components/club/use-club-guard";
+import { PartnerFormModal } from "@/components/club/partner-form-modal";
 import { cn } from "@/lib/utils";
-import { clubPartners } from "@/lib/mocks/club-partners";
-import { getMyClubContext, getClubPartners } from "@/lib/supabase/club-queries";
+import type { ClubPartner } from "@/lib/mocks/club-partners";
+import {
+  getClubPartnersLocal,
+  subscribeClubPartners,
+} from "@/lib/club/club-partners-store";
+import { getMyClubContext, getClubPartners, shouldUseClubDemoData } from "@/lib/supabase/club-queries";
 
 const filters = ["Tous", "Signés", "Prospects", "En négociation", "À renouveler"];
 
@@ -20,9 +25,12 @@ const statusStyles: Record<string, string> = {
 export default function ClubPartnersPage() {
   const status = useClubGuard();
   const [loading, setLoading] = useState(true);
-  const [partnersData, setPartnersData] = useState<any[]>([]);
+  const [partnersData, setPartnersData] = useState<ClubPartner[]>([]);
   const [activeFilter, setActiveFilter] = useState("Tous");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [showAdd, setShowAdd] = useState(false);
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(true);
 
   const partners = useMemo(() => {
     if (activeFilter === "Tous") return partnersData;
@@ -36,19 +44,28 @@ export default function ClubPartnersPage() {
   }, [activeFilter, partnersData]);
 
   useEffect(() => {
+    const unsubscribe = subscribeClubPartners(() => {
+      setPartnersData(getClubPartnersLocal());
+    });
+
     const load = async () => {
       const { club: clubData, role } = await getMyClubContext();
-      const isDemo = role === "demo";
-      if (!clubData || isDemo) {
-        setPartnersData(clubPartners);
+      const useDemo = shouldUseClubDemoData(role, clubData);
+      setIsDemo(useDemo);
+      setClubId(clubData?.id ?? null);
+      if (useDemo) {
+        setPartnersData(getClubPartnersLocal());
         setLoading(false);
         return;
       }
       const partnersList = await getClubPartners(clubData.id);
-      setPartnersData(partnersList);
+      setPartnersData(partnersList.length > 0 ? partnersList : getClubPartnersLocal());
       setLoading(false);
     };
-    load();
+    void load();
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   if (status !== "allowed") {
@@ -68,6 +85,7 @@ export default function ClubPartnersPage() {
         <button
           className="rounded-full px-5 py-2 text-sm font-semibold text-white"
           style={{ backgroundColor: "var(--club-primary)" }}
+          onClick={() => setShowAdd(true)}
         >
           + Ajouter un partenaire
         </button>
@@ -140,7 +158,7 @@ export default function ClubPartnersPage() {
                   </div>
                 </div>
                 <div className="mt-3 text-lg font-black text-[#8B1A2B]">
-                  {partner.valeur.toLocaleString("fr-FR")}€
+                  {(partner.valeur || 0).toLocaleString("fr-FR")}€
                 </div>
                 <div className="mt-3 text-sm text-white/60">
                   {partner.contact_prenom} {partner.contact_nom}
@@ -202,7 +220,7 @@ export default function ClubPartnersPage() {
                     <td className="px-4 py-3 text-white">{partner.nom}</td>
                     <td className="px-4 py-3">{partner.secteur}</td>
                     <td className="px-4 py-3" style={{ color: "var(--club-primary)" }}>
-                      {partner.valeur.toLocaleString("fr-FR")}€
+                      {(partner.valeur || 0).toLocaleString("fr-FR")}€
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -234,6 +252,15 @@ export default function ClubPartnersPage() {
           )
         ) : null}
       </div>
+
+      <PartnerFormModal
+        open={showAdd}
+        onOpenChange={setShowAdd}
+        mode="create"
+        clubId={clubId}
+        isDemo={isDemo}
+        onSaved={(saved) => setPartnersData((prev) => [saved, ...prev.filter((item) => item.slug !== saved.slug)])}
+      />
     </ClubLayout>
   );
 }

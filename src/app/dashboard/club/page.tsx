@@ -4,18 +4,23 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ClubLayout } from "@/components/club/club-layout";
+import { PartnerFormModal } from "@/components/club/partner-form-modal";
 import { getClubTheme } from "@/lib/club-theme";
 import { cn } from "@/lib/utils";
 import { clubPartners } from "@/lib/mocks/club-partners";
+import {
+  getClubPartnersLocal,
+  subscribeClubPartners,
+} from "@/lib/club/club-partners-store";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  createPartner,
   getMyClubContext,
   getClubMatches,
   getClubNews,
   getClubPartners,
   shouldUseClubDemoData,
+  updateMatchAffluence,
 } from "@/lib/supabase/club-queries";
 
 const actions = [
@@ -81,13 +86,14 @@ export default function ClubDashboardPage() {
   const [firstName, setFirstName] = useState(demoClub.contact_prenom);
   const [isDemo, setIsDemo] = useState(true);
   const [showAddPartner, setShowAddPartner] = useState(false);
-  const [newPartner, setNewPartner] = useState({
-    nom: "",
-    secteur: "",
-    contact: "",
-    email: "",
-    telephone: "",
-    colonne_tunnel: "prospects",
+  const [editingMatch, setEditingMatch] = useState<any | null>(null);
+  const [matchForm, setMatchForm] = useState({
+    opponent: "",
+    date: "",
+    home: "Domicile",
+    score_nous: "",
+    score_eux: "",
+    affluence: "",
   });
   const theme = useMemo(
     () => getClubTheme(club?.slug ?? club?.code ?? club?.nom_slug ?? "esr"),
@@ -95,6 +101,7 @@ export default function ClubDashboardPage() {
   );
   useEffect(() => {
     let cancelled = false;
+    let demoMode = true;
 
     async function load() {
       try {
@@ -102,7 +109,11 @@ export default function ClubDashboardPage() {
         if (cancelled) return;
 
         const useDemo = shouldUseClubDemoData(role, clubData);
-        if (useDemo) return;
+        demoMode = useDemo;
+        if (useDemo) {
+          setPartners(getClubPartnersLocal());
+          return;
+        }
 
         setIsDemo(false);
         setClub(clubData);
@@ -123,8 +134,12 @@ export default function ClubDashboardPage() {
     }
 
     void load();
+    const unsubscribe = subscribeClubPartners(() => {
+      if (demoMode) setPartners(getClubPartnersLocal());
+    });
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 
@@ -151,8 +166,16 @@ export default function ClubDashboardPage() {
         match.equipe_adverse ||
         match.nom_adversaire ||
         "Adversaire";
-      const isHome = Boolean(
-        match.is_home ?? match.domicile ?? match.home ?? match.stade === "Domicile"
+      const isHome = !(
+        match.home === "Extérieur" ||
+        match.is_home === false ||
+        match.domicile === false
+      ) && Boolean(
+        match.home === "Domicile" ||
+        match.is_home === true ||
+        match.domicile === true ||
+        match.stade === "Domicile" ||
+        match.home === true
       );
       const scoreNous = match.score_nous ?? match.score_home ?? match.scoreOur;
       const scoreEux = match.score_eux ?? match.score_away ?? match.scoreOpp;
@@ -180,45 +203,45 @@ export default function ClubDashboardPage() {
     });
   }, [matches]);
 
-  const handleCreatePartner = async () => {
-    if (!newPartner.nom.trim()) return;
-    if (!club?.id || isDemo) {
-      setPartners((prev) => [
-        {
-          id: `demo-${Date.now()}`,
-          nom: newPartner.nom,
-          secteur: newPartner.secteur || "—",
-          valeur: 0,
-          statut: "Prospect",
-          contact_prenom: newPartner.contact.split(" ")[0] || "",
-          contact_nom: newPartner.contact.split(" ").slice(1).join(" "),
-          contact_email: newPartner.email,
-          contact_tel: newPartner.telephone,
-          colonne_tunnel: newPartner.colonne_tunnel,
-        },
-        ...prev,
-      ]);
-      setShowAddPartner(false);
-      setNewPartner({ nom: "", secteur: "", contact: "", email: "", telephone: "", colonne_tunnel: "prospects" });
-      toast.success("Partenaire créé ✓");
-      return;
-    }
-    await createPartner(club.id, {
-      nom: newPartner.nom,
-      secteur: newPartner.secteur,
-      contact_prenom: newPartner.contact.split(" ")[0] || "",
-      contact_nom: newPartner.contact.split(" ").slice(1).join(" "),
-      contact_email: newPartner.email,
-      contact_tel: newPartner.telephone,
-      colonne_tunnel: newPartner.colonne_tunnel,
-      statut: "Prospect",
-      valeur: 0,
+  const openMatchModal = (match: any) => {
+    const id = match.id ?? `${match.date}-${match.opponent || match.adversaire}`;
+    setEditingMatch({ ...match, id });
+    setMatchForm({
+      opponent: match.opponent || match.adversaire || "",
+      date: match.date ? String(match.date).slice(0, 10) : "",
+      home: match.home === "Extérieur" || match.is_home === false ? "Extérieur" : "Domicile",
+      score_nous: match.score_nous != null ? String(match.score_nous) : "",
+      score_eux: match.score_eux != null ? String(match.score_eux) : "",
+      affluence: match.affluence != null ? String(match.affluence) : match.attendance != null ? String(match.attendance) : "",
     });
-    const refreshed = await getClubPartners(club.id);
-    setPartners(refreshed);
-    setShowAddPartner(false);
-    setNewPartner({ nom: "", secteur: "", contact: "", email: "", telephone: "", colonne_tunnel: "prospects" });
-    toast.success("Partenaire créé ✓");
+  };
+
+  const handleSaveMatch = async () => {
+    if (!editingMatch) return;
+    const scoreNous = matchForm.score_nous === "" ? null : Number(matchForm.score_nous);
+    const scoreEux = matchForm.score_eux === "" ? null : Number(matchForm.score_eux);
+    const affluence = matchForm.affluence === "" ? null : Number(matchForm.affluence);
+    setMatches((prev) =>
+      prev.map((match) => {
+        const id = match.id ?? `${match.date}-${match.opponent || match.adversaire}`;
+        if (id !== editingMatch.id && match !== editingMatch) return match;
+        return {
+          ...match,
+          opponent: matchForm.opponent,
+          date: matchForm.date || match.date,
+          home: matchForm.home,
+          is_home: matchForm.home === "Domicile",
+          score_nous: scoreNous,
+          score_eux: scoreEux,
+          affluence,
+        };
+      }),
+    );
+    if (!isDemo && editingMatch.id && affluence != null) {
+      await updateMatchAffluence(editingMatch.id, affluence);
+    }
+    toast.success("Match mis à jour");
+    setEditingMatch(null);
   };
 
   return (
@@ -326,7 +349,7 @@ export default function ClubDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {formattedMatches.map((match) => (
+                {formattedMatches.map((match, index) => (
                   <tr key={match.id} className="border-t border-white/10">
                     <td className="px-4 py-3">{match.date}</td>
                     <td className="px-4 py-3">{match.opponent}</td>
@@ -351,13 +374,23 @@ export default function ClubDashboardPage() {
                           {match.attendance}
                         </span>
                       ) : match.home === "Domicile" ? (
-                        <button className="text-xs text-[#8B1A2B]">Saisir</button>
+                        <button
+                          className="text-xs text-[#8B1A2B]"
+                          onClick={() => openMatchModal(matches[index] ?? match)}
+                        >
+                          Saisir
+                        </button>
                       ) : (
                         "—"
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <button className="rounded-full bg-white/10 px-3 py-1 text-xs text-white">Modifier</button>
+                      <button
+                        className="rounded-full bg-white/10 px-3 py-1 text-xs text-white"
+                        onClick={() => openMatchModal(matches[index] ?? match)}
+                      >
+                        Modifier
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -424,65 +457,75 @@ export default function ClubDashboardPage() {
       </section>
       </div>
 
-      <Dialog open={showAddPartner} onOpenChange={setShowAddPartner}>
-        <DialogContent className="max-w-lg bg-[#111] text-white">
+      <PartnerFormModal
+        open={showAddPartner}
+        onOpenChange={setShowAddPartner}
+        mode="create"
+        clubId={club?.id}
+        isDemo={isDemo}
+        onSaved={(saved) => setPartners((prev) => [saved, ...prev.filter((item: any) => item.slug !== saved.slug)])}
+      />
+
+      <Dialog open={Boolean(editingMatch)} onOpenChange={(open) => !open && setEditingMatch(null)}>
+        <DialogContent className="bg-[#1A0A0D] text-white sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ajouter un partenaire</DialogTitle>
+            <DialogTitle>Modifier le match</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Input
-              placeholder="Nom de l'entreprise"
-              value={newPartner.nom}
-              onChange={(event) => setNewPartner((prev) => ({ ...prev, nom: event.target.value }))}
+              placeholder="Adversaire"
+              value={matchForm.opponent}
+              onChange={(event) => setMatchForm((prev) => ({ ...prev, opponent: event.target.value }))}
               className="border-white/10 bg-white/5 text-white"
             />
             <Input
-              placeholder="Secteur"
-              value={newPartner.secteur}
-              onChange={(event) => setNewPartner((prev) => ({ ...prev, secteur: event.target.value }))}
-              className="border-white/10 bg-white/5 text-white"
-            />
-            <Input
-              placeholder="Nom du contact"
-              value={newPartner.contact}
-              onChange={(event) => setNewPartner((prev) => ({ ...prev, contact: event.target.value }))}
-              className="border-white/10 bg-white/5 text-white"
-            />
-            <Input
-              placeholder="Email"
-              value={newPartner.email}
-              onChange={(event) => setNewPartner((prev) => ({ ...prev, email: event.target.value }))}
-              className="border-white/10 bg-white/5 text-white"
-            />
-            <Input
-              placeholder="Téléphone"
-              value={newPartner.telephone}
-              onChange={(event) => setNewPartner((prev) => ({ ...prev, telephone: event.target.value }))}
+              type="date"
+              value={matchForm.date}
+              onChange={(event) => setMatchForm((prev) => ({ ...prev, date: event.target.value }))}
               className="border-white/10 bg-white/5 text-white"
             />
             <select
-              value={newPartner.colonne_tunnel}
-              onChange={(event) => setNewPartner((prev) => ({ ...prev, colonne_tunnel: event.target.value }))}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+              value={matchForm.home}
+              onChange={(event) => setMatchForm((prev) => ({ ...prev, home: event.target.value }))}
+              className="h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
             >
-              <option value="prospects">Prospect</option>
-              <option value="premier_contact">Premier contact</option>
-              <option value="negociation">Négociation</option>
+              <option value="Domicile" className="bg-[#1A0A0D]">Domicile</option>
+              <option value="Extérieur" className="bg-[#1A0A0D]">Extérieur</option>
             </select>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                type="number"
+                placeholder="Score club"
+                value={matchForm.score_nous}
+                onChange={(event) => setMatchForm((prev) => ({ ...prev, score_nous: event.target.value }))}
+                className="border-white/10 bg-white/5 text-white"
+              />
+              <Input
+                type="number"
+                placeholder="Score adverse"
+                value={matchForm.score_eux}
+                onChange={(event) => setMatchForm((prev) => ({ ...prev, score_eux: event.target.value }))}
+                className="border-white/10 bg-white/5 text-white"
+              />
+            </div>
+            <Input
+              type="number"
+              placeholder="Affluence (domicile)"
+              value={matchForm.affluence}
+              onChange={(event) => setMatchForm((prev) => ({ ...prev, affluence: event.target.value }))}
+              className="border-white/10 bg-white/5 text-white"
+            />
           </div>
           <DialogFooter>
-            <button
-              className="rounded-full bg-white/10 px-4 py-2 text-sm"
-              onClick={() => setShowAddPartner(false)}
-            >
+            <button className="rounded-full bg-white/10 px-4 py-2 text-sm" onClick={() => setEditingMatch(null)}>
               Annuler
             </button>
             <button
               className="rounded-full px-4 py-2 text-sm text-white"
               style={{ backgroundColor: "var(--club-primary)" }}
-              onClick={handleCreatePartner}
+              onClick={() => void handleSaveMatch()}
             >
-              Créer
+              Enregistrer
             </button>
           </DialogFooter>
         </DialogContent>

@@ -6,6 +6,7 @@ import {
   Newspaper,
   Ticket,
   Users2,
+  CircleUser,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const navItems = [
   { label: "Actualités club", href: "/dashboard/partenaire/news", icon: Newspaper },
   { label: "Mes avantages", href: "/dashboard/partenaire/avantages", icon: Ticket },
   { label: "Annuaire partenaires", href: "/dashboard/partenaire/annuaire", icon: Users2 },
+  { label: "Mon compte", href: "/dashboard/partenaire/compte", icon: CircleUser },
 ];
 
 const CLUB_PRIMARY = ESR_PRIMARY;

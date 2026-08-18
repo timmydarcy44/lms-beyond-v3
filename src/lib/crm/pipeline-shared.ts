@@ -22,8 +22,14 @@ export const DEFAULT_PIPELINE_STAGES = [
   { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 4 },
   { slug: "proposition_envoyee", label: "Proposition envoyée", sort_order: 5 },
   { slug: "reussi", label: "Réussi", sort_order: 6 },
-  { slug: "echec", label: "Échec", sort_order: 7 },
+  { slug: "client_actif", label: "Client actif", sort_order: 8 },
+  { slug: "formation_programmee", label: "Formation programmée", sort_order: 9 },
+  { slug: "formation_en_cours", label: "Formation en cours", sort_order: 10 },
+  { slug: "echec", label: "Échec", sort_order: 11 },
 ] as const;
+
+export const BTOB_FORMATION_SCHEDULED_STAGE_SLUG = "formation_programmee";
+export const BTOB_FORMATION_IN_PROGRESS_STAGE_SLUG = "formation_en_cours";
 
 /** Étapes retirées du pipe (legacy). */
 export const DEPRECATED_PIPELINE_STAGE_SLUGS = ["envoi_mail"] as const;

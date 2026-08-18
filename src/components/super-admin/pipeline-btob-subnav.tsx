@@ -11,6 +11,8 @@ const TABS = [
     path.startsWith("/super/crm/pipeline/prescripteurs") },
   { href: "/super/crm/pipeline/projets", label: "Projets", match: (path: string) =>
     path.startsWith("/super/crm/pipeline/projets") },
+  { href: "/super/crm/qualiopi", label: "Qualiopi", match: (path: string) =>
+    path.startsWith("/super/crm/qualiopi") },
 ] as const;
 
 export function PipelineBtobSubnav() {
@@ -19,7 +21,7 @@ export function PipelineBtobSubnav() {
   const typeParam = searchParams.get("type");
 
   if (typeParam === "btoc") return null;
-  if (!pathname?.startsWith("/super/crm/pipeline")) return null;
+  if (!pathname?.startsWith("/super/crm/pipeline") && !pathname?.startsWith("/super/crm/qualiopi")) return null;
 
   return (
     <nav className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">

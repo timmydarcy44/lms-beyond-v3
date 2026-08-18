@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   Rocket,
   Handshake,
+  FileBadge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSupabase } from "@/components/providers/supabase-provider";
@@ -26,6 +27,7 @@ const CRM_LINKS = [
   { href: "/super/crm/pipeline/prescripteurs", label: "Prescripteur", icon: Handshake, nested: true, prescripteurOnly: true },
   { href: "/super/crm/pipeline?type=btoc", label: "Pipeline BTOC", icon: ShoppingBag },
   { href: "/super/crm/onboarding", label: "Onboarding clients", icon: Rocket },
+  { href: "/super/crm/qualiopi", label: "Qualiopi", icon: FileBadge },
   { href: "/super/crm/validators", label: "Validateurs", icon: ShieldCheck },
   { href: "/super/organisations", label: "Organisations", icon: Building2 },
   { href: "/super/utilisateurs?role=instructor", label: "Formateurs", icon: GraduationCap },
@@ -92,6 +94,8 @@ export function CrmSidebar() {
             isActive = pathname === "/super/crm/pipeline" && typeParam !== "btoc";
           } else if (isPrescripteur) {
             isActive = pathname.startsWith("/super/crm/pipeline/prescripteurs");
+          } else if (item.href === "/super/crm/qualiopi") {
+            isActive = pathname.startsWith("/super/crm/qualiopi");
           } else if (item.href.includes("?role=")) {
             isActive =
               pathname === "/super/utilisateurs" &&

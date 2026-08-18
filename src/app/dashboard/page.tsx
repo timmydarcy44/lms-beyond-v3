@@ -10,6 +10,8 @@ import {
 import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { requireSession } from "@/lib/auth/session";
+import { headers } from "next/headers";
+import { canServeClubPartenaireDashboards } from "@/lib/auth/beyond-center-host";
 
 type ProfileAccessRow = {
   id: string;
@@ -50,9 +52,15 @@ export default async function DashboardPage() {
 
   const roleKeys = collectProfileRoleKeys(profile);
   const isDemoOnly = roleKeys.length === 1 && roleKeys[0] === "demo";
+  const clubPartenaireEnabled = canServeClubPartenaireDashboards((await headers()).get("host"));
+  const isClubPartenaireHref = (href: string) =>
+    href === "/dashboard/club" ||
+    href.startsWith("/dashboard/club/") ||
+    href === "/dashboard/partenaire" ||
+    href.startsWith("/dashboard/partenaire/");
 
   const roleDestination = resolveDestinationFromProfile(profile);
-  if (!isDemoOnly && roleDestination) {
+  if (!isDemoOnly && roleDestination && (clubPartenaireEnabled || !isClubPartenaireHref(roleDestination))) {
     redirect(roleDestination);
   }
 
@@ -64,10 +72,13 @@ export default async function DashboardPage() {
   );
 
   if (!isDemoOnly) {
-    if (spaces.length === 1) {
-      redirect(spaces[0].href);
+    const visibleSpaces = clubPartenaireEnabled
+      ? spaces
+      : spaces.filter((space) => !isClubPartenaireHref(space.href));
+    if (visibleSpaces.length === 1) {
+      redirect(visibleSpaces[0].href);
     }
-    if (spaces.length === 0) {
+    if (visibleSpaces.length === 0) {
       return (
         <UnknownRoleDashboard
           firstName={session.fullName?.trim().split(/\s+/)[0] || session.email?.split("@")[0] || "utilisateur"}
@@ -77,7 +88,9 @@ export default async function DashboardPage() {
     }
   }
 
-  const cards: DashboardSpace[] = isDemoOnly ? buildDemoCards() : spaces;
+  const cards: DashboardSpace[] = (isDemoOnly ? buildDemoCards() : spaces).filter((space) =>
+    clubPartenaireEnabled || !isClubPartenaireHref(space.href),
+  );
 
   const firstName =
     session.fullName?.trim().split(/\s+/)[0] ||

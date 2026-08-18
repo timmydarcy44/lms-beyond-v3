@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import { requireClubDashboardAccess } from "@/lib/auth/require-club-partenaire";
 
-/** Auth club : middleware (club-only lock + login sur les autres dashboards). */
-export default function ClubDashboardLayout({ children }: { children: ReactNode }) {
+export default async function ClubDashboardLayout({ children }: { children: ReactNode }) {
+  await requireClubDashboardAccess();
   return <>{children}</>;
 }

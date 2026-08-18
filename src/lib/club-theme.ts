@@ -1,3 +1,10 @@
+export const ESR_LOGO_URL =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/Beyond/Football%20Club%20Rochelais.png";
+
+/** Maroon from the Football Club Rochelais / ESR crest. */
+export const ESR_PRIMARY = "#8B1A2B";
+export const ESR_PRIMARY_DARK = "#5C1018";
+
 export type ClubTheme = {
   /** Nom de la plateforme (sans logo). */
   app_name: string;
@@ -13,37 +20,28 @@ export type ClubTheme = {
   division: string;
 };
 
-const DEFAULT_SLUG = "bayeux-fc";
+const DEFAULT_SLUG = "esr";
+
+const ESR_THEME: ClubTheme = {
+  app_name: "Football Club Rochelais",
+  nom: "ESR",
+  slug: "esr",
+  logo_url: ESR_LOGO_URL,
+  logo_initiales: "ESR",
+  couleur_primaire: ESR_PRIMARY,
+  couleur_secondaire: "#1A0A0D",
+  couleur_accent: "#FFFFFF",
+  couleur_texte: "#FFFFFF",
+  ville: "La Rochelle",
+  division: "Régional — Atlantique",
+};
 
 export const CLUB_THEMES: Record<string, ClubTheme> = {
-  "bayeux-fc": {
-    app_name: "Bayeux FC",
-    nom: "Bayeux FC",
-    slug: "bayeux-fc",
-    logo_url: null,
-    logo_initiales: "BFC",
-    /** Jaune club — remplace l’ancien rouge. */
-    couleur_primaire: "#EAB308",
-    couleur_secondaire: "#1B2A4A",
-    couleur_accent: "#FFFFFF",
-    couleur_texte: "#0d1b2e",
-    ville: "Bayeux",
-    division: "N3 — Normandie",
-  },
-  /** Alias rétrocompat pour d’anciens slugs démo. */
-  "su-dives-cabourg": {
-    app_name: "Bayeux FC",
-    nom: "Bayeux FC",
-    slug: "bayeux-fc",
-    logo_url: null,
-    logo_initiales: "BFC",
-    couleur_primaire: "#EAB308",
-    couleur_secondaire: "#1B2A4A",
-    couleur_accent: "#FFFFFF",
-    couleur_texte: "#0d1b2e",
-    ville: "Bayeux",
-    division: "N3 — Normandie",
-  },
+  esr: ESR_THEME,
+  "football-club-rochelais": { ...ESR_THEME, slug: "football-club-rochelais" },
+  /** Alias rétrocompat (ancien thème démo). */
+  "bayeux-fc": { ...ESR_THEME, slug: "bayeux-fc" },
+  "su-dives-cabourg": { ...ESR_THEME, slug: "su-dives-cabourg" },
 };
 
 export function getClubTheme(slug: string): ClubTheme {

@@ -41,7 +41,7 @@ type ProspectCard = {
 const initialColumnsBase = [
   { id: "prospects", label: "Prospects", couleur: "#6B7280" },
   { id: "premier_contact", label: "Premier contact", couleur: "#3B82F6" },
-  { id: "presentation", label: "Présentation", couleur: "#EAB308" },
+  { id: "presentation", label: "Présentation", couleur: "#8B1A2B" },
   { id: "negociation", label: "Négociation", couleur: "#F97316" },
   { id: "signature", label: "Signature", couleur: "#22C55E" },
   { id: "perdu", label: "Perdu", couleur: "#EF4444" },
@@ -403,7 +403,7 @@ function TabsComponent({
               <div className="text-sm text-white/70">Adresse : {prospect.adresse || "—"}</div>
               <div className="text-sm text-white/70">Secteur : {prospect.secteur}</div>
               <div className="mt-2 text-sm text-white/70">Valeur estimée :</div>
-              <div className="text-lg font-bold text-[#EAB308]">
+              <div className="text-lg font-bold text-[#8B1A2B]">
                 {prospect.valeur.toLocaleString("fr-FR")}€
               </div>
             </div>
@@ -590,14 +590,14 @@ function TabsComponent({
               })}
             </div>
             <div className="my-4 h-px bg-white/10" />
-            <div className="text-xl font-black text-[#EAB308] lg:text-3xl">
+            <div className="text-xl font-black text-[#8B1A2B] lg:text-3xl">
               {offerTotal.toLocaleString("fr-FR")}€ HT
             </div>
             <div className="text-sm text-white/60">
               TTC : {(offerTotal * 1.2).toLocaleString("fr-FR")}€
             </div>
             <button
-              className="mt-4 w-full rounded-full bg-[#EAB308] px-4 py-2 text-sm font-semibold text-[#0d1b2e]"
+              className="mt-4 w-full rounded-full bg-[#8B1A2B] px-4 py-2 text-sm font-semibold text-white"
               onClick={generateCustomOfferPdf}
             >
               Générer le contrat PDF
@@ -1154,7 +1154,7 @@ export default function ClubTunnelPage() {
     if (!selectedProspect) return;
     const doc = new jsPDF();
     doc.setFont("helvetica", "bold");
-    doc.setTextColor("#EAB308");
+    doc.setTextColor("#8B1A2B");
     doc.text("CONVENTION DE MÉCÉNAT", 105, 20, { align: "center" });
     doc.setDrawColor("#1B2A4A");
     doc.line(15, 25, 195, 25);
@@ -1162,11 +1162,11 @@ export default function ClubTunnelPage() {
     doc.setTextColor("#1B2A4A");
     doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, 15, 35);
     doc.text(`Convention n° MC-${Date.now().toString().slice(-6)}`, 15, 42);
-    doc.text("Bénéficiaire : Bayeux FC", 15, 55);
+    doc.text("Bénéficiaire : Football Club Rochelais", 15, 55);
     doc.text(`Mécène : ${selectedProspect.nom}`, 15, 62);
     doc.text(`Montant du don : ${mecenatAmount.toLocaleString("fr-FR")}€`, 15, 75);
     doc.text(
-      "Objet : Soutien aux activités sportives du Bayeux FC, évoluant en National 3",
+      "Objet : Soutien aux activités sportives du Football Club Rochelais, évoluant en National 3",
       15,
       90,
       { maxWidth: 180 }
@@ -1183,7 +1183,7 @@ export default function ClubTunnelPage() {
     doc.text("Signature club", 30, 260);
     doc.text("Signature mécène", 130, 260);
     doc.setFontSize(10);
-    doc.text("Bayeux FC — Association loi 1901", 105, 285, { align: "center" });
+    doc.text("Football Club Rochelais — Association loi 1901", 105, 285, { align: "center" });
     doc.save(`convention-mecenat-${selectedProspect.nom}.pdf`);
     setDocuments((prev) => [
       ...prev,
@@ -1205,7 +1205,7 @@ export default function ClubTunnelPage() {
     doc.setFont("helvetica", "normal");
     doc.text(`Partenaire : ${selectedProspect.nom}`, 15, 32);
     doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, 15, 40);
-    doc.setDrawColor("#EAB308");
+    doc.setDrawColor("#8B1A2B");
     doc.line(15, 45, 195, 45);
     let y = 55;
     doc.setFont("helvetica", "bold");
@@ -1225,7 +1225,7 @@ export default function ClubTunnelPage() {
       y += 8;
     });
     doc.setFont("helvetica", "bold");
-    doc.setTextColor("#EAB308");
+    doc.setTextColor("#8B1A2B");
     doc.text(`Total : ${selectedSponsorTotal.toLocaleString("fr-FR")}€`, 15, y + 6);
     doc.setTextColor("#1B2A4A");
     doc.setFontSize(9);
@@ -1258,12 +1258,12 @@ export default function ClubTunnelPage() {
     const totalHt = selectedItems.reduce((sum, item) => sum + item.price, 0);
     const doc = new jsPDF();
     doc.setFont("helvetica", "bold");
-    doc.setTextColor("#EAB308");
+    doc.setTextColor("#8B1A2B");
     doc.text("CONTRAT DE PARTENARIAT SPORTIF", 105, 20, { align: "center" });
     doc.setFont("helvetica", "normal");
     doc.setTextColor("#1B2A4A");
     doc.text(`Partenaire : ${selectedProspect.nom}`, 15, 35);
-    doc.text("Bayeux FC", 15, 42);
+    doc.text("Football Club Rochelais", 15, 42);
     doc.line(15, 48, 195, 48);
     let y = 58;
     doc.setFont("helvetica", "bold");
@@ -1277,7 +1277,7 @@ export default function ClubTunnelPage() {
       y += 8;
     });
     doc.setFont("helvetica", "bold");
-    doc.setTextColor("#EAB308");
+    doc.setTextColor("#8B1A2B");
     doc.text(`Total HT : ${totalHt.toLocaleString("fr-FR")}€`, 15, y + 6);
     doc.text(`TVA 20% : ${(totalHt * 0.2).toLocaleString("fr-FR")}€`, 15, y + 14);
     doc.text(`Total TTC : ${(totalHt * 1.2).toLocaleString("fr-FR")}€`, 15, y + 22);
@@ -1302,13 +1302,13 @@ export default function ClubTunnelPage() {
     if (!selectedProspect) return;
     const selections = selectedProspect.offerSelections ?? {};
     const totalHt = Object.values(selections).reduce((sum, value) => sum + value, 0);
-    const subject = encodeURIComponent("Offre personnalisée — Bayeux FC");
+    const subject = encodeURIComponent("Offre personnalisée — Football Club Rochelais");
     const body = encodeURIComponent(
       `Bonjour ${selectedProspect.contact?.split(" ")[0] || ""},\n\n` +
         `Veuillez trouver ci-dessous notre offre personnalisée.\n\n` +
         `Total HT : ${totalHt.toLocaleString("fr-FR")}€\n` +
         `Total TTC : ${(totalHt * 1.2).toLocaleString("fr-FR")}€\n\n` +
-        `Cordialement,\n${currentUserName}\n${currentUserEmail}\nBayeux FC`
+        `Cordialement,\n${currentUserName}\n${currentUserEmail}\nFootball Club Rochelais`
     );
     const mailto = `mailto:${selectedProspect.contactEmail || ""}?subject=${subject}&body=${body}`;
     window.open(mailto, "_blank");
@@ -1317,14 +1317,14 @@ export default function ClubTunnelPage() {
   const handleSendMecenatEmail = () => {
     if (!selectedProspect) return;
     const reduction = Math.round(mecenatAmount * 0.6);
-    const subject = encodeURIComponent("Convention de mécénat — Bayeux FC");
+    const subject = encodeURIComponent("Convention de mécénat — Football Club Rochelais");
     const body = encodeURIComponent(
       `Bonjour ${selectedProspect.contact?.split(" ")[0] || ""},\n\n` +
-        `Veuillez trouver ci-joint la convention de mécénat pour votre engagement auprès du Bayeux FC.\n\n` +
+        `Veuillez trouver ci-joint la convention de mécénat pour votre engagement auprès du Football Club Rochelais.\n\n` +
         `Montant : ${mecenatAmount}€\n` +
         `Avantage fiscal : ${reduction}€ de réduction d'impôt\n\n` +
         `N'hésitez pas à nous contacter pour toute question.\n\n` +
-        `Cordialement,\n${currentUserName}\n${currentUserEmail}\nBayeux FC`
+        `Cordialement,\n${currentUserName}\n${currentUserEmail}\nFootball Club Rochelais`
     );
     const mailto = `mailto:${selectedProspect.contactEmail || ""}?subject=${subject}&body=${body}`;
     window.open(mailto, "_blank");
@@ -1427,7 +1427,7 @@ export default function ClubTunnelPage() {
         </div>
         <div className="flex flex-col gap-0.5 rounded-xl bg-[#111827] px-4 py-3">
           <span className="text-xs uppercase tracking-wider text-white/40">CA réalisé</span>
-          <span className="text-2xl font-bold text-[#EAB308]">{caRealise.toLocaleString("fr-FR")}€</span>
+          <span className="text-2xl font-bold text-[#8B1A2B]">{caRealise.toLocaleString("fr-FR")}€</span>
         </div>
       </div>
 
@@ -1756,7 +1756,7 @@ export default function ClubTunnelPage() {
             <div className="flex-shrink-0 border-t border-white/10 p-5 flex items-center justify-between">
               <div className="text-sm text-white/70">
                 Total HT : {newOfferTotal.toLocaleString("fr-FR")}€ · TVA 20% : {newOfferTva.toLocaleString("fr-FR")}€ ·{" "}
-                <span className="font-semibold text-[#EAB308]">
+                <span className="font-semibold text-[#8B1A2B]">
                   {newOfferTtc.toLocaleString("fr-FR")}€ TTC
                 </span>
               </div>

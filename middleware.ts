@@ -3,8 +3,15 @@ import type { NextRequest } from "next/server";
 
 import { getTenantFromHostname, isJessicaContentinMarketingHostname } from "@/lib/tenant/config";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
-import { isClubOnlyAccount } from "@/lib/auth/club-access";
+import { isClubOnlyAccount, canAccessClubDashboard } from "@/lib/auth/club-access";
+import { isPartenaireOnlyAccount, canAccessPartenaireDashboard } from "@/lib/auth/partenaire-access";
 import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
+import {
+  canServeClubPartenaireDashboards,
+  isBeyondCenterHostname,
+  isClubDashboardPath,
+  isPartenaireDashboardPath,
+} from "@/lib/auth/beyond-center-host";
 import {
   isEcoleHandicapSectionPath,
   shouldRestrictSchoolDashboardToHandicapOnly,
@@ -126,11 +133,6 @@ const JESSICA_ROOT_PREFIXES = [...JESSICA_ALIAS_PREFIXES, ...JESSICA_ACCOUNT_PRE
 const startsWithAnyPrefix = (pathname: string, prefixes: string[]) =>
   prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
-/** Site marketing Beyond Center — ne doit pas être traité comme l’ancien domaine « Beyond » (/landing). */
-function isBeyondCenterHostname(host: string): boolean {
-  const h = host.split(":")[0]?.toLowerCase() ?? "";
-  return h === "beyondcenter.fr" || h === "www.beyondcenter.fr";
-}
 
 function isEdgeOnlineHostname(host: string): boolean {
   const h = host.split(":")[0]?.toLowerCase() ?? "";
@@ -368,29 +370,76 @@ async function runMiddleware(request: NextRequest) {
   // --- Redirection /dashboard selon profiles.role ---
   if (url.pathname === "/dashboard" && SUPABASE_URL && SUPABASE_ANON_KEY) {
     const profile = await fetchProfileForRequest(request);
-    const destination = resolveDestinationFromProfile(profile);
+    let destination = resolveDestinationFromProfile(profile);
+    if (
+      destination &&
+      (isClubDashboardPath(destination) || isPartenaireDashboardPath(destination)) &&
+      !canServeClubPartenaireDashboards(hostWithoutPort)
+    ) {
+      destination = null;
+    }
     if (destination) {
       return NextResponse.redirect(new URL(destination, request.url));
     }
   }
 
-  // Comptes club exclusifs (role + role_type = club) → verrouillés sur /dashboard/club
-  const isClubDashboardPath =
-    url.pathname === "/dashboard/club" || url.pathname.startsWith("/dashboard/club/");
+  const clubDashboardPath = isClubDashboardPath(url.pathname);
+  const partenaireDashboardPath = isPartenaireDashboardPath(url.pathname);
+
+  // Club / partenaire : beyondcenter.fr uniquement (jamais sur EDGE).
+  if ((clubDashboardPath || partenaireDashboardPath) && !canServeClubPartenaireDashboards(hostWithoutPort)) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // Comptes club / partenaire exclusifs → verrouillés sur leur dashboard.
   const isGenericDashboardPath =
     url.pathname === "/dashboard" || url.pathname.startsWith("/dashboard/");
   if (
     isGenericDashboardPath &&
-    !isClubDashboardPath &&
+    !clubDashboardPath &&
+    !partenaireDashboardPath &&
     SUPABASE_URL &&
     SUPABASE_ANON_KEY
   ) {
-    const profileClubOnly = await fetchProfileForRequest(request);
+    const profileLocked = await fetchProfileForRequest(request);
     if (
-      profileClubOnly &&
-      isClubOnlyAccount(profileClubOnly.role, profileClubOnly.role_type, profileClubOnly.email)
+      profileLocked &&
+      isClubOnlyAccount(profileLocked.role, profileLocked.role_type, profileLocked.email)
     ) {
       return NextResponse.redirect(new URL("/dashboard/club", request.url));
+    }
+    if (
+      profileLocked &&
+      isPartenaireOnlyAccount(profileLocked.role, profileLocked.role_type, profileLocked.email)
+    ) {
+      return NextResponse.redirect(new URL("/dashboard/partenaire", request.url));
+    }
+  }
+
+  if ((clubDashboardPath || partenaireDashboardPath) && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    const profileScoped = await fetchProfileForRequest(request);
+    if (!profileScoped) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (clubDashboardPath) {
+      const allowed = canAccessClubDashboard(
+        profileScoped.role,
+        profileScoped.role_type,
+        profileScoped.email,
+      );
+      if (!allowed) {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
+      }
+    }
+    if (partenaireDashboardPath) {
+      const allowed = canAccessPartenaireDashboard(
+        profileScoped.role,
+        profileScoped.role_type,
+        profileScoped.email,
+      );
+      if (!allowed) {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
+      }
     }
   }
 

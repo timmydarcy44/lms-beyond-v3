@@ -5,6 +5,11 @@ import {
   type ProfileRoutingInput,
 } from "@/lib/auth/dashboard-routing";
 import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
+import {
+  canServeClubPartenaireDashboards,
+  isClubDashboardPath,
+  isPartenaireDashboardPath,
+} from "@/lib/auth/beyond-center-host";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -44,21 +49,29 @@ export async function POST(request: Request) {
     profile = rows.find((row) => String(row.id ?? "") === user.id) ?? rows[0] ?? null;
   }
 
+  const host = request.headers.get("host");
+  const clubPartenaireEnabled = canServeClubPartenaireDashboards(host);
+  const isClubPartenaireHref = (href: string) =>
+    isClubDashboardPath(href) || isPartenaireDashboardPath(href);
+
   const roleDestination = resolveDestinationFromProfile(profile);
-  if (roleDestination) {
+  if (roleDestination && (clubPartenaireEnabled || !isClubPartenaireHref(roleDestination))) {
     return NextResponse.json({ destination: roleDestination });
   }
 
   const { spaces } = await resolveDashboardSpaces(service, user.id, emailValue, profile);
+  const visibleSpaces = clubPartenaireEnabled
+    ? spaces
+    : spaces.filter((space) => !isClubPartenaireHref(space.href));
 
-  if (spaces.length > 1) {
+  if (visibleSpaces.length > 1) {
     return NextResponse.json({ destination: "/dashboard" });
   }
 
-  if (spaces.length === 1) {
-    return NextResponse.json({ destination: spaces[0].href });
+  if (visibleSpaces.length === 1) {
+    return NextResponse.json({ destination: visibleSpaces[0].href });
   }
 
-  const fallback = pickPrimaryDestination(spaces);
+  const fallback = pickPrimaryDestination(visibleSpaces);
   return NextResponse.json({ destination: fallback ?? "/dashboard" });
 }

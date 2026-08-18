@@ -426,7 +426,7 @@ export default function ClubNewsPage() {
                     <button
                       className={`rounded-full px-4 py-2 text-sm ${
                         ctaStyle === "club"
-                          ? "bg-[#EAB308] text-[#0d1b2e]"
+                          ? "bg-[#8B1A2B] text-white"
                           : ctaStyle === "navy"
                             ? "bg-[#1B2A4A] text-white"
                             : "border border-white text-white"

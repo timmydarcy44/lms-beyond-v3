@@ -39,12 +39,13 @@ export type PartnerEvent = {
 };
 
 export const partenaireClub: PartnerClub = {
-  id: "bayeux-fc",
-  name: "Bayeux FC",
-  initials: "BF",
-  /** Bleu → jaune (aligné dashboard club). */
-  gradientFrom: "#1B2A4A",
-  gradientTo: "#EAB308",
+  id: "esr",
+  name: "Football Club Rochelais",
+  initials: "ESR",
+  logoUrl:
+    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/Beyond/Football%20Club%20Rochelais.png",
+  gradientFrom: "#1A0A0D",
+  gradientTo: "#8B1A2B",
 };
 
 export const partenaireProfile: PartnerProfile = {

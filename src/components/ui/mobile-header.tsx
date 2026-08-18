@@ -11,7 +11,7 @@ interface MobileHeaderProps {
 
 export default function MobileHeader({ title, logo, initials, onMenuOpen }: MobileHeaderProps) {
   return (
-    <header className="safe-area-top fixed left-0 right-0 top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#0d1b2e]/95 px-4 backdrop-blur-xl lg:hidden">
+    <header className="safe-area-top fixed left-0 right-0 top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#1A0A0D]/95 px-4 backdrop-blur-xl lg:hidden">
       <button
         onClick={onMenuOpen}
         className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white"

@@ -6,6 +6,7 @@ import { PartenaireSidebar } from "@/components/partenaire/partenaire-sidebar";
 import MobileHeader from "@/components/ui/mobile-header";
 import Drawer from "@/components/ui/drawer";
 import BottomNav from "@/components/ui/bottom-nav";
+import { ESR_PRIMARY } from "@/lib/club-theme";
 
 type ClubInfo = {
   name: string;
@@ -29,8 +30,13 @@ export function PartenaireLayout({ children, club, partner, activeItem }: Parten
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0d1b2e] text-white">
-      <MobileHeader title="Brasserie du Port" initials="BP" onMenuOpen={() => setDrawerOpen(true)} />
+    <div className="flex h-screen overflow-hidden bg-[#1A0A0D] text-white">
+      <MobileHeader
+        title={partner.name}
+        initials={partner.initials}
+        logo={club.logoUrl}
+        onMenuOpen={() => setDrawerOpen(true)}
+      />
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <PartenaireSidebar
@@ -50,7 +56,7 @@ export function PartenaireLayout({ children, club, partner, activeItem }: Parten
         </main>
       </div>
 
-      <BottomNav variant="partenaire" activeColor="#EAB308" />
+      <BottomNav variant="partenaire" activeColor={ESR_PRIMARY} />
     </div>
   );
 }

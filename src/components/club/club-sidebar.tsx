@@ -8,7 +8,6 @@ import {
   Calendar,
   BarChart2,
   GraduationCap,
-  Building2,
   Shield,
 } from "lucide-react";
 import type { ClubTheme } from "@/lib/club-theme";
@@ -39,18 +38,30 @@ const navItems = [
 export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {
   return (
     <aside
-      className="fixed left-4 top-4 bottom-4 z-50 w-[220px] overflow-hidden rounded-2xl border bg-[#1B2A4A] backdrop-blur-2xl"
+      className="fixed left-4 top-4 bottom-4 z-50 w-[220px] overflow-hidden rounded-2xl border bg-[#2A1016] backdrop-blur-2xl"
       style={{ borderColor: `${theme.couleur_primaire}4D` }}
     >
       <div className="flex h-full flex-col px-4 py-5 text-white">
         <div className="flex flex-col items-center text-center">
-          <div className="text-lg font-black tracking-tight text-white">{theme.app_name}</div>
+          {theme.logo_url ? (
+            <img
+              src={theme.logo_url}
+              alt={theme.app_name}
+              className="h-16 w-16 object-contain"
+            />
+          ) : (
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-full text-sm font-black"
+              style={{ backgroundColor: theme.couleur_primaire }}
+            >
+              {theme.logo_initiales}
+            </div>
+          )}
+          <div className="mt-3 text-sm font-black tracking-tight text-white">{theme.app_name}</div>
           {theme.nom !== theme.app_name ? (
-            <div className="mt-2 text-sm font-semibold text-white/80">{theme.nom}</div>
+            <div className="mt-1 text-xs font-semibold text-white/80">{theme.nom}</div>
           ) : null}
-          <div className={cn("text-xs text-white/50", theme.nom === theme.app_name && "mt-2")}>
-            {theme.division}
-          </div>
+          <div className="mt-1 text-xs text-white/50">{theme.division}</div>
         </div>
 
         <div className="my-5 h-px bg-white/10" />
@@ -85,17 +96,6 @@ export function ClubSidebar({ activeItem, theme, onClose }: ClubSidebarProps) {
             );
           })}
         </nav>
-
-        <div className="mt-3 border-t border-white/10 pt-3">
-          <a
-            href="/dashboard/entreprise"
-            onClick={onClose}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/50 transition-all hover:bg-white/10 hover:text-white"
-          >
-            <Building2 className="h-4 w-4 flex-shrink-0" />
-            <span className="text-xs">Former vos collaborateurs</span>
-          </a>
-        </div>
 
         <div className="mt-6 space-y-2 border-t border-white/10 pt-4 text-xs text-white/60">
           <div>23 partenaires actifs</div>

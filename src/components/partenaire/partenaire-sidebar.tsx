@@ -9,6 +9,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ESR_PRIMARY } from "@/lib/club-theme";
 
 type ClubInfo = {
   name: string;
@@ -37,18 +38,18 @@ const navItems = [
   { label: "Annuaire partenaires", href: "/dashboard/partenaire/annuaire", icon: Users2 },
 ];
 
-const CLUB_PRIMARY = "#EAB308";
-const CLUB_TEXT = "#0d1b2e";
+const CLUB_PRIMARY = ESR_PRIMARY;
+const CLUB_TEXT = "#FFFFFF";
 
 export function PartenaireSidebar({ club, partner, activeItem, onClose }: PartenaireSidebarProps) {
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[220px] border-r border-[#EAB308]/30 bg-[#1B2A4A]">
+    <aside className="fixed left-0 top-0 bottom-0 w-[220px] border-r border-[#8B1A2B]/40 bg-[#2A1016]">
       <div className="flex h-full flex-col px-4 py-6 text-white">
         <div className="flex items-center gap-3">
           {club.logoUrl ? (
-            <img src={club.logoUrl} alt={club.name} className="h-10 w-10 rounded-full object-cover" />
+            <img src={club.logoUrl} alt={club.name} className="h-12 w-12 object-contain" />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EAB308] text-sm font-bold text-[#0d1b2e]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#8B1A2B] text-sm font-bold text-white">
               {club.initials}
             </div>
           )}

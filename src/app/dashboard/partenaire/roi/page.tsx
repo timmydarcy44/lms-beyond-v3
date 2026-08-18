@@ -69,7 +69,7 @@ export default function PartenaireRoiPage() {
 
   const handleDownloadPdf = () => {
     const doc = new jsPDF();
-    doc.setFillColor("#EAB308");
+    doc.setFillColor("#8B1A2B");
     doc.rect(0, 0, 210, 25, "F");
     doc.setTextColor("#0d1b2e");
     doc.setFont("helvetica", "bold");
@@ -99,7 +99,7 @@ export default function PartenaireRoiPage() {
 
     doc.setFontSize(10);
     doc.text("Rapport généré par Beyond Network", 14, 285);
-    doc.save("rapport-roi-bayeux-fc.pdf");
+    doc.save("rapport-roi-esr.pdf");
   };
 
   const canalTotals = useMemo(
@@ -158,7 +158,7 @@ export default function PartenaireRoiPage() {
           <div className="mt-2 text-xl font-black text-white lg:text-3xl">14</div>
           <div className="text-xs text-white/50">sur 17 matchs joués</div>
           <div className="mt-3 h-2 rounded-full bg-white/10">
-            <div className="h-2 w-[82%] rounded-full bg-[#EAB308]" />
+            <div className="h-2 w-[82%] rounded-full bg-[#8B1A2B]" />
           </div>
         </div>
       </section>
@@ -210,7 +210,7 @@ export default function PartenaireRoiPage() {
               <Tooltip contentStyle={{ background: "#0b1424", border: "1px solid rgba(255,255,255,0.1)" }} />
               <Legend />
               <Bar dataKey="visibilite" name="Visibilité générée" fill="#38bdf8" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="investissement" name="Coût mensuel partenariat" fill="#EAB308" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="investissement" name="Coût mensuel partenariat" fill="#8B1A2B" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -224,7 +224,7 @@ export default function PartenaireRoiPage() {
               <div className="text-sm text-white/60">{canal.label}</div>
               <div className="mt-2 text-lg font-black text-white lg:text-2xl">{canal.value.toLocaleString("fr-FR")}€</div>
               <div className="mt-3 h-2 rounded-full bg-white/10">
-                <div className="h-2 rounded-full bg-[#EAB308]" style={{ width: `${canal.pct}%` }} />
+                <div className="h-2 rounded-full bg-[#8B1A2B]" style={{ width: `${canal.pct}%` }} />
               </div>
               <div className="mt-2 text-xs text-white/50">
                 {canal.label === "Stade & Physique" && "Panneaux, bâches, présence physique"}
@@ -248,7 +248,7 @@ export default function PartenaireRoiPage() {
             <div>
               Publicité Google Ads locale — 16 000€ visibilité
               <div className="text-xs text-white/50">Coût marché : 8 000€</div>
-              <div className="text-xs text-white/50">Votre coût via Bayeux FC : 5 000€</div>
+              <div className="text-xs text-white/50">Votre coût via Football Club Rochelais : 5 000€</div>
             </div>
             <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs text-emerald-300">
               Vous économisez 3 000€
@@ -276,7 +276,7 @@ export default function PartenaireRoiPage() {
         </div>
       </section>
 
-        <section className="mt-8 rounded-2xl bg-gradient-to-r from-[#EAB308] to-[#CA8A04] p-4 text-center lg:p-8">
+        <section className="mt-8 rounded-2xl bg-gradient-to-r from-[#8B1A2B] to-[#5C1018] p-4 text-center lg:p-8">
         <div className="text-sm text-[#0d1b2e]/70">Votre partenariat se termine dans 5 mois</div>
         <div className="mt-2 text-lg font-black text-[#0d1b2e] lg:text-2xl">Renouveler ou upgrader votre pack ?</div>
         <div className="mt-2 text-sm text-[#0d1b2e]/80">

@@ -15,12 +15,16 @@ type ClubLayoutProps = {
 };
 
 export function ClubLayout({ children, activeItem, clubSlug }: ClubLayoutProps) {
-  const theme = getClubTheme(clubSlug ?? "bayeux-fc");
+  const theme = getClubTheme(clubSlug ?? "esr");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0d1b2e] text-white" style={getThemeVars(theme)}>
-      <MobileHeader title={theme.app_name} onMenuOpen={() => setDrawerOpen(true)} />
+    <div className="flex h-screen overflow-hidden bg-[#1A0A0D] text-white" style={getThemeVars(theme)}>
+      <MobileHeader
+        title={theme.app_name}
+        logo={theme.logo_url ?? undefined}
+        onMenuOpen={() => setDrawerOpen(true)}
+      />
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <ClubSidebar activeItem={activeItem} theme={theme} onClose={() => setDrawerOpen(false)} />

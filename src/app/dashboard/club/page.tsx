@@ -60,9 +60,9 @@ const demoMatches = [
 
 const demoClub = {
   id: "demo-club",
-  nom: "Bayeux FC",
-  division: "National 3",
-  slug: "bayeux-fc",
+  nom: "Football Club Rochelais",
+  division: "Régional — Atlantique",
+  slug: "esr",
   contact_prenom: "Responsable",
 };
 
@@ -90,7 +90,7 @@ export default function ClubDashboardPage() {
     colonne_tunnel: "prospects",
   });
   const theme = useMemo(
-    () => getClubTheme(club?.slug ?? club?.code ?? club?.nom_slug ?? "bayeux-fc"),
+    () => getClubTheme(club?.slug ?? club?.code ?? club?.nom_slug ?? "esr"),
     [club?.slug, club?.code, club?.nom_slug]
   );
   useEffect(() => {
@@ -223,11 +223,14 @@ export default function ClubDashboardPage() {
 
   return (
     <ClubLayout activeItem="Dashboard">
-      <div className="-mx-4 -my-4 min-h-screen bg-[#0d1b2e] px-4 pb-4 pt-6 text-white lg:-mx-8 lg:-my-8 lg:px-8 lg:pb-8 lg:pt-8">
+      <div className="-mx-4 -my-4 min-h-screen bg-[#1A0A0D] px-4 pb-4 pt-6 text-white lg:-mx-8 lg:-my-8 lg:px-8 lg:pb-8 lg:pt-8">
         <section className="relative overflow-hidden rounded-3xl">
-          <div className="h-[250px] bg-gradient-to-r from-[#1B2A4A] to-[#EAB308] lg:h-[500px]" />
+          <div className="h-[250px] bg-gradient-to-r from-[#1A0A0D] to-[#8B1A2B] lg:h-[500px]" />
           <div className="absolute inset-0 flex flex-col justify-between p-6 text-white lg:flex-row lg:items-center lg:p-10">
             <div>
+              {theme.logo_url ? (
+                <img src={theme.logo_url} alt={theme.app_name} className="mb-4 h-16 w-16 object-contain lg:h-20 lg:w-20" />
+              ) : null}
               <span className="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest">
                 {theme.app_name}
               </span>
@@ -250,11 +253,11 @@ export default function ClubDashboardPage() {
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-              className="rounded-2xl border border-white/20 bg-[#1B2A4A] p-5 shadow-sm"
+              className="rounded-2xl border border-white/20 bg-[#2A1016] p-5 shadow-sm"
             >
               <div
                 className={`text-xl font-black lg:text-3xl ${
-                  kpi.highlight ? "text-[#EAB308]" : "text-white"
+                  kpi.highlight ? "text-[#F4B4BA]" : "text-white"
                 }`}
               >
                 {kpi.value}
@@ -262,7 +265,7 @@ export default function ClubDashboardPage() {
               <div className="mt-1 flex items-center gap-2 text-xs uppercase tracking-wider text-white/60">
                 {kpi.label}
                 {kpi.badge && Number(kpi.value) > 0 && (
-                  <span className="rounded-full bg-[#EAB308]/10 px-2 py-0.5 text-[10px] font-semibold text-[#EAB308]">
+                  <span className="rounded-full bg-[#8B1A2B]/10 px-2 py-0.5 text-[10px] font-semibold text-[#8B1A2B]">
                     +{kpi.value}
                   </span>
                 )}
@@ -348,7 +351,7 @@ export default function ClubDashboardPage() {
                           {match.attendance}
                         </span>
                       ) : match.home === "Domicile" ? (
-                        <button className="text-xs text-[#EAB308]">Saisir</button>
+                        <button className="text-xs text-[#8B1A2B]">Saisir</button>
                       ) : (
                         "—"
                       )}
@@ -411,7 +414,7 @@ export default function ClubDashboardPage() {
           {activities.map((activity) => (
               <div key={activity.label} className="flex items-center justify-between text-sm text-white/80">
                 <div className="flex items-center gap-3">
-                  <span className="h-2 w-2 rounded-full bg-[#EAB308]" />
+                  <span className="h-2 w-2 rounded-full bg-[#8B1A2B]" />
                   <span>{activity.label}</span>
                 </div>
                 <span className="text-white/50">{activity.time}</span>

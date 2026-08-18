@@ -31,12 +31,12 @@ interface BottomNavProps {
   activeColor?: string;
 }
 
-export default function BottomNav({ variant = "club", activeColor = "#EAB308" }: BottomNavProps) {
+export default function BottomNav({ variant = "club", activeColor = "#8B1A2B" }: BottomNavProps) {
   const pathname = usePathname();
   const items = variant === "partenaire" ? partnerNav : clubNav;
 
   return (
-    <nav className="safe-area-bottom fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-white/10 bg-[#0d1b2e]/95 px-2 backdrop-blur-xl lg:hidden">
+    <nav className="safe-area-bottom fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-white/10 bg-[#1A0A0D]/95 px-2 backdrop-blur-xl lg:hidden">
       {items.map(({ href, icon: Icon, label }) => {
         const active = pathname === href;
         return (

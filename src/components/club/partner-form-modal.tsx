@@ -1,12 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CLUB_PACKS, CLUB_PACK_OPTIONS, CLUB_SECTEURS, CLUB_STATUTS } from "@/lib/club/club-packs";
 import { upsertClubPartnerLocal } from "@/lib/club/club-partners-store";
+import {
+  flattenClubPrestations,
+  formatPrestationLine,
+  parsePrestationLines,
+  type SelectedClubPrestation,
+} from "@/lib/club/club-prestations";
+import {
+  getAllocationSnapshot,
+  getAvailabilityStatus,
+  subscribePrestationAllocations,
+} from "@/lib/club/club-prestation-allocations";
 import type { ClubPartner, ClubPartnerPack } from "@/lib/mocks/club-partners";
 import { createPartner, updatePartner } from "@/lib/supabase/club-queries";
 
@@ -38,7 +49,7 @@ const emptyForm = {
   renouvellement: "",
   modalite_paiement: "Virement",
   pack: "Bronze" as ClubPartnerPack,
-  prestationsText: "",
+  selectedPrestations: [] as SelectedClubPrestation[],
 };
 
 function partnerToForm(partner?: ClubPartner | null) {
@@ -57,7 +68,7 @@ function partnerToForm(partner?: ClubPartner | null) {
     renouvellement: partner.renouvellement === "—" ? "" : partner.renouvellement ?? "",
     modalite_paiement: partner.modalite_paiement ?? "Virement",
     pack: (partner.pack as ClubPartnerPack) || "Bronze",
-    prestationsText: (partner.prestations ?? []).join("\n"),
+    selectedPrestations: parsePrestationLines(partner.prestations ?? []),
   };
 }
 
@@ -79,10 +90,18 @@ export function PartnerFormModal({
 }: PartnerFormModalProps) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [prestationToAdd, setPrestationToAdd] = useState("");
+  const allocations = useSyncExternalStore(
+    subscribePrestationAllocations,
+    getAllocationSnapshot,
+    getAllocationSnapshot
+  );
+  const catalog = useMemo(() => flattenClubPrestations(), []);
 
   useEffect(() => {
     if (!open) return;
     setForm(partnerToForm(partner));
+    setPrestationToAdd("");
   }, [open, partner]);
 
   const packAvantages = useMemo(() => CLUB_PACKS[form.pack]?.avantages ?? [], [form.pack]);
@@ -97,7 +116,7 @@ export function PartnerFormModal({
       ...prev,
       pack,
       valeur: prev.valeur || (defaults.prix ? String(defaults.prix) : prev.valeur),
-      prestationsText: defaults.avantages.join("\n"),
+      selectedPrestations: parsePrestationLines(defaults.avantages),
     }));
   };
 
@@ -111,10 +130,7 @@ export function PartnerFormModal({
       return;
     }
 
-    const prestations = form.prestationsText
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
+    const prestations = form.selectedPrestations.map(formatPrestationLine);
 
     const payload: ClubPartner = {
       ...(partner ?? {}),
@@ -169,7 +185,7 @@ export function PartnerFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto bg-[#1A0A0D] text-white sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto bg-[#1A0A0D] text-white sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{titles[mode]}</DialogTitle>
         </DialogHeader>
@@ -363,18 +379,110 @@ export function PartnerFormModal({
               </div>
               {packAvantages.length > 0 && form.pack !== "Personnalisé" ? (
                 <p className="text-xs text-white/50">
-                  Les prestations du pack {form.pack} sont préremplies. Vous pouvez les ajuster.
+                  Les prestations du pack {form.pack} sont préremplies. Vous pouvez les ajuster ou négocier les prix.
                 </p>
               ) : null}
               <div className="space-y-1.5">
-                <Label>Prestations incluses (une par ligne)</Label>
-                <textarea
-                  value={form.prestationsText}
-                  onChange={(event) => setForm((prev) => ({ ...prev, prestationsText: event.target.value }))}
-                  rows={5}
-                  placeholder="Panneau bord terrain&#10;Logo site web"
-                  className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30"
-                />
+                <Label>Prestations incluses</Label>
+                <select
+                  value={prestationToAdd}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    setPrestationToAdd("");
+                    if (!id) return;
+                    const item = catalog.find((prestation) => prestation.id === id);
+                    if (!item) return;
+                    setForm((prev) => {
+                      if (prev.selectedPrestations.some((selected) => selected.id === item.id)) {
+                        return prev;
+                      }
+                      return {
+                        ...prev,
+                        selectedPrestations: [
+                          ...prev.selectedPrestations,
+                          { id: item.id, label: item.label, price: item.price },
+                        ],
+                      };
+                    });
+                  }}
+                  className="h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white"
+                >
+                  <option value="">+ Ajouter une prestation…</option>
+                  {catalog.map((item) => {
+                    const already = form.selectedPrestations.some((selected) => selected.id === item.id);
+                    const availability = getAvailabilityStatus(item.id, item.quantity, allocations);
+                    const priceLabel =
+                      item.price === null ? "INCLUS" : `${item.price.toLocaleString("fr-FR")}€`;
+                    const suffix = already
+                      ? " — déjà ajoutée"
+                      : availability.fullyTaken
+                        ? " — déjà prise"
+                        : availability.taken > 0
+                          ? ` — ${availability.label}`
+                          : "";
+                    return (
+                      <option
+                        key={item.id}
+                        value={item.id}
+                        disabled={already || availability.fullyTaken}
+                        className="bg-[#1A0A0D]"
+                      >
+                        {item.label} · {priceLabel}
+                        {suffix}
+                      </option>
+                    );
+                  })}
+                </select>
+                <div className="space-y-2 pt-1">
+                  {form.selectedPrestations.length === 0 ? (
+                    <p className="text-xs text-white/40">Aucune prestation pour le moment.</p>
+                  ) : (
+                    form.selectedPrestations.map((item, index) => (
+                      <div
+                        key={`${item.id}-${index}`}
+                        className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5"
+                      >
+                        <div className="min-w-0 flex-1 truncate text-sm text-white/80">{item.label}</div>
+                        {item.price === null ? (
+                          <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] text-emerald-300">
+                            INCLUS
+                          </span>
+                        ) : (
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={item.price}
+                              onChange={(event) => {
+                                const nextPrice = Number(event.target.value) || 0;
+                                setForm((prev) => ({
+                                  ...prev,
+                                  selectedPrestations: prev.selectedPrestations.map((selected, idx) =>
+                                    idx === index ? { ...selected, price: nextPrice } : selected
+                                  ),
+                                }));
+                              }}
+                              className="h-8 w-24 border-white/10 bg-white/5 text-right text-white"
+                            />
+                            <span className="text-xs text-white/50">€</span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          className="shrink-0 text-white/40 hover:text-white"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              selectedPrestations: prev.selectedPrestations.filter((_, idx) => idx !== index),
+                            }))
+                          }
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </section>
           ) : null}

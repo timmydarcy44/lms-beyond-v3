@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { toast } from "sonner";
 import { ClubLayout } from "@/components/club/club-layout";
 import { ClubGuardGate, useClubGuard } from "@/components/club/use-club-guard";
@@ -66,6 +66,7 @@ export default function ClubNewsPage() {
   const [ctaText, setCtaText] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
   const [ctaStyle, setCtaStyle] = useState<"club" | "navy" | "outline">("club");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [form, setForm] = useState({
     titre: "",
     image: "",
@@ -85,6 +86,7 @@ export default function ClubNewsPage() {
     setCtaText("");
     setCtaUrl("");
     setCtaStyle("club");
+    setUploadingImage(false);
     if (editorRef.current) {
       editorRef.current.innerHTML = "";
     }
@@ -244,6 +246,35 @@ export default function ClubNewsPage() {
     run();
   };
 
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "club-news");
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : "Upload impossible");
+      }
+      if (typeof data.url !== "string" || !data.url) {
+        throw new Error("URL manquante");
+      }
+      setForm((prev) => ({ ...prev, image: data.url }));
+      toast.success("Image importée");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Impossible d'importer l'image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const toolbarActions = useMemo(
     () => [
       { label: "B", cmd: "bold" },
@@ -328,23 +359,48 @@ export default function ClubNewsPage() {
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col bg-[#111] text-white">
+        <DialogContent className="flex max-h-[92vh] w-[min(96vw,48rem)] flex-col overflow-hidden bg-[#111] text-white sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{editingNews ? "Modifier une news" : "Créer une news"}</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
             <Input
               placeholder="Titre"
               value={form.titre}
               onChange={(event) => setForm({ ...form, titre: event.target.value })}
               className="border-white/10 bg-white/5 text-white"
             />
-            <Input
-              placeholder="URL Photo"
-              value={form.image}
-              onChange={(event) => setForm({ ...form, image: event.target.value })}
-              className="border-white/10 bg-white/5 text-white"
-            />
+            <div className="space-y-2">
+              <div className="text-xs text-white/60">Photo</div>
+              {form.image ? (
+                <div className="relative overflow-hidden rounded-xl border border-white/10">
+                  <img src={form.image} alt="" className="h-40 w-full object-cover" />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-2 rounded-full bg-black/70 px-3 py-1 text-xs text-white"
+                    onClick={() => setForm((prev) => ({ ...prev, image: "" }))}
+                  >
+                    Retirer
+                  </button>
+                </div>
+              ) : null}
+              <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/5 px-4 py-3 text-sm text-white/70 hover:bg-white/10">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => void handleImageUpload(event)}
+                  disabled={uploadingImage}
+                />
+                {uploadingImage ? "Import en cours…" : "Importer une image depuis l'ordinateur"}
+              </label>
+              <Input
+                placeholder="Ou coller une URL (optionnel)"
+                value={form.image}
+                onChange={(event) => setForm({ ...form, image: event.target.value })}
+                className="border-white/10 bg-white/5 text-white"
+              />
+            </div>
             <div className="flex flex-wrap gap-2">
               {toolbarActions.map((action) => (
                 <button

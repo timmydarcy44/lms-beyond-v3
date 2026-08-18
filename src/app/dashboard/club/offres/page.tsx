@@ -1,12 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ClubLayout } from "@/components/club/club-layout";
 import { ClubGuardGate, useClubGuard } from "@/components/club/use-club-guard";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { addPartnerOffer } from "@/lib/club/partner-offers-store";
+import {
+  allocatePrestations,
+  getAllocationSnapshot,
+  getAvailabilityStatus,
+  subscribePrestationAllocations,
+} from "@/lib/club/club-prestation-allocations";
+import {
+  CLUB_PRESTATION_CATALOG,
+  type ClubPrestation,
+  type ClubPrestationCategory,
+} from "@/lib/club/club-prestations";
 
 type Pack = {
   nom: string;
@@ -64,44 +75,14 @@ const initialPacks: Pack[] = [
   },
 ];
 
-type PrestationItem = { id: string; label: string; price: number | null; description?: string };
+type PrestationsCatalog = Record<ClubPrestationCategory, ClubPrestation[]>;
 
-const initialPrestations = {
-  matchday: [
-    { id: "maillot-principal", label: "Sponsor maillot principal", price: 30000 },
-    { id: "maillot-manche-droite", label: "Sponsor maillot manche droite", price: 8000 },
-    { id: "maillot-manche-gauche", label: "Sponsor maillot manche gauche", price: 8000 },
-    { id: "maillot-dos-haut", label: "Sponsor maillot dos haut", price: 10000 },
-    { id: "maillot-dos-bas", label: "Sponsor maillot dos bas", price: 6000 },
-    { id: "short-avant-droit", label: "Sponsor short avant droit", price: 4000 },
-    { id: "short-avant-gauche", label: "Sponsor short avant gauche", price: 4000 },
-    { id: "short-arriere-droit", label: "Sponsor short arrière droit", price: 3000 },
-    { id: "short-arriere-gauche", label: "Sponsor short arrière gauche", price: 3000 },
-    { id: "veste-echauffement", label: "Sponsor veste échauffement", price: 5000 },
-    { id: "sac-equipe", label: "Sponsor sac équipe", price: 3000 },
-  ] as PrestationItem[],
-  training: [
-    { id: "training-principal", label: "Sponsor maillot training principal", price: 12000 },
-    { id: "training-manche-droite", label: "Sponsor maillot training manche droite", price: 4000 },
-    { id: "training-manche-gauche", label: "Sponsor maillot training manche gauche", price: 4000 },
-    { id: "training-short-avant", label: "Sponsor short training avant", price: 3000 },
-    { id: "training-short-arriere", label: "Sponsor short training arrière", price: 3000 },
-    { id: "training-veste", label: "Sponsor veste training", price: 4000 },
-    { id: "training-pantalon", label: "Sponsor pantalon training", price: 2000 },
-  ] as PrestationItem[],
-  digital: [
-    { id: "digital-logo", label: "Logo espace partenaire site web", price: 2000 },
-    { id: "digital-matchday", label: "Pack match day (story + post)", price: 3000 },
-    { id: "digital-week", label: "Pack week (2 posts/semaine)", price: 5000 },
-    { id: "digital-newsletter", label: "Naming newsletter", price: 2500 },
-  ] as PrestationItem[],
-  stade: [
-    { id: "stade-3x1", label: "Panneau bord terrain 3m x 1m", price: 2500 },
-    { id: "stade-6x1", label: "Panneau bord terrain 6m x 1m", price: 4000 },
-    { id: "stade-bache", label: "Bâche tribune 5m x 2m", price: 6000 },
-    { id: "stade-presse", label: "Naming salle de presse", price: 8000 },
-  ] as PrestationItem[],
-  dives: [{ id: "dives-platform", label: "Accès plateforme Beyond Network", price: null }] as PrestationItem[],
+const initialPrestations: PrestationsCatalog = {
+  matchday: CLUB_PRESTATION_CATALOG.matchday.map((item) => ({ ...item })),
+  training: CLUB_PRESTATION_CATALOG.training.map((item) => ({ ...item })),
+  digital: CLUB_PRESTATION_CATALOG.digital.map((item) => ({ ...item })),
+  stade: CLUB_PRESTATION_CATALOG.stade.map((item) => ({ ...item })),
+  dives: CLUB_PRESTATION_CATALOG.dives.map((item) => ({ ...item })),
 };
 
 export default function ClubOffersPage() {
@@ -113,15 +94,21 @@ export default function ClubOffersPage() {
   const [expandedSection, setExpandedSection] = useState<string | null>("match-day");
   const [prestations, setPrestations] = useState(initialPrestations);
   const [showAddPrestationDialog, setShowAddPrestationDialog] = useState(false);
-  const [addCategory, setAddCategory] = useState<keyof typeof initialPrestations>("matchday");
+  const [addCategory, setAddCategory] = useState<ClubPrestationCategory>("matchday");
   const [newPrestationTitle, setNewPrestationTitle] = useState("");
   const [newPrestationDescription, setNewPrestationDescription] = useState("");
   const [newPrestationPrice, setNewPrestationPrice] = useState<number | "">("");
+  const [newPrestationQuantity, setNewPrestationQuantity] = useState(1);
   const [showCustomOfferDialog, setShowCustomOfferDialog] = useState(false);
   const [customOfferName, setCustomOfferName] = useState("");
   const [customExpandedSection, setCustomExpandedSection] = useState<string | null>("match-day");
   const [customSelections, setCustomSelections] = useState<Record<string, number>>({});
   const [selectedPartner, setSelectedPartner] = useState("");
+  const allocations = useSyncExternalStore(
+    subscribePrestationAllocations,
+    getAllocationSnapshot,
+    getAllocationSnapshot
+  );
 
   const partenaires = [
     { id: "1", nom: "Normandie Énergie" },
@@ -176,6 +163,7 @@ export default function ClubOffersPage() {
           label: newPrestationTitle,
           description: newPrestationDescription || undefined,
           price: Number(newPrestationPrice),
+          quantity: Math.max(1, Number(newPrestationQuantity) || 1),
         },
       ],
     }));
@@ -183,6 +171,7 @@ export default function ClubOffersPage() {
     setNewPrestationTitle("");
     setNewPrestationDescription("");
     setNewPrestationPrice("");
+    setNewPrestationQuantity(1);
   };
 
   const removePrestation = (category: keyof typeof prestations, id: string) => {
@@ -201,7 +190,7 @@ export default function ClubOffersPage() {
       });
     });
     return map;
-  }, []);
+  }, [catalogSections]);
 
   const selectedOfferItems = useMemo(() => {
     return Object.entries(customSelections).map(([id, price]) => ({
@@ -263,6 +252,7 @@ export default function ClubOffersPage() {
       border: "border-white/10",
     };
     setPacks((prev) => [nextPack, ...prev]);
+    allocatePrestations(selectedOfferItems.map((item) => item.id));
     setShowCustomOfferDialog(false);
     if (selectedPartner) {
       const partner = partenaires.find((item) => item.id === selectedPartner);
@@ -421,7 +411,9 @@ export default function ClubOffersPage() {
           </div>
         </div>
         <div className="mt-1 text-sm text-white/60">
-          Configurez les tarifs suggérés par emplacement
+          Configurez les tarifs suggérés par emplacement. Une prestation exclusive (quantité 1) passe en « déjà
+          prise » dès qu’elle est vendue ; les volumes (panneaux, etc.) restent disponibles tant que le stock n’est
+          pas épuisé.
         </div>
 
         <div className="mt-6 space-y-3">
@@ -452,14 +444,35 @@ export default function ClubOffersPage() {
                     <thead className="text-xs uppercase text-white/50">
                       <tr>
                         <th className="py-2">Prestation</th>
+                        <th className="py-2">Disponibilité</th>
                         <th className="py-2">Tarif suggéré</th>
                         <th className="py-2">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {section.items.map((item) => (
+                      {section.items.map((item) => {
+                        const availability = getAvailabilityStatus(item.id, item.quantity, allocations);
+                        return (
                         <tr key={item.id} className="border-t border-white/10">
                           <td className="py-2">{item.label}</td>
+                          <td className="py-2">
+                            <span
+                              className={
+                                availability.fullyTaken
+                                  ? "rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/50"
+                                  : availability.taken > 0
+                                    ? "rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-200"
+                                    : "rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-300"
+                              }
+                            >
+                              {availability.label}
+                            </span>
+                            {item.quantity > 1 && !availability.fullyTaken ? (
+                              <span className="ml-2 text-[11px] text-white/40">
+                                {availability.remaining} restant{availability.remaining > 1 ? "s" : ""}
+                              </span>
+                            ) : null}
+                          </td>
                           <td className="py-2">
                             {item.price === null ? (
                               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
@@ -494,7 +507,8 @@ export default function ClubOffersPage() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                   <button
@@ -514,16 +528,53 @@ export default function ClubOffersPage() {
       </div>
 
       <Dialog open={showCustomOfferDialog} onOpenChange={setShowCustomOfferDialog}>
-        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto bg-[#111] text-white">
+        <DialogContent className="flex max-h-[92vh] w-[min(96vw,72rem)] flex-col overflow-hidden bg-[#111] text-white sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle>Créer une offre personnalisée</DialogTitle>
             <div className="text-sm text-white/60">
-              Sélectionnez les prestations et composez votre offre sur mesure
+              Sélectionnez les prestations et composez votre offre sur mesure. Les prix restent négociables.
             </div>
           </DialogHeader>
-          <div className="grid grid-cols-[1fr_380px] gap-6">
-            <div className="max-h-[65vh] overflow-y-auto space-y-4 pr-2">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0 space-y-4 overflow-y-auto pr-1">
               <div className="text-sm font-semibold text-white">Sélectionnez les prestations</div>
+              <select
+                value=""
+                onChange={(event) => {
+                  const id = event.target.value;
+                  if (!id) return;
+                  const item = catalogSections
+                    .flatMap((section) => section.items)
+                    .find((prestation) => prestation.id === id);
+                  if (!item || item.price === null) return;
+                  setCustomSelections((prev) => ({ ...prev, [item.id]: item.price ?? 0 }));
+                }}
+                className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white"
+              >
+                <option value="">+ Ajouter une prestation au tarif catalogue…</option>
+                {catalogSections.flatMap((section) =>
+                  section.items
+                    .filter((item) => item.price !== null)
+                    .map((item) => {
+                      const availability = getAvailabilityStatus(item.id, item.quantity, allocations);
+                      const already = Object.prototype.hasOwnProperty.call(customSelections, item.id);
+                      const blocked = availability.fullyTaken && !already;
+                      const suffix = already
+                        ? " — déjà ajoutée"
+                        : availability.fullyTaken
+                          ? " — déjà prise"
+                          : availability.taken > 0
+                            ? ` — ${availability.label}`
+                            : "";
+                      return (
+                        <option key={item.id} value={item.id} disabled={blocked || already} className="bg-[#111]">
+                          {item.label} · {(item.price ?? 0).toLocaleString("fr-FR")}€
+                          {suffix}
+                        </option>
+                      );
+                    })
+                )}
+              </select>
               {catalogSections.map((section) => (
                 <div key={section.id} className="rounded-xl bg-[#1B2A4A]/40 p-4">
                   <button
@@ -542,9 +593,9 @@ export default function ClubOffersPage() {
                       {section.items.map((item) => {
                         if (item.price === null) {
                           return (
-                            <div key={item.id} className="flex items-center justify-between">
-                              <span>{item.label}</span>
-                              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
+                            <div key={item.id} className="flex items-center justify-between gap-3">
+                              <span className="min-w-0 truncate">{item.label}</span>
+                              <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
                                 INCLUS
                               </span>
                             </div>
@@ -552,12 +603,21 @@ export default function ClubOffersPage() {
                         }
                         const value = item.price ?? 0;
                         const checked = Object.prototype.hasOwnProperty.call(customSelections, item.id);
+                        const availability = getAvailabilityStatus(item.id, item.quantity, allocations);
+                        const blocked = availability.fullyTaken && !checked;
                         return (
-                          <label key={item.id} className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
+                          <label
+                            key={item.id}
+                            className={`flex items-center justify-between gap-3 rounded-lg px-1 py-1 ${
+                              blocked ? "cursor-not-allowed opacity-45" : ""
+                            }`}
+                          >
+                            <div className="flex min-w-0 items-center gap-3">
                               <input
                                 type="checkbox"
+                                className="shrink-0"
                                 checked={checked}
+                                disabled={blocked}
                                 onChange={(event) => {
                                   const isChecked = event.target.checked;
                                   setCustomSelections((prev) => {
@@ -570,9 +630,16 @@ export default function ClubOffersPage() {
                                   });
                                 }}
                               />
-                              <span>{item.label}</span>
+                              <span className="min-w-0">{item.label}</span>
                             </div>
-                            <span>{value.toLocaleString("fr-FR")}€</span>
+                            <div className="flex shrink-0 items-center gap-2 text-xs">
+                              {availability.fullyTaken ? (
+                                <span className="text-white/40">Déjà prise</span>
+                              ) : availability.taken > 0 ? (
+                                <span className="text-amber-200">{availability.label}</span>
+                              ) : null}
+                              <span>{value.toLocaleString("fr-FR")}€</span>
+                            </div>
                           </label>
                         );
                       })}
@@ -582,9 +649,9 @@ export default function ClubOffersPage() {
               ))}
             </div>
 
-            <div className="sticky top-0 space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="flex min-h-0 flex-col space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm font-semibold text-white">Votre offre</div>
-              <div className="mb-4">
+              <div>
                 <label className="mb-1 block text-xs text-white/60">Associer à un partenaire</label>
                 <select
                   value={selectedPartner}
@@ -607,10 +674,22 @@ export default function ClubOffersPage() {
               />
               <div className="space-y-2 text-sm text-white/70">
                 {selectedOfferItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between">
-                    <div>{item.label}</div>
-                    <div className="flex items-center gap-2">
-                      <span>{item.price.toLocaleString("fr-FR")}€</span>
+                  <div key={item.id} className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1 truncate">{item.label}</div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={item.price}
+                        onChange={(event) =>
+                          setCustomSelections((prev) => ({
+                            ...prev,
+                            [item.id]: Number(event.target.value) || 0,
+                          }))
+                        }
+                        className="h-8 w-24 border-white/10 bg-white/5 text-right text-white"
+                      />
+                      <span className="text-xs text-white/50">€</span>
                       <button
                         className="text-white/50"
                         onClick={() =>
@@ -673,6 +752,19 @@ export default function ClubOffersPage() {
               onChange={(event) => setNewPrestationPrice(Number(event.target.value))}
               className="border-white/10 bg-white/5 text-white"
             />
+            <div>
+              <label className="mb-1 block text-xs text-white/60">
+                Quantité disponible (1 = exclusive, ex. maillot ; 10–20 = panneaux)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                placeholder="Quantité"
+                value={newPrestationQuantity}
+                onChange={(event) => setNewPrestationQuantity(Math.max(1, Number(event.target.value) || 1))}
+                className="border-white/10 bg-white/5 text-white"
+              />
+            </div>
           </div>
           <DialogFooter>
             <button

@@ -74,7 +74,7 @@ export function PipelineQualiopiScheduleOverlay({
     }
     setSaving(true);
     try {
-      const res = await fetch(`/api/super-admin/crm/pipeline/deals/${deal.id}/qualiopi/schedule`, {
+      const res = await fetch(`/api/super-admin/crm/qualiopi/sessions/${deal.id}/program`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

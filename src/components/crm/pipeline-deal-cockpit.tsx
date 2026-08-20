@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PipelineDealActionsSection } from "@/components/crm/pipeline-deal-actions-section";
 import { PipelineQuoteFormationsCompact } from "@/components/crm/pipeline-quote-formations";
+import { PipelineDealQualiopiDossier } from "@/components/crm/pipeline-deal-qualiopi-dossier";
 import {
   computeDealIntelligence,
   normalizeLinkedInUrl,
@@ -168,7 +169,7 @@ export function PipelineDealCockpit({
   onQuoteTotalChange: (cents: number) => void;
   onActionsChange?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"identity" | "commercial" | "admin">("identity");
+  const [activeTab, setActiveTab] = useState<"identity" | "commercial" | "admin" | "qualiopi">("identity");
 
   const intel = useMemo(() => computeDealIntelligence(intelligenceInput), [intelligenceInput]);
   const stageLabel =
@@ -208,6 +209,7 @@ export function PipelineDealCockpit({
     { id: "identity" as const, label: "Identité" },
     { id: "commercial" as const, label: "Commercial" },
     { id: "admin" as const, label: "Administratif" },
+    { id: "qualiopi" as const, label: "Qualiopi" },
   ];
 
   return (
@@ -886,6 +888,12 @@ export function PipelineDealCockpit({
             </div>
           </section>
         </div>
+      ) : null}
+
+      {activeTab === "qualiopi" ? (
+        <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+          <PipelineDealQualiopiDossier dealId={form.id} tone="dark" />
+        </section>
       ) : null}
     </div>
   );

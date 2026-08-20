@@ -18,8 +18,7 @@ import {
   computePipelineRevenueCents,
   DEPRECATED_PIPELINE_STAGE_SLUGS,
   BTOB_CATALOGUE_STAGE_SLUG,
-  BTOB_FORMATION_SCHEDULED_STAGE_SLUG,
-  BTOB_FORMATION_IN_PROGRESS_STAGE_SLUG,
+  SIGNED_DEAL_STAGES_FOR_FORMATIONS,
   formatDealAmount,
   shouldShowRevenueBar,
   type PipelineDeal,
@@ -50,8 +49,6 @@ import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsibl
 import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pipeline-deal-sheet";
 import { CatalogueEmailOpenIndicator } from "@/components/crm/catalogue-email-open-indicator";
 import { PipelineCatalogueEmailOverlay } from "@/components/crm/pipeline-catalogue-email-overlay";
-import { PipelineQualiopiScheduleOverlay } from "@/components/crm/pipeline-qualiopi-schedule-overlay";
-import { PipelineQualiopiStartOverlay } from "@/components/crm/pipeline-qualiopi-start-overlay";
 import { PipelineDealCockpit, sanitizeHumanNotes } from "@/components/crm/pipeline-deal-cockpit";
 import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
@@ -148,9 +145,6 @@ export const PipelineBoardClient = forwardRef<
   const [catalogueOverlayDeal, setCatalogueOverlayDeal] = useState<PipelineDeal | null>(null);
   const [pendingStageSlug, setPendingStageSlug] = useState<string | null>(null);
   const [saveAfterCatalogue, setSaveAfterCatalogue] = useState(false);
-  const [qualiopiScheduleOpen, setQualiopiScheduleOpen] = useState(false);
-  const [qualiopiStartOpen, setQualiopiStartOpen] = useState(false);
-  const [qualiopiDeal, setQualiopiDeal] = useState<PipelineDeal | null>(null);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
@@ -507,36 +501,6 @@ export const PipelineBoardClient = forwardRef<
       }
     }
 
-    if (
-      !isBtoc &&
-      form.id &&
-      form.stage_slug === BTOB_FORMATION_SCHEDULED_STAGE_SLUG &&
-      originalStageSlug !== BTOB_FORMATION_SCHEDULED_STAGE_SLUG
-    ) {
-      const dealFromForm = deals.find((d) => d.id === form.id);
-      if (dealFromForm) {
-        setQualiopiDeal({ ...dealFromForm, company_name: form.company_name, email: form.email || null });
-        setQualiopiScheduleOpen(true);
-        setDialogOpen(false);
-        return;
-      }
-    }
-
-    if (
-      !isBtoc &&
-      form.id &&
-      form.stage_slug === BTOB_FORMATION_IN_PROGRESS_STAGE_SLUG &&
-      originalStageSlug !== BTOB_FORMATION_IN_PROGRESS_STAGE_SLUG
-    ) {
-      const dealFromForm = deals.find((d) => d.id === form.id);
-      if (dealFromForm) {
-        setQualiopiDeal({ ...dealFromForm, company_name: form.company_name });
-        setQualiopiStartOpen(true);
-        setDialogOpen(false);
-        return;
-      }
-    }
-
     const zip =
       form.zip_code.trim()
       || parseZipFromText(commercial.location)
@@ -592,6 +556,18 @@ export const PipelineBoardClient = forwardRef<
       setDialogOpen(false);
       await load();
       toast.success("Enregistré");
+      if (
+        !isBtoc &&
+        SIGNED_DEAL_STAGES_FOR_FORMATIONS.includes(
+          form.stage_slug as (typeof SIGNED_DEAL_STAGES_FOR_FORMATIONS)[number]
+        ) &&
+        originalStageSlug !== form.stage_slug &&
+        !SIGNED_DEAL_STAGES_FOR_FORMATIONS.includes(
+          String(originalStageSlug) as (typeof SIGNED_DEAL_STAGES_FOR_FORMATIONS)[number]
+        )
+      ) {
+        toast.success("Client ajouté à l’onglet Formations");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     }
@@ -613,16 +589,6 @@ export const PipelineBoardClient = forwardRef<
       openCatalogueOverlay(deal, stageSlug);
       return;
     }
-    if (!isBtoc && deal && stageSlug === BTOB_FORMATION_SCHEDULED_STAGE_SLUG && deal.stage_slug !== stageSlug) {
-      setQualiopiDeal(deal);
-      setQualiopiScheduleOpen(true);
-      return;
-    }
-    if (!isBtoc && deal && stageSlug === BTOB_FORMATION_IN_PROGRESS_STAGE_SLUG && deal.stage_slug !== stageSlug) {
-      setQualiopiDeal(deal);
-      setQualiopiStartOpen(true);
-      return;
-    }
 
     const res = await fetch(`/api/super-admin/crm/pipeline/deals/${dealId}`, {
       method: "PATCH",
@@ -634,6 +600,18 @@ export const PipelineBoardClient = forwardRef<
       return;
     }
     await load();
+    if (
+      !isBtoc &&
+      SIGNED_DEAL_STAGES_FOR_FORMATIONS.includes(
+        stageSlug as (typeof SIGNED_DEAL_STAGES_FOR_FORMATIONS)[number]
+      ) &&
+      deal &&
+      !SIGNED_DEAL_STAGES_FOR_FORMATIONS.includes(
+        deal.stage_slug as (typeof SIGNED_DEAL_STAGES_FOR_FORMATIONS)[number]
+      )
+    ) {
+      toast.success("Client ajouté à l’onglet Formations");
+    }
   };
 
   const handleCatalogueSent = async () => {
@@ -1229,18 +1207,6 @@ export const PipelineBoardClient = forwardRef<
         deal={catalogueOverlayDeal}
         currentUserEmail={currentUserEmail}
         onSent={handleCatalogueSent}
-      />
-      <PipelineQualiopiScheduleOverlay
-        open={qualiopiScheduleOpen}
-        onOpenChange={setQualiopiScheduleOpen}
-        deal={qualiopiDeal}
-        onDone={load}
-      />
-      <PipelineQualiopiStartOverlay
-        open={qualiopiStartOpen}
-        onOpenChange={setQualiopiStartOpen}
-        deal={qualiopiDeal}
-        onDone={load}
       />
     </div>
   );

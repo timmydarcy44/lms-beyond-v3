@@ -104,3 +104,36 @@ export async function sendQualiopiStartPack(params: {
   }
   return results;
 }
+
+export async function sendQualiopiSatisfactionPack(params: {
+  attendees: { full_name: string; email: string; satisfaction_token: string }[];
+  companyName: string;
+  courseName: string;
+  fromEmail: string;
+  fromName?: string;
+}) {
+  const results: { email: string; success: boolean; error?: string }[] = [];
+  for (const attendee of params.attendees) {
+    const link = `${qualiopiAppBaseUrl()}/qualiopi/satisfaction/${attendee.satisfaction_token}`;
+    const html = `
+      <div style="font-family:system-ui,sans-serif;line-height:1.6;color:#111">
+        <p>Bonjour ${escapeHtml(attendee.full_name)},</p>
+        <p>
+          La formation <strong>${escapeHtml(params.courseName)}</strong>
+          pour <strong>${escapeHtml(params.companyName)}</strong> est terminée.
+        </p>
+        <p>Pour clôturer le dossier Qualiopi, merci de répondre au questionnaire de satisfaction :</p>
+        <p><a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none">Questionnaire de satisfaction</a></p>
+        <p>Cordialement,<br/>${escapeHtml(params.fromName || "EDGE")}</p>
+      </div>
+    `;
+    const sent = await sendEmail({
+      to: attendee.email,
+      from: params.fromEmail,
+      subject: `Satisfaction formation — ${params.courseName}`,
+      html,
+    });
+    results.push({ email: attendee.email, success: sent.success, error: sent.error });
+  }
+  return results;
+}

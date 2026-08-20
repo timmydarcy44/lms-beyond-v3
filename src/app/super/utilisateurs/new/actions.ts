@@ -2,24 +2,47 @@
 
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { CRM_PROFILE_ROLES, type CrmProfileRole } from "@/lib/crm/crm-shared";
 import { revalidatePath } from "next/cache";
 
 type CreateUserInput = {
   email: string;
-  fullName: string;
-  role: "instructor" | "learner" | "tutor" | "admin";
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+  role: CrmProfileRole;
   organizationIds?: string[];
 };
+
+function buildFullName(firstName: string, lastName: string) {
+  return [firstName.trim(), lastName.trim()].filter(Boolean).join(" ").trim();
+}
+
+function isAllowedRole(role: string): role is CrmProfileRole {
+  return (CRM_PROFILE_ROLES as readonly string[]).includes(role);
+}
 
 export async function createUserAction(input: CreateUserInput): Promise<{
   success: boolean;
   userId?: string;
   error?: string;
 }> {
-  // Vérifier les permissions
   const hasAccess = await isSuperAdmin();
   if (!hasAccess) {
     return { success: false, error: "Accès non autorisé" };
+  }
+
+  const email = input.email.trim().toLowerCase();
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  const fullName = buildFullName(firstName, lastName);
+  const phone = input.phone?.trim() || null;
+
+  if (!email || !firstName || !lastName) {
+    return { success: false, error: "Email, prénom et nom sont obligatoires." };
+  }
+  if (!isAllowedRole(input.role)) {
+    return { success: false, error: "Rôle invalide." };
   }
 
   const supabase = await getServerClient();
@@ -27,37 +50,42 @@ export async function createUserAction(input: CreateUserInput): Promise<{
     return { success: false, error: "Erreur de connexion à la base de données" };
   }
 
-  // Utiliser le service role client pour créer des utilisateurs
   const serviceClient = getServiceRoleClient();
   if (!serviceClient) {
     return { success: false, error: "Service role client non disponible" };
   }
-  const client = serviceClient!;
+  const client = serviceClient;
 
   try {
-    // Vérifier si l'utilisateur existe déjà
     const { data: existingProfile } = await supabase
       .from("profiles")
       .select("id")
-      .eq("email", input.email)
-      .single();
+      .eq("email", email)
+      .maybeSingle();
+
+    const profilePayload = {
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+      phone,
+      role: input.role,
+    };
 
     let userId: string;
 
     if (existingProfile) {
       userId = existingProfile.id;
-      // Mettre à jour le rôle si nécessaire
-      await client
-        .from("profiles")
-        .update({ role: input.role, full_name: input.fullName })
-        .eq("id", userId);
+      await client.from("profiles").update(profilePayload).eq("id", userId);
     } else {
-      // Créer l'utilisateur via Supabase Auth
       const { data: authUser, error: authError } = await client.auth.admin.createUser({
-        email: input.email,
-        email_confirm: false, // Nécessitera confirmation email
+        email,
+        email_confirm: false,
         user_metadata: {
-          full_name: input.fullName,
+          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName,
+          phone,
           role: input.role,
         },
       });
@@ -72,12 +100,9 @@ export async function createUserAction(input: CreateUserInput): Promise<{
 
       userId = authUser.user.id;
 
-      // Créer le profil
       const { error: profileError } = await client.from("profiles").insert({
         id: userId,
-        email: input.email,
-        full_name: input.fullName,
-        role: input.role,
+        ...profilePayload,
       });
 
       if (profileError) {
@@ -89,7 +114,6 @@ export async function createUserAction(input: CreateUserInput): Promise<{
       }
     }
 
-    // Assigner aux organisations si fournies
     if (input.organizationIds && input.organizationIds.length > 0) {
       for (const orgId of input.organizationIds) {
         const { error: membershipError } = await client.from("org_memberships").upsert({
@@ -100,7 +124,6 @@ export async function createUserAction(input: CreateUserInput): Promise<{
 
         if (membershipError) {
           console.error(`[super-admin] Error adding user to org ${orgId}:`, membershipError);
-          // Continue avec les autres organisations
         }
       }
     }
@@ -114,4 +137,3 @@ export async function createUserAction(input: CreateUserInput): Promise<{
     return { success: false, error: "Une erreur inattendue est survenue" };
   }
 }
-

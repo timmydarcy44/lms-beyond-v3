@@ -2,15 +2,14 @@
 
 insert into public.crm_pipeline_stages (pipeline_type, slug, label, sort_order)
 values
-  ('btob', 'client_actif', 'Client actif', 8),
-  ('btob', 'formation_programmee', 'Formation programmée', 9),
-  ('btob', 'formation_en_cours', 'Formation en cours', 10)
+  ('btob', 'proposition_signee', 'Proposition signée', 6),
+  ('btob', 'client_actif', 'Client actif', 8)
 on conflict (pipeline_type, slug) do update
 set label = excluded.label, sort_order = excluded.sort_order;
 
-update public.crm_pipeline_stages
-set sort_order = 11
-where pipeline_type = 'btob' and slug = 'echec';
+update public.crm_pipeline_stages set sort_order = 7 where pipeline_type = 'btob' and slug = 'reussi';
+update public.crm_pipeline_stages set sort_order = 8 where pipeline_type = 'btob' and slug = 'client_actif';
+update public.crm_pipeline_stages set sort_order = 9 where pipeline_type = 'btob' and slug = 'echec';
 
 create table if not exists public.crm_qualiopi_documents (
   id uuid primary key default gen_random_uuid(),

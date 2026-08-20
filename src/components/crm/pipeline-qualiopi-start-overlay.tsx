@@ -30,7 +30,7 @@ export function PipelineQualiopiStartOverlay({
     if (!deal?.id) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/super-admin/crm/pipeline/deals/${deal.id}/qualiopi/start`, {
+      const res = await fetch(`/api/super-admin/crm/qualiopi/sessions/${deal.id}/start`, {
         method: "POST",
       });
       const json = await parseFetchJson<{ error?: string; email_failures?: { email: string }[] }>(res);

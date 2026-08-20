@@ -4,7 +4,7 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 import { QUALIOPI_CORE_DOCS, type QualiopiDocKind } from "@/lib/crm/qualiopi-shared";
 
 async function ensureCoreDocs(supabase: NonNullable<ReturnType<typeof getServiceRoleClient>>) {
-  const { data } = await supabase.from("crm_qualiopi_documents").select("kind");
+  const { data } = await supabase.from("crm_qualiopi_documents").select("kind").is("session_id", null);
   const existing = new Set((data ?? []).map((row) => String(row.kind)));
   const missing = QUALIOPI_CORE_DOCS.filter((doc) => !existing.has(doc.kind));
   if (missing.length) {
@@ -23,6 +23,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("crm_qualiopi_documents")
     .select("*")
+    .is("session_id", null)
     .order("created_at", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ documents: data ?? [] });
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
   const title = String(form.get("title") ?? "").trim();
   const kind = (String(form.get("kind") ?? "autre") as QualiopiDocKind) || "autre";
   const replaceId = String(form.get("id") ?? "").trim();
+  const sessionId = String(form.get("session_id") ?? "").trim();
   const file = form.get("file");
 
   if (!title) return NextResponse.json({ error: "Titre obligatoire" }, { status: 400 });
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
     kind: ["convention", "reglement", "livret", "autre"].includes(kind) ? kind : "autre",
     file_url: fileUrl,
     file_name: fileName,
+    session_id: sessionId || null,
     updated_at: new Date().toISOString(),
   };
 

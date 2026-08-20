@@ -3,6 +3,7 @@ export type PipelineType = "btob" | "btoc";
 /** Stades à partir desquels le bandeau CA s’affiche (proposition envoyée et au-delà). */
 export const CRM_REVENUE_STAGE_SLUGS = [
   "proposition_envoyee",
+  "proposition_signee",
   "reussi",
 ] as const;
 
@@ -21,18 +22,29 @@ export const DEFAULT_PIPELINE_STAGES = [
   { slug: "demo_realisee", label: "Démo réalisée", sort_order: 3 },
   { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 4 },
   { slug: "proposition_envoyee", label: "Proposition envoyée", sort_order: 5 },
-  { slug: "reussi", label: "Réussi", sort_order: 6 },
+  { slug: "proposition_signee", label: "Proposition signée", sort_order: 6 },
+  { slug: "reussi", label: "Réussi", sort_order: 7 },
   { slug: "client_actif", label: "Client actif", sort_order: 8 },
-  { slug: "formation_programmee", label: "Formation programmée", sort_order: 9 },
-  { slug: "formation_en_cours", label: "Formation en cours", sort_order: 10 },
-  { slug: "echec", label: "Échec", sort_order: 11 },
+  { slug: "echec", label: "Échec", sort_order: 9 },
 ] as const;
 
+/** Colonnes pédagogiques : désormais dans l'onglet Formations, plus dans le pipe commercial. */
 export const BTOB_FORMATION_SCHEDULED_STAGE_SLUG = "formation_programmee";
 export const BTOB_FORMATION_IN_PROGRESS_STAGE_SLUG = "formation_en_cours";
 
-/** Étapes retirées du pipe (legacy). */
-export const DEPRECATED_PIPELINE_STAGE_SLUGS = ["envoi_mail"] as const;
+export const SIGNED_DEAL_STAGES_FOR_FORMATIONS = [
+  "proposition_signee",
+  "gagne",
+  "reussi",
+  "client_actif",
+] as const;
+
+/** Étapes retirées du pipe commercial. */
+export const DEPRECATED_PIPELINE_STAGE_SLUGS = [
+  "envoi_mail",
+  "formation_programmee",
+  "formation_en_cours",
+] as const;
 
 export type PipelineStage = {
   pipeline_type?: string;

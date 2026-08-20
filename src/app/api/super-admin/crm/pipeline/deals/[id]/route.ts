@@ -3,6 +3,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { updatePipelineDeal } from "@/lib/crm/pipeline-deal-update";
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import { ensureQualiopiSessionForDeal, isSignedDealStage } from "@/lib/crm/qualiopi-sessions";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -67,6 +68,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const { data, error } = await updatePipelineDeal(supabase, id, patch);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  const nextStage = String(data?.stage_slug ?? patch.stage_slug ?? "");
+  if (isSignedDealStage(nextStage) && data) {
+    await ensureQualiopiSessionForDeal(supabase, {
+      id,
+      company_name: data.company_name,
+      quoted_course_ids: data.quoted_course_ids,
+    });
+  }
 
   return NextResponse.json({ deal: data });
 }

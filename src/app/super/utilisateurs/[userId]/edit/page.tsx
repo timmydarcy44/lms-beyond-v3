@@ -10,6 +10,7 @@ import { ArrowLeft, Save, Lock } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { updateUserDetails } from "./actions";
+import { CRM_PROFILE_ROLE_OPTIONS } from "@/lib/crm/crm-shared";
 
 type UserDetails = {
   id: string;
@@ -311,12 +312,11 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
                 value={selectedRole}
                 onChange={(e) => handleRoleChange(e.target.value)}
               >
-                <option value="student">Apprenant</option>
-                <option value="admin">Administrateur</option>
-                <option value="entreprise">Entreprise</option>
-                <option value="tutor">Tuteur</option>
-                <option value="PARTICULIER">Particulier B2C</option>
-                <option value="mentor">Mentor</option>
+                {CRM_PROFILE_ROLE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
 

@@ -5,6 +5,10 @@ import {
   shouldEnrichNutrisetDemo,
 } from "@/lib/entreprise/nutriset-demo-enrich";
 import {
+  enrichPsgDemoOverview,
+  shouldEnrichPsgDemo,
+} from "@/lib/entreprise/psg-demo-enrich";
+import {
   getEntrepriseOverviewServiceClient,
   resolveEntrepriseOverviewAccess,
 } from "@/lib/entreprise/overview-route";
@@ -394,6 +398,9 @@ export async function GET() {
     },
   };
 
+  if (shouldEnrichPsgDemo(orgId, access.viewer.email)) {
+    return NextResponse.json(enrichPsgDemoOverview(payload));
+  }
   if (shouldEnrichNutrisetDemo(orgId, access.viewer.email)) {
     return NextResponse.json(enrichNutrisetDemoOverview(payload));
   }

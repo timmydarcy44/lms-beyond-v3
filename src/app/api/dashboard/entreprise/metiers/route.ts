@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
+import {
+  NUTRISET_DEMO_METIERS,
+  NUTRISET_ORG_ID,
+  isNutrisetDemoViewer,
+} from "@/lib/entreprise/nutriset-demo-data";
+import {
+  PSG_DEMO_METIERS,
+  PSG_ORG_ID,
+  isPsgDemoViewer,
+} from "@/lib/entreprise/psg-demo-data";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +39,14 @@ export async function GET() {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
   if ("superAdminPreview" in access && access.superAdminPreview) {
-    return NextResponse.json({ roles: [] });
+    return NextResponse.json({
+      roles: NUTRISET_DEMO_METIERS.map((role) => ({
+        ...role,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })),
+      demo_enriched: true,
+    });
   }
   if ("configurationRequired" in access && access.configurationRequired) {
     return NextResponse.json({ error: "Organisation non configurée", needsOnboarding: true }, { status: 400 });
@@ -50,7 +67,7 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const roles = ((data ?? []) as JobRoleRow[]).map((role) => ({
+  let roles = ((data ?? []) as JobRoleRow[]).map((role) => ({
     id: role.id,
     title: role.title ?? "",
     description: role.description ?? "",
@@ -59,6 +76,32 @@ export async function GET() {
     created_at: role.created_at,
     updated_at: role.updated_at,
   }));
+
+  const nutrisetDemo =
+    roles.length === 0 &&
+    isNutrisetDemoViewer(access.viewer.email) &&
+    access.organizationId === NUTRISET_ORG_ID;
+  if (nutrisetDemo) {
+    roles = NUTRISET_DEMO_METIERS.map((role) => ({
+      ...role,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+    return NextResponse.json({ roles, demo_enriched: true });
+  }
+
+  const psgDemo =
+    roles.length === 0 &&
+    isPsgDemoViewer(access.viewer.email) &&
+    access.organizationId === PSG_ORG_ID;
+  if (psgDemo) {
+    roles = PSG_DEMO_METIERS.map((role) => ({
+      ...role,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+    return NextResponse.json({ roles, demo_enriched: true });
+  }
 
   return NextResponse.json({ roles });
 }

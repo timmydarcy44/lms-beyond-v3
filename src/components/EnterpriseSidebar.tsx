@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { Menu } from "lucide-react";
 import { useOptionalEnterpriseOverviewContext } from "@/components/enterprise/enterprise-overview-provider";
+import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
@@ -85,6 +86,9 @@ export function EnterpriseMobileNav() {
             <SheetHeader>
               <SheetTitle className="text-left text-white">{orgName}</SheetTitle>
             </SheetHeader>
+            <div className="mt-2 text-[10px] font-medium tracking-[0.08em] text-white/40">
+              Powered by EDGE
+            </div>
             <nav className="mt-6 flex flex-col gap-1" aria-label="Navigation entreprise mobile">
               {NAV_ITEMS.map((item) => {
                 const active =
@@ -112,12 +116,13 @@ export function EnterpriseMobileNav() {
             </nav>
           </SheetContent>
         </Sheet>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-col items-center">
           {orgLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={orgLogo} alt="" className="h-8 w-8 rounded-lg border border-white/10 bg-white object-contain p-0.5" />
           ) : null}
-          <div className="truncate text-sm font-semibold text-white">{orgName}</div>
+          <div className="mt-1 truncate text-sm font-semibold text-white">{orgName}</div>
+          <div className="text-[9px] tracking-[0.08em] text-white/40">Powered by EDGE</div>
         </div>
         <div className="w-10" />
       </div>
@@ -159,33 +164,10 @@ export default function EnterpriseSidebar() {
       style={{ background: "linear-gradient(180deg, #0f0e1a 0%, #1a1535 100%)" }}
     >
       <div className="border-b border-white/10 px-6 pb-6 pt-8">
-        {overviewData?.organisation?.logo_url ? (
-          <div className="mb-4 flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={overviewData.organisation.logo_url}
-              alt={overviewData.organisation.name || "Organisation"}
-              className="h-12 w-12 rounded-xl border border-white/10 bg-white object-contain p-1"
-            />
-            <div className="min-w-0">
-              <div className="truncate text-base font-extrabold tracking-tight text-white">
-                {overviewData.organisation.name || "Beyond"}
-              </div>
-              <div className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-white/40">
-                Enterprise · Admin
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="text-lg font-extrabold tracking-tight text-white">
-              {overviewData?.organisation?.name || "Beyond"}
-            </div>
-            <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.15em] text-white/40">
-              Enterprise · Admin
-            </div>
-          </>
-        )}
+        <OrgSidebarBrand
+          logoUrl={overviewData?.organisation?.logo_url}
+          name={overviewData?.organisation?.name || "Beyond"}
+        />
         <div className="mt-5 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white">
             {initials}

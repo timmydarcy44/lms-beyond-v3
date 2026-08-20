@@ -32,7 +32,9 @@ function SetPasswordForm() {
   const isEdgeEntreprise = flow === "entreprise";
   const isEdgeExpert = flow === "expert";
   const isInviteFlow = flow === "invite";
-  const isEdgeMarketingFlow = isEdgeParticulier || isEdgeEntreprise || isEdgeExpert || isInviteFlow;
+  const isCrmInviteFlow = flow === "crm";
+  const isEdgeMarketingFlow =
+    isEdgeParticulier || isEdgeEntreprise || isEdgeExpert || isInviteFlow || isCrmInviteFlow;
   const authQueryKey = searchParams.toString();
 
   const hintEmail = useMemo(() => {
@@ -84,6 +86,8 @@ function SetPasswordForm() {
               ? "Lien expiré ou invalide. Réinscrivez-vous sur la page EDGE pour recevoir un nouvel email."
               : isInviteFlow
                 ? "Lien expiré ou invalide. Demandez une nouvelle invitation à votre responsable RH."
+                : isCrmInviteFlow
+                  ? "Lien expiré ou invalide. Demandez un nouvel email depuis le CRM EDGE."
                 : "Lien invalide ou expiré. Demandez une nouvelle invitation.",
         );
       } catch (error) {
@@ -101,7 +105,7 @@ function SetPasswordForm() {
       cancelled = true;
       window.clearTimeout(failTimer);
     };
-  }, [supabase, authQueryKey, isEdgeParticulier, isEdgeEntreprise, isEdgeExpert, isInviteFlow]);
+  }, [supabase, authQueryKey, isEdgeParticulier, isEdgeEntreprise, isEdgeExpert, isInviteFlow, isCrmInviteFlow]);
 
   const ensureActiveSession = async () => {
     const code = searchParams.get("code");
@@ -185,6 +189,8 @@ function SetPasswordForm() {
             ? "Mot de passe créé. Bienvenue sur EDGE !"
             : isInviteFlow
               ? "Mot de passe créé. Bienvenue sur votre espace collaborateur !"
+              : isCrmInviteFlow
+                ? "Mot de passe créé. Bienvenue sur EDGE !"
               : "Mot de passe créé. Bienvenue sur Beyond !",
       );
       window.location.assign(result.destination);
@@ -214,6 +220,8 @@ function SetPasswordForm() {
             ? "Bienvenue — votre espace formateur EDGE est prêt."
           : isInviteFlow
             ? "Bienvenue — votre espace collaborateur est prêt."
+            : isCrmInviteFlow
+              ? "Bienvenue sur EDGE — votre espace est prêt."
             : "Bienvenue sur EDGE — votre cockpit est prêt.",
       );
       window.location.assign(result.destination);
@@ -243,15 +251,29 @@ function SetPasswordForm() {
   }
 
   if (bootState === "error" && isEdgeMarketingFlow) {
-    const panelVariant = isEdgeEntreprise ? "entreprise" : isEdgeExpert ? "expert" : isInviteFlow ? "invite" : "particulier";
-    const retryHref = isEdgeEntreprise ? "/entreprises/connexion" : isEdgeExpert ? "/expert/register" : isInviteFlow ? "/login" : "/particuliers#signup";
+    const panelVariant = isEdgeEntreprise
+      ? "entreprise"
+      : isEdgeExpert
+        ? "expert"
+        : isCrmInviteFlow
+          ? "crm"
+          : isInviteFlow
+            ? "invite"
+            : "particulier";
+    const retryHref = isEdgeEntreprise
+      ? "/entreprises/connexion"
+      : isEdgeExpert
+        ? "/expert/register"
+        : isInviteFlow || isCrmInviteFlow
+          ? "/login"
+          : "/particuliers#signup";
     const retryLabel = isEdgeEntreprise
       ? "Réinscription entreprise"
       : isEdgeExpert
         ? "Nouvelle candidature formateur"
-      : isInviteFlow
-        ? "Page de connexion"
-        : "Créer un nouveau compte";
+        : isInviteFlow || isCrmInviteFlow
+          ? "Page de connexion"
+          : "Créer un nouveau compte";
 
     return (
       <div

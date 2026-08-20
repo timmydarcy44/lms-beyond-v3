@@ -3,6 +3,7 @@
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { CRM_PROFILE_ROLES, type CrmProfileRole } from "@/lib/crm/crm-shared";
+import { sendCrmUserPasswordInvite } from "@/lib/crm/send-crm-user-password-invite";
 import { revalidatePath } from "next/cache";
 
 type CreateUserInput = {
@@ -25,6 +26,8 @@ function isAllowedRole(role: string): role is CrmProfileRole {
 export async function createUserAction(input: CreateUserInput): Promise<{
   success: boolean;
   userId?: string;
+  inviteSent?: boolean;
+  warning?: string;
   error?: string;
 }> {
   const hasAccess = await isSuperAdmin();
@@ -73,6 +76,7 @@ export async function createUserAction(input: CreateUserInput): Promise<{
     };
 
     let userId: string;
+    let isNewAuthUser = false;
 
     if (existingProfile) {
       userId = existingProfile.id;
@@ -87,6 +91,8 @@ export async function createUserAction(input: CreateUserInput): Promise<{
           last_name: lastName,
           phone,
           role: input.role,
+          needs_password_setup: true,
+          signup_source: "crm_edge",
         },
       });
 
@@ -99,6 +105,7 @@ export async function createUserAction(input: CreateUserInput): Promise<{
       }
 
       userId = authUser.user.id;
+      isNewAuthUser = true;
 
       const { error: profileError } = await client.from("profiles").insert({
         id: userId,
@@ -128,10 +135,28 @@ export async function createUserAction(input: CreateUserInput): Promise<{
       }
     }
 
+    let inviteSent = false;
+    let warning: string | undefined;
+
+    if (isNewAuthUser) {
+      const invite = await sendCrmUserPasswordInvite(client, {
+        email,
+        firstName,
+        role: input.role,
+      });
+      if (invite.ok) {
+        inviteSent = true;
+      } else {
+        console.error("[super-admin] password invite failed:", invite.error);
+        warning =
+          "Utilisateur créé, mais l'email de création de mot de passe n'a pas pu être envoyé.";
+      }
+    }
+
     revalidatePath("/super/utilisateurs");
     revalidatePath("/super");
 
-    return { success: true, userId };
+    return { success: true, userId, inviteSent, warning };
   } catch (error) {
     console.error("[super-admin] Unexpected error:", error);
     return { success: false, error: "Une erreur inattendue est survenue" };

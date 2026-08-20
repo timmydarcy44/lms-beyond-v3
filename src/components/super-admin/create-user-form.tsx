@@ -49,7 +49,13 @@ export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
       });
 
       if (result.success) {
-        toast.success("Utilisateur créé avec succès");
+        if (result.warning) {
+          toast.warning(result.warning);
+        } else if (result.inviteSent) {
+          toast.success("Utilisateur créé — un email de création de mot de passe a été envoyé");
+        } else {
+          toast.success("Utilisateur créé avec succès");
+        }
         router.push(`/super/utilisateurs/${result.userId}`);
       } else {
         toast.error(result.error || "Erreur lors de la création");

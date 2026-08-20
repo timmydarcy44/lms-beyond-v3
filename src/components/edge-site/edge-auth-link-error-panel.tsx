@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
 type Props = {
-  variant: "particulier" | "entreprise" | "invite" | "expert";
+  variant: "particulier" | "entreprise" | "invite" | "expert" | "crm";
   signupHref: string;
   signupLabel: string;
   initialEmail?: string;
@@ -17,12 +17,14 @@ export function EdgeAuthLinkErrorPanel({ variant, signupHref, signupLabel, initi
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   const title =
-    variant === "invite"
+    variant === "invite" || variant === "crm"
       ? "Lien d'invitation expiré"
       : "Ce lien a expiré ou a déjà été utilisé";
 
   const description =
-    variant === "invite"
+    variant === "crm"
+      ? "Les liens de création de mot de passe sont valables 24 h. Demandez un nouvel email depuis le CRM EDGE."
+      : variant === "invite"
       ? "Demandez une nouvelle invitation à votre responsable RH, ou contactez le support."
       : variant === "entreprise"
         ? "Les liens de confirmation sont valables 24 h. Demandez un nouvel email pour continuer votre inscription entreprise."

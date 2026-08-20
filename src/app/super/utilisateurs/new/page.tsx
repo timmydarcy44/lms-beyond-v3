@@ -16,8 +16,8 @@ export default async function CreateUserPage({
           {defaultRole === "admin" ? "Créer un Administrateur" : "Créer un Utilisateur"}
         </h1>
         <p className="text-sm text-gray-600">
-          Créez un contact avec email, téléphone, prénom, nom et rôle. Il apparaîtra dans la liste CRM
-          Contacts.
+          Créez un contact avec email, téléphone, prénom, nom et rôle. Un email lui permettra de créer
+          son mot de passe de façon autonome. Il apparaîtra ensuite dans la liste CRM Contacts.
         </p>
       </div>
 

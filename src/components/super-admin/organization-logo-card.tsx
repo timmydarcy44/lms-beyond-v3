@@ -35,7 +35,10 @@ export function OrganizationLogoCard({ organizationId, organizationName, initial
         body: form,
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error || "UPLOAD_FAILED");
+      if (!res.ok) {
+        const detail = [json?.error, json?.details].filter(Boolean).join(" — ");
+        throw new Error(detail || "UPLOAD_FAILED");
+      }
 
       const nextUrl = typeof json?.logo_url === "string" ? json.logo_url : null;
       setLogoUrl(nextUrl);
@@ -65,7 +68,10 @@ export function OrganizationLogoCard({ organizationId, organizationName, initial
         body: form,
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error || "REMOVE_FAILED");
+      if (!res.ok) {
+        const detail = [json?.error, json?.details].filter(Boolean).join(" — ");
+        throw new Error(detail || "REMOVE_FAILED");
+      }
       setLogoUrl(null);
       setPreview(null);
       toast.success("Logo retiré");
@@ -84,7 +90,7 @@ export function OrganizationLogoCard({ organizationId, organizationName, initial
       <CardHeader>
         <CardTitle className="text-lg text-slate-900">Logo organisation</CardTitle>
         <CardDescription>
-          Affiché en haut de la sidebar des dashboards dédiés à {organizationName}.
+          Affiché en haut de la sidebar des dashboards dédiés à {organizationName}. PNG/JPG/WebP, max 2&nbsp;Mo.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">

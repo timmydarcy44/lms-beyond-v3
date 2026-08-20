@@ -26,6 +26,15 @@ CREATE TABLE IF NOT EXISTS public.organization_features (
   UNIQUE(org_id, feature_key)
 );
 
+-- Si la table existait déjà sans ces colonnes, les ajouter (CREATE TABLE IF NOT EXISTS ne les crée pas)
+ALTER TABLE public.organization_features
+  ADD COLUMN IF NOT EXISTS enabled_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS enabled_by UUID,
+  ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS metadata JSONB,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+
 -- Index pour des recherches rapides (supprimer d'abord s'ils existent)
 DROP INDEX IF EXISTS organization_features_org_id_idx;
 DROP INDEX IF EXISTS organization_features_feature_key_idx;

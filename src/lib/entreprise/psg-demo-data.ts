@@ -5,6 +5,7 @@ export const PSG_ORG_ID = "cb2bc84a-2f19-4744-8539-d5a13a3d7006";
 export const PSG_DEMO_VIEWER_EMAILS = new Set([
   "demo@psg.fr",
   "demoapprenant@psg.fr",
+  "demoecole@psg.fr",
   "timmydarcy44@gmail.com",
   "jerome.picot@edgebs.fr",
   "contact@edgebs.fr",

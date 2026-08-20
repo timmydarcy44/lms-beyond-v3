@@ -96,7 +96,7 @@ export async function GET() {
     { data: orgPaths, error: pathsErr },
     { data: orgSessions, error: sessionsErr },
   ] = await Promise.all([
-    service.from("organizations").select("id, name, logo_url, logo").eq("id", orgId).maybeSingle(),
+    service.from("organizations").select("id, name, logo_url").eq("id", orgId).maybeSingle(),
     service
       .from("employees")
       .select("id, first_name, last_name, email, job_title, department, profile_id, created_at")
@@ -145,9 +145,9 @@ export async function GET() {
       .limit(12),
   ]);
 
-  let orgRow = org as { id: string; name?: string; logo_url?: string | null; logo?: string | null } | null;
+  let orgRow = org as { id: string; name?: string; logo_url?: string | null } | null;
   if (orgErr || !orgRow) {
-    if (orgErr && (orgErr.code === "42703" || orgErr.message?.includes("logo"))) {
+    if (orgErr && (orgErr.code === "42703" || /logo/i.test(orgErr.message))) {
       const { data: orgMinimal, error: orgMinimalErr } = await service
         .from("organizations")
         .select("id, name")
@@ -309,7 +309,7 @@ export async function GET() {
     organisation: {
       id: orgId,
       name: String(orgRow?.name ?? ""),
-      logo_url: String(orgRow?.logo_url ?? "").trim() || String(orgRow?.logo ?? "").trim() || null,
+      logo_url: String(orgRow?.logo_url ?? "").trim() || null,
     },
     kpis: {
       employees_total: employeesTotal,

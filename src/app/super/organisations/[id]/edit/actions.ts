@@ -46,18 +46,12 @@ export async function updateOrganizationAction(input: UpdateOrganizationInput): 
       payload.wants_internal_badges = input.wantsInternalBadges;
     }
     if (typeof input.logo === "string") {
-      // URL publique ou data URL stockée en legacy `logo` / `logo_url`
-      if (input.logo === "") {
-        payload.logo_url = null;
-        payload.logo = null;
-      } else {
-        payload.logo_url = input.logo;
-        payload.logo = input.logo;
-      }
+      // Uniquement logo_url (la colonne legacy `logo` n'existe plus en prod)
+      payload.logo_url = input.logo === "" ? null : input.logo;
     }
 
     let { error } = await serviceClient.from("organizations").update(payload).eq("id", input.organizationId);
-    if (error && (error.code === "42703" || error.message?.includes("logo_url"))) {
+    if (error && (error.code === "42703" || /logo_url|schema cache/i.test(error.message))) {
       const { logo_url: _ignored, ...withoutLogoUrl } = payload;
       const retry = await serviceClient
         .from("organizations")

@@ -13,23 +13,25 @@ async function updateOrgLogo(
   orgId: string,
   logoUrl: string | null,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  // Essayer logo_url + logo, puis chaque colonne seule
-  const attempts: Record<string, string | null>[] = [
-    { logo_url: logoUrl, logo: logoUrl },
-    { logo_url: logoUrl },
-    { logo: logoUrl },
-  ];
+  // La colonne legacy `logo` n'existe plus partout — n'écrire que `logo_url`.
+  const { error } = await supabase
+    .from("organizations")
+    .update({ logo_url: logoUrl })
+    .eq("id", orgId);
 
-  let lastError = "UPDATE_FAILED";
-  for (const payload of attempts) {
-    const { error } = await supabase.from("organizations").update(payload).eq("id", orgId);
-    if (!error) return { ok: true };
-    lastError = error.message;
-    if (error.code !== "42703" && !/column .* does not exist/i.test(error.message)) {
-      return { ok: false, error: lastError };
-    }
+  if (!error) return { ok: true };
+
+  // Fallback ultra-rare si seule la colonne `logo` existe encore
+  if (/logo_url|schema cache/i.test(error.message) || error.code === "42703") {
+    const { error: legacyError } = await supabase
+      .from("organizations")
+      .update({ logo: logoUrl } as Record<string, string | null>)
+      .eq("id", orgId);
+    if (!legacyError) return { ok: true };
+    return { ok: false, error: legacyError.message };
   }
-  return { ok: false, error: lastError };
+
+  return { ok: false, error: error.message };
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {

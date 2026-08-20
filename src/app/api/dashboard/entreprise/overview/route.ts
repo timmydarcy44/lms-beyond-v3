@@ -92,7 +92,7 @@ export async function GET() {
     { data: orgPaths, error: pathsErr },
     { data: orgSessions, error: sessionsErr },
   ] = await Promise.all([
-    service.from("organizations").select("id, name").eq("id", orgId).maybeSingle(),
+    service.from("organizations").select("id, name, logo_url, logo").eq("id", orgId).maybeSingle(),
     service
       .from("employees")
       .select("id, first_name, last_name, email, job_title, department, profile_id, created_at")
@@ -141,9 +141,23 @@ export async function GET() {
       .limit(12),
   ]);
 
-  if (orgErr || !org) {
-    console.error("[dashboard/entreprise/overview] org", orgErr);
-    return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 });
+  let orgRow = org as { id: string; name?: string; logo_url?: string | null; logo?: string | null } | null;
+  if (orgErr || !orgRow) {
+    if (orgErr && (orgErr.code === "42703" || orgErr.message?.includes("logo"))) {
+      const { data: orgMinimal, error: orgMinimalErr } = await service
+        .from("organizations")
+        .select("id, name")
+        .eq("id", orgId)
+        .maybeSingle();
+      if (orgMinimalErr || !orgMinimal) {
+        console.error("[dashboard/entreprise/overview] org", orgMinimalErr ?? orgErr);
+        return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 });
+      }
+      orgRow = orgMinimal;
+    } else {
+      console.error("[dashboard/entreprise/overview] org", orgErr);
+      return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 });
+    }
   }
   if (empErr) console.error("[dashboard/entreprise/overview] employees", empErr);
   if (diagErr) console.error("[dashboard/entreprise/overview] diagnostics", diagErr);
@@ -290,7 +304,8 @@ export async function GET() {
     viewer: access.viewer,
     organisation: {
       id: orgId,
-      name: String((org as { name?: string })?.name ?? ""),
+      name: String(orgRow?.name ?? ""),
+      logo_url: String(orgRow?.logo_url ?? "").trim() || String(orgRow?.logo ?? "").trim() || null,
     },
     kpis: {
       employees_total: employeesTotal,

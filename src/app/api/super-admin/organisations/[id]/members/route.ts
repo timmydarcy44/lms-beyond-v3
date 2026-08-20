@@ -17,6 +17,8 @@ type Body = {
   attachSchoolId?: boolean;
   /** défaut : apprenants → ligne school_students si attachSchoolId */
   enrollSchoolStudent?: boolean;
+  /** Admin organisation (dashboard entreprise) plutôt qu’admin école */
+  organisationAdmin?: boolean;
 };
 
 function mapBodyRole(role: Body["role"]): SuperAdminMemberApiRole {
@@ -113,7 +115,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const email = (body.email ?? "").trim().toLowerCase();
   const apiRole = mapBodyRole(body.role ?? "student");
   const tempPassword = (body.tempPassword ?? "").trim();
-  const attachSchoolId = body.attachSchoolId !== false;
+  const isOrganisationAdmin = Boolean(body.organisationAdmin) || apiRole === "admin";
+  const attachSchoolId = isOrganisationAdmin ? false : body.attachSchoolId !== false;
   const enrollSchoolStudent = body.enrollSchoolStudent;
 
   const first = (body.firstName ?? "").trim();
@@ -137,6 +140,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       tempPassword: tempPassword || undefined,
       attachSchoolId,
       enrollSchoolStudent,
+      ...(isOrganisationAdmin
+        ? {
+            profileRoleOverride: "admin" as const,
+            roleTypeOverride: "admin_hr",
+            setCompanyId: true,
+          }
+        : {}),
     });
 
     if (!result.ok) {

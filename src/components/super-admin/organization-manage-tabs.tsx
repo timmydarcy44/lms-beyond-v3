@@ -120,11 +120,19 @@ export function OrganizationManageTabs({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [tempPassword, setTempPassword] = useState("");
-  const [role, setRole] = useState<UiOrgRole>("student");
+  const [role, setRole] = useState<UiOrgRole>("admin");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [bulkPassword, setBulkPassword] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+
+  const onTabChange = (value: string) => {
+    const next = value as "admins" | "trainers" | "students";
+    setTab(next);
+    if (next === "admins") setRole("admin");
+    else if (next === "trainers") setRole("trainer");
+    else setRole("student");
+  };
 
   const rows = useMemo(() => {
     const normalized = members.map((m) => ({
@@ -150,6 +158,7 @@ export function OrganizationManageTabs({
 
     setIsSubmitting(true);
     try {
+      const isOrgAdmin = role === "admin";
       const res = await fetch(`/api/super-admin/organisations/${organizationId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -159,7 +168,9 @@ export function OrganizationManageTabs({
           firstName: firstName.trim() || undefined,
           lastName: lastName.trim() || undefined,
           tempPassword: tempPassword.trim() || undefined,
-          attachSchoolId: true,
+          // Admin organisation → espace entreprise (pas CFA / school_id)
+          attachSchoolId: isOrgAdmin ? false : true,
+          organisationAdmin: isOrgAdmin,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -178,8 +189,54 @@ export function OrganizationManageTabs({
     }
   };
 
+  const handleBulk = async () => {
+    const rows = parseOrgMemberBulkPaste(bulkText);
+    if (!rows.length) {
+      toast.error("Aucune ligne valide", {
+        description: "Collez un CSV avec au moins une colonne email.",
+      });
+      return;
+    }
+
+    setBulkSubmitting(true);
+    try {
+      const res = await fetch(`/api/super-admin/organisations/${organizationId}/members/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rows: rows.map((r) => ({
+            email: r.email,
+            first_name: r.first_name,
+            last_name: r.last_name,
+            role: r.role,
+          })),
+          tempPassword: bulkPassword.trim() || undefined,
+          attachSchoolId: true,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || "BULK_IMPORT_FAILED");
+
+      const okCount = Array.isArray(json?.results)
+        ? json.results.filter((r: { ok?: boolean }) => r.ok).length
+        : rows.length;
+      toast.success("Import terminé", {
+        description: `${okCount}/${rows.length} membre(s) traités pour ${organizationName}`,
+      });
+      setBulkText("");
+      setBulkPassword("");
+      router.refresh();
+    } catch (e) {
+      toast.error("Import impossible", {
+        description: e instanceof Error ? e.message : "Erreur lors de l'import",
+      });
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
+
   return (
-    <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="gap-6">
+    <Tabs value={tab} onValueChange={onTabChange} className="gap-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <TabsList className="rounded-full bg-slate-100">
           <TabsTrigger value="admins" className="rounded-full px-4">
@@ -232,11 +289,17 @@ export function OrganizationManageTabs({
                 onChange={(e) => setRole(e.target.value as UiOrgRole)}
                 className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
               >
-                <option value="admin">Administrateur</option>
-                <option value="trainer">Formateur</option>
-                <option value="student">Apprenant</option>
-                <option value="tutor">Tuteur</option>
-                <option value="handicap_referent">Référent handicap</option>
+                {tab === "admins" ? (
+                  <option value="admin">Administrateur organisation</option>
+                ) : (
+                  <>
+                    <option value="admin">Administrateur organisation</option>
+                    <option value="trainer">Formateur</option>
+                    <option value="student">Apprenant</option>
+                    <option value="tutor">Tuteur</option>
+                    <option value="handicap_referent">Référent handicap</option>
+                  </>
+                )}
               </select>
             </div>
             <Button

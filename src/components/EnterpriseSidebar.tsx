@@ -64,6 +64,9 @@ async function fetchViewer(): Promise<ViewerState | null> {
 export function EnterpriseMobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const overviewCtx = useOptionalEnterpriseOverviewContext();
+  const orgName = overviewCtx?.data?.organisation?.name || "Beyond Enterprise";
+  const orgLogo = overviewCtx?.data?.organisation?.logo_url || null;
 
   return (
     <div className="sticky top-0 z-40 border-b border-violet-500/15 bg-[#0f0e1a]/95 px-4 py-3 backdrop-blur-md lg:hidden">
@@ -80,7 +83,7 @@ export function EnterpriseMobileNav() {
           </SheetTrigger>
           <SheetContent side="left" className="border-violet-500/20 bg-[#0f0e1a] text-white">
             <SheetHeader>
-              <SheetTitle className="text-left text-white">Beyond Enterprise</SheetTitle>
+              <SheetTitle className="text-left text-white">{orgName}</SheetTitle>
             </SheetHeader>
             <nav className="mt-6 flex flex-col gap-1" aria-label="Navigation entreprise mobile">
               {NAV_ITEMS.map((item) => {
@@ -109,7 +112,13 @@ export function EnterpriseMobileNav() {
             </nav>
           </SheetContent>
         </Sheet>
-        <div className="min-w-0 text-sm font-semibold text-white">Beyond Enterprise</div>
+        <div className="flex min-w-0 items-center gap-2">
+          {orgLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={orgLogo} alt="" className="h-8 w-8 rounded-lg border border-white/10 bg-white object-contain p-0.5" />
+          ) : null}
+          <div className="truncate text-sm font-semibold text-white">{orgName}</div>
+        </div>
         <div className="w-10" />
       </div>
     </div>
@@ -150,10 +159,33 @@ export default function EnterpriseSidebar() {
       style={{ background: "linear-gradient(180deg, #0f0e1a 0%, #1a1535 100%)" }}
     >
       <div className="border-b border-white/10 px-6 pb-6 pt-8">
-        <div className="text-lg font-extrabold tracking-tight text-white">Beyond</div>
-        <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.15em] text-white/40">
-          Enterprise · Admin
-        </div>
+        {overviewData?.organisation?.logo_url ? (
+          <div className="mb-4 flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={overviewData.organisation.logo_url}
+              alt={overviewData.organisation.name || "Organisation"}
+              className="h-12 w-12 rounded-xl border border-white/10 bg-white object-contain p-1"
+            />
+            <div className="min-w-0">
+              <div className="truncate text-base font-extrabold tracking-tight text-white">
+                {overviewData.organisation.name || "Beyond"}
+              </div>
+              <div className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-white/40">
+                Enterprise · Admin
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="text-lg font-extrabold tracking-tight text-white">
+              {overviewData?.organisation?.name || "Beyond"}
+            </div>
+            <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.15em] text-white/40">
+              Enterprise · Admin
+            </div>
+          </>
+        )}
         <div className="mt-5 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white">
             {initials}

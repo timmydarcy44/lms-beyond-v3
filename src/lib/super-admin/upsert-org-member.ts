@@ -43,6 +43,8 @@ export type UpsertOrgMemberInput = {
   enrollSchoolStudent?: boolean;
   profileRoleOverride?: "student" | "instructor" | "admin" | "tutor" | null;
   roleTypeOverride?: string | null;
+  /** Rattache `profiles.company_id` à l’org (admin organisation / entreprise) */
+  setCompanyId?: boolean;
   phone?: string | null;
   schoolClass?: string | null;
   contractType?: string | null;
@@ -192,6 +194,7 @@ export async function upsertOrgMember(input: UpsertOrgMemberInput): Promise<Upse
     if (identity.lastName) profileBase.last_name = identity.lastName;
     if (pair.roleType) profileBase.role_type = pair.roleType;
     if (attachSchoolId) profileBase.school_id = orgId;
+    if (input.setCompanyId) profileBase.company_id = orgId;
     const phone = (input.phone ?? "").trim();
     const schoolClass = (input.schoolClass ?? "").trim();
     const contractType = (input.contractType ?? "").trim();

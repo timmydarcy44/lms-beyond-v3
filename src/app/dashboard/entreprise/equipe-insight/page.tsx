@@ -5,10 +5,10 @@ import { RadarEquipeClient } from "@/components/radar-equipe/radar-equipe-client
 
 export default function EquipeInsightPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-[#0b0a12] text-white">
       <EnterpriseSidebar />
       <main className="relative min-h-screen px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
-        <RadarEquipeClient variant="light" />
+        <RadarEquipeClient variant="dark" />
       </main>
     </div>
   );

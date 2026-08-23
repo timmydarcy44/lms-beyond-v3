@@ -42,7 +42,7 @@ export async function GET(_request: NextRequest, context: Params) {
           salary_range: demo.salary_range,
           contract_type: demo.contract_type,
           status: demo.status,
-          company_id: EDGEBS_ORG_ID,
+          school_id: EDGEBS_ORG_ID,
           created_at: new Date().toISOString(),
         },
         applications: [
@@ -71,38 +71,45 @@ export async function GET(_request: NextRequest, context: Params) {
 
   const { data: offer, error } = await service
     .from("job_offers")
-    .select("id, title, description, requirements, city, salary_range, contract_type, status, company_id, created_at")
+    .select("id, title, description, requirements, city, salary_range, contract_type, status, school_id, created_at")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error || !offer) {
     return NextResponse.json({ error: "Offre introuvable" }, { status: 404 });
   }
 
-  const ownerIds = new Set([access.organizationId, access.userId]);
-  if (!ownerIds.has(String((offer as { company_id?: string | null }).company_id ?? ""))) {
+  if (String((offer as { school_id?: string | null }).school_id ?? "") !== access.organizationId) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
   const { data: applications } = await service
-    .from("beyond_connect_applications")
+    .from("applications")
     .select(
       `
       id,
       created_at,
-      match_score,
-      profiles(
+      status,
+      profiles:talent_id(
         id,
         first_name,
         last_name
       )
     `,
     )
-    .eq("job_offer_id", id)
+    .eq("job_id", id)
     .order("created_at", { ascending: false });
 
   return NextResponse.json({
     offer,
-    applications: applications ?? [],
+    applications: (applications ?? []).map((row) => ({
+      ...row,
+      match_score: null,
+      profiles: Array.isArray((row as { profiles?: unknown }).profiles)
+        ? (row as { profiles: unknown[] }).profiles
+        : (row as { profiles?: unknown }).profiles
+          ? [(row as { profiles: unknown }).profiles]
+          : [],
+    })),
   });
 }

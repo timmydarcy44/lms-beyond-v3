@@ -25,7 +25,9 @@ import { cn } from "@/lib/utils";
 type EquipeOption = { id: string; name: string };
 
 function gapLabel(key: string) {
-  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const raw = key.replace(/_/g, " ").trim();
+  if (!raw) return raw;
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 function stressTone(signal: string | null): "emerald" | "amber" | "rose" {

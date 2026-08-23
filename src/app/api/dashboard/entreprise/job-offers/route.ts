@@ -17,9 +17,27 @@ type OfferRow = {
   salary_range: string | null;
   contract_type: string | null;
   status: string | null;
-  company_id: string | null;
+  school_id?: string | null;
   created_at: string | null;
 };
+
+function demoOffersPayload() {
+  return {
+    offers: EDGEBS_DEMO_JOB_OFFERS.map((o) => ({
+      id: o.id,
+      title: o.title,
+      description: o.description,
+      city: o.city,
+      salary_range: o.salary_range,
+      contract_type: o.contract_type,
+      status: o.status,
+      school_id: EDGEBS_ORG_ID,
+      created_at: new Date().toISOString(),
+      applications_count: o.applications_count,
+      demo: true,
+    })),
+  };
+}
 
 export async function GET() {
   const access = await resolveEntrepriseOverviewAccess();
@@ -33,16 +51,23 @@ export async function GET() {
     return NextResponse.json({ error: "Organisation non configurée", needsOnboarding: true }, { status: 400 });
   }
 
+  const edgebsDemo =
+    access.organizationId === EDGEBS_ORG_ID && isEdgebsDemoViewer(access.viewer.email);
+  // Mocks d’abord — évite les schémas hétérogènes (company_id vs school_id)
+  if (edgebsDemo) {
+    return NextResponse.json(demoOffersPayload());
+  }
+
   const service = getServiceRoleClient();
   if (!service) {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
-  const ownerIds = Array.from(new Set([access.organizationId, access.userId].filter(Boolean)));
+  // Schéma actuel: job_offers.school_id (pas company_id)
   const { data, error } = await service
     .from("job_offers")
-    .select("id, title, description, city, salary_range, contract_type, status, company_id, created_at")
-    .in("company_id", ownerIds)
+    .select("id, title, description, city, salary_range, contract_type, status, school_id, created_at")
+    .eq("school_id", access.organizationId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -50,39 +75,18 @@ export async function GET() {
   }
 
   const offers = (data ?? []) as OfferRow[];
-
-  const edgebsDemo =
-    access.organizationId === EDGEBS_ORG_ID && isEdgebsDemoViewer(access.viewer.email);
-  if (edgebsDemo && offers.length === 0) {
-    return NextResponse.json({
-      offers: EDGEBS_DEMO_JOB_OFFERS.map((o) => ({
-        id: o.id,
-        title: o.title,
-        description: o.description,
-        city: o.city,
-        salary_range: o.salary_range,
-        contract_type: o.contract_type,
-        status: o.status,
-        company_id: EDGEBS_ORG_ID,
-        created_at: new Date().toISOString(),
-        applications_count: o.applications_count,
-        demo: true,
-      })),
-    });
-  }
-
   const offerIds = offers.map((offer) => offer.id);
 
   let countsByOffer = new Map<string, number>();
   if (offerIds.length > 0) {
     const { data: applications } = await service
-      .from("beyond_connect_applications")
-      .select("job_offer_id")
-      .in("job_offer_id", offerIds);
+      .from("applications")
+      .select("job_id")
+      .in("job_id", offerIds);
 
     countsByOffer = new Map<string, number>();
     for (const row of applications ?? []) {
-      const offerId = String((row as { job_offer_id?: string | null }).job_offer_id ?? "");
+      const offerId = String((row as { job_id?: string | null }).job_id ?? "");
       if (!offerId) continue;
       countsByOffer.set(offerId, (countsByOffer.get(offerId) ?? 0) + 1);
     }

@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  EDGEBS_DEMO_JOB_OFFERS,
+  EDGEBS_ORG_ID,
+  isEdgebsDemoViewer,
+} from "@/lib/entreprise/edgebs-demo-data";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -21,6 +26,44 @@ export async function GET(_request: NextRequest, context: Params) {
   }
 
   const { id } = await context.params;
+
+  const edgebsDemo =
+    access.organizationId === EDGEBS_ORG_ID && isEdgebsDemoViewer(access.viewer.email);
+  if (edgebsDemo) {
+    const demo = EDGEBS_DEMO_JOB_OFFERS.find((o) => o.id === id);
+    if (demo) {
+      return NextResponse.json({
+        offer: {
+          id: demo.id,
+          title: demo.title,
+          description: demo.description,
+          requirements: demo.requirements,
+          city: demo.city,
+          salary_range: demo.salary_range,
+          contract_type: demo.contract_type,
+          status: demo.status,
+          company_id: EDGEBS_ORG_ID,
+          created_at: new Date().toISOString(),
+        },
+        applications: [
+          {
+            id: `${demo.id}-app-1`,
+            created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+            match_score: 86,
+            profiles: [{ id: "edgebs-cand-1", first_name: "Léa", last_name: "Bernard" }],
+          },
+          {
+            id: `${demo.id}-app-2`,
+            created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+            match_score: 74,
+            profiles: [{ id: "edgebs-cand-2", first_name: "Hugo", last_name: "Moreau" }],
+          },
+        ],
+        demo: true,
+      });
+    }
+  }
+
   const service = getServiceRoleClient();
   if (!service) {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });

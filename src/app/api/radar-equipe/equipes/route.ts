@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  EDGEBS_DEMO_EQUIPES,
+  EDGEBS_ORG_ID,
+  isEdgebsDemoViewer,
+} from "@/lib/entreprise/edgebs-demo-data";
 import { assertRadarManagerAccess } from "@/lib/radar-equipe/auth";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -16,6 +21,9 @@ export async function GET() {
     return NextResponse.json({ error: access.error }, { status: 403 });
   }
 
+  const edgebsDemo =
+    profile.company_id === EDGEBS_ORG_ID && isEdgebsDemoViewer(profile.email);
+
   const supabase = await getServerClient();
   if (!supabase) {
     return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
@@ -28,10 +36,32 @@ export async function GET() {
     .order("created_at", { ascending: true });
 
   if (error) {
+    if (edgebsDemo) {
+      return NextResponse.json({
+        equipes: EDGEBS_DEMO_EQUIPES.map((e) => ({
+          id: e.id,
+          name: e.name,
+          organisation_id: e.organisation_id,
+          manager_id: access.userId,
+        })),
+        demo: true,
+      });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   if (!equipes?.length) {
+    if (edgebsDemo) {
+      return NextResponse.json({
+        equipes: EDGEBS_DEMO_EQUIPES.map((e) => ({
+          id: e.id,
+          name: e.name,
+          organisation_id: e.organisation_id,
+          manager_id: access.userId,
+        })),
+        demo: true,
+      });
+    }
     const service = getServiceRoleClient();
     if (service) {
       const { data: created } = await service

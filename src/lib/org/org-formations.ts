@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  EDGEBS_DEMO_STATS,
+  EDGEBS_ORG_ID,
+  isEdgebsDemoViewer,
+} from "@/lib/entreprise/edgebs-demo-data";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { formatDurationFr, loadSchoolPedagogyInsights } from "@/lib/dashboard/ecole-pedagogy-data";
 import { getEdgeOnlinePublishedCourses, type EdgeOnlineCourse } from "@/lib/queries/edge-online";
@@ -257,7 +262,10 @@ export async function listOrgLearners(orgId: string): Promise<OrgLearnerOption[]
   );
 }
 
-export async function loadOrgFormationStats(orgId: string): Promise<OrgFormationStats> {
+export async function loadOrgFormationStats(
+  orgId: string,
+  options?: { viewerEmail?: string | null },
+): Promise<OrgFormationStats> {
   const empty: OrgFormationStats = {
     orgId,
     coursesCount: 0,
@@ -352,7 +360,7 @@ export async function loadOrgFormationStats(orgId: string): Promise<OrgFormation
 
   const activeLearners = new Set(insights.formationTime.map((r) => r.user_id));
 
-  return {
+  const stats: OrgFormationStats = {
     orgId,
     coursesCount: courses.length,
     publishedCount: courses.filter((c) => c.status === "published").length,
@@ -366,6 +374,40 @@ export async function loadOrgFormationStats(orgId: string): Promise<OrgFormation
     quizRecent,
     topFormations,
   };
+
+  const demo =
+    orgId === EDGEBS_ORG_ID &&
+    isEdgebsDemoViewer(options?.viewerEmail) &&
+    stats.enrollmentsCount < 5 &&
+    stats.topFormations.length === 0;
+
+  if (demo) {
+    return {
+      ...stats,
+      coursesCount: Math.max(stats.coursesCount, EDGEBS_DEMO_STATS.coursesCount),
+      publishedCount: Math.max(stats.publishedCount, EDGEBS_DEMO_STATS.publishedCount),
+      enrollmentsCount: Math.max(stats.enrollmentsCount, EDGEBS_DEMO_STATS.enrollmentsCount),
+      completedCount: Math.max(stats.completedCount, EDGEBS_DEMO_STATS.completedCount),
+      avgCompletionPercent: Math.max(
+        stats.avgCompletionPercent,
+        EDGEBS_DEMO_STATS.avgCompletionPercent,
+      ),
+      testsPassedCount: Math.max(stats.testsPassedCount, EDGEBS_DEMO_STATS.testsPassedCount),
+      totalConnectionSeconds: Math.max(
+        stats.totalConnectionSeconds,
+        EDGEBS_DEMO_STATS.totalConnectionSeconds,
+      ),
+      totalConnectionLabel: EDGEBS_DEMO_STATS.totalConnectionLabel,
+      activeLearnersCount: Math.max(
+        stats.activeLearnersCount,
+        EDGEBS_DEMO_STATS.activeLearnersCount,
+      ),
+      quizRecent: EDGEBS_DEMO_STATS.quizRecent.map((q) => ({ ...q })),
+      topFormations: EDGEBS_DEMO_STATS.topFormations.map((f) => ({ ...f })),
+    };
+  }
+
+  return stats;
 }
 
 export async function listEdgeCatalogueForOrgHub(): Promise<EdgeOnlineCourse[]> {

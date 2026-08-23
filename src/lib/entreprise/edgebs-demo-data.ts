@@ -60,6 +60,144 @@ export const EDGEBS_DEMO_METIERS = [
   },
 ] as const;
 
+/** Offres recrutement démo (UUIDs stables). */
+export const EDGEBS_DEMO_JOB_OFFERS = [
+  {
+    id: "a1b2c3d4-e5f6-4789-a012-3456789abc01",
+    title: "Account Manager B2B — EDGE Business",
+    description:
+      "Développez un portefeuille PME/ETI sur l’offre Learning EDGE. Prospection, closing et suivi client.",
+    city: "Le Havre / Remote",
+    salary_range: "38-45k",
+    contract_type: "CDI",
+    status: "published",
+    applications_count: 12,
+    requirements: "Expérience commerciale B2B, aisance CRM, appétence formation.",
+  },
+  {
+    id: "a1b2c3d4-e5f6-4789-a012-3456789abc02",
+    title: "Talent Partner RH",
+    description:
+      "Pilotez diagnostics, entretiens et parcours collaborateurs au sein d’EDGE Business Demo.",
+    city: "Paris",
+    salary_range: "42-50k",
+    contract_type: "CDI",
+    status: "published",
+    applications_count: 8,
+    requirements: "Expérience RH / talent, sensibilité data people, anglais opérationnel.",
+  },
+  {
+    id: "a1b2c3d4-e5f6-4789-a012-3456789abc03",
+    title: "Alternance — Learning Designer",
+    description:
+      "Concevez des micro-modules blended et mesurez l’impact formation avec l’équipe L&D.",
+    city: "Remote France",
+    salary_range: "Selon grille",
+    contract_type: "Alternance",
+    status: "published",
+    applications_count: 21,
+    requirements: "Formation Bac+3/5 pédagogie ou digital learning.",
+  },
+] as const;
+
+export const EDGEBS_DEMO_STATS = {
+  coursesCount: 14,
+  publishedCount: 11,
+  enrollmentsCount: 86,
+  completedCount: 29,
+  avgCompletionPercent: 67,
+  testsPassedCount: 54,
+  totalConnectionSeconds: 312 * 3600,
+  totalConnectionLabel: "312 h",
+  activeLearnersCount: 39,
+  quizRecent: [
+    {
+      id: "edgebs-quiz-1",
+      userId: "edgebs-demo-alex",
+      userName: "Alex Martin",
+      score: 82,
+      testTitle: "Quiz Modern Prospecting",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "edgebs-quiz-2",
+      userId: "edgebs-demo-clara",
+      userName: "Clara Martin",
+      score: 91,
+      testTitle: "Quiz Leadership",
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+    },
+    {
+      id: "edgebs-quiz-3",
+      userId: "edgebs-demo-julie",
+      userName: "Julie Morel",
+      score: 76,
+      testTitle: "Quiz Soft Skills",
+      createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    },
+    {
+      id: "edgebs-quiz-4",
+      userId: "edgebs-demo-thomas",
+      userName: "Thomas Leroy",
+      score: 88,
+      testTitle: "Quiz IA managers",
+      createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+    },
+  ],
+  topFormations: [
+    { courseId: "edgebs-tf-1", title: "Modern Prospecting", seconds: 86 * 3600, label: "86 h" },
+    { courseId: "edgebs-tf-2", title: "Leadership inter-équipes", seconds: 64 * 3600, label: "64 h" },
+    { courseId: "edgebs-tf-3", title: "Parcours IA Productivité", seconds: 51 * 3600, label: "51 h" },
+    { courseId: "edgebs-tf-4", title: "Soft Skills Manager", seconds: 44 * 3600, label: "44 h" },
+  ],
+} as const;
+
+export const EDGEBS_DEMO_EQUIPE_ID = "b2c3d4e5-f6a7-4890-b123-456789abcdef";
+
+export const EDGEBS_DEMO_EQUIPES = [
+  { id: EDGEBS_DEMO_EQUIPE_ID, name: "Sales & Account Management", organisation_id: EDGEBS_ORG_ID },
+  {
+    id: "b2c3d4e5-f6a7-4890-b123-456789abcde0",
+    name: "People & Learning",
+    organisation_id: EDGEBS_ORG_ID,
+  },
+] as const;
+
+export function buildEdgebsDemoEquipeAggregat(equipeId: string, organisationId: string) {
+  const now = new Date();
+  const debut = new Date(now.getTime() - 30 * 86400000);
+  return {
+    id: `edgebs-agg-${equipeId.slice(0, 8)}`,
+    equipe_id: equipeId,
+    organisation_id: organisationId,
+    periode_debut: debut.toISOString().slice(0, 10),
+    periode_fin: now.toISOString().slice(0, 10),
+    nb_membres_actifs: 12,
+    nb_diagnostics_completes: 11,
+    idmc_moyen: 68,
+    idmc_zone: "attention" as const,
+    stress_moyen: 42,
+    stress_signal: "modere" as const,
+    disc_d_pct: 22,
+    disc_i_pct: 31,
+    disc_s_pct: 28,
+    disc_c_pct: 19,
+    taux_completion_moyen: 64,
+    nb_abandons_semaine: 1,
+    connexions_hors_horaires: 4,
+    gaps_competences: ["Négociation avancée", "IA générative", "Feedback managérial"],
+    modules_recommandes: ["Modern Prospecting", "Leadership inter-équipes", "IA pour managers"],
+    nb_signaux_attention: 2,
+    nb_signaux_critique: 0,
+    insight_principal:
+      "L’équipe Sales progresse bien sur la prospection ; renforcer le coaching négociation et limiter les connexions hors horaires.",
+    cohesion_score: 74,
+    profil_manquant: "Profil Conforme (C) sous-représenté",
+    insuffisant: false,
+    created_at: now.toISOString(),
+  };
+}
+
 export const EDGEBS_DEMO_FORMATIONS = {
   presentiel: [
     {

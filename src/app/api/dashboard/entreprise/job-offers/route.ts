@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  EDGEBS_DEMO_JOB_OFFERS,
+  EDGEBS_ORG_ID,
+  isEdgebsDemoViewer,
+} from "@/lib/entreprise/edgebs-demo-data";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -45,6 +50,27 @@ export async function GET() {
   }
 
   const offers = (data ?? []) as OfferRow[];
+
+  const edgebsDemo =
+    access.organizationId === EDGEBS_ORG_ID && isEdgebsDemoViewer(access.viewer.email);
+  if (edgebsDemo && offers.length === 0) {
+    return NextResponse.json({
+      offers: EDGEBS_DEMO_JOB_OFFERS.map((o) => ({
+        id: o.id,
+        title: o.title,
+        description: o.description,
+        city: o.city,
+        salary_range: o.salary_range,
+        contract_type: o.contract_type,
+        status: o.status,
+        company_id: EDGEBS_ORG_ID,
+        created_at: new Date().toISOString(),
+        applications_count: o.applications_count,
+        demo: true,
+      })),
+    });
+  }
+
   const offerIds = offers.map((offer) => offer.id);
 
   let countsByOffer = new Map<string, number>();

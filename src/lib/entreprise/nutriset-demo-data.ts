@@ -14,6 +14,7 @@ export const SALARIE_DEMO_EMAILS = new Set([
   "timmydarcy44@gmail.com",
   "jerome.picot@edgebs.fr",
   "demoapprenant@psg.fr",
+  "demosalarie@edgebs.fr",
 ]);
 
 export function isNutrisetDemoViewer(email: string | null | undefined): boolean {
@@ -119,18 +120,29 @@ export function buildSalarieDemoSnapshot(email: string) {
   const lower = email.toLowerCase();
   const isJerome = lower.includes("jerome");
   const isPsgApprenant = lower.includes("demoapprenant@psg.fr");
+  const isEdgebsSalarie = lower.includes("demosalarie@edgebs.fr");
   return {
-    firstName: isPsgApprenant ? "Demo" : isJerome ? "Jerome" : "Timmy",
-    jobTitle: isPsgApprenant
-      ? "Analyste performance"
-      : isJerome
-        ? "Responsable Commercial"
-        : "Directeur Associé",
+    firstName: isEdgebsSalarie
+      ? "Alex"
+      : isPsgApprenant
+        ? "Demo"
+        : isJerome
+          ? "Jerome"
+          : "Timmy",
+    jobTitle: isEdgebsSalarie
+      ? "Account Manager"
+      : isPsgApprenant
+        ? "Analyste performance"
+        : isJerome
+          ? "Responsable Commercial"
+          : "Directeur Associé",
     discScores: isJerome
       ? { D: 72, I: 64, S: 38, C: 41 }
       : isPsgApprenant
         ? { D: 61, I: 58, S: 44, C: 67 }
-        : { D: 58, I: 71, S: 45, C: 52 },
+        : isEdgebsSalarie
+          ? { D: 64, I: 72, S: 48, C: 55 }
+          : { D: 58, I: 71, S: 45, C: 52 },
     idmcAxes: isJerome
       ? {
           attention: 62,
@@ -149,32 +161,48 @@ export function buildSalarieDemoSnapshot(email: string) {
             spatial: 71,
             global: 72,
           }
-        : {
-            attention: 68,
-            memoire: 61,
-            logique: 74,
-            verbal: 70,
-            spatial: 59,
-            global: 69,
-          },
+        : isEdgebsSalarie
+          ? {
+              attention: 66,
+              memoire: 63,
+              logique: 72,
+              verbal: 74,
+              spatial: 58,
+              global: 68,
+            }
+          : {
+              attention: 68,
+              memoire: 61,
+              logique: 74,
+              verbal: 70,
+              spatial: 59,
+              global: 69,
+            },
     softSkillsRadar: [
-      { skill: "Leadership", score: isPsgApprenant ? 71 : isJerome ? 74 : 78 },
-      { skill: "Communication", score: isPsgApprenant ? 68 : isJerome ? 81 : 76 },
-      { skill: "Collaboration", score: isPsgApprenant ? 80 : isJerome ? 69 : 82 },
-      { skill: "Résilience", score: isPsgApprenant ? 76 : isJerome ? 72 : 70 },
-      { skill: "Créativité", score: isPsgApprenant ? 64 : isJerome ? 61 : 73 },
-      { skill: "Organisation", score: isPsgApprenant ? 79 : isJerome ? 77 : 68 },
+      { skill: "Leadership", score: isEdgebsSalarie ? 70 : isPsgApprenant ? 71 : isJerome ? 74 : 78 },
+      { skill: "Communication", score: isEdgebsSalarie ? 82 : isPsgApprenant ? 68 : isJerome ? 81 : 76 },
+      { skill: "Collaboration", score: isEdgebsSalarie ? 76 : isPsgApprenant ? 80 : isJerome ? 69 : 82 },
+      { skill: "Résilience", score: isEdgebsSalarie ? 73 : isPsgApprenant ? 76 : isJerome ? 72 : 70 },
+      { skill: "Créativité", score: isEdgebsSalarie ? 67 : isPsgApprenant ? 64 : isJerome ? 61 : 73 },
+      { skill: "Organisation", score: isEdgebsSalarie ? 71 : isPsgApprenant ? 79 : isJerome ? 77 : 68 },
     ],
-    aiAnalysis: isPsgApprenant
-      ? "Profil performance sport : conformité et logique élevées, forte organisation et collaboration. Priorité : communication media et leadership transverse staff Academy."
-      : isJerome
-        ? "Profil orienté performance commerciale : dominance DISC élevée, logique IDMC solide, communication et résilience au-dessus de la moyenne. Priorité : renforcer le leadership d’équipe et l’IA métier."
-        : "Profil stratégique équilibré : influence et logique élevées, forte coopération. Priorité : structurer le pilotage compétences et accélérer les parcours Learning+.",
+    aiAnalysis: isEdgebsSalarie
+      ? "Profil commercial EDGE : influence et communication élevées, logique solide. Priorité : structurer le pipeline et accélérer Modern Prospecting + IA métier."
+      : isPsgApprenant
+        ? "Profil performance sport : conformité et logique élevées, forte organisation et collaboration. Priorité : communication media et leadership transverse staff Academy."
+        : isJerome
+          ? "Profil orienté performance commerciale : dominance DISC élevée, logique IDMC solide, communication et résilience au-dessus de la moyenne. Priorité : renforcer le leadership d’équipe et l’IA métier."
+          : "Profil stratégique équilibré : influence et logique élevées, forte coopération. Priorité : structurer le pilotage compétences et accélérer les parcours Learning+.",
   };
 }
 
 export function buildSalarieDemoMissions(email: string) {
-  const owner = email.toLowerCase().includes("jerome") ? "Jerome" : "Timmy";
+  const lower = email.toLowerCase();
+  const owner = lower.includes("demosalarie@edgebs.fr")
+    ? "Alex"
+    : lower.includes("jerome")
+      ? "Jerome"
+      : "Timmy";
   const base = Date.now();
   return [
     {

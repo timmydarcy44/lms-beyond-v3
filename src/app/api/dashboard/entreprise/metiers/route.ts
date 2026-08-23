@@ -6,6 +6,11 @@ import {
   isNutrisetDemoViewer,
 } from "@/lib/entreprise/nutriset-demo-data";
 import {
+  EDGEBS_DEMO_METIERS,
+  EDGEBS_ORG_ID,
+  isEdgebsDemoViewer,
+} from "@/lib/entreprise/edgebs-demo-data";
+import {
   PSG_DEMO_METIERS,
   PSG_ORG_ID,
   isPsgDemoViewer,
@@ -76,6 +81,19 @@ export async function GET() {
     created_at: role.created_at,
     updated_at: role.updated_at,
   }));
+
+  const edgebsDemo =
+    roles.length === 0 &&
+    isEdgebsDemoViewer(access.viewer.email) &&
+    access.organizationId === EDGEBS_ORG_ID;
+  if (edgebsDemo) {
+    roles = EDGEBS_DEMO_METIERS.map((role) => ({
+      ...role,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+    return NextResponse.json({ roles, demo_enriched: true });
+  }
 
   const nutrisetDemo =
     roles.length === 0 &&

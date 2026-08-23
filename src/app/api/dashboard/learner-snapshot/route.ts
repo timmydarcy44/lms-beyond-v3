@@ -96,9 +96,11 @@ export async function GET() {
   }
 
   const isPsgApprenant = email.includes("demoapprenant@psg.fr");
+  const isEdgebsSalarie = email.includes("demosalarie@edgebs.fr");
+  const forceDemoSnapshot = isPsgApprenant || isEdgebsSalarie;
   const needsDemo =
     isSalarieDemoEmail(email) &&
-    (isPsgApprenant ||
+    (forceDemoSnapshot ||
       !discScores ||
       !idmcAxes ||
       !(softSkillsRadar && softSkillsRadar.length > 0));
@@ -113,9 +115,9 @@ export async function GET() {
       userId,
       firstName: firstName || demo.firstName,
       jobTitle: employee?.job_title ?? profileRow?.poste_actuel ?? demo.jobTitle,
-      discScores: isPsgApprenant ? demo.discScores : discScores ?? demo.discScores,
-      idmcAxes: isPsgApprenant ? demo.idmcAxes : idmcAxes ?? demo.idmcAxes,
-      softSkillsRadar: isPsgApprenant
+      discScores: forceDemoSnapshot ? demo.discScores : discScores ?? demo.discScores,
+      idmcAxes: forceDemoSnapshot ? demo.idmcAxes : idmcAxes ?? demo.idmcAxes,
+      softSkillsRadar: forceDemoSnapshot
         ? demoSoft
         : softSkillsRadar && softSkillsRadar.length > 0
           ? softSkillsRadar

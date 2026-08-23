@@ -5,6 +5,10 @@ import {
   shouldEnrichNutrisetDemo,
 } from "@/lib/entreprise/nutriset-demo-enrich";
 import {
+  enrichEdgebsDemoOverview,
+  shouldEnrichEdgebsDemo,
+} from "@/lib/entreprise/edgebs-demo-enrich";
+import {
   enrichPsgDemoOverview,
   shouldEnrichPsgDemo,
 } from "@/lib/entreprise/psg-demo-enrich";
@@ -400,6 +404,9 @@ export async function GET() {
 
   if (shouldEnrichPsgDemo(orgId, access.viewer.email)) {
     return NextResponse.json(enrichPsgDemoOverview(payload));
+  }
+  if (shouldEnrichEdgebsDemo(orgId, access.viewer.email)) {
+    return NextResponse.json(enrichEdgebsDemoOverview(payload));
   }
   if (shouldEnrichNutrisetDemo(orgId, access.viewer.email)) {
     return NextResponse.json(enrichNutrisetDemoOverview(payload));

@@ -16,9 +16,10 @@ export default async function EntrepriseFormationsCataloguePage() {
       <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <OrgFormationsShell
           basePath="/dashboard/entreprise/formations"
-          title="Catalogue EDGE"
+          title="Formations EDGE"
           lead="Parcourez les formations EDGE Online. Vos formations internes restent privées à l’entreprise."
           variant="dark"
+          hideTabs
         >
           <OrgCatalogueEdgeView courses={courses} variant="dark" />
         </OrgFormationsShell>

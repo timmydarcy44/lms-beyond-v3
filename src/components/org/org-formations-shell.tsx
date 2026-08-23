@@ -20,12 +20,15 @@ export function OrgFormationsShell({
   title = "Formations",
   lead,
   variant = "light",
+  hideTabs = false,
   children,
 }: {
   basePath: string;
   title?: string;
   lead?: string;
   variant?: "light" | "dark";
+  /** Quand la nav est dans la sidebar (entreprise), masquer les pills. */
+  hideTabs?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -50,38 +53,40 @@ export function OrgFormationsShell({
         ) : null}
       </header>
 
-      <nav
-        className={cn(
-          "mb-8 flex flex-wrap gap-2 border-b pb-3",
-          isDark ? "border-white/10" : "border-black/10",
-        )}
-        aria-label="Sous-onglets formations"
-      >
-        {TABS.map((tab) => {
-          const href = `${basePath}/${tab.segment}`;
-          const active = pathname === href || pathname.startsWith(`${href}/`);
-          const Icon = tab.icon;
-          return (
-            <Link
-              key={tab.id}
-              href={href}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
-                active
-                  ? isDark
-                    ? "bg-white text-black"
-                    : "bg-[#1D1D1F] text-white"
-                  : isDark
-                    ? "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-                    : "bg-black/[0.04] text-black/60 hover:bg-black/[0.08] hover:text-black",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
+      {!hideTabs ? (
+        <nav
+          className={cn(
+            "mb-8 flex flex-wrap gap-2 border-b pb-3",
+            isDark ? "border-white/10" : "border-black/10",
+          )}
+          aria-label="Sous-onglets formations"
+        >
+          {TABS.map((tab) => {
+            const href = `${basePath}/${tab.segment}`;
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.id}
+                href={href}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                  active
+                    ? isDark
+                      ? "bg-white text-black"
+                      : "bg-[#1D1D1F] text-white"
+                    : isDark
+                      ? "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                      : "bg-black/[0.04] text-black/60 hover:bg-black/[0.08] hover:text-black",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
 
       {children}
     </div>

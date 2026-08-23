@@ -17,8 +17,9 @@ export default async function EntrepriseFormationsGererPage() {
         <OrgFormationsShell
           basePath="/dashboard/entreprise/formations"
           title="Gérer mes formations"
-          lead="Formations internes. Assignation limitée aux salariés de votre organisation."
+          lead="Formations internes. Assignez-les aux collaborateurs de votre organisation."
           variant="dark"
+          hideTabs
         >
           <OrgFormationsManageView
             courses={courses}
@@ -26,6 +27,7 @@ export default async function EntrepriseFormationsGererPage() {
             orgId={orgId}
             basePath="/dashboard/entreprise/formations"
             variant="dark"
+            assigneeLabel="collaborateur"
           />
         </OrgFormationsShell>
       </main>

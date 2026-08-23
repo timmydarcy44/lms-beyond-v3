@@ -31,18 +31,28 @@ export function OrgFormationsManageView({
   orgId,
   basePath,
   variant = "light",
+  assigneeLabel = "membre",
 }: {
   courses: OrgFormationListItem[];
   learners: OrgLearnerOption[];
   orgId: string;
   basePath: string;
   variant?: "light" | "dark";
+  /** Libellé UI : apprenant / collaborateur */
+  assigneeLabel?: "membre" | "collaborateur" | "apprenant";
 }) {
   const isDark = variant === "dark";
   const [openFor, setOpenFor] = useState<OrgFormationListItem | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const plural =
+    assigneeLabel === "collaborateur"
+      ? "collaborateurs"
+      : assigneeLabel === "apprenant"
+        ? "apprenants"
+        : "membres";
 
   const filteredLearners = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -52,6 +62,16 @@ export function OrgFormationsManageView({
       return hay.includes(q);
     });
   }, [learners, query]);
+
+  const editHref = (courseId: string) => {
+    const params = new URLSearchParams({
+      lockedOrgId: orgId,
+      courseId,
+      returnTo: `${basePath}/gerer`,
+      embed: "1",
+    });
+    return `/dashboard/formateur/formations/new?${params.toString()}`;
+  };
 
   const assign = () => {
     if (!openFor || selected.size === 0) return;
@@ -69,8 +89,8 @@ export function OrgFormationsManageView({
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || "Assignation impossible");
-        toast.success("Apprenants assignés", {
-          description: `${selected.size} membre(s) de votre organisation.`,
+        toast.success("Assignation réussie", {
+          description: `${selected.size} ${plural} de votre organisation.`,
         });
         setOpenFor(null);
         setSelected(new Set());
@@ -136,7 +156,7 @@ export function OrgFormationsManageView({
                 Assigner
               </Button>
               <Button asChild className="rounded-full">
-                <Link href={`${basePath}/creer?courseId=${course.id}`}>Éditer</Link>
+                <Link href={editHref(course.id)}>Éditer</Link>
               </Button>
             </div>
           </div>
@@ -148,18 +168,21 @@ export function OrgFormationsManageView({
           <DialogHeader>
             <DialogTitle>Assigner — {openFor?.title}</DialogTitle>
             <DialogDescription>
-              Uniquement les apprenants / salariés de votre organisation.
+              Sélectionnez les {plural} de votre organisation à inscrire.
             </DialogDescription>
           </DialogHeader>
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher un membre…"
+            placeholder={`Rechercher un ${assigneeLabel}…`}
             className="mb-3"
           />
           <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
             {filteredLearners.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun membre trouvé.</p>
+              <p className="text-sm text-muted-foreground">
+                Aucun {assigneeLabel} trouvé. Ajoutez des salariés à votre organisation pour les
+                assigner.
+              </p>
             ) : (
               filteredLearners.map((learner) => {
                 const checked = selected.has(learner.id);

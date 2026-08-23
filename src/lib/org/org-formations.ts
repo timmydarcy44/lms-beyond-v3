@@ -171,68 +171,90 @@ export async function listOrgLearners(orgId: string): Promise<OrgLearnerOption[]
   const client = await getServiceRoleClientOrFallback();
   if (!client) return [];
 
-  const { data: memberships, error } = await client
+  const byId = new Map<string, OrgLearnerOption>();
+
+  const addProfile = (row: {
+    id?: string;
+    full_name?: string | null;
+    email?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    role?: string | null;
+    role_type?: string | null;
+  }) => {
+    const id = String(row.id ?? "").trim();
+    if (!id || byId.has(id)) return;
+    const role = String(row.role ?? "")
+      .trim()
+      .toLowerCase();
+    const roleType = String(row.role_type ?? "")
+      .trim()
+      .toLowerCase();
+    if (STAFF_ROLES.includes(role) || STAFF_ROLES.includes(roleType)) return;
+    const composed = [row.first_name, row.last_name].filter(Boolean).join(" ").trim();
+    byId.set(id, {
+      id,
+      full_name: (row.full_name ?? composed) || null,
+      email: row.email ?? null,
+    });
+  };
+
+  const { data: memberships } = await client
     .from("org_memberships")
     .select("user_id, role")
     .eq("org_id", orgId)
     .limit(2000);
 
-  if (error) {
-    console.error("[org-formations] learners memberships:", error.message);
-    return [];
+  const memberIds = (memberships ?? [])
+    .filter((m) => {
+      const role = String((m as { role?: string }).role ?? "")
+        .trim()
+        .toLowerCase();
+      return LEARNER_ROLES.includes(role) || role === "" || !STAFF_ROLES.includes(role);
+    })
+    .map((m) => String((m as { user_id?: string }).user_id ?? ""))
+    .filter(Boolean);
+
+  // Collaborateurs entreprise (employees.profile_id)
+  const { data: employees } = await client
+    .from("employees")
+    .select("profile_id, email, first_name, last_name")
+    .eq("company_id", orgId)
+    .not("profile_id", "is", null)
+    .limit(2000);
+
+  for (const emp of employees ?? []) {
+    const pid = String((emp as { profile_id?: string }).profile_id ?? "").trim();
+    if (pid) memberIds.push(pid);
   }
 
-  const userIds = Array.from(
-    new Set(
-      (memberships ?? [])
-        .filter((m) => {
-          const role = String((m as { role?: string }).role ?? "")
-            .trim()
-            .toLowerCase();
-          return LEARNER_ROLES.includes(role) || role === "" || !STAFF_ROLES.includes(role);
-        })
-        .map((m) => String((m as { user_id?: string }).user_id ?? ""))
-        .filter(Boolean),
-    ),
-  );
-
-  // Complément : profils rattachés via school_id / company_id
+  // Profils rattachés via school_id / company_id
   const { data: linkedProfiles } = await client
     .from("profiles")
-    .select("id")
+    .select("id, full_name, email, first_name, last_name, role, role_type")
     .or(`school_id.eq.${orgId},company_id.eq.${orgId}`)
     .limit(2000);
 
   for (const p of linkedProfiles ?? []) {
-    const id = String((p as { id?: string }).id ?? "");
-    if (id) userIds.push(id);
+    addProfile(p as Parameters<typeof addProfile>[0]);
   }
 
-  const uniqueIds = Array.from(new Set(userIds));
-  if (!uniqueIds.length) return [];
+  const uniqueIds = Array.from(new Set(memberIds));
+  if (uniqueIds.length) {
+    const { data: profiles } = await client
+      .from("profiles")
+      .select("id, full_name, email, first_name, last_name, role, role_type")
+      .in("id", uniqueIds)
+      .limit(2000);
+    for (const p of profiles ?? []) {
+      addProfile(p as Parameters<typeof addProfile>[0]);
+    }
+  }
 
-  const { data: profiles } = await client
-    .from("profiles")
-    .select("id, full_name, email, first_name, last_name")
-    .in("id", uniqueIds)
-    .order("full_name", { ascending: true })
-    .limit(2000);
-
-  return (profiles ?? []).map((p) => {
-    const row = p as {
-      id: string;
-      full_name?: string | null;
-      email?: string | null;
-      first_name?: string | null;
-      last_name?: string | null;
-    };
-    const composed = [row.first_name, row.last_name].filter(Boolean).join(" ").trim();
-    return {
-      id: row.id,
-      full_name: (row.full_name ?? composed) || null,
-      email: row.email ?? null,
-    };
-  });
+  // Fallback: employees sans profil encore — non assignables via enrollments (user_id requis)
+  return Array.from(byId.values()).sort((a, b) =>
+    String(a.full_name || a.email || "").localeCompare(String(b.full_name || b.email || ""), "fr"),
+  );
 }
 
 export async function loadOrgFormationStats(orgId: string): Promise<OrgFormationStats> {

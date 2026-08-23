@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (courseIdToUse) {
       const { data: existingCourse, error: checkError } = await supabase
         .from("courses")
-        .select("id, title, creator_id, owner_id")
+        .select("id, title, creator_id, owner_id, org_id")
         .eq("id", courseIdToUse)
         .maybeSingle();
       
@@ -93,8 +93,16 @@ export async function POST(request: NextRequest) {
         }, { status: 404 });
       }
       
-      // Vérifier que l'utilisateur est le créateur/propriétaire
-      if (existingCourse.creator_id !== user.id && existingCourse.owner_id !== user.id) {
+      // Créateur/propriétaire OU staff de l’organisation du cours
+      const isOwner =
+        existingCourse.creator_id === user.id || existingCourse.owner_id === user.id;
+      const courseOrgId = String((existingCourse as { org_id?: string | null }).org_id ?? "").trim();
+      let canManageOrg = false;
+      if (!isOwner && courseOrgId) {
+        const { userCanManageOrgFormations } = await import("@/lib/org/org-formations");
+        canManageOrg = await userCanManageOrgFormations(supabase, user.id, courseOrgId);
+      }
+      if (!isOwner && !canManageOrg) {
         console.error("[api/courses] Utilisateur non autorisé à modifier ce course:", {
           courseId: courseIdToUse,
           courseCreatorId: existingCourse.creator_id,
@@ -166,7 +174,7 @@ export async function POST(request: NextRequest) {
       // (La vérification a déjà été faite plus haut)
       const { data: existingCourse, error: checkError } = await supabase
         .from("courses")
-        .select("creator_id, owner_id, id")
+        .select("creator_id, owner_id, id, org_id")
         .eq("id", courseIdToUse)
         .single();
 
@@ -176,9 +184,16 @@ export async function POST(request: NextRequest) {
       }
 
       if (existingCourse) {
-        const isOwner = existingCourse.creator_id === user.id || 
-                       (existingCourse.owner_id && existingCourse.owner_id === user.id);
-        if (!isOwner) {
+        const isOwner =
+          existingCourse.creator_id === user.id ||
+          (existingCourse.owner_id && existingCourse.owner_id === user.id);
+        const courseOrgId = String((existingCourse as { org_id?: string | null }).org_id ?? "").trim();
+        let canManageOrg = false;
+        if (!isOwner && courseOrgId) {
+          const { userCanManageOrgFormations } = await import("@/lib/org/org-formations");
+          canManageOrg = await userCanManageOrgFormations(supabase, user.id, courseOrgId);
+        }
+        if (!isOwner && !canManageOrg) {
           return NextResponse.json({ error: "Vous n'êtes pas autorisé à modifier cette formation" }, { status: 403 });
         }
       }

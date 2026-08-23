@@ -17,11 +17,15 @@ import {
   Users,
   Zap,
   BadgeCheck,
+  BookOpen,
+  LineChart,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard/entreprise", icon: LayoutDashboard },
   { label: "Salariés", href: "/dashboard/entreprise/salaries", icon: Users },
+  { label: "Formations", href: "/dashboard/entreprise/formations", icon: BookOpen },
+  { label: "Statistiques", href: "/dashboard/entreprise/statistiques", icon: LineChart },
   { label: "Équipe Insight", href: "/dashboard/entreprise/equipe-insight", icon: BarChart3 },
   { label: "Mes Offres", href: "/dashboard/entreprise/offres", icon: Briefcase },
   { label: "Métiers", href: "/dashboard/entreprise/metiers", icon: BadgeCheck },

@@ -18,6 +18,8 @@ import {
   MonitorPlay,
   ShieldCheck,
   Users,
+  BookOpen,
+  BarChart3,
 } from "lucide-react";
 import { HandicapSidebarNav } from "@/components/beyond-connect/handicap-sidebar-nav";
 import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
@@ -83,6 +85,17 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
     { label: "Mes apprenants", href: "/dashboard/ecole/apprenants", icon: Users },
     { label: "Mes classes", href: "/dashboard/ecole/classes", icon: GraduationCap },
     { label: "Offres", href: "/dashboard/ecole/offres", icon: Briefcase },
+    {
+      label: "Formations",
+      href: "/dashboard/ecole/formations",
+      icon: BookOpen,
+      activePathPrefix: "/dashboard/ecole/formations",
+    },
+    {
+      label: "Statistiques",
+      href: "/dashboard/ecole/statistiques",
+      icon: BarChart3,
+    },
     {
       label: "Suivi formations",
       href: "/dashboard/ecole/formations-suivi",

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { listOrgLearners, userCanManageOrgFormations } from "@/lib/org/org-formations";
+import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 type Body = {
   courseId: string;
@@ -8,7 +9,9 @@ type Body = {
   learnerIds?: string[];
   userId?: string;
   userIds?: string[];
-  learnerEmail?: string; // legacy
+  learnerEmail?: string;
+  /** Restrict targets to members of orgId / course.org_id */
+  scopeOrgOnly?: boolean;
 };
 
 function uniqStrings(values: Array<string | null | undefined>) {
@@ -36,100 +39,132 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Payload invalide" }, { status: 400 });
   }
 
-  console.log("PAYLOAD REÇU:", body);
-
   const courseId = String(body.courseId ?? "").trim();
   if (!courseId) return NextResponse.json({ success: false, error: "courseId requis" }, { status: 400 });
   if (!isUuid(courseId)) return NextResponse.json({ error: "Invalid IDs" }, { status: 400 });
 
-  // Vérifier que le cours appartient au formateur (owner_id ou creator_id).
-  const { data: course, error: courseError } = await supabase
+  const service = await getServiceRoleClientOrFallback();
+  const readClient = service ?? supabase;
+
+  const { data: course, error: courseError } = await readClient
     .from("courses")
-    .select("id, owner_id, creator_id")
+    .select("id, owner_id, creator_id, org_id")
     .eq("id", courseId)
     .maybeSingle();
 
   if (courseError || !course) return NextResponse.json({ success: false, error: "Formation introuvable" }, { status: 404 });
-  const isOwner = String(course.owner_id ?? "") === user.id || String(course.creator_id ?? "") === user.id;
-  if (!isOwner) return NextResponse.json({ success: false, error: "Accès refusé" }, { status: 403 });
+
+  const courseOrgId = String((course as { org_id?: string | null }).org_id ?? "").trim() || null;
+  const isOwner =
+    String(course.owner_id ?? "") === user.id || String(course.creator_id ?? "") === user.id;
+  const canManageOrg = courseOrgId
+    ? await userCanManageOrgFormations(readClient, user.id, courseOrgId)
+    : false;
+  if (!isOwner && !canManageOrg) {
+    return NextResponse.json({ success: false, error: "Accès refusé" }, { status: 403 });
+  }
+
+  const scopeOrgId =
+    (typeof body.orgId === "string" && body.orgId.trim() ? body.orgId.trim() : null) || courseOrgId;
+  const scopeOrgOnly = Boolean(body.scopeOrgOnly) || Boolean(courseOrgId);
+
+  if (scopeOrgOnly && scopeOrgId && courseOrgId && scopeOrgId !== courseOrgId) {
+    return NextResponse.json(
+      { success: false, error: "Cette formation est réservée à son organisation." },
+      { status: 403 },
+    );
+  }
 
   const targetUserIds = new Set<string>();
 
-  // Groupes → group_members.user_id
-  const groupIds = Array.isArray(body.groupIds) ? body.groupIds.map(String).filter(Boolean) : [];
-  if (groupIds.length) {
-    const { data: members, error } = await supabase
-      .from("group_members")
-      .select("user_id, group_id")
-      .in("group_id", groupIds);
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    (members ?? []).forEach((m: any) => {
-      if (m?.user_id) targetUserIds.add(String(m.user_id));
-    });
+  if (!scopeOrgOnly) {
+    const groupIds = Array.isArray(body.groupIds) ? body.groupIds.map(String).filter(Boolean) : [];
+    if (groupIds.length) {
+      const { data: members, error } = await supabase
+        .from("group_members")
+        .select("user_id, group_id")
+        .in("group_id", groupIds);
+      if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      (members ?? []).forEach((m: { user_id?: string }) => {
+        if (m?.user_id) targetUserIds.add(String(m.user_id));
+      });
+    }
   }
 
-  // Organisation → org_memberships (role learner)
   const orgId = typeof body.orgId === "string" && body.orgId.trim() ? body.orgId.trim() : null;
-  if (orgId) {
+  if (orgId && !scopeOrgOnly) {
     const { data: orgMembers, error } = await supabase
       .from("org_memberships")
       .select("user_id, role")
       .eq("org_id", orgId)
       .eq("role", "learner");
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    (orgMembers ?? []).forEach((m: any) => {
+    (orgMembers ?? []).forEach((m: { user_id?: string }) => {
       if (m?.user_id) targetUserIds.add(String(m.user_id));
     });
   }
 
-  // Individuel → sélection directe d’IDs
   const learnerIds = Array.isArray(body.learnerIds) ? uniqStrings(body.learnerIds) : [];
   learnerIds.forEach((id) => targetUserIds.add(id));
 
-  // Standard: userId / userIds
   const userId = typeof body.userId === "string" ? body.userId.trim() : "";
   if (userId) targetUserIds.add(userId);
   const userIdsFromBody = Array.isArray(body.userIds) ? uniqStrings(body.userIds) : [];
   userIdsFromBody.forEach((id) => targetUserIds.add(id));
 
-  // Legacy (email) → profiles via email
-  const learnerEmail = typeof body.learnerEmail === "string" ? body.learnerEmail.trim() : "";
-  if (learnerEmail) {
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .ilike("email", learnerEmail)
-      .maybeSingle();
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    if (!profile?.id) return NextResponse.json({ success: false, error: "Apprenant introuvable" }, { status: 404 });
-    targetUserIds.add(String(profile.id));
+  if (!scopeOrgOnly) {
+    const learnerEmail = typeof body.learnerEmail === "string" ? body.learnerEmail.trim() : "";
+    if (learnerEmail) {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .ilike("email", learnerEmail)
+        .maybeSingle();
+      if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      if (!profile?.id) return NextResponse.json({ success: false, error: "Apprenant introuvable" }, { status: 404 });
+      targetUserIds.add(String(profile.id));
+    }
   }
 
-  const userIds = Array.from(targetUserIds);
+  let userIds = Array.from(targetUserIds);
   if (userIds.length === 0) {
     return NextResponse.json({ success: false, error: "Aucune cible sélectionnée" }, { status: 400 });
   }
   const invalidUserId = userIds.find((id) => !isUuid(String(id)));
   if (invalidUserId) return NextResponse.json({ error: "Invalid IDs" }, { status: 400 });
 
+  if (scopeOrgOnly && scopeOrgId) {
+    const allowed = new Set((await listOrgLearners(scopeOrgId)).map((l) => l.id));
+    userIds = userIds.filter((id) => allowed.has(id));
+    if (!userIds.length) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Aucun membre de votre organisation dans la sélection.",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
   const rows = userIds.map((uid) => ({
     course_id: courseId,
     user_id: uid,
   }));
 
-  console.log("Tentative insertion enrollments:", { user_id: userIds[0], course_id: courseId });
-
-  const result = await supabase.from("enrollments").upsert(rows as any, { onConflict: "user_id,course_id" });
+  const writeClient = service ?? supabase;
+  const result = await writeClient.from("enrollments").upsert(rows as never, { onConflict: "user_id,course_id" });
 
   if (result.error) {
-    // Fallback: certaines versions utilisent `course_enrollments`
     const courseEnrollments = userIds.map((uid) => ({
       course_id: courseId,
       user_id: uid,
     }));
-    let alt = await supabase.from("course_enrollments").upsert(courseEnrollments as any, { onConflict: "user_id,course_id" });
+    let alt = await writeClient
+      .from("course_enrollments")
+      .upsert(courseEnrollments as never, { onConflict: "user_id,course_id" });
     if (alt.error) {
-      alt = await supabase.from("course_enrollments").insert(courseEnrollments as any);
+      alt = await writeClient.from("course_enrollments").insert(courseEnrollments as never);
     }
     if (!alt.error) {
       return NextResponse.json({
@@ -138,7 +173,7 @@ export async function POST(req: Request) {
         message: `${userIds.length} apprenant(s) assigné(s) à la formation.`,
       });
     }
-    const code = (result.error as any)?.code ? String((result.error as any).code) : "";
+    const code = (result.error as { code?: string })?.code ? String((result.error as { code?: string }).code) : "";
     const msg = code === "42501" ? "Erreur de permissions (RLS)" : result.error.message;
     return NextResponse.json({ success: false, error: msg, code }, { status: 400 });
   }
@@ -149,4 +184,3 @@ export async function POST(req: Request) {
     message: `${userIds.length} apprenant(s) assigné(s) à la formation.`,
   });
 }
-

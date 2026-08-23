@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { Suspense, useEffect, useMemo, useState, useTransition } from "react";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, Sparkles } from "lucide-react";
 import { X, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Settings } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -152,7 +152,18 @@ function prepareSnapshotForSaveApi(snapshot: CourseBuilderSnapshot): CourseBuild
   return copy;
 }
 
-export function FormateurFormationBuilderWhite({ initialCourseId }: { initialCourseId?: string }) {
+export function FormateurFormationBuilderWhite({
+  initialCourseId,
+  lockedOrgId = null,
+  returnTo = null,
+  embed = false,
+}: {
+  initialCourseId?: string;
+  /** Force la formation dans cette organisation (création école / entreprise). */
+  lockedOrgId?: string | null;
+  returnTo?: string | null;
+  embed?: boolean;
+}) {
   const router = useRouter();
   const updateGeneral = useCourseBuilder((s) => s.updateGeneral);
   const snapshot = useCourseBuilder((s) => s.snapshot);
@@ -160,6 +171,15 @@ export function FormateurFormationBuilderWhite({ initialCourseId }: { initialCou
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const isTimmy = String(userEmail ?? "").trim().toLowerCase() === "timmydarcy44@gmail.com";
+  const orgIsLocked = Boolean(lockedOrgId && lockedOrgId.trim());
+
+  useEffect(() => {
+    if (!orgIsLocked || !lockedOrgId) return;
+    updateGeneral({
+      assigned_organization_id: lockedOrgId,
+      assignment_type: "organization",
+    } as any);
+  }, [lockedOrgId, orgIsLocked, updateGeneral]);
 
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; slug?: string }>>([]);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
@@ -239,11 +259,17 @@ export function FormateurFormationBuilderWhite({ initialCourseId }: { initialCou
       })
       .then((data) => {
         const list = Array.isArray(data?.organizations) ? data.organizations : [];
+        if (lockedOrgId && !list.some((o: { id?: string }) => o?.id === lockedOrgId)) {
+          list.unshift({ id: lockedOrgId, name: "Mon organisation" });
+        }
         setOrganizations(list);
       })
-      .catch(() => setOrganizations([]))
+      .catch(() => {
+        if (lockedOrgId) setOrganizations([{ id: lockedOrgId, name: "Mon organisation" }]);
+        else setOrganizations([]);
+      })
       .finally(() => setOrganizationsLoading(false));
-  }, [organizations.length, organizationsLoading]);
+  }, [organizations.length, organizationsLoading, lockedOrgId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -858,7 +884,7 @@ export function FormateurFormationBuilderWhite({ initialCourseId }: { initialCou
       if (data?.courseId && !courseId) {
         const id = String(data.courseId);
         setCourseId(id);
-        router.replace(`/dashboard/formateur/formations/${id}`);
+        router.replace(returnTo || `/dashboard/formateur/formations/${id}`);
         // On navigue → overlay inutile ici.
         toast.success("Enregistré", {
           description: data?.message || "Le cours a été sauvegardé.",
@@ -1110,11 +1136,11 @@ export function FormateurFormationBuilderWhite({ initialCourseId }: { initialCou
         <div className="mx-4 overflow-hidden rounded-2xl bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] shadow-lg backdrop-blur-md">
           <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-4 py-3 md:px-8">
             <a
-              href="/dashboard/formateur"
+              href={returnTo || "/dashboard/formateur"}
               className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
-              ← Retour au Dashboard
+              {embed || returnTo ? "← Retour" : "← Retour au Dashboard"}
             </a>
             <div className="truncate text-sm font-semibold text-white/85">
               {snapshot.general.title?.trim() ? snapshot.general.title.trim() : "Nouvelle formation"}
@@ -1297,19 +1323,20 @@ export function FormateurFormationBuilderWhite({ initialCourseId }: { initialCou
                 className="rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
               />
               <div className="mb-6 grid gap-4 sm:grid-cols-3">
-                {isTimmy ? (
+                {isTimmy || orgIsLocked ? (
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-black/40">
-                      Assigner à une Galaxie
+                      {orgIsLocked ? "Organisation (verrouillée)" : "Assigner à une Galaxie"}
                     </label>
                     <select
                       className="w-full rounded-xl border border-slate-200/90 bg-white p-3 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300/40 disabled:opacity-60"
-                      value={String((snapshot.general as any)?.assigned_organization_id ?? "")}
+                      value={String((snapshot.general as any)?.assigned_organization_id ?? lockedOrgId ?? "")}
                       onChange={(e) => {
+                        if (orgIsLocked) return;
                         const v = e.target.value;
                         updateGeneral({ assigned_organization_id: v || null } as any);
                       }}
-                      disabled={organizationsLoading}
+                      disabled={organizationsLoading || orgIsLocked}
                     >
                       <option value="">{organizationsLoading ? "Chargement…" : "—"}</option>
                       {organizations.map((o) => (
@@ -1838,7 +1865,7 @@ export function FormateurFormationBuilderWhite({ initialCourseId }: { initialCou
               className="mt-10 h-12 w-full rounded-full bg-slate-950 text-sm font-semibold text-white hover:bg-slate-900"
               onClick={() => {
                 setPublishSuccessOpen(false);
-                router.push("/dashboard/formateur/formations");
+                router.push(returnTo || "/dashboard/formateur/formations");
               }}
             >
               {successOverlayStatus === "published" ? "Accéder au catalogue" : "Retour au catalogue"}
@@ -1850,8 +1877,28 @@ export function FormateurFormationBuilderWhite({ initialCourseId }: { initialCou
   );
 }
 
+function FormateurNewFormationPageClient() {
+  const searchParams = useSearchParams();
+  const lockedOrgId = searchParams.get("lockedOrgId");
+  const returnTo = searchParams.get("returnTo");
+  const embed = searchParams.get("embed") === "1";
+  const courseId = searchParams.get("courseId") || undefined;
+  return (
+    <FormateurFormationBuilderWhite
+      initialCourseId={courseId}
+      lockedOrgId={lockedOrgId}
+      returnTo={returnTo}
+      embed={embed}
+    />
+  );
+}
+
 export default function FormateurNewFormationPage() {
-  return <FormateurFormationBuilderWhite />;
+  return (
+    <Suspense fallback={<div className="p-8 text-sm text-slate-500">Chargement du builder…</div>}>
+      <FormateurNewFormationPageClient />
+    </Suspense>
+  );
 }
 
 function ObjectivesMirror({ objectifs }: { objectifs: string[] }) {

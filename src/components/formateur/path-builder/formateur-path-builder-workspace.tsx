@@ -27,12 +27,21 @@ type Props = {
     builderSnapshot?: unknown;
     orgId?: string | null;
   };
+  /** Verrouille le parcours sur une organisation (dashboard école / entreprise). */
+  lockedOrgId?: string | null;
 };
 
-export function FormateurPathBuilderWorkspace({ library, organizations, initialData }: Props) {
-  const orgOptions = useMemo(() => organizations ?? [], [organizations]);
+export function FormateurPathBuilderWorkspace({ library, organizations, initialData, lockedOrgId = null }: Props) {
+  const orgOptions = useMemo(() => {
+    if (lockedOrgId) {
+      const locked = (organizations ?? []).filter((o) => o.id === lockedOrgId);
+      if (locked.length) return locked;
+      return [{ id: lockedOrgId, name: "Mon organisation" } as FormateurOrganization];
+    }
+    return organizations ?? [];
+  }, [organizations, lockedOrgId]);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(
-    initialData?.orgId ?? orgOptions[0]?.id ?? null,
+    lockedOrgId ?? initialData?.orgId ?? orgOptions[0]?.id ?? null,
   );
 
   const additionalFields = useCallback(() => {
@@ -42,9 +51,16 @@ export function FormateurPathBuilderWorkspace({ library, organizations, initialD
   const extraHeaderSlot = orgOptions.length ? (
     <div className="flex items-center gap-2">
       <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">
-        Galaxie
+        {lockedOrgId ? "Organisation" : "Galaxie"}
       </span>
-      <Select value={selectedOrgId ?? ""} onValueChange={(v) => setSelectedOrgId(v || null)}>
+      <Select
+        value={selectedOrgId ?? ""}
+        onValueChange={(v) => {
+          if (lockedOrgId) return;
+          setSelectedOrgId(v || null);
+        }}
+        disabled={Boolean(lockedOrgId)}
+      >
         <SelectTrigger className="h-9 min-w-[220px] rounded-full border-slate-200 bg-white text-left text-sm text-slate-900">
           <SelectValue placeholder="Sélectionner une galaxie" />
         </SelectTrigger>

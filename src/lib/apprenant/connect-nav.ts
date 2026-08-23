@@ -10,6 +10,8 @@ import {
 
   BookMarked,
 
+  BookOpen,
+
   Award,
 
   Wallet,
@@ -68,6 +70,7 @@ const BASE: ApprenantNavItem[] = [
     icon: Share2,
     action: "share-profile",
   },
+  { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
   { label: "EDGE Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
   { label: "Parcours", href: PARCOURS_HREF, icon: BookMarked },
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
@@ -106,27 +109,18 @@ export function buildApprenantNavItems(
   const items = [...BASE];
 
   if (hasOrganisation) {
-
-    items.splice(6, 0, {
-
+    const walletIdx = items.findIndex((i) => i.href === "/dashboard/apprenant/badges");
+    const insertAt = walletIdx >= 0 ? walletIdx : items.length;
+    items.splice(insertAt, 0, {
       label: "Mes missions",
-
       href: "/dashboard/apprenant/missions",
-
       icon: ClipboardList,
-
     });
-
-    items.splice(7, 0, {
-
+    items.splice(insertAt + 1, 0, {
       label: "Mon entreprise",
-
       href: "/dashboard/apprenant/entreprise",
-
       icon: Building2,
-
     });
-
   }
 
   return items;

@@ -158,12 +158,12 @@ export function buildSalarieDemoSnapshot(email: string) {
             global: 69,
           },
     softSkillsRadar: [
-      { title: "Leadership", score: isPsgApprenant ? 71 : isJerome ? 74 : 78 },
-      { title: "Communication", score: isPsgApprenant ? 68 : isJerome ? 81 : 76 },
-      { title: "Collaboration", score: isPsgApprenant ? 80 : isJerome ? 69 : 82 },
-      { title: "Résilience", score: isPsgApprenant ? 76 : isJerome ? 72 : 70 },
-      { title: "Créativité", score: isPsgApprenant ? 64 : isJerome ? 61 : 73 },
-      { title: "Organisation", score: isPsgApprenant ? 79 : isJerome ? 77 : 68 },
+      { skill: "Leadership", score: isPsgApprenant ? 71 : isJerome ? 74 : 78 },
+      { skill: "Communication", score: isPsgApprenant ? 68 : isJerome ? 81 : 76 },
+      { skill: "Collaboration", score: isPsgApprenant ? 80 : isJerome ? 69 : 82 },
+      { skill: "Résilience", score: isPsgApprenant ? 76 : isJerome ? 72 : 70 },
+      { skill: "Créativité", score: isPsgApprenant ? 64 : isJerome ? 61 : 73 },
+      { skill: "Organisation", score: isPsgApprenant ? 79 : isJerome ? 77 : 68 },
     ],
     aiAnalysis: isPsgApprenant
       ? "Profil performance sport : conformité et logique élevées, forte organisation et collaboration. Priorité : communication media et leadership transverse staff Academy."
@@ -217,25 +217,35 @@ export function buildSalarieDemoMissions(email: string) {
 }
 
 export function buildSalarieDemoBadges() {
+  const share = (id: string) => `https://edgebs.fr/badgeclasses/${id}/criteria`;
   return {
     earnedOpenBadges: [
       {
         id: "a1000001-0000-4000-8000-000000000001",
         name: "Profil comportemental EDGE",
-        image_url: null,
+        imageUrl: null,
+        level: 1,
         awardedAt: new Date().toISOString(),
+        shareUrl: share("a1000001-0000-4000-8000-000000000001"),
+        linkedInShareUrl: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(share("a1000001-0000-4000-8000-000000000001"))}`,
       },
       {
         id: "demo-badge-communication",
         name: "Communication",
-        image_url: null,
+        imageUrl: null,
+        level: 1,
         awardedAt: new Date(Date.now() - 10 * 86400000).toISOString(),
+        shareUrl: share("demo-badge-communication"),
+        linkedInShareUrl: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(share("demo-badge-communication"))}`,
       },
       {
         id: "demo-badge-prospecting",
         name: "Modern Prospecting",
-        image_url: null,
+        imageUrl: null,
+        level: 1,
         awardedAt: new Date(Date.now() - 20 * 86400000).toISOString(),
+        shareUrl: share("demo-badge-prospecting"),
+        linkedInShareUrl: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(share("demo-badge-prospecting"))}`,
       },
     ],
     visibleOpenBadges: [

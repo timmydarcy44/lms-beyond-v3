@@ -59,6 +59,10 @@ export function SalarieDashboardClient() {
   const discScores = snapshot?.discScores ?? null;
   const idmcAxes = snapshot?.idmcAxes ?? null;
   const softSkillsRadar = snapshot?.softSkillsRadar ?? [];
+  const correlatedFromSnapshot =
+    typeof (snapshot as { aiAnalysis?: unknown } | null)?.aiAnalysis === "string"
+      ? String((snapshot as { aiAnalysis?: string }).aiAnalysis)
+      : null;
 
   useEffect(() => {
     void refresh();
@@ -131,13 +135,19 @@ export function SalarieDashboardClient() {
           setCorrelatedAnalysis(raw);
         }
       } catch {
-        if (!cancelled) setCorrelatedAnalysis(null);
+        if (!cancelled) setCorrelatedAnalysis(correlatedFromSnapshot);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [snapshot?.userId, supabase]);
+  }, [snapshot?.userId, supabase, correlatedFromSnapshot]);
+
+  useEffect(() => {
+    if (!correlatedAnalysis && correlatedFromSnapshot) {
+      setCorrelatedAnalysis(correlatedFromSnapshot);
+    }
+  }, [correlatedAnalysis, correlatedFromSnapshot]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowPlan(true), 0);

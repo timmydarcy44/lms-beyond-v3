@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import {
+  buildSalarieDemoSnapshot,
+  isSalarieDemoEmail,
+} from "@/lib/entreprise/nutriset-demo-data";
+import {
   collectLearnerProfileCandidates,
   fetchDiscScoresForCandidates,
   fetchIdmcAxesForCandidates,
@@ -88,6 +92,36 @@ export async function GET() {
       userId,
       email,
       profileIds,
+    });
+  }
+
+  const isPsgApprenant = email.includes("demoapprenant@psg.fr");
+  const needsDemo =
+    isSalarieDemoEmail(email) &&
+    (isPsgApprenant ||
+      !discScores ||
+      !idmcAxes ||
+      !(softSkillsRadar && softSkillsRadar.length > 0));
+
+  if (needsDemo) {
+    const demo = buildSalarieDemoSnapshot(email);
+    const demoSoft = demo.softSkillsRadar.map((row) => ({
+      skill: String((row as { skill?: string; title?: string }).skill ?? (row as { title?: string }).title ?? "").trim(),
+      score: Number((row as { score?: number }).score) || 0,
+    })).filter((r) => r.skill);
+    return NextResponse.json({
+      userId,
+      firstName: firstName || demo.firstName,
+      jobTitle: employee?.job_title ?? profileRow?.poste_actuel ?? demo.jobTitle,
+      discScores: isPsgApprenant ? demo.discScores : discScores ?? demo.discScores,
+      idmcAxes: isPsgApprenant ? demo.idmcAxes : idmcAxes ?? demo.idmcAxes,
+      softSkillsRadar: isPsgApprenant
+        ? demoSoft
+        : softSkillsRadar && softSkillsRadar.length > 0
+          ? softSkillsRadar
+          : demoSoft,
+      demo_enriched: true,
+      aiAnalysis: demo.aiAnalysis,
     });
   }
 

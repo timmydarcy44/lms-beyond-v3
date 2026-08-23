@@ -71,9 +71,13 @@ export async function resolveSalarieOrgEdgeOffer(
     .maybeSingle();
 
   const offer = parseOrgEdgeOffer(org?.edge_offer);
+  // Démo présentation : Nutriset Learning+ même si la colonne n'est pas encore renseignée.
+  const effectiveOffer =
+    offer ??
+    (organizationId === "163c8e74-b648-4792-9167-2b4031a888b3" ? "learning-plus" : null);
   return {
     organizationId,
-    offer,
-    hasLibraryAccess: orgHasLearningPlusLibrary(offer),
+    offer: effectiveOffer,
+    hasLibraryAccess: orgHasLearningPlusLibrary(effectiveOffer),
   };
 }

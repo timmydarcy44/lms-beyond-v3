@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  buildSalarieDemoMissions,
+  isSalarieDemoEmail,
+} from "@/lib/entreprise/nutriset-demo-data";
+import { buildPsgApprenantDemoMissions } from "@/lib/entreprise/psg-demo-data";
 import { resolveEmployeeIdForUser } from "@/lib/learner/resolve-employee-id";
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -51,6 +56,20 @@ export async function GET() {
   const result = await fetchMissionsForUser(user.id, user.email);
   if (result.error) {
     return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
+  if (
+    result.missions.length === 0 &&
+    isSalarieDemoEmail(user.email)
+  ) {
+    const email = String(user.email ?? "").toLowerCase();
+    const missions = email.includes("demoapprenant@psg.fr")
+      ? buildPsgApprenantDemoMissions()
+      : buildSalarieDemoMissions(email);
+    return NextResponse.json({
+      missions,
+      demo_enriched: true,
+    });
   }
 
   return NextResponse.json({ missions: result.missions });

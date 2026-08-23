@@ -22,6 +22,7 @@ import { ConnectCockpitBackdrop } from "@/components/apprenant/connect-cockpit-b
 import { ApprenantShellProvider } from "@/components/apprenant/apprenant-shell-context";
 import { LearnerSnapshotProvider } from "@/components/learner/learner-snapshot-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
 
 type ProfileSnippet = {
   first_name?: string | null;
@@ -66,6 +67,29 @@ export function ApprenantConnectShell({
   const [isParticulier, setIsParticulier] = useState(false);
   const [snippetVersion, setSnippetVersion] = useState(0);
   const [shareCopied, setShareCopied] = useState(false);
+  const [orgBranding, setOrgBranding] = useState<{ logoUrl: string | null; name: string | null }>({
+    logoUrl: null,
+    name: null,
+  });
+
+  useEffect(() => {
+    if (variant === "jessica") return;
+    let cancelled = false;
+    fetch("/api/organizations/nav-branding", { credentials: "include" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const b = json?.branding;
+        setOrgBranding({
+          logoUrl: typeof b?.logoUrl === "string" && b.logoUrl.trim() ? b.logoUrl.trim() : null,
+          name: typeof b?.name === "string" && b.name.trim() ? b.name.trim() : null,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [variant]);
 
   const loadProfile = useCallback(async () => {
     if (!supabase) return;
@@ -296,8 +320,24 @@ export function ApprenantConnectShell({
               isSidebarCollapsed ? "w-[76px]" : "w-[240px]"
             }`}
           >
-            <div className={`flex h-[52px] shrink-0 items-center px-2.5 ${theme.sidebarHeaderBorder}`}>
-              {!isSidebarCollapsed ? (
+            <div
+              className={`flex shrink-0 items-center px-2.5 ${theme.sidebarHeaderBorder} ${
+                orgBranding.logoUrl && variant !== "jessica"
+                  ? isSidebarCollapsed
+                    ? "h-auto flex-col gap-2 py-3"
+                    : "h-auto flex-col gap-2 py-4"
+                  : "h-[52px]"
+              }`}
+            >
+              {orgBranding.logoUrl && variant !== "jessica" ? (
+                <div className="w-full">
+                  <OrgSidebarBrand
+                    logoUrl={orgBranding.logoUrl}
+                    name={orgBranding.name || theme.brandTitle}
+                    compact={isSidebarCollapsed}
+                  />
+                </div>
+              ) : !isSidebarCollapsed ? (
                 <div className="min-w-0 flex-1 leading-tight">
                   <div
                     className={`text-[11px] font-semibold tracking-[0.18em] ${
@@ -320,7 +360,9 @@ export function ApprenantConnectShell({
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                className={theme.collapseBtnClass}
+                className={`${theme.collapseBtnClass} ${
+                  orgBranding.logoUrl && variant !== "jessica" ? "self-end" : ""
+                }`}
                 aria-label={isSidebarCollapsed ? "Développer le menu" : "Réduire le menu"}
               >
                 {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

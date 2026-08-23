@@ -9,7 +9,7 @@ import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise
 import { EntrepriseQuickAccess } from "@/components/enterprise/entreprise-quick-access";
 import { EnterpriseLoadingOverlay } from "@/components/enterprise/enterprise-loading-overlay";
 import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
-import { filterRealEntrepriseEmployees } from "@/lib/entreprise/demo-employee-id";
+import { filterRealEntrepriseEmployees, isEnrichedDemoEmployeeId } from "@/lib/entreprise/demo-employee-id";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
 
@@ -166,10 +166,11 @@ export function EnterpriseDashboardV2() {
     return Array.from(set).sort();
   }, [overview?.employees]);
 
-  const realEmployees = useMemo(
-    () => filterRealEntrepriseEmployees(overview?.employees ?? []),
-    [overview?.employees],
-  );
+  const realEmployees = useMemo(() => {
+    const all = overview?.employees ?? [];
+    if (overview?.demo_enriched) return all;
+    return filterRealEntrepriseEmployees(all);
+  }, [overview?.employees, overview?.demo_enriched]);
 
   const kpis = overview?.kpis;
   const attentionSignals = overview?.kpis?.attention_signals;
@@ -318,31 +319,36 @@ export function EnterpriseDashboardV2() {
                       {realEmployees.map((c) => {
                         const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ") || "—";
                         const color = avatarColor(fullName);
+                        const isDemo = isEnrichedDemoEmployeeId(c.id);
+                        const identity = (
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={cn(
+                                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
+                                color,
+                              )}
+                            >
+                              {initials(c.first_name, c.last_name)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">{fullName}</p>
+                              <p className="text-xs text-gray-400">{c.job_title ?? "—"}</p>
+                              {c.idmc_score != null ? (
+                                <p className={cn("text-xs font-semibold", idmcTextClass(c.idmc_score))}>
+                                  IDMC {Math.round(c.idmc_score)}%
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
                         return (
                           <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                             <td className="px-4 py-3">
-                              <Link
-                                href={`/dashboard/entreprise/salaries/${c.id}`}
-                                className="flex items-center gap-3"
-                              >
-                                <div
-                                  className={cn(
-                                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
-                                    color,
-                                  )}
-                                >
-                                  {initials(c.first_name, c.last_name)}
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-900">{fullName}</p>
-                                  <p className="text-xs text-gray-400">{c.job_title ?? "—"}</p>
-                                  {c.idmc_score != null ? (
-                                    <p className={cn("text-xs font-semibold", idmcTextClass(c.idmc_score))}>
-                                      IDMC {Math.round(c.idmc_score)}%
-                                    </p>
-                                  ) : null}
-                                </div>
-                              </Link>
+                              {isDemo ? (
+                                identity
+                              ) : (
+                                <Link href={`/dashboard/entreprise/salaries/${c.id}`}>{identity}</Link>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-gray-600">{c.department ?? "—"}</td>
                             <td className="px-4 py-3">
@@ -370,12 +376,16 @@ export function EnterpriseDashboardV2() {
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <Link
-                                href={`/dashboard/entreprise/salaries/${c.id}`}
-                                className="text-sm font-semibold text-violet-600 hover:text-violet-500"
-                              >
-                                Voir →
-                              </Link>
+                              {isDemo ? (
+                                <span className="text-sm font-medium text-gray-400">Démo</span>
+                              ) : (
+                                <Link
+                                  href={`/dashboard/entreprise/salaries/${c.id}`}
+                                  className="text-sm font-semibold text-violet-600 hover:text-violet-500"
+                                >
+                                  Voir →
+                                </Link>
+                              )}
                             </td>
                           </tr>
                         );

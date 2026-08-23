@@ -1060,41 +1060,52 @@ export async function getLearnerContentDetail(
   category: LearnerCategory,
   slug: string
 ): Promise<{ card: LearnerCard; detail: LearnerDetail; related?: LearnerCard[] } | null> {
-  const supabase = await getServerClient();
+  const normalizedSlug = decodeURIComponent(String(slug ?? "")).trim();
+  console.log("[apprenant] getLearnerContentDetail enter", { category, slug: normalizedSlug });
+
+  // Service role d’abord (catalogue EDGE Online / galaxy) — évite 404 RLS après listing public.
+  let supabase = getServiceRoleClient();
+  if (!supabase) {
+    try {
+      supabase = await getServerClient();
+    } catch (e) {
+      console.error("[apprenant] getLearnerContentDetail: no supabase client", e);
+      return null;
+    }
+  }
   if (!supabase) return null;
 
   try {
     // Pour les formations (courses), récupérer depuis le slug ou l'ID
     if (category === "formations") {
-      console.log("[apprenant] Fetching course with slug/id:", slug);
+      console.log("[apprenant] Fetching course with slug/id:", normalizedSlug);
       
       // Essayer d'abord avec le slug
       let { data: course, error: courseError } = await supabase
         .from("courses")
         .select("id, title, description, slug, cover_image, builder_snapshot, status, validated_by_peer_id")
-        .eq("slug", slug)
+        .eq("slug", normalizedSlug)
         .maybeSingle();
 
       // Si pas trouvé par slug, essayer par ID
-      if (!course && !courseError && slug.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        console.log("[apprenant] Slug looks like UUID, trying by ID:", slug);
+      if (!course && !courseError && normalizedSlug.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        console.log("[apprenant] Slug looks like UUID, trying by ID:", normalizedSlug);
         const result = await supabase
           .from("courses")
           .select("id, title, description, slug, cover_image, builder_snapshot, status, validated_by_peer_id")
-          .eq("id", slug)
+          .eq("id", normalizedSlug)
           .maybeSingle();
         course = result.data;
         courseError = result.error;
       }
 
-      // Si toujours pas trouvé, essayer avec published = true en plus (pour les courses du catalogue)
+      // Si toujours pas trouvé, essayer sans filtre status (évite `.or()` fragile sur slugs)
       if (!course && !courseError) {
-        console.log("[apprenant] Trying with published check:", slug);
+        console.log("[apprenant] Retry course by slug only:", normalizedSlug);
         const result = await supabase
           .from("courses")
           .select("id, title, description, slug, cover_image, builder_snapshot, status, validated_by_peer_id")
-          .or(`slug.eq.${slug},id.eq.${slug}`)
-          .or("status.eq.published,status.eq.active,status.is.null")
+          .eq("slug", normalizedSlug)
           .maybeSingle();
         course = result.data;
         courseError = result.error;
@@ -1107,13 +1118,13 @@ export async function getLearnerContentDetail(
           code: courseError?.code,
           details: courseError?.details,
           hint: courseError?.hint,
-          slug,
+          slug: normalizedSlug,
         });
         return null;
       }
 
       if (!course) {
-        console.error("[apprenant] Course not found for slug/id:", slug);
+        console.error("[apprenant] Course not found for slug/id:", normalizedSlug);
     return null;
   }
 

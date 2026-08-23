@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  buildSalarieDemoBadges,
+  isSalarieDemoEmail,
+} from "@/lib/entreprise/nutriset-demo-data";
+import { buildPsgApprenantDemoBadges } from "@/lib/entreprise/psg-demo-data";
+import {
   getLearnerEarnedOpenBadges,
   getLearnerVisibleOpenBadges,
 } from "@/lib/openbadges/learner-visible-badges";
@@ -37,5 +42,20 @@ export async function GET() {
     getLearnerVisibleOpenBadges(user.id, orgId, orgIds),
   ]);
 
-  return NextResponse.json({ earnedOpenBadges, visibleOpenBadges });
+  const earned = Array.isArray(earnedOpenBadges) ? earnedOpenBadges : [];
+  const visible = Array.isArray(visibleOpenBadges) ? visibleOpenBadges : [];
+
+  if (isSalarieDemoEmail(user.email) && earned.length === 0) {
+    const email = String(user.email ?? "").toLowerCase();
+    const demo = email.includes("demoapprenant@psg.fr")
+      ? buildPsgApprenantDemoBadges()
+      : buildSalarieDemoBadges();
+    return NextResponse.json({
+      earnedOpenBadges: demo.earnedOpenBadges,
+      visibleOpenBadges: visible.length > 0 ? visible : demo.visibleOpenBadges,
+      demo_enriched: true,
+    });
+  }
+
+  return NextResponse.json({ earnedOpenBadges: earned, visibleOpenBadges: visible });
 }

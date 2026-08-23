@@ -50,10 +50,11 @@ export default function SalariesPage() {
   }, [organisationId, supabase]);
 
   const effectiveOrgId = organisationId ?? clientOrgId;
-  const employees = useMemo(
-    () => filterRealEntrepriseEmployees(data?.employees ?? []),
-    [data?.employees],
-  );
+  const employees = useMemo(() => {
+    const all = data?.employees ?? [];
+    if ((data as { demo_enriched?: boolean } | null)?.demo_enriched) return all;
+    return filterRealEntrepriseEmployees(all);
+  }, [data]);
   const kpis = data?.kpis;
   const diagnosticsCompleted = kpis?.diagnostics_completed ?? 0;
 

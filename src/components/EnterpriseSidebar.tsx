@@ -119,7 +119,7 @@ export function EnterpriseMobileNav() {
         <div className="flex min-w-0 flex-col items-center">
           {orgLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={orgLogo} alt="" className="h-8 w-8 rounded-lg border border-white/10 bg-white object-contain p-0.5" />
+            <img src={orgLogo} alt="" className="h-8 w-8 rounded-lg object-contain" />
           ) : null}
           <div className="mt-1 truncate text-sm font-semibold text-white">{orgName}</div>
           <div className="text-[9px] tracking-[0.08em] text-white/40">Powered by EDGE</div>

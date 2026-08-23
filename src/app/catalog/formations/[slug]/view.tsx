@@ -877,16 +877,30 @@ export const FormationDetailView = ({
     : "/catalog";
 
   useEffect(() => {
-    // Sur le catalogue public (/catalog/...), on garde le branding de la formation
-    // (builder snapshot). Le branding basé sur les org memberships de l'utilisateur
-    // peut être incohérent (ex: utilisateur Playmakers sur une formation EDGE Lab).
-    if (!effectiveOrgSlug) {
-      setBrandLogoFromSession(null);
-      return;
-    }
-
+    // Préfère le logo de l'organisation de l'utilisateur connecté (PSG, etc.),
+    // y compris sur EDGE Online (orgSlug = edgelab pour le catalogue cours).
     let cancel = false;
     (async () => {
+      try {
+        const res = await fetch("/api/organizations/nav-branding", { credentials: "include" });
+        const json = await res.json().catch(() => null);
+        const logoUrl =
+          typeof json?.branding?.logoUrl === "string" && json.branding.logoUrl.trim()
+            ? json.branding.logoUrl.trim()
+            : null;
+        if (logoUrl && !cancel) {
+          setBrandLogoFromSession(logoUrl);
+          return;
+        }
+      } catch {
+        /* fallback memberships below */
+      }
+
+      if (!effectiveOrgSlug) {
+        if (!cancel) setBrandLogoFromSession(null);
+        return;
+      }
+
       try {
         const {
           data: { user },

@@ -297,6 +297,10 @@ export function LessonPlayView({
   const [mounted, setMounted] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [showLearningStrategyModal, setShowLearningStrategyModal] = useState(false);
+  const [orgBranding, setOrgBranding] = useState<{ logoUrl: string | null; name: string | null }>({
+    logoUrl: null,
+    name: null,
+  });
   const [showMobileOutline, setShowMobileOutline] = useState(false);
   const [showCertificationOverlay, setShowCertificationOverlay] = useState(false);
   const [badgeConfig, setBadgeConfig] = useState<any>(null);
@@ -458,6 +462,24 @@ export function LessonPlayView({
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/organizations/nav-branding", { credentials: "include" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const b = json?.branding;
+        setOrgBranding({
+          logoUrl: typeof b?.logoUrl === "string" && b.logoUrl.trim() ? b.logoUrl.trim() : null,
+          name: typeof b?.name === "string" && b.name.trim() ? b.name.trim() : null,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -1087,6 +1109,40 @@ export function LessonPlayView({
         isJessica ? "text-slate-900" : "text-white",
       )}
     >
+      {orgBranding.logoUrl || orgBranding.name ? (
+        <div className="flex flex-col items-center gap-2 border-b border-white/10 pb-4">
+          {orgBranding.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={orgBranding.logoUrl}
+              alt={orgBranding.name || "Organisation"}
+              className="h-12 w-12 rounded-2xl object-contain"
+            />
+          ) : (
+            <div
+              className={cn(
+                "flex h-12 w-12 items-center justify-center rounded-2xl text-xs font-bold",
+                isJessica ? "bg-slate-100 text-slate-700" : "bg-white/10 text-white/80",
+              )}
+            >
+              {(orgBranding.name || "OR").slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          {orgBranding.name ? (
+            <p
+              className={cn(
+                "truncate text-center text-sm font-semibold",
+                isJessica ? "text-[#2F2A25]" : "text-white",
+              )}
+            >
+              {orgBranding.name}
+            </p>
+          ) : null}
+          <p className={cn("text-[10px] tracking-[0.08em]", isJessica ? "text-slate-400" : "text-white/40")}>
+            Powered by EDGE
+          </p>
+        </div>
+      ) : null}
       <div>
         <p className={cn("text-xs uppercase tracking-[0.3em]", isJessica ? "text-slate-500" : "text-white/70")}>
           Sommaire
@@ -1460,9 +1516,17 @@ export function LessonPlayView({
               <div
                 className={cn(
                   "flex w-full shrink-0",
-                  showDesktopOutline ? "justify-end pr-0 pt-0" : "justify-center pt-1",
+                  showDesktopOutline ? "justify-between gap-2 pr-0 pt-0" : "flex-col items-center gap-2 pt-1",
                 )}
               >
+                {orgBranding.logoUrl && !showDesktopOutline ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={orgBranding.logoUrl}
+                    alt={orgBranding.name || "Organisation"}
+                    className="h-9 w-9 rounded-xl object-contain"
+                  />
+                ) : null}
                 <button
                   type="button"
                   aria-expanded={showDesktopOutline}
@@ -1473,6 +1537,7 @@ export function LessonPlayView({
                     isJessica
                       ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                       : "border-white/20 bg-white/10 text-white hover:bg-white/18",
+                    showDesktopOutline && "ml-auto",
                   )}
                 >
                   {showDesktopOutline ? (

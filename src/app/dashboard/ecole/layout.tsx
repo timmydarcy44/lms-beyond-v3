@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
@@ -20,6 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import { HandicapSidebarNav } from "@/components/beyond-connect/handicap-sidebar-nav";
+import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
 import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 import { EcoleFloatingAssistant } from "@/components/beyond-connect/ecole-floating-assistant";
 
@@ -47,7 +48,29 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isCompaniesOpen, setIsCompaniesOpen] = useState(true);
+  const [orgBranding, setOrgBranding] = useState<{ logoUrl: string | null; name: string | null }>({
+    logoUrl: null,
+    name: null,
+  });
   const isTodo = pathname.startsWith("/dashboard/ecole/todo");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/organizations/nav-branding", { credentials: "include" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const b = json?.branding;
+        setOrgBranding({
+          logoUrl: typeof b?.logoUrl === "string" && b.logoUrl.trim() ? b.logoUrl.trim() : null,
+          name: typeof b?.name === "string" && b.name.trim() ? b.name.trim() : null,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const pricingNavItem: EcoleNavItem = {
     label: "Tarifs",
@@ -90,19 +113,18 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
               isCollapsed ? "w-20" : "w-64"
             }`}
           >
-          <div className="flex shrink-0 items-center justify-between">
-            {!isCollapsed ? (
-              <div>
-                <div className="text-lg font-semibold tracking-tight">BEYOND CONNECT</div>
-                <p className="mt-2 text-xs uppercase tracking-[0.3em] text-white/50">École</p>
-              </div>
-            ) : (
-              <div className="text-xs font-semibold tracking-tight">BC</div>
-            )}
+          <div className={`flex shrink-0 ${isCollapsed ? "flex-col items-center gap-3" : "items-start justify-between gap-2"}`}>
+            <div className={isCollapsed ? "w-full" : "min-w-0 flex-1"}>
+              <OrgSidebarBrand
+                logoUrl={orgBranding.logoUrl}
+                name={orgBranding.name || "École"}
+                compact={isCollapsed}
+              />
+            </div>
             <button
               type="button"
               onClick={() => setIsCollapsed((prev) => !prev)}
-              className="rounded-full border border-white/10 p-2 text-white/60 hover:text-white"
+              className="shrink-0 rounded-full border border-white/10 p-2 text-white/60 hover:text-white"
               aria-label="Replier la sidebar"
             >
               <ChevronsLeft className={`h-4 w-4 transition-transform ${isCollapsed ? "rotate-180" : ""}`} />

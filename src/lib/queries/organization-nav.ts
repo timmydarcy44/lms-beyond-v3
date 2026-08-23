@@ -12,8 +12,9 @@ export type OrganizationNavBranding = {
 };
 
 /**
- * Branding sidebar : priorité URL galaxie (`x-org-slug`), sinon première appartenance org (option filtre rôle).
- * `logoUrl` préfère `organizations.logo_url` puis `logo`.
+ * Branding sidebar : priorité URL galaxie (`x-org-slug`), sinon profil
+ * (`school_id` / `company_id`), sinon première appartenance org.
+ * `logoUrl` lit uniquement `organizations.logo_url` (pas la colonne legacy `logo`).
  */
 export async function getOrganizationNavBrandingForUser(options?: {
   membershipRole?: "admin" | "learner" | "instructor" | null;
@@ -47,6 +48,19 @@ export async function getOrganizationNavBrandingForUser(options?: {
     }
 
     if (!orgId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("school_id, company_id")
+        .eq("id", userId)
+        .maybeSingle();
+      const p = profile as { school_id?: string | null; company_id?: string | null } | null;
+      orgId =
+        String(p?.school_id ?? "").trim() ||
+        String(p?.company_id ?? "").trim() ||
+        null;
+    }
+
+    if (!orgId) {
       let q = supabase.from("org_memberships").select("org_id").eq("user_id", userId);
       if (options?.membershipRole) {
         q = q.eq("role", options.membershipRole);
@@ -59,16 +73,28 @@ export async function getOrganizationNavBrandingForUser(options?: {
       return { logoUrl: null, name: null };
     }
 
-    const { data: org } = await supabase
+    const { data: org, error: orgErr } = await supabase
       .from("organizations")
-      .select("name, logo_url, logo")
+      .select("name, logo_url")
       .eq("id", orgId)
       .maybeSingle();
 
-    const o = org as { name?: string; logo_url?: string; logo?: string } | null;
+    let o = org as { name?: string; logo_url?: string | null } | null;
+    if (orgErr || !o) {
+      if (orgErr && (orgErr.code === "42703" || /logo/i.test(orgErr.message))) {
+        const { data: orgMinimal } = await supabase
+          .from("organizations")
+          .select("name")
+          .eq("id", orgId)
+          .maybeSingle();
+        o = orgMinimal as { name?: string } | null;
+      } else {
+        return { logoUrl: null, name: null };
+      }
+    }
+
     const fromUrl = String(o?.logo_url ?? "").trim();
-    const fromLegacy = String(o?.logo ?? "").trim();
-    const logoUrl = slugLower === "playmakers" ? PLAYMAKERS_BRANDING_LOGO_URL : fromUrl || fromLegacy || null;
+    const logoUrl = slugLower === "playmakers" ? PLAYMAKERS_BRANDING_LOGO_URL : fromUrl || null;
     const name = String(o?.name ?? "").trim() || null;
 
     return { logoUrl, name };

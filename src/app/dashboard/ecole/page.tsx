@@ -6,6 +6,11 @@ import {
   schoolDashboardAllowed,
 } from "@/lib/auth/school-access";
 import { loadSchoolOverviewData } from "@/lib/dashboard/ecole-overview-data";
+import {
+  enrichPsgEcoleDemoOverview,
+  shouldEnrichPsgEcoleDemo,
+} from "@/lib/entreprise/psg-demo-ecole-enrich";
+import { PSG_ORG_ID } from "@/lib/entreprise/psg-demo-data";
 import { getMiddlewarePathname } from "@/lib/http/request-pathname";
 import { getServerClient } from "@/lib/supabase/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -44,17 +49,31 @@ export default async function SchoolDashboardPage() {
   const schoolId = await resolveSchoolIdForEcoleDashboard(session.id, session.email, supabase);
 
   if (!schoolId) {
+    const empty = {
+      apprenants: [] as Awaited<ReturnType<typeof loadSchoolOverviewData>>["apprenants"],
+      entreprises: [] as Awaited<ReturnType<typeof loadSchoolOverviewData>>["entreprises"],
+      effectifTotal: 0,
+      alternancesSignees: 0,
+      apprenantsEnRecherche: 0,
+      offersCount: 0,
+      latestOffers: [] as Awaited<ReturnType<typeof loadSchoolOverviewData>>["latestOffers"],
+      latestConnected: [] as Awaited<ReturnType<typeof loadSchoolOverviewData>>["latestConnected"],
+      recentActivities: [] as Awaited<ReturnType<typeof loadSchoolOverviewData>>["recentActivities"],
+    };
+    const overview = shouldEnrichPsgEcoleDemo(PSG_ORG_ID, session.email)
+      ? enrichPsgEcoleDemoOverview(empty)
+      : empty;
     return (
       <SchoolDashboard
-        apprenants={[]}
-        entreprises={[]}
-        effectifTotal={0}
-        alternancesSignees={0}
-        apprenantsEnRecherche={0}
-        offersCount={0}
-        latestOffers={[]}
-        latestConnected={[]}
-        recentActivities={[]}
+        apprenants={overview.apprenants}
+        entreprises={overview.entreprises}
+        effectifTotal={overview.effectifTotal}
+        alternancesSignees={overview.alternancesSignees}
+        apprenantsEnRecherche={overview.apprenantsEnRecherche}
+        offersCount={overview.offersCount}
+        latestOffers={overview.latestOffers}
+        latestConnected={overview.latestConnected}
+        recentActivities={overview.recentActivities}
         fullName={session.fullName || session.email || "Utilisateur"}
       />
     );
@@ -67,7 +86,10 @@ export default async function SchoolDashboardPage() {
     /* RLS navigateur si pas de service role */
   }
 
-  const overview = await loadSchoolOverviewData(schoolId, listClient);
+  let overview = await loadSchoolOverviewData(schoolId, listClient);
+  if (shouldEnrichPsgEcoleDemo(schoolId, session.email)) {
+    overview = enrichPsgEcoleDemoOverview(overview);
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] px-4 py-8 text-[#1D1D1F] md:px-8 md:py-10">

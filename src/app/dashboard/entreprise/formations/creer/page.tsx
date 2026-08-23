@@ -14,7 +14,7 @@ export default async function EntrepriseFormationsCreerPage({
   const courseId = typeof sp.courseId === "string" ? sp.courseId.trim() : "";
   const params = new URLSearchParams({
     lockedOrgId: orgId,
-    returnTo: "/dashboard/entreprise/formations/gerer",
+    returnTo: "/dashboard/entreprise/formations/catalogue",
     embed: "1",
   });
   if (courseId) params.set("courseId", courseId);

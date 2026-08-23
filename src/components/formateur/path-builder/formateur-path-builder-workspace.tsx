@@ -29,9 +29,16 @@ type Props = {
   };
   /** Verrouille le parcours sur une organisation (dashboard école / entreprise). */
   lockedOrgId?: string | null;
+  returnTo?: string | null;
 };
 
-export function FormateurPathBuilderWorkspace({ library, organizations, initialData, lockedOrgId = null }: Props) {
+export function FormateurPathBuilderWorkspace({
+  library,
+  organizations,
+  initialData,
+  lockedOrgId = null,
+  returnTo = null,
+}: Props) {
   const orgOptions = useMemo(() => {
     if (lockedOrgId) {
       const locked = (organizations ?? []).filter((o) => o.id === lockedOrgId);
@@ -87,6 +94,7 @@ export function FormateurPathBuilderWorkspace({ library, organizations, initialD
       initialData={initialData ? { ...initialData, builderSnapshot } : undefined}
       additionalFields={additionalFields}
       extraHeaderSlot={extraHeaderSlot}
+      returnTo={returnTo}
     />
   );
 }

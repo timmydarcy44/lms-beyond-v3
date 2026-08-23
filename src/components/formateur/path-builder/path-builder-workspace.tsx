@@ -65,6 +65,7 @@ type PathBuilderWorkspaceProps = {
   };
   additionalFields?: () => Record<string, unknown>;
   extraHeaderSlot?: ReactNode;
+  returnTo?: string | null;
 };
 
 type WorkflowStepType = "action" | "trigger";
@@ -123,7 +124,13 @@ function normalizePositions(steps: WorkflowStep[]): WorkflowStep[] {
   }));
 }
 
-export function PathBuilderWorkspace({ library, initialData, additionalFields, extraHeaderSlot }: PathBuilderWorkspaceProps) {
+export function PathBuilderWorkspace({
+  library,
+  initialData,
+  additionalFields,
+  extraHeaderSlot,
+  returnTo = null,
+}: PathBuilderWorkspaceProps) {
   const router = useRouter();
 
   const [title, setTitle] = useState(initialData?.title || "Nouveau parcours");
@@ -796,7 +803,7 @@ export function PathBuilderWorkspace({ library, initialData, additionalFields, e
 
       if (status === "published") {
         setTimeout(() => {
-          router.push("/dashboard/formateur/parcours");
+          router.push(returnTo || "/dashboard/formateur/parcours");
           router.refresh();
         }, 1500);
       }
@@ -887,11 +894,11 @@ export function PathBuilderWorkspace({ library, initialData, additionalFields, e
         <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-6 py-4">
           <button
             type="button"
-            onClick={() => router.push("/dashboard/formateur")}
+            onClick={() => router.push(returnTo || "/dashboard/formateur")}
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-950"
           >
             <ArrowLeft className="h-4 w-4" />
-            Retour au dashboard
+            {returnTo ? "← Retour" : "Retour au dashboard"}
           </button>
           <div className="min-w-0 flex-1 px-4 text-center">
             <p className="truncate text-sm font-semibold text-slate-900">{title?.trim() ? title.trim() : "Parcours"}</p>

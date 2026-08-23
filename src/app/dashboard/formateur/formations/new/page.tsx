@@ -373,7 +373,8 @@ export function FormateurFormationBuilderWhite({
           .filter((p: any) => p.id && p.title);
         if (cancelled) return;
         setAvailablePaths(cleaned);
-        if (!cleaned.length) {
+        // Création org (école/entreprise) : liste vide = normal, pas de toast alarmiste
+        if (!cleaned.length && !orgIsLocked) {
           toast.message("Aucun parcours listé pour cette galaxie", {
             description:
               "Soit il n’existe pas encore de parcours `org_id`, soit les politiques RLS ne renvoient rien pour votre compte.",
@@ -383,6 +384,7 @@ export function FormateurFormationBuilderWhite({
       .catch((e: unknown) => {
         if (cancelled) return;
         setAvailablePaths([]);
+        if (orgIsLocked) return;
         const msg = e instanceof Error ? e.message : "Impossible de charger les parcours";
         toast.error("Parcours introuvables", { description: msg });
       })
@@ -393,7 +395,7 @@ export function FormateurFormationBuilderWhite({
     return () => {
       cancelled = true;
     };
-  }, [(snapshot.general as any)?.assigned_organization_id]);
+  }, [(snapshot.general as any)?.assigned_organization_id, orgIsLocked]);
 
   useEffect(() => {
     if (!thematics?.length) return;
@@ -1116,11 +1118,15 @@ export function FormateurFormationBuilderWhite({
     }
   };
 
+  const backHref =
+    returnTo ||
+    (orgIsLocked ? "/dashboard/entreprise/formations/gerer" : "/dashboard/formateur");
+
   return (
     <DashboardShell
       title="Création de formation"
       breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard/formateur" },
+        { label: "Dashboard", href: backHref },
         { label: "Formateur", href: "/dashboard/formateur" },
         { label: "Formations", href: "/dashboard/formateur/formations" },
         { label: "Nouvelle formation" },
@@ -1136,11 +1142,11 @@ export function FormateurFormationBuilderWhite({
         <div className="mx-4 overflow-hidden rounded-2xl bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] shadow-lg backdrop-blur-md">
           <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-4 py-3 md:px-8">
             <a
-              href={returnTo || "/dashboard/formateur"}
+              href={backHref}
               className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
-              {embed || returnTo ? "← Retour" : "← Retour au Dashboard"}
+              {embed || returnTo || orgIsLocked ? "← Retour" : "← Retour au Dashboard"}
             </a>
             <div className="truncate text-sm font-semibold text-white/85">
               {snapshot.general.title?.trim() ? snapshot.general.title.trim() : "Nouvelle formation"}

@@ -13,6 +13,7 @@ import {
 import { UserDetailsClient } from "@/app/super/gestion-client/[id]/user-details-client";
 import { JessicaCabinetPatientPanel } from "@/components/jessica-contentin/crm/jessica-cabinet-patient-panel";
 import { JessicaClientQuestionnairesPanel } from "@/components/jessica-contentin/jessica-client-questionnaires-panel";
+import { JessicaPatientDocumentsPanel } from "@/components/jessica-contentin/crm/jessica-patient-documents-panel";
 import { formatClientName } from "@/lib/jessica-contentin/parse-client-name";
 import { JessicaSuperPage } from "@/components/jessica-contentin/super/jessica-super-ui";
 import { getJessicaQuestionnaireResponsesForClient, listResolvedJessicaQuestionnaires } from "@/lib/queries/jessica-questionnaires";
@@ -94,6 +95,15 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
         {patient ? (
           <JessicaCabinetPatientPanel patient={patient} revenue={patientRevenue ?? undefined} compact />
         ) : null}
+        {patient ? (
+          <div className="mb-6">
+            <JessicaPatientDocumentsPanel
+              lockedPatientId={patient.id}
+              lockedProfileId={patient.profileId}
+              compact
+            />
+          </div>
+        ) : null}
         <UserDetailsClient
           userDetails={userDetails}
           availableResources={resources}
@@ -117,6 +127,13 @@ export default async function JessicaCrmClientPage({ params }: PageProps) {
       backLabel="Retour au CRM"
     >
       <JessicaCabinetPatientPanel patient={patient!} revenue={patientRevenue ?? undefined} />
+      <div className="mt-6">
+        <JessicaPatientDocumentsPanel
+          lockedPatientId={patient!.id}
+          lockedProfileId={patient!.profileId}
+          compact
+        />
+      </div>
       <div className="mt-6">
         <JessicaClientQuestionnairesPanel
           responses={questionnaireResponses}

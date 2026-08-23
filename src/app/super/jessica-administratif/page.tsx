@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FileCheck2 } from "lucide-react";
+import { FileCheck2, FolderOpen } from "lucide-react";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient } from "@/lib/supabase/server";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
@@ -11,6 +11,13 @@ import { cn } from "@/lib/utils";
 export const revalidate = 0;
 
 const MENU = [
+  {
+    href: "/super/jessica-administratif/documents",
+    title: "Documents patients",
+    description:
+      "Stocker les documents envoyés par les patients ; ils apparaissent aussi sur chaque fiche individuelle.",
+    icon: FolderOpen,
+  },
   {
     href: "/super/jessica-administratif/attestation-presence",
     title: "Attestation de présence",

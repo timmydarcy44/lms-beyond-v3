@@ -89,17 +89,33 @@ export async function getEdgeOnlinePublishedCourses(): Promise<EdgeOnlineCourse[
     const slugRaw = String(row.slug ?? "").trim();
     const slug = slugRaw || id;
 
-    const image =
+    const fromColumns =
       (row.cover_image as string | null | undefined) ||
       (row.hero_image_url as string | null | undefined) ||
       (row.image_url as string | null | undefined) ||
       null;
 
+    let fromSnap: string | null = null;
+    const snap = row.builder_snapshot;
+    if (snap && typeof snap === "object") {
+      const g = (snap as { general?: { cover_image?: string; heroImage?: string } }).general;
+      const c = String(g?.cover_image ?? "").trim();
+      const h = String(g?.heroImage ?? "").trim();
+      fromSnap = c || h || null;
+    }
+
+    const image = fromColumns || fromSnap;
+
     const desc = (row.description as string | null) ?? null;
     const pres = (row.presentation as string | null) ?? null;
     const excerpt = stripHtml(pres || desc, 200) || stripHtml(desc, 200);
 
-    const categoryName = String(row.category_name ?? "").trim() || "À découvrir";
+    const categoryName =
+      String(row.category_name ?? "").trim() ||
+      String(
+        (row.builder_snapshot as { general?: { category?: string } } | null)?.general?.category ?? "",
+      ).trim() ||
+      "À découvrir";
 
     out.push({
       id,

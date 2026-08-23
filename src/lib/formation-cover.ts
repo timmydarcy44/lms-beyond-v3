@@ -47,7 +47,9 @@ const PLACEHOLDER = "/placeholder-course.jpg";
 function normalizePublicStorageUrl(url: string): string {
   return url
     .replace("/object/public/playmakers/", "/object/public/Playmakers/")
-    .replace("/object/public/home/", "/object/public/Home/");
+    .replace("/object/public/home/", "/object/public/Home/")
+    .replace(/\/object\/public\/edge%20lab\//gi, "/object/public/EDGE%20Lab/")
+    .replace(/\/object\/public\/edge lab\//gi, "/object/public/EDGE%20Lab/");
 }
 
 /**

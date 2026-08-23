@@ -12,6 +12,8 @@ type Body = {
   learnerEmail?: string;
   /** Restrict targets to members of orgId / course.org_id */
   scopeOrgOnly?: boolean;
+  /** RH assigne une formation catalogue (ex. EDGE Online) à ses collaborateurs */
+  allowCatalogueAssign?: boolean;
 };
 
 function uniqStrings(values: Array<string | null | undefined>) {
@@ -48,27 +50,46 @@ export async function POST(req: Request) {
 
   const { data: course, error: courseError } = await readClient
     .from("courses")
-    .select("id, owner_id, creator_id, org_id")
+    .select("id, owner_id, creator_id, org_id, status")
     .eq("id", courseId)
     .maybeSingle();
 
   if (courseError || !course) return NextResponse.json({ success: false, error: "Formation introuvable" }, { status: 404 });
 
   const courseOrgId = String((course as { org_id?: string | null }).org_id ?? "").trim() || null;
+  const courseStatus = String((course as { status?: string | null }).status ?? "")
+    .trim()
+    .toLowerCase();
+  const isPublished = courseStatus === "published" || courseStatus === "active" || courseStatus === "";
   const isOwner =
     String(course.owner_id ?? "") === user.id || String(course.creator_id ?? "") === user.id;
-  const canManageOrg = courseOrgId
+  const canManageCourseOrg = courseOrgId
     ? await userCanManageOrgFormations(readClient, user.id, courseOrgId)
     : false;
-  if (!isOwner && !canManageOrg) {
+
+  const requestOrgId = typeof body.orgId === "string" && body.orgId.trim() ? body.orgId.trim() : null;
+  const allowCatalogueAssign = Boolean(body.allowCatalogueAssign) && Boolean(requestOrgId);
+  const canManageRequestOrg = requestOrgId
+    ? await userCanManageOrgFormations(readClient, user.id, requestOrgId)
+    : false;
+
+  // Catalogue EDGE → RH peut assigner une formation publiée à SES collaborateurs
+  const catalogueOk = allowCatalogueAssign && canManageRequestOrg && isPublished;
+
+  if (!isOwner && !canManageCourseOrg && !catalogueOk) {
     return NextResponse.json({ success: false, error: "Accès refusé" }, { status: 403 });
   }
 
-  const scopeOrgId =
-    (typeof body.orgId === "string" && body.orgId.trim() ? body.orgId.trim() : null) || courseOrgId;
-  const scopeOrgOnly = Boolean(body.scopeOrgOnly) || Boolean(courseOrgId);
+  const scopeOrgId = catalogueOk ? requestOrgId : requestOrgId || courseOrgId;
+  const scopeOrgOnly = Boolean(body.scopeOrgOnly) || Boolean(courseOrgId) || catalogueOk;
 
-  if (scopeOrgOnly && scopeOrgId && courseOrgId && scopeOrgId !== courseOrgId) {
+  if (
+    scopeOrgOnly &&
+    scopeOrgId &&
+    courseOrgId &&
+    scopeOrgId !== courseOrgId &&
+    !catalogueOk
+  ) {
     return NextResponse.json(
       { success: false, error: "Cette formation est réservée à son organisation." },
       { status: 403 },

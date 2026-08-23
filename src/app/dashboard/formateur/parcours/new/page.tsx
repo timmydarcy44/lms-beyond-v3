@@ -11,6 +11,7 @@ export default async function FormateurNewParcoursPage({
 }) {
   const sp = (await searchParams) ?? {};
   const lockedOrgId = typeof sp.lockedOrgId === "string" ? sp.lockedOrgId.trim() : null;
+  const returnTo = typeof sp.returnTo === "string" ? sp.returnTo.trim() : null;
 
   const [library, organizations] = await Promise.all([
     getFormateurContentLibrary().catch(() => ({
@@ -41,6 +42,7 @@ export default async function FormateurNewParcoursPage({
       library={library}
       organizations={orgs}
       lockedOrgId={lockedOrgId}
+      returnTo={returnTo}
     />
   );
 }

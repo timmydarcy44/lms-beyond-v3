@@ -8,7 +8,7 @@ export default async function EntrepriseFormationsParcoursPage() {
   const { orgId } = await requireEntrepriseOrgId("/dashboard/entreprise/formations/parcours");
   const params = new URLSearchParams({
     lockedOrgId: orgId,
-    returnTo: "/dashboard/entreprise/formations/gerer",
+    returnTo: "/dashboard/entreprise/formations/catalogue",
   });
   redirect(`/dashboard/formateur/parcours/new?${params.toString()}`);
 }

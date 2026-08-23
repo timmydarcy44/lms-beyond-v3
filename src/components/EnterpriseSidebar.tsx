@@ -10,13 +10,11 @@ import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
-  BarChart3,
   Briefcase,
   MessageCircle,
   Settings,
   Users,
   BookOpen,
-  LineChart,
 } from "lucide-react";
 
 type NavLeaf = { label: string; href: string };
@@ -37,7 +35,10 @@ const NAV_ITEMS: NavItem[] = [
     label: "Salariés",
     href: "/dashboard/entreprise/salaries",
     icon: Users,
-    children: [{ label: "Métiers", href: "/dashboard/entreprise/metiers" }],
+    children: [
+      { label: "Métiers", href: "/dashboard/entreprise/metiers" },
+      { label: "Équipe Insight", href: "/dashboard/entreprise/equipe-insight" },
+    ],
   },
   {
     type: "group",
@@ -49,11 +50,16 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Créer une formation", href: "/dashboard/entreprise/formations/creer" },
       { label: "Gérer mes formations", href: "/dashboard/entreprise/formations/gerer" },
       { label: "Parcours", href: "/dashboard/entreprise/formations/parcours" },
+      { label: "Statistiques", href: "/dashboard/entreprise/statistiques" },
     ],
   },
-  { type: "link", label: "Statistiques", href: "/dashboard/entreprise/statistiques", icon: LineChart },
-  { type: "link", label: "Équipe Insight", href: "/dashboard/entreprise/equipe-insight", icon: BarChart3 },
-  { type: "link", label: "Mes Offres", href: "/dashboard/entreprise/offres", icon: Briefcase },
+  {
+    type: "group",
+    label: "Recrutement",
+    href: "/dashboard/entreprise/offres",
+    icon: Briefcase,
+    children: [{ label: "Mes offres", href: "/dashboard/entreprise/offres" }],
+  },
   { type: "link", label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
   { type: "link", label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
 ];
@@ -98,13 +104,20 @@ function isPathActive(pathname: string, href: string) {
 
 function isGroupActive(pathname: string, item: Extract<NavItem, { type: "group" }>) {
   if (item.label === "Formations") {
-    return pathname.startsWith("/dashboard/entreprise/formations");
+    return (
+      pathname.startsWith("/dashboard/entreprise/formations") ||
+      pathname.startsWith("/dashboard/entreprise/statistiques")
+    );
   }
   if (item.label === "Salariés") {
     return (
       pathname.startsWith("/dashboard/entreprise/salaries") ||
-      pathname.startsWith("/dashboard/entreprise/metiers")
+      pathname.startsWith("/dashboard/entreprise/metiers") ||
+      pathname.startsWith("/dashboard/entreprise/equipe-insight")
     );
+  }
+  if (item.label === "Recrutement") {
+    return pathname.startsWith("/dashboard/entreprise/offres");
   }
   return isPathActive(pathname, item.href) || item.children.some((c) => isPathActive(pathname, c.href));
 }
@@ -209,12 +222,18 @@ export function EnterpriseMobileNav() {
   useEffect(() => {
     setOpenGroups((prev) => ({
       ...prev,
-      Formations: pathname.startsWith("/dashboard/entreprise/formations") ? true : prev.Formations,
+      Formations:
+        pathname.startsWith("/dashboard/entreprise/formations") ||
+        pathname.startsWith("/dashboard/entreprise/statistiques")
+          ? true
+          : prev.Formations,
       Salariés:
         pathname.startsWith("/dashboard/entreprise/salaries") ||
-        pathname.startsWith("/dashboard/entreprise/metiers")
+        pathname.startsWith("/dashboard/entreprise/metiers") ||
+        pathname.startsWith("/dashboard/entreprise/equipe-insight")
           ? true
           : prev.Salariés,
+      Recrutement: pathname.startsWith("/dashboard/entreprise/offres") ? true : prev.Recrutement,
     }));
   }, [pathname]);
 
@@ -294,12 +313,18 @@ export default function EnterpriseSidebar() {
   useEffect(() => {
     setOpenGroups((prev) => ({
       ...prev,
-      Formations: pathname.startsWith("/dashboard/entreprise/formations") ? true : prev.Formations,
+      Formations:
+        pathname.startsWith("/dashboard/entreprise/formations") ||
+        pathname.startsWith("/dashboard/entreprise/statistiques")
+          ? true
+          : prev.Formations,
       Salariés:
         pathname.startsWith("/dashboard/entreprise/salaries") ||
-        pathname.startsWith("/dashboard/entreprise/metiers")
+        pathname.startsWith("/dashboard/entreprise/metiers") ||
+        pathname.startsWith("/dashboard/entreprise/equipe-insight")
           ? true
           : prev.Salariés,
+      Recrutement: pathname.startsWith("/dashboard/entreprise/offres") ? true : prev.Recrutement,
     }));
   }, [pathname]);
 

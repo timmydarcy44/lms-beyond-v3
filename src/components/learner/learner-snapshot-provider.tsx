@@ -130,7 +130,7 @@ export function useOptionalLearnerSnapshotContext() {
 }
 
 export function usePersonalizedActionPlanFromSnapshot(surface: "apprenant" | "salarie" = "salarie") {
-  const { loading, snapshot } = useLearnerSnapshot();
+  const { loading, snapshot, refresh } = useLearnerSnapshot();
 
   const plan = useMemo(
     () =>
@@ -154,6 +154,7 @@ export function usePersonalizedActionPlanFromSnapshot(surface: "apprenant" | "sa
     loading,
     plan,
     snapshot,
+    refresh,
     firstName: snapshot?.firstName ?? "Vous",
     parcoursHref,
   };

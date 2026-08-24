@@ -32,9 +32,15 @@ type Props = {
   employeeId: string;
   missions: EmployeeMission[];
   onChange: (missions: EmployeeMission[]) => void;
+  editing?: boolean;
 };
 
-export function EnterpriseEmployeeMissions({ employeeId, missions, onChange }: Props) {
+export function EnterpriseEmployeeMissions({
+  employeeId,
+  missions,
+  onChange,
+  editing = false,
+}: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -91,46 +97,48 @@ export function EnterpriseEmployeeMissions({ employeeId, missions, onChange }: P
   };
 
   return (
-    <section className="mt-6 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-      <h2 className="text-xl font-black tracking-tight text-gray-950">Missions du collaborateur</h2>
-      <p className="mt-2 text-sm text-gray-600">
-        Assignez des missions visibles dans l&apos;onglet « Mes missions » du dashboard apprenant.
+    <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-black tracking-tight text-gray-950">Missions</h2>
+      <p className="mt-1 text-sm text-gray-600">
+        Missions visibles dans l&apos;onglet « Mes missions » du dashboard apprenant.
       </p>
 
-      <div className="mt-6 grid gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 md:grid-cols-2">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Titre de la mission *"
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
-        />
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
-        />
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description (optionnelle)"
-          rows={2}
-          className="md:col-span-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
-        />
-        <div className="md:col-span-2 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => void handleAdd()}
-            disabled={saving || !title.trim()}
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            {saving ? "Ajout…" : "Ajouter la mission"}
-          </button>
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {editing ? (
+        <div className="mt-6 grid gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 md:grid-cols-2">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Titre de la mission *"
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+          />
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+          />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description (optionnelle)"
+            rows={2}
+            className="md:col-span-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+          />
+          <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleAdd()}
+              disabled={saving || !title.trim()}
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              {saving ? "Ajout…" : "Ajouter la mission"}
+            </button>
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="mt-6 space-y-3">
         {missions.length === 0 ? (
@@ -167,14 +175,16 @@ export function EnterpriseEmployeeMissions({ employeeId, missions, onChange }: P
                   </p>
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => void handleDelete(mission.id)}
-                className="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
-                aria-label="Supprimer la mission"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {editing ? (
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(mission.id)}
+                  className="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+                  aria-label="Supprimer la mission"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
           ))
         )}

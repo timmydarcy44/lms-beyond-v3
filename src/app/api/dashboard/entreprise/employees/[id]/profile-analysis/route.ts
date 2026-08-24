@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAnyTestResults, loadEmployeeTestResults } from "@/lib/entreprise/employee-profile-diagnostics";
 import { resolveEmployeeTestStatus } from "@/lib/entreprise/employee-test-status";
+import {
+  buildEdgebsDemoEmployeeDetailPayload,
+  isEdgebsDemoEmployeeId,
+} from "@/lib/entreprise/edgebs-demo-enrich";
 import { hasAnyEnterpriseShareConsent } from "@/lib/entreprise/enterprise-share-consent";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { resolveProfileAnalysisForProfile } from "@/lib/learner/profile-analysis";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** Analyse croisée DISC+IDMC+Soft Skills pour la fiche RH — réutilise le cache profiles.ai_analysis du salarié. */
 export async function GET(
@@ -21,6 +28,27 @@ export async function GET(
   const access = await resolveEntrepriseOverviewAccess();
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  if (isEdgebsDemoEmployeeId(employeeId)) {
+    const demo = buildEdgebsDemoEmployeeDetailPayload(employeeId);
+    if (!demo?.profile_analysis) {
+      return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
+    }
+    return NextResponse.json({
+      sections: {
+        strengths: demo.profile_analysis.strengths,
+        improvements: demo.profile_analysis.improvements,
+        summary: demo.profile_analysis.summary,
+      },
+      updatedAt: demo.profile_analysis.updatedAt,
+      cached: true,
+      demo: true,
+    });
+  }
+
+  if (!UUID_RE.test(employeeId)) {
+    return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
   }
 
   const service = getServiceRoleClient();

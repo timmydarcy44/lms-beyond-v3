@@ -17,7 +17,7 @@ import {
   BookOpen,
 } from "lucide-react";
 
-type NavLeaf = { label: string; href: string };
+type NavLeaf = { label: string; href: string; section?: string };
 type NavItem =
   | { type: "link"; label: string; href: string; icon: typeof LayoutDashboard }
   | {
@@ -36,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/entreprise/salaries",
     icon: Users,
     children: [
+      { label: "Mes équipes", href: "/dashboard/entreprise/salaries" },
       { label: "Métiers", href: "/dashboard/entreprise/metiers" },
       { label: "Équipe Insight", href: "/dashboard/entreprise/equipe-insight" },
     ],
@@ -46,11 +47,36 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/entreprise/formations/catalogue",
     icon: BookOpen,
     children: [
-      { label: "Formations EDGE", href: "/dashboard/entreprise/formations/catalogue" },
-      { label: "Créer une formation", href: "/dashboard/entreprise/formations/creer" },
-      { label: "Gérer mes formations", href: "/dashboard/entreprise/formations/gerer" },
-      { label: "Parcours", href: "/dashboard/entreprise/formations/parcours" },
-      { label: "Statistiques", href: "/dashboard/entreprise/statistiques" },
+      {
+        label: "Demander une formation",
+        href: "/dashboard/entreprise/formations/demander",
+        section: "EDGE",
+      },
+      {
+        label: "EDGE Online",
+        href: "/dashboard/entreprise/formations/catalogue",
+        section: "EDGE",
+      },
+      {
+        label: "Créer une formation",
+        href: "/dashboard/entreprise/formations/creer",
+        section: "Interne",
+      },
+      {
+        label: "Gérer mes formations",
+        href: "/dashboard/entreprise/formations/gerer",
+        section: "Interne",
+      },
+      {
+        label: "Parcours",
+        href: "/dashboard/entreprise/formations/parcours",
+        section: "Interne",
+      },
+      {
+        label: "Statistiques",
+        href: "/dashboard/entreprise/statistiques",
+        section: "Pilotage",
+      },
     ],
   },
   {
@@ -58,7 +84,10 @@ const NAV_ITEMS: NavItem[] = [
     label: "Recrutement",
     href: "/dashboard/entreprise/offres",
     icon: Briefcase,
-    children: [{ label: "Mes offres", href: "/dashboard/entreprise/offres" }],
+    children: [
+      { label: "Mes offres", href: "/dashboard/entreprise/offres" },
+      { label: "Nouveau candidat", href: "/dashboard/entreprise/recrutement/candidats/nouveau" },
+    ],
   },
   { type: "link", label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
   { type: "link", label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
@@ -117,7 +146,10 @@ function isGroupActive(pathname: string, item: Extract<NavItem, { type: "group" 
     );
   }
   if (item.label === "Recrutement") {
-    return pathname.startsWith("/dashboard/entreprise/offres");
+    return (
+      pathname.startsWith("/dashboard/entreprise/offres") ||
+      pathname.startsWith("/dashboard/entreprise/recrutement")
+    );
   }
   return isPathActive(pathname, item.href) || item.children.some((c) => isPathActive(pathname, c.href));
 }
@@ -183,25 +215,36 @@ function NavLinks({
             </button>
             {open ? (
               <div className="ml-3 space-y-0.5 border-l border-white/10 pl-3">
-                {item.children.map((child) => {
-                  const childActive = isPathActive(pathname, child.href);
-                  return (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      prefetch
-                      onClick={onNavigate}
-                      className={cn(
-                        "block rounded-lg px-3 py-2 text-[13px] font-medium transition",
-                        childActive
-                          ? "bg-white/10 text-white"
-                          : "text-white/50 hover:bg-white/5 hover:text-white",
-                      )}
-                    >
-                      {child.label}
-                    </Link>
-                  );
-                })}
+                {Array.from(new Set(item.children.map((child) => child.section || ""))).map((section) => (
+                  <div key={`${item.label}-${section || "default"}`} className="space-y-1.5 py-1">
+                    {section ? (
+                      <p className="px-3 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                        {section}
+                      </p>
+                    ) : null}
+                    {item.children
+                      .filter((child) => (child.section || "") === section)
+                      .map((child) => {
+                        const childActive = isPathActive(pathname, child.href);
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            prefetch
+                            onClick={onNavigate}
+                            className={cn(
+                              "block rounded-lg px-3 py-2 text-[13px] font-medium transition",
+                              childActive
+                                ? "bg-white/10 text-white"
+                                : "text-white/50 hover:bg-white/5 hover:text-white",
+                            )}
+                          >
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
@@ -233,7 +276,11 @@ export function EnterpriseMobileNav() {
         pathname.startsWith("/dashboard/entreprise/equipe-insight")
           ? true
           : prev.Salariés,
-      Recrutement: pathname.startsWith("/dashboard/entreprise/offres") ? true : prev.Recrutement,
+      Recrutement:
+        pathname.startsWith("/dashboard/entreprise/offres") ||
+        pathname.startsWith("/dashboard/entreprise/recrutement")
+          ? true
+          : prev.Recrutement,
     }));
   }, [pathname]);
 
@@ -324,7 +371,11 @@ export default function EnterpriseSidebar() {
         pathname.startsWith("/dashboard/entreprise/equipe-insight")
           ? true
           : prev.Salariés,
-      Recrutement: pathname.startsWith("/dashboard/entreprise/offres") ? true : prev.Recrutement,
+      Recrutement:
+        pathname.startsWith("/dashboard/entreprise/offres") ||
+        pathname.startsWith("/dashboard/entreprise/recrutement")
+          ? true
+          : prev.Recrutement,
     }));
   }, [pathname]);
 

@@ -9,10 +9,21 @@ import {
   resolveEmployeeTestStatus,
   syncCollaborateurDiagnosticFromTests,
 } from "@/lib/entreprise/employee-test-status";
+import {
+  computeSoftSkillGaps,
+  parseMetierSoftSkillTargets,
+} from "@/lib/entreprise/metier-skill-gaps";
+import {
+  buildEdgebsDemoEmployeeDetailPayload,
+  isEdgebsDemoEmployeeId,
+} from "@/lib/entreprise/edgebs-demo-enrich";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function mapCollaborateurDiagnostic(row: Record<string, unknown>) {
   const stress = row.stress_score != null ? Number(row.stress_score) : null;
@@ -38,6 +49,15 @@ export async function GET(
   const access = await resolveEntrepriseOverviewAccess();
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  // Collaborateurs mock EDGEBS (ids non-UUID) — ne jamais les passer à Postgres
+  if (isEdgebsDemoEmployeeId(employeeId) || !UUID_RE.test(employeeId)) {
+    if (isEdgebsDemoEmployeeId(employeeId)) {
+      const demoPayload = buildEdgebsDemoEmployeeDetailPayload(employeeId);
+      if (demoPayload) return NextResponse.json(demoPayload);
+    }
+    return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
   }
 
   const service = getServiceRoleClient();
@@ -166,6 +186,41 @@ export async function GET(
       ? []
       : (hrDocumentsRows ?? []);
 
+  let metierMatch = null;
+  const jobTitle = String(employee.job_title ?? "").trim();
+  if (jobTitle && orgId) {
+    const { data: roleRows } = await service
+      .from("enterprise_job_roles")
+      .select("id, title, hard_skills, soft_skills")
+      .eq("organization_id", orgId)
+      .order("updated_at", { ascending: false })
+      .limit(40);
+
+    const matched =
+      (roleRows ?? []).find((role) => String(role.title).toLowerCase() === jobTitle.toLowerCase()) ??
+      (roleRows ?? []).find((role) =>
+        String(role.title).toLowerCase().includes(jobTitle.toLowerCase()) ||
+        jobTitle.toLowerCase().includes(String(role.title).toLowerCase()),
+      ) ??
+      null;
+
+    if (matched) {
+      const targets = parseMetierSoftSkillTargets(
+        Array.isArray(matched.soft_skills) ? (matched.soft_skills as string[]) : [],
+      );
+      const softSkills = Array.isArray(testStatus.test_results?.soft_skills)
+        ? testStatus.test_results.soft_skills
+        : [];
+      metierMatch = {
+        id: String(matched.id),
+        title: String(matched.title),
+        hard_skills: Array.isArray(matched.hard_skills) ? matched.hard_skills : [],
+        soft_skill_targets: targets,
+        soft_skill_gaps: computeSoftSkillGaps(targets, softSkills),
+      };
+    }
+  }
+
   return NextResponse.json({
     employee: { ...employee, profile_id: testStatus.profile_id ?? employee.profile_id },
     diagnostics,
@@ -182,6 +237,7 @@ export async function GET(
     recommended_action: recommendedAction,
     missions: missions ?? [],
     hr_documents: hrDocuments,
+    metier_match: metierMatch,
   });
 }
 
@@ -190,6 +246,9 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id: employeeId } = await context.params;
+  if (isEdgebsDemoEmployeeId(employeeId) || !UUID_RE.test(employeeId)) {
+    return NextResponse.json({ error: "Action non disponible sur un profil démo" }, { status: 400 });
+  }
   const access = await resolveEntrepriseOverviewAccess();
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
@@ -241,6 +300,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id: employeeId } = await context.params;
+  if (isEdgebsDemoEmployeeId(employeeId) || !UUID_RE.test(employeeId)) {
+    return NextResponse.json({ error: "Action non disponible sur un profil démo" }, { status: 400 });
+  }
   const access = await resolveEntrepriseOverviewAccess();
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });

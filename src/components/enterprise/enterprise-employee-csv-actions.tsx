@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, Upload, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { CollaboratorInviteSuccessOverlay } from "@/components/enterprise/collaborator-invite-success-overlay";
@@ -12,6 +12,8 @@ type Props = {
   organisationName?: string;
   onSuccess: () => void;
   departments?: string[];
+  /** Ouvre le modal d'ajout dès le montage (ex. ?invite=1). */
+  autoOpenAdd?: boolean;
 };
 
 export function exportEmployeesCsv(employees: EntrepriseEmployee[], organisationName?: string) {
@@ -45,6 +47,7 @@ export function EnterpriseEmployeeCsvActions({
   organisationName,
   onSuccess,
   departments = [],
+  autoOpenAdd = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importPreview, setImportPreview] = useState<{
@@ -64,6 +67,10 @@ export function EnterpriseEmployeeCsvActions({
     department: "",
     job_title: "",
   });
+
+  useEffect(() => {
+    if (autoOpenAdd) setShowAddModal(true);
+  }, [autoOpenAdd]);
 
   const deptOptions = [
     ...new Set([...departments, addForm.department].filter(Boolean) as string[]),

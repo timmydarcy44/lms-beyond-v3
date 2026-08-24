@@ -1,21 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
-import { Activity, BookOpen, Brain, ChevronRight, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  ListTodo,
+  Users,
+} from "lucide-react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { EmptyState } from "@/components/enterprise/empty-state";
 import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise-employee-csv-actions";
 import { EntrepriseQuickAccess } from "@/components/enterprise/entreprise-quick-access";
 import { EnterpriseLoadingOverlay } from "@/components/enterprise/enterprise-loading-overlay";
 import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
-import { filterRealEntrepriseEmployees, isEnrichedDemoEmployeeId } from "@/lib/entreprise/demo-employee-id";
+import { filterRealEntrepriseEmployees } from "@/lib/entreprise/demo-employee-id";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
 
+type AlertLevel = "critical" | "attention" | "info";
+
 type Overview = {
   configuration_required?: boolean;
-  onboarding_href?: string;
+  demo_enriched?: boolean;
   viewer: { email: string | null; prenom: string | null; nom: string | null };
   organisation: { id: string; name: string };
   kpis: {
@@ -24,7 +33,7 @@ type Overview = {
     diagnostics_total: number;
     diagnostics_pct: number;
     enrollments_active: number;
-    attention_signals:
+    attention_signals?:
       | { insufficient: true; completed: number; threshold: number }
       | { insufficient: false; attention: number; critical: number };
   };
@@ -35,44 +44,26 @@ type Overview = {
     email: string | null;
     job_title: string | null;
     department: string | null;
-    created_at: string | null;
     diagnostic_done: boolean;
-    idmc_score: number | null;
     formation_active: boolean;
   }>;
   employees_pending: number;
-  this_week: {
-    recent_activity: Array<{ id: string; title: string; at: string; kind?: string }>;
-  };
-  formations: {
-    presentiel: Array<{
+  equipe_insight?: {
+    priority_alerts?: Array<{
+      level: AlertLevel;
+      text: string;
+      employee_id?: string;
+      href?: string;
+    }>;
+    recommended_actions?: Array<{
       id: string;
       title: string;
-      formateur: string;
-      date: string;
-      time: string;
-      confirmed: number;
-      total: number;
+      detail?: string;
+      href?: string;
     }>;
-    elearning: Array<{
-      path_id: string;
-      title: string;
-      enrolled: number;
-      completion_pct: number;
-      avg_quiz_score: number | null;
-      badges_count: number;
-    }>;
+    ai_recommendations?: string[];
   };
 };
-
-const AVATAR_COLORS = [
-  "bg-violet-500",
-  "bg-pink-500",
-  "bg-blue-500",
-  "bg-orange-500",
-  "bg-emerald-500",
-  "bg-rose-500",
-];
 
 function formatDateLongFr(d = new Date()) {
   return d.toLocaleDateString("fr-FR", {
@@ -83,73 +74,64 @@ function formatDateLongFr(d = new Date()) {
   });
 }
 
-function formatSessionDate(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-}
-
 function initials(first: string | null, last: string | null) {
   const a = (first ?? "").trim().slice(0, 1).toUpperCase();
   const b = (last ?? "").trim().slice(0, 1).toUpperCase();
   return (a + b).trim() || "—";
 }
 
-function avatarColor(name: string) {
-  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
-}
-
-function idmcTextClass(score: number | null) {
-  if (score == null) return "text-gray-400";
-  if (score > 75) return "text-emerald-600";
-  if (score > 60) return "text-amber-600";
-  return "text-red-600";
-}
-
-function LightKpiCard(props: {
+function KpiCard(props: {
   icon: React.ReactNode;
   iconBg: string;
   label: string;
   value: React.ReactNode;
   sub?: string;
-  footer?: React.ReactNode;
+  href?: string;
 }) {
-  return (
-    <div className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+  const body = (
+    <div className="flex h-full items-start gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:border-violet-200">
       <div className={cn("rounded-xl p-3", props.iconBg)}>{props.icon}</div>
       <div className="min-w-0 flex-1">
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">{props.label}</p>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">
+          {props.label}
+        </p>
         <p className="text-3xl font-black text-gray-900">{props.value}</p>
         {props.sub ? <p className="mt-1 text-xs text-gray-400">{props.sub}</p> : null}
-        {props.footer}
       </div>
     </div>
   );
+  if (props.href) {
+    return <Link href={props.href}>{body}</Link>;
+  }
+  return body;
 }
 
-function RoseProgressBar({ pct }: { pct: number }) {
-  const p = Math.max(0, Math.min(100, Math.round(pct)));
-  return (
-    <div className="mt-3 h-1 w-full rounded-full bg-rose-100">
-      <div className="h-1 rounded-full bg-rose-500 transition-all" style={{ width: `${p}%` }} />
-    </div>
-  );
-}
-
-function BlueProgressBar({ pct }: { pct: number }) {
-  const p = Math.max(0, Math.min(100, Math.round(pct)));
-  return (
-    <div className="mt-2 h-1.5 w-full rounded-full bg-blue-100">
-      <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${p}%` }} />
-    </div>
-  );
+function alertStyles(level: AlertLevel) {
+  if (level === "critical") {
+    return {
+      wrap: "border-red-100 bg-red-50/70",
+      badge: "bg-red-100 text-red-700",
+      label: "Critique",
+    };
+  }
+  if (level === "attention") {
+    return {
+      wrap: "border-amber-100 bg-amber-50/70",
+      badge: "bg-amber-100 text-amber-800",
+      label: "Attention",
+    };
+  }
+  return {
+    wrap: "border-blue-100 bg-blue-50/60",
+    badge: "bg-blue-100 text-blue-700",
+    label: "Info",
+  };
 }
 
 export function EnterpriseDashboardV2() {
   const { loading, data, fetchError, organisationId, configurationRequired, reload } =
     useEntrepriseOverview();
   const overview = data as Overview | null;
-  const [formationTab, setFormationTab] = useState<"presentiel" | "elearning">("presentiel");
 
   const greeting = useMemo(() => {
     const prenom = overview?.viewer?.prenom?.trim();
@@ -166,28 +148,105 @@ export function EnterpriseDashboardV2() {
     return Array.from(set).sort();
   }, [overview?.employees]);
 
-  const realEmployees = useMemo(() => {
+  const employees = useMemo(() => {
     const all = overview?.employees ?? [];
     if (overview?.demo_enriched) return all;
     return filterRealEntrepriseEmployees(all);
   }, [overview?.employees, overview?.demo_enriched]);
 
-  const kpis = overview?.kpis;
-  const attentionSignals = overview?.kpis?.attention_signals;
-  const formations = overview?.formations ?? { presentiel: [], elearning: [] };
-  const recentActivity = overview?.this_week?.recent_activity ?? [];
+  const pendingDiagnostics = useMemo(
+    () => employees.filter((e) => !e.diagnostic_done),
+    [employees],
+  );
 
+  const alerts = useMemo(() => {
+    const fromInsight = overview?.equipe_insight?.priority_alerts ?? [];
+    if (fromInsight.length > 0) {
+      return fromInsight.filter((a) => a.level !== "info");
+    }
+    const derived: Array<{
+      level: AlertLevel;
+      text: string;
+      employee_id?: string;
+      href?: string;
+    }> = [];
+    if (pendingDiagnostics.length > 0) {
+      derived.push({
+        level: pendingDiagnostics.length >= 5 ? "attention" : "info",
+        text: `${pendingDiagnostics.length} collaborateur${pendingDiagnostics.length > 1 ? "s" : ""} sans diagnostic complété`,
+        href: "/dashboard/entreprise/salaries",
+      });
+    }
+    const signals = overview?.kpis?.attention_signals;
+    if (signals && !signals.insufficient) {
+      if (signals.critical > 0) {
+        derived.push({
+          level: "critical",
+          text: `${signals.critical} signal${signals.critical > 1 ? "aux" : ""} critique${signals.critical > 1 ? "s" : ""} détecté${signals.critical > 1 ? "s" : ""}`,
+          href: "/dashboard/entreprise/equipe-insight",
+        });
+      }
+      if (signals.attention > 0) {
+        derived.push({
+          level: "attention",
+          text: `${signals.attention} signal${signals.attention > 1 ? "aux" : ""} d’attention cette semaine`,
+          href: "/dashboard/entreprise/equipe-insight",
+        });
+      }
+    }
+    return derived;
+  }, [overview, pendingDiagnostics.length]);
+
+  const actions = useMemo(() => {
+    const structured = overview?.equipe_insight?.recommended_actions ?? [];
+    if (structured.length > 0) return structured;
+    const fromAi = (overview?.equipe_insight?.ai_recommendations ?? []).map((text, i) => ({
+      id: `ai-${i}`,
+      title: text,
+      detail: undefined as string | undefined,
+      href: "/dashboard/entreprise/formations/demander",
+    }));
+    if (fromAi.length > 0) return fromAi;
+    const fallback = [];
+    if (pendingDiagnostics.length > 0) {
+      fallback.push({
+        id: "diag",
+        title: "Relancer les diagnostics en attente",
+        detail: `${pendingDiagnostics.length} collaborateur${pendingDiagnostics.length > 1 ? "s" : ""}`,
+        href: "/dashboard/entreprise/salaries",
+      });
+    }
+    fallback.push({
+      id: "offer",
+      title: "Publier une offre d’emploi",
+      detail: "Recruter via le job board interne",
+      href: "/dashboard/entreprise/offres/creer",
+    });
+    fallback.push({
+      id: "train",
+      title: "Demander une formation EDGE",
+      detail: "Catalogue business pour vos équipes",
+      href: "/dashboard/entreprise/formations/demander",
+    });
+    return fallback;
+  }, [overview, pendingDiagnostics.length]);
+
+  const kpis = overview?.kpis;
+  const actionsCount = actions.length;
+  const alertsCount = alerts.length;
   const showBlockingOverlay = loading && !overview;
 
   return (
-    <div className="relative flex min-h-screen bg-white font-sans text-gray-900">
+    <div className="relative flex min-h-screen bg-[#f7f5fb] font-sans text-gray-900">
       {showBlockingOverlay ? <EnterpriseLoadingOverlay /> : null}
       <EnterpriseSidebar />
-      <main className="flex-1 min-w-0 overflow-x-hidden px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
-        <header className="mb-10 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-400">Espace Entreprise</p>
-          <h1 className={cn("mt-2", ENTREPRISE_H1_CLASS)}>{greeting}</h1>
-          <p className="mt-2 text-sm text-gray-400">
+      <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+        <header className="mb-8">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-violet-500">
+            Espace Entreprise
+          </p>
+          <h1 className={cn("mt-2 text-left", ENTREPRISE_H1_CLASS)}>{greeting}</h1>
+          <p className="mt-2 text-sm text-gray-500">
             {overview?.organisation?.name ? `${overview.organisation.name} · ` : ""}
             {formatDateLongFr()}
           </p>
@@ -202,16 +261,15 @@ export function EnterpriseDashboardV2() {
               onClick={() => void reload()}
               className="mt-4 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
             >
-              Réessayer maintenant
+              Réessayer
             </button>
           </div>
         ) : configurationRequired ? (
           <div className="space-y-8">
-            <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-8">
-              <h2 className="text-xl font-bold text-gray-900">Bienvenue sur Beyond Enterprise</h2>
+            <div className="rounded-2xl border border-violet-100 bg-white p-8 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900">Bienvenue sur EDGE Entreprise</h2>
               <p className="mt-2 max-w-lg text-sm text-gray-600">
                 Importez votre liste RH pour créer vos collaborateurs et lancer les diagnostics.
-                Format : Nom, Prénom, Email, Département, Poste.
               </p>
               <div className="mt-6">
                 <EnterpriseEmployeeCsvActions
@@ -220,299 +278,209 @@ export function EnterpriseDashboardV2() {
                   onSuccess={() => void reload()}
                 />
               </div>
-              <p className="mt-4 text-xs text-gray-500">
-                Votre organisation n&apos;est pas encore liée ?{" "}
-                <Link href="/onboarding" className="font-semibold text-violet-600 underline">
-                  Compléter la configuration →
-                </Link>
-              </p>
             </div>
             <EntrepriseQuickAccess />
           </div>
         ) : overview && kpis ? (
           <>
-            <EntrepriseQuickAccess />
-
             <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <LightKpiCard
+              <KpiCard
                 iconBg="bg-violet-50"
                 icon={<Users className="text-violet-600" size={22} />}
-                label="Total collaborateurs"
+                label="Collaborateurs"
                 value={kpis.employees_total}
-                sub="équipe active"
+                sub={`${overview.employees_pending ?? 0} invitation${(overview.employees_pending ?? 0) > 1 ? "s" : ""} en attente`}
+                href="/dashboard/entreprise/salaries"
               />
-              <LightKpiCard
-                iconBg="bg-rose-50"
-                icon={<Brain className="text-rose-500" size={22} />}
-                label="Diagnostics"
-                value={`${kpis.diagnostics_completed} / ${kpis.diagnostics_total}`}
-                sub={`${kpis.diagnostics_pct}% complétés`}
-                footer={<RoseProgressBar pct={kpis.diagnostics_pct} />}
+              <KpiCard
+                iconBg="bg-emerald-50"
+                icon={<CheckCircle2 className="text-emerald-600" size={22} />}
+                label="Diagnostics réalisés"
+                value={`${kpis.diagnostics_completed}`}
+                sub={`${kpis.diagnostics_pct}% · ${kpis.diagnostics_completed}/${kpis.diagnostics_total}`}
+                href="/dashboard/entreprise/salaries"
               />
-              <LightKpiCard
+              <KpiCard
                 iconBg="bg-blue-50"
-                icon={<BookOpen className="text-blue-600" size={22} />}
-                label="Formations actives"
-                value={kpis.enrollments_active}
-                sub="parcours en cours"
+                icon={<ListTodo className="text-blue-600" size={22} />}
+                label="Actions à mettre en place"
+                value={actionsCount}
+                sub="priorités RH recommandées"
+                href="#actions"
               />
-              <LightKpiCard
-                iconBg="bg-orange-50"
-                icon={<Activity className="text-orange-500" size={22} />}
-                label="Équipe Insight"
-                value={
-                  attentionSignals?.insufficient ? (
-                    <Link href="/dashboard/entreprise/equipe-insight" className="text-lg font-black text-orange-600">
-                      En attente →
-                    </Link>
-                  ) : (
-                    (attentionSignals as { attention?: number })?.attention ?? 0
-                  )
-                }
-                sub={
-                  attentionSignals?.insufficient
-                    ? `${(attentionSignals as { completed: number }).completed}/${(attentionSignals as { threshold: number }).threshold} diagnostics`
-                    : "signaux cette semaine"
-                }
+              <KpiCard
+                iconBg="bg-amber-50"
+                icon={<AlertTriangle className="text-amber-600" size={22} />}
+                label="Alertes écarts"
+                value={alertsCount}
+                sub="écarts significatifs détectés"
+                href="#alertes"
               />
             </section>
 
-            {/* Collaborateurs */}
-            <section className="mt-10">
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="mt-8 grid gap-6 lg:grid-cols-2">
+              <section id="alertes" className="rounded-[24px] border border-gray-100 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Alertes</h2>
+                    <p className="text-sm text-gray-400">
+                      Écarts importants vs fiche métier ou signaux à traiter
+                    </p>
+                  </div>
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                </div>
+                {alerts.length === 0 ? (
+                  <p className="rounded-2xl bg-emerald-50 px-4 py-6 text-sm text-emerald-800">
+                    Aucune alerte critique pour le moment.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {alerts.map((alert, index) => {
+                      const style = alertStyles(alert.level);
+                      const href =
+                        alert.href ??
+                        (alert.employee_id
+                          ? `/dashboard/entreprise/salaries/${alert.employee_id}`
+                          : undefined);
+                      const inner = (
+                        <div
+                          className={cn(
+                            "flex items-start justify-between gap-3 rounded-2xl border px-4 py-3",
+                            style.wrap,
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <span
+                              className={cn(
+                                "inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                style.badge,
+                              )}
+                            >
+                              {style.label}
+                            </span>
+                            <p className="mt-2 text-sm font-medium text-gray-900">{alert.text}</p>
+                          </div>
+                          {href ? (
+                            <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-gray-400" />
+                          ) : null}
+                        </div>
+                      );
+                      return (
+                        <li key={`${alert.text}-${index}`}>
+                          {href ? <Link href={href}>{inner}</Link> : inner}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+
+              <section id="actions" className="rounded-[24px] border border-gray-100 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Actions à mettre en place</h2>
+                    <p className="text-sm text-gray-400">Priorités concrètes pour vos équipes</p>
+                  </div>
+                  <ClipboardList className="h-5 w-5 text-blue-500" />
+                </div>
+                <ul className="space-y-3">
+                  {actions.map((action) => {
+                    const inner = (
+                      <div className="group flex items-start justify-between gap-3 rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3 transition hover:border-violet-200 hover:bg-violet-50/40">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900">{action.title}</p>
+                          {action.detail ? (
+                            <p className="mt-1 text-xs text-gray-500">{action.detail}</p>
+                          ) : null}
+                        </div>
+                        <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-gray-300 group-hover:text-violet-500" />
+                      </div>
+                    );
+                    return (
+                      <li key={action.id}>
+                        {action.href ? <Link href={action.href}>{inner}</Link> : inner}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            </div>
+
+            <div className="mt-8">
+              <EntrepriseQuickAccess />
+            </div>
+
+            <section className="mt-8">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Collaborateurs</h2>
+                  <h2 className="text-lg font-bold text-gray-900">Diagnostics en attente</h2>
                   <p className="text-sm text-gray-400">
-                    {overview.kpis.employees_total} membres · {overview.employees_pending ?? 0} en attente
+                    {pendingDiagnostics.length} collaborateur
+                    {pendingDiagnostics.length > 1 ? "s" : ""} à relancer
                   </p>
                 </div>
-                <EnterpriseEmployeeCsvActions
-                  organisationId={organisationId}
-                  employees={realEmployees}
-                  organisationName={overview.organisation?.name}
-                  departments={departments}
-                  onSuccess={() => void reload()}
-                />
+                <div className="flex flex-wrap items-center gap-3">
+                  <EnterpriseEmployeeCsvActions
+                    organisationId={organisationId}
+                    employees={employees}
+                    organisationName={overview.organisation?.name}
+                    departments={departments}
+                    onSuccess={() => void reload()}
+                  />
+                  <Link
+                    href="/dashboard/entreprise/salaries"
+                    className="text-sm font-semibold text-violet-600 hover:text-violet-500"
+                  >
+                    Voir tous →
+                  </Link>
+                </div>
               </div>
 
-              {realEmployees.length === 0 ? (
+              {employees.length === 0 ? (
                 <EmptyState
                   variant="light"
                   icon="👥"
                   title="Aucun collaborateur"
-                  description="Importez un fichier CSV ou ajoutez vos collaborateurs manuellement."
+                  description="Importez un fichier CSV ou invitez vos collaborateurs."
                   onAction={() => document.getElementById("entreprise-csv-import")?.click()}
                 />
+              ) : pendingDiagnostics.length === 0 ? (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-5 py-6 text-sm text-emerald-800">
+                  Tous les collaborateurs visibles ont complété leur diagnostic.
+                </div>
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50/80 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                        <th className="px-4 py-3">Collaborateur</th>
-                        <th className="px-4 py-3">Département</th>
-                        <th className="px-4 py-3">Diagnostic</th>
-                        <th className="px-4 py-3">Formation</th>
-                        <th className="px-4 py-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {realEmployees.map((c) => {
-                        const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ") || "—";
-                        const color = avatarColor(fullName);
-                        const isDemo = isEnrichedDemoEmployeeId(c.id);
-                        const identity = (
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={cn(
-                                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
-                                color,
-                              )}
-                            >
-                              {initials(c.first_name, c.last_name)}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">{fullName}</p>
-                              <p className="text-xs text-gray-400">{c.job_title ?? "—"}</p>
-                              {c.idmc_score != null ? (
-                                <p className={cn("text-xs font-semibold", idmcTextClass(c.idmc_score))}>
-                                  IDMC {Math.round(c.idmc_score)}%
-                                </p>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                        return (
-                          <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                            <td className="px-4 py-3">
-                              {isDemo ? (
-                                identity
-                              ) : (
-                                <Link href={`/dashboard/entreprise/salaries/${c.id}`}>{identity}</Link>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">{c.department ?? "—"}</td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={cn(
-                                  "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
-                                  c.diagnostic_done
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "bg-gray-100 text-gray-500",
-                                )}
-                              >
-                                {c.diagnostic_done ? "Complété" : "En attente"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={cn(
-                                  "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
-                                  c.formation_active
-                                    ? "bg-blue-50 text-blue-700"
-                                    : "bg-gray-100 text-gray-500",
-                                )}
-                              >
-                                {c.formation_active ? "En cours" : "Aucune"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              {isDemo ? (
-                                <span className="text-sm font-medium text-gray-400">Démo</span>
-                              ) : (
-                                <Link
-                                  href={`/dashboard/entreprise/salaries/${c.id}`}
-                                  className="text-sm font-semibold text-violet-600 hover:text-violet-500"
-                                >
-                                  Voir →
-                                </Link>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-
-            {/* Formations */}
-            <section className="mt-10">
-              <h2 className="mb-4 text-xl font-bold text-gray-900">Formations</h2>
-              <div className="mb-4 flex gap-2">
-                {(["presentiel", "elearning"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setFormationTab(tab)}
-                    className={cn(
-                      "rounded-xl px-4 py-2 text-sm font-semibold transition",
-                      formationTab === tab
-                        ? "bg-violet-600 text-white"
-                        : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50",
-                    )}
-                  >
-                    {tab === "presentiel" ? "Présentiel" : "eLearning"}
-                  </button>
-                ))}
-              </div>
-
-              {formationTab === "presentiel" ? (
-                formations.presentiel.length === 0 ? (
-                  <EmptyState
-                    variant="light"
-                    icon="📋"
-                    title="Aucune session planifiée"
-                    description="Planifiez une formation pour vos équipes."
-                    action={{ label: "Planifier une formation", href: "/dashboard/entreprise/marketplace" }}
-                  />
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {formations.presentiel.map((s) => {
-                      const pct =
-                        s.total > 0 ? Math.round((s.confirmed / s.total) * 100) : 0;
+                  <ul className="divide-y divide-gray-50">
+                    {pendingDiagnostics.slice(0, 8).map((c) => {
+                      const fullName =
+                        [c.first_name, c.last_name].filter(Boolean).join(" ") || "—";
                       return (
-                        <div
-                          key={s.id}
-                          className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
-                        >
-                          <p className="font-bold text-gray-900">📋 {s.title}</p>
-                          <p className="mt-1 text-sm text-gray-500">
-                            Formateur : {s.formateur} · {formatSessionDate(s.date)}
-                            {s.time ? ` · ${s.time}` : ""}
-                          </p>
-                          <p className="mt-3 text-sm text-gray-600">
-                            Présences : {s.confirmed} / {s.total} confirmées
-                          </p>
-                          <BlueProgressBar pct={pct} />
-                          <p className="mt-1 text-xs text-gray-400">{pct}%</p>
-                        </div>
+                        <li key={c.id}>
+                          <Link
+                            href={`/dashboard/entreprise/salaries/${c.id}`}
+                            className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50/80"
+                          >
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700">
+                                {initials(c.first_name, c.last_name)}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-gray-900">{fullName}</p>
+                                <p className="truncate text-xs text-gray-400">
+                                  {c.job_title ?? "—"}
+                                  {c.department ? ` · ${c.department}` : ""}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-bold uppercase text-gray-500">
+                              En attente
+                            </span>
+                          </Link>
+                        </li>
                       );
                     })}
-                  </div>
-                )
-              ) : formations.elearning.length === 0 ? (
-                <EmptyState
-                  variant="light"
-                  icon="📚"
-                  title="Aucun parcours eLearning"
-                  description="Assignez des parcours LMS à vos collaborateurs."
-                  action={{ label: "eLearning by EDGE", href: "https://edgebs.fr" }}
-                />
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {formations.elearning.map((p) => (
-                    <div key={p.path_id} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                      <p className="font-bold text-gray-900">📚 {p.title}</p>
-                      <p className="mt-1 text-sm text-gray-500">{p.enrolled} apprenants inscrits</p>
-                      <p className="mt-3 text-sm font-semibold text-gray-700">
-                        Taux complétion : {p.completion_pct}%
-                      </p>
-                      <BlueProgressBar pct={p.completion_pct} />
-                      {p.avg_quiz_score != null ? (
-                        <p className="mt-2 text-sm text-gray-500">
-                          Score moyen quiz : {p.avg_quiz_score}%
-                        </p>
-                      ) : null}
-                      {p.badges_count > 0 ? (
-                        <p className="text-sm text-gray-500">Badges obtenus : {p.badges_count}</p>
-                      ) : null}
-                      <Link
-                        href={`/dashboard/formateur`}
-                        className="mt-4 inline-flex items-center text-sm font-semibold text-violet-600 hover:text-violet-500"
-                      >
-                        Voir le détail <ChevronRight className="ml-1 h-4 w-4" />
-                      </Link>
-                    </div>
-                  ))}
+                  </ul>
                 </div>
-              )}
-            </section>
-
-            {/* Activité récente */}
-            <section className="mt-10 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-gray-900">Activité récente</p>
-              {recentActivity.length === 0 ? (
-                <p className="mt-3 text-sm text-gray-400">Aucune activité récente.</p>
-              ) : (
-                <ul className="mt-4 space-y-2">
-                  {recentActivity.map((x) => (
-                    <li key={x.id} className="flex items-center gap-3 rounded-xl border border-gray-50 bg-gray-50/50 p-3 text-sm">
-                      <Brain className="h-4 w-4 text-violet-500" />
-                      <div>
-                        <p className="font-semibold text-gray-900">{x.title}</p>
-                        <p className="text-gray-400">
-                          {new Date(x.at).toLocaleDateString("fr-FR", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
               )}
             </section>
           </>

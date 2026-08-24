@@ -3,6 +3,7 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/emails/brevo";
 import { getSignupConfirmationEmail } from "@/lib/emails/templates/signup-confirmation";
 import { getBeyondConnectBaseUrl } from "@/lib/beyond-connect/utils";
+import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 
 /**
  * Inscription d'un candidat avec juste l'email
@@ -11,7 +12,7 @@ import { getBeyondConnectBaseUrl } from "@/lib/beyond-connect/utils";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { email, firstName, lastName, returnLink } = body;
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Email invalide" }, { status: 400 });
@@ -99,6 +100,12 @@ export async function POST(request: NextRequest) {
     const baseUrl = getBeyondConnectBaseUrl();
     const confirmationLink = `${baseUrl}/beyond-connect/confirmer?token=${confirmationToken}&email=${encodeURIComponent(email)}`;
 
+    let enterpriseRequester = false;
+    if (returnLink === true) {
+      const access = await resolveEntrepriseOverviewAccess();
+      enterpriseRequester = access.ok && !("superAdminPreview" in access) && !("configurationRequired" in access);
+    }
+
     // Envoyer l'email de confirmation
     let emailSent = false;
     let emailError = null;
@@ -137,12 +144,19 @@ export async function POST(request: NextRequest) {
         message: "Compte créé avec succès, mais l'email de confirmation n'a pas pu être envoyé. Veuillez contacter le support ou réessayer plus tard.",
         warning: true,
         emailError: emailError,
+        confirmationLink: enterpriseRequester ? confirmationLink : null,
       });
     }
 
     return NextResponse.json({ 
       success: true,
       message: "Email de confirmation envoyé",
+      confirmationLink: enterpriseRequester ? confirmationLink : null,
+      candidate: {
+        email,
+        firstName: String(firstName ?? "").trim() || null,
+        lastName: String(lastName ?? "").trim() || null,
+      },
     });
   } catch (error) {
     console.error("[beyond-connect/signup] Error:", error);

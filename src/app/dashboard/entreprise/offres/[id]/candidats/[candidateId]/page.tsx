@@ -44,6 +44,105 @@ type Candidate = {
 
 const CANDIDATES: Candidate[] = [
   {
+    id: "edgebs-cand-1",
+    name: "Léa Bernard",
+    availability: "En recherche active",
+    mobility: "Mobile Le Havre & Paris",
+    lastCompany: "Agence Horizon",
+    avatar:
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80",
+    match: 86,
+    idmc: 78,
+    disc: "Relationnel",
+    softSkills: [
+      { label: "Collaboration", level: "86%" },
+      { label: "Communication", level: "80%" },
+      { label: "Empathie", level: "78%" },
+    ],
+    idmcAxes: [
+      { axis: "Connaissance de soi", value: 74 },
+      { axis: "Maîtrise des méthodes", value: 76 },
+      { axis: "Adaptation au contexte", value: 80 },
+      { axis: "Organisation", value: 72 },
+      { axis: "Traitement de l'info", value: 70 },
+      { axis: "Résolution de problèmes", value: 76 },
+      { axis: "Suivi", value: 68 },
+      { axis: "Auto-évaluation", value: 72 },
+    ],
+    discScores: { D: 52, I: 74, S: 70, C: 58 },
+    experiences: [
+      { role: "Chargée de recrutement", company: "Agence Horizon", duration: "18 mois" },
+      { role: "Assistante RH", company: "Viva Consulting", duration: "10 mois" },
+    ],
+    diplomas: [{ title: "Licence RH & Organisation", school: "Université Le Havre", duration: "3 ans" }],
+    languages: ["Français (C2)", "Anglais (B2)"],
+    certifications: ["Entretien structuré", "Marque employeur"],
+    achievements: {
+      "Agence Horizon": [
+        "Pilotage de 12 recrutements CDI",
+        "Amélioration du délai de sourcing (−20%)",
+      ],
+    },
+    badges: [
+      {
+        title: "Communication d'Équipe",
+        issuer: "EDGE Academy",
+        date: "2024-01-08",
+        skills: ["Collaboration", "Feedback", "Alignement"],
+        image:
+          "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
+      },
+    ],
+  },
+  {
+    id: "edgebs-cand-2",
+    name: "Hugo Moreau",
+    availability: "Disponible immédiatement",
+    mobility: "Mobile Normandie",
+    lastCompany: "SalesForce Studio",
+    avatar:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
+    match: 74,
+    idmc: 71,
+    disc: "Décisionnel",
+    softSkills: [
+      { label: "Assertivité", level: "82%" },
+      { label: "Résilience", level: "78%" },
+      { label: "Organisation", level: "74%" },
+    ],
+    idmcAxes: [
+      { axis: "Connaissance de soi", value: 70 },
+      { axis: "Maîtrise des méthodes", value: 72 },
+      { axis: "Adaptation au contexte", value: 68 },
+      { axis: "Organisation", value: 74 },
+      { axis: "Traitement de l'info", value: 66 },
+      { axis: "Résolution de problèmes", value: 73 },
+      { axis: "Suivi", value: 65 },
+      { axis: "Auto-évaluation", value: 69 },
+    ],
+    discScores: { D: 72, I: 58, S: 48, C: 45 },
+    experiences: [
+      { role: "Account Executive", company: "SalesForce Studio", duration: "2 ans" },
+      { role: "SDR", company: "GrowthLab", duration: "1 an" },
+    ],
+    diplomas: [{ title: "Bachelor Commerce", school: "ESC Normandie", duration: "3 ans" }],
+    languages: ["Français (C2)", "Anglais (C1)"],
+    certifications: ["CRM avancé", "Négociation B2B"],
+    achievements: {
+      "SalesForce Studio": ["Quota atteint 118%", "Ouverture de 3 comptes ETI"],
+    },
+    badges: [
+      {
+        title: "Modern Prospecting",
+        issuer: "EDGE Academy",
+        date: "2024-03-12",
+        skills: ["Prospection", "Pipeline", "Closing"],
+        image:
+          "https://images.unsplash.com/photo-1529429617124-a2e0b9d3b3c2?auto=format&fit=crop&w=600&q=80",
+      },
+    ],
+  },
+  {
     id: "c-01",
     name: "Marc Lefebvre",
     availability: "Disponible immédiatement",

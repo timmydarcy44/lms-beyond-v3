@@ -110,3 +110,52 @@ export async function DELETE(
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ success: true });
 }
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id: employeeId } = await context.params;
+  const ctx = await assertEmployeeAccess(employeeId);
+  if ("error" in ctx && ctx.error) return ctx.error;
+  const { service, orgId } = ctx as { service: NonNullable<ReturnType<typeof getServiceRoleClient>>; orgId: string };
+
+  let body: {
+    docId?: string;
+    document_type?: string;
+    title?: string;
+    document_date?: string | null;
+    notes?: string | null;
+  };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Corps invalide" }, { status: 400 });
+  }
+
+  const docId = String(body.docId ?? "").trim();
+  const title = String(body.title ?? "").trim();
+  const document_type = String(body.document_type ?? "").trim();
+  if (!docId || !title || !VALID_TYPES.has(document_type)) {
+    return NextResponse.json({ error: "docId, type et titre requis" }, { status: 400 });
+  }
+
+  const { data, error } = await service
+    .from("employee_hr_documents")
+    .update({
+      document_type,
+      title,
+      document_date: body.document_date?.trim() || null,
+      notes: body.notes?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", docId)
+    .eq("employee_id", employeeId)
+    .eq("organization_id", orgId)
+    .select("id, document_type, title, document_date, notes, file_url, file_name, created_at")
+    .maybeSingle();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (!data) return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
+  return NextResponse.json({ document: data });
+}

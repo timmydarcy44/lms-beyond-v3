@@ -44,7 +44,7 @@ function parseDiscScores(raw: unknown): EmployeeTestResults["disc"] {
 }
 
 function parseSoftSkills(raw: unknown): EmployeeTestResults["soft_skills"] {
-  return parseSoftSkillsScoreEntries(raw).slice(0, 10);
+  return parseSoftSkillsScoreEntries(raw);
 }
 
 export function hasAnyTestResults(results: EmployeeTestResults): boolean {

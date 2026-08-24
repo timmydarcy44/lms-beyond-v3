@@ -223,28 +223,58 @@ export default function EntrepriseOfferDetailPage() {
                   </section>
 
                   <section className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-sm">
-                    <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500">
-                      Candidatures
-                    </h2>
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500">
+                        Candidatures
+                      </h2>
+                      <Link
+                        href={`/dashboard/entreprise/offres/${offer.id}/candidats`}
+                        className="text-xs font-semibold text-violet-700 hover:underline"
+                      >
+                        Voir tout
+                      </Link>
+                    </div>
                     {applications.length === 0 ? (
                       <p className="mt-4 text-sm text-gray-500">
                         Aucune candidature pour le moment sur cette offre.
                       </p>
                     ) : (
                       <div className="mt-4 space-y-3">
-                        {applications.map((application) => (
-                          <div key={application.id} className="rounded-2xl border border-gray-100 bg-slate-50 p-4">
+                        {applications.map((application) => {
+                          const profileId = application.profiles?.[0]?.id;
+                          const href = profileId
+                            ? `/dashboard/entreprise/offres/${offer.id}/candidats/${profileId}`
+                            : null;
+                          const content = (
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="font-medium text-gray-900">{candidateName(application)}</p>
                                 <p className="mt-1 text-xs text-gray-500">{formatDate(application.created_at)}</p>
+                                {href ? (
+                                  <p className="mt-2 text-xs font-semibold text-violet-700">
+                                    Analyser le profil →
+                                  </p>
+                                ) : null}
                               </div>
                               <span className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-xs font-semibold text-violet-700">
                                 {application.match_score ?? "—"}%
                               </span>
                             </div>
-                          </div>
-                        ))}
+                          );
+                          return href ? (
+                            <Link
+                              key={application.id}
+                              href={href}
+                              className="block rounded-2xl border border-gray-100 bg-slate-50 p-4 transition hover:border-violet-200 hover:bg-violet-50/40"
+                            >
+                              {content}
+                            </Link>
+                          ) : (
+                            <div key={application.id} className="rounded-2xl border border-gray-100 bg-slate-50 p-4">
+                              {content}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </section>

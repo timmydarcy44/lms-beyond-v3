@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Users } from "lucide-react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { EnterpriseEmployeeCsvActions } from "@/components/enterprise/enterprise-employee-csv-actions";
@@ -32,6 +33,8 @@ function avatarColor(name: string) {
 
 export default function SalariesPage() {
   const supabase = useSupabase();
+  const searchParams = useSearchParams();
+  const autoOpenInvite = searchParams.get("invite") === "1";
   const { loading, data, organisationId, configurationRequired, reload } = useEntrepriseOverview();
   const [clientOrgId, setClientOrgId] = useState<string | null>(null);
   useEffect(() => {
@@ -90,6 +93,7 @@ export default function SalariesPage() {
                 employees={employees}
                 organisationName={data?.organisation?.name}
                 departments={departments}
+                autoOpenAdd={autoOpenInvite}
                 onSuccess={() => void reload()}
               />
             </div>

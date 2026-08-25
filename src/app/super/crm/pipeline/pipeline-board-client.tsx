@@ -25,6 +25,12 @@ import {
   type PipelineStage,
   type PipelineType,
 } from "@/lib/crm/pipeline-shared";
+import { computeCaPotentielCents } from "@/lib/crm/pipeline-opportunity-ca";
+import {
+  parseQuotedProducts,
+  resolvePartyKind,
+  type PipelineQuotedProductLine,
+} from "@/lib/crm/pipeline-quoted-products";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
 import {
@@ -72,11 +78,13 @@ type DealForm = {
   phone: string;
   amount: string;
   opportunity_type: string;
+  party_kind: "prospect" | "prescripteur";
   notes: string;
   city: string;
   zip_code: string;
   company_creation_date: string;
   quoted_course_ids: string[];
+  quoted_products: PipelineQuotedProductLine[];
 };
 
 const emptyDeal = (stage: string): DealForm => ({
@@ -94,11 +102,13 @@ const emptyDeal = (stage: string): DealForm => ({
   phone: "",
   amount: "",
   opportunity_type: "autre",
+  party_kind: "prospect",
   notes: "",
   city: "",
   zip_code: "",
   company_creation_date: "",
   quoted_course_ids: [],
+  quoted_products: [],
 });
 
 function formatDealContactName(deal: PipelineDeal): string {
@@ -254,6 +264,7 @@ export const PipelineBoardClient = forwardRef<
 
   const showCa = !isBtoc && shouldShowRevenueBar(filteredDeals);
   const caTotal = computePipelineRevenueCents(filteredDeals);
+  const propositionCa = !isBtoc ? computeCaPotentielCents(filteredDeals) : { cents: 0, count: 0 };
 
   const kpis = useMemo(() => {
     if (isBtoc) return null;
@@ -382,11 +393,13 @@ export const PipelineBoardClient = forwardRef<
       phone: deal.phone ?? "",
       amount: deal.amount_cents ? String(deal.amount_cents / 100) : "",
       opportunity_type: deal.opportunity_type ?? "autre",
+      party_kind: resolvePartyKind(deal),
       notes: sanitizeHumanNotes(deal.notes) || "",
       city: deal.city ?? "",
       zip_code: deal.zip_code ?? "",
       company_creation_date: (deal.company_creation_date ?? "") as string,
       quoted_course_ids: deal.quoted_course_ids ?? [],
+      quoted_products: parseQuotedProducts(deal.quoted_products),
     });
     setCommercial(commercialFromDeal(deal));
     setEditingDealMeta({
@@ -532,6 +545,8 @@ export const PipelineBoardClient = forwardRef<
       company_creation_date: form.company_creation_date || null,
       amount: form.amount,
       opportunity_type: form.opportunity_type || "autre",
+      party_kind: form.party_kind || "prospect",
+      quoted_products: form.quoted_products ?? [],
       notes: form.notes || null,
       contact_linkedin: commercial.contact_linkedin || null,
       company_linkedin: commercial.company_linkedin || null,
@@ -650,6 +665,8 @@ export const PipelineBoardClient = forwardRef<
         company_creation_date: form.company_creation_date || null,
         amount: form.amount,
         opportunity_type: form.opportunity_type || "autre",
+        party_kind: form.party_kind || "prospect",
+        quoted_products: form.quoted_products ?? [],
         notes: form.notes || null,
         contact_linkedin: commercial.contact_linkedin || null,
         company_linkedin: commercial.company_linkedin || null,
@@ -895,20 +912,34 @@ export const PipelineBoardClient = forwardRef<
         </div>
       ) : null}
 
-      {showCa ? (
-        <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-6 py-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
-              <DollarSign className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">CA réalisé</p>
-              <p className="text-2xl font-bold text-gray-900">{formatDealAmount(caTotal)}</p>
+      {showCa || propositionCa.count > 0 || caTotal > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex items-center justify-between rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white px-5 py-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-600 text-white">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-sky-700">Proposition</p>
+                <p className="text-2xl font-bold text-gray-900">{formatDealAmount(propositionCa.cents)}</p>
+                <p className="text-xs text-gray-500">
+                  {propositionCa.count} prospect{propositionCa.count > 1 ? "s" : ""} avec montant
+                </p>
+              </div>
             </div>
           </div>
-          <p className="text-sm text-gray-500 max-w-md text-right">
-            Proposition signée + Réussi · montants identifiés uniquement
-          </p>
+          <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">CA réalisé</p>
+                <p className="text-2xl font-bold text-gray-900">{formatDealAmount(caTotal)}</p>
+                <p className="text-xs text-gray-500">Proposition signée + Réussi</p>
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -957,18 +988,37 @@ export const PipelineBoardClient = forwardRef<
               <div className="flex-1 space-y-2 p-2 min-h-[120px]">
                 {columnDeals.map((deal) => {
                   const contactName = formatDealContactName(deal);
+                  const isPrescripteur = resolvePartyKind(deal) === "prescripteur";
                   return (
                   <div
                     key={deal.id}
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData("dealId", deal.id)}
-                    className="relative cursor-grab overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-3 text-white shadow-lg active:cursor-grabbing"
+                    className={
+                      isPrescripteur
+                        ? "relative cursor-grab overflow-hidden rounded-xl border border-amber-400/30 bg-gradient-to-br from-slate-950 via-amber-950 to-orange-950 p-3 text-white shadow-lg active:cursor-grabbing"
+                        : "relative cursor-grab overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-3 text-white shadow-lg active:cursor-grabbing"
+                    }
                   >
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(99,102,241,0.22),transparent_60%)]" />
+                    <div
+                      className={
+                        isPrescripteur
+                          ? "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(245,158,11,0.28),transparent_60%)]"
+                          : "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(99,102,241,0.22),transparent_60%)]"
+                      }
+                    />
                     <div className="relative">
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-medium text-sm leading-tight">{deal.company_name}</p>
                         <div className="flex shrink-0 items-center gap-1">
+                          {isPrescripteur ? (
+                            <Badge
+                              variant="outline"
+                              className="border-amber-400/40 bg-amber-500/20 text-[10px] text-amber-100"
+                            >
+                              Prescripteur
+                            </Badge>
+                          ) : null}
                           {!isBtoc ? (
                             <CatalogueEmailOpenIndicator
                               sentAt={deal.catalog_email_sent_at}

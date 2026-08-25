@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -26,7 +26,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PipelineDealActionsSection } from "@/components/crm/pipeline-deal-actions-section";
 import { PipelineQuoteFormationsCompact } from "@/components/crm/pipeline-quote-formations";
+import { PipelineQuoteProducts } from "@/components/crm/pipeline-quote-products";
 import { PipelineDealQualiopiDossier } from "@/components/crm/pipeline-deal-qualiopi-dossier";
+import {
+  computeQuotedProductsCents,
+  type PipelineQuotedProductLine,
+} from "@/lib/crm/pipeline-quoted-products";
 import {
   computeDealIntelligence,
   normalizeLinkedInUrl,
@@ -59,11 +64,13 @@ export type DealCockpitForm = {
   phone: string;
   amount: string;
   opportunity_type: string;
+  party_kind: "prospect" | "prescripteur";
   notes: string;
   city: string;
   zip_code: string;
   company_creation_date: string;
   quoted_course_ids: string[];
+  quoted_products: PipelineQuotedProductLine[];
 };
 
 function healthVisual(score: number, level: string) {
@@ -173,6 +180,12 @@ export function PipelineDealCockpit({
   onActionsChange?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"identity" | "commercial" | "admin" | "qualiopi">("identity");
+  const formationsCentsRef = useRef(0);
+
+  const pushCombinedTotal = (formationsCents: number, products: PipelineQuotedProductLine[]) => {
+    formationsCentsRef.current = formationsCents;
+    onQuoteTotalChange(formationsCents + computeQuotedProductsCents(products));
+  };
 
   const intel = useMemo(() => computeDealIntelligence(intelligenceInput), [intelligenceInput]);
   const stageLabel =
@@ -664,15 +677,45 @@ export function PipelineDealCockpit({
 
             <div className="mt-5 border-t border-white/10 pt-4">
               <p className="text-sm font-semibold text-white">Offre envisagée</p>
-              <div className="mt-2">
+              <div className="mt-3">
+                <PipelineQuoteProducts
+                  lines={form.quoted_products ?? []}
+                  onChange={(next) => {
+                    setForm((f) => ({ ...f, quoted_products: next }));
+                    pushCombinedTotal(formationsCentsRef.current, next);
+                  }}
+                  tone="dark"
+                />
+              </div>
+              <div className="mt-4">
                 <PipelineQuoteFormationsCompact
                   selectedIds={form.quoted_course_ids}
                   onChange={(ids) => setForm((f) => ({ ...f, quoted_course_ids: ids }))}
-                  onTotalChange={onQuoteTotalChange}
+                  onTotalChange={(cents) => pushCombinedTotal(cents, form.quoted_products ?? [])}
                   tone="dark"
                 />
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label className="text-xs text-slate-400">Type de fiche</Label>
+                  <select
+                    className="mt-1 flex h-9 w-full rounded-md border border-white/15 bg-white/10 px-3 text-sm text-white"
+                    value={form.party_kind || "prospect"}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        party_kind: e.target.value === "prescripteur" ? "prescripteur" : "prospect",
+                      }))
+                    }
+                  >
+                    <option value="prospect" className="bg-slate-900 text-white">
+                      Prospect
+                    </option>
+                    <option value="prescripteur" className="bg-slate-900 text-white">
+                      Prescripteur
+                    </option>
+                  </select>
+                </div>
                 <div>
                   <Label className="text-xs text-slate-400">Type d&apos;opportunité</Label>
                   <select
@@ -687,7 +730,7 @@ export function PipelineDealCockpit({
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <Label className="text-xs text-slate-400">Montant identifié (€)</Label>
                   <Input
                     type="number"

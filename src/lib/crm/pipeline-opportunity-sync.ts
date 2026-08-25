@@ -10,10 +10,12 @@ const OPPORTUNITY_COLUMNS = [
   "opportunity_title",
   "opportunity_identified_at",
   "opportunity_won_at",
+  "quoted_products",
+  "party_kind",
 ] as const;
 
 const OPPORTUNITY_COLUMN_ERROR =
-  /opportunity_type|opportunity_title|opportunity_identified_at|opportunity_won_at|crm_pipeline_opportunities|crm_pipeline_deal_stage_history/i;
+  /opportunity_type|opportunity_title|opportunity_identified_at|opportunity_won_at|quoted_products|party_kind|crm_pipeline_opportunities|crm_pipeline_deal_stage_history/i;
 
 export function stripOpportunityColumns(row: Record<string, unknown>): Record<string, unknown> {
   const next = { ...row };

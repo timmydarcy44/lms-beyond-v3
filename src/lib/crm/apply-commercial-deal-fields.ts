@@ -12,6 +12,8 @@ const COMMERCIAL_KEYS = [
   "latitude",
   "longitude",
   "quoted_course_ids",
+  "quoted_products",
+  "party_kind",
   "priority",
   "why_target",
   "training_needs",
@@ -63,6 +65,11 @@ export function applyCommercialFieldsFromBody(
       target.quoted_course_ids = Array.isArray(body.quoted_course_ids)
         ? body.quoted_course_ids.map((id) => String(id).trim()).filter(Boolean)
         : [];
+    } else if (key === "quoted_products") {
+      target.quoted_products = Array.isArray(body.quoted_products) ? body.quoted_products : [];
+    } else if (key === "party_kind") {
+      const v = String(body.party_kind ?? "").trim();
+      target.party_kind = v === "prescripteur" || v === "prospect" ? v : null;
     } else if (key === "latitude" || key === "longitude") {
       const n = Number(body[key]);
       target[key] = Number.isFinite(n) ? n : null;

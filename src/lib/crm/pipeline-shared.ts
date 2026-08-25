@@ -108,6 +108,8 @@ export type PipelineDeal = PipelineDealCommercial & {
   opportunity_title?: string | null;
   opportunity_identified_at?: string | null;
   opportunity_won_at?: string | null;
+  quoted_products?: unknown;
+  party_kind?: string | null;
   sort_order: number;
   notes: string | null;
   ai_prospect_summary?: string | null;

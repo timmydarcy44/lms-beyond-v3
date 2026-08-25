@@ -84,7 +84,7 @@ export default function JessicaContentinHomePage() {
               "+ de 100 familles accompagnées",
               "Plus de dix ans d'expérience",
               "Spécialisée troubles du neurodéveloppement",
-              "Professeure certifiée (CAPES)",
+              "Professeure en santé",
             ].map((it) => (
               <div key={it} className="p-4 text-center text-sm font-semibold text-[#2F2A25] md:text-base">
                 {it}
@@ -104,7 +104,7 @@ export default function JessicaContentinHomePage() {
             "@context": "https://schema.org",
             "@type": "ProfessionalService",
             "name": "Jessica CONTENTIN - Psychopédagogue",
-            "description": "Professeure certifiée de l'Éducation nationale (CAPES) et psychopédagogue certifiée en neuroéducation. Accompagnement structuré et individualisé pour comprendre le fonctionnement cognitif et émotionnel, réguler les émotions et structurer les apprentissages.",
+            "description": "Professeure en santé et psychopédagogue certifiée en neuroéducation. Accompagnement structuré et individualisé pour comprendre le fonctionnement cognitif et émotionnel, réguler les émotions et structurer les apprentissages.",
             "url": "https://jessicacontentin.fr",
             "address": {
               "@type": "PostalAddress",

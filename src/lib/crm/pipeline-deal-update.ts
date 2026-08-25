@@ -1,8 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  isOpportunitySchemaError,
+  stripOpportunityColumns,
+} from "@/lib/crm/pipeline-opportunity-sync";
 
 const CONTACT_CIVILITY_COLUMN_ERROR = /contact_civility/i;
 
-/** Met à jour un deal ; retire contact_civility si la colonne n'existe pas encore en base. */
+/** Met à jour un deal ; retire colonnes absentes si migration pas encore appliquée. */
 export async function updatePipelineDeal(
   supabase: SupabaseClient,
   id: string,
@@ -16,6 +20,10 @@ export async function updatePipelineDeal(
   if (error && CONTACT_CIVILITY_COLUMN_ERROR.test(error.message) && "contact_civility" in patch) {
     const { contact_civility: _removed, ...withoutCivility } = patch;
     ({ data, error } = await attempt(withoutCivility));
+  }
+
+  if (error && isOpportunitySchemaError(error.message)) {
+    ({ data, error } = await attempt(stripOpportunityColumns(patch)));
   }
 
   return { data, error };

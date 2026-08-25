@@ -71,6 +71,7 @@ type DealForm = {
   email: string;
   phone: string;
   amount: string;
+  opportunity_type: string;
   notes: string;
   city: string;
   zip_code: string;
@@ -92,6 +93,7 @@ const emptyDeal = (stage: string): DealForm => ({
   email: "",
   phone: "",
   amount: "",
+  opportunity_type: "autre",
   notes: "",
   city: "",
   zip_code: "",
@@ -379,6 +381,7 @@ export const PipelineBoardClient = forwardRef<
       email: deal.email ?? "",
       phone: deal.phone ?? "",
       amount: deal.amount_cents ? String(deal.amount_cents / 100) : "",
+      opportunity_type: deal.opportunity_type ?? "autre",
       notes: sanitizeHumanNotes(deal.notes) || "",
       city: deal.city ?? "",
       zip_code: deal.zip_code ?? "",
@@ -528,6 +531,7 @@ export const PipelineBoardClient = forwardRef<
       quoted_course_ids: form.quoted_course_ids,
       company_creation_date: form.company_creation_date || null,
       amount: form.amount,
+      opportunity_type: form.opportunity_type || "autre",
       notes: form.notes || null,
       contact_linkedin: commercial.contact_linkedin || null,
       company_linkedin: commercial.company_linkedin || null,
@@ -645,6 +649,7 @@ export const PipelineBoardClient = forwardRef<
         quoted_course_ids: form.quoted_course_ids,
         company_creation_date: form.company_creation_date || null,
         amount: form.amount,
+        opportunity_type: form.opportunity_type || "autre",
         notes: form.notes || null,
         contact_linkedin: commercial.contact_linkedin || null,
         company_linkedin: commercial.company_linkedin || null,
@@ -897,12 +902,12 @@ export const PipelineBoardClient = forwardRef<
               <DollarSign className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Chiffre d&apos;affaires pipeline</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">CA réalisé</p>
               <p className="text-2xl font-bold text-gray-900">{formatDealAmount(caTotal)}</p>
             </div>
           </div>
           <p className="text-sm text-gray-500 max-w-md text-right">
-            Affiché dès qu&apos;une carte atteint « Proposition envoyée » ou « Réussi »
+            Proposition signée + Réussi · montants identifiés uniquement
           </p>
         </div>
       ) : null}
@@ -910,7 +915,10 @@ export const PipelineBoardClient = forwardRef<
       <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 -mx-1 px-1">
         {visibleStages.map((stage) => {
           const columnDeals = filteredDealsByStage.get(stage.slug) ?? [];
-          const columnTotal = columnDeals.reduce((s, d) => s + d.amount_cents, 0);
+          const columnIdentified = columnDeals.reduce(
+            (s, d) => s + ((d.amount_cents ?? 0) > 0 ? d.amount_cents : 0),
+            0,
+          );
 
           return (
             <div
@@ -928,7 +936,8 @@ export const PipelineBoardClient = forwardRef<
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{stage.label}</p>
                     <p className="text-xs text-gray-500">
-                      {formatDealAmount(columnTotal)} · {columnDeals.length} deal{columnDeals.length > 1 ? "s" : ""}
+                      {columnDeals.length} prospect{columnDeals.length > 1 ? "s" : ""}
+                      {columnIdentified > 0 ? ` · ${formatDealAmount(columnIdentified)} identifiés` : ""}
                     </p>
                   </div>
                   <button

@@ -23,7 +23,7 @@ export function JessicaContentinFooter() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              Professeure certifiée de l&apos;Éducation nationale (CAPES)
+              Professeure en santé
             </p>
             <p
               className="text-[#2F2A25]/80 mb-4"

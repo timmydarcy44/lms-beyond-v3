@@ -18,6 +18,12 @@ import {
   type PipelineType,
 } from "@/lib/crm/pipeline-shared";
 import { syncBtocPipelineDeals } from "@/lib/crm/btoc-pipeline-sync";
+import {
+  applyOpportunityFieldsToDealPatch,
+  isOpportunitySchemaError,
+  stripOpportunityColumns,
+  syncPrimaryOpportunity,
+} from "@/lib/crm/pipeline-opportunity-sync";
 
 async function ensureStages(
   supabase: NonNullable<ReturnType<typeof getServiceRoleClient>>,
@@ -132,6 +138,8 @@ export async function POST(req: NextRequest) {
     applyCommercialFieldsFromBody(insertRow, body);
   }
 
+  applyOpportunityFieldsToDealPatch(insertRow, null, body);
+
   const attemptInsert = async (row: Record<string, unknown>) =>
     supabase.from("crm_pipeline_deals").insert(row).select("*").single();
 
@@ -143,7 +151,29 @@ export async function POST(req: NextRequest) {
     ({ data, error } = await attemptInsert(withoutCivility));
   }
 
+  if (error && isOpportunitySchemaError(error.message)) {
+    ({ data, error } = await attemptInsert(stripOpportunityColumns(insertRow)));
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  if (data) {
+    try {
+      await syncPrimaryOpportunity(supabase, {
+        id: String(data.id),
+        stage_slug: String(data.stage_slug),
+        amount_cents: Number(data.amount_cents ?? 0),
+        opportunity_type: data.opportunity_type ? String(data.opportunity_type) : null,
+        opportunity_title: data.opportunity_title ? String(data.opportunity_title) : null,
+        opportunity_identified_at: data.opportunity_identified_at
+          ? String(data.opportunity_identified_at)
+          : null,
+        opportunity_won_at: data.opportunity_won_at ? String(data.opportunity_won_at) : null,
+      });
+    } catch (syncErr) {
+      console.warn("[crm/pipeline] opportunity sync:", syncErr);
+    }
+  }
 
   // Side-effects after insert must never fail the HTTP response (deal already saved).
   if (pipeline_type === "btob" && data) {

@@ -25,7 +25,7 @@ export function JessicaHomePresentation() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#9A7B52]">Présentation</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">Jessica CONTENTIN</h2>
             <p className="mt-3 text-lg text-[#5C5348] md:text-xl">
-              Professeure certifiée de l&apos;Éducation nationale • Psychopédagogue certifiée en neuroéducation
+              Professeure en santé • Psychopédagogue certifiée en neuroéducation
             </p>
           </div>
 
@@ -41,7 +41,7 @@ export function JessicaHomePresentation() {
           </p>
 
           <p className="text-base leading-relaxed text-[#2F2A25]/90 md:text-lg">
-            Professeure certifiée de l&apos;Éducation nationale (CAPES), psychopédagogue certifiée en neuroéducation
+            Professeure en santé, psychopédagogue certifiée en neuroéducation
             et titulaire de deux Masters universitaires, j&apos;accompagne depuis plus de 10 ans les enfants, les
             adolescents, les étudiants et leurs familles.
           </p>

@@ -1,11 +1,10 @@
 export type PipelineType = "btob" | "btoc";
 
-/** Stades à partir desquels le bandeau CA s’affiche (proposition envoyée et au-delà). */
-export const CRM_REVENUE_STAGE_SLUGS = [
-  "proposition_envoyee",
-  "proposition_signee",
-  "reussi",
-] as const;
+/**
+ * Étapes comptant pour le CA réalisé (proposition signée + réussi).
+ * Aligné avec `CRM_WON_REVENUE_STAGE_SLUGS` — pas de CA fictif sur « proposition envoyée ».
+ */
+export const CRM_REVENUE_STAGE_SLUGS = ["proposition_signee", "reussi"] as const;
 
 export const DEFAULT_BTOC_PIPELINE_STAGES = [
   { slug: "inscription", label: "Inscription", sort_order: 0 },
@@ -105,6 +104,10 @@ export type PipelineDeal = PipelineDealCommercial & {
   email: string | null;
   phone: string | null;
   amount_cents: number;
+  opportunity_type?: string | null;
+  opportunity_title?: string | null;
+  opportunity_identified_at?: string | null;
+  opportunity_won_at?: string | null;
   sort_order: number;
   notes: string | null;
   ai_prospect_summary?: string | null;
@@ -126,15 +129,16 @@ export function formatDealAmount(cents: number): string {
 }
 
 export function shouldShowRevenueBar(deals: PipelineDeal[]): boolean {
-  return deals.some((d) =>
-    CRM_REVENUE_STAGE_SLUGS.includes(d.stage_slug as (typeof CRM_REVENUE_STAGE_SLUGS)[number]),
-  );
+  return deals.some((d) => (d.amount_cents ?? 0) > 0);
 }
 
+/** @deprecated Préférer computeCaRealiseCents / computeCaPotentielCents (période). */
 export function computePipelineRevenueCents(deals: PipelineDeal[]): number {
   return deals
-    .filter((d) =>
-      CRM_REVENUE_STAGE_SLUGS.includes(d.stage_slug as (typeof CRM_REVENUE_STAGE_SLUGS)[number]),
+    .filter(
+      (d) =>
+        (d.amount_cents ?? 0) > 0 &&
+        CRM_REVENUE_STAGE_SLUGS.includes(d.stage_slug as (typeof CRM_REVENUE_STAGE_SLUGS)[number]),
     )
     .reduce((sum, d) => sum + (d.amount_cents ?? 0), 0);
 }

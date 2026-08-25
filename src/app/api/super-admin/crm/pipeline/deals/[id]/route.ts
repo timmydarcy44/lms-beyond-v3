@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { updatePipelineDeal } from "@/lib/crm/pipeline-deal-update";
-import { getServiceRoleClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { ensureQualiopiSessionForDeal, isSignedDealStage } from "@/lib/crm/qualiopi-sessions";
+import {
+  applyOpportunityFieldsToDealPatch,
+  logDealStageChange,
+  syncPrimaryOpportunity,
+} from "@/lib/crm/pipeline-opportunity-sync";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -35,6 +40,35 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
+  let existingDeal: {
+    stage_slug?: string | null;
+    amount_cents?: number | null;
+    opportunity_type?: string | null;
+    opportunity_title?: string | null;
+    opportunity_identified_at?: string | null;
+    opportunity_won_at?: string | null;
+  } | null = null;
+
+  {
+    const full = await supabase
+      .from("crm_pipeline_deals")
+      .select(
+        "stage_slug, amount_cents, opportunity_type, opportunity_title, opportunity_identified_at, opportunity_won_at",
+      )
+      .eq("id", id)
+      .maybeSingle();
+    if (full.error) {
+      const fallback = await supabase
+        .from("crm_pipeline_deals")
+        .select("stage_slug, amount_cents")
+        .eq("id", id)
+        .maybeSingle();
+      existingDeal = fallback.data;
+    } else {
+      existingDeal = full.data;
+    }
+  }
+
   if (body?.pipeline_type != null) patch.pipeline_type = body.pipeline_type === "btoc" ? "btoc" : "btob";
   if (body?.stage_slug != null) patch.stage_slug = String(body.stage_slug).trim();
   if (body?.source != null) patch.source = String(body.source);
@@ -64,12 +98,49 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   applyCommercialFieldsFromBody(patch, body, { partial: true });
+  applyOpportunityFieldsToDealPatch(patch, existingDeal, body);
 
   const { data, error } = await updatePipelineDeal(supabase, id, patch);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  const prevStage = existingDeal?.stage_slug ? String(existingDeal.stage_slug) : null;
   const nextStage = String(data?.stage_slug ?? patch.stage_slug ?? "");
+
+  if (prevStage !== nextStage && nextStage) {
+    let changedByEmail: string | null = null;
+    try {
+      const userClient = await getServerClient();
+      const { data: auth } = userClient
+        ? await userClient.auth.getUser()
+        : { data: { user: null } };
+      changedByEmail = auth.user?.email ?? null;
+    } catch {
+      /* ignore */
+    }
+    await logDealStageChange(supabase, {
+      dealId: id,
+      fromStage: prevStage,
+      toStage: nextStage,
+      changedByEmail,
+      source: "ui",
+    });
+  }
+
+  if (data) {
+    await syncPrimaryOpportunity(supabase, {
+      id,
+      stage_slug: String(data.stage_slug),
+      amount_cents: Number(data.amount_cents ?? 0),
+      opportunity_type: data.opportunity_type ? String(data.opportunity_type) : null,
+      opportunity_title: data.opportunity_title ? String(data.opportunity_title) : null,
+      opportunity_identified_at: data.opportunity_identified_at
+        ? String(data.opportunity_identified_at)
+        : null,
+      opportunity_won_at: data.opportunity_won_at ? String(data.opportunity_won_at) : null,
+    });
+  }
+
   if (isSignedDealStage(nextStage) && data) {
     await ensureQualiopiSessionForDeal(supabase, {
       id,

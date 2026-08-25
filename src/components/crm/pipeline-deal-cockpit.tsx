@@ -40,7 +40,8 @@ import {
 import { PIPELINE_BTOB_CONTACT_OWNERS, CONTACT_CIVILITY_OPTIONS } from "@/lib/crm/pipeline-btob-owners";
 import type { BtobCommercialFormState } from "@/app/super/crm/pipeline/pipeline-btob-commercial-fields";
 import type { PipelineStage } from "@/lib/crm/pipeline-shared";
-import { PIPELINE_SHEET_BADGE, PIPELINE_SHEET_BTN_OUTLINE } from "@/lib/crm/pipeline-shared";
+import { PIPELINE_SHEET_BADGE, PIPELINE_SHEET_BTN_OUTLINE, formatDealAmount } from "@/lib/crm/pipeline-shared";
+import { PIPELINE_OPPORTUNITY_TYPE_OPTIONS } from "@/lib/crm/pipeline-opportunity-ca";
 
 export type DealCockpitForm = {
   id?: string;
@@ -56,6 +57,8 @@ export type DealCockpitForm = {
   contact_civility: string;
   email: string;
   phone: string;
+  amount: string;
+  opportunity_type: string;
   notes: string;
   city: string;
   zip_code: string;
@@ -668,6 +671,43 @@ export function PipelineDealCockpit({
                   onTotalChange={onQuoteTotalChange}
                   tone="dark"
                 />
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label className="text-xs text-slate-400">Type d&apos;opportunité</Label>
+                  <select
+                    className="mt-1 flex h-9 w-full rounded-md border border-white/15 bg-white/10 px-3 text-sm text-white"
+                    value={form.opportunity_type || "autre"}
+                    onChange={(e) => setForm((f) => ({ ...f, opportunity_type: e.target.value }))}
+                  >
+                    {PIPELINE_OPPORTUNITY_TYPE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value} className="bg-slate-900 text-white">
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-400">Montant identifié (€)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={100}
+                    placeholder="Laisser vide si non chiffré"
+                    className="mt-1 h-9 border-white/15 bg-white/10 text-sm text-white placeholder:text-slate-500"
+                    value={form.amount}
+                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                  />
+                  {form.amount && Number.parseFloat(form.amount) > 0 ? (
+                    <p className="mt-1 text-[11px] text-emerald-300/90">
+                      Opportunité : {formatDealAmount(Math.round(Number.parseFloat(form.amount) * 100))}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Prospect sans montant = pas de CA affiché
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </section>

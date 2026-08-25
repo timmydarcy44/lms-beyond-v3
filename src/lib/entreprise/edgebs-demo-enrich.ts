@@ -10,6 +10,7 @@ import {
   computeSoftSkillGaps,
   parseMetierSoftSkillTargets,
 } from "@/lib/entreprise/metier-skill-gaps";
+import { getEdgebsDemoInclusion } from "@/lib/entreprise/inclusion-accommodations";
 import { AXES_LABELS, IDMC_AXIS_KEYS, type AxisKey } from "@/lib/idmc/idmc-display";
 import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 
@@ -247,26 +248,27 @@ function buildDemoIdmcAxes(index: number): Record<AxisKey, number> {
   return axes;
 }
 
+/** Scores Soft Skills démo — échelle test EDGE /15. */
 function buildDemoSoftSkills(index: number): Array<{ skill: string; score: number }> {
   return SOFT_SKILLS.map((skill, skillIndex) => {
     const pattern = (index + skillIndex) % 7;
     const delta =
       pattern === 0
-        ? 14
+        ? 3
         : pattern === 1
-          ? 8
+          ? 2
           : pattern === 2
-            ? 2
+            ? 1
             : pattern === 3
-              ? -4
+              ? 0
               : pattern === 4
-                ? -10
+                ? -1
                 : pattern === 5
-                  ? -16
-                  : -22;
+                  ? -2
+                  : -3;
     return {
       skill: skill.titre,
-      score: Math.max(32, Math.min(98, 72 + delta + ((index + skillIndex) % 5))),
+      score: Math.max(3, Math.min(15, 11 + delta + ((index + skillIndex) % 3) - 1)),
     };
   }).sort((a, b) => b.score - a.score);
 }
@@ -374,16 +376,16 @@ export function buildEdgebsDemoEmployeeDetailPayload(id: string) {
     profile_analysis: forcedDone
       ? {
           strengths: softSkills
-            .filter((s) => s.score >= 78)
+            .filter((s) => s.score >= 12)
             .slice(0, 4)
-            .map((s) => `${s.skill} solide (${s.score}/100)`),
+            .map((s) => `${s.skill} solide (${s.score}/15)`),
           improvements: [
             ...skillGaps
               .filter((g) => g.status === "critical" || g.status === "attention")
               .slice(0, 2)
               .map((g) =>
                 g.gap != null
-                  ? `${g.skill} : ${g.actual}/100 vs cible ${g.target} (écart ${g.gap})`
+                  ? `${g.skill} : ${g.actual}/15 vs cible ${g.target}/15 (écart ${g.gap})`
                   : `${g.skill} non mesuré`,
               ),
             ...(idmcAxes
@@ -392,7 +394,7 @@ export function buildEdgebsDemoEmployeeDetailPayload(id: string) {
                   .map((key) => `${AXES_LABELS[key]} (IDMC ${idmcAxes[key]}/100) à renforcer`)
               : []),
           ].slice(0, 4),
-          summary: `Profil comportemental « ${disc?.label ?? "—"} » · IDMC ${idmc ?? "—"}/100 sur 8 axes · ${softSkills.length} soft skills mesurées. Comparaison avec « ${metier.title} ».`,
+          summary: `Profil comportemental « ${disc?.label ?? "—"} » · IDMC ${idmc ?? "—"}/100 sur 8 axes · ${softSkills.length} soft skills mesurées (/15). Comparaison avec « ${metier.title} ».`,
           updatedAt: new Date().toISOString(),
           cached: true,
         }
@@ -412,6 +414,7 @@ export function buildEdgebsDemoEmployeeDetailPayload(id: string) {
           },
         ]
       : [],
+    inclusion: getEdgebsDemoInclusion(id),
     hr_documents: [
       {
         id: `${id}-doc-1`,
@@ -451,6 +454,46 @@ export function buildEdgebsDemoEmployeeDetailPayload(id: string) {
       },
     ],
     demo: true,
+  };
+}
+
+/** Entrées Skills Gap pour la démo EDGEBS (échelle Soft Skills /15). */
+export function buildEdgebsSkillsGapInputs(): {
+  employees: Array<{
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    job_title: string | null;
+    department: string | null;
+    metier: string | null;
+    soft_skills: Array<{ skill: string; score: number }>;
+    has_soft_skills: boolean;
+  }>;
+  metiers: Array<{ id: string; title: string; soft_skills: string[] }>;
+} {
+  const employees = listEdgebsDemoEmployees().map((row, index) => {
+    const id = String(row.id);
+    const forcedDone = Boolean(row.diagnostic_done);
+    const softSkills = forcedDone ? buildDemoSoftSkills(index) : [];
+    return {
+      id,
+      first_name: (row.first_name as string | null) ?? null,
+      last_name: (row.last_name as string | null) ?? null,
+      job_title: (row.job_title as string | null) ?? null,
+      department: (row.department as string | null) ?? null,
+      metier: (row.metier as string | null) ?? null,
+      soft_skills: softSkills,
+      has_soft_skills: softSkills.length > 0,
+    };
+  });
+
+  return {
+    employees,
+    metiers: EDGEBS_DEMO_METIERS.map((m) => ({
+      id: m.id,
+      title: m.title,
+      soft_skills: [...m.soft_skills],
+    })),
   };
 }
 

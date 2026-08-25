@@ -1,4 +1,17 @@
-/** Écarts soft skills entre fiche métier (cible) et résultats collaborateur. */
+/**
+ * Soft Skill gaps métier ↔ collaborateur — échelle unifiée /15.
+ * Réutilise le format métier `Label::score` (score désormais /15 ; legacy /100 converti).
+ */
+
+import {
+  classifyGapSeverity,
+  gapSeverityLabel,
+  normalizeObservedToScale15,
+  normalizeTargetToScale15,
+  SKILLS_GAP_DEFAULT_TARGET,
+  SKILLS_GAP_SCORE_MAX,
+  type GapSeverity,
+} from "@/lib/entreprise/skills-gap-config";
 
 export type MetierSoftSkillTarget = {
   label: string;
@@ -11,6 +24,10 @@ export type SoftSkillGap = {
   actual: number | null;
   gap: number | null;
   status: "ok" | "attention" | "critical" | "missing";
+  severity: GapSeverity | "missing";
+  /** Source conceptuelle pour évolution (soft_skill_test, etc.). */
+  observedSource: "soft_skill_test" | null;
+  targetSource: "metier_soft_skills";
 };
 
 export function parseMetierSoftSkillTargets(values: string[] | null | undefined): MetierSoftSkillTarget[] {
@@ -25,7 +42,9 @@ export function parseMetierSoftSkillTargets(values: string[] | null | undefined)
       const parsed = Number(scoreRaw);
       return {
         label,
-        target: Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 75,
+        target: Number.isFinite(parsed)
+          ? normalizeTargetToScale15(parsed)
+          : SKILLS_GAP_DEFAULT_TARGET,
       };
     })
     .filter((item): item is MetierSoftSkillTarget => Boolean(item));
@@ -47,13 +66,19 @@ export function findSoftSkillScore(
   if (!Array.isArray(softSkills) || softSkills.length === 0) return null;
   const needle = normalizeLabel(label);
   const exact = softSkills.find((item) => normalizeLabel(item.skill) === needle);
-  if (exact) return Math.max(0, Math.min(100, Number(exact.score) || 0));
+  if (exact) return normalizeObservedToScale15(Number(exact.score) || 0);
   const partial = softSkills.find(
     (item) =>
       normalizeLabel(item.skill).includes(needle) || needle.includes(normalizeLabel(item.skill)),
   );
-  if (partial) return Math.max(0, Math.min(100, Number(partial.score) || 0));
+  if (partial) return normalizeObservedToScale15(Number(partial.score) || 0);
   return null;
+}
+
+function severityToLegacyStatus(severity: GapSeverity): SoftSkillGap["status"] {
+  if (severity === "conforme" || severity === "leger") return "ok";
+  if (severity === "modere") return "attention";
+  return "critical";
 }
 
 export function computeSoftSkillGaps(
@@ -69,17 +94,22 @@ export function computeSoftSkillGaps(
         actual: null,
         gap: null,
         status: "missing" as const,
+        severity: "missing" as const,
+        observedSource: null,
+        targetSource: "metier_soft_skills" as const,
       };
     }
     const gap = actual - target.target;
-    const status =
-      gap >= -5 ? ("ok" as const) : gap >= -15 ? ("attention" as const) : ("critical" as const);
+    const severity = classifyGapSeverity(gap);
     return {
       skill: target.label,
       target: target.target,
       actual,
       gap,
-      status,
+      status: severityToLegacyStatus(severity),
+      severity,
+      observedSource: "soft_skill_test",
+      targetSource: "metier_soft_skills",
     };
   });
 }
@@ -90,3 +120,16 @@ export function gapStatusLabel(status: SoftSkillGap["status"]) {
   if (status === "critical") return "Écart fort";
   return "Non mesuré";
 }
+
+export function formatScoreOn15(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return `—/${SKILLS_GAP_SCORE_MAX}`;
+  return `${Math.round(value * 10) / 10}/${SKILLS_GAP_SCORE_MAX}`;
+}
+
+export function formatGap(gap: number | null | undefined): string {
+  if (gap == null || !Number.isFinite(gap)) return "—";
+  const rounded = Math.round(gap * 10) / 10;
+  return rounded > 0 ? `+${rounded}` : String(rounded);
+}
+
+export { gapSeverityLabel };

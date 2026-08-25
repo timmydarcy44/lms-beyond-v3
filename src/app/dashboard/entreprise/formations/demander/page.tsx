@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import {
   BUSINESS_TRAINING_CATEGORIES,
@@ -261,12 +262,45 @@ function RequestModal({
 }
 
 export default function EntrepriseFormationRequestPage() {
+  const searchParams = useSearchParams();
+  const skillParam = (searchParams.get("skill") ?? "").trim();
+  const metierParam = (searchParams.get("metier") ?? "").trim();
+  const formatParam = (searchParams.get("format") ?? "").trim();
+
   const [category, setCategory] = useState<string>("Tous");
   const [selected, setSelected] = useState<BusinessTrainingItem | null>(null);
   const [form, setForm] = useState<RequestFormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!skillParam && !formatParam) return;
+    const needle = skillParam.toLowerCase();
+    if (skillParam) {
+      const softCat = BUSINESS_TRAINING_CATEGORIES.find((c) => c === "Soft Skills");
+      if (softCat) setCategory(softCat);
+      const match = BUSINESS_TRAINING_ITEMS.find(
+        (item) =>
+          item.title.toLowerCase().includes(needle) ||
+          item.subtitle.toLowerCase().includes(needle) ||
+          item.category.toLowerCase().includes(needle),
+      );
+      if (match) setSelected(match);
+    }
+    setForm((prev) => ({
+      ...prev,
+      preferred_format:
+        formatParam && (FORMAT_OPTIONS as readonly string[]).includes(formatParam)
+          ? formatParam
+          : prev.preferred_format,
+      notes:
+        prev.notes ||
+        (skillParam
+          ? `Besoin Skills Gap : renforcer « ${skillParam} »${metierParam ? ` pour le métier « ${metierParam} »` : ""}.`
+          : prev.notes),
+    }));
+  }, [skillParam, metierParam, formatParam]);
 
   useEffect(() => {
     let cancelled = false;

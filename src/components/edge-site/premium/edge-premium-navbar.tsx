@@ -7,14 +7,9 @@ import { cn } from "@/lib/utils";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 import { EdgePremiumLogo } from "@/components/edge-site/premium/edge-premium-logo";
-import {
-  EdgePremiumMegaColumnsPanel,
-  EdgePremiumMegaTrigger,
-} from "@/components/edge-site/premium/edge-premium-mega-menu";
 import { EdgePremiumMobileMenu } from "@/components/edge-site/premium/edge-premium-mobile-menu";
 
-type DropdownKey = "fonctionnalites" | "ressources";
-type MegaKey = "business" | "particulier";
+type PillarId = "former" | "developper" | "recruter" | "piloter";
 
 function NavDropdown({
   label,
@@ -22,7 +17,6 @@ function NavDropdown({
   open,
   onToggle,
   onClose,
-  scrolled,
   light,
 }: {
   label: string;
@@ -30,7 +24,6 @@ function NavDropdown({
   open: boolean;
   onToggle: () => void;
   onClose: () => void;
-  scrolled: boolean;
   light: boolean;
 }) {
   return (
@@ -56,13 +49,10 @@ function NavDropdown({
       {open ? (
         <div
           className={cn(
-            "absolute left-0 top-full z-50 mt-2 min-w-[220px] rounded-2xl p-2 shadow-2xl backdrop-blur-xl",
+            "absolute left-0 top-full z-50 mt-2 min-w-[240px] rounded-2xl p-2 shadow-2xl backdrop-blur-xl",
             light
               ? "border border-black/[0.08] bg-white/95"
-              : cn(
-                  "border border-white/10",
-                  scrolled ? "bg-edge-black-deep/95" : "bg-[#0a0c14]/90",
-                ),
+              : "border border-white/10 bg-edge-black-deep/95",
           )}
         >
           {items.map((item) => (
@@ -98,27 +88,15 @@ export function EdgePremiumNavbar({
   light = false,
 }: NavbarProps) {
   const config = useEdgePremiumConfig();
-  const { links, nav, megaBusiness, megaParticulier } = config;
+  const { links, nav } = config;
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
-  const [openMega, setOpenMega] = useState<MegaKey | null>(null);
+  const [openPillar, setOpenPillar] = useState<PillarId | null>(null);
   const headerRef = useRef<HTMLElement>(null);
-  const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const scheduleMegaClose = () => {
-    if (megaTimer.current) clearTimeout(megaTimer.current);
-    megaTimer.current = setTimeout(() => setOpenMega(null), 180);
-  };
-
-  const cancelMegaClose = () => {
-    if (megaTimer.current) clearTimeout(megaTimer.current);
-  };
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (!headerRef.current?.contains(e.target as Node)) {
-        setOpenDropdown(null);
-        setOpenMega(null);
+        setOpenPillar(null);
       }
     };
     document.addEventListener("pointerdown", onClick);
@@ -128,8 +106,7 @@ export function EdgePremiumNavbar({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setOpenDropdown(null);
-        setOpenMega(null);
+        setOpenPillar(null);
         setMobileOpen(false);
       }
     };
@@ -138,18 +115,11 @@ export function EdgePremiumNavbar({
   }, []);
 
   const closeAll = () => {
-    setOpenDropdown(null);
-    setOpenMega(null);
+    setOpenPillar(null);
     setMobileOpen(false);
   };
 
-  const openMegaMenu = (key: MegaKey) => {
-    cancelMegaClose();
-    setOpenMega(key);
-    setOpenDropdown(null);
-  };
-
-  const isSolid = pageScrolled || openDropdown !== null || mobileOpen;
+  const isSolid = pageScrolled || openPillar !== null || mobileOpen;
 
   return (
     <header
@@ -170,48 +140,24 @@ export function EdgePremiumNavbar({
               !overlay && "border-b border-white/[0.06] bg-edge-black-deep",
             ),
       )}
-      onMouseLeave={scheduleMegaClose}
     >
       <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
         <EdgePremiumLogo light={light} />
 
         <nav className="hidden items-center lg:flex" aria-label="Navigation principale">
-          <EdgePremiumMegaTrigger
-            label="Business"
-            open={openMega === "business"}
-            onOpen={() => openMegaMenu("business")}
-            light={light}
-          />
-          <EdgePremiumMegaTrigger
-            label="Particulier"
-            open={openMega === "particulier"}
-            onOpen={() => openMegaMenu("particulier")}
-            light={light}
-          />
-          <NavDropdown
-            label="Fonctionnalités"
-            items={nav.fonctionnalites}
-            open={openDropdown === "fonctionnalites"}
-            scrolled={isSolid}
-            light={light}
-            onToggle={() => {
-              setOpenMega(null);
-              setOpenDropdown((d) => (d === "fonctionnalites" ? null : "fonctionnalites"));
-            }}
-            onClose={() => setOpenDropdown(null)}
-          />
-          <NavDropdown
-            label="Ressources"
-            items={nav.ressources}
-            open={openDropdown === "ressources"}
-            scrolled={isSolid}
-            light={light}
-            onToggle={() => {
-              setOpenMega(null);
-              setOpenDropdown((d) => (d === "ressources" ? null : "ressources"));
-            }}
-            onClose={() => setOpenDropdown(null)}
-          />
+          {nav.pillars.map((pillar) => (
+            <NavDropdown
+              key={pillar.id}
+              label={pillar.label}
+              items={pillar.items}
+              open={openPillar === pillar.id}
+              light={light}
+              onToggle={() =>
+                setOpenPillar((current) => (current === pillar.id ? null : pillar.id))
+              }
+              onClose={() => setOpenPillar(null)}
+            />
+          ))}
           <Link
             href={links.tarifs}
             className={cn(
@@ -264,19 +210,6 @@ export function EdgePremiumNavbar({
           )}
         </button>
       </div>
-
-      {openMega ? (
-        <div
-          className="absolute left-0 right-0 top-full z-50 hidden px-4 pt-3 pb-5 sm:px-6 lg:block lg:px-8"
-          onMouseEnter={cancelMegaClose}
-        >
-          <EdgePremiumMegaColumnsPanel
-            data={openMega === "business" ? megaBusiness : megaParticulier}
-            onClose={() => setOpenMega(null)}
-            light={light}
-          />
-        </div>
-      ) : null}
 
       <EdgePremiumMobileMenu
         open={mobileOpen}

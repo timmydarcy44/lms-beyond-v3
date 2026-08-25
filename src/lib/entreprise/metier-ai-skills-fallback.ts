@@ -8,15 +8,16 @@ type MetierAiSkills = {
   soft_skills: SoftSkillTarget[];
 };
 
+/** Cibles Soft Skills métier — échelle test EDGE /15. */
 const DEFAULT_SOFT: SoftSkillTarget[] = [
-  { label: "Communication", score: 80 },
-  { label: "Collaboration", score: 75 },
-  { label: "Organisation", score: 78 },
-  { label: "Adaptabilite", score: 72 },
-  { label: "Autonomie", score: 74 },
-  { label: "Rigueur", score: 76 },
-  { label: "Resolution de problemes", score: 78 },
-  { label: "Gestion du stress", score: 70 },
+  { label: "Communication", score: 12 },
+  { label: "Collaboration", score: 11 },
+  { label: "Organisation", score: 12 },
+  { label: "Adaptabilite", score: 11 },
+  { label: "Autonomie", score: 11 },
+  { label: "Rigueur", score: 11 },
+  { label: "Resolution de problemes", score: 12 },
+  { label: "Gestion du stress", score: 10 },
 ];
 
 function matches(title: string, ...needles: string[]) {
@@ -35,12 +36,12 @@ export function buildMetierAiSkillsFallback(title: string): MetierAiSkills {
       description: `Developper le portefeuille, qualifier les opportunites et conclure des deals pour le role ${t}.`,
       hard_skills: ["CRM", "Prospection", "Negociation", "Pipeline", "Discovery call", "Reporting commercial"],
       soft_skills: [
-        { label: "Assertivite", score: 82 },
-        { label: "Ecoute", score: 85 },
-        { label: "Resilience", score: 80 },
-        { label: "Influence", score: 78 },
-        { label: "Organisation", score: 75 },
-        { label: "Gestion du stress", score: 72 },
+        { label: "Assertivite", score: 12 },
+        { label: "Ecoute", score: 13 },
+        { label: "Resilience", score: 12 },
+        { label: "Influence", score: 12 },
+        { label: "Organisation", score: 11 },
+        { label: "Gestion du stress", score: 11 },
       ],
     };
   }
@@ -50,12 +51,12 @@ export function buildMetierAiSkillsFallback(title: string): MetierAiSkills {
       description: `Piloter competences, engagement et parcours collaborateurs pour le role ${t}.`,
       hard_skills: ["GPEC", "SIRH", "Recrutement", "Entretiens", "Reporting RH", "Droit social de base"],
       soft_skills: [
-        { label: "Empathie", score: 88 },
-        { label: "Discernement", score: 82 },
-        { label: "Communication", score: 85 },
-        { label: "Organisation", score: 80 },
-        { label: "Confidentialite", score: 90 },
-        { label: "Negociation", score: 72 },
+        { label: "Empathie", score: 13 },
+        { label: "Discernement", score: 12 },
+        { label: "Communication", score: 13 },
+        { label: "Organisation", score: 12 },
+        { label: "Confidentialite", score: 14 },
+        { label: "Negociation", score: 11 },
       ],
     };
   }
@@ -65,12 +66,12 @@ export function buildMetierAiSkillsFallback(title: string): MetierAiSkills {
       description: `Animer la performance collective et accompagner la montee en competences pour le role ${t}.`,
       hard_skills: ["People management", "KPI", "Delegation", "Conduite du changement", "Feedback", "Planification"],
       soft_skills: [
-        { label: "Leadership", score: 88 },
-        { label: "Feedback", score: 85 },
-        { label: "Cooperation", score: 80 },
-        { label: "Gestion du stress", score: 78 },
-        { label: "Decision", score: 82 },
-        { label: "Communication", score: 84 },
+        { label: "Leadership", score: 13 },
+        { label: "Feedback", score: 13 },
+        { label: "Cooperation", score: 12 },
+        { label: "Gestion du stress", score: 12 },
+        { label: "Decision", score: 12 },
+        { label: "Communication", score: 13 },
       ],
     };
   }
@@ -80,12 +81,12 @@ export function buildMetierAiSkillsFallback(title: string): MetierAiSkills {
       description: `Construire la marque, les contenus et la performance acquisition pour le role ${t}.`,
       hard_skills: ["SEO", "Content marketing", "Analytics", "CRM marketing", "Brand", "Reseaux sociaux"],
       soft_skills: [
-        { label: "Creativite", score: 85 },
-        { label: "Communication", score: 88 },
-        { label: "Collaboration", score: 78 },
-        { label: "Organisation", score: 76 },
-        { label: "Adaptabilite", score: 80 },
-        { label: "Rigueur", score: 74 },
+        { label: "Creativite", score: 13 },
+        { label: "Communication", score: 13 },
+        { label: "Collaboration", score: 12 },
+        { label: "Organisation", score: 11 },
+        { label: "Adaptabilite", score: 12 },
+        { label: "Rigueur", score: 11 },
       ],
     };
   }
@@ -95,12 +96,12 @@ export function buildMetierAiSkillsFallback(title: string): MetierAiSkills {
       description: `Concevoir et animer des parcours de formation alignes business pour le role ${t}.`,
       hard_skills: ["Ingenierie pedagogique", "LMS", "Animation", "Evaluation", "Blended learning", "Reporting L&D"],
       soft_skills: [
-        { label: "Pedagogie", score: 90 },
-        { label: "Communication", score: 86 },
-        { label: "Empathie", score: 82 },
-        { label: "Organisation", score: 80 },
-        { label: "Creativite", score: 78 },
-        { label: "Adaptabilite", score: 84 },
+        { label: "Pedagogie", score: 14 },
+        { label: "Communication", score: 13 },
+        { label: "Empathie", score: 12 },
+        { label: "Organisation", score: 12 },
+        { label: "Creativite", score: 12 },
+        { label: "Adaptabilite", score: 13 },
       ],
     };
   }
@@ -110,12 +111,12 @@ export function buildMetierAiSkillsFallback(title: string): MetierAiSkills {
       description: `Livrer des solutions fiables, mesurables et alignees produit pour le role ${t}.`,
       hard_skills: ["Analyse", "SQL", "Agile/Scrum", "Documentation", "Tests", "Outils collaboratifs"],
       soft_skills: [
-        { label: "Resolution de problemes", score: 88 },
-        { label: "Rigueur", score: 85 },
-        { label: "Collaboration", score: 78 },
-        { label: "Autonomie", score: 82 },
-        { label: "Communication", score: 74 },
-        { label: "Adaptabilite", score: 80 },
+        { label: "Resolution de problemes", score: 13 },
+        { label: "Rigueur", score: 13 },
+        { label: "Collaboration", score: 12 },
+        { label: "Autonomie", score: 12 },
+        { label: "Communication", score: 11 },
+        { label: "Adaptabilite", score: 12 },
       ],
     };
   }

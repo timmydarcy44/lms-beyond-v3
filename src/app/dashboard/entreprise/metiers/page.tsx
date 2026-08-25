@@ -90,26 +90,38 @@ const HARD_SKILL_LIBRARY = Array.from(
   ]),
 ).sort((a, b) => a.localeCompare(b, "fr"));
 
+/** Cible Soft Skill métier : échelle test EDGE /15. */
+const DEFAULT_SOFT_TARGET_ON_15 = 11;
+
 const EMPTY_FORM: RoleFormState = {
   title: "",
   description: "",
   hardSkills: [],
-  softSkills: SOFT_SKILL_LIBRARY.map((label) => ({ label, score: 70 })),
+  softSkills: SOFT_SKILL_LIBRARY.map((label) => ({ label, score: DEFAULT_SOFT_TARGET_ON_15 })),
 };
 
 function encodeSoftSkills(skills: SoftSkillTarget[]) {
   return skills
     .filter((skill) => skill.label.trim())
-    .map((skill) => `${skill.label.trim()}::${Math.max(0, Math.min(100, skill.score))}`);
+    .map(
+      (skill) =>
+        `${skill.label.trim()}::${Math.max(3, Math.min(15, Math.round(skill.score)))}`,
+    );
 }
 
 function decodeSoftSkills(values: string[]) {
   return values.map((value) => {
     const [label, scoreRaw] = value.split("::");
     const parsed = Number(scoreRaw);
+    let score = DEFAULT_SOFT_TARGET_ON_15;
+    if (Number.isFinite(parsed)) {
+      // Legacy métier targets were 0–100
+      score = parsed > 15 ? Math.round((parsed / 100) * 15) : Math.round(parsed);
+      score = Math.max(3, Math.min(15, score));
+    }
     return {
       label: (label || value).trim(),
-      score: Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 70,
+      score,
     };
   });
 }
@@ -234,7 +246,7 @@ export default function EntrepriseMetiersPage() {
       softSkills:
         role.soft_skills.some((skill) => skill.includes("::"))
           ? decodeSoftSkills(role.soft_skills)
-          : role.soft_skills.map((skill) => ({ label: skill, score: 70 })),
+          : role.soft_skills.map((skill) => ({ label: skill, score: DEFAULT_SOFT_TARGET_ON_15 })),
     });
     setHardSkillQuery("");
     setCustomHardSkill("");
@@ -369,7 +381,10 @@ export default function EntrepriseMetiersPage() {
             roles.map((role) => {
               const softSkills = role.soft_skills.some((skill) => skill.includes("::"))
                 ? decodeSoftSkills(role.soft_skills)
-                : role.soft_skills.map((skill) => ({ label: skill, score: 70 }));
+                : role.soft_skills.map((skill) => ({
+                    label: skill,
+                    score: DEFAULT_SOFT_TARGET_ON_15,
+                  }));
 
               return (
                 <article
@@ -436,7 +451,7 @@ export default function EntrepriseMetiersPage() {
                             key={`${skill.label}-${skill.score}`}
                             className="rounded-full border border-violet-100 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700"
                           >
-                            {skill.label} · {skill.score}
+                            {skill.label} · {skill.score}/15
                           </span>
                         ))}
                       </div>
@@ -628,7 +643,7 @@ export default function EntrepriseMetiersPage() {
               <div>
                 <p className="text-sm font-medium text-gray-700">Soft skills et score cible</p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Le RH peut noter chaque competence comportementale sur 100.
+                  Même échelle que le test Soft Skills collaborateurs : de 3 à 15.
                 </p>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
@@ -649,8 +664,8 @@ export default function EntrepriseMetiersPage() {
                     <div className="mt-3 flex items-center gap-3">
                       <input
                         type="range"
-                        min={0}
-                        max={100}
+                        min={3}
+                        max={15}
                         value={skill.score}
                         onChange={(event) =>
                           setForm((prev) => ({
@@ -662,8 +677,8 @@ export default function EntrepriseMetiersPage() {
                         }
                         className="w-full accent-violet-600"
                       />
-                      <span className="w-12 text-right text-sm font-semibold text-violet-700">
-                        {skill.score}
+                      <span className="w-14 text-right text-sm font-semibold text-violet-700">
+                        {skill.score}/15
                       </span>
                     </div>
                   </div>

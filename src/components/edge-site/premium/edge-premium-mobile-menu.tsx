@@ -100,7 +100,7 @@ export function EdgePremiumMobileMenu({
   light = false,
 }: Props) {
   const tabs = getMobileRevolutTabs(config);
-  const [activeTab, setActiveTab] = useState<MobileRevolutTabId>("business");
+  const [activeTab, setActiveTab] = useState<MobileRevolutTabId>("former");
   const [mounted, setMounted] = useState(false);
 
   const current = tabs.find((t) => t.id === activeTab) ?? tabs[0];
@@ -208,7 +208,7 @@ export function EdgePremiumMobileMenu({
             <Link
               href={current.discoverHref}
               className={cn(
-                "mb-8 inline-flex items-center gap-1.5 text-[15px] font-medium transition",
+                "mb-4 inline-flex items-center gap-1.5 text-[15px] font-medium transition",
                 light ? "text-neutral-800 hover:text-neutral-950" : "text-white/75 hover:text-white",
               )}
               onClick={onClose}
@@ -217,6 +217,16 @@ export function EdgePremiumMobileMenu({
               <ChevronRight
                 className={cn("h-4 w-4", light ? "text-neutral-400" : "text-white/40")}
               />
+            </Link>
+            <Link
+              href={config.links.tarifs}
+              className={cn(
+                "mb-8 block text-[15px] font-medium transition",
+                light ? "text-neutral-600 hover:text-neutral-950" : "text-white/50 hover:text-white",
+              )}
+              onClick={onClose}
+            >
+              Tarifs
             </Link>
             <RevolutAccordion sections={current.sections} onNavigate={onClose} light={light} />
           </>

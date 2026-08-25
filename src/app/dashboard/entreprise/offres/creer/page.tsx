@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
@@ -187,10 +187,37 @@ function SkillPicker({
 
 export default function CreateOfferPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [customSoft, setCustomSoft] = useState("");
   const [customHard, setCustomHard] = useState("");
+
+  useEffect(() => {
+    const metier = (searchParams.get("metier") ?? "").trim();
+    const softSkill = (searchParams.get("soft_skill") ?? "").trim();
+    const target = (searchParams.get("target") ?? "").trim();
+    if (!metier && !softSkill) return;
+    setForm((prev) => {
+      const soft = softSkill
+        ? prev.soft_skills.some((s) => s.toLowerCase() === softSkill.toLowerCase())
+          ? prev.soft_skills
+          : [...prev.soft_skills, softSkill]
+        : prev.soft_skills;
+      return {
+        ...prev,
+        title: prev.title || (metier ? `${metier} — recrutement` : prev.title),
+        description:
+          prev.description ||
+          (metier || softSkill
+            ? `Poste lié au besoin compétences${metier ? ` « ${metier} »` : ""}${
+                softSkill ? ` — Soft skill prioritaire : ${softSkill}${target ? ` (cible ${target}/15)` : ""}` : ""
+              }.`
+            : prev.description),
+        soft_skills: soft,
+      };
+    });
+  }, [searchParams]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));

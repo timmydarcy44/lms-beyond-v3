@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { generateJSON } from "@/lib/ai/openai-client";
 import { buildMetierAiSkillsFallback } from "@/lib/entreprise/metier-ai-skills-fallback";
+import { normalizeTargetToScale15 } from "@/lib/entreprise/skills-gap-config";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 
 const SOFT_SKILL_SCHEMA = {
@@ -48,7 +49,7 @@ function normalizePayload(
     ? result.soft_skills
         .map((item) => ({
           label: normalizeSkillLabel((item as { label?: unknown }).label),
-          score: Math.max(0, Math.min(100, Number((item as { score?: unknown }).score) || 0)),
+          score: normalizeTargetToScale15(Number((item as { score?: unknown }).score) || 0),
         }))
         .filter((item) => item.label)
         .slice(0, 12)
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
   const prompt = `Pour le metier "${title}", propose:
 - une description courte orientee RH / fiche metier
 - 6 a 10 hard skills concretes
-- 6 a 10 soft skills avec un score cible de 0 a 100
+- 6 a 10 soft skills avec un score cible de 3 a 15 (meme echelle que le test Soft Skills EDGE : 3 questions × Likert 1-5)
 
 Reponds en francais, concret, operationnel, sans jargon inutile.`;
 

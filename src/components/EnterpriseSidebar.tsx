@@ -15,6 +15,9 @@ import {
   Settings,
   Users,
   BookOpen,
+  UserCircle,
+  CreditCard,
+  CircleHelp,
 } from "lucide-react";
 
 type NavLeaf = { label: string; href: string; section?: string };
@@ -28,6 +31,7 @@ type NavItem =
       children: NavLeaf[];
     };
 
+/** Navigation principale — Mon compte / Aide / Paramètres sont en pied de sidebar. */
 const NAV_ITEMS: NavItem[] = [
   { type: "link", label: "Dashboard", href: "/dashboard/entreprise", icon: LayoutDashboard },
   {
@@ -38,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "Mes équipes", href: "/dashboard/entreprise/salaries" },
       { label: "Métiers", href: "/dashboard/entreprise/metiers" },
+      { label: "Besoins en compétences", href: "/dashboard/entreprise/besoins-competences" },
       { label: "Équipe Insight", href: "/dashboard/entreprise/equipe-insight" },
     ],
   },
@@ -90,8 +95,13 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { type: "link", label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
-  { type: "link", label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
+  { type: "link", label: "Tarifs", href: "/dashboard/entreprise/abonnement", icon: CreditCard },
 ];
+
+const ACCOUNT_SUBMENU = [
+  { label: "Aide", href: "/dashboard/entreprise/aide", icon: CircleHelp },
+  { label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
+] as const;
 
 type ViewerState = {
   prenom: string | null;
@@ -142,6 +152,7 @@ function isGroupActive(pathname: string, item: Extract<NavItem, { type: "group" 
     return (
       pathname.startsWith("/dashboard/entreprise/salaries") ||
       pathname.startsWith("/dashboard/entreprise/metiers") ||
+      pathname.startsWith("/dashboard/entreprise/besoins-competences") ||
       pathname.startsWith("/dashboard/entreprise/equipe-insight")
     );
   }
@@ -152,6 +163,135 @@ function isGroupActive(pathname: string, item: Extract<NavItem, { type: "group" 
     );
   }
   return isPathActive(pathname, item.href) || item.children.some((c) => isPathActive(pathname, c.href));
+}
+
+function AccountMenuFooter({
+  pathname,
+  onNavigate,
+  mobile,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+  mobile?: boolean;
+}) {
+  const [hoverOpen, setHoverOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const accountActive =
+    isPathActive(pathname, "/dashboard/entreprise/compte") ||
+    ACCOUNT_SUBMENU.some((item) => isPathActive(pathname, item.href));
+
+  if (mobile) {
+    return (
+      <div className="mt-4 border-t border-white/10 pt-3">
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+            accountActive
+              ? "bg-violet-600/20 text-violet-200"
+              : "text-white/55 hover:bg-white/5 hover:text-white",
+          )}
+          aria-expanded={mobileOpen}
+        >
+          <UserCircle size={18} strokeWidth={1.75} />
+          <span className="flex-1 text-left">Mon compte</span>
+          <ChevronDown
+            size={16}
+            className={cn("opacity-60 transition-transform", mobileOpen && "rotate-180")}
+          />
+        </button>
+        {mobileOpen ? (
+          <div className="mt-1 space-y-1 pl-3">
+            <Link
+              href="/dashboard/entreprise/compte"
+              prefetch
+              onClick={onNavigate}
+              className={cn(
+                "block rounded-lg px-3 py-2 text-[13px] font-medium",
+                isPathActive(pathname, "/dashboard/entreprise/compte")
+                  ? "bg-white/10 text-white"
+                  : "text-white/50 hover:bg-white/5 hover:text-white",
+              )}
+            >
+              Voir mon compte
+            </Link>
+            {ACCOUNT_SUBMENU.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium",
+                    isPathActive(pathname, item.href)
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:bg-white/5 hover:text-white",
+                  )}
+                >
+                  <Icon size={14} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative border-t border-white/10 px-3 py-3"
+      onMouseEnter={() => setHoverOpen(true)}
+      onMouseLeave={() => setHoverOpen(false)}
+    >
+      {hoverOpen ? (
+        <div className="absolute bottom-full left-3 right-3 z-20 mb-2 overflow-hidden rounded-2xl border border-white/10 bg-[#16132a] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]">
+          {ACCOUNT_SUBMENU.map((item) => {
+            const Icon = item.icon;
+            const active = isPathActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition",
+                  active
+                    ? "bg-violet-600/25 text-violet-100"
+                    : "text-white/70 hover:bg-white/5 hover:text-white",
+                )}
+              >
+                <Icon size={16} strokeWidth={1.75} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <Link
+        href="/dashboard/entreprise/compte"
+        prefetch
+        className={cn(
+          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+          accountActive
+            ? "bg-violet-600/20 text-violet-200"
+            : "text-white/55 hover:bg-white/5 hover:text-white",
+        )}
+      >
+        <UserCircle size={18} strokeWidth={1.75} />
+        <span className="flex-1">Mon compte</span>
+        <ChevronDown
+          size={14}
+          className={cn("opacity-50 transition-transform", hoverOpen && "rotate-180")}
+        />
+      </Link>
+    </div>
+  );
 }
 
 function NavLinks({
@@ -215,36 +355,38 @@ function NavLinks({
             </button>
             {open ? (
               <div className="ml-3 space-y-0.5 border-l border-white/10 pl-3">
-                {Array.from(new Set(item.children.map((child) => child.section || ""))).map((section) => (
-                  <div key={`${item.label}-${section || "default"}`} className="space-y-1.5 py-1">
-                    {section ? (
-                      <p className="px-3 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
-                        {section}
-                      </p>
-                    ) : null}
-                    {item.children
-                      .filter((child) => (child.section || "") === section)
-                      .map((child) => {
-                        const childActive = isPathActive(pathname, child.href);
-                        return (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            prefetch
-                            onClick={onNavigate}
-                            className={cn(
-                              "block rounded-lg px-3 py-2 text-[13px] font-medium transition",
-                              childActive
-                                ? "bg-white/10 text-white"
-                                : "text-white/50 hover:bg-white/5 hover:text-white",
-                            )}
-                          >
-                            {child.label}
-                          </Link>
-                        );
-                      })}
-                  </div>
-                ))}
+                {Array.from(new Set(item.children.map((child) => child.section || ""))).map(
+                  (section) => (
+                    <div key={`${item.label}-${section || "default"}`} className="space-y-1.5 py-1">
+                      {section ? (
+                        <p className="px-3 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                          {section}
+                        </p>
+                      ) : null}
+                      {item.children
+                        .filter((child) => (child.section || "") === section)
+                        .map((child) => {
+                          const childActive = isPathActive(pathname, child.href);
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              prefetch
+                              onClick={onNavigate}
+                              className={cn(
+                                "block rounded-lg px-3 py-2 text-[13px] font-medium transition",
+                                childActive
+                                  ? "bg-white/10 text-white"
+                                  : "text-white/50 hover:bg-white/5 hover:text-white",
+                              )}
+                            >
+                              {child.label}
+                            </Link>
+                          );
+                        })}
+                    </div>
+                  ),
+                )}
               </div>
             ) : null}
           </div>
@@ -273,6 +415,7 @@ export function EnterpriseMobileNav() {
       Salariés:
         pathname.startsWith("/dashboard/entreprise/salaries") ||
         pathname.startsWith("/dashboard/entreprise/metiers") ||
+        pathname.startsWith("/dashboard/entreprise/besoins-competences") ||
         pathname.startsWith("/dashboard/entreprise/equipe-insight")
           ? true
           : prev.Salariés,
@@ -314,6 +457,11 @@ export function EnterpriseMobileNav() {
                 onNavigate={() => setOpen(false)}
                 openGroups={openGroups}
                 toggleGroup={toggleGroup}
+              />
+              <AccountMenuFooter
+                pathname={pathname}
+                onNavigate={() => setOpen(false)}
+                mobile
               />
             </nav>
           </SheetContent>
@@ -368,6 +516,7 @@ export default function EnterpriseSidebar() {
       Salariés:
         pathname.startsWith("/dashboard/entreprise/salaries") ||
         pathname.startsWith("/dashboard/entreprise/metiers") ||
+        pathname.startsWith("/dashboard/entreprise/besoins-competences") ||
         pathname.startsWith("/dashboard/entreprise/equipe-insight")
           ? true
           : prev.Salariés,
@@ -411,9 +560,14 @@ export default function EnterpriseSidebar() {
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4" aria-label="Navigation entreprise">
+      <nav
+        className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-4"
+        aria-label="Navigation entreprise"
+      >
         <NavLinks pathname={pathname} openGroups={openGroups} toggleGroup={toggleGroup} />
       </nav>
+
+      <AccountMenuFooter pathname={pathname} />
     </aside>
   );
 }

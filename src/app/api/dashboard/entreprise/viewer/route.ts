@@ -35,5 +35,7 @@ export async function GET() {
     ...viewer,
     userId: user.id,
     company_id: (profile as { company_id?: string | null } | null)?.company_id ?? null,
+    role: (profile as { role?: string | null } | null)?.role ?? null,
+    role_type: (profile as { role_type?: string | null } | null)?.role_type ?? null,
   });
 }

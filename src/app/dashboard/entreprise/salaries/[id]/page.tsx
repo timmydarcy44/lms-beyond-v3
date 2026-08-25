@@ -12,8 +12,10 @@ import {
   type HrDocument,
 } from "@/components/enterprise/enterprise-employee-hr-panel";
 import { EnterpriseEmployeeEntretiensSection } from "@/components/enterprise/enterprise-employee-entretiens";
+import { EnterpriseEmployeeInclusionCta } from "@/components/enterprise/enterprise-employee-inclusion";
 import { formatSeniority } from "@/lib/entreprise/seniority";
 import { gapStatusLabel, type SoftSkillGap } from "@/lib/entreprise/metier-skill-gaps";
+import type { EmployeeInclusionProfile } from "@/lib/entreprise/inclusion-accommodations";
 import {
   AXES_LABELS,
   IDMC_AXIS_KEYS,
@@ -89,7 +91,8 @@ function initials(first?: string | null, last?: string | null) {
 }
 
 function SkillLevelBar({ score }: { score: number }) {
-  const filled = score >= 80 ? 3 : score >= 60 ? 2 : 1;
+  // Soft Skills EDGE : 3–15
+  const filled = score >= 12 ? 3 : score >= 9 ? 2 : 1;
   return (
     <div className="flex items-center gap-1" aria-hidden>
       {[0, 1, 2].map((i) => (
@@ -198,7 +201,9 @@ function SoftSkillsRanking({ skills }: { skills: Array<{ skill: string; score: n
           </div>
           <div className="flex items-center gap-3">
             <SkillLevelBar score={s.score} />
-            <span className="w-10 text-right text-sm font-bold text-gray-950">{Math.round(s.score)}</span>
+            <span className="w-12 text-right text-sm font-bold text-gray-950">
+              {Math.round(s.score)}/15
+            </span>
           </div>
         </li>
       ))}
@@ -232,6 +237,7 @@ export default function SalarieDetailPage() {
   } | null>(null);
   const [missions, setMissions] = useState<EmployeeMission[]>([]);
   const [hrDocuments, setHrDocuments] = useState<HrDocument[]>([]);
+  const [inclusion, setInclusion] = useState<EmployeeInclusionProfile | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [recommendedAction, setRecommendedAction] = useState<RecommendedActionRow | null>(null);
   const [shareConsent, setShareConsent] = useState(false);
@@ -268,6 +274,7 @@ export default function SalarieDetailPage() {
           test_status?: { share_consent?: boolean };
           missions?: EmployeeMission[];
           hr_documents?: HrDocument[];
+          inclusion?: EmployeeInclusionProfile | null;
           recommended_action?: RecommendedActionRow | null;
           metier_match?: {
             id: string;
@@ -297,6 +304,7 @@ export default function SalarieDetailPage() {
           setProfileAnalysisError(null);
           setMissions(payload.missions ?? []);
           setHrDocuments(payload.hr_documents ?? []);
+          setInclusion(payload.inclusion ?? null);
           setRecommendedAction(payload.recommended_action ?? null);
           setEditing(false);
         }
@@ -398,7 +406,7 @@ export default function SalarieDetailPage() {
       return `Priorité IDMC : renforcer « ${weakIdmc.label} » (${weakIdmc.score}/100 — ${weakIdmc.mastery}).`;
     }
     if (weakSoft && weakSoft.score < 60) {
-      return `Priorité soft skills : travailler « ${weakSoft.skill} » (${Math.round(weakSoft.score)}/100).`;
+      return `Priorité soft skills : travailler « ${weakSoft.skill} » (${Math.round(weakSoft.score)}/15).`;
     }
     if (stressScore != null && stressScore < 50) {
       return "Gagne en efficacité quand la charge est stabilisée et que les attentes sont explicites.";
@@ -579,6 +587,13 @@ export default function SalarieDetailPage() {
                   Terminer l&apos;édition
                 </button>
               )}
+              <EnterpriseEmployeeInclusionCta
+                employeeName={
+                  [displayEmployee.first_name, displayEmployee.last_name].filter(Boolean).join(" ") ||
+                  "Collaborateur"
+                }
+                profile={inclusion}
+              />
               <button
                 type="button"
                 onClick={() => router.push("/dashboard/entreprise/salaries")}
@@ -812,7 +827,7 @@ export default function SalarieDetailPage() {
               <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-black tracking-tight text-gray-950">Écarts vs fiche métier</h2>
                 <p className="mt-1 text-sm text-gray-600">
-                  Cibles de « {metierMatch.title} » comparées aux soft skills du collaborateur.
+                  Cibles de « {metierMatch.title} » comparées aux soft skills du collaborateur (échelle /15).
                 </p>
                 <div className="mt-5 space-y-3">
                   {metierMatch.soft_skill_gaps.map((gap) => {
@@ -837,8 +852,8 @@ export default function SalarieDetailPage() {
                           <p className="text-xs opacity-80">{gapStatusLabel(gap.status)}</p>
                         </div>
                         <div className="flex flex-wrap gap-4 text-sm font-semibold">
-                          <span>Cible {gap.target}</span>
-                          <span>Collab. {gap.actual ?? "—"}</span>
+                          <span>Cible {gap.target}/15</span>
+                          <span>Collab. {gap.actual != null ? `${gap.actual}/15` : "—"}</span>
                           <span>
                             Écart {gap.gap == null ? "—" : gap.gap > 0 ? `+${gap.gap}` : String(gap.gap)}
                           </span>

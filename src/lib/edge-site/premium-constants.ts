@@ -71,6 +71,56 @@ export function getEdgePremiumConfig(host?: string | null) {
       home: R.home,
     },
     nav: {
+      /** Menu principal home : piliers Business (plus Business / Particulier / Fonctionnalités). */
+      pillars: [
+        {
+          id: "former" as const,
+          label: "Former",
+          href: R.businessFormerEquipes,
+          items: [
+            { label: "Former vos équipes", href: R.businessFormerEquipes },
+            { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
+            { label: "Intra-entreprise", href: R.businessFormerEquipes },
+            { label: "Inter-entreprises", href: R.businessFormerEquipes },
+            { label: "Blended learning", href: R.businessPresentielDistanciel },
+          ],
+        },
+        {
+          id: "developper" as const,
+          label: "Développer",
+          href: R.businessDiagnostics,
+          items: [
+            { label: "Diagnostics de compétences", href: R.businessDiagnostics },
+            { label: "Cartographier les compétences", href: R.businessCompetences },
+            { label: "Plans de progression", href: R.businessPlansProgression },
+            { label: "Certifications", href: R.businessCertificationsBiz },
+            { label: "Open Badges", href: R.businessOpenBadges },
+          ],
+        },
+        {
+          id: "recruter" as const,
+          label: "Recruter",
+          href: R.businessRecrutement,
+          items: [
+            { label: "Identifier les talents", href: R.businessIdentifierTalents },
+            { label: "Évaluer les compétences", href: R.businessEvaluerCompetences },
+            { label: "Matching compétences", href: R.businessRecrutement },
+            { label: "Onboarding", href: R.businessOnboarding },
+          ],
+        },
+        {
+          id: "piloter" as const,
+          label: "Piloter",
+          href: R.businessTableauxDeBord,
+          items: [
+            { label: "Tableaux de bord", href: R.businessTableauxDeBord },
+            { label: "Analytics", href: R.businessAnalytics },
+            { label: "ROI formation", href: R.businessRoiFormation },
+            { label: "Aide à la décision", href: R.businessAideDecision },
+          ],
+        },
+      ],
+      /** @deprecated Conservé pour compat — le menu home utilise `pillars`. */
       fonctionnalites: [
         { label: "Formations & parcours", href: R.formations },
         { label: "Certifications", href: R.certifications },
@@ -259,53 +309,15 @@ export type EdgeMobileNavCategory = {
 export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNavCategory[] {
   const R = config.routes;
   return [
+    ...config.nav.pillars.map((pillar) => ({
+      id: pillar.id,
+      label: pillar.label,
+      links: pillar.items,
+    })),
     {
-      id: "business",
-      label: "Business",
-      links: [
-        { label: "Former vos équipes", href: R.businessFormerEquipes },
-        { label: "Diagnostics de compétences", href: R.businessDiagnostics },
-        { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
-        { label: "Blended learning", href: R.businessPresentielDistanciel },
-        { label: "Recrutement", href: R.businessRecrutement },
-        { label: "Pilotage", href: R.businessTableauxDeBord },
-      ],
-    },
-    {
-      id: "particulier",
-      label: "Particulier",
-      links: [
-        { label: "Certifications pro", href: R.particulierCertifications },
-        { label: "EDGE Online", href: R.particulierEdgeOnline },
-        { label: "Soft Skills", href: R.particulierSoftSkills },
-        { label: "CPF & financement", href: R.particulierCpf },
-        { label: "Reconversion", href: R.particulierReconversion },
-        { label: "Coaching", href: R.particulierCoaching },
-      ],
-    },
-    {
-      id: "fonctionnalites",
-      label: "Fonctionnalités",
-      links: [
-        { label: "LMS", href: R.online },
-        { label: "Certifications", href: R.certifications },
-        { label: "Diagnostics", href: R.businessDiagnostics },
-        { label: "Open Badges", href: R.businessOpenBadges },
-        { label: "Analytics", href: R.businessAnalytics },
-        { label: "Matching", href: R.businessMatchingCandidats },
-        { label: "IA", href: R.businessFormerEquipes },
-      ],
-    },
-    {
-      id: "ressources",
-      label: "Ressources",
-      links: [
-        { label: "Blog", href: R.blog },
-        { label: "Guides", href: R.guides },
-        { label: "Webinaires", href: R.webinaires },
-        { label: "FAQ", href: R.contact },
-        { label: "Formateurs / Experts", href: R.formateursExperts },
-      ],
+      id: "tarifs",
+      label: "Tarifs",
+      links: [{ label: "Tarifs", href: R.tarifs }],
     },
     {
       id: "compte",

@@ -1,5 +1,6 @@
 import { getEdgeMarketingRoutes, type EdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
+import { getPillarMegaMenus } from "@/lib/edge-site/pillar-mega-menu-data";
 import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 
 /** Logo navbar / footer — asset local public (chrome sombre). */
@@ -133,6 +134,8 @@ export function getEdgePremiumConfig(host?: string | null) {
         { label: "Webinaires", href: R.webinaires },
         { label: "FAQ", href: R.contact },
       ],
+      /** Mega-menus compacts (header home). */
+      pillarMegaMenus: getPillarMegaMenus(R),
     },
     megaApprenants: {
       headerTitle: "Découvrir EDGE Apprenants",

@@ -1,80 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 import { EdgePremiumLogo } from "@/components/edge-site/premium/edge-premium-logo";
 import { EdgePremiumMobileMenu } from "@/components/edge-site/premium/edge-premium-mobile-menu";
+import {
+  EdgePremiumPillarMegaPanel,
+  EdgePremiumPillarMegaTrigger,
+} from "@/components/edge-site/premium/edge-premium-pillar-mega-menu";
+import type { PillarMegaMenuId } from "@/lib/edge-site/pillar-mega-menu-data";
 
-type PillarId = "former" | "developper" | "recruter" | "piloter";
-
-function NavDropdown({
-  label,
-  items,
-  open,
-  onToggle,
-  onClose,
-  light,
-}: {
-  label: string;
-  items: readonly { label: string; href: string }[];
-  open: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-  light: boolean;
-}) {
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        className={cn(
-          "flex items-center gap-1 px-2.5 py-2 text-sm font-medium transition-colors xl:px-3",
-          light
-            ? open
-              ? "text-neutral-950"
-              : "text-neutral-700 hover:text-neutral-950"
-            : open
-              ? "text-white"
-              : "text-white/60 hover:text-white",
-        )}
-        aria-expanded={open}
-        onClick={onToggle}
-      >
-        {label}
-        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
-      </button>
-      {open ? (
-        <div
-          className={cn(
-            "absolute left-0 top-full z-50 mt-2 min-w-[240px] rounded-2xl p-2 shadow-2xl backdrop-blur-xl",
-            light
-              ? "border border-black/[0.08] bg-white/95"
-              : "border border-white/10 bg-edge-black-deep/95",
-          )}
-        >
-          {items.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={cn(
-                "block rounded-xl px-4 py-2.5 text-sm transition-colors",
-                light
-                  ? "text-neutral-700 hover:bg-black/[0.04] hover:text-neutral-950"
-                  : "text-white/70 hover:bg-white/[0.06] hover:text-white",
-              )}
-              onClick={onClose}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+const HOVER_OPEN_MS = 120;
+const HOVER_CLOSE_MS = 180;
 
 type NavbarProps = {
   overlay?: boolean;
@@ -90,8 +30,30 @@ export function EdgePremiumNavbar({
   const config = useEdgePremiumConfig();
   const { links, nav } = config;
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openPillar, setOpenPillar] = useState<PillarId | null>(null);
+  const [openPillar, setOpenPillar] = useState<PillarMegaMenuId | null>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHoverTimer = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  };
+
+  const scheduleOpen = (id: PillarMegaMenuId) => {
+    clearHoverTimer();
+    hoverTimerRef.current = setTimeout(() => setOpenPillar(id), HOVER_OPEN_MS);
+  };
+
+  const scheduleClose = () => {
+    clearHoverTimer();
+    hoverTimerRef.current = setTimeout(() => setOpenPillar(null), HOVER_CLOSE_MS);
+  };
+
+  useEffect(() => {
+    return () => clearHoverTimer();
+  }, []);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -145,19 +107,40 @@ export function EdgePremiumNavbar({
         <EdgePremiumLogo light={light} />
 
         <nav className="hidden items-center lg:flex" aria-label="Navigation principale">
-          {nav.pillars.map((pillar) => (
-            <NavDropdown
-              key={pillar.id}
-              label={pillar.label}
-              items={pillar.items}
-              open={openPillar === pillar.id}
-              light={light}
-              onToggle={() =>
-                setOpenPillar((current) => (current === pillar.id ? null : pillar.id))
-              }
-              onClose={() => setOpenPillar(null)}
-            />
-          ))}
+          {nav.pillarMegaMenus.map((pillar) => {
+            const panelId = `edge-pillar-mega-${pillar.id}`;
+            const open = openPillar === pillar.id;
+
+            return (
+              <div
+                key={pillar.id}
+                className="relative"
+                onMouseEnter={() => scheduleOpen(pillar.id)}
+                onMouseLeave={scheduleClose}
+              >
+                <EdgePremiumPillarMegaTrigger
+                  label={pillar.label}
+                  open={open}
+                  controlsId={panelId}
+                  light={light}
+                  onOpen={() => scheduleOpen(pillar.id)}
+                  onToggle={() =>
+                    setOpenPillar((current) => (current === pillar.id ? null : pillar.id))
+                  }
+                />
+                {open ? (
+                  <div className="absolute left-0 top-full z-50 mt-2 origin-top animate-in fade-in slide-in-from-top-1 duration-200">
+                    <EdgePremiumPillarMegaPanel
+                      data={pillar}
+                      panelId={panelId}
+                      light={light}
+                      onClose={() => setOpenPillar(null)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
           <Link
             href={links.tarifs}
             className={cn(

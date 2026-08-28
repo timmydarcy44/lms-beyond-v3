@@ -18,10 +18,16 @@ function RevolutAccordion({
   sections,
   onNavigate,
   light,
+  editorialTitle,
+  editorialCtaLabel,
+  editorialCtaHref,
 }: {
-  sections: { title: string; links: { label: string; href: string }[] }[];
+  sections: { title: string; links: { label: string; href: string; description?: string; external?: boolean }[] }[];
   onNavigate: () => void;
   light: boolean;
+  editorialTitle?: string;
+  editorialCtaLabel?: string;
+  editorialCtaHref?: string;
 }) {
   const [openTitle, setOpenTitle] = useState<string | null>(null);
 
@@ -58,21 +64,67 @@ function RevolutAccordion({
             </button>
             {isOpen ? (
               <div className="pb-5 pl-1">
-                {section.links.map((link) => (
-                  <Link
-                    key={link.label}
-                    href={link.href}
+                {section.links.map((link) => {
+                  const linkProps = link.external
+                    ? { target: "_blank" as const, rel: "noopener noreferrer" }
+                    : {};
+                  return (
+                    <Link
+                      key={link.label}
+                      href={link.href}
+                      className={cn(
+                        "block py-2.5 transition",
+                        light
+                          ? "text-neutral-600 hover:text-neutral-950"
+                          : "text-white/55 hover:text-white",
+                      )}
+                      onClick={onNavigate}
+                      {...linkProps}
+                    >
+                      <span className="text-[15px] font-medium">{link.label}</span>
+                      {link.description ? (
+                        <span
+                          className={cn(
+                            "mt-0.5 block text-[13px] leading-snug",
+                            light ? "text-neutral-400" : "text-white/35",
+                          )}
+                        >
+                          {link.description}
+                        </span>
+                      ) : null}
+                    </Link>
+                  );
+                })}
+                {editorialTitle && editorialCtaLabel && editorialCtaHref ? (
+                  <div
                     className={cn(
-                      "block py-2.5 text-[15px] transition",
+                      "mt-4 rounded-xl border px-4 py-3",
                       light
-                        ? "text-neutral-600 hover:text-neutral-950"
-                        : "text-white/55 hover:text-white",
+                        ? "border-black/[0.06] bg-neutral-50"
+                        : "border-white/[0.08] bg-white/[0.03]",
                     )}
-                    onClick={onNavigate}
                   >
-                    {link.label}
-                  </Link>
-                ))}
+                    <p
+                      className={cn(
+                        "text-sm font-semibold",
+                        light ? "text-neutral-900" : "text-white",
+                      )}
+                    >
+                      {editorialTitle}
+                    </p>
+                    <Link
+                      href={editorialCtaHref}
+                      className={cn(
+                        "mt-2 inline-flex items-center gap-1 text-sm font-medium",
+                        light ? "text-neutral-700" : "text-white/70",
+                      )}
+                      onClick={onNavigate}
+                    >
+                      {editorialCtaLabel}
+                      <ChevronRight className="h-4 w-4" aria-hidden />
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -228,7 +280,14 @@ export function EdgePremiumMobileMenu({
             >
               Tarifs
             </Link>
-            <RevolutAccordion sections={current.sections} onNavigate={onClose} light={light} />
+            <RevolutAccordion
+              sections={current.sections}
+              onNavigate={onClose}
+              light={light}
+              editorialTitle={current.editorialTitle}
+              editorialCtaLabel={current.editorialCtaLabel}
+              editorialCtaHref={current.editorialCtaHref}
+            />
           </>
         ) : null}
       </div>

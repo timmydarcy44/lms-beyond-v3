@@ -1,27 +1,26 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  BarChart3,
-  BookOpen,
-  Briefcase,
-  ClipboardList,
-  GraduationCap,
-  LayoutDashboard,
-  Route,
-  Search,
-  Sparkles,
-  Target,
-  Users,
-} from "lucide-react";
 import type { EdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 
 export type PillarMegaMenuId = "former" | "developper" | "recruter" | "piloter";
 
+export type PillarMegaMenuIconId =
+  | "graduation-cap"
+  | "route"
+  | "book-open"
+  | "clipboard-list"
+  | "sparkles"
+  | "briefcase"
+  | "users"
+  | "search"
+  | "target"
+  | "layout-dashboard"
+  | "bar-chart-3";
+
 export type PillarMegaMenuLink = {
   label: string;
   href: string;
   description: string;
-  icon: LucideIcon;
+  icon: PillarMegaMenuIconId;
   external?: boolean;
 };
 
@@ -53,13 +52,13 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
           label: "Formations avec nos experts",
           href: R.businessFormerEquipes,
           description: "Des formations opérationnelles adaptées aux enjeux de vos équipes.",
-          icon: GraduationCap,
+          icon: "graduation-cap",
         },
         {
           label: "Parcours sur mesure",
           href: R.businessParcoursSurMesure,
           description: "Construisez un programme adapté à votre organisation.",
-          icon: Route,
+          icon: "route",
         },
       ],
       secondaryLinks: [
@@ -85,26 +84,26 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
           label: "EDGE Online",
           href: EDGE_ONLINE_EXTERNAL_URL,
           description: "Micro-formations pour développer les compétences en continu.",
-          icon: BookOpen,
+          icon: "book-open",
           external: true,
         },
         {
           label: "Formations internes",
           href: R.businessAcademie,
           description: "Créez et diffusez vos propres contenus de formation.",
-          icon: ClipboardList,
+          icon: "clipboard-list",
         },
         {
           label: "Parcours",
           href: R.businessSuiviParcours,
           description: "Combinez contenus EDGE et formations internes en parcours personnalisés.",
-          icon: Route,
+          icon: "route",
         },
         {
           label: "Micro-certifications",
           href: R.businessCertificationsBiz,
           description: "Valorisez les compétences acquises au fil des parcours.",
-          icon: Sparkles,
+          icon: "sparkles",
         },
       ],
       secondaryLinks: [],
@@ -127,25 +126,25 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
           label: "Créer une offre",
           href: R.businessRecrutement,
           description: "Structurez et publiez une offre à partir de votre besoin.",
-          icon: Briefcase,
+          icon: "briefcase",
         },
         {
           label: "Gérer les candidatures",
           href: R.businessRecrutement,
           description: "Centralisez vos candidats et suivez leur progression.",
-          icon: Users,
+          icon: "users",
         },
         {
           label: "Matching compétences",
           href: R.businessMatchingCandidats,
           description: "Comparez les profils candidats avec les compétences recherchées.",
-          icon: Search,
+          icon: "search",
         },
         {
           label: "Pipeline de recrutement",
           href: R.businessRecrutement,
           description: "Pilotez chaque recrutement depuis un même espace.",
-          icon: Target,
+          icon: "target",
         },
       ],
       secondaryLinks: [],
@@ -167,31 +166,31 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
           label: "Dashboard RH",
           href: R.businessTableauxDeBord,
           description: "Visualisez les indicateurs clés de vos équipes.",
-          icon: LayoutDashboard,
+          icon: "layout-dashboard",
         },
         {
           label: "Métiers & compétences",
           href: R.businessCompetences,
           description: "Structurez vos métiers et les compétences attendues.",
-          icon: Briefcase,
+          icon: "briefcase",
         },
         {
           label: "Diagnostics",
           href: R.businessDiagnostics,
           description: "Évaluez les profils et identifiez les écarts.",
-          icon: BarChart3,
+          icon: "bar-chart-3",
         },
         {
           label: "Besoins en compétences",
           href: R.businessDeveloppementTalents,
           description: "Identifiez les Skills Gaps individuels et collectifs.",
-          icon: Target,
+          icon: "target",
         },
         {
           label: "Équipe Insight",
           href: R.businessAnalytics,
           description: "Obtenez une lecture globale des profils et besoins de vos équipes.",
-          icon: Users,
+          icon: "users",
         },
       ],
       secondaryLinks: [],

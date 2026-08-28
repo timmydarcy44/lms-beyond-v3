@@ -2,8 +2,38 @@
 
 import Link from "next/link";
 import { ArrowRight, ChevronDown } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  Briefcase,
+  ClipboardList,
+  GraduationCap,
+  LayoutDashboard,
+  Route,
+  Search,
+  Sparkles,
+  Target,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { PillarMegaMenuData } from "@/lib/edge-site/pillar-mega-menu-data";
+import type {
+  PillarMegaMenuData,
+  PillarMegaMenuIconId,
+} from "@/lib/edge-site/pillar-mega-menu-data";
+
+const PILLAR_ICON_MAP = {
+  "graduation-cap": GraduationCap,
+  route: Route,
+  "book-open": BookOpen,
+  "clipboard-list": ClipboardList,
+  sparkles: Sparkles,
+  briefcase: Briefcase,
+  users: Users,
+  search: Search,
+  target: Target,
+  "layout-dashboard": LayoutDashboard,
+  "bar-chart-3": BarChart3,
+} satisfies Record<PillarMegaMenuIconId, typeof GraduationCap>;
 
 type PanelProps = {
   data: PillarMegaMenuData;
@@ -48,7 +78,7 @@ export function EdgePremiumPillarMegaPanel({ data, onClose, light = false, panel
 
           <ul className="mt-5 space-y-0.5">
             {data.primaryLinks.map((link) => {
-              const Icon = link.icon;
+              const Icon = PILLAR_ICON_MAP[link.icon];
               const linkProps = link.external
                 ? { target: "_blank" as const, rel: "noopener noreferrer" }
                 : {};

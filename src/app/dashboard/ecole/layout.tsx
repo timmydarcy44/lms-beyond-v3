@@ -2,117 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-import type { LucideIcon } from "lucide-react";
-import {
-  Briefcase,
-  Building2,
-  CheckSquare,
-  ChevronsLeft,
-  ClipboardCheck,
-  Euro,
-  GitBranch,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
-  MonitorPlay,
-  ShieldCheck,
-  Users,
-  BookOpen,
-  BarChart3,
-} from "lucide-react";
-import { HandicapSidebarNav } from "@/components/beyond-connect/handicap-sidebar-nav";
-import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
-import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
+import { Suspense, useState } from "react";
+import { LayoutDashboard, Users, Building2, Euro } from "lucide-react";
+import { EcoleSidebar } from "@/components/ecole/ecole-sidebar";
 import { EcoleFloatingAssistant } from "@/components/beyond-connect/ecole-floating-assistant";
+import { ECOLE_PRICING_NAV, isEcoleLinkActive } from "@/lib/ecole/ecole-sidebar-nav";
 
 type SchoolLayoutProps = {
   children: React.ReactNode;
 };
 
-type EcoleNavItem = {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  activePathPrefix?: string;
-};
-
-function isEcoleNavActive(pathname: string, item: EcoleNavItem): boolean {
-  if (item.activePathPrefix) {
-    const p = item.activePathPrefix;
-    return pathname === p || pathname.startsWith(`${p}/`);
-  }
-  if (item.href === "/dashboard/ecole") return pathname === item.href;
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
-}
+const MOBILE_TAB_ITEMS = [
+  { label: "Tableau de bord", href: "/dashboard/ecole", icon: LayoutDashboard },
+  { label: "Apprenants", href: "/dashboard/ecole/apprenants", icon: Users },
+  { label: "Entreprises", href: "/dashboard/ecole/entreprises", icon: Building2 },
+  { label: "Tarifs", href: ECOLE_PRICING_NAV.href, icon: Euro },
+];
 
 export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isCompaniesOpen, setIsCompaniesOpen] = useState(true);
-  const [orgBranding, setOrgBranding] = useState<{ logoUrl: string | null; name: string | null }>({
-    logoUrl: null,
-    name: null,
-  });
   const isTodo = pathname.startsWith("/dashboard/ecole/todo");
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/organizations/nav-branding", { credentials: "include" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (cancelled) return;
-        const b = json?.branding;
-        setOrgBranding({
-          logoUrl: typeof b?.logoUrl === "string" && b.logoUrl.trim() ? b.logoUrl.trim() : null,
-          name: typeof b?.name === "string" && b.name.trim() ? b.name.trim() : null,
-        });
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const pricingNavItem: EcoleNavItem = {
-    label: "Tarifs",
-    href: "/dashboard/ecole/pricing",
-    icon: Euro,
-  };
-
-  const mainNavItems: EcoleNavItem[] = [
-    { label: "Tableau de bord", href: "/dashboard/ecole", icon: LayoutDashboard },
-    { label: "Mes apprenants", href: "/dashboard/ecole/apprenants", icon: Users },
-    { label: "Mes classes", href: "/dashboard/ecole/classes", icon: GraduationCap },
-    { label: "Offres", href: "/dashboard/ecole/offres", icon: Briefcase },
-    {
-      label: "Formations",
-      href: "/dashboard/ecole/formations",
-      icon: BookOpen,
-      activePathPrefix: "/dashboard/ecole/formations",
-    },
-    {
-      label: "Statistiques",
-      href: "/dashboard/ecole/statistiques",
-      icon: BarChart3,
-    },
-    {
-      label: "Suivi formations",
-      href: "/dashboard/ecole/formations-suivi",
-      icon: ClipboardCheck,
-    },
-    { label: "Prospection", href: "/dashboard/ecole/prospection", icon: GitBranch },
-    { label: "Ma todo", href: "/dashboard/ecole/todo", icon: CheckSquare },
-    { label: "Qualiopi", href: "/dashboard/ecole/qualiopi", icon: ShieldCheck },
-    {
-      label: "EDGE Online",
-      href: EDGE_ONLINE_APP_SURFACE_PATH,
-      icon: MonitorPlay,
-      activePathPrefix: EDGE_ONLINE_APP_SURFACE_PATH,
-    },
-  ];
-
-  const tabItems = [...mainNavItems.slice(0, 4), pricingNavItem];
 
   return (
     <div
@@ -121,154 +31,12 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
     >
       <div className="flex min-h-screen">
         {!isTodo ? (
-          <aside
-            className={`fixed left-0 top-0 z-30 hidden h-screen min-h-0 flex-col bg-[#121212] px-4 py-6 text-[#F5F2E8] transition-all md:flex ${
-              isCollapsed ? "w-20" : "w-64"
-            }`}
-          >
-          <div className={`flex shrink-0 ${isCollapsed ? "flex-col items-center gap-3" : "items-start justify-between gap-2"}`}>
-            <div className={isCollapsed ? "w-full" : "min-w-0 flex-1"}>
-              <OrgSidebarBrand
-                logoUrl={orgBranding.logoUrl}
-                name={orgBranding.name || "École"}
-                compact={isCollapsed}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsCollapsed((prev) => !prev)}
-              className="shrink-0 rounded-full border border-white/10 p-2 text-white/60 hover:text-white"
-              aria-label="Replier la sidebar"
-            >
-              <ChevronsLeft className={`h-4 w-4 transition-transform ${isCollapsed ? "rotate-180" : ""}`} />
-            </button>
+          <div className="hidden md:block">
+            <EcoleSidebar
+              collapsed={isCollapsed}
+              onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
+            />
           </div>
-          <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-          <nav className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain text-sm">
-            {mainNavItems.map((item) => {
-              const isActive = isEcoleNavActive(pathname, item);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 transition ${
-                    isActive
-                      ? "bg-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.2)] backdrop-blur"
-                      : "text-white/70 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <span
-                    className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full ${
-                      isActive ? "bg-[#007AFF]" : "bg-transparent"
-                    }`}
-                  />
-                  <Icon
-                    className={`h-4 w-4 ${
-                      isActive ? "text-[#007AFF]" : "text-white/40"
-                    }`}
-                  />
-                  {!isCollapsed ? (
-                    <span
-                      className={`${
-                        isActive ? "text-white drop-shadow-[0_0_6px_rgba(197,160,89,0.3)]" : ""
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setIsCompaniesOpen((prev) => !prev)}
-                className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 transition ${
-                  pathname.startsWith("/dashboard/ecole/entreprises")
-                    ? "bg-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.2)] backdrop-blur"
-                    : "text-white/70 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                <span
-                  className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full ${
-                    pathname.startsWith("/dashboard/ecole/entreprises")
-                      ? "bg-[#007AFF]"
-                      : "bg-transparent"
-                  }`}
-                />
-                <Building2
-                  className={`h-4 w-4 ${
-                    pathname.startsWith("/dashboard/ecole/entreprises")
-                      ? "text-[#007AFF]"
-                      : "text-white/40"
-                  }`}
-                />
-                {!isCollapsed ? <span>Entreprises</span> : null}
-                {!isCollapsed ? (
-                  <span className="ml-auto text-xs text-white/40">{isCompaniesOpen ? "–" : "+"}</span>
-                ) : null}
-              </button>
-              {!isCollapsed && isCompaniesOpen ? (
-                <div className="mt-2 space-y-1 pl-8">
-                  <Link
-                    href="/dashboard/ecole/entreprises"
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${
-                      pathname.startsWith("/dashboard/ecole/entreprises")
-                        ? "bg-white/10 text-white"
-                        : "text-white/60 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    Clients
-                  </Link>
-                  <Link
-                    href="/dashboard/ecole/entreprises/prospects"
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${
-                      pathname.startsWith("/dashboard/ecole/entreprises/prospects")
-                        ? "bg-white/10 text-white"
-                        : "text-white/60 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    Prospects
-                  </Link>
-                </div>
-              ) : null}
-            </div>
-          </nav>
-          <div className="shrink-0 pt-2">
-            <HandicapSidebarNav collapsed={isCollapsed} labelVariant="handicap" />
-          </div>
-          </div>
-          <div className="shrink-0 space-y-1 border-t border-white/10 pt-3">
-            <Link
-              href={pricingNavItem.href}
-              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
-                isEcoleNavActive(pathname, pricingNavItem)
-                  ? "bg-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.2)] backdrop-blur"
-                  : "text-white/70 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <span
-                className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full ${
-                  isEcoleNavActive(pathname, pricingNavItem) ? "bg-[#007AFF]" : "bg-transparent"
-                }`}
-              />
-              <Euro
-                className={`h-4 w-4 ${
-                  isEcoleNavActive(pathname, pricingNavItem) ? "text-[#007AFF]" : "text-white/40"
-                }`}
-              />
-              {!isCollapsed ? <span>{pricingNavItem.label}</span> : null}
-            </Link>
-            <Link
-              href="/logout"
-              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white"
-            >
-              <LogOut className="h-4 w-4 text-white/40" />
-              {!isCollapsed ? <span>Déconnexion</span> : null}
-            </Link>
-          </div>
-        </aside>
         ) : null}
         <main
           className={`flex-1 min-h-screen ${isTodo ? "" : "bg-[#F5F5F7] text-[#1D1D1F]"} ${
@@ -281,8 +49,8 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
       {!isTodo ? (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E5E5EA] bg-white/95 px-2 py-2 md:hidden">
           <div className="flex items-center justify-around gap-0.5">
-            {tabItems.map((item) => {
-              const isActive = isEcoleNavActive(pathname, item);
+            {MOBILE_TAB_ITEMS.map((item) => {
+              const isActive = isEcoleLinkActive(pathname, item.href);
               const Icon = item.icon;
               return (
                 <Link

@@ -24,7 +24,7 @@ export async function POST(
 
     const { data: expert, error: fetchError } = await supabase
       .from("experts")
-      .select("id,is_active,references,certification_status,is_certified_beyond")
+      .select("id,is_active,references,certification_status,is_certified_beyond,is_care_expert")
       .eq("id", id)
       .maybeSingle();
 
@@ -40,6 +40,8 @@ export async function POST(
     } else if (action === "set_certified") {
       patch.certification_status = "certified";
       patch.is_certified_beyond = true;
+    } else if (action === "toggle_care") {
+      patch.is_care_expert = !Boolean(expert.is_care_expert);
     } else if (action === "add_note") {
       const note = typeof body.note === "string" ? body.note.trim() : "";
       if (!note) {

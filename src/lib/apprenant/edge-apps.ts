@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 import type { ApprenantNavItem } from "@/lib/apprenant/connect-nav";
-import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
+import { EDGE_LAB_ONLINE_CATALOG_HREF, EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
 export type EdgeAppId =
   | "profil"
@@ -111,7 +111,7 @@ const SKILLS_NAV: ApprenantNavItem[] = [
 const LEARNING_NAV: ApprenantNavItem[] = [
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
   { label: "Mes parcours", href: "/dashboard/apprenant/parcours", icon: BookMarked },
-  { label: "Online", href: "/dashboard/apprenant/online", icon: MonitorPlay },
+  { label: "Online", href: EDGE_LAB_ONLINE_CATALOG_HREF, icon: MonitorPlay },
   { label: "Statistiques", href: "/dashboard/apprenant/statistiques", icon: GraduationCap },
 ];
 
@@ -252,7 +252,9 @@ export function resolveEdgeAppFromPathname(pathname: string | null | undefined):
     p.startsWith("/dashboard/apprenant/parcours") ||
     p.startsWith("/dashboard/apprenant/online") ||
     p.startsWith("/dashboard/apprenant/statistiques") ||
-    p.startsWith(EDGE_ONLINE_APP_SURFACE_PATH)
+    p.startsWith(EDGE_ONLINE_APP_SURFACE_PATH) ||
+    p.startsWith("/g/edgelab") ||
+    p.startsWith("/g/edge-lab")
   ) {
     return "learning";
   }

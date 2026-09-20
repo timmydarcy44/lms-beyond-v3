@@ -315,6 +315,19 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
               >
                 EDGE Certified
               </button>
+              <button
+                type="button"
+                disabled={loading !== null}
+                onClick={() => void runAction("toggle_care")}
+                className={cn(
+                  "rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60",
+                  expert.is_care_expert
+                    ? "border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                    : "border border-slate-200 text-slate-700 hover:bg-slate-50",
+                )}
+              >
+                {expert.is_care_expert ? "Care ✓" : "Care"}
+              </button>
             </div>
           </div>
 
@@ -555,6 +568,19 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                   className="rounded-xl border border-[#635BFF]/25 bg-[#635BFF]/8 py-2.5 text-sm font-semibold text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-60"
                 >
                   Marquer EDGE Certified
+                </button>
+                <button
+                  type="button"
+                  disabled={loading !== null}
+                  onClick={() => void runAction("toggle_care")}
+                  className={cn(
+                    "rounded-xl py-2.5 text-sm font-semibold disabled:opacity-60",
+                    expert.is_care_expert
+                      ? "border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                      : "border border-slate-200 hover:bg-slate-50",
+                  )}
+                >
+                  {expert.is_care_expert ? "Retirer de Care" : "Afficher dans Care"}
                 </button>
               </div>
             </div>

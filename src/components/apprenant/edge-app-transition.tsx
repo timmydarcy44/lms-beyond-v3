@@ -1,28 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { edgePerfMark, edgePerfMeasure } from "@/lib/edge/perf-marks";
 
-/** Animation totale cible : 500–800 ms (plus de sleep 5s). */
-const TRANSITION_MS = 700;
-const FADE_OUT_MS = 180;
+/** Durée minimale d’affichage de la marque. */
+const MIN_HOLD_MS = 520;
+/** Fade de sortie uniquement quand la destination est prête. */
+const FADE_OUT_MS = 160;
+/** Filet de sécurité si la navigation reste bloquée. */
+const MAX_WAIT_MS = 8000;
 
 type AppTransitionProps = {
   /** Nom sur UNE ligne (ex. « EDGE Learn » ou « Pilotage »). */
   appName?: string;
   app?: string;
   open: boolean;
+  /** true quand le pathname correspond déjà à l’app cible. */
+  destinationReady?: boolean;
   onComplete: () => void;
   className?: string;
 };
 
 /**
- * Transition de marque courte — la navigation destination doit démarrer
- * en parallèle (router.push dès le clic), pas après cette animation.
+ * Transition de marque — reste opaque jusqu’à ce que la destination soit prête,
+ * pour ne jamais révéler l’ancien dashboard entre-deux.
  */
-export function AppTransition({ appName, app, open, onComplete, className }: AppTransitionProps) {
+export function AppTransition({
+  appName,
+  app,
+  open,
+  destinationReady = false,
+  onComplete,
+  className,
+}: AppTransitionProps) {
   const [phase, setPhase] = useState<"idle" | "in" | "hold" | "out">("idle");
+  const openedAtRef = useRef<number>(0);
+  const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   const raw = String(appName ?? app ?? "").trim() || "EDGE";
   const line = /^EDGE\b/i.test(raw) ? raw : `EDGE ${raw}`;
   const parts = line.match(/^(EDGE)\s+(.+)$/i);
@@ -30,23 +47,40 @@ export function AppTransition({ appName, app, open, onComplete, className }: App
   useEffect(() => {
     if (!open) {
       setPhase("idle");
+      completedRef.current = false;
       return;
     }
+    completedRef.current = false;
+    openedAtRef.current = performance.now();
     edgePerfMark("transition-open", { line });
     setPhase("in");
-    const holdTimer = window.setTimeout(() => setPhase("hold"), 120);
-    const outTimer = window.setTimeout(() => setPhase("out"), TRANSITION_MS - FADE_OUT_MS);
-    const doneTimer = window.setTimeout(() => {
-      edgePerfMeasure("app-transition", "transition-open", "transition-done");
-      onComplete();
-      setPhase("idle");
-    }, TRANSITION_MS);
-    return () => {
-      window.clearTimeout(holdTimer);
-      window.clearTimeout(outTimer);
-      window.clearTimeout(doneTimer);
+    const holdTimer = window.setTimeout(() => setPhase("hold"), 100);
+    return () => window.clearTimeout(holdTimer);
+  }, [open, line]);
+
+  useEffect(() => {
+    if (!open || phase === "idle" || phase === "out" || completedRef.current) return;
+
+    const tryDismiss = () => {
+      if (completedRef.current) return;
+      const elapsed = performance.now() - openedAtRef.current;
+      const minOk = elapsed >= MIN_HOLD_MS;
+      const forced = elapsed >= MAX_WAIT_MS;
+      if ((!destinationReady || !minOk) && !forced) return;
+
+      completedRef.current = true;
+      setPhase("out");
+      window.setTimeout(() => {
+        edgePerfMeasure("app-transition", "transition-open", "transition-done");
+        onCompleteRef.current();
+        setPhase("idle");
+      }, FADE_OUT_MS);
     };
-  }, [open, onComplete, line]);
+
+    tryDismiss();
+    const poll = window.setInterval(tryDismiss, 50);
+    return () => window.clearInterval(poll);
+  }, [open, phase, destinationReady]);
 
   if (!open && phase === "idle") return null;
 
@@ -55,7 +89,7 @@ export function AppTransition({ appName, app, open, onComplete, className }: App
       className={cn(
         "fixed inset-0 z-[400] flex items-center justify-center overflow-hidden",
         "bg-[#05060a]",
-        phase === "out" && "opacity-0 transition-opacity duration-200 ease-out",
+        phase === "out" && "pointer-events-none opacity-0 transition-opacity duration-150 ease-out",
         className,
       )}
       role="presentation"
@@ -70,7 +104,7 @@ export function AppTransition({ appName, app, open, onComplete, className }: App
       />
       <div
         className={cn(
-          "relative z-10 px-6 text-center transition-all duration-200 ease-out",
+          "relative z-10 px-6 text-center transition-all duration-150 ease-out",
           phase === "out" && "scale-[0.99] opacity-0",
         )}
         style={phase === "in" ? { animation: "edgeBrandIn 220ms ease-out forwards" } : undefined}
@@ -119,4 +153,4 @@ export function EdgeAppTransition(props: {
   );
 }
 
-export const EDGE_APP_TRANSITION_MS = TRANSITION_MS;
+export const EDGE_APP_TRANSITION_MS = MIN_HOLD_MS;

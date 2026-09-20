@@ -8,21 +8,32 @@ export {
   parseExpertInternalNotes,
 } from "@/lib/expert/admin-expert-types";
 
+const ADMIN_EXPERT_SELECT_LEGACY = ADMIN_EXPERT_SELECT.replace(",is_care_expert", "");
+
+function isMissingCareColumn(message: string | undefined) {
+  return Boolean(message && /is_care_expert/i.test(message));
+}
+
 export async function getAdminExperts(status?: string | null): Promise<AdminExpertRow[]> {
   const supabase = getServiceRoleClient();
   if (!supabase) return [];
 
-  let query = supabase
-    .from("experts")
-    .select(ADMIN_EXPERT_SELECT)
-    .order("created_at", { ascending: false })
-    .limit(500);
+  const run = (select: string) => {
+    let query = supabase
+      .from("experts")
+      .select(select)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (status && status !== "all") {
+      query = query.eq("review_status", status);
+    }
+    return query;
+  };
 
-  if (status && status !== "all") {
-    query = query.eq("review_status", status);
+  let { data, error } = await run(ADMIN_EXPERT_SELECT);
+  if (error && isMissingCareColumn(error.message)) {
+    ({ data, error } = await run(ADMIN_EXPERT_SELECT_LEGACY));
   }
-
-  const { data, error } = await query;
   if (error) {
     console.error("[getAdminExperts]", error);
     return [];
@@ -34,11 +45,19 @@ export async function getAdminExpertById(id: string): Promise<AdminExpertRow | n
   const supabase = getServiceRoleClient();
   if (!supabase) return null;
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("experts")
     .select(ADMIN_EXPERT_SELECT)
     .eq("id", id)
     .maybeSingle();
+
+  if (error && isMissingCareColumn(error.message)) {
+    ({ data, error } = await supabase
+      .from("experts")
+      .select(ADMIN_EXPERT_SELECT_LEGACY)
+      .eq("id", id)
+      .maybeSingle());
+  }
 
   if (error) {
     console.error("[getAdminExpertById]", error);

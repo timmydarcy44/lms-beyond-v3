@@ -53,11 +53,17 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
   const handleAppChange = useCallback(
     (id: string) => {
       const next = id as EcoleAppId;
+      setActiveAppId(next);
+      setStoredEcoleAppId(next);
+      setPendingAppId(next);
       const href = ECOLE_APP_BY_ID[next]?.homeHref;
       if (href) router.push(href);
-      setPendingAppId(next);
     },
     [router],
+  );
+
+  const destinationReady = Boolean(
+    pendingAppId && resolveEcoleAppFromPathname(pathname) === pendingAppId,
   );
 
   const completeAppTransition = useCallback(() => {
@@ -99,7 +105,11 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
               />
             </div>
           ) : null}
-          <Suspense fallback={null}>{children}</Suspense>
+          <Suspense fallback={null}>
+            <div className={pendingAppId ? "invisible" : undefined} aria-hidden={pendingAppId ? true : undefined}>
+              {children}
+            </div>
+          </Suspense>
         </main>
       </div>
       {!isTodo ? (
@@ -128,6 +138,7 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
       <AppTransition
         appName={pendingAppId ? getEcoleAppLabel(pendingAppId) : ""}
         open={Boolean(pendingAppId)}
+        destinationReady={destinationReady}
         onComplete={completeAppTransition}
       />
     </div>

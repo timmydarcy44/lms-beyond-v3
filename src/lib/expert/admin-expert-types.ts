@@ -20,11 +20,12 @@ export type AdminExpertRow = {
   wants_certification: boolean | null;
   certification_status: string | null;
   is_certified_beyond: boolean | null;
+  is_care_expert: boolean | null;
   created_at: string | null;
 };
 
 export const ADMIN_EXPERT_SELECT =
-  "id,email,first_name,last_name,headline,bio,bio_long,linkedin_url,photo_url,avatar_url,review_status,is_active,specialties,formats_supported,regions,references,wants_certification,certification_status,is_certified_beyond,created_at";
+  "id,email,first_name,last_name,headline,bio,bio_long,linkedin_url,photo_url,avatar_url,review_status,is_active,specialties,formats_supported,regions,references,wants_certification,certification_status,is_certified_beyond,is_care_expert,created_at";
 
 export function parseExpertRegistrationMeta(references: unknown) {
   if (!Array.isArray(references)) return null;

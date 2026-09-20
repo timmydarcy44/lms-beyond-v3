@@ -191,13 +191,19 @@ export function ApprenantConnectShell({
   const handleAppChange = useCallback(
     (id: EdgeAppId) => {
       edgePerfMark("app-switch-start", { id });
-      // Navigation immédiate : la destination charge PENDANT l’animation courte
+      // Sidebar + nav cible immédiatement ; l’overlay reste opaque jusqu’à destinationReady
+      setActiveAppId(id);
+      setStoredEdgeAppId(id);
+      setPendingAppId(id);
       const href = EDGE_APP_BY_ID[id]?.homeHref;
       if (href) router.push(href);
-      setPendingAppId(id);
       setMobileOpen(false);
     },
     [router],
+  );
+
+  const destinationReady = Boolean(
+    pendingAppId && resolveEdgeAppFromPathname(pathname) === pendingAppId,
   );
 
   const completeAppTransition = useCallback(() => {
@@ -207,7 +213,6 @@ export function ApprenantConnectShell({
     setStoredEdgeAppId(next);
     setPendingAppId(null);
     edgePerfMark("app-switch-complete", { id: next });
-    // router.push déjà déclenché au clic
   }, [pendingAppId]);
 
   const handleProfileSaved = useCallback(() => {
@@ -814,7 +819,14 @@ export function ApprenantConnectShell({
               </div>
             </div>
 
-            <div className="relative z-10 px-5 py-6 sm:px-8 lg:pl-8 lg:pr-10 lg:py-8">{children}</div>
+            <div
+              className={`relative z-10 px-5 py-6 sm:px-8 lg:pl-8 lg:pr-10 lg:py-8 ${
+                pendingAppId ? "invisible" : ""
+              }`}
+              aria-hidden={pendingAppId ? true : undefined}
+            >
+              {children}
+            </div>
           </main>
         </div>
 
@@ -837,6 +849,7 @@ export function ApprenantConnectShell({
           <AppTransition
             appName={pendingAppId ? getEdgeAppTransitionName(pendingAppId) : ""}
             open={Boolean(pendingAppId)}
+            destinationReady={destinationReady}
             onComplete={completeAppTransition}
           />
         ) : null}

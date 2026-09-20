@@ -38,6 +38,14 @@ export function MonEvolutionReport() {
     return (
       <EdgePageAmbiance ambiance="evolution">
         <div className={`${APPRENANT_PAGE_SHELL} mx-auto max-w-[42rem] space-y-8 pb-20 md:max-w-3xl`}>
+          <header className="space-y-2">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/45">
+              Mon évolution
+            </p>
+            <h1 className="text-[1.85rem] font-bold tracking-[-0.04em] text-white sm:text-[2.15rem]">
+              Votre plan d&apos;action
+            </h1>
+          </header>
           <EvolutionAbstractHeroCard
             objectiveLabel=""
             matching={null}
@@ -99,7 +107,7 @@ export function MonEvolutionReport() {
           referentialTitle={data.selectedCareer?.title ?? null}
           matching={data.matching}
           hasProject={data.hasProject}
-          error={data.error}
+          error={data.discScores ? null : data.error}
         />
 
         {!data.selectedCareer &&

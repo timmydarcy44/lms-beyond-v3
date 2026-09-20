@@ -4,7 +4,7 @@ import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/co
 
 export default function FormateurNewFormationStructurePage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen text-white">
       <div className="px-6 py-6">
         <Link
           href="/dashboard/formateur/formations"

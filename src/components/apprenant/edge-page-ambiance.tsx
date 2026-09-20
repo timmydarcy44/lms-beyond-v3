@@ -1,19 +1,27 @@
 "use client";
 
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
-/** Ambiances de fond distinctes — profondeur type Revolut, pas du noir plat. */
-export type EdgeAmbiance = "profile" | "evolution" | "mission" | "neutral";
+/**
+ * Ambiance de page EDGE — peinte sur le MAIN shell (background continu),
+ * JAMAIS comme une card / grand rectangle arrondi.
+ */
+export type EdgeAmbiance = "profile" | "evolution" | "mission" | "neutral" | "care" | "skills";
 
 const AMBIANCE: Record<EdgeAmbiance, string> = {
   profile:
-    "bg-[radial-gradient(ellipse_120%_80%_at_10%_-10%,rgba(37,99,235,0.35),transparent_55%),radial-gradient(ellipse_90%_70%_at_95%_10%,rgba(99,102,241,0.18),transparent_50%),linear-gradient(180deg,#0a1224_0%,#07090f_45%,#050508_100%)]",
+    "radial-gradient(ellipse 120% 80% at 10% -10%, rgba(37,99,235,0.28), transparent 55%), radial-gradient(ellipse 90% 70% at 95% 10%, rgba(99,102,241,0.14), transparent 50%), transparent",
   evolution:
-    "bg-[radial-gradient(ellipse_110%_75%_at_85%_-5%,rgba(124,58,237,0.28),transparent_55%),radial-gradient(ellipse_80%_60%_at_0%_30%,rgba(14,165,233,0.14),transparent_50%),linear-gradient(180deg,#0c0a16_0%,#08080e_50%,#050508_100%)]",
+    "radial-gradient(ellipse 110% 75% at 85% -5%, rgba(124,58,237,0.22), transparent 55%), radial-gradient(ellipse 80% 60% at 0% 30%, rgba(14,165,233,0.12), transparent 50%), transparent",
   mission:
-    "bg-[radial-gradient(ellipse_100%_70%_at_50%_-20%,rgba(30,41,59,0.55),transparent_55%),linear-gradient(180deg,#0a0b10_0%,#050508_100%)]",
+    "radial-gradient(ellipse 100% 70% at 50% -20%, rgba(30,41,59,0.4), transparent 55%), transparent",
   neutral:
-    "bg-[radial-gradient(ellipse_100%_80%_at_50%_-15%,rgba(51,65,85,0.25),transparent_50%),linear-gradient(180deg,#0b0d14_0%,#06070b_100%)]",
+    "radial-gradient(ellipse 100% 80% at 50% -15%, rgba(51,65,85,0.2), transparent 50%), transparent",
+  care:
+    "radial-gradient(ellipse 110% 70% at 20% -10%, rgba(16,185,129,0.14), transparent 55%), radial-gradient(ellipse 80% 60% at 100% 0%, rgba(61,123,255,0.12), transparent 50%), transparent",
+  skills:
+    "radial-gradient(ellipse 130% 90% at 0% -20%, rgba(61,123,255,0.32), transparent 52%), radial-gradient(ellipse 70% 55% at 100% 5%, rgba(14,165,233,0.16), transparent 48%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(37,99,235,0.1), transparent 55%), transparent",
 };
 
 export function EdgePageAmbiance({
@@ -25,16 +33,18 @@ export function EdgePageAmbiance({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <div className={cn("relative min-h-[70vh] rounded-[28px]", className)}>
-      <div
-        className={cn(
-          "pointer-events-none absolute -inset-x-4 -inset-y-6 -z-10 rounded-[32px] sm:-inset-x-8 sm:-inset-y-8",
-          AMBIANCE[ambiance],
-        )}
-        aria-hidden
-      />
-      {children}
-    </div>
-  );
+  useEffect(() => {
+    const main = document.querySelector<HTMLElement>("[data-connect-main]");
+    if (!main) return;
+    main.setAttribute("data-edge-ambiance", ambiance);
+    main.style.setProperty("--edge-page-ambiance", AMBIANCE[ambiance]);
+    return () => {
+      if (main.getAttribute("data-edge-ambiance") === ambiance) {
+        main.removeAttribute("data-edge-ambiance");
+        main.style.removeProperty("--edge-page-ambiance");
+      }
+    };
+  }, [ambiance]);
+
+  return <div className={cn("relative", className)}>{children}</div>;
 }

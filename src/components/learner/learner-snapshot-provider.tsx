@@ -39,11 +39,18 @@ export function invalidateLearnerSnapshotProviderCache() {
 }
 
 async function fetchSnapshot(): Promise<LearnerSnapshot | null> {
+  const t0 = typeof performance !== "undefined" ? performance.now() : 0;
   const res = await fetch("/api/dashboard/learner-snapshot", {
     credentials: "include",
     cache: "no-store",
   });
   const raw = await res.text();
+  if (typeof performance !== "undefined" && process.env.NODE_ENV === "development") {
+    // eslint-disable-next-line no-console
+    console.info(
+      `[edge-perf] learner-snapshot network: ${Math.round(performance.now() - t0)}ms status=${res.status}`,
+    );
+  }
   if (!res.ok) {
     console.error("[learner-snapshot] fetch failed", res.status, raw.slice(0, 300));
     return null;

@@ -17,11 +17,11 @@ export async function collectLearnerProfileCandidates(
 
   const normalizedEmail = (email ?? "").trim().toLowerCase();
 
-  const [{ data: profileById }, { data: profileByEmail }, { data: employeeRow }] = await Promise.all([
+  const [{ data: profileById }, { data: profilesByEmail }, { data: employeeRow }] = await Promise.all([
     db.from("profiles").select("id, email").eq("id", userId).maybeSingle(),
     normalizedEmail
-      ? db.from("profiles").select("id").eq("email", normalizedEmail).maybeSingle()
-      : Promise.resolve({ data: null }),
+      ? db.from("profiles").select("id").ilike("email", normalizedEmail)
+      : Promise.resolve({ data: [] as Array<{ id: string }> }),
     normalizedEmail
       ? db
           .from("employees")
@@ -40,11 +40,13 @@ export async function collectLearnerProfileCandidates(
   ]);
 
   if (profileById?.id) ids.add(String(profileById.id));
-  if (profileByEmail?.id) ids.add(String(profileByEmail.id));
+  for (const row of profilesByEmail ?? []) {
+    if (row?.id) ids.add(String(row.id));
+  }
 
   const profileEmail = String(profileById?.email ?? normalizedEmail).trim().toLowerCase();
   if (profileEmail) {
-    const { data: siblings } = await db.from("profiles").select("id").eq("email", profileEmail);
+    const { data: siblings } = await db.from("profiles").select("id").ilike("email", profileEmail);
     for (const row of siblings ?? []) {
       if (row?.id) ids.add(String(row.id));
     }
@@ -80,6 +82,35 @@ export async function fetchDiscScoresForCandidates(
     if (!bestScores || updatedAt >= bestTime) {
       bestScores = data.scores;
       bestTime = updatedAt;
+    }
+  }
+
+  // Fallback legacy : colonnes profiles.disc_* / score_d..c (anciens parcours)
+  if (!bestScores) {
+    for (const profileId of profileIds) {
+      const { data, error } = await db
+        .from("profiles")
+        .select("disc_scores, score_d, score_i, score_s, score_c, updated_at")
+        .eq("id", profileId)
+        .maybeSingle();
+      if (error || !data) continue;
+      const fromJson = data.disc_scores;
+      const fromCols =
+        data.score_d != null || data.score_i != null || data.score_s != null || data.score_c != null
+          ? {
+              D: Number(data.score_d ?? 0),
+              I: Number(data.score_i ?? 0),
+              S: Number(data.score_s ?? 0),
+              C: Number(data.score_c ?? 0),
+            }
+          : null;
+      const candidate = fromJson ?? fromCols;
+      if (!candidate) continue;
+      const updatedAt = Date.parse(String(data.updated_at ?? "")) || 0;
+      if (!bestScores || updatedAt >= bestTime) {
+        bestScores = candidate;
+        bestTime = updatedAt;
+      }
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
+import { useOptionalLearnerSnapshotContext } from "@/components/learner/learner-snapshot-provider";
 import { analyzeCareerMatching, type CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
 import {
   getCareerProfileBySlug,
@@ -28,6 +29,9 @@ import {
   buildProfilEdgeExplorations,
   isProfilEdgeComplete,
 } from "@/lib/particulier/profil-edge-progress";
+import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
+import { normalizeIdmcAxesRecord } from "@/lib/idmc/idmc-display";
+import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
@@ -41,6 +45,19 @@ async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
   return getCareerProfileBySlug(slug) ?? null;
 }
 
+function softRadarToRecord(
+  radar: Array<{ skill: string; score: number }> | null | undefined,
+): Record<string, number> | null {
+  if (!radar?.length) return null;
+  const out: Record<string, number> = {};
+  for (const row of radar) {
+    const k = String(row.skill ?? "").trim();
+    if (!k) continue;
+    out[k] = Number(row.score) || 0;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 export type ProfilEdgeHubData = {
   loading: boolean;
   error: string | null;
@@ -48,6 +65,10 @@ export type ProfilEdgeHubData = {
   hasIdmc: boolean;
   hasSoftSkills: boolean;
   softSkillsScores: Record<string, number> | null;
+  /** Axes IDMC pour graphiques (payload, pas seulement le flag completed). */
+  idmcAxes: Record<AxisKey, number> | null;
+  /** Soft skills radar pour graphiques. */
+  softSkillsRadar: Array<{ skill: string; score: number }>;
   badgeAwarded: boolean;
   badgeName: string;
   selectedCareer: CareerProfile | null;
@@ -70,14 +91,21 @@ export type ProfilEdgeHubData = {
   reload: () => Promise<void>;
 };
 
+/**
+ * Hub Profil EDGE — lit les diagnostics via learner-snapshot (candidats multi-profil,
+ * parseStoredDiscScores, soft skills apprenant+salarié) pour rester compatible legacy.
+ */
 export function useProfilEdgeHubData(): ProfilEdgeHubData {
   const supabase = createSupabaseBrowserClient();
+  const snapshotCtx = useOptionalLearnerSnapshotContext();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [discScores, setDiscScores] = useState<DiscScores | null>(null);
   const [hasIdmc, setHasIdmc] = useState(false);
   const [hasSoftSkills, setHasSoftSkills] = useState(false);
   const [softSkillsScores, setSoftSkillsScores] = useState<Record<string, number> | null>(null);
+  const [idmcAxes, setIdmcAxes] = useState<Record<AxisKey, number> | null>(null);
+  const [softSkillsRadar, setSoftSkillsRadar] = useState<Array<{ skill: string; score: number }>>([]);
   const [badgeAwarded, setBadgeAwarded] = useState(false);
   const [badgeName, setBadgeName] = useState("Profil comportemental EDGE");
   const [selectedCareer, setSelectedCareer] = useState<CareerProfile | null>(null);
@@ -91,6 +119,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
 
   const load = useCallback(async () => {
     setError(null);
+    const t0 = typeof performance !== "undefined" ? performance.now() : 0;
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
     if (!uid) {
@@ -98,11 +127,46 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       return;
     }
 
-    const [profileRes, discRes, idmcRes, softRes, expRes, dipRes] = await Promise.all([
+    // Diagnostics : payloads complets (pas seulement flags completed).
+    let snapDisc: DiscScores | null = null;
+    let snapIdmcAxes: Record<AxisKey, number> | null = null;
+    let snapSoftRadar: Array<{ skill: string; score: number }> = [];
+
+    const existingSnap = snapshotCtx?.snapshot;
+    const applySnap = (snap: {
+      discScores?: unknown;
+      idmcAxes?: Record<AxisKey, number> | null;
+      softSkillsRadar?: Array<{ skill: string; score: number }>;
+    }) => {
+      snapDisc = snap.discScores
+        ? (parseStoredDiscScores(snap.discScores as Record<string, unknown>) as DiscScores | null)
+        : null;
+      snapIdmcAxes =
+        snap.idmcAxes && Object.keys(snap.idmcAxes).length > 0 ? snap.idmcAxes : null;
+      snapSoftRadar = Array.isArray(snap.softSkillsRadar) ? snap.softSkillsRadar : [];
+    };
+
+    // Snapshot + tables en parallèle (évite waterfall snapshot → queries)
+    const snapshotPromise: Promise<{
+      discScores?: unknown;
+      idmcAxes?: Record<AxisKey, number> | null;
+      softSkillsRadar?: Array<{ skill: string; score: number }>;
+    } | null> =
+      existingSnap && !snapshotCtx?.loading
+        ? Promise.resolve(existingSnap)
+        : fetch("/api/dashboard/learner-snapshot", {
+            credentials: "include",
+            cache: "no-store",
+          })
+            .then(async (res) => (res.ok ? ((await res.json()) as object) : null))
+            .catch(() => null);
+
+    const [snapPayload, profileRes, discRes, idmcRes, softRes, expRes, dipRes] = await Promise.all([
+      snapshotPromise,
       supabase
         .from("profiles")
         .select(
-          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata",
+          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata, disc_scores, score_d, score_i, score_s, score_c",
         )
         .eq("id", uid)
         .maybeSingle(),
@@ -113,8 +177,20 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       supabase.from("diplomes").select("*").eq("learner_id", uid),
     ]);
 
-    if (profileRes.error || discRes.error) {
-      setError("Impossible de charger votre profil pour le moment.");
+    if (snapPayload) applySnap(snapPayload);
+
+    if (typeof performance !== "undefined" && process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.info(
+        `[edge-perf] profil-edge-hub parallel queries: ${Math.round(performance.now() - t0)}ms`,
+      );
+    }
+    if (profileRes.error) {
+      // Soft fail : ne bloque pas l'évolution si disc/snapshot sont dispo
+      console.warn("[profil-edge-hub] profiles fetch", profileRes.error.message);
+      if (!snapDisc && !profileRes.data) {
+        setError("Impossible de charger votre profil pour le moment.");
+      }
     }
 
     const profile = profileRes.data;
@@ -132,10 +208,46 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     setHardSkills(Array.isArray(profile?.hard_skills) ? (profile.hard_skills as string[]) : []);
     setSkillsMetadata((profile?.skills_metadata as Record<string, LearnerHardSkillMeta>) ?? {});
 
-    setHasIdmc(Boolean(idmcRes.data?.scores));
-    const softScores = softRes.data?.scores as Record<string, number> | null;
-    setHasSoftSkills(Boolean(softScores && Object.keys(softScores).length > 0));
-    setSoftSkillsScores(softScores);
+    // Fusion snapshot (prioritaire) + fallback auth uid / colonnes legacy profil
+    let resolvedDisc = snapDisc;
+    if (!resolvedDisc) {
+      resolvedDisc = parseStoredDiscScores(
+        (discRes.data?.scores as Record<string, unknown> | null) ?? null,
+      ) as DiscScores | null;
+    }
+    if (!resolvedDisc && profile) {
+      const legacy =
+        (profile.disc_scores as Record<string, unknown> | null) ??
+        (profile.score_d != null
+          ? {
+              D: Number(profile.score_d),
+              I: Number(profile.score_i ?? 0),
+              S: Number(profile.score_s ?? 0),
+              C: Number(profile.score_c ?? 0),
+            }
+          : null);
+      resolvedDisc = parseStoredDiscScores(legacy) as DiscScores | null;
+    }
+    setDiscScores(resolvedDisc);
+
+    let resolvedIdmcAxes = snapIdmcAxes;
+    if (!resolvedIdmcAxes && idmcRes.data?.scores) {
+      resolvedIdmcAxes = normalizeIdmcAxesRecord(idmcRes.data.scores) as Record<AxisKey, number> | null;
+    }
+    setIdmcAxes(resolvedIdmcAxes);
+    setHasIdmc(Boolean(resolvedIdmcAxes && Object.keys(resolvedIdmcAxes).length > 0));
+
+    let resolvedRadar = snapSoftRadar;
+    if (!resolvedRadar.length && softRes.data?.scores) {
+      const rec = softRes.data.scores as Record<string, number>;
+      resolvedRadar = Object.entries(rec)
+        .map(([skill, score]) => ({ skill, score: Number(score) || 0 }))
+        .filter((r) => r.skill);
+    }
+    const resolvedSoft = softRadarToRecord(resolvedRadar);
+    setSoftSkillsRadar(resolvedRadar);
+    setHasSoftSkills(Boolean(resolvedSoft && Object.keys(resolvedSoft).length > 0));
+    setSoftSkillsScores(resolvedSoft);
 
     setExperiences(
       (expRes.data ?? []).map((row) => ({
@@ -176,7 +288,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       badge_id?: string;
       badge_awarded_at?: string;
     } | null;
-    const testsComplete = Boolean(discRes.data?.scores && idmcRes.data?.scores && softRes.data?.scores);
+    const testsComplete = Boolean(resolvedDisc && resolvedIdmcAxes && resolvedSoft);
     setBadgeAwarded(Boolean(testsComplete && completion?.badge_awarded_at));
 
     if (completion?.badge_id) {
@@ -187,11 +299,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
         .maybeSingle();
       if (badge?.name) setBadgeName(String(badge.name));
     }
-
-    const scores = discRes.data?.scores as DiscScores | null;
-    if (scores?.D != null) setDiscScores(scores);
-    else setDiscScores(null);
-  }, [supabase]);
+  }, [supabase, snapshotCtx?.snapshot, snapshotCtx?.loading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,6 +316,13 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       cancelled = true;
     };
   }, [load]);
+
+  // Recharger quand le snapshot shell arrive après le premier paint
+  useEffect(() => {
+    if (!snapshotCtx?.loading && snapshotCtx?.snapshot) {
+      void load();
+    }
+  }, [snapshotCtx?.loading, snapshotCtx?.snapshot, load]);
 
   const testsDone = [Boolean(discScores), hasSoftSkills, hasIdmc].filter(Boolean).length;
 
@@ -287,6 +402,8 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     hasIdmc,
     hasSoftSkills,
     softSkillsScores,
+    idmcAxes,
+    softSkillsRadar,
     badgeAwarded,
     badgeName,
     selectedCareer,

@@ -7,7 +7,6 @@ import {
   parseHardSkillPortfolio,
   type StoredHardSkillMeta,
 } from "@/lib/hard-skills/hard-skills-portfolio";
-import { PROFIL_EDGE_SECTION_HREFS } from "@/lib/particulier/profil-edge-maturity";
 import { HubPillCta, HubSectionHeader, HubSurface } from "./hub-ui";
 
 type Props = {
@@ -22,7 +21,7 @@ export function SkillsSummaryCard({ hardSkills, skillsMetadata }: Props) {
 
   return (
     <section>
-      <HubSectionHeader title="Mes compétences" subtitle="Synthèse — le détail reste dans votre portfolio." />
+      <HubSectionHeader title="Mes compétences" subtitle="Synthèse — le capital se construit dans EDGE Skills." />
       <HubSurface tone="violet" className="min-h-[280px] space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
@@ -61,9 +60,9 @@ export function SkillsSummaryCard({ hardSkills, skillsMetadata }: Props) {
           </p>
         )}
 
-        <Link href={PROFIL_EDGE_SECTION_HREFS.hard_skills}>
+        <Link href="/dashboard/apprenant/skills">
           <HubPillCta>
-            {stats.total > 0 ? "Gérer mes compétences" : "Ajouter une compétence"}
+            {stats.total > 0 ? "Ouvrir EDGE Skills" : "Développer une compétence"}
             <ArrowRight className="h-4 w-4" />
           </HubPillCta>
         </Link>

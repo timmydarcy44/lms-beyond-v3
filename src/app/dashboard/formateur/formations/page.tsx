@@ -2,7 +2,6 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import { FormateurSidebar } from "@/components/formateur/formateur-sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,29 +29,19 @@ export default async function FormateurFormationsPage() {
   const published = formateurCourses.filter((c) => c.status === "published");
   const drafts = formateurCourses.filter((c) => c.status === "draft");
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <FormateurSidebar activeItem="Formations" />
-      <main
-        className="ml-[228px] border-l border-white/10 px-5 py-8 md:ml-[232px] md:px-6"
-        style={{
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(0, 150, 255, 0.05) 0%, rgba(0, 0, 0, 1) 70%)",
-        }}
-      >
-        <div className="space-y-12 pt-2">
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0b0b0b] via-[#050505] to-[#0d0d0d] px-6 py-10 md:px-10">
-        <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full bg-cyan-400/10 blur-[150px]" aria-hidden="true" />
-        <div className="pointer-events-none absolute right-[-14rem] bottom-0 h-96 w-96 rounded-full bg-blue-500/10 blur-[160px]" aria-hidden="true" />
-        <div className="relative flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-8">
-            <div className="space-y-3">
-              <Badge className="rounded-full border border-cyan-400/20 bg-cyan-500/10 text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200">
-                Bibliothèque formateur
+    <div className="space-y-10 text-white">
+        <div className="space-y-10 pt-2">
+        <section className="space-y-4">
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Badge className="rounded-full border border-[#3D7BFF]/25 bg-[#3D7BFF]/10 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#93B4FF]">
+                Mes cours
               </Badge>
-              <h1 className="max-w-2xl text-3xl font-semibold text-white md:text-[2.5rem] md:leading-[1.1]">
-                Un espace créatif, fluide, pour piloter vos formations au quotidien.
+              <h1 className="max-w-2xl text-3xl font-bold tracking-tight text-white md:text-[2rem]">
+                Ce que vous enseignez
               </h1>
-              <p className="max-w-2xl text-sm leading-relaxed text-white/70 md:text-base">
+              <p className="max-w-2xl text-sm leading-relaxed text-white/45 md:text-[15px]">
                 Retouchez vos brouillons, finalisez vos parcours et suivez vos formations actives avec une vision claire,
                 légère et motivante.
               </p>
@@ -146,7 +135,6 @@ export default async function FormateurFormationsPage() {
           )}
         </section>
         </div>
-      </main>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { FormateurSidebar } from "@/components/formateur/formateur-sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getFormateurPaths, getFormateurLearners, getFormateurGroups, getFormateurContentLibrary } from "@/lib/queries/formateur";
@@ -22,9 +21,7 @@ export default async function FormateurParcoursPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <FormateurSidebar activeItem="Parcours" />
-      <main className="ml-[236px] px-10 py-10 space-y-10">
+    <div className="space-y-10 text-white">
         <section className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-white md:text-3xl">Mes parcours signatures</h1>
@@ -69,7 +66,6 @@ export default async function FormateurParcoursPage() {
           </CardContent>
         </Card>
       ) : null}
-      </main>
     </div>
   );
 }

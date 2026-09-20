@@ -73,7 +73,7 @@ export function EvolutionAbstractHeroCard({
             Mon évolution
           </p>
 
-          {error ? (
+          {error && !matching && !hasProject && !loading ? (
             <div className="mt-6 space-y-3">
               <h2 className="text-[1.75rem] font-bold tracking-[-0.035em] text-white sm:text-[2rem]">
                 Impossible de charger votre évolution

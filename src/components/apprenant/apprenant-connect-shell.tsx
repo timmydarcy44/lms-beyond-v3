@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight, LifeBuoy, LogOut, Menu, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Bell, ChevronLeft, ChevronRight, LifeBuoy, LogOut, Menu, Sparkles, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { buildApprenantNavItems } from "@/lib/apprenant/connect-nav";
@@ -11,6 +11,16 @@ import {
   getConnectShellTheme,
   type ApprenantConnectVariant,
 } from "@/lib/apprenant/connect-theme";
+import {
+  EDGE_APP_BY_ID,
+  getEdgeAppLabel,
+  getEdgeAppNavItems,
+  getEdgeAppTransitionName,
+  resolveEdgeAppFromPathname,
+  setStoredEdgeAppId,
+  type EdgeAppId,
+} from "@/lib/apprenant/edge-apps";
+import { edgePerfMark } from "@/lib/edge/perf-marks";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import {
   buildPublicProfileUrl,
@@ -20,6 +30,8 @@ import { ApprenantProfileEditModal } from "@/components/apprenant/apprenant-prof
 import { ObjectiveDetailStepModal } from "@/components/apprenant/objective-detail-step-modal";
 import { ConnectCockpitBackdrop } from "@/components/apprenant/connect-cockpit-backdrop";
 import { ApprenantShellProvider } from "@/components/apprenant/apprenant-shell-context";
+import { EdgeAppSwitcher } from "@/components/apprenant/edge-app-switcher";
+import { AppTransition } from "@/components/apprenant/edge-app-transition";
 import { LearnerSnapshotProvider } from "@/components/learner/learner-snapshot-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
@@ -71,6 +83,9 @@ export function ApprenantConnectShell({
     logoUrl: null,
     name: null,
   });
+  const [activeAppId, setActiveAppId] = useState<EdgeAppId>("profil");
+  const [pendingAppId, setPendingAppId] = useState<EdgeAppId | null>(null);
+  const useEdgeApps = variant === "edge";
 
   useEffect(() => {
     if (variant === "jessica") return;
@@ -93,7 +108,9 @@ export function ApprenantConnectShell({
 
   const loadProfile = useCallback(async () => {
     if (!supabase) return;
+    edgePerfMark("shell-profile-start");
     const { data: userData } = await supabase.auth.getUser();
+    edgePerfMark("shell-getUser-done");
     const uid = userData?.user?.id;
     if (userData?.user?.email) setAuthEmail(userData.user.email);
     if (userData?.user?.user_metadata) {
@@ -107,6 +124,7 @@ export function ApprenantConnectShell({
       )
       .eq("id", uid)
       .maybeSingle();
+    edgePerfMark("shell-profiles-done");
     setProfile((data as ProfileSnippet) ?? null);
 
     const role = String((data as ProfileSnippet | null)?.role ?? "").toUpperCase();
@@ -157,10 +175,40 @@ export function ApprenantConnectShell({
     return () => window.clearTimeout(timer);
   }, [router, searchParams]);
 
-  const navItems = useMemo(
-    () => buildApprenantNavItems(hasOrganisation, variant, isParticulier),
-    [hasOrganisation, isParticulier, variant],
+  useEffect(() => {
+    if (!useEdgeApps) return;
+    if (pendingAppId) return; // ne pas écraser pendant la transition de marque
+    const fromPath = resolveEdgeAppFromPathname(pathname);
+    setActiveAppId(fromPath);
+    setStoredEdgeAppId(fromPath);
+  }, [pathname, useEdgeApps, pendingAppId]);
+
+  const navItems = useMemo(() => {
+    if (useEdgeApps) return getEdgeAppNavItems(activeAppId);
+    return buildApprenantNavItems(hasOrganisation, variant, isParticulier);
+  }, [activeAppId, hasOrganisation, isParticulier, useEdgeApps, variant]);
+
+  const handleAppChange = useCallback(
+    (id: EdgeAppId) => {
+      edgePerfMark("app-switch-start", { id });
+      // Navigation immédiate : la destination charge PENDANT l’animation courte
+      const href = EDGE_APP_BY_ID[id]?.homeHref;
+      if (href) router.push(href);
+      setPendingAppId(id);
+      setMobileOpen(false);
+    },
+    [router],
   );
+
+  const completeAppTransition = useCallback(() => {
+    if (!pendingAppId) return;
+    const next = pendingAppId;
+    setActiveAppId(next);
+    setStoredEdgeAppId(next);
+    setPendingAppId(null);
+    edgePerfMark("app-switch-complete", { id: next });
+    // router.push déjà déclenché au clic
+  }, [pendingAppId]);
 
   const handleProfileSaved = useCallback(() => {
     setSnippetVersion((v) => v + 1);
@@ -374,6 +422,18 @@ export function ApprenantConnectShell({
                 isSidebarCollapsed ? "px-1.5" : "px-2"
               } [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent]`}
             >
+              {useEdgeApps && navItems.length === 0 ? (
+                <div
+                  className={`px-2 py-4 ${isSidebarCollapsed ? "sr-only" : ""}`}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/25">
+                    {getEdgeAppLabel(activeAppId)}
+                  </p>
+                  <p className="mt-2 text-[12px] leading-relaxed text-white/35">
+                    Aucune section interne — le planning s’affiche dans la zone principale.
+                  </p>
+                </div>
+              ) : (
               <div className="space-y-0.5">
                 {navItems.map((item) => {
                   const isParcoursGalaxy = item.label === "Parcours" || item.label === "Mes parcours";
@@ -443,6 +503,7 @@ export function ApprenantConnectShell({
                   );
                 })}
               </div>
+              )}
             </nav>
 
             <div className={theme.sidebarFooterClass}>
@@ -564,7 +625,52 @@ export function ApprenantConnectShell({
           </aside>
 
           <main data-connect-main className={theme.mainClass}>
-            {/* Mobile header: burger + back */}
+            {useEdgeApps ? (
+              <div
+                data-connect-topbar
+                className="sticky top-0 z-30 hidden px-5 py-3 sm:px-8 lg:block lg:pl-8 lg:pr-10"
+              >
+                <div className="flex items-center justify-end gap-2">
+                  <Link
+                    href="/dashboard/ressources"
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.05] bg-white/[0.03] px-3 text-[12px] font-medium text-white/60 transition hover:border-white/[0.1] hover:bg-white/[0.05] hover:text-white"
+                    title="Aide & ressources"
+                  >
+                    <LifeBuoy className="h-4 w-4" />
+                    <span>Aide</span>
+                  </Link>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.05] bg-white/[0.03] text-white/60 transition hover:border-white/[0.1] hover:bg-white/[0.05] hover:text-white"
+                    aria-label="Notifications"
+                    title="Notifications"
+                  >
+                    <Bell className="h-4 w-4" />
+                  </button>
+                  <EdgeAppSwitcher activeAppId={activeAppId} onAppChange={handleAppChange} />
+                  <button
+                    type="button"
+                    onClick={openEditProfile}
+                    className={`inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border p-[2px] ${theme.profileBorder}`}
+                    title="Modifier mon profil"
+                    aria-label="Profil"
+                  >
+                    <span className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full ${theme.profileAvatarBg}`}>
+                      {profile?.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className={theme.profileInitialClass}>
+                          {(firstName || "?").slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Mobile header: burger + back + switcher */}
             <div className={theme.mobileHeaderClass}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -581,7 +687,7 @@ export function ApprenantConnectShell({
                     <SheetContent side="left" className={theme.mobileSheetClass}>
                       <SheetHeader className={`flex flex-row items-center justify-between pb-4 text-left ${variant === "jessica" ? "border-b border-[#D2B48C]/40" : "border-b border-white/10"}`}>
                         <SheetTitle className={variant === "jessica" ? "text-[#2F2A25]" : "text-white"}>
-                          Navigation
+                          {useEdgeApps ? getEdgeAppLabel(activeAppId) : "Navigation"}
                         </SheetTitle>
                         <button
                           type="button"
@@ -594,6 +700,11 @@ export function ApprenantConnectShell({
                       </SheetHeader>
 
                       <div className="mt-4 space-y-1 pb-6">
+                        {navItems.length === 0 && useEdgeApps ? (
+                          <p className="px-1 text-[13px] text-white/40">
+                            Aucune section interne pour cette application.
+                          </p>
+                        ) : null}
                         {navItems.map((item) => {
                           const isShareProfile = item.action === "share-profile";
                           const longerMatchExists = Boolean(
@@ -689,11 +800,17 @@ export function ApprenantConnectShell({
 
                 <div className="min-w-0 flex-1">
                   <div className={theme.mobileTitleClass}>
-                    {activeNavLabel || theme.mobileBrandFallback}
+                    {activeNavLabel || (useEdgeApps ? getEdgeAppLabel(activeAppId) : theme.mobileBrandFallback)}
                   </div>
                 </div>
 
-                <div className="w-[88px]" />
+                <div className="flex w-auto shrink-0 items-center justify-end gap-1.5">
+                  {useEdgeApps ? (
+                    <EdgeAppSwitcher activeAppId={activeAppId} onAppChange={handleAppChange} />
+                  ) : (
+                    <div className="w-10" />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -715,6 +832,14 @@ export function ApprenantConnectShell({
           onSaved={handleObjectiveSaved}
           onClose={() => setObjectiveModalOpen(false)}
         />
+
+        {useEdgeApps ? (
+          <AppTransition
+            appName={pendingAppId ? getEdgeAppTransitionName(pendingAppId) : ""}
+            open={Boolean(pendingAppId)}
+            onComplete={completeAppTransition}
+          />
+        ) : null}
 
         {shareCopied ? (
           <div

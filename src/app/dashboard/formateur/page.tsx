@@ -1,47 +1,61 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, BookOpen, CalendarDays, Clock, NotebookPen, Users } from "lucide-react";
 
-import { FormateurSidebar } from "@/components/formateur/formateur-sidebar";
+import {
+  APPRENANT_CARD_BODY,
+  APPRENANT_CARD_KICKER,
+  APPRENANT_CARD_MUTED,
+  APPRENANT_CARD_TITLE,
+} from "@/lib/apprenant/connect-nav";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { OpenCourseButton } from "@/app/dashboard/formateur/formations/open-course-button";
+import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
+import { cn } from "@/lib/utils";
 
-type Kpis = {
-  totalCourses: number;
-  publishedCourses: number;
-  totalLearners: number;
-};
-
-type PublishedCourseCard = {
+type Slot = {
   id: string;
-  title: string;
-  image: string;
-  updatedAt: string;
-  kind: "course" | "path";
+  starts_at: string;
+  ends_at: string;
+  duration_hours?: number;
+  module?: { name?: string } | null;
+  class?: { name?: string } | null;
 };
 
-function isVideoUrl(url: string): boolean {
-  const u = String(url ?? "").trim().toLowerCase();
-  if (!u) return false;
-  try {
-    const p = new URL(u).pathname.toLowerCase();
-    return p.endsWith(".mp4") || p.endsWith(".webm");
-  } catch {
-    return u.endsWith(".mp4") || u.endsWith(".webm");
-  }
+type Overview = {
+  nextSlot: Slot | null;
+  upcomingHours: number;
+  learnerCount: number;
+  journalsPending: number;
+  upcoming: Slot[];
+};
+
+function formatRange(starts: string, ends: string) {
+  const a = new Date(starts);
+  const b = new Date(ends);
+  const day = a.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const t1 = a.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const t2 = b.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return { day, time: `${t1} — ${t2}` };
+}
+
+function isToday(iso: string) {
+  const d = new Date(iso);
+  const n = new Date();
+  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 }
 
 export default function FormateurDashboardPage() {
-  const [kpis, setKpis] = useState<Kpis>({
-    totalCourses: 0,
-    publishedCourses: 0,
-    totalLearners: 0,
-  });
+  const [firstName, setFirstName] = useState("Expert");
   const [loading, setLoading] = useState(true);
-  const [published, setPublished] = useState<PublishedCourseCard[]>([]);
+  const [overview, setOverview] = useState<Overview>({
+    nextSlot: null,
+    upcomingHours: 0,
+    learnerCount: 0,
+    journalsPending: 0,
+    upcoming: [],
+  });
 
   useEffect(() => {
     let ignore = false;
@@ -52,342 +66,220 @@ export default function FormateurDashboardPage() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
+        if (!user?.id) return;
 
-        if (!user?.id) {
-          if (!ignore) {
-            setKpis({ totalCourses: 0, publishedCourses: 0, totalLearners: 0 });
-            setPublished([]);
-          }
-          return;
-        }
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name, email")
+          .eq("id", user.id)
+          .maybeSingle();
 
-        const [coursesRes, pathsRes] = await Promise.all([
+        const name = resolveLearnerDisplayFirstName({
+          profileFirstName: profile?.first_name,
+          email: profile?.email ?? user.email,
+        });
+        if (!ignore) setFirstName(name || "Expert");
+
+        const [emargementRes, coursesRes, journalRes] = await Promise.all([
+          fetch("/api/dashboard/formateur/emargement", { credentials: "include" }),
           fetch("/api/formateur/courses", { credentials: "include" }),
-          fetch("/api/formateur/paths", { credentials: "include" }),
+          fetch("/api/dashboard/formateur/cahier-de-texte", { credentials: "include" }),
         ]);
+
+        const emargement = emargementRes.ok ? await emargementRes.json().catch(() => null) : null;
         const coursesPayload = coursesRes.ok ? await coursesRes.json().catch(() => null) : null;
-        const pathsPayload = pathsRes.ok ? await pathsRes.json().catch(() => null) : null;
+        const journal = journalRes.ok ? await journalRes.json().catch(() => null) : null;
+
+        const slots: Slot[] = Array.isArray(emargement?.slots) ? emargement.slots : [];
+        const now = Date.now();
+        const future = slots
+          .filter((s) => new Date(s.ends_at).getTime() >= now)
+          .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+        const next30 = future.filter(
+          (s) => new Date(s.starts_at).getTime() <= now + 30 * 86400000,
+        );
+        const upcomingHours = next30.reduce((a, s) => a + Number(s.duration_hours ?? 0), 0);
+
         const courses = Array.isArray(coursesPayload?.courses) ? coursesPayload.courses : [];
-        const paths = Array.isArray(pathsPayload?.paths) ? pathsPayload.paths : [];
-
-        if (!coursesRes.ok) {
-          console.warn("[formateur/dashboard] courses API failed", coursesRes.status);
-        }
-        if (!pathsRes.ok) {
-          console.warn("[formateur/dashboard] paths API failed", pathsRes.status);
-        }
-
-        const moduleCourseIds = courses.map((c: any) => String(c?.id ?? "")).filter((x: string) => x.length > 0);
-        const pathIds = paths.map((p: any) => String(p?.id ?? "")).filter((x: string) => x.length > 0);
-        const allFormationIds = new Set([...moduleCourseIds, ...pathIds]);
-
-        const publishedCoursesCount = courses.filter(
-          (c: any) => String(c?.status ?? "").toLowerCase() === "published",
-        ).length;
-        const publishedPathsCount = paths.filter(
-          (p: any) => String(p?.status ?? "").toLowerCase() === "published",
-        ).length;
-
-        const publishedCourses = courses
-          .filter((c: any) => String(c?.status ?? "").toLowerCase() === "published")
-          .sort((a: any, b: any) => {
-            const ta = String(a?.updated_at ?? a?.created_at ?? "");
-            const tb = String(b?.updated_at ?? b?.created_at ?? "");
-            return tb.localeCompare(ta);
-          });
-
-        const publishedPaths = paths
-          .filter((p: any) => String(p?.status ?? "").toLowerCase() === "published")
-          .sort((a: any, b: any) => {
-            const ta = String(a?.updatedAt ?? a?.updated_at ?? "");
-            const tb = String(b?.updatedAt ?? b?.updated_at ?? "");
-            return tb.localeCompare(ta);
-          });
-
-        const pickImage = (row: any): string => {
-          const snap = row?.builder_snapshot;
-          const fromSnapshot =
-            (typeof snap?.general?.cover_image === "string" && snap.general.cover_image.trim()
-              ? snap.general.cover_image.trim()
-              : "") ||
-            (typeof snap?.general?.heroImage === "string" && snap.general.heroImage.trim()
-              ? snap.general.heroImage.trim()
-              : "") ||
-            "";
-          return (
-            fromSnapshot ||
-            row?.cover_image ||
-            "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80"
-          );
-        };
-
-        const pickPathImage = (row: any): string => {
-          const h = String(row?.heroUrl ?? row?.thumbnailUrl ?? "").trim();
-          return h || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80";
-        };
-
-        const learnerIds = new Set<string>();
-        const validModuleIds = moduleCourseIds.filter((id) => !!id);
-        if (validModuleIds.length > 0) {
-          const { data: enrollments, error: enrollmentsError } = await supabase
+        const moduleIds = courses.map((c: { id?: string }) => String(c?.id ?? "")).filter(Boolean);
+        let learnerCount = 0;
+        if (moduleIds.length) {
+          const { data: enrollments } = await supabase
             .from("enrollments")
             .select("user_id")
-            .in("course_id", validModuleIds);
-
-          if (enrollmentsError) {
-            console.warn("[formateur/dashboard] enrollments fetch failed", enrollmentsError);
-          } else {
-            (enrollments ?? []).forEach((e: any) => {
-              const u = String(e.user_id ?? "").trim();
-              if (u) learnerIds.add(u);
-            });
-          }
+            .in("course_id", moduleIds);
+          learnerCount = new Set((enrollments ?? []).map((e: { user_id?: string }) => e.user_id).filter(Boolean)).size;
         }
 
-        const validPathIds = pathIds.filter((id) => !!id);
-        if (validPathIds.length > 0) {
-          const { data: pe, error: peErr } = await supabase
-            .from("path_enrollments")
-            .select("user_id")
-            .in("path_id", validPathIds);
-          if (peErr) {
-            console.warn("[formateur/dashboard] path_enrollments fetch failed", peErr);
-          } else {
-            (pe ?? []).forEach((e: any) => {
-              const u = String(e.user_id ?? "").trim();
-              if (u) learnerIds.add(u);
-            });
-          }
-        }
-
-        const totalLearners = learnerIds.size;
-
-        const publishedMerged: PublishedCourseCard[] = [
-          ...publishedPaths.map((p: any) => ({
-            id: String(p.id),
-            title: p.title || "Parcours",
-            image: pickPathImage(p),
-            updatedAt: p.updatedAt || p.updated_at || new Date().toISOString(),
-            kind: "path" as const,
-          })),
-          ...publishedCourses.map((c: any) => ({
-            id: String(c.id),
-            title: c.title || "Formation",
-            image: pickImage(c),
-            updatedAt: c.updated_at || c.created_at || new Date().toISOString(),
-            kind: "course" as const,
-          })),
-        ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+        const pending = Array.isArray(journal?.sessions)
+          ? journal.sessions.filter((s: { lesson_completed_at?: string | null }) => !s.lesson_completed_at).length
+          : 0;
 
         if (!ignore) {
-          setKpis({
-            totalCourses: allFormationIds.size,
-            publishedCourses: publishedCoursesCount + publishedPathsCount,
-            totalLearners,
+          setOverview({
+            nextSlot: future[0] ?? null,
+            upcomingHours: Math.round(upcomingHours * 100) / 100,
+            learnerCount,
+            journalsPending: pending,
+            upcoming: future.slice(0, 6),
           });
-          setPublished(publishedMerged);
         }
       } finally {
         if (!ignore) setLoading(false);
       }
     };
-    run();
+    void run();
     return () => {
       ignore = true;
     };
   }, []);
 
-  const statTiles = useMemo(
-    () => [
-      { label: "Formations", value: kpis.totalCourses, sub: "créées" },
-      { label: "Publiées", value: kpis.publishedCourses, sub: "en ligne" },
-      { label: "Apprenants", value: kpis.totalLearners, sub: "uniques" },
-    ],
-    [kpis.publishedCourses, kpis.totalCourses, kpis.totalLearners],
-  );
+  const nextMeta = useMemo(() => {
+    if (!overview.nextSlot) return null;
+    return formatRange(overview.nextSlot.starts_at, overview.nextSlot.ends_at);
+  }, [overview.nextSlot]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <FormateurSidebar activeItem="Accueil" />
+    <div className="space-y-8">
+      <header className="space-y-1">
+        <h1 className="text-[28px] font-bold tracking-[-0.03em] text-white">
+          Bonjour {firstName}
+        </h1>
+        <p className="text-[14px] text-white/40">Votre espace Expert EDGE</p>
+      </header>
 
-      <main
-        className="min-h-screen ml-[236px] px-8 py-10"
-        style={{
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(0, 150, 255, 0.05) 0%, rgba(0, 0, 0, 1) 70%)",
-        }}
-      >
-        <section className="relative min-h-[70vh] overflow-hidden rounded-2xl border border-white/10 bg-black/20">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=2000&q=80"
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="eager"
-            fetchPriority="high"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/70 via-transparent to-transparent" />
-          <div className="relative z-10 flex h-full flex-col justify-end gap-6 pb-12 pl-6 pr-8 md:pb-16 md:pl-8 md:pr-12">
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-white/80">
-              ESPACE FORMATEUR
-              <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-[0.3em] text-red-200">
-                PREMIUM
-              </span>
-            </div>
-            <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight text-white md:text-5xl">
-              Pilotez vos formations,
-              <br />
-              suivez vos cohortes et boostez
-              <br />
-              l&apos;engagement de vos apprenants.
-            </h1>
-            <p className="text-lg text-white/80">Une expérience immersive, pensée pour l&apos;action.</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <button className="rounded-full bg-[#0A84FF] px-5 py-2.5 text-sm font-semibold text-white">
-                Inviter un apprenant
-              </button>
-              <button className="rounded-full bg-white/20 px-5 py-2.5 text-sm font-semibold text-white">
-                Exporter le reporting
-              </button>
-              <button className="rounded-full border border-white/30 px-5 py-2.5 text-sm font-semibold text-white/80">
-                Planifier une session
-              </button>
-            </div>
-            <div className="absolute right-12 top-1/2 w-72 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-                Prochaines étapes
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className={APPRENANT_CARD_BODY}>
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-[#3D7BFF]" />
+            <p className={APPRENANT_CARD_KICKER}>Prochain cours</p>
+          </div>
+          {overview.nextSlot && nextMeta ? (
+            <>
+              <p className="text-[12px] text-white/45">
+                {isToday(overview.nextSlot.starts_at) ? "Aujourd'hui" : nextMeta.day}
               </p>
-              <div className="mt-4 space-y-3 text-sm text-white/80">
-                <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
-                  <p className="font-medium text-white">Finaliser votre prochaine cohorte</p>
-                  <p className="text-xs text-white/60">3 sections à confirmer</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
-                  <p className="font-medium text-white">Partager la masterclass engageante</p>
-                  <p className="text-xs text-white/60">Embed recommandée pour vos mentors</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-12 py-12">
-          <div className="grid gap-4 md:grid-cols-3">
-            {statTiles.map((tile) => (
-              <div
-                key={tile.label}
-                className="rounded-2xl border border-white/5 bg-[#0d0d0d] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+              <p className={APPRENANT_CARD_TITLE}>{nextMeta.time}</p>
+              <p className="text-[14px] font-semibold text-white">
+                {overview.nextSlot.module?.name ?? "Séance"}
+              </p>
+              <p className={APPRENANT_CARD_MUTED}>{overview.nextSlot.class?.name ?? "Classe"}</p>
+              <Link
+                href={`/dashboard/formateur/emargement?slotId=${overview.nextSlot.id}`}
+                className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#3D7BFF] hover:text-[#5B93FF]"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
-                  {tile.label}
-                </p>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <p className="text-3xl font-black text-white">
-                    {loading ? "…" : tile.value}
-                  </p>
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/40">
-                    {tile.sub}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white/90">Vos formations en ligne</h2>
-              <Link className="text-xs font-semibold text-slate-400 hover:text-white" href="/dashboard/formateur/formations">
-                Voir tout
+                Ouvrir le cours <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-            </div>
-            {published.length === 0 ? (
-              <div className="rounded-2xl border border-white/5 bg-[#0d0d0d] p-6 text-sm text-white/70">
-                {loading ? "Chargement…" : "Aucune formation publiée pour le moment."}
-              </div>
-            ) : (
-              <div className="grid gap-4 lg:grid-cols-3">
-                {published.map((course) => (
-                  <div
-                    key={`${course.kind}-${course.id}`}
-                    className="overflow-hidden rounded-2xl border border-white/5 bg-[#0d0d0d]"
-                  >
-                    <div className="aspect-video overflow-hidden bg-black/30">
-                      {isVideoUrl(course.image) ? (
-                        <video
-                          src={course.image}
-                          className="h-full w-full object-cover"
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                        />
-                      ) : (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={course.image}
-                          alt={course.title}
-                          className="h-full w-full object-cover"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          loading="lazy"
-                        />
-                      )}
-                    </div>
-                    <div className="space-y-3 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white">{course.title}</p>
-                          <p className="text-xs text-white/50">Publié</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {course.kind === "path" ? (
-                          <a
-                            className="rounded-full bg-[#0A84FF] px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
-                            href={`/dashboard/formateur/parcours/${course.id}/edit`}
-                          >
-                            Ouvrir
-                          </a>
-                        ) : (
-                          <OpenCourseButton courseId={course.id} />
-                        )}
-                        <a
-                          className="rounded-full bg-white/5 px-4 py-2 text-xs font-semibold text-white/80 hover:bg-white/10"
-                          href={
-                            course.kind === "path"
-                              ? `/dashboard/formateur/parcours/${course.id}`
-                              : `/dashboard/formateur/formations/${course.id}/preview`
-                          }
-                        >
-                          Prévisualiser
-                        </a>
-                      </div>
-                    </div>
+            </>
+          ) : (
+            <p className={cn(APPRENANT_CARD_MUTED, "pt-2")}>
+              {loading ? "Chargement…" : "Aucun cours à venir"}
+            </p>
+          )}
+        </div>
+
+        <div className={APPRENANT_CARD_BODY}>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-[#3D7BFF]" />
+            <p className={APPRENANT_CARD_KICKER}>Heures à venir</p>
+          </div>
+          <p className="text-[32px] font-bold tracking-tight text-white">
+            {loading ? "…" : overview.upcomingHours}
+            <span className="ml-1 text-[16px] font-semibold text-white/40">h</span>
+          </p>
+          <p className={APPRENANT_CARD_MUTED}>sur les 30 prochains jours</p>
+        </div>
+
+        <div className={APPRENANT_CARD_BODY}>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-[#3D7BFF]" />
+            <p className={APPRENANT_CARD_KICKER}>Apprenants</p>
+          </div>
+          <p className="text-[32px] font-bold tracking-tight text-white">
+            {loading ? "…" : overview.learnerCount}
+          </p>
+          <p className={APPRENANT_CARD_MUTED}>dans vos classes / formations</p>
+        </div>
+
+        <div className={APPRENANT_CARD_BODY}>
+          <div className="flex items-center gap-2">
+            <NotebookPen className="h-4 w-4 text-[#3D7BFF]" />
+            <p className={APPRENANT_CARD_KICKER}>Cahier de texte</p>
+          </div>
+          <p className="text-[32px] font-bold tracking-tight text-white">
+            {loading ? "…" : overview.journalsPending}
+          </p>
+          <p className={APPRENANT_CARD_MUTED}>séances à compléter</p>
+          <Link
+            href="/dashboard/formateur/cahier-de-texte"
+            className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#3D7BFF] hover:text-[#5B93FF]"
+          >
+            Voir le cahier <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[15px] font-semibold text-white/90">Mon planning</h2>
+          <Link
+            href="/dashboard/formateur/planning"
+            className="text-[12px] font-semibold text-white/40 hover:text-white"
+          >
+            Voir tout
+          </Link>
+        </div>
+        {overview.upcoming.length === 0 ? (
+          <p className={cn(APPRENANT_CARD_MUTED, "py-4")}>
+            {loading ? "Chargement du planning…" : "Aucun créneau planifié pour le moment."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {overview.upcoming.map((slot) => {
+              const meta = formatRange(slot.starts_at, slot.ends_at);
+              return (
+                <div key={slot.id} className={cn(APPRENANT_CARD_BODY, "flex-row items-center justify-between gap-4")}>
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-[12px] capitalize text-white/40">{meta.day}</p>
+                    <p className="text-[14px] font-semibold text-white">{meta.time}</p>
+                    <p className="truncate text-[13px] text-white/70">
+                      {slot.module?.name ?? "Séance"}
+                      {slot.class?.name ? ` · ${slot.class.name}` : ""}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="shrink-0 text-right">
+                    <p className="text-[13px] font-semibold text-[#3D7BFF]">
+                      {Number(slot.duration_hours ?? 0)} h
+                    </p>
+                    <Link
+                      href={`/dashboard/formateur/cahier-de-texte?slot=${slot.id}`}
+                      className="text-[11px] font-medium text-white/40 hover:text-white"
+                    >
+                      Cahier
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+        )}
+      </section>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white/90">Formations en cours</h2>
-                <Link className="text-xs font-semibold text-slate-400 hover:text-white" href="/dashboard/formateur/formations">
-                  Voir tout
-                </Link>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-[#1a1a1a] p-6 text-sm text-white/70">
-              Accès rapide au catalogue formateur :{" "}
-              <Link className="text-white underline" href="/dashboard/formateur/formations">
-                voir mes formations
-              </Link>
-              .
-            </div>
-          </div>
-        </section>
-      </main>
+      <section className="flex flex-wrap gap-3">
+        <Link
+          href="/dashboard/formateur/formations"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-2.5 text-[13px] font-semibold text-white/70 transition hover:border-[#3D7BFF]/30 hover:text-white"
+        >
+          <BookOpen className="h-4 w-4 text-[#3D7BFF]" />
+          Mes cours
+        </Link>
+        <Link
+          href="/dashboard/formateur/emargement"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#3D7BFF] px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#5B93FF]"
+        >
+          Émargement
+        </Link>
+      </section>
     </div>
   );
 }
-
-

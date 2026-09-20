@@ -44,7 +44,7 @@ const PARCOURS_HREF = "/dashboard/apprenant/parcours";
 export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNavItem[] {
   void hasOrganisation;
   return [
-    { label: "Mon Profil EDGE", href: "/dashboard/apprenant/profil-comportemental", icon: UserCircle },
+    { label: "Vue d'ensemble", href: "/dashboard/apprenant/profil-comportemental", icon: UserCircle },
     { label: "Mon évolution", href: "/dashboard/apprenant", icon: LayoutDashboard },
     {
       label: "Mes compétences",

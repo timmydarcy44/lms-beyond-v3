@@ -158,7 +158,6 @@ export function ApprenantDashboardClient({
       (learnerSnapshotCtx?.snapshot?.softSkillsRadar?.length ?? 0) > 0,
   );
   const useSnapshotTests =
-    isSalarieSurface &&
     Boolean(learnerSnapshotCtx) &&
     !learnerSnapshotCtx.loading &&
     snapshotHasTests;
@@ -289,12 +288,12 @@ export function ApprenantDashboardClient({
 
   const snapshotRetryRef = useRef(false);
   useEffect(() => {
-    if (!isSalarieSurface || !learnerSnapshotCtx) return;
+    if (!learnerSnapshotCtx) return;
     if (learnerSnapshotCtx.loading || snapshotHasTests) return;
     if (snapshotRetryRef.current) return;
     snapshotRetryRef.current = true;
     void learnerSnapshotCtx.refresh();
-  }, [isSalarieSurface, learnerSnapshotCtx, learnerSnapshotCtx?.loading, snapshotHasTests]);
+  }, [learnerSnapshotCtx, learnerSnapshotCtx?.loading, snapshotHasTests]);
 
   useEffect(() => {
     if (!useSnapshotTests || !learnerSnapshotCtx?.snapshot) return;

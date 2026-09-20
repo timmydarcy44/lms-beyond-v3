@@ -4,26 +4,36 @@
  */
 [data-connect-shell="edge"] {
   --connect-main-bg: transparent;
-  --connect-card: #17171f;
-  --connect-card-2: #1c1c28;
-  --connect-card-border: rgba(255, 255, 255, 0.06);
+  --connect-card: rgba(23, 23, 31, 0.72);
+  --connect-card-2: rgba(28, 28, 40, 0.65);
+  --connect-card-border: rgba(255, 255, 255, 0.04);
   --connect-text: #f1f5f9;
   --connect-text-muted: rgba(255, 255, 255, 0.4);
   --connect-accent: #3d7bff;
-  --connect-accent-soft: rgba(61, 123, 255, 0.4);
+  --connect-accent-soft: rgba(61, 123, 255, 0.35);
 }
 
 [data-connect-shell="edge"] [data-connect-sidebar] {
   background: transparent;
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 [data-connect-shell="edge"] [data-connect-main] {
   position: relative;
   background: transparent;
   color: var(--connect-text);
+}
+
+/* Ambiance de page = couche de fond du MAIN (jamais une card) */
+[data-connect-shell="edge"] [data-connect-main][data-edge-ambiance]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--edge-page-ambiance);
 }
 
 [data-connect-shell="edge"] [data-connect-main] .connect-progress-track {
@@ -36,14 +46,15 @@
   border-radius: 100px;
 }
 
-/* Cartes dashboard */
+/* Cartes dashboard — flottent dans le canvas sans cadres durs */
 [data-connect-shell="edge"] [data-connect-main] [data-cockpit-card] {
   border: 1px solid var(--connect-card-border);
   background: var(--connect-card);
+  box-shadow: 0 18px 48px -28px rgba(0, 0, 0, 0.55);
 }
 
 [data-connect-shell="edge"] [data-connect-main] [data-cockpit-card]:hover {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.07);
 }
 
 [data-connect-shell="edge"] [data-connect-main] [data-cockpit-kicker] {
@@ -56,5 +67,13 @@
 
 [data-connect-shell="edge"] [data-connect-main] [data-cockpit-accent-line] {
   border-left: 2px solid var(--connect-accent);
-  background: linear-gradient(90deg, rgba(61, 123, 255, 0.12), transparent);
+  background: linear-gradient(90deg, rgba(61, 123, 255, 0.1), transparent);
+}
+
+/* Canvas continu : atténue les séparations topbar / contenu */
+[data-connect-shell="edge"] [data-connect-topbar] {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  background: rgba(10, 10, 13, 0.28);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
 }

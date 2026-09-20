@@ -19,6 +19,8 @@ type EcoleSidebarProps = {
   onToggleCollapse?: () => void;
   showCollapseControl?: boolean;
   className?: string;
+  /** Nav de l’univers actif (switcher). Défaut = nav historique complète. */
+  navItems?: EcoleNavItem[];
 };
 
 function getDefaultOpenGroups(pathname: string): Record<string, boolean> {
@@ -36,8 +38,10 @@ export function EcoleSidebar({
   onToggleCollapse,
   showCollapseControl = true,
   className = "",
+  navItems: navItemsProp,
 }: EcoleSidebarProps) {
   const pathname = usePathname();
+  const navItems = useMemo(() => navItemsProp ?? ECOLE_SIDEBAR_NAV, [navItemsProp]);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     getDefaultOpenGroups(pathname),
   );
@@ -49,14 +53,14 @@ export function EcoleSidebar({
   useEffect(() => {
     setOpenGroups((prev) => {
       const next = { ...prev };
-      for (const item of ECOLE_SIDEBAR_NAV) {
+      for (const item of navItems) {
         if (item.type === "group" && isEcoleGroupActive(pathname, item.children)) {
           next[item.label] = true;
         }
       }
       return next;
     });
-  }, [pathname]);
+  }, [pathname, navItems]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,8 +79,6 @@ export function EcoleSidebar({
       cancelled = true;
     };
   }, []);
-
-  const navItems = useMemo(() => ECOLE_SIDEBAR_NAV, []);
 
   const renderLink = (item: Extract<EcoleNavItem, { type: "link" }>) => {
     const isActive = isEcoleLinkActive(pathname, item.href, item.activePathPrefix);
@@ -166,7 +168,7 @@ export function EcoleSidebar({
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-30 flex h-screen min-h-0 flex-col bg-[#121212] px-4 py-6 text-[#F5F2E8] transition-all ${
+      className={`fixed left-0 top-0 z-30 flex h-screen min-h-0 flex-col border-r border-black/[0.06] bg-[#1C1C1E] px-4 py-6 text-[#F5F2E8] transition-all ${
         collapsed ? "w-20" : "w-64"
       } ${className}`}
     >

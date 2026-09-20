@@ -44,6 +44,9 @@ export type StoredHardSkillMeta = {
   validated?: boolean;
   source?: "catalog" | "manual" | "badge";
   validation?: SkillValidationSession;
+  /** Objectif d'entraînement (EDGE Skills Training Center). */
+  trainingTargetLevel?: HardSkillLevel;
+  trainingStartedAt?: string;
 };
 
 export const HARD_SKILL_LEVELS: HardSkillLevel[] = ["Débutant", "Intermédiaire", "Confirmé", "Expert"];

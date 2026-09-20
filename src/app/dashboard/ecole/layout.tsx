@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Suspense, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { LayoutDashboard, Users, Building2, Euro } from "lucide-react";
-import { EcoleSidebar } from "@/components/ecole/ecole-sidebar";
+
+import { AppTransition } from "@/components/apprenant/edge-app-transition";
 import { EcoleFloatingAssistant } from "@/components/beyond-connect/ecole-floating-assistant";
+import { EdgeAppsLauncher } from "@/components/edge/edge-apps-launcher";
+import { EcoleSidebar } from "@/components/ecole/ecole-sidebar";
+import {
+  ECOLE_APPS,
+  ECOLE_APP_BY_ID,
+  getEcoleAppLabel,
+  resolveEcoleAppFromPathname,
+  setStoredEcoleAppId,
+  type EcoleAppId,
+} from "@/lib/ecole/ecole-apps";
 import { ECOLE_PRICING_NAV, isEcoleLinkActive } from "@/lib/ecole/ecole-sidebar-nav";
 
 type SchoolLayoutProps = {
@@ -21,8 +32,41 @@ const MOBILE_TAB_ITEMS = [
 
 export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [activeAppId, setActiveAppId] = useState<EcoleAppId>("pilotage");
+  const [pendingAppId, setPendingAppId] = useState<EcoleAppId | null>(null);
   const isTodo = pathname.startsWith("/dashboard/ecole/todo");
+
+  useEffect(() => {
+    if (pendingAppId) return;
+    const fromPath = resolveEcoleAppFromPathname(pathname);
+    setActiveAppId(fromPath);
+    setStoredEcoleAppId(fromPath);
+  }, [pathname, pendingAppId]);
+
+  const navItems = useMemo(
+    () => ECOLE_APP_BY_ID[activeAppId]?.navItems ?? ECOLE_APP_BY_ID.pilotage.navItems,
+    [activeAppId],
+  );
+
+  const handleAppChange = useCallback(
+    (id: string) => {
+      const next = id as EcoleAppId;
+      const href = ECOLE_APP_BY_ID[next]?.homeHref;
+      if (href) router.push(href);
+      setPendingAppId(next);
+    },
+    [router],
+  );
+
+  const completeAppTransition = useCallback(() => {
+    if (!pendingAppId) return;
+    const next = pendingAppId;
+    setActiveAppId(next);
+    setStoredEcoleAppId(next);
+    setPendingAppId(null);
+  }, [pendingAppId]);
 
   return (
     <div
@@ -35,14 +79,26 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
             <EcoleSidebar
               collapsed={isCollapsed}
               onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
+              navItems={navItems}
             />
           </div>
         ) : null}
         <main
-          className={`flex-1 min-h-screen ${isTodo ? "" : "bg-[#F5F5F7] text-[#1D1D1F]"} ${
+          className={`flex-1 min-h-screen ${isTodo ? "" : "bg-transparent text-[#1D1D1F]"} ${
             isTodo ? "" : isCollapsed ? "md:ml-20" : "md:ml-64"
           } pb-24 md:pb-0`}
         >
+          {!isTodo ? (
+            <div className="sticky top-0 z-20 flex items-center justify-end gap-2 px-4 py-3 sm:px-6">
+              <EdgeAppsLauncher
+                light
+                title="Applications EDGE École"
+                apps={ECOLE_APPS}
+                activeAppId={activeAppId}
+                onAppChange={handleAppChange}
+              />
+            </div>
+          ) : null}
           <Suspense fallback={null}>{children}</Suspense>
         </main>
       </div>
@@ -69,6 +125,11 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
         </nav>
       ) : null}
       {!isTodo ? <EcoleFloatingAssistant /> : null}
+      <AppTransition
+        appName={pendingAppId ? getEcoleAppLabel(pendingAppId) : ""}
+        open={Boolean(pendingAppId)}
+        onComplete={completeAppTransition}
+      />
     </div>
   );
 }

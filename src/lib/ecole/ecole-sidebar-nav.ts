@@ -3,6 +3,7 @@ import {
   BookOpen,
   Briefcase,
   Building2,
+  CalendarDays,
   CheckSquare,
   ClipboardCheck,
   GraduationCap,
@@ -62,6 +63,12 @@ export const ECOLE_SIDEBAR_NAV: EcoleNavItem[] = [
       { label: "Suivi des formations", href: "/dashboard/ecole/formations-suivi" },
       { label: "Statistiques", href: "/dashboard/ecole/statistiques" },
     ],
+  },
+  {
+    type: "link",
+    label: "Planning",
+    href: "/dashboard/ecole/planning",
+    icon: CalendarDays,
   },
   {
     type: "group",

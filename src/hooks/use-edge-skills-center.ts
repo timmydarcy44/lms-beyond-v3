@@ -102,7 +102,7 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
       supabase
         .from("profiles")
         .select(
-          "hard_skills, skills_metadata, target_career_slug, type_profil, professional_project, objective_details, cross_profile_completion, disc_scores",
+          "hard_skills, skills_metadata, target_career_slug, type_profil, professional_project, objective_details, cross_profile_completion",
         )
         .eq("id", uid)
         .maybeSingle(),
@@ -120,9 +120,7 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
     setHardSkills(hs);
     setMeta(parsedMeta);
 
-    const disc =
-      parseStoredDiscScores((discRes.data?.scores as Record<string, unknown>) ?? null) ||
-      parseStoredDiscScores((profile.disc_scores as Record<string, unknown>) ?? null);
+    const disc = parseStoredDiscScores((discRes.data?.scores as Record<string, unknown>) ?? null);
 
     const completion = profile.cross_profile_completion as {
       badge_awarded_at?: string;

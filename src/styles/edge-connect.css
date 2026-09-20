@@ -36,6 +36,22 @@
   background: var(--edge-page-ambiance);
 }
 
+[data-connect-shell="edge"] [data-connect-main][data-edge-ambiance="care"] {
+  --connect-accent: #c70059;
+  --connect-accent-soft: rgba(199, 0, 89, 0.4);
+  color: #fff8fb;
+}
+
+[data-connect-shell="edge"] [data-connect-main][data-edge-ambiance="care"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(165deg, rgba(80, 12, 40, 0.35) 0%, rgba(28, 10, 22, 0.2) 45%, transparent 75%);
+}
+
+
 [data-connect-shell="edge"] [data-connect-main] .connect-progress-track {
   background-color: rgba(255, 255, 255, 0.07);
   border-radius: 100px;

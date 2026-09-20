@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { EDGE_LAB_ONLINE_CATALOG_HREF } from "@/lib/galaxy-branding";
+import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
-/** Online → catalogue EDGE Lab directement. */
+/** Online → surface EDGE Online (/edgeonline). */
 export default function ApprenantOnlinePage() {
-  redirect(EDGE_LAB_ONLINE_CATALOG_HREF);
+  redirect(EDGE_ONLINE_APP_SURFACE_PATH);
 }

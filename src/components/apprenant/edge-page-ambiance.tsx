@@ -19,7 +19,7 @@ const AMBIANCE: Record<EdgeAmbiance, string> = {
   neutral:
     "radial-gradient(ellipse 100% 80% at 50% -15%, rgba(51,65,85,0.2), transparent 50%), transparent",
   care:
-    "radial-gradient(ellipse 110% 70% at 20% -10%, rgba(16,185,129,0.14), transparent 55%), radial-gradient(ellipse 80% 60% at 100% 0%, rgba(61,123,255,0.12), transparent 50%), transparent",
+    "radial-gradient(ellipse 130% 95% at 0% -20%, rgba(199,0,89,0.55), transparent 58%), radial-gradient(ellipse 90% 70% at 100% 5%, rgba(236,72,153,0.28), transparent 52%), radial-gradient(ellipse 70% 50% at 50% 110%, rgba(199,0,89,0.18), transparent 55%), linear-gradient(180deg, rgba(255,236,244,0.08) 0%, transparent 42%)",
   skills:
     "radial-gradient(ellipse 130% 90% at 0% -20%, rgba(61,123,255,0.32), transparent 52%), radial-gradient(ellipse 70% 55% at 100% 5%, rgba(14,165,233,0.16), transparent 48%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(37,99,235,0.1), transparent 55%), transparent",
 };

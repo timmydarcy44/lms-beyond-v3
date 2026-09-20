@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -130,7 +129,8 @@ export function ProfilComportementalReport() {
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/[0.08]">
               {data.avatarUrl ? (
-                <Image src={data.avatarUrl} alt="" fill className="object-cover" sizes="80px" />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={data.avatarUrl} alt="" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white/70">
                   {(data.firstName?.[0] || data.lastName?.[0] || "E").toUpperCase()}

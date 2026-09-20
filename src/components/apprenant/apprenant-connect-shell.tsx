@@ -543,9 +543,6 @@ export function ApprenantConnectShell({
                       <div className={theme.profileRoleClass}>Apprenant</div>
                     </div>
                   </button>
-                  <button type="button" onClick={() => setEditOpen(true)} className={theme.profileEditBtnClass}>
-                    Modifier mon profil
-                  </button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
@@ -556,18 +553,6 @@ export function ApprenantConnectShell({
                     className={theme.profileCollapsedBtnClass}
                   >
                     {(firstName || "?").slice(0, 1).toUpperCase()}
-                  </button>
-                  <button
-                    type="button"
-                    title="Modifier mon profil"
-                    onClick={() => setEditOpen(true)}
-                    className={`mx-auto rounded-full border px-2 py-1.5 text-[10px] font-medium ${
-                      variant === "jessica"
-                        ? "border-[#C6A664]/40 text-[#8B4513]"
-                        : "border-white/20 text-white/70"
-                    }`}
-                  >
-                    Éditer
                   </button>
                 </div>
               )}

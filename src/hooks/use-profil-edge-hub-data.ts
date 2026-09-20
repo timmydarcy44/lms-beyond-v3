@@ -166,7 +166,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       supabase
         .from("profiles")
         .select(
-          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata, disc_scores, score_d, score_i, score_s, score_c",
+          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata, score_d, score_i, score_s, score_c",
         )
         .eq("id", uid)
         .maybeSingle(),
@@ -217,15 +217,14 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     }
     if (!resolvedDisc && profile) {
       const legacy =
-        (profile.disc_scores as Record<string, unknown> | null) ??
-        (profile.score_d != null
+        profile.score_d != null
           ? {
               D: Number(profile.score_d),
               I: Number(profile.score_i ?? 0),
               S: Number(profile.score_s ?? 0),
               C: Number(profile.score_c ?? 0),
             }
-          : null);
+          : null;
       resolvedDisc = parseStoredDiscScores(legacy) as DiscScores | null;
     }
     setDiscScores(resolvedDisc);

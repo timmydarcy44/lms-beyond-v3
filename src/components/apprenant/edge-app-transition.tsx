@@ -11,8 +11,11 @@ const FADE_OUT_MS = 160;
 /** Filet de sécurité si la navigation reste bloquée. */
 const MAX_WAIT_MS = 8000;
 
+const BYOUND_LOGO_WHITE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_byound_blanc_sans_fond.png";
+
 type AppTransitionProps = {
-  /** Nom sur UNE ligne (ex. « EDGE Learn » ou « Pilotage »). */
+  /** Nom de l’app (ex. « Byound Learn », « Learn » ou « Pilotage »). */
   appName?: string;
   app?: string;
   open: boolean;
@@ -21,6 +24,13 @@ type AppTransitionProps = {
   onComplete: () => void;
   className?: string;
 };
+
+/** Extrait le libellé d’application (sans le préfixe marque). */
+function resolveAppLabel(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/^(Byound|EDGE)\s+/i, "").trim() || trimmed;
+}
 
 /**
  * Transition de marque — reste opaque jusqu’à ce que la destination soit prête,
@@ -40,9 +50,8 @@ export function AppTransition({
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
-  const raw = String(appName ?? app ?? "").trim() || "EDGE";
-  const line = /^EDGE\b/i.test(raw) ? raw : `EDGE ${raw}`;
-  const parts = line.match(/^(EDGE)\s+(.+)$/i);
+  const appLabel = resolveAppLabel(String(appName ?? app ?? ""));
+  const line = appLabel ? `Byound ${appLabel}` : "Byound";
 
   useEffect(() => {
     if (!open) {
@@ -104,21 +113,22 @@ export function AppTransition({
       />
       <div
         className={cn(
-          "relative z-10 px-6 text-center transition-all duration-150 ease-out",
+          "relative z-10 flex items-center gap-4 px-6 transition-all duration-150 ease-out sm:gap-5 md:gap-6",
           phase === "out" && "scale-[0.99] opacity-0",
         )}
         style={phase === "in" ? { animation: "edgeBrandIn 220ms ease-out forwards" } : undefined}
       >
-        <h1 className="whitespace-nowrap text-4xl tracking-[-0.03em] text-white md:text-5xl lg:text-6xl">
-          {parts ? (
-            <>
-              <span className="font-extrabold">{parts[1]}</span>
-              <span className="font-semibold"> {parts[2]}</span>
-            </>
-          ) : (
-            <span className="font-extrabold">{line}</span>
-          )}
-        </h1>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={BYOUND_LOGO_WHITE}
+          alt="Byound"
+          className="h-9 w-auto sm:h-11 md:h-14 lg:h-16"
+        />
+        {appLabel ? (
+          <h1 className="whitespace-nowrap text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl md:text-5xl lg:text-6xl">
+            {appLabel}
+          </h1>
+        ) : null}
       </div>
       <style jsx global>{`
         @keyframes edgeBrandIn {

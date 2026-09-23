@@ -1,7 +1,6 @@
 import type { EdgePremiumConfig } from "@/lib/edge-site/premium-constants";
-import type { PillarMegaMenuId } from "@/lib/edge-site/pillar-mega-menu-data";
 
-export type MobileRevolutTabId = PillarMegaMenuId;
+export type MobileRevolutTabId = "alternance" | "business" | "fonctionnalites" | "ressources";
 
 export type MobileRevolutSection = {
   title: string;
@@ -20,30 +19,76 @@ export type MobileRevolutTabData = {
 };
 
 export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTabData[] {
-  return config.nav.pillarMegaMenus.map((pillar) => ({
-    id: pillar.id,
-    label: pillar.label,
-    discoverHref: pillar.primaryLinks[0]?.href ?? config.routes.business,
-    discoverLabel: pillar.subtitle,
-    sections: [
-      {
-        title: pillar.title,
-        links: [
-          ...pillar.primaryLinks.map((link) => ({
-            label: link.label,
-            href: link.href,
-            description: link.description,
-            external: link.external,
+  const { megaApprenants, megaBusiness, nav, links, routes } = config;
+
+  return [
+    {
+      id: "alternance",
+      label: "Alternance",
+      discoverHref: megaApprenants.headerHref,
+      discoverLabel: megaApprenants.headerTitle,
+      sections: megaApprenants.columns.map((col) => ({
+        title: col.title,
+        links: col.links.map((link) => ({
+          label: link.label,
+          href: link.href,
+        })),
+      })),
+      editorialTitle: "Trouver votre formation",
+      editorialCtaLabel: "Voir les formations",
+      editorialCtaHref: routes.formations,
+    },
+    {
+      id: "business",
+      label: "Business",
+      discoverHref: megaBusiness.headerHref,
+      discoverLabel: megaBusiness.headerTitle,
+      sections: megaBusiness.columns.map((col) => ({
+        title: col.title,
+        links: col.links.map((link) => ({
+          label: link.label,
+          href: link.href,
+        })),
+      })),
+      editorialTitle: "Équipes & compétences",
+      editorialCtaLabel: "Demander une démo",
+      editorialCtaHref: routes.businessDemo,
+    },
+    {
+      id: "fonctionnalites",
+      label: "Fonctionnalités",
+      discoverHref: nav.fonctionnalites[0]?.href ?? links.home,
+      discoverLabel: "Fonctionnalités",
+      sections: [
+        {
+          title: "Fonctionnalités",
+          links: nav.fonctionnalites.map((item) => ({
+            label: item.label,
+            href: item.href,
           })),
-          ...pillar.secondaryLinks.map((link) => ({
-            label: link.label,
-            href: link.href,
+        },
+      ],
+      editorialTitle: "Découvrir la plateforme",
+      editorialCtaLabel: "Découvrir Byound",
+      editorialCtaHref: links.decouvrirEdge,
+    },
+    {
+      id: "ressources",
+      label: "Ressources",
+      discoverHref: nav.ressources[0]?.href ?? links.home,
+      discoverLabel: "Ressources",
+      sections: [
+        {
+          title: "Ressources",
+          links: nav.ressources.map((item) => ({
+            label: item.label,
+            href: item.href,
           })),
-        ],
-      },
-    ],
-    editorialTitle: pillar.editorial.title,
-    editorialCtaLabel: pillar.editorial.ctaLabel,
-    editorialCtaHref: pillar.editorial.ctaHref,
-  }));
+        },
+      ],
+      editorialTitle: "Aller plus loin",
+      editorialCtaLabel: "Contact",
+      editorialCtaHref: links.contact,
+    },
+  ];
 }

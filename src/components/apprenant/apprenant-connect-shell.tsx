@@ -379,7 +379,9 @@ export function ApprenantConnectShell({
                   ? isSidebarCollapsed
                     ? "h-auto flex-col gap-2 py-3"
                     : "h-auto flex-col gap-2 py-4"
-                  : "h-[52px]"
+                  : variant === "edge" && !isSidebarCollapsed
+                    ? "h-auto min-h-[64px] py-3"
+                    : "h-[52px]"
               }`}
             >
               {orgBranding.logoUrl && variant !== "jessica" ? (
@@ -392,15 +394,24 @@ export function ApprenantConnectShell({
                 </div>
               ) : !isSidebarCollapsed ? (
                 <div className="min-w-0 flex-1 leading-tight">
-                  <div
-                    className={`text-[11px] font-semibold tracking-[0.18em] ${
-                      variant === "jessica" ? "text-[#2F2A25]" : "text-white"
-                    }`}
-                  >
-                    {theme.brandTitle}
-                  </div>
+                  {variant === "edge" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src="https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_byound_blanc_sans_fond.png"
+                      alt="Byound"
+                      className="h-10 w-auto"
+                    />
+                  ) : (
+                    <div
+                      className={`text-[11px] font-semibold tracking-[0.18em] ${
+                        variant === "jessica" ? "text-[#2F2A25]" : "text-white"
+                      }`}
+                    >
+                      {theme.brandTitle}
+                    </div>
+                  )}
                   <p
-                    className={`text-[9px] tracking-[0.1em] ${
+                    className={`mt-1 text-[9px] tracking-[0.1em] ${
                       variant === "jessica" ? "text-[#8B4513]/55" : "text-white/20"
                     }`}
                   >
@@ -408,7 +419,18 @@ export function ApprenantConnectShell({
                   </p>
                 </div>
               ) : (
-                <div className={theme.brandCollapsedClass}>{theme.brandCollapsedLetter}</div>
+                <div className={theme.brandCollapsedClass}>
+                  {variant === "edge" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src="https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_byound_blanc_sans_fond.png"
+                      alt="Byound"
+                      className="h-7 w-auto"
+                    />
+                  ) : (
+                    theme.brandCollapsedLetter
+                  )}
+                </div>
               )}
               <button
                 type="button"
@@ -512,7 +534,7 @@ export function ApprenantConnectShell({
             </nav>
 
             <div className={theme.sidebarFooterClass}>
-              {!isSidebarCollapsed ? (
+              {variant !== "edge" && !isSidebarCollapsed ? (
                 <div
                   className={`rounded-xl border p-2 backdrop-blur-sm ${
                     variant === "jessica"
@@ -544,18 +566,7 @@ export function ApprenantConnectShell({
                     </div>
                   </button>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    title="Synthèse profil"
-                    onClick={scrollToProfilOrHome}
-                    className={theme.profileCollapsedBtnClass}
-                  >
-                    {(firstName || "?").slice(0, 1).toUpperCase()}
-                  </button>
-                </div>
-              )}
+              ) : null}
               {variant === "edge" ? (
                 <>
                   <Link

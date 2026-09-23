@@ -2,6 +2,10 @@ import {
   isProfessionalProjectCompleteForType,
   mergeObjectiveDetailsIntoProject,
 } from "@/lib/particulier/professional-project-fields";
+import {
+  isEdgeProjectV2Complete,
+  migrateLegacyProjectToV2,
+} from "@/lib/particulier/edge-professional-project-v2";
 
 export type ProfessionalProject = Record<string, string | undefined>;
 
@@ -90,6 +94,9 @@ export function isProfessionalProjectComplete(
   project: ProfessionalProject,
   typeProfil?: string | null,
 ): boolean {
+  // Format EDGE v2 (profession / secteur / projet libre) — prioritaire
+  if (isEdgeProjectV2Complete(migrateLegacyProjectToV2(project))) return true;
+
   if (typeProfil) {
     return isProfessionalProjectCompleteForType(typeProfil, project);
   }
@@ -112,17 +119,34 @@ export function isIdentityComplete(profile: {
   city?: string | null;
   avatar_url?: string | null;
 }): boolean {
-  const phone = profile.phone ?? profile.telephone;
-  return (
-    filled(profile.first_name) &&
-    filled(profile.last_name) &&
-    filled(profile.email) &&
-    filled(phone) &&
-    filled(profile.city) &&
-    filled(profile.avatar_url)
-  );
+  return identityFilledCount(profile) >= 6;
 }
 
+/** Nombre de champs identité renseignés (sur 6). */
+export function identityFilledCount(profile: {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  telephone?: string | null;
+  city?: string | null;
+  avatar_url?: string | null;
+}): number {
+  const phone = profile.phone ?? profile.telephone;
+  return [
+    profile.first_name,
+    profile.last_name,
+    profile.email,
+    phone,
+    profile.city,
+    profile.avatar_url,
+  ].filter((v) => filled(v)).length;
+}
+
+/**
+ * Complétion profil (hors hard skills — gérées dans EDGE Skills).
+ * Poids : Identité 20 · Projet 20 · Tests 30 · Expériences 20 · Diplômes 10 = 100
+ */
 export function computeProfilEdgeMaturity(input: {
   profile: {
     first_name?: string | null;
@@ -148,32 +172,30 @@ export function computeProfilEdgeMaturity(input: {
     parseProfessionalProject(input.profile.professional_project),
     (input.profile.objective_details as Record<string, string>) ?? null,
   );
-  const hardSkills = Array.isArray(input.profile.hard_skills)
-    ? (input.profile.hard_skills as unknown[]).map(String).filter((s) => s.trim())
-    : [];
 
-  const identityComplete = isIdentityComplete(input.profile);
+  const identityCount = identityFilledCount(input.profile);
+  const identityComplete = identityCount >= 6;
+  const identityPercent = Math.round((identityCount / 6) * 20);
   const projectComplete = isProfessionalProjectComplete(project, input.profile.type_profil);
   const testsCount = [input.hasDisc, input.hasSoftSkills, input.hasIdmc].filter(Boolean).length;
   const testsPercent = testsCount * 10;
   const experiencesComplete = input.experiencesCount > 0;
   const diplomasComplete = input.diplomasCount > 0;
-  const hardSkillsComplete = hardSkills.length > 0;
 
   const blocks: ProfilEdgeMaturityBlock[] = [
     {
       id: "identite",
       label: "Identité",
-      weight: 15,
-      percent: identityComplete ? 15 : 0,
+      weight: 20,
+      percent: identityPercent,
       complete: identityComplete,
       href: PROFIL_EDGE_SECTION_HREFS.identite,
     },
     {
       id: "projet",
       label: "Projet professionnel",
-      weight: 15,
-      percent: projectComplete ? 15 : 0,
+      weight: 20,
+      percent: projectComplete ? 20 : 0,
       complete: projectComplete,
       href: PROFIL_EDGE_SECTION_HREFS.projet,
     },
@@ -188,8 +210,8 @@ export function computeProfilEdgeMaturity(input: {
     {
       id: "experiences",
       label: "Expériences professionnelles",
-      weight: 15,
-      percent: experiencesComplete ? 15 : 0,
+      weight: 20,
+      percent: experiencesComplete ? 20 : 0,
       complete: experiencesComplete,
       href: PROFIL_EDGE_SECTION_HREFS.experiences,
     },
@@ -200,14 +222,6 @@ export function computeProfilEdgeMaturity(input: {
       percent: diplomasComplete ? 10 : 0,
       complete: diplomasComplete,
       href: PROFIL_EDGE_SECTION_HREFS.diplomes,
-    },
-    {
-      id: "hard_skills",
-      label: "Hard Skills",
-      weight: 15,
-      percent: hardSkillsComplete ? 15 : 0,
-      complete: hardSkillsComplete,
-      href: PROFIL_EDGE_SECTION_HREFS.hard_skills,
     },
   ];
 

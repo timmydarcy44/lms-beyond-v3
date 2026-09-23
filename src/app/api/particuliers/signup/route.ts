@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         last_name: lastName,
         full_name: `${firstName} ${lastName}`.trim(),
         role_type: "particulier",
+        role: "learner",
         type_profil: objectif || null,
         signup_source: "edge_particuliers",
         origin: "edge",

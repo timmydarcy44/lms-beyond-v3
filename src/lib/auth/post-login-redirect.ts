@@ -20,10 +20,10 @@ export const PROFILE_ROLE_DESTINATIONS: Record<string, string> = {
   rh: "/dashboard/entreprise",
   entreprise: "/dashboard/entreprise",
   client: "/dashboard/entreprise",
-  apprenant: "/dashboard/apprenant",
-  student: "/dashboard/apprenant",
-  learner: "/dashboard/apprenant",
   particulier: "/dashboard/apprenant/profil-comportemental",
+  learner: "/dashboard/apprenant/profil-comportemental",
+  apprenant: "/dashboard/apprenant/profil-comportemental",
+  student: "/dashboard/apprenant/profil-comportemental",
   salarie: "/dashboard/salarie",
   collaborateur: "/dashboard/salarie",
   employee: "/dashboard/salarie",
@@ -67,7 +67,8 @@ export function resolveDestinationFromProfile(
   const roleDest = resolveDestinationFromProfileRole(profile.role);
   const roleTypeDest = resolveDestinationFromProfileRole(profile.role_type);
   const genericLearnerRole =
-    roleDest === "/dashboard/apprenant" &&
+    (roleDest === "/dashboard/apprenant" ||
+      roleDest === "/dashboard/apprenant/profil-comportemental") &&
     ["learner", "student", "apprenant"].includes(normalize(profile.role));
 
   if (roleTypeDest === "/dashboard/salarie" && genericLearnerRole && profile.company_id) {

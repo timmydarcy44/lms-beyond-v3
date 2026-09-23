@@ -24,8 +24,11 @@ export const PROFILE_ANALYSIS_FORBIDDEN_PATTERNS: RegExp[] = [
 export const PROFILE_ANALYSIS_TONE_PROMPT_LINES = [
   "- Ton EDGE : direct, sobre, factuel — jamais sensationnaliste ni marketing",
   "- Interdits : exceptionnel, fantastique, remarquable, extraordinaire, incroyable, formidable, magnifique, parfait, unique, sommets, fabuleux, prodigieux, coach de vie, parcours exceptionnel, professionnel équilibré",
+  "- Interdits aussi : « trajectoire EDGE cohérente », « vous ressortez particulièrement sur », « ces soft skills complètent », « utile pour votre objectif » suivi du seul nom du profil, listes de labels sans interprétation",
   "- Pas de point d'exclamation",
   "- Formulations mesurées : « solide », « cohérent », « structuré », « en progression »",
+  "- Vouvoiement systématique : vous / votre / vos — jamais tu / ton / ta / tes",
+  "- Analyse ++ : croiser les signaux, nommer les tensions et les leviers concrets — ne jamais reformuler un classement déjà visible à l'écran",
 ];
 
 export function sanitizeProfileAnalysisTone(text: string): string {

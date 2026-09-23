@@ -48,15 +48,15 @@ const APP_ASSETS = {
   profil:
     "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/EDGE%20Profil.jpg",
   skills:
-    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/EDGE%20Skills.png",
+    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_B_brosse_Wallet.png",
   learn:
-    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/EDGE%20Learn.jpg",
+    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_B_Learn.png",
   planning:
-    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/EDGE%20Planning.jpg",
+    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_B_Planning.png",
   recrutement:
     "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/EDGE%20Recrutement.jpg",
   care:
-    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/EDGE%20Care.jpg",
+    "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_B_Care.png",
 } as const;
 
 /** Profil = hub identité (synthèse / partage), pas le catalogue compétences. */
@@ -139,7 +139,7 @@ export const EDGE_APPS: EdgeAppDefinition[] = [
   {
     id: "profil",
     label: "Profil",
-    transitionName: "EDGE Profil",
+    transitionName: "Byound Profil",
     subtitle: "Mon identité",
     icon: UserCircle,
     image: APP_ASSETS.profil,
@@ -149,7 +149,7 @@ export const EDGE_APPS: EdgeAppDefinition[] = [
   {
     id: "skills",
     label: "Skills",
-    transitionName: "EDGE Skills",
+    transitionName: "Byound Skills",
     subtitle: "Training Center",
     icon: Sparkles,
     image: APP_ASSETS.skills,
@@ -159,7 +159,7 @@ export const EDGE_APPS: EdgeAppDefinition[] = [
   {
     id: "learning",
     label: "Learn",
-    transitionName: "EDGE Learn",
+    transitionName: "Byound Learn",
     subtitle: "Mes apprentissages",
     icon: BookOpen,
     image: APP_ASSETS.learn,
@@ -169,7 +169,7 @@ export const EDGE_APPS: EdgeAppDefinition[] = [
   {
     id: "planning",
     label: "Planning",
-    transitionName: "EDGE Planning",
+    transitionName: "Byound Planning",
     subtitle: "Mon emploi du temps",
     icon: CalendarDays,
     image: APP_ASSETS.planning,
@@ -179,7 +179,7 @@ export const EDGE_APPS: EdgeAppDefinition[] = [
   {
     id: "recrutement",
     label: "Recrutement",
-    transitionName: "EDGE Recrutement",
+    transitionName: "Byound Recrutement",
     subtitle: "Mes opportunités",
     icon: Briefcase,
     image: APP_ASSETS.recrutement,
@@ -189,7 +189,7 @@ export const EDGE_APPS: EdgeAppDefinition[] = [
   {
     id: "care",
     label: "Care",
-    transitionName: "EDGE Care",
+    transitionName: "Byound Care",
     subtitle: "Bien-être & accompagnement",
     icon: HeartPulse,
     image: APP_ASSETS.care,
@@ -280,5 +280,5 @@ export function getEdgeAppLabel(appId: EdgeAppId): string {
 }
 
 export function getEdgeAppTransitionName(appId: EdgeAppId): string {
-  return EDGE_APP_BY_ID[appId]?.transitionName ?? "EDGE Profil";
+  return EDGE_APP_BY_ID[appId]?.transitionName ?? "Byound Profil";
 }

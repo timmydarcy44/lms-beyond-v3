@@ -24,7 +24,8 @@ export async function upsertParticulierProfile(
     first_name: input.firstName,
     last_name: input.lastName,
     full_name: fullName,
-    role: "PARTICULIER",
+    /** Accès espace apprenant EDGE */
+    role: "learner",
     role_type: "particulier",
   };
 
@@ -33,11 +34,15 @@ export async function upsertParticulierProfile(
   if (baseError) {
     const message = baseError.message ?? "Erreur profil";
     if (message.includes("profiles_role_check") || message.toLowerCase().includes("role")) {
-      const { error: learnerError } = await supabase
-        .from("profiles")
-        .upsert({ ...basePayload, role: "learner" }, { onConflict: "id" });
-      if (learnerError) {
-        return { ok: false, error: learnerError.message };
+      // Contrainte legacy : PARTICULIER / apprenant
+      for (const role of ["apprenant", "PARTICULIER", "particulier"] as const) {
+        const { error: retryError } = await supabase
+          .from("profiles")
+          .upsert({ ...basePayload, role }, { onConflict: "id" });
+        if (!retryError) break;
+        if (role === "particulier") {
+          return { ok: false, error: retryError.message };
+        }
       }
     } else {
       return { ok: false, error: message };

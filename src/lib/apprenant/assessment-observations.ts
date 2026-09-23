@@ -35,11 +35,10 @@ export function buildIdmcObservation(axes: Record<AxisKey, number>): string {
 
 export function buildSoftSkillsObservation(
   items: Array<{ skill: string; score: number }>,
-  firstName?: string,
+  _firstName?: string,
 ): string {
   if (!items.length) return "";
   const sorted = [...items].sort((a, b) => b.score - a.score);
   const top = sorted.slice(0, 3).map((i) => i.skill);
-  const subject = firstName ? `${firstName}` : "Vous";
-  return `${subject} ressort particulièrement sur ${top.join(", ")}. Ces soft skills complètent votre profil comportemental et votre bilan IDMC pour le matching carrière.`;
+  return `Vous ressortez particulièrement sur ${top.join(", ")}. Ces soft skills complètent votre profil comportemental et votre bilan IDMC pour le matching carrière.`;
 }

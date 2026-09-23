@@ -3,12 +3,13 @@ import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
 import { getPillarMegaMenus } from "@/lib/edge-site/pillar-mega-menu-data";
 import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 
-/** Logo navbar / footer — asset local public (chrome sombre). */
-export const EDGE_LOGO_PATH = "/edge-lab/edge-logo-white.png";
+/** Logo navbar / footer — Byound blanc (chrome sombre). */
+export const EDGE_LOGO_PATH =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_byound_blanc_sans_fond.png";
 
-/** Logo noir transparent — chrome clair (menu blanc). */
+/** Logo Byound pour chrome clair (même asset, teinté noir côté composant). */
 export const EDGE_LOGO_BLACK_PATH =
-  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/EDGE_noir_sans_fond.png";
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_byound_blanc_sans_fond.png";
 
 export const EDGE_PREMIUM_IMAGES = {
   hero: EDGE_HERO_IMAGE_URL,
@@ -138,7 +139,7 @@ export function getEdgePremiumConfig(host?: string | null) {
       pillarMegaMenus: getPillarMegaMenus(R),
     },
     megaApprenants: {
-      headerTitle: "Découvrir EDGE Apprenants",
+      headerTitle: "Découvrir Alternance",
       headerHref: R.apprenants,
       columns: [
         {
@@ -181,7 +182,7 @@ export function getEdgePremiumConfig(host?: string | null) {
       ],
     },
     megaBusiness: {
-      headerTitle: "Découvrir EDGE Business",
+      headerTitle: "Découvrir Byound Business",
       headerSubtitle:
         "Former, développer, recruter et piloter les compétences de vos équipes.",
       headerHref: R.business,
@@ -312,11 +313,30 @@ export type EdgeMobileNavCategory = {
 export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNavCategory[] {
   const R = config.routes;
   return [
-    ...config.nav.pillars.map((pillar) => ({
-      id: pillar.id,
-      label: pillar.label,
-      links: pillar.items,
-    })),
+    {
+      id: "alternance",
+      label: "Alternance",
+      links: config.megaApprenants.columns.flatMap((col) =>
+        col.links.map((link) => ({ label: link.label, href: link.href })),
+      ),
+    },
+    {
+      id: "business",
+      label: "Business",
+      links: config.megaBusiness.columns.flatMap((col) =>
+        col.links.map((link) => ({ label: link.label, href: link.href })),
+      ),
+    },
+    {
+      id: "fonctionnalites",
+      label: "Fonctionnalités",
+      links: [...config.nav.fonctionnalites],
+    },
+    {
+      id: "ressources",
+      label: "Ressources",
+      links: [...config.nav.ressources],
+    },
     {
       id: "tarifs",
       label: "Tarifs",
@@ -327,7 +347,7 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
       label: "Compte",
       links: [
         { label: "Connexion", href: R.login },
-        { label: "Découvrir EDGE", href: R.decouvrir },
+        { label: "Découvrir Byound", href: R.decouvrir },
       ],
     },
   ];

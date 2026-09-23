@@ -8,9 +8,19 @@ import { getServerClient } from "@/lib/supabase/server";
 
 type AnalysisPayload = {
   firstName: string;
+  jobTitle?: string | null;
+  objectiveLabel?: string | null;
   discScores: Record<string, number>;
   idmcScores: Record<string, number>;
   softSkillsTop?: Array<{ skill?: string; label?: string; score?: number; value?: number }>;
+  careerMatching?: {
+    compatibilityScore?: number | null;
+    strengths?: string[];
+    consolidate?: string[];
+    develop?: string[];
+    unevaluated?: string[];
+    nextPrioritySkill?: string | null;
+  } | null;
   testsSignature?: string;
   discUpdatedAt?: string | null;
   idmcUpdatedAt?: string | null;
@@ -51,9 +61,12 @@ export async function POST(request: NextRequest) {
 
     const analysis = await generateProfileAnalysisText({
       firstName,
+      jobTitle: body?.jobTitle ?? null,
+      objectiveLabel: body?.objectiveLabel ?? null,
       discScores,
       idmcScores,
       softSkillsTop,
+      careerMatching: body?.careerMatching ?? null,
     });
 
     if (!analysis) {

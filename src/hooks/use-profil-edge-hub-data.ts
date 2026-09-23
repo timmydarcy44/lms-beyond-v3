@@ -30,9 +30,12 @@ import {
   isProfilEdgeComplete,
 } from "@/lib/particulier/profil-edge-progress";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
-import { normalizeIdmcAxesRecord } from "@/lib/idmc/idmc-display";
+import { hasMeaningfulIdmcAxes, normalizeIdmcAxesRecord } from "@/lib/idmc/idmc-display";
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
+import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { fetchIdmcAxesForCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
+import { collectLearnerProfileCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
 
 async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
   try {
@@ -116,6 +119,8 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
   const [diplomas, setDiplomas] = useState<Diplome[]>([]);
   const [profileRow, setProfileRow] = useState<Record<string, unknown>>({});
   const [typeProfil, setTypeProfil] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [authMetaFirstName, setAuthMetaFirstName] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -126,6 +131,15 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       setError("Session introuvable.");
       return;
     }
+
+    const meta = (userData.user?.user_metadata ?? {}) as Record<string, unknown>;
+    setAuthEmail(userData.user?.email ?? null);
+    setAuthMetaFirstName(
+      (typeof meta.first_name === "string" && meta.first_name) ||
+        (typeof meta.prenom === "string" && meta.prenom) ||
+        (typeof meta.given_name === "string" && meta.given_name) ||
+        null,
+    );
 
     // Diagnostics : payloads complets (pas seulement flags completed).
     let snapDisc: DiscScores | null = null;
@@ -141,8 +155,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       snapDisc = snap.discScores
         ? (parseStoredDiscScores(snap.discScores as Record<string, unknown>) as DiscScores | null)
         : null;
-      snapIdmcAxes =
-        snap.idmcAxes && Object.keys(snap.idmcAxes).length > 0 ? snap.idmcAxes : null;
+      snapIdmcAxes = snap.idmcAxes ? normalizeIdmcAxesRecord(snap.idmcAxes) : null;
       snapSoftRadar = Array.isArray(snap.softSkillsRadar) ? snap.softSkillsRadar : [];
     };
 
@@ -166,7 +179,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       supabase
         .from("profiles")
         .select(
-          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata, score_d, score_i, score_s, score_c",
+          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata",
         )
         .eq("id", uid)
         .maybeSingle(),
@@ -202,7 +215,13 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
         objectiveDetails,
       ),
     );
-    setProfileRow((profile as Record<string, unknown>) ?? {});
+    setProfileRow({
+      ...((profile as Record<string, unknown>) ?? {}),
+      email:
+        (profile?.email ? String(profile.email) : null) ||
+        userData.user?.email ||
+        null,
+    });
     setTypeProfil(profile?.type_profil ? String(profile.type_profil) : null);
     setProfessionalProject(project);
     setHardSkills(Array.isArray(profile?.hard_skills) ? (profile.hard_skills as string[]) : []);
@@ -215,26 +234,30 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
         (discRes.data?.scores as Record<string, unknown> | null) ?? null,
       ) as DiscScores | null;
     }
-    if (!resolvedDisc && profile) {
-      const legacy =
-        profile.score_d != null
-          ? {
-              D: Number(profile.score_d),
-              I: Number(profile.score_i ?? 0),
-              S: Number(profile.score_s ?? 0),
-              C: Number(profile.score_c ?? 0),
-            }
-          : null;
-      resolvedDisc = parseStoredDiscScores(legacy) as DiscScores | null;
-    }
     setDiscScores(resolvedDisc);
 
     let resolvedIdmcAxes = snapIdmcAxes;
     if (!resolvedIdmcAxes && idmcRes.data?.scores) {
       resolvedIdmcAxes = normalizeIdmcAxesRecord(idmcRes.data.scores) as Record<AxisKey, number> | null;
     }
+    if (!resolvedIdmcAxes) {
+      try {
+        const email =
+          (profile?.email ? String(profile.email) : null) || userData.user?.email || null;
+        const candidates = await collectLearnerProfileCandidates(supabase, uid, email);
+        resolvedIdmcAxes = (await fetchIdmcAxesForCandidates(
+          supabase,
+          candidates,
+        )) as Record<AxisKey, number> | null;
+      } catch {
+        /* ignore */
+      }
+    }
+    if (!hasMeaningfulIdmcAxes(resolvedIdmcAxes)) {
+      resolvedIdmcAxes = null;
+    }
     setIdmcAxes(resolvedIdmcAxes);
-    setHasIdmc(Boolean(resolvedIdmcAxes && Object.keys(resolvedIdmcAxes).length > 0));
+    setHasIdmc(Boolean(resolvedIdmcAxes));
 
     let resolvedRadar = snapSoftRadar;
     if (!resolvedRadar.length && softRes.data?.scores) {
@@ -419,7 +442,11 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     matching,
     objectiveLabel,
     hasProject,
-    firstName: String(profileRow.first_name ?? ""),
+    firstName: resolveLearnerDisplayFirstName({
+      profileFirstName: profileRow.first_name ? String(profileRow.first_name) : null,
+      metadataFirstName: authMetaFirstName,
+      email: authEmail ?? (profileRow.email ? String(profileRow.email) : null),
+    }),
     lastName: String(profileRow.last_name ?? ""),
     avatarUrl: profileRow.avatar_url ? String(profileRow.avatar_url) : null,
     reload: load,

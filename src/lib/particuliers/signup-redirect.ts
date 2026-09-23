@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { defaultLocalOrigin, publicAppUrl } from "@/lib/env";
 
-const PARTICULIER_NEXT_PATH = "/dashboard/apprenant/test-comportemental-intro";
+const PARTICULIER_NEXT_PATH = "/dashboard/apprenant/profil-comportemental";
 
 /** Origine publique HTTPS (edgebs.fr en prod). */
 export function resolveParticulierAppOrigin(request: NextRequest): string {

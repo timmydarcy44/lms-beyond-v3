@@ -1,4 +1,5 @@
-import { getParcours, PARCOURS, type Parcours } from "@/lib/parcours";
+import { getParcours, PARCOURS, parcoursImageSrc, type Parcours } from "@/lib/parcours";
+import { parcoursHeroImage } from "@/lib/parcours-builders";
 import type { ActionPlanItem, CoachingRecommendation } from "@/lib/learner/personalized-action-plan";
 
 /** Slugs mis en avant quand les tests ne sont pas encore passés. */
@@ -17,6 +18,8 @@ export type CatalogFormationPreview = {
   duree: string;
   badge: string;
   href: string;
+  /** Cover / hero du parcours */
+  image: string;
 };
 
 export function getFeaturedCatalogFormations(limit = 4): CatalogFormationPreview[] {
@@ -45,6 +48,7 @@ function toCatalogPreview(p: Parcours): CatalogFormationPreview {
     duree: p.duree,
     badge: p.badge,
     href: `/edge-lab/parcours/${p.slug}`,
+    image: parcoursImageSrc(p, parcoursHeroImage(p.slug)),
   };
 }
 
@@ -69,7 +73,7 @@ export function matchParcoursForKeywords(keywords: string[]): CatalogFormationPr
     const p = getParcours(slug);
     if (p) results.push(toCatalogPreview(p));
   }
-  return results.slice(0, 2);
+  return results;
 }
 
 export function formationsFromActionPlan(items: ActionPlanItem[]): CatalogFormationPreview[] {
@@ -92,6 +96,7 @@ export function formationsFromActionPlan(items: ActionPlanItem[]): CatalogFormat
       duree: "—",
       badge: item.kind === "micro_formation" ? "Micro-formation" : "Formation",
       href: item.href,
+      image: parcoursHeroImage(item.id),
     });
   }
   return previews;

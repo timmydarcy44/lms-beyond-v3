@@ -38,7 +38,7 @@ function SignupForm({
       id="signup"
       className="scroll-mt-28 mx-auto w-full max-w-md space-y-4 border-t border-black/10 pt-10"
     >
-      <p className="text-[13px] text-black/45">Créez votre compte pour voir votre chemin.</p>
+      <p className="text-[13px] text-black/45">Créez votre compte apprenant pour accéder à EDGE.</p>
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <input
@@ -76,14 +76,14 @@ function SignupForm({
           disabled={isLoading}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-edge-black px-6 py-4 text-[14px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {isLoading ? "Préparation…" : "Construire mon chemin"}
+          {isLoading ? "Création…" : "Créer un compte"}
           {!isLoading ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
         </button>
       </div>
       <p className="text-[12px] text-black/40">
-        Gratuit · 2 minutes · aucun engagement.{" "}
+        Déjà inscrit ?{" "}
         <Link href="/particuliers/login" className="font-medium text-edge-black underline-offset-2 hover:underline">
-          Se connecter
+          Connexion
         </Link>
       </p>
       {errorMessage ? (
@@ -289,19 +289,19 @@ export default function ParticuliersPage() {
           <Link href="/particuliers" className="text-[17px] font-semibold tracking-[-0.04em]">
             EDGE
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link
               href="/particuliers/login"
-              className="hidden text-[13px] text-black/45 transition hover:text-edge-black sm:inline"
+              className="text-[13px] font-medium text-black/55 transition hover:text-edge-black"
             >
-              Se connecter
+              Connexion
             </Link>
             <button
               type="button"
               onClick={scrollToSignup}
               className="rounded-full bg-edge-black px-5 py-2 text-[12px] font-medium text-white transition hover:opacity-90"
             >
-              Commencer
+              Créer un compte
             </button>
           </div>
         </div>
@@ -337,11 +337,22 @@ export default function ParticuliersPage() {
               onClick={scrollToSignup}
               className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-[14px] font-medium text-edge-black transition hover:bg-white/90"
             >
-              Construire mon chemin
+              Créer un compte
               <ArrowRight className="h-4 w-4" aria-hidden />
             </button>
-            <p className="text-[13px] text-white/40">Gratuit · 2 minutes · aucun engagement</p>
+            <Link
+              href="/particuliers/login"
+              className="inline-flex items-center gap-2 rounded-full border border-white/25 px-7 py-3.5 text-[14px] font-medium text-white transition hover:border-white/50 hover:bg-white/5"
+            >
+              Connexion
+            </Link>
           </div>
+          <p
+            className="mt-4 text-[13px] text-white/40 opacity-0"
+            style={{ animation: "edgeHeroIn 0.9s ease 0.3s forwards" }}
+          >
+            Gratuit · accès à votre espace apprenant EDGE
+          </p>
         </div>
       </section>
 

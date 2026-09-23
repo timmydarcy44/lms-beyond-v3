@@ -38,17 +38,61 @@
 
 [data-connect-shell="edge"] [data-connect-main][data-edge-ambiance="care"] {
   --connect-accent: #c70059;
-  --connect-accent-soft: rgba(199, 0, 89, 0.4);
-  color: #fff8fb;
+  --connect-accent-soft: rgba(199, 0, 89, 0.35);
+  --connect-text: #0a0a0a;
+  --connect-text-muted: rgba(10, 10, 10, 0.5);
+  color: #0a0a0a;
 }
 
 [data-connect-shell="edge"] [data-connect-main][data-edge-ambiance="care"]::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(165deg, rgba(80, 12, 40, 0.35) 0%, rgba(28, 10, 22, 0.2) 45%, transparent 75%);
+  content: none;
+}
+
+/* Care : masque le halo bleu, impose rouge → blanc */
+[data-connect-shell="edge"][data-edge-ambiance="care"] {
+  background: linear-gradient(165deg, #c70059 0%, #e83a7a 18%, #f472b6 38%, #fbcfe8 58%, #fff5f9 78%, #ffffff 100%) !important;
+}
+
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-backdrop] {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-sidebar] {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-right: 1px solid rgba(10, 10, 10, 0.08);
+  color: #0a0a0a !important;
+}
+
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-sidebar] [class*="text-white"] {
+  color: rgba(10, 10, 10, 0.78) !important;
+}
+
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-sidebar] a,
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-sidebar] button {
+  color: rgba(10, 10, 10, 0.72);
+}
+
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-sidebar] a:hover,
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-sidebar] button:hover {
+  color: #0a0a0a;
+  background: rgba(199, 0, 89, 0.1);
+}
+
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-main] {
+  background: transparent;
+  color: #0a0a0a;
+}
+
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-main][data-edge-ambiance]::before {
+  background: transparent;
+}
+
+[data-connect-shell="edge"][data-edge-ambiance="care"] [data-connect-topbar] {
+  background: transparent !important;
+  border-bottom-color: rgba(10, 10, 10, 0.08) !important;
 }
 
 

@@ -18,8 +18,7 @@ const AMBIANCE: Record<EdgeAmbiance, string> = {
     "radial-gradient(ellipse 100% 70% at 50% -20%, rgba(30,41,59,0.4), transparent 55%), transparent",
   neutral:
     "radial-gradient(ellipse 100% 80% at 50% -15%, rgba(51,65,85,0.2), transparent 50%), transparent",
-  care:
-    "radial-gradient(ellipse 130% 95% at 0% -20%, rgba(199,0,89,0.55), transparent 58%), radial-gradient(ellipse 90% 70% at 100% 5%, rgba(236,72,153,0.28), transparent 52%), radial-gradient(ellipse 70% 50% at 50% 110%, rgba(199,0,89,0.18), transparent 55%), linear-gradient(180deg, rgba(255,236,244,0.08) 0%, transparent 42%)",
+  care: "linear-gradient(165deg, #C70059 0%, #E83A7A 18%, #F472B6 38%, #FBCFE8 58%, #FFF5F9 78%, #FFFFFF 100%)",
   skills:
     "radial-gradient(ellipse 130% 90% at 0% -20%, rgba(61,123,255,0.32), transparent 52%), radial-gradient(ellipse 70% 55% at 100% 5%, rgba(14,165,233,0.16), transparent 48%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(37,99,235,0.1), transparent 55%), transparent",
 };
@@ -35,16 +34,54 @@ export function EdgePageAmbiance({
 }) {
   useEffect(() => {
     const main = document.querySelector<HTMLElement>("[data-connect-main]");
-    if (!main) return;
-    main.setAttribute("data-edge-ambiance", ambiance);
-    main.style.setProperty("--edge-page-ambiance", AMBIANCE[ambiance]);
+    const shell = document.querySelector<HTMLElement>('[data-connect-shell="edge"]');
+    const backdrop = document.querySelector<HTMLElement>("[data-connect-backdrop]");
+
+    if (main) {
+      main.setAttribute("data-edge-ambiance", ambiance);
+      main.style.setProperty("--edge-page-ambiance", AMBIANCE[ambiance]);
+    }
+    if (shell) {
+      shell.setAttribute("data-edge-ambiance", ambiance);
+      shell.style.setProperty("--edge-page-ambiance", AMBIANCE[ambiance]);
+      if (ambiance === "care") {
+        shell.style.background = AMBIANCE.care;
+      }
+    }
+    if (backdrop) {
+      if (ambiance === "care") {
+        backdrop.style.display = "none";
+      } else {
+        backdrop.style.display = "";
+      }
+    }
+
     return () => {
-      if (main.getAttribute("data-edge-ambiance") === ambiance) {
+      if (main?.getAttribute("data-edge-ambiance") === ambiance) {
         main.removeAttribute("data-edge-ambiance");
         main.style.removeProperty("--edge-page-ambiance");
+      }
+      if (shell?.getAttribute("data-edge-ambiance") === ambiance) {
+        shell.removeAttribute("data-edge-ambiance");
+        shell.style.removeProperty("--edge-page-ambiance");
+        shell.style.background = "";
+      }
+      if (backdrop && ambiance === "care") {
+        backdrop.style.display = "";
       }
     };
   }, [ambiance]);
 
-  return <div className={cn("relative", className)}>{children}</div>;
+  return (
+    <div className={cn("relative", className)}>
+      {ambiance === "care" ? (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-0"
+          style={{ background: AMBIANCE.care }}
+        />
+      ) : null}
+      <div className="relative z-[1]">{children}</div>
+    </div>
+  );
 }

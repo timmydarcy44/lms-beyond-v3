@@ -14,16 +14,26 @@ export const AXES_LABELS: Record<AxisKey, string> = {
 export const IDMC_AXIS_KEYS: AxisKey[] = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"];
 
 export function normalizeIdmcAxisScore(raw: unknown): number {
-  if (typeof raw === "number" && Number.isFinite(raw)) return Math.round(raw);
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    // Fractions 0–1 → pourcentages
+    if (raw > 0 && raw <= 1) return Math.round(raw * 100);
+    return Math.round(raw);
+  }
   if (typeof raw === "string") {
     const parsed = Number(raw);
-    if (Number.isFinite(parsed)) return Math.round(parsed);
+    if (Number.isFinite(parsed)) {
+      if (parsed > 0 && parsed <= 1) return Math.round(parsed * 100);
+      return Math.round(parsed);
+    }
   }
   if (raw && typeof raw === "object") {
     const candidate = raw as Record<string, unknown>;
     for (const key of ["value", "score", "percent", "percentage"] as const) {
       const nested = candidate[key];
-      if (typeof nested === "number" && Number.isFinite(nested)) return Math.round(nested);
+      if (typeof nested === "number" && Number.isFinite(nested)) {
+        if (nested > 0 && nested <= 1) return Math.round(nested * 100);
+        return Math.round(nested);
+      }
     }
   }
   return 0;
@@ -36,9 +46,23 @@ export function resolveIdmcAxisMasteryLevel(score: number): string {
   return "Maîtrise experte";
 }
 
+/** True si au moins un axe a un score réel (> 0). */
+export function hasMeaningfulIdmcAxes(
+  axes: Record<AxisKey, number> | null | undefined,
+): axes is Record<AxisKey, number> {
+  if (!axes) return false;
+  return IDMC_AXIS_KEYS.some((key) => Number(axes[key]) > 0);
+}
+
 export function normalizeIdmcAxesRecord(raw: unknown): Record<AxisKey, number> | null {
   if (!raw || typeof raw !== "object") return null;
   const candidate = raw as Record<string, unknown>;
+
+  // Déjà un record plat A1…A8
+  const flatCandidate =
+    candidate.axes && typeof candidate.axes === "object"
+      ? (candidate.axes as Record<string, unknown>)
+      : candidate;
 
   if (candidate.axes && typeof candidate.axes === "object") {
     const axes = candidate.axes as Record<string, unknown>;
@@ -46,7 +70,7 @@ export function normalizeIdmcAxesRecord(raw: unknown): Record<AxisKey, number> |
     for (const key of IDMC_AXIS_KEYS) {
       normalized[key] = normalizeIdmcAxisScore(axes[key]);
     }
-    return normalized;
+    return hasMeaningfulIdmcAxes(normalized) ? normalized : null;
   }
 
   if (candidate.points && typeof candidate.points === "object") {
@@ -54,18 +78,19 @@ export function normalizeIdmcAxesRecord(raw: unknown): Record<AxisKey, number> |
     const normalized = {} as Record<AxisKey, number>;
     for (const key of IDMC_AXIS_KEYS) {
       const pt = normalizeIdmcAxisScore(points[key]);
-      normalized[key] = Math.round((pt / 15) * 100);
+      // points 0–15 → % ; si déjà > 15, traiter comme %
+      normalized[key] = pt <= 15 ? Math.round((pt / 15) * 100) : Math.min(100, pt);
     }
-    return normalized;
+    return hasMeaningfulIdmcAxes(normalized) ? normalized : null;
   }
 
-  const hasAllAxes = IDMC_AXIS_KEYS.every((key) => key in candidate);
+  const hasAllAxes = IDMC_AXIS_KEYS.every((key) => key in flatCandidate);
   if (hasAllAxes) {
     const normalized = {} as Record<AxisKey, number>;
     for (const key of IDMC_AXIS_KEYS) {
-      normalized[key] = normalizeIdmcAxisScore(candidate[key]);
+      normalized[key] = normalizeIdmcAxisScore(flatCandidate[key]);
     }
-    return normalized;
+    return hasMeaningfulIdmcAxes(normalized) ? normalized : null;
   }
 
   return null;

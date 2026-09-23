@@ -11,12 +11,26 @@ import {
   fetchSoftSkillsRadarForCandidates,
 } from "@/lib/learner/resolve-learner-profile-candidates";
 
+/** Snapshot matching carrière pour ancrer l'orientation OpenAI. */
+export type ProfileAnalysisCareerMatching = {
+  compatibilityScore?: number | null;
+  strengths?: string[];
+  consolidate?: string[];
+  develop?: string[];
+  unevaluated?: string[];
+  nextPrioritySkill?: string | null;
+};
+
 export type ProfileAnalysisInput = {
   firstName: string;
   jobTitle?: string | null;
+  /** Objectif professionnel affiché (cap EDGE). */
+  objectiveLabel?: string | null;
   discScores: Record<string, number>;
   idmcScores: Record<string, number>;
   softSkillsTop: Array<{ skill: string; score: number }>;
+  /** Compétences métiers issues du matching carrière. */
+  careerMatching?: ProfileAnalysisCareerMatching | null;
 };
 
 export type StoredProfileAnalysis = {
@@ -29,6 +43,8 @@ export type ParsedProfileAnalysisSections = {
   strengths: string[];
   improvements: string[];
   summary: string | null;
+  /** Texte situant le profil par rapport à l'objectif pro. */
+  orientation: string | null;
 };
 
 export function buildProfileAnalysisTestsSignature(input: {
@@ -94,9 +110,18 @@ function bodyToBulletItems(body: string): string[] {
   return [paragraph];
 }
 
-/** Extrait Forces majeures / Axes d'amélioration / Synthèse EDGE (markdown ## ou libellés **…**). */
+function classifyAnalysisSectionTitle(title: string): keyof ParsedProfileAnalysisSections | null {
+  const t = title.toLowerCase();
+  if (t.includes("orientation") || t.includes("objectif professionnel")) return "orientation";
+  if (t.includes("forces")) return "strengths";
+  if (t.includes("axes") || t.includes("amélioration")) return "improvements";
+  if (t.includes("synthèse")) return "summary";
+  return null;
+}
+
+/** Extrait Orientation / Forces / Axes / Synthèse EDGE (markdown ## ou libellés **…**). */
 export function parseProfileAnalysisSections(markdown: string): ParsedProfileAnalysisSections {
-  const sections: Record<string, string> = {};
+  const sections: Partial<Record<keyof ParsedProfileAnalysisSections, string>> = {};
   const normalized = markdown.replace(/\r\n/g, "\n").trim();
 
   const boldParts = normalized.split(/\n(?=\*\*[^*]+\*\*\s*$)/m).filter(Boolean);
@@ -104,21 +129,17 @@ export function parseProfileAnalysisSections(markdown: string): ParsedProfileAna
     for (const part of boldParts) {
       const match = part.match(/^\*\*([^*]+)\*\*\s*\n?([\s\S]*)$/);
       if (!match) continue;
-      const title = match[1].trim().toLowerCase();
-      const body = match[2].trim();
-      if (title.includes("forces")) sections.strengths = body;
-      else if (title.includes("axes") || title.includes("amélioration")) sections.improvements = body;
-      else if (title.includes("synthèse")) sections.summary = body;
+      const key = classifyAnalysisSectionTitle(match[1].trim());
+      if (key) sections[key] = match[2].trim();
     }
   } else {
     const parts = normalized.split(/^##\s+/m).filter(Boolean);
     for (const part of parts) {
       const newline = part.indexOf("\n");
-      const title = (newline >= 0 ? part.slice(0, newline) : part).trim().toLowerCase();
+      const title = (newline >= 0 ? part.slice(0, newline) : part).trim();
       const body = (newline >= 0 ? part.slice(newline + 1) : "").trim();
-      if (title.includes("forces")) sections.strengths = body;
-      else if (title.includes("axes") || title.includes("amélioration")) sections.improvements = body;
-      else if (title.includes("synthèse")) sections.summary = body;
+      const key = classifyAnalysisSectionTitle(title);
+      if (key) sections[key] = body;
     }
   }
 
@@ -126,6 +147,7 @@ export function parseProfileAnalysisSections(markdown: string): ParsedProfileAna
     strengths: bodyToBulletItems(sections.strengths ?? ""),
     improvements: bodyToBulletItems(sections.improvements ?? ""),
     summary: sections.summary?.replace(/\*\*/g, "").trim() || null,
+    orientation: sections.orientation?.replace(/\*\*/g, "").trim() || null,
   };
 }
 
@@ -145,30 +167,55 @@ export async function generateProfileAnalysisText(input: ProfileAnalysisInput): 
   }
 
   const jobContext = input.jobTitle?.trim()
-    ? ` Poste : ${input.jobTitle.trim()}.`
+    ? ` Poste actuel : ${input.jobTitle.trim()}.`
     : "";
+  const objective = input.objectiveLabel?.trim() || null;
+  const objectiveContext = objective ? ` Objectif professionnel visé : ${objective}.` : "";
+  const matching = input.careerMatching ?? null;
+  const matchingContext = matching
+    ? ` Matching compétences métiers : ${JSON.stringify({
+        scoreCompatibilite: matching.compatibilityScore ?? null,
+        forcesMetier: matching.strengths ?? [],
+        aConsolider: matching.consolidate ?? [],
+        aDevelopper: matching.develop ?? [],
+        nonEvaluees: matching.unevaluated ?? [],
+        prioriteSuivante: matching.nextPrioritySkill ?? null,
+      })}`
+    : " Matching compétences métiers : non disponible.";
 
-  const prompt = `Tu rédiges une synthèse croisée pour ${input.firstName}${jobContext}, en reliant DISC, IDMC et soft skills (ne les traite pas isolément).
+  const prompt = `Tu es un analyste comportemental senior EDGE. Tu rédiges une lecture croisée exigeante.${jobContext}${objectiveContext}
+Les scores ci-dessous sont des matières premières : tu dois les INTERPRÉTER en combinaison (DISC × IDMC × soft skills × compétences métiers), pas les reformuler.
 
 Scores DISC : ${JSON.stringify(input.discScores)}
 Scores IDMC (axes A1–A8, 0–100) : ${JSON.stringify(input.idmcScores)}
 Top soft skills : ${JSON.stringify(input.softSkillsTop)}
+${matchingContext}
 
-Structure la réponse en français avec exactement ces 3 parties, chacune introduite par un libellé en gras sur sa propre ligne (syntaxe **Libellé**, pas de ##) :
+Structure la réponse en français avec exactement ces 4 parties, chacune introduite par un libellé en gras sur sa propre ligne (syntaxe **Libellé**, pas de ##) :
+
+**Orientation objectif**
+(2 à 4 phrases. ${
+    objective
+      ? `Commence par « Votre objectif est de devenir ${objective}. » Puis enchaîne sur une recommandation métier précise du type « À la lecture des compétences métiers, nous vous suggérons de… ». Explique POURQUOI ces priorités comptent pour cet objectif (pas une simple liste).`
+      : `Commence par « Pour avancer sur votre projet professionnel, » puis propose 1 à 3 priorités compétences métiers avec le raisonnement.`
+  })
 
 **Forces majeures**
-(liste à puces, 2 à 4 points factuels)
+(3 à 5 puces. Chaque puce = un levier d'action face à l'objectif. Format : ce que la personne fait naturellement + l'avantage concret dans le métier cible. Interdit : « Soft skill dominante : X », « Style comportemental Y ».)
 
 **Axes d'amélioration**
-(liste à puces, 2 à 4 points factuels)
+(3 à 5 puces. Chaque puce = un risque ou un frein pour l'objectif + ce qu'il faut entraîner. Interdit : « Développer « X » pour élargir votre palette ».)
 
 **Synthèse EDGE**
-(1 paragraphe court)
+(1 paragraphe de 4 à 6 phrases, commence obligatoirement par « Vous êtes ». C'est LA phrase de présentation du profil : portrait psychométrique croisé, dynamique de travail, tension principale, et implication pour l'objectif.
+Interdit formel : lister les soft skills du top 3, répéter « Influent/Dominant/… » sans en tirer une lecture situationnelle, phrases creuses du type « trajectoire cohérente », « complètent votre profil », « matching carrière ».)
 
 Contraintes strictes :
 ${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
-- 180 à 260 mots au total
-- Vouvoiement`;
+- Toujours vouvoyer
+- Zéro paraphrase des scores / classements visibles
+- Chaque phrase doit apporter une lecture que le lecteur ne peut pas déduire d'un simple regard sur les barres
+- 240 à 380 mots au total`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -176,11 +223,11 @@ ${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
       {
         role: "system",
         content:
-          "Tu es un analyste EDGE. Tu écris en français, de façon factuelle et sobre, sans formules creuses ni emphase.",
+          "Tu es un analyste EDGE senior. Tu croises DISC, IDMC, soft skills et compétences métiers pour produire une lecture décisionnelle. Tu n'énumères jamais des labels déjà visibles. Français vouvoyé, sobre, précis.",
       },
       { role: "user", content: prompt },
     ],
-    temperature: 0.4,
+    temperature: 0.55,
   });
 
   return sanitizeProfileAnalysisTone(response.choices[0]?.message?.content?.trim() || "");

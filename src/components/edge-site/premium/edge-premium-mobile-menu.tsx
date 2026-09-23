@@ -152,7 +152,7 @@ export function EdgePremiumMobileMenu({
   light = false,
 }: Props) {
   const tabs = getMobileRevolutTabs(config);
-  const [activeTab, setActiveTab] = useState<MobileRevolutTabId>("former");
+  const [activeTab, setActiveTab] = useState<MobileRevolutTabId>("alternance");
   const [mounted, setMounted] = useState(false);
 
   const current = tabs.find((t) => t.id === activeTab) ?? tabs[0];
@@ -204,13 +204,13 @@ export function EdgePremiumMobileMenu({
       )}
 
       <div className="relative flex shrink-0 items-center justify-between px-6 pb-4 pt-6">
-        <Link href={config.links.home} onClick={onClose} aria-label="EDGE — Accueil">
+        <Link href={config.links.home} onClick={onClose} aria-label="Byound — Accueil">
           <Image
             src={light ? EDGE_LOGO_BLACK_PATH : EDGE_LOGO_PATH}
-            alt="EDGE"
-            width={88}
-            height={28}
-            className="h-7 w-auto"
+            alt="Byound"
+            width={120}
+            height={32}
+            className={cn("h-7 w-auto", light && "brightness-0")}
             priority
           />
         </Link>
@@ -320,7 +320,7 @@ export function EdgePremiumMobileMenu({
             className="w-full"
             onClick={onClose}
           >
-            Découvrir EDGE
+            Découvrir Byound
           </EdgePremiumButton>
         </div>
       </div>

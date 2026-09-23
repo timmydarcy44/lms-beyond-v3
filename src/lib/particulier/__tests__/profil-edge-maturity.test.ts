@@ -8,7 +8,7 @@ import {
 } from "@/lib/particulier/profil-edge-maturity";
 
 describe("profil-edge-maturity", () => {
-  it("calcule 92% quand hard skills manquants", () => {
+  it("calcule 90% sans hard skills (hors complétion) quand diplômes manquants", () => {
     const maturity = computeProfilEdgeMaturity({
       profile: {
         first_name: "Jessica",
@@ -18,28 +18,27 @@ describe("profil-edge-maturity", () => {
         city: "Paris",
         avatar_url: "https://example.com/a.jpg",
         professional_project: {
-          metier_recherche: "Commercial",
-          secteur: "Immobilier",
-          type_contrat: "CDI",
-          niveau_experience: "3 ans",
-          disponibilite: "Immédiate",
-          mobilite: "Locale",
+          edge_profession: "commercial",
+          edge_secteur: "immobilier",
+          edge_projet_libre: "Je vise un poste de commercial immobilier B2B.",
         },
-        type_profil: "emploi",
+        type_profil: null,
         hard_skills: [],
       },
       hasDisc: true,
       hasSoftSkills: true,
       hasIdmc: true,
       experiencesCount: 1,
-      diplomasCount: 1,
+      diplomasCount: 0,
     });
 
-    expect(maturity.totalPercent).toBe(85);
-    expect(maturity.blocks.find((b) => b.id === "hard_skills")?.complete).toBe(false);
+    // 20 identité + 20 projet + 30 tests + 20 expériences + 0 diplômes
+    expect(maturity.totalPercent).toBe(90);
+    expect(maturity.blocks.find((b) => b.id === "hard_skills")).toBeUndefined();
+    expect(maturity.blocks.find((b) => b.id === "diplomes")?.complete).toBe(false);
   });
 
-  it("valide identité et projet professionnel", () => {
+  it("valide identité et projet professionnel v2 même sans type_profil", () => {
     expect(
       isIdentityComplete({
         first_name: "A",
@@ -54,14 +53,11 @@ describe("profil-edge-maturity", () => {
     expect(
       isProfessionalProjectComplete(
         parseProfessionalProject({
-          metier_recherche: "Commercial",
-          secteur: "Immobilier",
-          type_contrat: "CDI",
-          niveau_experience: "Junior",
-          disponibilite: "Immédiate",
-          mobilite: "Locale",
+          edge_profession: "commercial",
+          edge_secteur: "sport",
+          edge_projet_libre: "J'aimerai être business developer dans le sport.",
         }),
-        "emploi",
+        null,
       ),
     ).toBe(true);
   });

@@ -25,8 +25,8 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose, light = false }: Pa
       className={cn(
         "overflow-hidden rounded-[32px] backdrop-blur-3xl",
         light
-          ? "border border-black/[0.08] bg-white shadow-[0_28px_90px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.8)]"
-          : "border border-white/[0.12] bg-[linear-gradient(155deg,rgba(14,14,14,0.92)_0%,rgba(8,8,8,0.94)_42%,rgba(5,5,5,0.96)_100%)] shadow-[0_28px_90px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.06)]",
+          ? "border border-black/[0.08] bg-white/80 shadow-[0_28px_90px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.8)] supports-[backdrop-filter]:bg-white/65"
+          : "border border-white/[0.1] bg-[rgba(18,18,20,0.55)] shadow-[0_28px_90px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] supports-[backdrop-filter]:bg-[rgba(18,18,20,0.42)]",
       )}
       role="menu"
     >

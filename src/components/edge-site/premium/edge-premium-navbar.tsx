@@ -13,8 +13,8 @@ import {
 } from "@/components/edge-site/premium/edge-premium-mega-menu";
 import { EdgePremiumMobileMenu } from "@/components/edge-site/premium/edge-premium-mobile-menu";
 
-type DropdownKey = "fonctionnalites" | "ressources";
-type MegaKey = "alternance" | "business";
+type DropdownKey = "plateforme";
+type MegaKey = "alternants" | "entreprises" | "particuliers";
 
 function NavDropdown({
   label,
@@ -98,7 +98,7 @@ export function EdgePremiumNavbar({
   light = false,
 }: NavbarProps) {
   const config = useEdgePremiumConfig();
-  const { links, nav, megaApprenants, megaBusiness } = config;
+  const { links, nav, megaApprenants, megaBusiness, megaParticulier, routes } = config;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
   const [openMega, setOpenMega] = useState<MegaKey | null>(null);
@@ -155,6 +155,15 @@ export function EdgePremiumNavbar({
 
   const isSolid = pageScrolled || openDropdown !== null || openMega !== null || mobileOpen;
 
+  const megaData =
+    openMega === "alternants"
+      ? megaApprenants
+      : openMega === "entreprises"
+        ? megaBusiness
+        : openMega === "particuliers"
+          ? megaParticulier
+          : null;
+
   return (
     <header
       ref={headerRef}
@@ -176,48 +185,42 @@ export function EdgePremiumNavbar({
       )}
       onMouseLeave={scheduleMegaClose}
     >
-      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
+      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8 lg:gap-4 lg:px-10">
         <EdgePremiumLogo light={light} />
 
         <nav className="hidden items-center lg:flex" aria-label="Navigation principale">
           <EdgePremiumMegaTrigger
-            label="Alternance"
-            open={openMega === "alternance"}
-            onOpen={() => openMegaMenu("alternance")}
+            label="Alternants"
+            open={openMega === "alternants"}
+            onOpen={() => openMegaMenu("alternants")}
             light={light}
           />
           <EdgePremiumMegaTrigger
-            label="Business"
-            open={openMega === "business"}
-            onOpen={() => openMegaMenu("business")}
+            label="Entreprises"
+            open={openMega === "entreprises"}
+            onOpen={() => openMegaMenu("entreprises")}
+            light={light}
+          />
+          <EdgePremiumMegaTrigger
+            label="Particuliers"
+            open={openMega === "particuliers"}
+            onOpen={() => openMegaMenu("particuliers")}
             light={light}
           />
           <NavDropdown
-            label="Fonctionnalités"
-            items={nav.fonctionnalites}
-            open={openDropdown === "fonctionnalites"}
+            label="La plateforme"
+            items={nav.plateforme}
+            open={openDropdown === "plateforme"}
             scrolled={isSolid}
             light={light}
             onToggle={() => {
               setOpenMega(null);
-              setOpenDropdown((d) => (d === "fonctionnalites" ? null : "fonctionnalites"));
-            }}
-            onClose={() => setOpenDropdown(null)}
-          />
-          <NavDropdown
-            label="Ressources"
-            items={nav.ressources}
-            open={openDropdown === "ressources"}
-            scrolled={isSolid}
-            light={light}
-            onToggle={() => {
-              setOpenMega(null);
-              setOpenDropdown((d) => (d === "ressources" ? null : "ressources"));
+              setOpenDropdown((d) => (d === "plateforme" ? null : "plateforme"));
             }}
             onClose={() => setOpenDropdown(null)}
           />
           <Link
-            href={links.tarifs}
+            href={routes.aPropos}
             className={cn(
               "px-2.5 py-2 text-sm font-medium transition-colors xl:px-3",
               light
@@ -225,7 +228,7 @@ export function EdgePremiumNavbar({
                 : "text-white/60 hover:text-white",
             )}
           >
-            Tarifs
+            À propos
           </Link>
         </nav>
 
@@ -242,12 +245,12 @@ export function EdgePremiumNavbar({
             Connexion
           </Link>
           <EdgePremiumButton
-            href={links.decouvrirEdge}
+            href={routes.alternance}
             variant={light ? "primary" : "white"}
             shape="revolut"
             className="!px-5 !py-2.5 !text-sm"
           >
-            Découvrir Byound
+            Découvrir l&apos;alternance
           </EdgePremiumButton>
         </div>
 
@@ -269,13 +272,13 @@ export function EdgePremiumNavbar({
         </button>
       </div>
 
-      {openMega ? (
+      {megaData ? (
         <div
           className="absolute left-0 right-0 top-full z-50 hidden px-4 pt-3 pb-5 sm:px-6 lg:block lg:px-8"
           onMouseEnter={cancelMegaClose}
         >
           <EdgePremiumMegaColumnsPanel
-            data={openMega === "alternance" ? megaApprenants : megaBusiness}
+            data={megaData}
             onClose={() => setOpenMega(null)}
             light={light}
           />
@@ -287,7 +290,7 @@ export function EdgePremiumNavbar({
         onClose={closeAll}
         config={config}
         loginHref={links.login}
-        discoverHref={links.decouvrirEdge}
+        discoverHref={routes.alternance}
         light={light}
       />
     </header>

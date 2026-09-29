@@ -152,7 +152,7 @@ export function EdgePremiumMobileMenu({
   light = false,
 }: Props) {
   const tabs = getMobileRevolutTabs(config);
-  const [activeTab, setActiveTab] = useState<MobileRevolutTabId>("alternance");
+  const [activeTab, setActiveTab] = useState<MobileRevolutTabId>("alternants");
   const [mounted, setMounted] = useState(false);
 
   const current = tabs.find((t) => t.id === activeTab) ?? tabs[0];
@@ -210,7 +210,7 @@ export function EdgePremiumMobileMenu({
             alt="Byound"
             width={120}
             height={32}
-            className={cn("h-7 w-auto", light && "brightness-0")}
+            className={cn("h-9 w-auto", light && "brightness-0")}
             priority
           />
         </Link>
@@ -320,7 +320,7 @@ export function EdgePremiumMobileMenu({
             className="w-full"
             onClick={onClose}
           >
-            Découvrir Byound
+            Découvrir l&apos;alternance
           </EdgePremiumButton>
         </div>
       </div>

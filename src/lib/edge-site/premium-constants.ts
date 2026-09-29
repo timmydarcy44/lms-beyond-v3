@@ -73,7 +73,7 @@ export function getEdgePremiumConfig(host?: string | null) {
       home: R.home,
     },
     nav: {
-      /** Menu principal home : piliers Business (plus Business / Particulier / Fonctionnalités). */
+      /** @deprecated Conservé pour compat — piliers Business historiques. */
       pillars: [
         {
           id: "former" as const,
@@ -122,12 +122,20 @@ export function getEdgePremiumConfig(host?: string | null) {
           ],
         },
       ],
-      /** @deprecated Conservé pour compat — le menu home utilise `pillars`. */
-      fonctionnalites: [
-        { label: "Formations & parcours", href: R.formations },
-        { label: "Certifications", href: R.certifications },
-        { label: "Formations en ligne", href: R.online },
+      /** Plateforme Byound — outils & preuves de compétences. */
+      plateforme: [
+        { label: "Profil & progression", href: R.particulier },
         { label: "Open Badges", href: R.businessOpenBadges },
+        { label: "Diagnostics de compétences", href: R.businessDiagnostics },
+        { label: "Certifications", href: R.certifications },
+        { label: "Tarifs", href: R.tarifs },
+      ],
+      /** @deprecated Alias — utiliser `plateforme`. */
+      fonctionnalites: [
+        { label: "Profil & progression", href: R.particulier },
+        { label: "Certifications", href: R.certifications },
+        { label: "Open Badges", href: R.businessOpenBadges },
+        { label: "Diagnostics", href: R.businessDiagnostics },
       ],
       ressources: [
         { label: "Blog", href: R.blog },
@@ -135,28 +143,27 @@ export function getEdgePremiumConfig(host?: string | null) {
         { label: "Webinaires", href: R.webinaires },
         { label: "FAQ", href: R.contact },
       ],
-      /** Mega-menus compacts (header home). */
+      /** Mega-menus compacts (legacy pillars — conservés pour pages internes). */
       pillarMegaMenus: getPillarMegaMenus(R),
     },
     megaApprenants: {
-      headerTitle: "Découvrir Alternance",
-      headerHref: R.apprenants,
+      headerTitle: "Byound School",
+      headerHref: R.alternance,
       columns: [
-        {
-          title: "Formations",
-          links: [
-            { label: "Titres professionnels (Bac+2)", href: R.formationsTitresPro },
-            { label: "Bachelor (Bac+3)", href: R.formationsBachelor },
-            { label: "Mastère (Bac+5)", href: R.formationsMastere },
-            { label: "Bootcamps", href: R.onlineBootcamps },
-            { label: "Spécialités", href: R.formationsSpecialites },
-          ],
-        },
         {
           title: "Parcours",
           links: [
-            { label: "Alternance", href: R.alternance },
-            { label: "Admissions", href: R.admissions },
+            { label: "Découvrir l'alternance", href: R.alternance, featured: true },
+            { label: "Titres professionnels (Bac+2)", href: R.formationsTitresPro },
+            { label: "Bachelor (Bac+3)", href: R.formationsBachelor },
+            { label: "Mastère (Bac+5)", href: R.formationsMastere },
+          ],
+        },
+        {
+          title: "CFA Byound",
+          links: [
+            { label: "Ouverture prévue — rentrée 2027", href: R.alternance, featured: true },
+            { label: "Manifestez votre intérêt", href: R.contact },
             { label: "Financement", href: R.financement },
             { label: "Vie étudiante", href: R.vieEtudiante },
           ],
@@ -165,24 +172,22 @@ export function getEdgePremiumConfig(host?: string | null) {
           title: "Réussir",
           links: [
             { label: "Entreprises partenaires", href: R.entreprises },
-            { label: "Débouchés", href: R.apprenants },
             { label: "Certifications", href: R.certifications },
-            { label: "Accompagnement personnalisé", href: R.contact },
+            { label: "Accompagnement", href: R.contact },
           ],
         },
         {
           title: "Aide",
           links: [
-            { label: "Trouver ma formation", href: R.formations },
+            { label: "Admissions", href: R.admissions },
             { label: "Prendre rendez-vous", href: R.contact },
-            { label: "FAQ admissions", href: R.admissions },
             { label: "Contact", href: R.contact },
           ],
         },
       ],
     },
     megaBusiness: {
-      headerTitle: "Découvrir Byound Business",
+      headerTitle: "Byound Business",
       headerSubtitle:
         "Former, développer, recruter et piloter les compétences de vos équipes.",
       headerHref: R.business,
@@ -237,9 +242,9 @@ export function getEdgePremiumConfig(host?: string | null) {
       ],
     },
     megaParticulier: {
-      headerTitle: "Découvrir EDGE Particulier",
+      headerTitle: "Byound Life",
       headerSubtitle:
-        "Certifications, montée en compétences et accompagnement de votre évolution professionnelle.",
+        "Bootcamps, formations courtes et parcours pour développer vos compétences — aujourd’hui et à venir.",
       headerHref: R.particulier,
       columns: [
         {
@@ -314,40 +319,42 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
   const R = config.routes;
   return [
     {
-      id: "alternance",
-      label: "Alternance",
+      id: "alternants",
+      label: "Alternants",
       links: config.megaApprenants.columns.flatMap((col) =>
         col.links.map((link) => ({ label: link.label, href: link.href })),
       ),
     },
     {
-      id: "business",
-      label: "Business",
+      id: "entreprises",
+      label: "Entreprises",
       links: config.megaBusiness.columns.flatMap((col) =>
         col.links.map((link) => ({ label: link.label, href: link.href })),
       ),
     },
     {
-      id: "fonctionnalites",
-      label: "Fonctionnalités",
-      links: [...config.nav.fonctionnalites],
+      id: "particuliers",
+      label: "Particuliers",
+      links: config.megaParticulier.columns.flatMap((col) =>
+        col.links.map((link) => ({ label: link.label, href: link.href })),
+      ),
     },
     {
-      id: "ressources",
-      label: "Ressources",
-      links: [...config.nav.ressources],
+      id: "plateforme",
+      label: "La plateforme",
+      links: [...config.nav.plateforme],
     },
     {
-      id: "tarifs",
-      label: "Tarifs",
-      links: [{ label: "Tarifs", href: R.tarifs }],
+      id: "a-propos",
+      label: "À propos",
+      links: [{ label: "À propos", href: R.aPropos }],
     },
     {
       id: "compte",
       label: "Compte",
       links: [
         { label: "Connexion", href: R.login },
-        { label: "Découvrir Byound", href: R.decouvrir },
+        { label: "Découvrir l'alternance", href: R.alternance },
       ],
     },
   ];

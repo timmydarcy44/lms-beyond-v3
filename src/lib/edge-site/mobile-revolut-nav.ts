@@ -1,6 +1,11 @@
 import type { EdgePremiumConfig } from "@/lib/edge-site/premium-constants";
 
-export type MobileRevolutTabId = "alternance" | "business" | "fonctionnalites" | "ressources";
+export type MobileRevolutTabId =
+  | "alternants"
+  | "entreprises"
+  | "particuliers"
+  | "plateforme"
+  | "a-propos";
 
 export type MobileRevolutSection = {
   title: string;
@@ -19,13 +24,13 @@ export type MobileRevolutTabData = {
 };
 
 export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTabData[] {
-  const { megaApprenants, megaBusiness, nav, links, routes } = config;
+  const { megaApprenants, megaBusiness, megaParticulier, nav, routes } = config;
 
   return [
     {
-      id: "alternance",
-      label: "Alternance",
-      discoverHref: megaApprenants.headerHref,
+      id: "alternants",
+      label: "Alternants",
+      discoverHref: routes.alternance,
       discoverLabel: megaApprenants.headerTitle,
       sections: megaApprenants.columns.map((col) => ({
         title: col.title,
@@ -34,13 +39,13 @@ export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTa
           href: link.href,
         })),
       })),
-      editorialTitle: "Trouver votre formation",
-      editorialCtaLabel: "Voir les formations",
-      editorialCtaHref: routes.formations,
+      editorialTitle: "CFA Byound — rentrée 2027",
+      editorialCtaLabel: "Manifestez votre intérêt",
+      editorialCtaHref: routes.contact,
     },
     {
-      id: "business",
-      label: "Business",
+      id: "entreprises",
+      label: "Entreprises",
       discoverHref: megaBusiness.headerHref,
       discoverLabel: megaBusiness.headerTitle,
       sections: megaBusiness.columns.map((col) => ({
@@ -55,40 +60,57 @@ export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTa
       editorialCtaHref: routes.businessDemo,
     },
     {
-      id: "fonctionnalites",
-      label: "Fonctionnalités",
-      discoverHref: nav.fonctionnalites[0]?.href ?? links.home,
-      discoverLabel: "Fonctionnalités",
-      sections: [
-        {
-          title: "Fonctionnalités",
-          links: nav.fonctionnalites.map((item) => ({
-            label: item.label,
-            href: item.href,
-          })),
-        },
-      ],
-      editorialTitle: "Découvrir la plateforme",
-      editorialCtaLabel: "Découvrir Byound",
-      editorialCtaHref: links.decouvrirEdge,
+      id: "particuliers",
+      label: "Particuliers",
+      discoverHref: megaParticulier.headerHref,
+      discoverLabel: megaParticulier.headerTitle,
+      sections: megaParticulier.columns.map((col) => ({
+        title: col.title,
+        links: col.links.map((link) => ({
+          label: link.label,
+          href: link.href,
+        })),
+      })),
+      editorialTitle: "Votre prochain projet",
+      editorialCtaLabel: "Espace particuliers",
+      editorialCtaHref: routes.particulier,
     },
     {
-      id: "ressources",
-      label: "Ressources",
-      discoverHref: nav.ressources[0]?.href ?? links.home,
-      discoverLabel: "Ressources",
+      id: "plateforme",
+      label: "Plateforme",
+      discoverHref: nav.plateforme[0]?.href ?? routes.home,
+      discoverLabel: "La plateforme",
       sections: [
         {
-          title: "Ressources",
-          links: nav.ressources.map((item) => ({
+          title: "La plateforme",
+          links: nav.plateforme.map((item) => ({
             label: item.label,
             href: item.href,
           })),
         },
       ],
-      editorialTitle: "Aller plus loin",
-      editorialCtaLabel: "Contact",
-      editorialCtaHref: links.contact,
+      editorialTitle: "Compétences visibles",
+      editorialCtaLabel: "Voir les Open Badges",
+      editorialCtaHref: routes.businessOpenBadges,
+    },
+    {
+      id: "a-propos",
+      label: "À propos",
+      discoverHref: routes.aPropos,
+      discoverLabel: "À propos de Byound",
+      sections: [
+        {
+          title: "Byound",
+          links: [
+            { label: "À propos", href: routes.aPropos },
+            { label: "Notre mission", href: routes.notreMission },
+            { label: "Contact", href: routes.contact },
+          ],
+        },
+      ],
+      editorialTitle: "Qui sommes-nous",
+      editorialCtaLabel: "En savoir plus",
+      editorialCtaHref: routes.aPropos,
     },
   ];
 }

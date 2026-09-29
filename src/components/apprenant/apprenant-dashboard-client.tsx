@@ -27,6 +27,10 @@ import {
   validateOnboardingForm,
   type ParticulierOnboardingForm,
 } from "@/lib/particulier/onboarding-objective-config";
+import {
+  buildProfileAnalysisTestsSignature,
+  parseStoredProfileAnalysis,
+} from "@/lib/learner/profile-analysis";
 const PersonalizedActionPlanSection = dynamic(
   () =>
     import("@/components/learner/personalized-action-plan-section").then((m) => ({
@@ -257,6 +261,7 @@ export function ApprenantDashboardClient({
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [aiAnalysisUpdatedAt, setAiAnalysisUpdatedAt] = useState<string | null>(null);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const lastAnalysisSignatureRef = useRef<string | null>(null);
   const [idmcUpdatedAt, setIdmcUpdatedAt] = useState<string | null>(null);
   const [experiencesPro, setExperiencesPro] = useState<ExperiencePro[]>([]);
   const [diplomes, setDiplomes] = useState<Diplome[]>([]);
@@ -486,16 +491,12 @@ export function ApprenantDashboardClient({
               .select("*")
               .eq("id", userId)
               .maybeSingle();
-            if (analysisData?.ai_analysis && typeof analysisData.ai_analysis === "string") {
-              try {
-                const parsed = JSON.parse(analysisData.ai_analysis) as {
-                  text?: string;
-                  updated_at?: string;
-                };
-                setAiAnalysis(parsed.text ?? analysisData.ai_analysis);
-                setAiAnalysisUpdatedAt(parsed.updated_at ?? null);
-      } catch {
-                setAiAnalysis(analysisData.ai_analysis);
+            const storedAnalysis = parseStoredProfileAnalysis(analysisData?.ai_analysis);
+            if (storedAnalysis?.text?.trim()) {
+              setAiAnalysis(storedAnalysis.text);
+              setAiAnalysisUpdatedAt(storedAnalysis.updatedAt ?? null);
+              if (storedAnalysis.testsSignature) {
+                lastAnalysisSignatureRef.current = storedAnalysis.testsSignature;
               }
             }
             const experiences = Array.isArray(analysisData?.experience)
@@ -763,16 +764,14 @@ export function ApprenantDashboardClient({
   );
   const testsSignature = useMemo(
     () =>
-      JSON.stringify({
-        disc: discScores,
-        idmc: idmcAxes,
-        soft: softSkillsRadar.map((s) => [s.skill, s.score]),
-        hard: hardSkills.slice().sort(),
-        meta: Object.entries(skillsMetadata)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([name, meta]) => [name, meta.level]),
-        exp: experiencesPro.map((e) => [e.employeur ?? "", e.intitule ?? "", e.date_debut ?? ""]),
-        dip: diplomes.map((d) => [d.intitule ?? "", d.ecole ?? "", d.annee_obtention ?? ""]),
+      buildProfileAnalysisTestsSignature({
+        discScores: discScores ?? undefined,
+        idmcScores: idmcAxes ?? undefined,
+        softSkills: softSkillsRadar,
+        hardSkills,
+        skillsMetadata,
+        experiences: experiencesPro,
+        diplomas: diplomes,
       }),
     [discScores, idmcAxes, softSkillsRadar, hardSkills, skillsMetadata, experiencesPro, diplomes],
   );
@@ -803,11 +802,9 @@ export function ApprenantDashboardClient({
       });
   }, [discAnalysisText]);
 
-  const lastAnalysisSignatureRef = useRef<string | null>(null);
-
   useEffect(() => {
     if (!hasAnyTest || !user?.id) return;
-    if (lastAnalysisSignatureRef.current === testsSignature && aiAnalysis) return;
+    if (lastAnalysisSignatureRef.current === testsSignature) return;
 
     let cancelled = false;
     const run = async () => {
@@ -818,24 +815,33 @@ export function ApprenantDashboardClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             firstName,
+            jobTitle: profile?.poste_actuel ?? null,
             discScores: discScores ?? {},
             idmcScores: idmcAxes ?? {},
-            softSkillsTop: softSkillsRadar.slice(0, 5),
+            softSkillsTop: softSkillsRadar.slice(0, 8),
             testsSignature,
             idmcUpdatedAt,
           }),
         });
+        const payload = (await response.json().catch(() => ({}))) as {
+          analysis?: string;
+          updatedAt?: string;
+          error?: string;
+        };
         if (!response.ok) {
-          throw new Error("Impossible de générer l'analyse.");
+          throw new Error(payload.error ?? "Impossible de générer l'analyse.");
         }
-        const payload = (await response.json()) as { analysis?: string; updatedAt?: string };
-        if (!cancelled && payload.analysis) {
+        if (!cancelled && payload.analysis?.trim()) {
           lastAnalysisSignatureRef.current = testsSignature;
           setAiAnalysis(payload.analysis);
           setAiAnalysisUpdatedAt(payload.updatedAt ?? new Date().toISOString());
         }
-      } catch {
-        // no-op
+      } catch (error) {
+        if (!cancelled) {
+          const message =
+            error instanceof Error ? error.message : "Impossible de générer l'analyse.";
+          toast.error(message);
+        }
       } finally {
         if (!cancelled) setAiAnalysisLoading(false);
       }
@@ -844,7 +850,17 @@ export function ApprenantDashboardClient({
     return () => {
       cancelled = true;
     };
-  }, [hasAnyTest, testsSignature, firstName, user?.id, discScores, idmcAxes, softSkillsRadar]);
+  }, [
+    hasAnyTest,
+    testsSignature,
+    firstName,
+    user?.id,
+    discScores,
+    idmcAxes,
+    softSkillsRadar,
+    idmcUpdatedAt,
+    profile?.poste_actuel,
+  ]);
 
   const handleAvatarUpload = async (file: File) => {
     setIsUploadingAvatar(true);

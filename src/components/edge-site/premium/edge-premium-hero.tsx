@@ -1,85 +1,100 @@
 "use client";
 
-import Image from "next/image";
-
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 
-import {
-  EDGE_PREMIUM_AVATARS,
-  EDGE_PREMIUM_IMAGES,
-} from "@/lib/edge-site/premium-constants";
+const HERO_VIDEO_URL =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Header/video%20hero%20section.mp4";
+
+function HeroVideo({ className }: { className?: string }) {
+  return (
+    <video
+      className={className}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      aria-hidden
+    >
+      <source src={HERO_VIDEO_URL} type="video/mp4" />
+    </video>
+  );
+}
 
 export function EdgePremiumHero() {
-  const { links } = useEdgePremiumConfig();
+  const { links, routes } = useEdgePremiumConfig();
 
   return (
-    <section className="relative min-h-[min(92svh,880px)] overflow-hidden bg-edge-black-deep">
-      <div className="absolute inset-0 lg:left-[32%]" aria-hidden>
-        <Image
-          src={EDGE_PREMIUM_IMAGES.hero}
-          alt="Professionnels en formation et développement de compétences"
-          fill
-          className="object-cover object-center lg:object-right-top"
-          sizes="100vw"
-          priority
-          unoptimized
-        />
+    <section className="relative isolate h-[100svh] min-h-[100svh] overflow-hidden bg-edge-black-deep">
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 right-0 top-16 hidden overflow-hidden lg:top-[6.25rem] lg:left-auto lg:block lg:w-[62%] xl:w-[58%]"
+        aria-hidden
+      >
+        <HeroVideo className="absolute inset-0 h-full w-full object-cover object-center" />
       </div>
 
       <div
-        className="absolute inset-0 bg-gradient-to-r from-edge-black-deep via-edge-black-deep/90 to-edge-black-deep/25 lg:to-edge-black-deep/15"
+        className="pointer-events-none absolute inset-x-0 bottom-0 top-16 hidden bg-gradient-to-r from-edge-black-deep via-edge-black-deep/90 to-transparent lg:top-[6.25rem] lg:block"
         aria-hidden
       />
       <div
-        className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_70%,rgba(255,255,255,0.06),transparent_50%)]"
+        className="pointer-events-none absolute bottom-0 left-0 top-16 hidden w-[48%] bg-gradient-to-r from-edge-black-deep via-edge-black-deep/75 to-transparent lg:top-[6.25rem] lg:block"
         aria-hidden
       />
 
-      <div className="relative z-10 mx-auto flex min-h-[min(92svh,880px)] max-w-7xl items-center px-5 pb-20 pt-28 sm:px-8 lg:px-10 lg:pb-24 lg:pt-32">
-        <div className="max-w-xl lg:max-w-2xl">
-          <h1 className="text-[clamp(2.5rem,5.5vw,4.25rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
-            Développons
-            <br />
-            les compétences
-            <br />
-            qui feront la
-            <br />
-            différence demain.
-          </h1>
-
-          <p className="mt-8 max-w-lg text-base leading-relaxed text-white/60 sm:text-lg">
-            Identifier les besoins. Former. Valoriser les compétences.
-            Un process clair pour faire évoluer la formation professionnelle.
+      <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col px-5 pb-0 pt-28 sm:px-8 lg:justify-center lg:px-10 lg:pb-20 lg:pt-36">
+        <div className="max-w-[22rem] shrink-0 sm:max-w-lg lg:max-w-[32rem] xl:max-w-[36rem]">
+          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/45 sm:text-xs">
+            Alternance · Formation · Compétences
           </p>
 
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <EdgePremiumButton href={links.formations} variant="white" showArrow className="sm:min-w-[220px]">
-              Trouver une formation
+          <h1 className="mt-7 text-[clamp(2.4rem,7.5vw,4.75rem)] font-semibold leading-[0.96] tracking-[-0.04em] text-white sm:mt-8 lg:mt-10">
+            Vos compétences
+            <br />
+            vous emmènent
+            <br />
+            plus loin.
+          </h1>
+
+          <p className="mt-7 max-w-[28rem] text-[15px] leading-relaxed text-white/50 sm:mt-9 sm:text-base">
+            Trouvez votre voie en alternance, développez les compétences de vos équipes ou
+            formez-vous pour votre prochain projet. Avec Byound, chaque compétence acquise peut
+            ouvrir une nouvelle opportunité.
+          </p>
+
+          <div className="mt-9 flex flex-col gap-3 sm:mt-11 sm:flex-row sm:items-center sm:gap-4">
+            <EdgePremiumButton
+              href={routes.alternance}
+              variant="white"
+              showArrow
+              className="sm:min-w-[220px]"
+            >
+              Découvrir l&apos;alternance
             </EdgePremiumButton>
-            <EdgePremiumButton href={links.conseiller} variant="secondary-dark">
-              Parler à un conseiller
+            <EdgePremiumButton href={links.business} variant="secondary-dark">
+              Découvrir Byound Business
             </EdgePremiumButton>
           </div>
 
-          <div className="mt-10 flex items-center gap-4">
-            <div className="flex -space-x-2">
-              {EDGE_PREMIUM_AVATARS.map((src, i) => (
-                <div
-                  key={src}
-                  className="relative h-9 w-9 overflow-hidden rounded-full border-2 border-edge-black-deep"
-                  style={{ zIndex: EDGE_PREMIUM_AVATARS.length - i }}
-                >
-                  <Image src={src} alt="" fill className="object-cover" sizes="36px" />
-                </div>
-              ))}
-            </div>
-            <p className="text-sm leading-snug text-white/50">
-              <span className="font-medium text-white/80">+25 000 personnes formées</span>
-              <br />
-              500+ organisations nous font confiance
-            </p>
-          </div>
+          <p className="mt-4 text-[13px] leading-snug text-white/40">
+            CFA : ouverture prévue à la rentrée 2027 —{" "}
+            <a
+              href={routes.contact}
+              className="underline decoration-white/25 underline-offset-2 transition-colors hover:text-white/70 hover:decoration-white/50"
+            >
+              manifester votre intérêt
+            </a>
+            .
+          </p>
+        </div>
+
+        <div className="relative mt-10 -mx-5 min-h-0 flex-1 overflow-hidden sm:-mx-8 sm:mt-12 lg:hidden">
+          <HeroVideo className="absolute inset-0 h-full w-full object-cover object-[72%_center] sm:object-[68%_center]" />
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-edge-black-deep to-transparent"
+            aria-hidden
+          />
         </div>
       </div>
     </section>

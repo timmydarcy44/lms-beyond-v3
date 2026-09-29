@@ -26,9 +26,9 @@ export function EdgePremiumLogo({ className, href, light = false }: Props) {
       <Image
         src={EDGE_LOGO_PATH}
         alt="Byound"
-        width={120}
-        height={32}
-        className={cn("h-7 w-auto", light && "brightness-0")}
+        width={148}
+        height={40}
+        className={cn("h-9 w-auto sm:h-10", light && "brightness-0")}
         priority
       />
     </Link>

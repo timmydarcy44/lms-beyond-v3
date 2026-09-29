@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildProfileAnalysisTestsSignature,
   generateProfileAnalysisText,
+  isProfileAnalysisCacheValid,
+  loadProfileAnalysisFromDb,
   saveProfileAnalysisToDb,
 } from "@/lib/learner/profile-analysis";
 import { getServerClient } from "@/lib/supabase/server";
@@ -24,6 +26,7 @@ type AnalysisPayload = {
   testsSignature?: string;
   discUpdatedAt?: string | null;
   idmcUpdatedAt?: string | null;
+  forceRegenerate?: boolean;
 };
 
 export async function POST(request: NextRequest) {
@@ -58,6 +61,18 @@ export async function POST(request: NextRequest) {
         idmcScores,
         softSkills: softSkillsTop,
       });
+
+    const forceRegenerate = Boolean(body?.forceRegenerate);
+    if (!forceRegenerate) {
+      const cached = await loadProfileAnalysisFromDb(supabase, user.id);
+      if (isProfileAnalysisCacheValid(cached, testsSignature) && cached?.text) {
+        return NextResponse.json({
+          analysis: cached.text,
+          updatedAt: cached.updatedAt ?? new Date().toISOString(),
+          cached: true,
+        });
+      }
+    }
 
     const analysis = await generateProfileAnalysisText({
       firstName,

@@ -16,8 +16,8 @@ export default function ConsultationsPage() {
   const consultations = [
     {
       title: "Première consultation",
-      price: "90 €",
-      description: "Première consultation à 90€.",
+      price: "95 €",
+      description: "Première consultation à 95€.",
     },
     {
       title: "Consultation de suivi",

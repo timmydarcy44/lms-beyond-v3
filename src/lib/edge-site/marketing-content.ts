@@ -226,18 +226,35 @@ export const MARKETING_PAGES = {
   }),
 
   alternance: page({
-    meta: { title: "Alternance — EDGE", description: "Comprendre et intégrer l'alternance avec EDGE." },
+    meta: {
+      title: "Alternance — Byound",
+      description:
+        "Parcours en alternance Byound. CFA : ouverture prévue à la rentrée 2027. Manifestez votre intérêt.",
+    },
     label: "Alternance",
     hero: {
-      title: "L'alternance, le meilleur accélérateur de compétences.",
-      subtitle: "Apprenez en entreprise, validez en formation, entrez sur le marché avec de l'expérience.",
+      title: "L'alternance, pour construire des compétences qui comptent.",
+      subtitle:
+        "Byound prépare l’ouverture de son CFA à la rentrée 2027. Dès aujourd’hui, découvrez les parcours envisagés et manifestez votre intérêt.",
       tone: "dark",
     },
     sections: [
-      { title: "Comment ça marche", body: "Contrat d'apprentissage ou de professionnalisation, rythme adapté et suivi personnalisé." },
-      { title: "Trouver une entreprise", body: "EDGE vous accompagne dans la recherche et la préparation aux entretiens." },
+      {
+        title: "CFA Byound — rentrée 2027",
+        body: "Les inscriptions au CFA ne sont pas encore ouvertes. Vous pouvez d’ores et déjà manifester votre intérêt pour être informé dès que les admissions démarreront.",
+      },
+      {
+        title: "Comment ça marche",
+        body: "Contrat d’apprentissage ou de professionnalisation, rythme entreprise / centre de formation, suivi personnalisé.",
+      },
+      {
+        title: "Trouver une entreprise",
+        body: "Byound vous accompagnera dans la préparation aux entretiens et la mise en relation avec des entreprises partenaires.",
+      },
     ],
-    ctas: [{ label: "En savoir plus", href: P.contact, variant: "primary" }],
+    ctas: [
+      { label: "Manifester mon intérêt", href: P.contact, variant: "primary" },
+    ],
   }),
 
   admissions: page({

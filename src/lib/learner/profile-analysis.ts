@@ -217,20 +217,43 @@ ${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
 - Chaque phrase doit apporter une lecture que le lecteur ne peut pas déduire d'un simple regard sur les barres
 - 240 à 380 mots au total`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content:
-          "Tu es un analyste EDGE senior. Tu croises DISC, IDMC, soft skills et compétences métiers pour produire une lecture décisionnelle. Tu n'énumères jamais des labels déjà visibles. Français vouvoyé, sobre, précis.",
-      },
-      { role: "user", content: prompt },
-    ],
-    temperature: 0.55,
-  });
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es un analyste EDGE senior. Tu croises DISC, IDMC, soft skills et compétences métiers pour produire une lecture décisionnelle. Tu n'énumères jamais des labels déjà visibles. Français vouvoyé, sobre, précis.",
+        },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.55,
+      max_tokens: 1200,
+    });
 
-  return sanitizeProfileAnalysisTone(response.choices[0]?.message?.content?.trim() || "");
+    const raw = response.choices[0]?.message?.content?.trim() || "";
+    if (!raw) {
+      throw new Error("OpenAI a renvoyé une réponse vide.");
+    }
+    return sanitizeProfileAnalysisTone(raw);
+  } catch (error: unknown) {
+    const apiError = error as { status?: number; message?: string; code?: string };
+    if (apiError?.status === 401) {
+      throw new Error("OpenAI : clé API invalide ou absente.");
+    }
+    if (apiError?.status === 429) {
+      throw new Error("OpenAI : quota ou limite de débit atteint.");
+    }
+    if (apiError?.code === "insufficient_quota") {
+      throw new Error("OpenAI : crédits insuffisants sur le compte.");
+    }
+    if (error instanceof Error && error.message.includes("OpenAI")) {
+      throw error;
+    }
+    const detail = error instanceof Error ? error.message : "erreur inconnue";
+    throw new Error(`OpenAI : ${detail}`);
+  }
 }
 
 export async function loadProfileAnalysisFromDb(

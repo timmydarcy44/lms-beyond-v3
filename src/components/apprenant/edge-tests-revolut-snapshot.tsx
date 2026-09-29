@@ -289,9 +289,15 @@ export function EdgeTestsRevolutSnapshot({
             testsSignature,
           }),
         });
-        if (!res.ok) return;
-        const payload = (await res.json()) as { analysis?: string };
-        if (!cancelled && payload.analysis) {
+        const payload = (await res.json().catch(() => ({}))) as {
+          analysis?: string;
+          error?: string;
+        };
+        if (!res.ok) {
+          console.warn("[profile-analysis]", payload.error ?? res.status);
+          return;
+        }
+        if (!cancelled && payload.analysis?.trim()) {
           setAnalysis(sanitizeProfileAnalysisTone(payload.analysis));
         }
       } catch {

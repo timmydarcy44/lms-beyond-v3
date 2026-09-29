@@ -1,7 +1,7 @@
 export const JESSICA_INVOICE_SECTION_TITLE_DEFAULT = "Consultation psychopédagogique";
 
 export const JESSICA_PRESTATION_OPTIONS = [
-  { value: "consultation", label: "Consultation", defaultPrice: 90 },
+  { value: "consultation", label: "Consultation", defaultPrice: 95 },
   { value: "test_mai", label: "Test MAI", defaultPrice: 120 },
   { value: "test_stress", label: "Test de stress", defaultPrice: 80 },
   { value: "formation", label: "Formation", defaultPrice: 0 },

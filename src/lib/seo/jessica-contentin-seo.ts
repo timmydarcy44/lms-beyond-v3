@@ -160,7 +160,7 @@ export const PAGE_SEO_CONFIG = {
   },
   consultations: {
     title: "Consultations Neuroéducation : Tarifs et Accompagnement à Caen",
-    description: "Consultations psychopédagogiques à Bretteville sur Odon (Caen). Tarifs : première consultation 90€, suivi 75€. Bilans selon les besoins. Cabinet chaleureux avec espace enfant. Prenez rendez-vous en ligne.",
+    description: "Consultations psychopédagogiques à Bretteville sur Odon (Caen). Tarifs : première consultation 95€, suivi 75€. Bilans selon les besoins. Cabinet chaleureux avec espace enfant. Prenez rendez-vous en ligne.",
     keywords: [
       "consultation psychopédagogue Caen",
       "tarif psychopédagogue Bretteville sur Odon",

@@ -170,7 +170,7 @@ export function ProfilEdgeIdentitySection() {
               Votre photo
             </h1>
             <p className="text-[15px] leading-relaxed text-white/45">
-              C’est la première chose que l’on voit sur votre profil EDGE.
+              C’est la première chose que l’on voit sur votre profil public.
             </p>
           </header>
           <div className="flex flex-1 flex-col items-center justify-center gap-6">

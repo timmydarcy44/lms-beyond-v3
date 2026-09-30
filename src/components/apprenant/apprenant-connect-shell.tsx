@@ -33,6 +33,7 @@ import { ApprenantShellProvider } from "@/components/apprenant/apprenant-shell-c
 import { EdgeAppSwitcher } from "@/components/apprenant/edge-app-switcher";
 import { AppTransition } from "@/components/apprenant/edge-app-transition";
 import { LearnerSnapshotProvider } from "@/components/learner/learner-snapshot-provider";
+import { ProfilEdgeHubProvider } from "@/components/apprenant/profil-edge/profil-edge-hub-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
 
@@ -358,9 +359,13 @@ export function ApprenantConnectShell({
     );
   }
 
+  const hubWrap = (node: ReactNode) =>
+    useEdgeApps ? <ProfilEdgeHubProvider>{node}</ProfilEdgeHubProvider> : node;
+
   return (
     <LearnerSnapshotProvider>
       <ApprenantShellProvider value={shellContext}>
+      {hubWrap(
       <div data-connect-shell={theme.shellAttr} className={theme.rootClass}>
         {theme.showBackdrop ? <ConnectCockpitBackdrop /> : null}
         <style jsx global>{`
@@ -571,7 +576,7 @@ export function ApprenantConnectShell({
                 <>
                   <Link
                     href="/dashboard/apprenant?premiers-pas=1"
-                    title="Premiers pas EDGE"
+                    title="Premiers pas Byound"
                     className={`${theme.helpLinkClass} ${isSidebarCollapsed ? "px-0" : "px-2"}`}
                   >
                     <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#8BB4FF]/80" />
@@ -869,7 +874,8 @@ export function ApprenantConnectShell({
             </div>
           </div>
         ) : null}
-      </div>
+      </div>,
+      )}
     </ApprenantShellProvider>
     </LearnerSnapshotProvider>
   );

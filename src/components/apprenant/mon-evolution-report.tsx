@@ -10,14 +10,14 @@ import { ProfilEdgeHubGaps } from "@/components/apprenant/profil-edge/profil-edg
 import { EdgePageAmbiance } from "@/components/apprenant/edge-page-ambiance";
 import { extractCareerTitleFromProject } from "@/lib/particulier/professional-project-fields";
 import { PROFIL_EDGE_SECTION_HREFS } from "@/lib/particulier/profil-edge-maturity";
-import { useProfilEdgeHubData } from "@/hooks/use-profil-edge-hub-data";
+import { useProfilEdgeHub } from "@/components/apprenant/profil-edge/profil-edge-hub-provider";
 import { APPRENANT_PAGE_SHELL, CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
 
 /**
  * Page « Mon évolution » — transforme le profil en plan d'action.
  */
 export function MonEvolutionReport() {
-  const data = useProfilEdgeHubData();
+  const data = useProfilEdgeHub();
 
   if (data.loading && !data.discScores) {
     return (

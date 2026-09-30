@@ -110,7 +110,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
   const [idmcAxes, setIdmcAxes] = useState<Record<AxisKey, number> | null>(null);
   const [softSkillsRadar, setSoftSkillsRadar] = useState<Array<{ skill: string; score: number }>>([]);
   const [badgeAwarded, setBadgeAwarded] = useState(false);
-  const [badgeName, setBadgeName] = useState("Profil comportemental EDGE");
+  const [badgeName, setBadgeName] = useState("Profil comportemental Byound");
   const [selectedCareer, setSelectedCareer] = useState<CareerProfile | null>(null);
   const [professionalProject, setProfessionalProject] = useState(parseProfessionalProject(null));
   const [hardSkills, setHardSkills] = useState<string[]>([]);
@@ -174,6 +174,10 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
             .then(async (res) => (res.ok ? ((await res.json()) as object) : null))
             .catch(() => null);
 
+    const snapHasDisc = Boolean(existingSnap?.discScores);
+    const snapHasIdmc = Boolean(existingSnap?.idmcAxes);
+    const snapHasSoft = (existingSnap?.softSkillsRadar?.length ?? 0) > 0;
+
     const [snapPayload, profileRes, discRes, idmcRes, softRes, expRes, dipRes] = await Promise.all([
       snapshotPromise,
       supabase
@@ -183,9 +187,15 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
         )
         .eq("id", uid)
         .maybeSingle(),
-      supabase.from("disc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
-      supabase.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
-      supabase.from("soft_skills_resultats").select("scores").eq("learner_id", uid).maybeSingle(),
+      snapHasDisc
+        ? Promise.resolve({ data: null, error: null })
+        : supabase.from("disc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
+      snapHasIdmc
+        ? Promise.resolve({ data: null, error: null })
+        : supabase.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
+      snapHasSoft
+        ? Promise.resolve({ data: null, error: null })
+        : supabase.from("soft_skills_resultats").select("scores").eq("learner_id", uid).maybeSingle(),
       supabase.from("experiences_pro").select("*").eq("learner_id", uid),
       supabase.from("diplomes").select("*").eq("learner_id", uid),
     ]);
@@ -300,12 +310,6 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     );
 
     const slug = profile?.target_career_slug ? String(profile.target_career_slug) : null;
-    if (slug) {
-      setSelectedCareer(await loadCareerBySlug(slug));
-    } else {
-      setSelectedCareer(null);
-    }
-
     const completion = profile?.cross_profile_completion as {
       badge_id?: string;
       badge_awarded_at?: string;
@@ -313,17 +317,25 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     const testsComplete = Boolean(resolvedDisc && resolvedIdmcAxes && resolvedSoft);
     setBadgeAwarded(Boolean(testsComplete && completion?.badge_awarded_at));
 
-    if (completion?.badge_id) {
-      const { data: badge } = await supabase
-        .from("open_badges")
-        .select("name")
-        .eq("id", completion.badge_id)
-        .maybeSingle();
-      if (badge?.name) setBadgeName(String(badge.name));
-    }
+    void (async () => {
+      if (slug) {
+        setSelectedCareer(await loadCareerBySlug(slug));
+      } else {
+        setSelectedCareer(null);
+      }
+      if (completion?.badge_id) {
+        const { data: badge } = await supabase
+          .from("open_badges")
+          .select("name")
+          .eq("id", completion.badge_id)
+          .maybeSingle();
+        if (badge?.name) setBadgeName(String(badge.name));
+      }
+    })();
   }, [supabase, snapshotCtx?.snapshot, snapshotCtx?.loading]);
 
   useEffect(() => {
+    if (snapshotCtx?.loading) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -337,14 +349,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     return () => {
       cancelled = true;
     };
-  }, [load]);
-
-  // Recharger quand le snapshot shell arrive après le premier paint
-  useEffect(() => {
-    if (!snapshotCtx?.loading && snapshotCtx?.snapshot) {
-      void load();
-    }
-  }, [snapshotCtx?.loading, snapshotCtx?.snapshot, load]);
+  }, [load, snapshotCtx?.loading]);
 
   const testsDone = [Boolean(discScores), hasSoftSkills, hasIdmc].filter(Boolean).length;
 

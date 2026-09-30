@@ -26,10 +26,8 @@ import {
 } from "@/lib/learner/profile-analysis";
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
 import { CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
+import { CrossReadingPanel } from "@/components/apprenant/cross-reading-panel";
 import { cn } from "@/lib/utils";
-
-const EDGE_LOGO_WHITE =
-  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/EDGE_noir_sans_fond.png";
 
 const DISC_COLORS: Record<keyof DiscScores, string> = {
   D: "#EF4444",
@@ -179,40 +177,6 @@ function buildLocalSections(params: {
   };
 }
 
-function RevolutList({
-  title,
-  items,
-  accent,
-}: {
-  title: string;
-  items: string[];
-  accent: "strength" | "improve";
-}) {
-  if (!items.length) return null;
-  return (
-    <div>
-      <p
-        className={cn(
-          "text-[11px] font-semibold uppercase tracking-[0.16em]",
-          accent === "strength" ? "text-emerald-400/80" : "text-amber-400/80",
-        )}
-      >
-        {title}
-      </p>
-      <ul className="mt-4 divide-y divide-white/[0.06]">
-        {items.map((item, index) => (
-          <li key={`${index}-${item.slice(0, 24)}`} className="flex gap-4 py-3.5 first:pt-0">
-            <span className="w-6 shrink-0 text-[13px] font-semibold tabular-nums text-white/25">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <p className="text-[14px] leading-relaxed text-white/70">{item}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function TestExplainerCard({
   explainer,
 }: {
@@ -273,7 +237,8 @@ export function EdgeTestsRevolutSnapshot({
   useEffect(() => {
     if (!hasAny) return;
     let cancelled = false;
-    void (async () => {
+    const timer = window.setTimeout(() => {
+      void (async () => {
       setAnalysisLoading(true);
       try {
         const res = await fetch("/api/profile-analysis", {
@@ -305,9 +270,11 @@ export function EdgeTestsRevolutSnapshot({
       } finally {
         if (!cancelled) setAnalysisLoading(false);
       }
-    })();
+      })();
+    }, 80);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [
     hasAny,
@@ -321,7 +288,22 @@ export function EdgeTestsRevolutSnapshot({
   ]);
 
   const sections = useMemo(() => {
-    if (analysis) return parseProfileAnalysisSections(analysis);
+    if (analysis) {
+      const parsed = parseProfileAnalysisSections(analysis);
+      if (
+        !parsed.summary &&
+        !parsed.strengths.length &&
+        !parsed.improvements.length &&
+        parsed.orientation &&
+        parsed.orientation.length > 200
+      ) {
+        const reparsed = parseProfileAnalysisSections(
+          analysis.replace(/\*\*([^*]+)\*\*/g, "\n\n**$1**\n"),
+        );
+        return reparsed;
+      }
+      return parsed;
+    }
     return buildLocalSections({
       discScores,
       idmcAxes,
@@ -331,7 +313,6 @@ export function EdgeTestsRevolutSnapshot({
     });
   }, [analysis, discScores, idmcAxes, softSkillsRadar, objectiveLabel, matching]);
 
-  const showAnalysisHero = Boolean(sections?.summary) || analysisLoading;
   const hasCrossContent = Boolean(
     sections?.orientation ||
       sections?.summary ||
@@ -351,81 +332,25 @@ export function EdgeTestsRevolutSnapshot({
       })).sort((a, b) => b.score - a.score)
     : [];
 
+  const panelSections = sections ?? {
+    strengths: [],
+    improvements: [],
+    summary: null,
+    orientation: null,
+  };
+
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={EDGE_LOGO_WHITE}
-          alt="EDGE"
-          className="h-5 w-auto brightness-0 invert opacity-90 sm:h-6"
-        />
-        <span className="text-[12px] text-white/35">· vos explorations</span>
-      </div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
+        Vos explorations comportementales
+      </p>
 
-      {/* Lecture croisée — Revolut */}
-      <section className="space-y-8">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
-            Lecture croisée
-          </p>
-          {objectiveLabel ? (
-            <p className="mt-3 text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] text-white sm:text-[2rem]">
-              {objectiveLabel}
-            </p>
-          ) : (
-            <p className="mt-3 text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] text-white/50 sm:text-[2rem]">
-              Votre objectif professionnel
-            </p>
-          )}
-        </div>
-
-        {!hasCrossContent ? (
-          <p className="max-w-xl text-[15px] leading-relaxed text-white/40">
-            Passez DISC, IDMC et Soft skills pour obtenir votre lecture de profil croisée.
-          </p>
-        ) : (
-          <div className="space-y-8">
-            {showAnalysisHero ? (
-              <div className="max-w-3xl">
-                {analysisLoading && !sections?.summary ? (
-                  <div className="space-y-3" aria-busy="true" aria-label="Analyse en cours">
-                    <div className="h-5 w-[92%] animate-pulse rounded bg-white/10" />
-                    <div className="h-5 w-[85%] animate-pulse rounded bg-white/10" />
-                    <div className="h-5 w-[70%] animate-pulse rounded bg-white/10" />
-                    <div className="h-5 w-[78%] animate-pulse rounded bg-white/10" />
-                  </div>
-                ) : sections?.summary ? (
-                  <p className="text-[1.05rem] font-medium leading-[1.55] tracking-[-0.01em] text-white sm:text-[1.2rem]">
-                    {sections.summary}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
-            {sections?.orientation ? (
-              <p className="max-w-2xl border-l border-white/15 pl-4 text-[14px] leading-relaxed text-white/50">
-                {sections.orientation}
-              </p>
-            ) : null}
-
-            {(sections?.strengths.length || sections?.improvements.length) ? (
-              <div className="grid gap-10 border-t border-white/[0.08] pt-8 md:grid-cols-2 md:gap-14">
-                <RevolutList
-                  title="Points forts"
-                  items={sections?.strengths ?? []}
-                  accent="strength"
-                />
-                <RevolutList
-                  title="Axes d'amélioration"
-                  items={sections?.improvements ?? []}
-                  accent="improve"
-                />
-              </div>
-            ) : null}
-          </div>
-        )}
-      </section>
+      <CrossReadingPanel
+        objectiveLabel={objectiveLabel}
+        sections={panelSections}
+        analysisLoading={analysisLoading}
+        hasCrossContent={hasCrossContent}
+      />
 
       {/* DISC */}
       <section className="rounded-[1.5rem] border border-white/[0.06] bg-white/[0.03] px-5 py-5 sm:px-6">

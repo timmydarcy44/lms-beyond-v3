@@ -39,7 +39,7 @@ export type EdgeAccompagnementOffer = {
 export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
   {
     id: "membership",
-    title: "EDGE Membership",
+    title: "Byound Membership",
     price: "49 €",
     priceSuffix: "/mois",
     tier: "principal",
@@ -49,9 +49,9 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
     benefits: [
       "Coaching individuel chaque mois",
       "Analyses et simulations régulières",
-      "Recommandations personnalisées selon votre profil EDGE",
+      "Recommandations personnalisées selon votre profil",
     ],
-    ctaLabel: "Rejoindre EDGE Membership",
+    ctaLabel: "Rejoindre Byound Membership",
     icon: "crown",
   },
   {
@@ -61,11 +61,11 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
     duration: "60 min",
     tier: "principal",
     tierLabel: "Séance avec un expert",
-    description: "Échange individuel en visioconférence avec un expert EDGE.",
+    description: "Échange individuel en visioconférence avec un expert Byound.",
     valueProposition:
       "Analyser votre profil, clarifier vos priorités et définir les prochaines étapes concrètes.",
     benefits: [
-      "Analyse de votre profil EDGE et de vos écarts",
+      "Analyse de votre profil et de vos écarts",
       "Priorisation des compétences à travailler",
       "Recommandations personnalisées pour la suite",
     ],
@@ -74,7 +74,7 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
   },
   {
     id: "simulation",
-    title: "Mission EDGE avec expert",
+    title: "Mission Byound avec expert",
     price: "179 €",
     duration: "60–90 min",
     tier: "cible",
@@ -83,7 +83,7 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
     valueProposition: "Vous préparer concrètement à une situation à venir.",
     benefits: [
       "Entretien, négociation, prise de parole…",
-      "Débrief avec un expert EDGE",
+      "Débrief avec un expert Byound",
       "Axes de progression identifiés",
     ],
     ctaLabel: "Réserver une mission avec expert",
@@ -101,7 +101,7 @@ export const EDGE_ACCOMPAGNEMENT_OFFERS: EdgeAccompagnementOffer[] = [
     benefits: [
       "Création d'un parcours personnalisé",
       "Plan de développement des compétences",
-      "Suivi et réévaluation avec un expert EDGE",
+      "Suivi et réévaluation avec un expert Byound",
     ],
     ctaLabel: "Demander un devis",
     icon: "layers",
@@ -118,7 +118,7 @@ export type ComparisonFeature = {
 
 export const EDGE_OFFER_COMPARISON: ComparisonFeature[] = [
   { label: "Échange expert", membership: "1×/mois", progression: "49 € · 60 min", simulation: "179 €", programme: "Sur devis" },
-  { label: "Analyse profil EDGE", membership: true, progression: true, simulation: true, programme: true },
+  { label: "Analyse de profil", membership: true, progression: true, simulation: true, programme: true },
   { label: "Plan d'action", membership: true, progression: true, simulation: false, programme: true },
   { label: "Création du parcours", membership: false, progression: false, simulation: false, programme: true },
   { label: "Développement des compétences", membership: false, progression: false, simulation: false, programme: true },
@@ -129,17 +129,17 @@ export const EDGE_ACCOMPAGNEMENT_FAQ = [
   {
     question: "Combien coûte la séance avec un expert ?",
     answer:
-      "La construction de votre plan avec un expert EDGE est à 49 € (60 min en visioconférence). La création d'un parcours complet ou d'un plan de développement des compétences sur la durée se fait sur devis, après un premier échange.",
+      "La construction de votre plan avec un expert Byound est à 49 € (60 min en visioconférence). La création d'un parcours complet ou d'un plan de développement des compétences sur la durée se fait sur devis, après un premier échange.",
   },
   {
-    question: "Quelle est la différence entre l'analyse EDGE et un accompagnement ?",
+    question: "Quelle est la différence entre l'analyse et un accompagnement ?",
     answer:
-      "L'analyse EDGE identifie vos compétences, vos écarts et vos priorités à partir de votre profil. L'accompagnement permet d'approfondir ces éléments avec un expert et de définir un plan d'action.",
+      "L'analyse identifie vos compétences, vos écarts et vos priorités à partir de votre profil. L'accompagnement permet d'approfondir ces éléments avec un expert et de définir un plan d'action.",
   },
   {
     question: "Puis-je réserver sans avoir terminé mon profil ?",
     answer:
-      "Oui. Plus votre profil EDGE est complet, plus l'accompagnement sera précis.",
+      "Oui. Plus votre profil est complet, plus l'accompagnement sera précis.",
   },
   {
     question: "Les séances sont-elles en visioconférence ?",

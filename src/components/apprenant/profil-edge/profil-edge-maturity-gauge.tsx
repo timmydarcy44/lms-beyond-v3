@@ -86,7 +86,7 @@ export function ProfilEdgeMaturityGauge({
             </p>
           </div>
           <p className="max-w-xs text-sm leading-relaxed text-white/45">
-            Plus votre profil est complet, plus EDGE personnalise votre progression.
+            Plus votre profil est complet, plus Byound personnalise votre progression.
           </p>
         </div>
         <div className={CONNECT_PROGRESS_TRACK}>

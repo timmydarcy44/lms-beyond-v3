@@ -105,7 +105,7 @@ export function EdgeDashboardGps({
           Ma prochaine étape
         </p>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/75">
-          EDGE a identifié vos écarts. Un expert peut construire une recommandation personnalisée à partir
+          Byound a identifié vos écarts. Un expert peut construire une recommandation personnalisée à partir
           de vos résultats — sans parcours générique.
         </p>
         {gps.prioritySkill && gps.hasObjective ? (

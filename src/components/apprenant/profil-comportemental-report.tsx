@@ -6,7 +6,7 @@ import { ArrowRight, Check } from "lucide-react";
 
 import { EdgePageAmbiance } from "@/components/apprenant/edge-page-ambiance";
 import { EdgeTestsRevolutSnapshot } from "@/components/apprenant/edge-tests-revolut-snapshot";
-import { useProfilEdgeHubData } from "@/hooks/use-profil-edge-hub-data";
+import { useProfilEdgeHub } from "@/components/apprenant/profil-edge/profil-edge-hub-provider";
 import {
   APPRENANT_CARD_KICKER,
   APPRENANT_PAGE_SHELL,
@@ -70,7 +70,7 @@ function CompletionRing({ percent }: { percent: number }) {
  * Cockpit Profil EDGE — première page après connexion.
  */
 export function ProfilComportementalReport() {
-  const data = useProfilEdgeHubData();
+  const data = useProfilEdgeHub();
   const [nextEvent, setNextEvent] = useState<{
     title: string;
     when: string;
@@ -101,6 +101,10 @@ export function ProfilComportementalReport() {
         objectiveLabel: data.objectiveLabel,
         matching: data.matching,
         softSkillsRadar: data.softSkillsRadar,
+        preconisationSkills: [
+          ...(data.matching?.develop ?? []),
+          ...(data.matching?.consolidate ?? []),
+        ],
       }),
     [data],
   );
@@ -160,7 +164,7 @@ export function ProfilComportementalReport() {
                 month: "long",
               })
             : "",
-          label: String(row.reason || "Progression EDGE"),
+          label: String(row.reason || "Progression Byound"),
         })),
       );
     })();
@@ -169,8 +173,19 @@ export function ProfilComportementalReport() {
     };
   }, []);
 
-  if (data.loading) {
-    return <p className="text-sm text-white/50">Chargement de votre cockpit EDGE…</p>;
+  if (data.loading && !data.hasProject && !data.discScores) {
+    return (
+      <EdgePageAmbiance ambiance="profile">
+        <div className={`${APPRENANT_PAGE_SHELL} mx-auto max-w-5xl space-y-8 pb-24 pt-2`}>
+          <div className="h-10 w-64 animate-pulse rounded-lg bg-white/10" />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="min-h-[280px] animate-pulse rounded-3xl bg-white/[0.06]" />
+            <div className="min-h-[280px] animate-pulse rounded-3xl bg-white/[0.06]" />
+          </div>
+          <div className="h-48 animate-pulse rounded-3xl bg-white/[0.05]" />
+        </div>
+      </EdgePageAmbiance>
+    );
   }
 
   const skillsApp = EDGE_APP_BY_ID.skills;
@@ -233,12 +248,18 @@ export function ProfilComportementalReport() {
                       </ul>
                     </div>
                   ) : null}
-                  <Link
-                    href="/dashboard/apprenant"
-                    className={`${CONNECT_BTN_PRIMARY} mt-2 w-fit`}
-                  >
-                    Voir mon plan d&apos;action
-                  </Link>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <Link href="/dashboard/apprenant" className={`${CONNECT_BTN_PRIMARY} w-fit`}>
+                      Voir mon plan d&apos;action
+                    </Link>
+                    <Link
+                      href={PROFIL_EDGE_SECTION_HREFS.projet}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-4 py-2.5 text-[13px] font-semibold text-white/90 transition hover:bg-white/10"
+                    >
+                      Modifier mon objectif
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </>
               ) : (
                 <>
@@ -313,7 +334,7 @@ export function ProfilComportementalReport() {
               Résultats des 3 tests
             </h2>
             <p className="mt-1.5 max-w-xl text-[14px] text-white/40">
-              DISC, IDMC et Soft skills — la base de votre profil EDGE.
+              DISC, IDMC et Soft skills — la base de votre profil.
             </p>
           </div>
           <EdgeTestsRevolutSnapshot
@@ -350,12 +371,14 @@ export function ProfilComportementalReport() {
           <div>
             <p className={APPRENANT_CARD_KICKER}>Pour aller plus loin</p>
             <h2 className="mt-1 text-[1.35rem] font-semibold tracking-[-0.02em] text-white">
-              Micro-formations recommandées
+              Formations alignées sur vos préconisations
             </h2>
             <p className="mt-1.5 max-w-xl text-[14px] text-white/40">
-              {data.hasProject
-                ? `Sélectionné pour votre objectif : ${data.objectiveLabel}`
-                : "Des contenus sélectionnés selon votre profil."}
+              {data.matching?.develop?.length
+                ? `Priorités identifiées : ${[...(data.matching.develop ?? []), ...(data.matching.consolidate ?? [])].slice(0, 3).join(" · ")}`
+                : data.hasProject
+                  ? `Sélection pour votre objectif : ${data.objectiveLabel}`
+                  : "Des contenus sélectionnés selon votre profil."}
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
@@ -374,18 +397,18 @@ export function ProfilComportementalReport() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
-                      EDGE Online · {reco.duree}
+                      Byound Learn · {reco.duree}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-1 flex-col gap-2 p-4">
-                  <h3 className="text-[15px] font-semibold leading-snug text-white">{reco.title}</h3>
-                  {reco.skills.length > 0 ? (
-                    <p className="text-[12px] text-white/40">
-                      Compétences : {reco.skills.slice(0, 3).join(" · ")}
-                    </p>
+                  {reco.skills[0] ? (
+                    <span className="inline-flex w-fit rounded-full border border-[#3D7BFF]/25 bg-[#3D7BFF]/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9EC0FF]">
+                      Préconisation · {reco.skills[0]}
+                    </span>
                   ) : null}
-                  <p className="text-[12px] leading-relaxed text-white/45">{reco.reason}</p>
+                  <h3 className="text-[15px] font-semibold leading-snug text-white">{reco.title}</h3>
+                  <p className="text-[12px] leading-relaxed text-white/55">{reco.reason}</p>
                   <Link
                     href={reco.href}
                     className="mt-auto inline-flex items-center gap-1 pt-2 text-[13px] font-semibold text-[#7BA7FF] transition group-hover:text-white"
@@ -400,7 +423,7 @@ export function ProfilComportementalReport() {
             href={EDGE_ONLINE_APP_SURFACE_PATH}
             className="inline-flex text-[13px] font-medium text-white/40 transition hover:text-[#7BA7FF]"
           >
-            Explorer EDGE Online →
+            Explorer le catalogue Learn →
           </Link>
         </section>
 
@@ -409,7 +432,7 @@ export function ProfilComportementalReport() {
           <div>
             <p className={APPRENANT_CARD_KICKER}>Votre écosystème</p>
             <h2 className="mt-1 text-[1.35rem] font-semibold tracking-[-0.02em] text-white">
-              Applications EDGE
+              Vos applications Byound
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">

@@ -207,7 +207,7 @@ export function ProfilEdgeHardSkillsSection() {
   return (
     <ProfilEdgeSectionShell
       title="Mes compétences"
-      description="Ajoutez les compétences que vous possédez déjà. EDGE les utilise pour personnaliser votre profil et votre parcours."
+      description="Ajoutez les compétences que vous possédez déjà. Byound les utilise pour personnaliser votre profil et votre parcours."
     >
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

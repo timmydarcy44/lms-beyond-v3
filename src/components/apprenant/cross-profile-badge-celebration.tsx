@@ -52,7 +52,7 @@ export function CrossProfileBadgeCelebration({
         <h2 className="mt-3 text-2xl font-bold tracking-tight">Félicitations</h2>
         <p className="mt-4 text-base leading-relaxed text-white/85">
           Vous obtenez votre badge{" "}
-          <span className="font-semibold text-white">{badgeName}</span>. Consultez votre Profil comportemental EDGE
+          <span className="font-semibold text-white">{badgeName}</span>. Consultez votre profil comportemental
           et vos priorités de progression.
         </p>
 

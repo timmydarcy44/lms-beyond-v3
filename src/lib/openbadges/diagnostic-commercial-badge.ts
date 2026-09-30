@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /** UUID fixe — voir migration 20260619100000_diagnostic_commercial_badge.sql */
 export const PROFIL_COMPORTEMENTAL_BADGE_ID = "a1000001-0000-4000-8000-000000000001";
 
-export const PROFIL_COMPORTEMENTAL_BADGE_NAME = "Profil comportemental EDGE";
+export const PROFIL_COMPORTEMENTAL_BADGE_NAME = "Profil comportemental Byound";
 
 /** @deprecated */
 export const DIAGNOSTIC_COMMERCIAL_BADGE_ID = PROFIL_COMPORTEMENTAL_BADGE_ID;

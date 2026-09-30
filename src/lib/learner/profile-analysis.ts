@@ -98,16 +98,38 @@ export function parseStoredProfileAnalysis(raw: unknown): StoredProfileAnalysis 
 }
 
 function bodyToBulletItems(body: string): string[] {
-  const lines = body
+  const cleaned = body.replace(/\*\*[^*]+\*\*/g, "").trim();
+  const lines = cleaned
     .split(/\n/)
-    .map((line) => line.replace(/^[-*•]\s*/, "").replace(/\*\*/g, "").trim())
+    .map((line) => line.replace(/^[-*•]\s*/, "").trim())
     .filter(Boolean);
 
-  if (lines.length > 0) return lines.slice(0, 5);
+  if (lines.length > 1) return lines.slice(0, 5);
 
-  const paragraph = body.replace(/\*\*/g, "").trim();
+  const dashSplit = cleaned
+    .split(/\s+-\s+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 12);
+  if (dashSplit.length >= 2) return dashSplit.slice(0, 5);
+
+  const paragraph = cleaned.trim();
   if (!paragraph) return [];
   return [paragraph];
+}
+
+/** Découpe le markdown aux titres **Section** (ligne seule ou inline). */
+function splitMarkdownByBoldSections(markdown: string): Array<{ title: string; body: string }> {
+  const normalized = markdown.replace(/\r\n/g, "\n").trim();
+  const parts = normalized.split(/\*\*([^*]+)\*\*/);
+  if (parts.length < 3) return [];
+
+  const out: Array<{ title: string; body: string }> = [];
+  for (let i = 1; i < parts.length; i += 2) {
+    const title = parts[i]?.trim() ?? "";
+    const body = parts[i + 1]?.trim() ?? "";
+    if (title) out.push({ title, body });
+  }
+  return out;
 }
 
 function classifyAnalysisSectionTitle(title: string): keyof ParsedProfileAnalysisSections | null {
@@ -124,30 +146,65 @@ export function parseProfileAnalysisSections(markdown: string): ParsedProfileAna
   const sections: Partial<Record<keyof ParsedProfileAnalysisSections, string>> = {};
   const normalized = markdown.replace(/\r\n/g, "\n").trim();
 
-  const boldParts = normalized.split(/\n(?=\*\*[^*]+\*\*\s*$)/m).filter(Boolean);
-  if (boldParts.length > 1 || /^\*\*[^*]+\*\*/m.test(normalized)) {
-    for (const part of boldParts) {
-      const match = part.match(/^\*\*([^*]+)\*\*\s*\n?([\s\S]*)$/);
-      if (!match) continue;
-      const key = classifyAnalysisSectionTitle(match[1].trim());
-      if (key) sections[key] = match[2].trim();
+  const boldSections = splitMarkdownByBoldSections(normalized);
+  if (boldSections.length > 0) {
+    for (const block of boldSections) {
+      const key = classifyAnalysisSectionTitle(block.title);
+      if (key) sections[key] = block.body;
     }
   } else {
-    const parts = normalized.split(/^##\s+/m).filter(Boolean);
-    for (const part of parts) {
-      const newline = part.indexOf("\n");
-      const title = (newline >= 0 ? part.slice(0, newline) : part).trim();
-      const body = (newline >= 0 ? part.slice(newline + 1) : "").trim();
-      const key = classifyAnalysisSectionTitle(title);
-      if (key) sections[key] = body;
+    const boldParts = normalized.split(/\n(?=\*\*[^*]+\*\*\s*$)/m).filter(Boolean);
+    if (boldParts.length > 1 || /^\*\*[^*]+\*\*/m.test(normalized)) {
+      for (const part of boldParts) {
+        const match = part.match(/^\*\*([^*]+)\*\*\s*\n?([\s\S]*)$/);
+        if (!match) continue;
+        const key = classifyAnalysisSectionTitle(match[1].trim());
+        if (key) sections[key] = match[2].trim();
+      }
+    } else {
+      const parts = normalized.split(/^##\s+/m).filter(Boolean);
+      for (const part of parts) {
+        const newline = part.indexOf("\n");
+        const title = (newline >= 0 ? part.slice(0, newline) : part).trim();
+        const body = (newline >= 0 ? part.slice(newline + 1) : "").trim();
+        const key = classifyAnalysisSectionTitle(title);
+        if (key) sections[key] = body;
+      }
     }
   }
 
+  let strengths = bodyToBulletItems(sections.strengths ?? "");
+  let improvements = bodyToBulletItems(sections.improvements ?? "");
+  let summary = sections.summary?.replace(/\*\*/g, "").trim() || null;
+  let orientation = sections.orientation?.replace(/\*\*/g, "").trim() || null;
+
+  // Orientation qui contient encore d'autres rubriques (legacy / mauvais format)
+  if (orientation && orientation.length > 320) {
+    const nested = splitMarkdownByBoldSections(orientation);
+    if (nested.length > 0) {
+      orientation = null;
+      for (const block of nested) {
+        const key = classifyAnalysisSectionTitle(block.title);
+        if (key === "orientation") orientation = block.body.replace(/\*\*/g, "").trim();
+        if (key === "strengths" && !strengths.length) strengths = bodyToBulletItems(block.body);
+        if (key === "improvements" && !improvements.length) {
+          improvements = bodyToBulletItems(block.body);
+        }
+        if (key === "summary" && !summary) summary = block.body.replace(/\*\*/g, "").trim();
+      }
+    }
+  }
+
+  if (orientation && orientation.length > 420) {
+    const sentences = orientation.match(/[^.!?]+[.!?]+/g)?.map((s) => s.trim()) ?? [];
+    orientation = sentences.slice(0, 3).join(" ") || orientation.slice(0, 420).trim() + "…";
+  }
+
   return {
-    strengths: bodyToBulletItems(sections.strengths ?? ""),
-    improvements: bodyToBulletItems(sections.improvements ?? ""),
-    summary: sections.summary?.replace(/\*\*/g, "").trim() || null,
-    orientation: sections.orientation?.replace(/\*\*/g, "").trim() || null,
+    strengths,
+    improvements,
+    summary,
+    orientation: orientation || null,
   };
 }
 
@@ -183,7 +240,7 @@ export async function generateProfileAnalysisText(input: ProfileAnalysisInput): 
       })}`
     : " Matching compétences métiers : non disponible.";
 
-  const prompt = `Tu es un analyste comportemental senior EDGE. Tu rédiges une lecture croisée exigeante.${jobContext}${objectiveContext}
+  const prompt = `Tu es un analyste comportemental senior Byound. Tu rédiges une lecture croisée exigeante.${jobContext}${objectiveContext}
 Les scores ci-dessous sont des matières premières : tu dois les INTERPRÉTER en combinaison (DISC × IDMC × soft skills × compétences métiers), pas les reformuler.
 
 Scores DISC : ${JSON.stringify(input.discScores)}
@@ -206,7 +263,7 @@ Structure la réponse en français avec exactement ces 4 parties, chacune introd
 **Axes d'amélioration**
 (3 à 5 puces. Chaque puce = un risque ou un frein pour l'objectif + ce qu'il faut entraîner. Interdit : « Développer « X » pour élargir votre palette ».)
 
-**Synthèse EDGE**
+**Synthèse**
 (1 paragraphe de 4 à 6 phrases, commence obligatoirement par « Vous êtes ». C'est LA phrase de présentation du profil : portrait psychométrique croisé, dynamique de travail, tension principale, et implication pour l'objectif.
 Interdit formel : lister les soft skills du top 3, répéter « Influent/Dominant/… » sans en tirer une lecture situationnelle, phrases creuses du type « trajectoire cohérente », « complètent votre profil », « matching carrière ».)
 
@@ -224,7 +281,7 @@ ${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
         {
           role: "system",
           content:
-            "Tu es un analyste EDGE senior. Tu croises DISC, IDMC, soft skills et compétences métiers pour produire une lecture décisionnelle. Tu n'énumères jamais des labels déjà visibles. Français vouvoyé, sobre, précis.",
+            "Tu es un analyste Byound senior. Tu croises DISC, IDMC, soft skills et compétences métiers pour produire une lecture décisionnelle. Tu n'énumères jamais des labels déjà visibles. Français vouvoyé, sobre, précis.",
         },
         { role: "user", content: prompt },
       ],

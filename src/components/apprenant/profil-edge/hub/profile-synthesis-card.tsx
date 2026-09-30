@@ -82,7 +82,7 @@ export function ProfileSynthesisCard({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl bg-white/[0.04] px-3 py-3">
-          <p className="text-[12px] text-white/45">Niveau EDGE</p>
+          <p className="text-[12px] text-white/45">Niveau profil</p>
           <p className="mt-1 text-[18px] font-semibold text-white">{level.level}</p>
           <p className="text-[12px] text-white/40">{level.title}</p>
         </div>

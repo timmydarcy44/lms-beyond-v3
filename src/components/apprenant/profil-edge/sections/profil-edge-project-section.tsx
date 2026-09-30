@@ -34,7 +34,7 @@ const STEP_COPY: Record<StepId, { title: string; subtitle: string }> = {
   },
   secteur: {
     title: "Dans quel univers ?",
-    subtitle: "Le secteur affine vos recommandations EDGE.",
+    subtitle: "Le secteur affine vos recommandations.",
   },
   specialite: {
     title: "Une spécialité ?",
@@ -46,7 +46,7 @@ const STEP_COPY: Record<StepId, { title: string; subtitle: string }> = {
   },
   confirm: {
     title: "Votre cap",
-    subtitle: "Vérifiez, puis lancez l’analyse métier EDGE.",
+    subtitle: "Vérifiez, puis lancez l’analyse métier.",
   },
 };
 
@@ -384,11 +384,11 @@ export function ProfilEdgeProjectSection() {
             </div>
             {resolvedTitle ? (
               <p className="text-[12px] text-white/40">
-                Référentiel EDGE : <span className="text-white/70">{resolvedTitle}</span>
+                Référentiel métier : <span className="text-white/70">{resolvedTitle}</span>
               </p>
             ) : (
               <p className="text-[12px] text-white/35">
-                À l’enregistrement, EDGE identifiera le métier le plus pertinent.
+                À l’enregistrement, Byound identifiera le métier le plus pertinent.
               </p>
             )}
             <button

@@ -92,7 +92,7 @@ export function EvolutionAbstractHeroCard({
                 Définissez votre prochaine direction.
               </h2>
               <p className="max-w-md text-[16px] leading-relaxed text-white/70">
-                Indiquez votre objectif professionnel pour que EDGE puisse construire votre
+                Indiquez votre objectif professionnel pour que Byound construise votre
                 progression.
               </p>
               <Link
@@ -110,7 +110,15 @@ export function EvolutionAbstractHeroCard({
               </h2>
 
               <div>
-                <p className="text-[13px] text-white/50">Objectif actuel</p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-[13px] text-white/50">Objectif actuel</p>
+                  <Link
+                    href={PROFIL_EDGE_SECTION_HREFS.projet}
+                    className="text-[13px] font-semibold text-[#9EC0FF] underline-offset-2 hover:underline"
+                  >
+                    Modifier
+                  </Link>
+                </div>
                 <p className="mt-1 text-[1.35rem] font-semibold tracking-[-0.02em] text-white">
                   {objectiveLabel}
                 </p>
@@ -151,7 +159,7 @@ export function EvolutionAbstractHeroCard({
               ) : (
                 <p className="max-w-md text-[15px] leading-relaxed text-white/70">
                   {referentialTitle || hasProject
-                    ? "L’alignement se calcule dès que votre diagnostic EDGE est complet et votre projet enregistré."
+                    ? "L’alignement se calcule dès que vos diagnostics sont complets et votre projet enregistré."
                     : "Complétez votre diagnostic pour activer l’alignement."}
                 </p>
               )}
@@ -168,12 +176,12 @@ export function EvolutionAbstractHeroCard({
               Continuer ma progression
               <ArrowRight className="h-4 w-4" />
             </a>
-            <a
-              href="#plan-action"
+            <Link
+              href={PROFIL_EDGE_SECTION_HREFS.projet}
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/25 bg-white/5 px-5 py-3.5 text-[15px] font-semibold text-white backdrop-blur-sm sm:w-auto"
             >
-              Voir mon plan d&apos;action
-            </a>
+              Modifier mon objectif
+            </Link>
           </div>
         ) : null}
       </div>

@@ -68,6 +68,11 @@ const PROFIL_NAV: ApprenantNavItem[] = [
   },
   { label: "Mon évolution", href: "/dashboard/apprenant", icon: TrendingUp },
   {
+    label: "Mon objectif",
+    href: "/dashboard/apprenant/profil-comportemental/projet",
+    icon: Briefcase,
+  },
+  {
     label: "Identité",
     href: "/dashboard/apprenant/profil-comportemental/identite",
     icon: UserCircle,

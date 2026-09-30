@@ -445,6 +445,9 @@ export function ApprenantDashboardClient({
           if (profileData) {
             setOnboardingForm(mapProfileToOnboardingForm(profileData as Record<string, unknown>));
           }
+          if (initialView === "home") {
+            setIsLoading(false);
+          }
           try {
             const first = String(profileData.first_name ?? metaFirstName ?? "").trim();
             const last = String(profileData.last_name ?? metaLastName ?? "").trim();
@@ -486,12 +489,9 @@ export function ApprenantDashboardClient({
             setHardSkills([]);
           }
           try {
-            const { data: analysisData } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", userId)
-              .maybeSingle();
-            const storedAnalysis = parseStoredProfileAnalysis(analysisData?.ai_analysis);
+            const storedAnalysis = parseStoredProfileAnalysis(
+              profileData ? (profileData as Record<string, unknown>).ai_analysis : null,
+            );
             if (storedAnalysis?.text?.trim()) {
               setAiAnalysis(storedAnalysis.text);
               setAiAnalysisUpdatedAt(storedAnalysis.updatedAt ?? null);
@@ -499,11 +499,12 @@ export function ApprenantDashboardClient({
                 lastAnalysisSignatureRef.current = storedAnalysis.testsSignature;
               }
             }
-            const experiences = Array.isArray(analysisData?.experience)
-              ? (analysisData?.experience as Array<Record<string, unknown>>)
+            const profileRecord = profileData as Record<string, unknown> | null;
+            const experiences = Array.isArray(profileRecord?.experience)
+              ? (profileRecord.experience as Array<Record<string, unknown>>)
               : [];
-            const educations = Array.isArray(analysisData?.education)
-              ? (analysisData?.education as Array<Record<string, unknown>>)
+            const educations = Array.isArray(profileRecord?.education)
+              ? (profileRecord.education as Array<Record<string, unknown>>)
               : [];
             setExperiencePreview(experiences.slice(0, 2));
             setEducationPreview(educations.slice(0, 1));
@@ -652,7 +653,7 @@ export function ApprenantDashboardClient({
       }
     };
     load();
-  }, [supabase, isSalarieSurface]);
+  }, [supabase, isSalarieSurface, initialView]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

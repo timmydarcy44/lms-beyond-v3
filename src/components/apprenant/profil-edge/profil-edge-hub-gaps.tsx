@@ -307,7 +307,7 @@ export function ProfilEdgeHubGaps({ matching, objectiveLabel }: Props) {
                   {EDGE_MISSION_LABEL}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-white/70">
-                  Le Coach EDGE prépare une mission contextualisée pour développer « {selected.name} » : mise en
+                  Le coach Byound prépare une mission contextualisée pour développer « {selected.name} » : mise en
                   situation, personnages, objectif pédagogique. Chaque mission est unique.
                 </p>
                 <Link

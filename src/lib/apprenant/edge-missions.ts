@@ -4,13 +4,13 @@
 
 import type { MissionFormatId } from "@/lib/apprenant/edge-mission-types";
 
-export const EDGE_MISSION_LABEL = "Mission EDGE";
+export const EDGE_MISSION_LABEL = "Mission Byound";
 
 export const EDGE_MISSION_TERMS = {
-  mission: "Mission EDGE",
-  coach: "Coach EDGE",
+  mission: "Mission Byound",
+  coach: "Coach Byound",
   session: "Session interactive",
-  validation: "Validation EDGE",
+  validation: "Validation Byound",
 } as const;
 
 export type MissionMechanic = {

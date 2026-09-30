@@ -134,7 +134,7 @@ export function buildCockpitNextAction(params: {
       title: `Développez votre ${develop.toLowerCase()}`,
       body: params.hasProject
         ? "Cette compétence est importante pour votre objectif professionnel."
-        : "Cette compétence renforce votre empreinte EDGE.",
+        : "Cette compétence renforce votre profil.",
       ctaLabel: "S'entraîner dans Skills",
       href: `/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(develop)}`,
     };
@@ -154,8 +154,8 @@ export function buildCockpitNextAction(params: {
 
   if (params.testsDone < 3) {
     return {
-      title: "Complétez vos tests EDGE",
-      body: "DISC, IDMC et Soft skills alimentent votre empreinte et vos recommandations.",
+      title: "Complétez vos diagnostics",
+      body: "DISC, IDMC et Soft skills alimentent votre profil et vos recommandations.",
       ctaLabel: "Voir mes tests",
       href: "/dashboard/apprenant/profil-comportemental/tests",
     };
@@ -171,7 +171,7 @@ export function buildCockpitNextAction(params: {
   }
 
   return {
-    title: "Explorez EDGE Skills",
+    title: "Explorez Byound Skills",
     body: "Entraînez une compétence et prouvez ce que vous savez faire.",
     ctaLabel: "Ouvrir Skills",
     href: "/dashboard/apprenant/skills",
@@ -182,38 +182,72 @@ export function buildOnlineRecommendations(params: {
   objectiveLabel: string;
   matching: CareerMatchingResult | null;
   softSkillsRadar: Array<{ skill: string; score: number }>;
+  /** Compétences issues de la lecture croisée / matching (préconisations). */
+  preconisationSkills?: string[];
 }): OnlineReco[] {
-  const keywords = [
+  const gapSkills = [
+    ...(params.preconisationSkills ?? []),
     ...(params.matching?.develop ?? []),
     ...(params.matching?.consolidate ?? []),
-    ...params.softSkillsRadar.filter((s) => s.score < 55).map((s) => s.skill),
-    params.objectiveLabel,
-  ].filter(Boolean);
+    params.matching?.nextPriority?.skill ?? "",
+  ]
+    .map((s) => String(s ?? "").trim())
+    .filter(Boolean);
 
-  const matched = matchParcoursForKeywords(keywords);
-  const featured = getFeaturedCatalogFormations(4);
-  const bySlug = new Map<string, CatalogFormationPreview>();
-  for (const item of [...matched, ...featured]) {
-    if (!bySlug.has(item.slug)) bySlug.set(item.slug, item);
+  const uniqueGaps = [...new Set(gapSkills)].slice(0, 4);
+  const softGaps = params.softSkillsRadar.filter((s) => s.score < 55).map((s) => s.skill);
+  const featured = getFeaturedCatalogFormations(6);
+  const usedSlugs = new Set<string>();
+  const recos: OnlineReco[] = [];
+
+  for (const skill of uniqueGaps) {
+    const matched = matchParcoursForKeywords([skill, params.objectiveLabel, ...softGaps]);
+    const pick = matched.find((m) => !usedSlugs.has(m.slug)) ?? null;
+    const formation = pick ?? featured.find((f) => !usedSlugs.has(f.slug));
+    if (!formation) continue;
+    usedSlugs.add(formation.slug);
+    recos.push({
+      ...formation,
+      href: formation.href.includes("edge-lab") ? formation.href : `/edgeonline`,
+      reason: `Recommandé pour travailler « ${skill} », identifié dans vos préconisations de progression.`,
+      skills: [skill],
+      image: formation.image,
+    });
+    if (recos.length >= 3) break;
   }
-  const base = Array.from(bySlug.values()).slice(0, 3);
-  const gapSkill = params.matching?.develop?.[0] ?? params.matching?.consolidate?.[0] ?? null;
 
-  return base.map((item, idx) => {
-    let reason = "Sélectionné pour enrichir votre parcours EDGE.";
-    if (gapSkill && idx === 0) {
-      reason = `Cette compétence est importante pour combler un écart identifié (${gapSkill}).`;
-    } else if (params.objectiveLabel) {
-      reason = `Recommandé pour votre objectif « ${params.objectiveLabel} ».`;
+  if (recos.length < 3) {
+    const keywords = [...uniqueGaps, ...softGaps, params.objectiveLabel].filter(Boolean);
+    for (const item of matchParcoursForKeywords(keywords)) {
+      if (usedSlugs.has(item.slug)) continue;
+      usedSlugs.add(item.slug);
+      recos.push({
+        ...item,
+        href: item.href.includes("edge-lab") ? item.href : `/edgeonline`,
+        reason: params.objectiveLabel
+          ? `Complète votre parcours vers « ${params.objectiveLabel} ».`
+          : "Sélectionné pour enrichir votre parcours.",
+        skills: uniqueGaps.slice(0, 2).length ? uniqueGaps.slice(0, 2) : [item.famille],
+        image: item.image,
+      });
+      if (recos.length >= 3) break;
     }
-    return {
+  }
+
+  for (const item of featured) {
+    if (recos.length >= 3) break;
+    if (usedSlugs.has(item.slug)) continue;
+    usedSlugs.add(item.slug);
+    recos.push({
       ...item,
       href: item.href.includes("edge-lab") ? item.href : `/edgeonline`,
-      reason,
-      skills: gapSkill && idx === 0 ? [gapSkill] : [item.famille].filter(Boolean),
+      reason: "Formation phare du catalogue Byound Learn.",
+      skills: [item.famille],
       image: item.image,
-    };
-  });
+    });
+  }
+
+  return recos.slice(0, 3);
 }
 
 export function countProvedSkills(

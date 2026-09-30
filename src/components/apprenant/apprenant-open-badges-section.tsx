@@ -10,7 +10,7 @@ export function ApprenantOpenBadgesSection({ badges }: { badges: LearnerVisibleO
     <section className={APPRENANT_CARD_BODY}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className={APPRENANT_CARD_KICKER}>Open Badges EDGE</p>
+          <p className={APPRENANT_CARD_KICKER}>Open Badges Byound</p>
           <h2 className="text-base font-semibold text-white sm:text-lg">Certifications à obtenir</h2>
         </div>
         <span className="text-[10px] text-white/40">

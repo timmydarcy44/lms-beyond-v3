@@ -13,7 +13,7 @@ export function ApprenantEdgeWalletSection({ badges }: { badges: LearnerEarnedOp
     <section className={APPRENANT_CARD_BODY}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className={APPRENANT_CARD_KICKER}>EDGE Wallet</p>
+          <p className={APPRENANT_CARD_KICKER}>Byound Wallet</p>
           <h2 className="text-base font-semibold text-white sm:text-lg">Badges obtenus</h2>
         </div>
         <Link

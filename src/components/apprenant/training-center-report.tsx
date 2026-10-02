@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Award, Dumbbell, FileCheck2, Play } from "lucide-react";
 
@@ -17,6 +17,7 @@ import { useProfilEdgeHub } from "@/components/apprenant/profil-edge/profil-edge
 import { APPRENANT_PAGE_SHELL, CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
 import { PROFIL_EDGE_SECTION_HREFS } from "@/lib/particulier/profil-edge-maturity";
 import { encodeSkillParam } from "@/lib/apprenant/edge-skills-center";
+import { cn } from "@/lib/utils";
 
 const QUICK_ACTIONS = [
   { label: "Exercices", href: "/dashboard/apprenant/skills/entrainement", icon: Dumbbell },
@@ -29,6 +30,7 @@ const SHELL = `${APPRENANT_PAGE_SHELL} mx-auto w-full max-w-6xl`;
 export function TrainingCenterReport() {
   const data = useProfilEdgeHub();
   const [selected, setSelected] = useState<CoachingSkill | null>(null);
+  const [, startTransition] = useTransition();
 
   const coaching = useMemo(() => {
     if (!data.matching) return null;
@@ -45,7 +47,11 @@ export function TrainingCenterReport() {
   const referentialTitle = data.selectedCareer?.title ?? data.objectiveLabel;
 
   const handleSelectRow = (item: TrainingCenterSkillRow) => {
-    setSelected(item.coaching);
+    startTransition(() => setSelected(item.coaching));
+  };
+
+  const closeDetail = () => {
+    startTransition(() => setSelected(null));
   };
 
   if (data.loading && !data.discScores) {
@@ -79,23 +85,9 @@ export function TrainingCenterReport() {
     );
   }
 
-  if (selected) {
-    return (
-      <EdgePageAmbiance ambiance="evolution">
-        <div className={`${SHELL} max-w-4xl pb-24 pt-2`}>
-          <SkillUniverseView
-            skill={selected}
-            objectiveLabel={data.objectiveLabel}
-            onBack={() => setSelected(null)}
-          />
-        </div>
-      </EdgePageAmbiance>
-    );
-  }
-
   return (
     <EdgePageAmbiance ambiance="evolution">
-      <div className={`${SHELL} space-y-8 pb-24 pt-1`}>
+      <div className={cn(SHELL, "space-y-8 pb-24 pt-1", selected && "max-lg:overflow-hidden")}>
         <header className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.05] to-transparent px-5 py-5 sm:px-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0 flex-1">
@@ -159,43 +151,76 @@ export function TrainingCenterReport() {
           ) : null}
         </header>
 
-        <div className="flex flex-wrap gap-2">
-          {QUICK_ACTIONS.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2.5 text-[13px] font-semibold text-white/85 transition hover:bg-white/[0.08]"
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </Link>
-          ))}
-        </div>
-
-        {!matching || !skillRows.length ? (
-          <div className="rounded-2xl border border-dashed border-white/15 px-5 py-8 text-[14px] text-white/50">
-            Enregistrez votre{" "}
-            <Link href={PROFIL_EDGE_SECTION_HREFS.projet} className="font-semibold text-[#9EC0FF]">
-              objectif professionnel
-            </Link>{" "}
-            pour afficher l&apos;ensemble des compétences du référentiel métier.
-          </div>
-        ) : (
-          <>
-            <TrainingCenterSkillsCockpit rows={skillRows} onSelect={handleSelectRow} />
-
-            {coaching?.priorities[0] ? (
+        <div
+          className={cn(
+            "transition-[opacity,filter] duration-200",
+            selected && "pointer-events-none opacity-[0.35] max-lg:blur-[2px]",
+          )}
+        >
+          <div className="flex flex-wrap gap-2">
+            {QUICK_ACTIONS.map(({ label, href, icon: Icon }) => (
               <Link
-                href={`/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(coaching.priorities[0].name)}`}
-                className={`${CONNECT_BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 py-3.5 sm:w-auto sm:min-w-[280px]`}
+                key={href}
+                href={href}
+                prefetch
+                className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2.5 text-[13px] font-semibold text-white/85 transition hover:bg-white/[0.08]"
               >
-                <Play className="h-4 w-4" />
-                Prochain exercice · {coaching.priorities[0].name}
+                <Icon className="h-3.5 w-3.5" />
+                {label}
               </Link>
-            ) : null}
-          </>
-        )}
+            ))}
+          </div>
+
+          {!matching || !skillRows.length ? (
+            <div className="mt-8 rounded-2xl border border-dashed border-white/15 px-5 py-8 text-[14px] text-white/50">
+              Enregistrez votre{" "}
+              <Link href={PROFIL_EDGE_SECTION_HREFS.projet} className="font-semibold text-[#9EC0FF]">
+                objectif professionnel
+              </Link>{" "}
+              pour afficher l&apos;ensemble des compétences du référentiel métier.
+            </div>
+          ) : (
+            <div className="mt-8 space-y-8">
+              <TrainingCenterSkillsCockpit rows={skillRows} onSelect={handleSelectRow} />
+
+              {coaching?.priorities[0] ? (
+                <Link
+                  href={`/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(coaching.priorities[0].name)}`}
+                  prefetch
+                  className={`${CONNECT_BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 py-3.5 sm:w-auto sm:min-w-[280px]`}
+                >
+                  <Play className="h-4 w-4" />
+                  Prochain exercice · {coaching.priorities[0].name}
+                </Link>
+              ) : null}
+            </div>
+          )}
+        </div>
       </div>
+
+      {selected ? (
+        <div className="fixed inset-0 z-[140] flex justify-end lg:z-[120]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
+            onClick={closeDetail}
+            aria-label="Fermer"
+          />
+          <aside
+            className="relative flex h-full w-full max-w-lg flex-col border-l border-white/10 bg-[#0e1018] shadow-2xl animate-in slide-in-from-right duration-200 lg:max-w-xl"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+              <SkillUniverseView
+                skill={selected}
+                objectiveLabel={data.objectiveLabel}
+                onBack={closeDetail}
+              />
+            </div>
+          </aside>
+        </div>
+      ) : null}
     </EdgePageAmbiance>
   );
 }

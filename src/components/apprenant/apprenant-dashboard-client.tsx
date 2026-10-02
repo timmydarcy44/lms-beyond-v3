@@ -50,7 +50,7 @@ const TrainingCenterReport = dynamic(
     import("@/components/apprenant/training-center-report").then((m) => ({
       default: m.TrainingCenterReport,
     })),
-  { ssr: false },
+  { ssr: false, loading: () => null },
 );
 import {
   ApprenantAssessmentResults,

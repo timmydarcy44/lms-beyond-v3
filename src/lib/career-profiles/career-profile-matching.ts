@@ -1,5 +1,6 @@
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import type { CareerProfile } from "@/lib/career-profiles/career-profiles-data";
+import { dedupeCareerExpectedSkills } from "@/lib/career-profiles/dedupe-career-skills";
 import { analyzeCareerFit } from "@/lib/career-profiles/career-profile-analysis";
 import type { Diplome, ExperiencePro, HardSkillLevel, LearnerHardSkillMeta } from "@/lib/particulier/profil-edge-maturity";
 import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
@@ -93,7 +94,8 @@ function normalizeSkill(s: string): string {
 }
 
 function careerExpectedSkills(career: CareerProfile): string[] {
-  return [...new Set([...career.key_skills, ...career.soft_skills, ...career.behavioral_expectations])];
+  const merged = [...career.key_skills, ...career.soft_skills, ...career.behavioral_expectations];
+  return dedupeCareerExpectedSkills([...new Set(merged)]);
 }
 
 function softScoreToLabel(score: number): { label: SkillLevelLabel; tone: CareerSkillRow["tone"] } {

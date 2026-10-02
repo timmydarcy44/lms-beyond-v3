@@ -70,7 +70,7 @@ export function EvolutionAbstractHeroCard({
       <div className="relative z-[1] flex min-h-[420px] flex-col justify-between gap-8 p-6 sm:p-8 md:max-w-[58%] md:p-10">
         <div>
           <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/55">
-            Mon évolution
+            Votre évolution
           </p>
 
           {error && !matching && !hasProject && !loading ? (
@@ -169,13 +169,13 @@ export function EvolutionAbstractHeroCard({
 
         {!loading && !error && hasProject ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a
-              href="#ma-mission"
+            <Link
+              href="/dashboard/apprenant"
               className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#3D7BFF] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_10px_28px_-10px_rgba(61,123,255,0.65)] sm:w-auto"
             >
-              Continuer ma progression
+              Training center
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
             <Link
               href={PROFIL_EDGE_SECTION_HREFS.projet}
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/25 bg-white/5 px-5 py-3.5 text-[15px] font-semibold text-white backdrop-blur-sm sm:w-auto"

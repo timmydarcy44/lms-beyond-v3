@@ -6,6 +6,8 @@ import { ArrowRight, Check } from "lucide-react";
 
 import { EdgePageAmbiance } from "@/components/apprenant/edge-page-ambiance";
 import { EdgeTestsRevolutSnapshot } from "@/components/apprenant/edge-tests-revolut-snapshot";
+import { EvolutionAbstractHeroCard } from "@/components/apprenant/profil-edge/hub/evolution-abstract-hero-card";
+import { ExpertCoachingCard } from "@/components/apprenant/profil-edge/hub/expert-coaching-card";
 import { useProfilEdgeHub } from "@/components/apprenant/profil-edge/profil-edge-hub-provider";
 import {
   APPRENANT_CARD_KICKER,
@@ -250,7 +252,7 @@ export function ProfilComportementalReport() {
                   ) : null}
                   <div className="mt-2 flex flex-wrap items-center gap-3">
                     <Link href="/dashboard/apprenant" className={`${CONNECT_BTN_PRIMARY} w-fit`}>
-                      Voir mon plan d&apos;action
+                      Ouvrir le Training center
                     </Link>
                     <Link
                       href={PROFIL_EDGE_SECTION_HREFS.projet}
@@ -326,6 +328,18 @@ export function ProfilComportementalReport() {
           </div>
         </section>
 
+        {data.discScores ? (
+          <section className="space-y-6">
+            <EvolutionAbstractHeroCard
+              objectiveLabel={data.objectiveLabel}
+              referentialTitle={data.selectedCareer?.title ?? null}
+              matching={data.matching}
+              hasProject={data.hasProject}
+            />
+            {data.matching && data.selectedCareer ? <ExpertCoachingCard /> : null}
+          </section>
+        ) : null}
+
         {/* Résultats des 3 tests */}
         <section className="space-y-4">
           <div>
@@ -334,7 +348,7 @@ export function ProfilComportementalReport() {
               Résultats des 3 tests
             </h2>
             <p className="mt-1.5 max-w-xl text-[14px] text-white/40">
-              DISC, IDMC et Soft skills — la base de votre profil.
+              DISC, IDMC et l&apos;ensemble de vos soft skills classés — la base de votre profil.
             </p>
           </div>
           <EdgeTestsRevolutSnapshot

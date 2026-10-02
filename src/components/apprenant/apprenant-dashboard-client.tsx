@@ -45,10 +45,10 @@ const EdgeDashboardGpsContainer = dynamic(
     })),
   { ssr: false },
 );
-const MonEvolutionReport = dynamic(
+const TrainingCenterReport = dynamic(
   () =>
-    import("@/components/apprenant/mon-evolution-report").then((m) => ({
-      default: m.MonEvolutionReport,
+    import("@/components/apprenant/training-center-report").then((m) => ({
+      default: m.TrainingCenterReport,
     })),
   { ssr: false },
 );
@@ -1310,7 +1310,7 @@ export function ApprenantDashboardClient({
             <>
           {!isSalarieSurface && appShell?.variant !== "jessica" && isParticulierUser ? (
             <Suspense fallback={<div className="mb-8 h-40 animate-pulse rounded-2xl bg-white/[0.04]" />}>
-              <MonEvolutionReport />
+              <TrainingCenterReport />
             </Suspense>
           ) : null}
 
@@ -1333,11 +1333,7 @@ export function ApprenantDashboardClient({
             </Suspense>
           ) : null}
 
-          {isParticulierUser && appShell?.variant !== "jessica" ? (
-            <section className="mt-10 space-y-8">
-              <PersonalizedActionPlanSection plan={personalizedPlan} className="opacity-90" />
-            </section>
-          ) : (
+          {isParticulierUser && appShell?.variant !== "jessica" ? null : (
           <section
             id="dashboard-secondary-modules"
             className={

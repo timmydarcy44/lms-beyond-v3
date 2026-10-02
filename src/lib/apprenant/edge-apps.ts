@@ -66,7 +66,7 @@ const PROFIL_NAV: ApprenantNavItem[] = [
     href: "/dashboard/apprenant/profil-comportemental",
     icon: LayoutDashboard,
   },
-  { label: "Mon évolution", href: "/dashboard/apprenant", icon: TrendingUp },
+  { label: "Training center", href: "/dashboard/apprenant", icon: TrendingUp },
   {
     label: "Mon objectif",
     href: "/dashboard/apprenant/profil-comportemental/projet",

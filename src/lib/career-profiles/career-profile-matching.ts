@@ -173,7 +173,8 @@ function diplomaMentionsSkill(skill: string, diplomas: Diplome[]): boolean {
   });
 }
 
-function rowToNumericScore(row: CareerSkillRow): number | null {
+/** Score 0–100 estimé pour une ligne du référentiel (null si non mesuré). */
+export function careerSkillMasteryPercent(row: CareerSkillRow): number | null {
   if (row.userLevel === "Non évaluée" || row.userLevel === "Non renseigné") return null;
   if (row.userLevel === "Excellent") return 95;
   if (row.userLevel === "Très bon") return 85;
@@ -181,6 +182,28 @@ function rowToNumericScore(row: CareerSkillRow): number | null {
   if (row.userLevel === "Moyen") return 55;
   if (row.userLevel === "À renforcer") return 35;
   return null;
+}
+
+function rowToNumericScore(row: CareerSkillRow): number | null {
+  return careerSkillMasteryPercent(row);
+}
+
+export function careerSkillBucketForMatching(
+  skillName: string,
+  matching: CareerMatchingResult,
+): CareerSkillBucket {
+  if (matching.strengths.includes(skillName)) return "strength";
+  if (matching.develop.includes(skillName)) return "develop";
+  if (matching.consolidate.includes(skillName)) return "consolidate";
+  if (matching.unevaluated.includes(skillName)) return "unevaluated";
+  return classifySkillRow(
+    matching.skillTable.find((r) => r.skill === skillName) ?? {
+      skill: skillName,
+      userLevel: "Non évaluée",
+      tone: "gray",
+      source: "—",
+    },
+  );
 }
 
 function scoreToPercent(scores: number[]): number {

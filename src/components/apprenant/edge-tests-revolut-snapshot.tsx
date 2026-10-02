@@ -27,7 +27,8 @@ import {
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
 import { CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
 import { CrossReadingPanel } from "@/components/apprenant/cross-reading-panel";
-import { cn } from "@/lib/utils";
+import { SoftSkillsRankingList } from "@/components/apprenant/soft-skills-ranking-list";
+import { sortSoftSkillsDescending } from "@/lib/soft-skills/resolve-soft-skills-result";
 
 const DISC_COLORS: Record<keyof DiscScores, string> = {
   D: "#EF4444",
@@ -118,11 +119,6 @@ function buildLocalOrientation(
       : `${suggestionSkills.slice(0, -1).join(", ")} et ${suggestionSkills[suggestionSkills.length - 1]}`;
 
   return `${head} À la lecture des compétences métiers, nous vous suggérons de travailler en priorité ${list}, car ce sont les écarts les plus directs par rapport au référentiel du métier cible.`;
-}
-
-function softScoreMax(scores: number[]): number {
-  const max = Math.max(0, ...scores);
-  return max > 15 ? 100 : 15;
 }
 
 function buildLocalSections(params: {
@@ -322,8 +318,7 @@ export function EdgeTestsRevolutSnapshot({
   );
 
   const disc = discScores ? resolveDiscProfile(discScores) : null;
-  const softSorted = [...softSkillsRadar].sort((a, b) => b.score - a.score);
-  const softMax = softScoreMax(softSorted.map((s) => s.score));
+  const softSorted = sortSoftSkillsDescending(softSkillsRadar);
   const idmcSorted = hasMeaningfulIdmcAxes(idmcAxes)
     ? IDMC_AXIS_KEYS.map((key) => ({
         key,
@@ -447,49 +442,19 @@ export function EdgeTestsRevolutSnapshot({
           Compétences
         </p>
         <h3 className="mt-1 text-[1.15rem] font-semibold text-white">
-          Soft skills — classement
+          Soft skills — classement complet
         </h3>
         {softSorted.length ? (
-          <div className="mt-5 space-y-3">
-            <ul className="space-y-2.5">
-              {softSorted.map((item, index) => (
-                <li key={item.skill} className="flex items-center gap-3">
-                  <span
-                    className={cn(
-                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
-                      index === 0
-                        ? "bg-[#3D7BFF] text-white"
-                        : "bg-white/10 text-white/60",
-                    )}
-                  >
-                    {index + 1}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-white/85">
-                    {item.skill}
-                  </span>
-                  <span className="shrink-0 text-[12px] font-semibold tabular-nums text-white/70">
-                    {Math.round(item.score)}/{softMax}
-                  </span>
-                  <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-white/10 sm:block">
-                    <div
-                      className="h-full rounded-full bg-[#3D7BFF]"
-                      style={{
-                        width: `${softMax ? Math.min(100, (item.score / softMax) * 100) : 0}%`,
-                      }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <div className="mt-5 space-y-4">
+            <SoftSkillsRankingList
+              items={softSorted}
+              variant="revolut"
+              synthesisHref="/soft-skills/resultats?from=apprenant"
+              synthesisLabel="Détail du test et synthèse IA"
+            />
             <p className="text-[13px] leading-relaxed text-white/50">
               {buildSoftSkillsObservation(softSorted, firstName)}
             </p>
-            <Link
-              href="/soft-skills/resultats?from=apprenant"
-              className="inline-flex text-[13px] font-semibold text-[#9EC0FF]"
-            >
-              Voir la synthèse soft skills
-            </Link>
           </div>
         ) : (
           <TestExplainerCard explainer={TEST_EXPLAINERS.soft} />

@@ -45,7 +45,7 @@ export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNav
   void hasOrganisation;
   return [
     { label: "Vue d'ensemble", href: "/dashboard/apprenant/profil-comportemental", icon: UserCircle },
-    { label: "Mon évolution", href: "/dashboard/apprenant", icon: LayoutDashboard },
+    { label: "Training center", href: "/dashboard/apprenant", icon: LayoutDashboard },
     {
       label: "Mon objectif",
       href: "/dashboard/apprenant/profil-comportemental/projet",

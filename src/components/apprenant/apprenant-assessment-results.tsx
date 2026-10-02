@@ -14,12 +14,14 @@ import {
 import { sanitizeProfileAnalysisTone } from "@/lib/learner/profile-analysis-tone";
 import { resolveDiscProfile } from "@/lib/disc/disc-scoring";
 import { ProfileAnalysisOverlay } from "@/components/apprenant/profile-analysis-overlay";
+import { SoftSkillsRankingList } from "@/components/apprenant/soft-skills-ranking-list";
 import {
   APPRENANT_CARD_BODY,
   APPRENANT_CARD_KICKER,
   CONNECT_BTN_PRIMARY,
   CONNECT_BTN_SECONDARY,
 } from "@/lib/apprenant/connect-nav";
+import { sortSoftSkillsDescending } from "@/lib/soft-skills/resolve-soft-skills-result";
 
 export type DiscScores = { D: number; I: number; S: number; C: number };
 
@@ -177,8 +179,7 @@ export function ApprenantAssessmentResults({
   const resultCard = cockpit ? APPRENANT_CARD_BODY : RESULT_CARD_LIGHT;
   const resultsSection = cockpit ? APPRENANT_CARD_BODY : RESULTS_SECTION_LIGHT;
   const [analysisOpen, setAnalysisOpen] = useState(false);
-  const topSoft = [...softSkillsRadar].sort((a, b) => b.score - a.score).slice(0, compact ? 5 : 10);
-  const softMax = topSoft.length ? Math.max(...topSoft.map((i) => i.score)) : 0;
+  const softSorted = sortSoftSkillsDescending(softSkillsRadar);
   const hasCorrelatedAnalysis = Boolean(
     correlatedAnalysis &&
       (typeof correlatedAnalysis === "string"
@@ -302,48 +303,17 @@ export function ApprenantAssessmentResults({
         <h3 className={`mt-1 text-base font-semibold ${cockpit ? "text-white" : "text-[#0a0a0a]"}`}>
           {firstName ? `Soft skills — ${firstName}` : "Soft skills"}
         </h3>
-        {topSoft.length ? (
+        {softSorted.length ? (
           <div className="mt-4 space-y-3">
-            <ul className="space-y-2.5">
-              {topSoft.map((item, index) => (
-                <li key={item.skill} className="flex items-center gap-3 text-sm">
-                  <span
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-                    style={{
-                      backgroundColor: cockpit ? COCKPIT_ACCENT_BG : "rgba(255,59,48,0.1)",
-                      color: cockpit ? COCKPIT_ACCENT : "#FF3B30",
-                    }}
-                  >
-                    {index + 1}
-                  </span>
-                  <span className={`min-w-0 flex-1 truncate ${cockpit ? "text-white/80" : "text-black/80"}`}>
-                    {item.skill}
-                  </span>
-                  <span
-                    className={`shrink-0 text-xs font-semibold tabular-nums ${cockpit ? "text-white/70" : "text-black/60"}`}
-                  >
-                    {item.score}/15
-                  </span>
-                  <div
-                    className={`hidden h-1.5 w-16 overflow-hidden rounded-full sm:block ${cockpit ? "bg-white/10" : "bg-black/10"}`}
-                  >
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${softMax ? (item.score / softMax) * 100 : 0}%`,
-                        backgroundColor: cockpit ? COCKPIT_ACCENT : "#FF3B30",
-                      }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <Observation cockpit={cockpit}>{buildSoftSkillsObservation(topSoft, firstName)}</Observation>
-            {!publicMode ? (
-              <Link href={softResultsHref} className={openAnalysisCtaClass}>
-                Relire la synthèse soft skills
-              </Link>
-            ) : null}
+            <SoftSkillsRankingList
+              items={softSorted}
+              variant={cockpit ? "cockpit" : "light"}
+              synthesisHref={publicMode ? null : softResultsHref}
+              synthesisLabel="Détail du test et synthèse IA"
+            />
+            <Observation cockpit={cockpit}>
+              {buildSoftSkillsObservation(softSorted, firstName)}
+            </Observation>
             {hasCorrelatedAnalysis && !publicMode ? (
               <button type="button" onClick={() => setAnalysisOpen(true)} className={secondaryCtaClass}>
                 Relire la synthèse croisée

@@ -10,13 +10,13 @@ export function ExpertCoachingCard() {
     <HubSurface tone="violet" className="space-y-6">
       <div>
         <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-white/65">
-          Accompagnement EDGE
+          Accompagnement Byound
         </p>
         <h2 className="mt-3 text-[1.65rem] font-bold leading-[1.15] tracking-[-0.035em] text-white sm:text-[1.9rem]">
-          Construisez votre parcours avec un spécialiste EDGE
+          Construisez votre parcours avec un expert
         </h2>
         <p className="mt-4 text-[15px] leading-relaxed text-white/80">
-          Pendant un entretien individuel de 60 minutes, un expert EDGE :
+          Pendant un entretien individuel de 60 minutes, un expert Byound :
         </p>
         <ul className="mt-3 space-y-2 text-[15px] leading-relaxed text-white/85">
           <li className="flex gap-2">
@@ -25,7 +25,7 @@ export function ExpertCoachingCard() {
           </li>
           <li className="flex gap-2">
             <span className="text-white/50">•</span>
-            <span>relit vos résultats EDGE</span>
+            <span>relit vos diagnostics</span>
           </li>
           <li className="flex gap-2">
             <span className="text-white/50">•</span>

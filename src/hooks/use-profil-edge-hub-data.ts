@@ -36,6 +36,11 @@ import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-na
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { fetchIdmcAxesForCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
 import { collectLearnerProfileCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
+import {
+  fetchLatestSoftSkillsResult,
+  parseSoftSkillsScoreEntries,
+  sortSoftSkillsDescending,
+} from "@/lib/soft-skills/resolve-soft-skills-result";
 
 async function loadCareerBySlug(slug: string): Promise<CareerProfile | null> {
   try {
@@ -156,7 +161,9 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
         ? (parseStoredDiscScores(snap.discScores as Record<string, unknown>) as DiscScores | null)
         : null;
       snapIdmcAxes = snap.idmcAxes ? normalizeIdmcAxesRecord(snap.idmcAxes) : null;
-      snapSoftRadar = Array.isArray(snap.softSkillsRadar) ? snap.softSkillsRadar : [];
+      snapSoftRadar = sortSoftSkillsDescending(
+        Array.isArray(snap.softSkillsRadar) ? snap.softSkillsRadar : [],
+      );
     };
 
     // Snapshot + tables en parallèle (évite waterfall snapshot → queries)
@@ -176,8 +183,6 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
 
     const snapHasDisc = Boolean(existingSnap?.discScores);
     const snapHasIdmc = Boolean(existingSnap?.idmcAxes);
-    const snapHasSoft = (existingSnap?.softSkillsRadar?.length ?? 0) > 0;
-
     const [snapPayload, profileRes, discRes, idmcRes, softRes, expRes, dipRes] = await Promise.all([
       snapshotPromise,
       supabase
@@ -193,9 +198,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       snapHasIdmc
         ? Promise.resolve({ data: null, error: null })
         : supabase.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
-      snapHasSoft
-        ? Promise.resolve({ data: null, error: null })
-        : supabase.from("soft_skills_resultats").select("scores").eq("learner_id", uid).maybeSingle(),
+      fetchLatestSoftSkillsResult(supabase, uid, "scores, taken_at"),
       supabase.from("experiences_pro").select("*").eq("learner_id", uid),
       supabase.from("diplomes").select("*").eq("learner_id", uid),
     ]);
@@ -269,13 +272,12 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     setIdmcAxes(resolvedIdmcAxes);
     setHasIdmc(Boolean(resolvedIdmcAxes));
 
-    let resolvedRadar = snapSoftRadar;
-    if (!resolvedRadar.length && softRes.data?.scores) {
-      const rec = softRes.data.scores as Record<string, number>;
-      resolvedRadar = Object.entries(rec)
-        .map(([skill, score]) => ({ skill, score: Number(score) || 0 }))
-        .filter((r) => r.skill);
+    const fromDb = parseSoftSkillsScoreEntries(softRes?.scores);
+    let resolvedRadar = fromDb.length >= snapSoftRadar.length ? fromDb : snapSoftRadar;
+    if (!resolvedRadar.length) {
+      resolvedRadar = fromDb.length ? fromDb : snapSoftRadar;
     }
+    resolvedRadar = sortSoftSkillsDescending(resolvedRadar);
     const resolvedSoft = softRadarToRecord(resolvedRadar);
     setSoftSkillsRadar(resolvedRadar);
     setHasSoftSkills(Boolean(resolvedSoft && Object.keys(resolvedSoft).length > 0));

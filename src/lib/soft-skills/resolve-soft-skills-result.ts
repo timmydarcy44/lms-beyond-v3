@@ -49,15 +49,33 @@ export function resolveSoftSkillsResultSource<T extends SoftSkillsResultRow>(
   return { source: "apprenant", row: apprenant };
 }
 
+/** Score max par compétence (3 questions × 5). */
+export const SOFT_SKILL_SCORE_PER_COMPETENCE = 15;
+
+export function sortSoftSkillsDescending(
+  entries: Array<{ skill: string; score: number }>,
+): Array<{ skill: string; score: number }> {
+  return [...entries].sort((a, b) => b.score - a.score);
+}
+
+export function softSkillMasteryPercent(
+  score: number,
+  max: number = SOFT_SKILL_SCORE_PER_COMPETENCE,
+): number {
+  if (!Number.isFinite(score) || max <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((score / max) * 100)));
+}
+
 export function parseSoftSkillsScoreEntries(
   raw: unknown,
 ): Array<{ skill: string; score: number }> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
-  return Object.entries(raw as Record<string, unknown>)
-    .filter(([skill]) => skill && !SOFT_SKILLS_META_KEYS.has(skill))
-    .map(([skill, score]) => ({ skill, score: Number(score ?? 0) }))
-    .filter((e) => !Number.isNaN(e.score) && e.score > 0)
-    .sort((a, b) => b.score - a.score);
+  return sortSoftSkillsDescending(
+    Object.entries(raw as Record<string, unknown>)
+      .filter(([skill]) => skill && !SOFT_SKILLS_META_KEYS.has(skill))
+      .map(([skill, score]) => ({ skill, score: Number(score ?? 0) }))
+      .filter((e) => !Number.isNaN(e.score) && e.score > 0),
+  );
 }
 
 async function fetchBothSoftSkillsRows(

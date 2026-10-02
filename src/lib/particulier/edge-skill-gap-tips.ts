@@ -161,9 +161,9 @@ export type SkillProgressionStep = {
 export function getSkillProgressionPlan(skillName: string): SkillProgressionStep[] {
   return [
     { label: `Faire l'exercice ciblé sur « ${skillName} »`, meta: "10 min" },
-    { label: "Réaliser une Mission EDGE", meta: "15 min" },
+    { label: "Réaliser une mission Byound", meta: "15 min" },
     { label: "Déposer une preuve terrain" },
     { label: "Valider la compétence" },
-    { label: "Obtenir un badge EDGE" },
+    { label: "Obtenir un open badge" },
   ];
 }

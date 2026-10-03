@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
+
 export const SOFT_SKILLS_META_KEYS = new Set(["variant"]);
 
 export type SoftSkillsResultSource = "apprenant" | "salarie";
@@ -64,6 +66,18 @@ export function softSkillMasteryPercent(
 ): number {
   if (!Number.isFinite(score) || max <= 0) return 0;
   return Math.max(0, Math.min(100, Math.round((score / max) * 100)));
+}
+
+/** Nombre de compétences attendu après un test soft skills terminé. */
+export const EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT = SOFT_SKILLS.length;
+
+export function countSoftSkillsScoreEntries(raw: unknown): number {
+  return parseSoftSkillsScoreEntries(raw).length;
+}
+
+/** Vrai test enregistré (20 compétences), pas l’empreinte badge (top 2). */
+export function isCompleteSoftSkillsScores(raw: unknown): boolean {
+  return countSoftSkillsScoreEntries(raw) >= EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT;
 }
 
 export function parseSoftSkillsScoreEntries(

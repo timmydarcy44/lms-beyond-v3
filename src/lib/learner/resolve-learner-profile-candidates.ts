@@ -1,10 +1,43 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 import { normalizeIdmcAxesRecord } from "@/lib/idmc/idmc-display";
+import { parseSoftScoresFromCrossProfileCompletion } from "@/lib/learner/cross-profile-soft-scores";
 import {
   fetchLatestSoftSkillsResult,
+  isCompleteSoftSkillsScores,
   parseSoftSkillsScoreEntries,
+  type SoftSkillsResultRecord,
 } from "@/lib/soft-skills/resolve-soft-skills-result";
+
+/** Au moins une compétence scorée (y compris empreinte badge — à ne pas afficher comme test complet). */
+export function hasStoredSoftSkillsScores(scores: unknown): boolean {
+  return parseSoftSkillsScoreEntries(scores).length > 0;
+}
+
+export function hasCompleteSoftSkillsTest(scores: unknown): boolean {
+  return isCompleteSoftSkillsScores(scores);
+}
+
+/** Scores soft archivés dans profiles.cross_profile_completion (badge croisé). */
+export async function fetchCrossProfileSoftScoresForCandidates(
+  db: SupabaseClient,
+  profileIds: string[],
+): Promise<Record<string, number> | null> {
+  for (const profileId of profileIds) {
+    const { data: profile, error } = await db
+      .from("profiles")
+      .select("cross_profile_completion")
+      .eq("id", profileId)
+      .maybeSingle();
+    if (error) {
+      console.warn("[fetchCrossProfileSoftScoresForCandidates]", profileId, error.message);
+      continue;
+    }
+    const parsed = parseSoftScoresFromCrossProfileCompletion(profile?.cross_profile_completion);
+    if (parsed && isCompleteSoftSkillsScores(parsed)) return parsed;
+  }
+  return null;
+}
 
 /** Ids profil à interroger pour retrouver les tests (auth id, legacy email, employé lié). */
 export async function collectLearnerProfileCandidates(
@@ -168,4 +201,26 @@ export async function fetchSoftSkillsRadarForCandidates(
   }
 
   return parseSoftSkillsScoreEntries(best?.scores);
+}
+
+/** Dernière ligne soft skills (scores + synthèse IA) parmi les profils liés au compte. */
+export async function fetchLatestSoftSkillsResultForCandidates(
+  db: SupabaseClient,
+  profileIds: string[],
+  select = "*",
+): Promise<SoftSkillsResultRecord | null> {
+  let best: SoftSkillsResultRecord | null = null;
+  let bestTime = 0;
+
+  for (const profileId of profileIds) {
+    const row = await fetchLatestSoftSkillsResult(db, profileId, select);
+    if (!row?.scores) continue;
+    const takenAt = Date.parse(row.taken_at ?? "") || 0;
+    if (!best || takenAt >= bestTime) {
+      best = row;
+      bestTime = takenAt;
+    }
+  }
+
+  return best;
 }

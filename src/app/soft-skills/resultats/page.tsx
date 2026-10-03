@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Linkedin } from "lucide-react";
 import { motion } from "framer-motion";
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip } from "recharts";
+import { normalizeArchivedSoftSkillScore } from "@/lib/learner/cross-profile-soft-scores";
+import { hasCompleteSoftSkillsTest } from "@/lib/learner/resolve-learner-profile-candidates";
 import { SOFT_SKILLS } from "@/lib/soft-skills";
 import { EDGE_COLORS, EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
 import { SimpleMarkdownAnalysis } from "@/lib/markdown/render-simple-markdown";
@@ -16,8 +18,18 @@ type ResultPayload = {
   result: {
     total_score?: number | null;
     scores?: Record<string, number> | null;
+    ai_analysis?: string | null;
   } | null;
+  source?: "test" | "cross_profile" | null;
 };
+
+function normalizeScoresForDisplay(raw: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [label, value] of Object.entries(raw)) {
+    out[label] = normalizeArchivedSoftSkillScore(Number(value) || 0);
+  }
+  return out;
+}
 
 const RADAR_BLUE = EDGE_COLORS.blueAccent;
 const RADAR_FILL = "rgba(61,123,255,0.22)";
@@ -35,8 +47,13 @@ export default function SoftSkillsResultsPage() {
         const response = await fetch("/api/soft-skills/results", { credentials: "include" });
         if (response.ok) {
           const data = (await response.json()) as ResultPayload;
-          if (data?.exists && data?.result?.scores) {
-            setScores(data.result.scores);
+          const raw = data?.result?.scores;
+          if (data?.exists && raw && hasCompleteSoftSkillsTest(raw)) {
+            setScores(normalizeScoresForDisplay(raw));
+            if (data.result?.ai_analysis?.trim()) {
+              setAiAnalysis(data.result.ai_analysis.trim());
+              aiFetchedRef.current = true;
+            }
             return;
           }
         }
@@ -112,12 +129,12 @@ export default function SoftSkillsResultsPage() {
 
   const radarData = useMemo(() => {
     if (!ranking.length) {
-      return SOFT_SKILLS.slice(0, 6).map((skill) => ({
+      return SOFT_SKILLS.map((skill) => ({
         subject: skill.titre,
         score: scores[skill.titre] ?? 0,
       }));
     }
-    return ranking.slice(0, 6).map((item) => ({ subject: item.label, score: item.value }));
+    return ranking.map((item) => ({ subject: item.label, score: item.value }));
   }, [ranking, scores]);
 
   const manifesto = useMemo(() => {

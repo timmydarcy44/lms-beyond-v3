@@ -21,7 +21,10 @@ import {
   CONNECT_BTN_PRIMARY,
   CONNECT_BTN_SECONDARY,
 } from "@/lib/apprenant/connect-nav";
-import { sortSoftSkillsDescending } from "@/lib/soft-skills/resolve-soft-skills-result";
+import {
+  EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT,
+  sortSoftSkillsDescending,
+} from "@/lib/soft-skills/resolve-soft-skills-result";
 
 export type DiscScores = { D: number; I: number; S: number; C: number };
 
@@ -303,7 +306,7 @@ export function ApprenantAssessmentResults({
         <h3 className={`mt-1 text-base font-semibold ${cockpit ? "text-white" : "text-[#0a0a0a]"}`}>
           {firstName ? `Soft skills — ${firstName}` : "Soft skills"}
         </h3>
-        {softSorted.length ? (
+        {softSorted.length >= EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT ? (
           <div className="mt-4 space-y-3">
             <SoftSkillsRankingList
               items={softSorted}

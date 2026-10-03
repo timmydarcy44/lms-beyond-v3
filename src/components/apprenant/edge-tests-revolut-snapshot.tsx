@@ -28,7 +28,10 @@ import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-
 import { CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
 import { CrossReadingPanel } from "@/components/apprenant/cross-reading-panel";
 import { SoftSkillsRankingList } from "@/components/apprenant/soft-skills-ranking-list";
-import { sortSoftSkillsDescending } from "@/lib/soft-skills/resolve-soft-skills-result";
+import {
+  EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT,
+  sortSoftSkillsDescending,
+} from "@/lib/soft-skills/resolve-soft-skills-result";
 
 const DISC_COLORS: Record<keyof DiscScores, string> = {
   D: "#EF4444",
@@ -444,7 +447,7 @@ export function EdgeTestsRevolutSnapshot({
         <h3 className="mt-1 text-[1.15rem] font-semibold text-white">
           Soft skills — classement complet
         </h3>
-        {softSorted.length ? (
+        {softSorted.length >= EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT ? (
           <div className="mt-5 space-y-4">
             <SoftSkillsRankingList
               items={softSorted}

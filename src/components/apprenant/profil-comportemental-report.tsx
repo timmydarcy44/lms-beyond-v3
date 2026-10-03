@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 
 import { EdgePageAmbiance } from "@/components/apprenant/edge-page-ambiance";
 import { EdgeTestsRevolutSnapshot } from "@/components/apprenant/edge-tests-revolut-snapshot";
-import { EvolutionAbstractHeroCard } from "@/components/apprenant/profil-edge/hub/evolution-abstract-hero-card";
-import { ExpertCoachingCard } from "@/components/apprenant/profil-edge/hub/expert-coaching-card";
 import { useProfilEdgeHub } from "@/components/apprenant/profil-edge/profil-edge-hub-provider";
 import {
   APPRENANT_CARD_KICKER,
@@ -29,45 +27,6 @@ import { cn } from "@/lib/utils";
 const CAP_IMAGE =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/objectifs%20pro.png";
 
-function CompletionRing({ percent }: { percent: number }) {
-  const clamped = Math.max(0, Math.min(100, percent));
-  const r = 54;
-  const c = 2 * Math.PI * r;
-  const offset = c * (1 - clamped / 100);
-
-  return (
-    <div className="relative mx-auto h-[148px] w-[148px]">
-      <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
-        <circle
-          cx="64"
-          cy="64"
-          r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.1)"
-          strokeWidth="10"
-        />
-        <circle
-          cx="64"
-          cy="64"
-          r={r}
-          fill="none"
-          stroke="#3D7BFF"
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[2rem] font-bold tracking-[-0.04em] text-white tabular-nums">
-          {clamped}
-          <span className="text-[1.1rem] font-semibold text-white/55">%</span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
 /**
  * Cockpit Profil EDGE — première page après connexion.
  */
@@ -79,9 +38,16 @@ export function ProfilComportementalReport() {
     trainer: string | null;
   } | null>(null);
   const [timeline, setTimeline] = useState<Array<{ date: string; label: string }>>([]);
+  const [completionOpen, setCompletionOpen] = useState(false);
 
-  const pct = Math.round(data.maturity.totalPercent);
+  const profileCompletionPct = Math.round(data.maturity.totalPercent);
+  const alignmentPct =
+    data.matching?.compatibilityScore != null
+      ? Math.round(data.matching.compatibilityScore)
+      : null;
   const firstName = data.firstName;
+  const lastName = data.lastName?.trim() ?? "";
+  const displayName = [firstName, lastName].filter(Boolean).join(" ") || "vous";
   const proved = countProvedSkills(data.hardSkills, data.skillsMetadata);
   const inDev = countInDevelopment(data.hardSkills, data.skillsMetadata);
 
@@ -180,10 +146,7 @@ export function ProfilComportementalReport() {
       <EdgePageAmbiance ambiance="profile">
         <div className={`${APPRENANT_PAGE_SHELL} mx-auto max-w-5xl space-y-8 pb-24 pt-2`}>
           <div className="h-10 w-64 animate-pulse rounded-lg bg-white/10" />
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="min-h-[280px] animate-pulse rounded-3xl bg-white/[0.06]" />
-            <div className="min-h-[280px] animate-pulse rounded-3xl bg-white/[0.06]" />
-          </div>
+          <div className="min-h-[280px] animate-pulse rounded-3xl bg-white/[0.06]" />
           <div className="h-48 animate-pulse rounded-3xl bg-white/[0.05]" />
         </div>
       </EdgePageAmbiance>
@@ -200,17 +163,75 @@ export function ProfilComportementalReport() {
       <div className={`${APPRENANT_PAGE_SHELL} mx-auto max-w-5xl space-y-14 pb-24`}>
         {/* 1. Header */}
         <header className="space-y-3 pt-1">
-          <h1 className="text-[2rem] font-bold tracking-[-0.04em] text-white sm:text-[2.4rem]">
-            Bonjour {firstName}.
-          </h1>
-          <p className="text-[17px] font-medium text-white/80">Voici où vous en êtes.</p>
-          <p className="max-w-xl text-[14px] leading-relaxed text-white/45">
-            Votre profil évolue avec vos apprentissages, vos compétences et vos expériences.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 space-y-2">
+              <h1 className="text-[2rem] font-bold tracking-[-0.04em] text-white sm:text-[2.4rem]">
+                Bonjour {displayName}.
+              </h1>
+              <button
+                type="button"
+                onClick={() => setCompletionOpen((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-white/50 transition hover:text-white/75"
+                aria-expanded={completionOpen}
+              >
+                Détail du profil
+                <span className="tabular-nums text-white/40">({profileCompletionPct}&nbsp;%)</span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 transition",
+                    completionOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              <p className="max-w-xl text-[14px] leading-relaxed text-white/45">
+                Votre profil évolue avec vos apprentissages, vos compétences et vos expériences.
+              </p>
+            </div>
+          </div>
+
+          {completionOpen ? (
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-4 sm:px-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                Détail du profil
+              </p>
+              <ul className="mt-3 space-y-2">
+                {data.maturity.blocks.map((block) => (
+                  <li key={block.id}>
+                    <Link
+                      href={block.href}
+                      className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5 transition hover:bg-white/[0.04]"
+                    >
+                      <span className="flex items-center gap-2 text-[13px] text-white/70">
+                        <span
+                          className={cn(
+                            "flex h-5 w-5 items-center justify-center rounded-full border",
+                            block.complete
+                              ? "border-[#3D7BFF]/50 bg-[#3D7BFF]/20 text-[#9EC0FF]"
+                              : "border-white/15 text-transparent",
+                          )}
+                        >
+                          <Check className="h-3 w-3" />
+                        </span>
+                        {block.label}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[12px] font-semibold tabular-nums",
+                          block.complete ? "text-white" : "text-white/30",
+                        )}
+                      >
+                        {block.percent}/{block.weight}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </header>
 
-        {/* 2 + 3. Mon Cap + Complétion */}
-        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        {/* Mon Cap */}
+        <section>
           <article className="relative min-h-[320px] overflow-hidden rounded-3xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -219,126 +240,94 @@ export function ProfilComportementalReport() {
               className="absolute inset-0 h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#05060a] via-[#05060a]/75 to-[#05060a]/25" />
-            <div className="relative flex h-full flex-col justify-end space-y-4 p-6 sm:p-8">
-              <p className={APPRENANT_CARD_KICKER}>Mon cap</p>
-              {data.hasProject ? (
-                <>
-                  <h2 className="max-w-md text-[1.65rem] font-bold tracking-[-0.03em] text-white sm:text-[1.9rem]">
-                    {data.objectiveLabel}
-                  </h2>
-                  <p className="text-[13px] text-white/55">{pct}&nbsp;% du chemin parcouru</p>
-                  <div className="h-1.5 max-w-sm overflow-hidden rounded-full bg-white/15">
-                    <div
-                      className="h-full rounded-full bg-[#3D7BFF]"
-                      style={{ width: `${Math.min(100, pct)}%` }}
-                    />
-                  </div>
-                  {data.matching?.develop?.length || data.matching?.consolidate?.length ? (
-                    <div className="space-y-1 pt-1">
-                      <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">
-                        3 priorités pour progresser
+            <div className="relative flex min-h-[320px] flex-col justify-end p-6 sm:p-8">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0 flex-1 space-y-4">
+                  <p className={APPRENANT_CARD_KICKER}>Mon cap</p>
+                  {data.hasProject ? (
+                    <>
+                      <h2 className="max-w-md text-[1.65rem] font-bold tracking-[-0.03em] text-white sm:text-[1.9rem]">
+                        {data.objectiveLabel}
+                      </h2>
+                      {alignmentPct != null ? (
+                        <div className="h-1.5 max-w-sm overflow-hidden rounded-full bg-white/15 sm:max-w-md">
+                          <div
+                            className="h-full rounded-full bg-[#3D7BFF]"
+                            style={{ width: `${Math.min(100, alignmentPct)}%` }}
+                          />
+                        </div>
+                      ) : (
+                        <p className="max-w-sm text-[13px] text-white/55">
+                          L&apos;alignement s&apos;affiche dès que votre projet et vos diagnostics
+                          sont prêts.
+                        </p>
+                      )}
+                      {data.matching?.develop?.length || data.matching?.consolidate?.length ? (
+                        <div className="space-y-1 pt-1">
+                          <p className="text-[11px] uppercase tracking-[0.14em] text-white/40">
+                            3 priorités pour progresser
+                          </p>
+                          <ul className="space-y-1 text-[13px] text-white/75">
+                            {[
+                              ...(data.matching?.develop ?? []),
+                              ...(data.matching?.consolidate ?? []),
+                            ]
+                              .slice(0, 3)
+                              .map((s) => (
+                                <li key={s}>· {s}</li>
+                              ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      <div className="flex flex-wrap items-center gap-3 pt-1">
+                        <Link href="/dashboard/apprenant" className={`${CONNECT_BTN_PRIMARY} w-fit`}>
+                          Ouvrir le Training center
+                        </Link>
+                        <Link
+                          href={PROFIL_EDGE_SECTION_HREFS.projet}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-4 py-2.5 text-[13px] font-semibold text-white/90 transition hover:bg-white/10"
+                        >
+                          Modifier mon objectif
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="max-w-md text-[1.55rem] font-bold tracking-[-0.03em] text-white">
+                        Définissez votre objectif professionnel
+                      </h2>
+                      <p className="max-w-sm text-[14px] text-white/55">
+                        Votre cap oriente Skills, Learn et vos recommandations.
                       </p>
-                      <ul className="space-y-1 text-[13px] text-white/75">
-                        {[
-                          ...(data.matching?.develop ?? []),
-                          ...(data.matching?.consolidate ?? []),
-                        ]
-                          .slice(0, 3)
-                          .map((s) => (
-                            <li key={s}>· {s}</li>
-                          ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
-                    <Link href="/dashboard/apprenant" className={`${CONNECT_BTN_PRIMARY} w-fit`}>
-                      Ouvrir le Training center
-                    </Link>
-                    <Link
-                      href={PROFIL_EDGE_SECTION_HREFS.projet}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-4 py-2.5 text-[13px] font-semibold text-white/90 transition hover:bg-white/10"
-                    >
-                      Modifier mon objectif
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
+                      <Link
+                        href={PROFIL_EDGE_SECTION_HREFS.projet}
+                        className={`${CONNECT_BTN_PRIMARY} mt-2 w-fit`}
+                      >
+                        Définir mon cap
+                      </Link>
+                    </>
+                  )}
+                </div>
+
+                {data.hasProject && alignmentPct != null ? (
+                  <div className="shrink-0 sm:text-right">
+                    <p className="text-[3.75rem] font-bold leading-none tracking-[-0.06em] text-white tabular-nums sm:text-[4.75rem]">
+                      {alignmentPct}
+                      <span className="text-[1.25rem] font-semibold text-white/45 sm:text-[1.5rem]">
+                        {" "}
+                        %
+                      </span>
+                    </p>
+                    <p className="mt-1 text-[13px] font-medium text-white/50 sm:text-right">
+                      d&apos;alignement
+                    </p>
                   </div>
-                </>
-              ) : (
-                <>
-                  <h2 className="max-w-md text-[1.55rem] font-bold tracking-[-0.03em] text-white">
-                    Définissez votre objectif professionnel
-                  </h2>
-                  <p className="max-w-sm text-[14px] text-white/55">
-                    Votre cap oriente Skills, Learn et vos recommandations.
-                  </p>
-                  <Link
-                    href={PROFIL_EDGE_SECTION_HREFS.projet}
-                    className={`${CONNECT_BTN_PRIMARY} mt-2 w-fit`}
-                  >
-                    Définir mon cap
-                  </Link>
-                </>
-              )}
+                ) : null}
+              </div>
             </div>
           </article>
-
-          <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] px-5 py-6 sm:px-6">
-            <p className={APPRENANT_CARD_KICKER}>Mon profil</p>
-            <h2 className="mt-1 text-[1.2rem] font-semibold tracking-[-0.02em] text-white">
-              Taux de complétion
-            </h2>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-white/40">
-              Identité, projet, tests, expériences et diplômes.
-            </p>
-            <div className="mt-5">
-              <CompletionRing percent={pct} />
-            </div>
-            <ul className="mt-5 space-y-2">
-              {data.maturity.blocks.map((block) => (
-                <li key={block.id}>
-                  <Link
-                    href={block.href}
-                    className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5 transition hover:bg-white/[0.04]"
-                  >
-                    <span className="flex items-center gap-2 text-[13px] text-white/70">
-                      <span
-                        className={cn(
-                          "flex h-5 w-5 items-center justify-center rounded-full border",
-                          block.complete
-                            ? "border-[#3D7BFF]/50 bg-[#3D7BFF]/20 text-[#9EC0FF]"
-                            : "border-white/15 text-transparent",
-                        )}
-                      >
-                        <Check className="h-3 w-3" />
-                      </span>
-                      {block.label}
-                    </span>
-                    <span
-                      className={cn(
-                        "text-[12px] font-semibold tabular-nums",
-                        block.complete ? "text-white" : "text-white/30",
-                      )}
-                    >
-                      {block.percent}/{block.weight}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
         </section>
-
-        {data.discScores ? (
-          <section className="space-y-6">
-            <EvolutionAbstractHeroCard
-              objectiveLabel={data.objectiveLabel}
-              referentialTitle={data.selectedCareer?.title ?? null}
-              matching={data.matching}
-              hasProject={data.hasProject}
-            />
-            {data.matching && data.selectedCareer ? <ExpertCoachingCard /> : null}
-          </section>
-        ) : null}
 
         {/* Résultats des 3 tests */}
         <section className="space-y-4">

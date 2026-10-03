@@ -4,7 +4,11 @@ import {
   fetchLatestSoftSkillsResultWithSource,
   SOFT_SKILLS_TABLE_BY_SOURCE,
 } from "@/lib/soft-skills/resolve-soft-skills-result";
-import { getServerClient } from "@/lib/supabase/server";
+import {
+  collectLearnerProfileCandidates,
+  fetchLatestSoftSkillsResultForCandidates,
+} from "@/lib/learner/resolve-learner-profile-candidates";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 type AnalyzePayload = {
   scores: Record<string, number>;
@@ -31,11 +35,20 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as AnalyzePayload;
     const scores = body?.scores ?? {};
 
-    const resolved = await fetchLatestSoftSkillsResultWithSource(
-      supabase,
-      user.id,
-      "learner_id, ai_analysis, taken_at",
+    const db = getServiceRoleClient() ?? supabase;
+    const profileIds = await collectLearnerProfileCandidates(db, user.id, user.email);
+    const latestRow = await fetchLatestSoftSkillsResultForCandidates(
+      db,
+      profileIds,
+      "learner_id, ai_analysis, taken_at, scores",
     );
+    const resolved = latestRow?.learner_id
+      ? await fetchLatestSoftSkillsResultWithSource(
+          db,
+          String(latestRow.learner_id),
+          "learner_id, ai_analysis, taken_at",
+        )
+      : null;
 
     if (resolved?.row.ai_analysis) {
       return NextResponse.json({ analysis: resolved.row.ai_analysis, cached: true });
@@ -62,10 +75,11 @@ export async function POST(request: NextRequest) {
 
     if (analysis && resolved) {
       const table = SOFT_SKILLS_TABLE_BY_SOURCE[resolved.source];
-      const { error: updateError } = await supabase
+      const learnerKey = resolved.row.learner_id ?? user.id;
+      const { error: updateError } = await db
         .from(table)
         .update({ ai_analysis: analysis })
-        .eq("learner_id", user.id);
+        .eq("learner_id", learnerKey);
       if (updateError) {
         console.error(`[soft-skills/analyze] update error (${table})`, updateError);
       }

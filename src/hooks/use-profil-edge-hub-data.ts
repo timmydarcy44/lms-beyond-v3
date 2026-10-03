@@ -34,10 +34,20 @@ import { hasMeaningfulIdmcAxes, normalizeIdmcAxesRecord } from "@/lib/idmc/idmc-
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { fetchIdmcAxesForCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
-import { collectLearnerProfileCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
 import {
+  collectLearnerProfileCandidates,
+  fetchDiscScoresForCandidates,
+  fetchIdmcAxesForCandidates,
+  fetchSoftSkillsRadarForCandidates,
+} from "@/lib/learner/resolve-learner-profile-candidates";
+import {
+  parseSoftScoresFromCrossProfileCompletion,
+  normalizeArchivedSoftSkillScore,
+} from "@/lib/learner/cross-profile-soft-scores";
+import {
+  EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT,
   fetchLatestSoftSkillsResult,
+  isCompleteSoftSkillsScores,
   parseSoftSkillsScoreEntries,
   sortSoftSkillsDescending,
 } from "@/lib/soft-skills/resolve-soft-skills-result";
@@ -146,45 +156,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
         null,
     );
 
-    // Diagnostics : payloads complets (pas seulement flags completed).
-    let snapDisc: DiscScores | null = null;
-    let snapIdmcAxes: Record<AxisKey, number> | null = null;
-    let snapSoftRadar: Array<{ skill: string; score: number }> = [];
-
-    const existingSnap = snapshotCtx?.snapshot;
-    const applySnap = (snap: {
-      discScores?: unknown;
-      idmcAxes?: Record<AxisKey, number> | null;
-      softSkillsRadar?: Array<{ skill: string; score: number }>;
-    }) => {
-      snapDisc = snap.discScores
-        ? (parseStoredDiscScores(snap.discScores as Record<string, unknown>) as DiscScores | null)
-        : null;
-      snapIdmcAxes = snap.idmcAxes ? normalizeIdmcAxesRecord(snap.idmcAxes) : null;
-      snapSoftRadar = sortSoftSkillsDescending(
-        Array.isArray(snap.softSkillsRadar) ? snap.softSkillsRadar : [],
-      );
-    };
-
-    // Snapshot + tables en parallèle (évite waterfall snapshot → queries)
-    const snapshotPromise: Promise<{
-      discScores?: unknown;
-      idmcAxes?: Record<AxisKey, number> | null;
-      softSkillsRadar?: Array<{ skill: string; score: number }>;
-    } | null> =
-      existingSnap && !snapshotCtx?.loading
-        ? Promise.resolve(existingSnap)
-        : fetch("/api/dashboard/learner-snapshot", {
-            credentials: "include",
-            cache: "no-store",
-          })
-            .then(async (res) => (res.ok ? ((await res.json()) as object) : null))
-            .catch(() => null);
-
-    const snapHasDisc = Boolean(existingSnap?.discScores);
-    const snapHasIdmc = Boolean(existingSnap?.idmcAxes);
-    const [snapPayload, profileRes, discRes, idmcRes, softRes, expRes, dipRes] = await Promise.all([
-      snapshotPromise,
+    const [profileRes, discRes, idmcRes, softRes, expRes, dipRes] = await Promise.all([
       supabase
         .from("profiles")
         .select(
@@ -192,18 +164,12 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
         )
         .eq("id", uid)
         .maybeSingle(),
-      snapHasDisc
-        ? Promise.resolve({ data: null, error: null })
-        : supabase.from("disc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
-      snapHasIdmc
-        ? Promise.resolve({ data: null, error: null })
-        : supabase.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
+      supabase.from("disc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
+      supabase.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
       fetchLatestSoftSkillsResult(supabase, uid, "scores, taken_at"),
       supabase.from("experiences_pro").select("*").eq("learner_id", uid),
       supabase.from("diplomes").select("*").eq("learner_id", uid),
     ]);
-
-    if (snapPayload) applySnap(snapPayload);
 
     if (typeof performance !== "undefined" && process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
@@ -214,7 +180,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     if (profileRes.error) {
       // Soft fail : ne bloque pas l'évolution si disc/snapshot sont dispo
       console.warn("[profil-edge-hub] profiles fetch", profileRes.error.message);
-      if (!snapDisc && !profileRes.data) {
+      if (!profileRes.data) {
         setError("Impossible de charger votre profil pour le moment.");
       }
     }
@@ -240,27 +206,40 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     setHardSkills(Array.isArray(profile?.hard_skills) ? (profile.hard_skills as string[]) : []);
     setSkillsMetadata((profile?.skills_metadata as Record<string, LearnerHardSkillMeta>) ?? {});
 
-    // Fusion snapshot (prioritaire) + fallback auth uid / colonnes legacy profil
-    let resolvedDisc = snapDisc;
+    const learnerEmail =
+      (profile?.email ? String(profile.email) : null) || userData.user?.email || null;
+    let profileCandidates: string[] = [uid];
+    try {
+      profileCandidates = await collectLearnerProfileCandidates(supabase, uid, learnerEmail);
+    } catch {
+      /* ignore */
+    }
+
+    // Source de vérité : tables tests (+ legacy profil). Le snapshot ne doit pas masquer une base vide.
+    let resolvedDisc = parseStoredDiscScores(
+      (discRes.data?.scores as Record<string, unknown> | null) ?? null,
+    ) as DiscScores | null;
     if (!resolvedDisc) {
-      resolvedDisc = parseStoredDiscScores(
-        (discRes.data?.scores as Record<string, unknown> | null) ?? null,
-      ) as DiscScores | null;
+      try {
+        resolvedDisc = (await fetchDiscScoresForCandidates(
+          supabase,
+          profileCandidates,
+        )) as DiscScores | null;
+      } catch {
+        /* ignore */
+      }
     }
     setDiscScores(resolvedDisc);
 
-    let resolvedIdmcAxes = snapIdmcAxes;
-    if (!resolvedIdmcAxes && idmcRes.data?.scores) {
+    let resolvedIdmcAxes: Record<AxisKey, number> | null = null;
+    if (idmcRes.data?.scores) {
       resolvedIdmcAxes = normalizeIdmcAxesRecord(idmcRes.data.scores) as Record<AxisKey, number> | null;
     }
     if (!resolvedIdmcAxes) {
       try {
-        const email =
-          (profile?.email ? String(profile.email) : null) || userData.user?.email || null;
-        const candidates = await collectLearnerProfileCandidates(supabase, uid, email);
         resolvedIdmcAxes = (await fetchIdmcAxesForCandidates(
           supabase,
-          candidates,
+          profileCandidates,
         )) as Record<AxisKey, number> | null;
       } catch {
         /* ignore */
@@ -273,14 +252,35 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     setHasIdmc(Boolean(resolvedIdmcAxes));
 
     const fromDb = parseSoftSkillsScoreEntries(softRes?.scores);
-    let resolvedRadar = fromDb.length >= snapSoftRadar.length ? fromDb : snapSoftRadar;
+    let resolvedRadar = fromDb.length ? fromDb : [];
     if (!resolvedRadar.length) {
-      resolvedRadar = fromDb.length ? fromDb : snapSoftRadar;
+      try {
+        resolvedRadar = await fetchSoftSkillsRadarForCandidates(supabase, profileCandidates);
+      } catch {
+        /* ignore */
+      }
+    }
+    if (!resolvedRadar.length && profile?.cross_profile_completion) {
+      const archived = parseSoftScoresFromCrossProfileCompletion(profile.cross_profile_completion);
+      if (archived && isCompleteSoftSkillsScores(archived)) {
+        resolvedRadar = sortSoftSkillsDescending(
+          Object.entries(archived).map(([skill, score]) => ({
+            skill,
+            score: normalizeArchivedSoftSkillScore(score),
+          })),
+        );
+      }
     }
     resolvedRadar = sortSoftSkillsDescending(resolvedRadar);
+    if (
+      resolvedRadar.length > 0 &&
+      resolvedRadar.length < EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT
+    ) {
+      resolvedRadar = [];
+    }
     const resolvedSoft = softRadarToRecord(resolvedRadar);
     setSoftSkillsRadar(resolvedRadar);
-    setHasSoftSkills(Boolean(resolvedSoft && Object.keys(resolvedSoft).length > 0));
+    setHasSoftSkills(isCompleteSoftSkillsScores(resolvedSoft));
     setSoftSkillsScores(resolvedSoft);
 
     setExperiences(

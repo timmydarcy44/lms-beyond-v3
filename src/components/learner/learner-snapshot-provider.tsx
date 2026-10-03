@@ -73,13 +73,8 @@ export function LearnerSnapshotProvider({ children }: { children: ReactNode }) {
   const mounted = useRef(true);
 
   const load = useCallback(async (force = false) => {
-    if (!force && sharedSnapshotPromise) {
-      const cached = await sharedSnapshotPromise;
-      if (mounted.current) {
-        setSnapshot(cached);
-        setLoading(false);
-      }
-      return;
+    if (force) {
+      sharedSnapshotPromise = null;
     }
 
     setLoading(true);
@@ -104,7 +99,8 @@ export function LearnerSnapshotProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     mounted.current = true;
-    void load();
+    invalidateLearnerSnapshotProviderCache();
+    void load(true);
     return () => {
       mounted.current = false;
     };

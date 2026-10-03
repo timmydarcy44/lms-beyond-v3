@@ -156,15 +156,8 @@ export function ApprenantDashboardClient({
   const appShell = useApprenantShell();
   const learnerSnapshotCtx = useOptionalLearnerSnapshotContext();
   const isSalarieSurface = homeHref.startsWith("/dashboard/salarie");
-  const snapshotHasTests = Boolean(
-    learnerSnapshotCtx?.snapshot?.discScores ||
-      learnerSnapshotCtx?.snapshot?.idmcAxes ||
-      (learnerSnapshotCtx?.snapshot?.softSkillsRadar?.length ?? 0) > 0,
-  );
-  const useSnapshotTests =
-    Boolean(learnerSnapshotCtx) &&
-    !learnerSnapshotCtx.loading &&
-    snapshotHasTests;
+  /** Snapshot : prénom / poste uniquement — les scores viennent toujours des tables tests. */
+  const useSnapshotTests = false;
   const [isLoading, setIsLoading] = useState(true);
   const [badgeCelebration, setBadgeCelebration] = useState<{
     badgeName: string;
@@ -291,28 +284,10 @@ export function ApprenantDashboardClient({
     }
   }, []);
 
-  const snapshotRetryRef = useRef(false);
   useEffect(() => {
-    if (!learnerSnapshotCtx) return;
-    if (learnerSnapshotCtx.loading || snapshotHasTests) return;
-    if (snapshotRetryRef.current) return;
-    snapshotRetryRef.current = true;
-    void learnerSnapshotCtx.refresh();
-  }, [learnerSnapshotCtx, learnerSnapshotCtx?.loading, snapshotHasTests]);
-
-  useEffect(() => {
-    if (!useSnapshotTests || !learnerSnapshotCtx?.snapshot) return;
-    const s = learnerSnapshotCtx.snapshot;
-    if (s.discScores) setDiscScores(s.discScores);
-    if (s.idmcAxes) setIdmcAxes(s.idmcAxes);
-    setSoftSkillsRadar(s.softSkillsRadar ?? []);
-    if (s.softSkillsRadar?.length) {
-      setSoftSkillsData(Object.fromEntries(s.softSkillsRadar.map(({ skill, score }) => [skill, score])));
-    }
-    if (s.firstName?.trim()) {
-      setCachedFirstName(s.firstName.trim());
-    }
-  }, [learnerSnapshotCtx?.snapshot, useSnapshotTests]);
+    if (!learnerSnapshotCtx?.snapshot?.firstName?.trim()) return;
+    setCachedFirstName(learnerSnapshotCtx.snapshot.firstName.trim());
+  }, [learnerSnapshotCtx?.snapshot?.firstName]);
 
   const useSnapshotTestsRef = useRef(useSnapshotTests);
   useSnapshotTestsRef.current = useSnapshotTests;
@@ -572,6 +547,8 @@ export function ApprenantDashboardClient({
           );
           if (axes) {
             setIdmcAxes(axes);
+          } else {
+            setIdmcAxes(null);
           }
           setIdmcUpdatedAt(
             String((idmcResult as { updated_at?: string | null } | null)?.updated_at ?? "") || null,

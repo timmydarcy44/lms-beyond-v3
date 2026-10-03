@@ -129,14 +129,6 @@ export function EvolutionAbstractHeroCard({
 
               {matching && score != null ? (
                 <>
-                  <div>
-                    <p className="text-[4.5rem] font-bold leading-none tracking-[-0.06em] text-white tabular-nums sm:text-[5.25rem]">
-                      {score}
-                      <span className="text-[1.5rem] font-semibold text-white/45"> %</span>
-                    </p>
-                    <p className="mt-2 text-[15px] text-white/60">d&apos;alignement</p>
-                  </div>
-
                   {priority ? (
                     <p className="max-w-md text-[15px] leading-relaxed text-white/80">
                       Votre prochaine progression prioritaire concerne{" "}

@@ -38,8 +38,8 @@ export function SoftSkillsRankingList({
           isRevolut || isCockpit ? "text-white/45" : "text-black/45",
         )}
       >
-        {sorted.length} compétence{sorted.length > 1 ? "s" : ""} évaluée
-        {sorted.length > 1 ? "s" : ""} — du plus fort au plus faible
+        {sorted.length} compétence{sorted.length > 1 ? "s évaluées" : " évaluée"} — du plus
+        fort au plus faible
       </p>
 
       <ul className="space-y-2">

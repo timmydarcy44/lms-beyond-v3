@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 import {
   buildDiscObservation,
@@ -25,7 +23,7 @@ import {
   type ProfileAnalysisCareerMatching,
 } from "@/lib/learner/profile-analysis";
 import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
-import { CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
+import { DiagnosticTestInviteCards } from "@/components/apprenant/diagnostic-test-invite-cards";
 import { CrossReadingPanel } from "@/components/apprenant/cross-reading-panel";
 import { SoftSkillsRankingList } from "@/components/apprenant/soft-skills-ranking-list";
 import {
@@ -58,27 +56,6 @@ const DISC_LABELS: Record<keyof DiscScores, string> = {
   S: "Stable",
   C: "Consciencieux",
 };
-
-const TEST_EXPLAINERS = {
-  disc: {
-    title: "Qu’est-ce que le DISC ?",
-    body: "Le DISC mesure votre style comportemental dominant (Dominant, Influent, Stable, Consciencieux). Il explique comment vous agissez, décidez et interagissez en situation professionnelle.",
-    duration: "Environ 8 minutes",
-    href: "/dashboard/apprenant/test-comportemental-intro",
-  },
-  idmc: {
-    title: "Qu’est-ce que l’IDMC ?",
-    body: "L’IDMC (Indice de Maîtrise Cognitive) évalue 8 axes : connaissance de soi, méthodes, adaptation, organisation, traitement de l’information, résolution de difficultés, suivi et auto-évaluation. Il oriente vos priorités d’apprentissage.",
-    duration: "Environ 10 minutes",
-    href: "/dashboard/apprenant/idmc-intro",
-  },
-  soft: {
-    title: "Qu’est-ce que le test Soft skills ?",
-    body: "Ce test classe vos compétences comportementales (communication, collaboration, leadership, etc.). Le classement alimente votre matching métier et vos recommandations de formation.",
-    duration: "Environ 12 minutes",
-    href: "/dashboard/apprenant/soft-skills-intro",
-  },
-} as const;
 
 type Props = {
   firstName?: string;
@@ -186,25 +163,6 @@ function buildLocalSections(params: {
     summary: null,
     orientation,
   };
-}
-
-function TestExplainerCard({
-  explainer,
-}: {
-  explainer: (typeof TEST_EXPLAINERS)[keyof typeof TEST_EXPLAINERS];
-}) {
-  return (
-    <div className="mt-5 space-y-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-4">
-      <div>
-        <p className="text-[14px] font-semibold text-white">{explainer.title}</p>
-        <p className="mt-2 text-[13px] leading-relaxed text-white/50">{explainer.body}</p>
-        <p className="mt-2 text-[12px] text-white/35">{explainer.duration}</p>
-      </div>
-      <Link href={explainer.href} className={`${CONNECT_BTN_PRIMARY} inline-flex`}>
-        Passer le test
-      </Link>
-    </div>
-  );
 }
 
 /**
@@ -334,6 +292,9 @@ export function EdgeTestsRevolutSnapshot({
 
   const disc = discScores ? resolveDiscProfile(discScores) : null;
   const softSorted = sortSoftSkillsDescending(softSkillsRadar);
+  const hasDisc = Boolean(discScores);
+  const hasIdmc = hasMeaningfulIdmcAxes(idmcAxes);
+  const hasSoftComplete = softSorted.length >= EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT;
   const idmcSorted = hasMeaningfulIdmcAxes(idmcAxes)
     ? IDMC_AXIS_KEYS.map((key) => ({
         key,
@@ -362,9 +323,15 @@ export function EdgeTestsRevolutSnapshot({
           analysisLoading={analysisLoading}
           hasCrossContent={hasCrossContent}
         />
-      ) : null}
+      ) : (
+        <DiagnosticTestInviteCards
+          discDone={hasDisc}
+          idmcDone={hasIdmc}
+          softDone={hasSoftComplete}
+        />
+      )}
 
-      {/* DISC */}
+      {hasDisc ? (
       <section className="rounded-[1.5rem] border border-white/[0.06] bg-white/[0.03] px-5 py-5 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -379,11 +346,10 @@ export function EdgeTestsRevolutSnapshot({
             </p>
           ) : null}
         </div>
-        {discScores ? (
           <div className="mt-5 space-y-5">
             <div className="grid grid-cols-4 gap-3">
-              {(Object.keys(discScores) as Array<keyof DiscScores>).map((key) => {
-                const pct = Math.max(0, Math.min(100, Math.round(discScores[key])));
+              {(Object.keys(discScores!) as Array<keyof DiscScores>).map((key) => {
+                const pct = Math.max(0, Math.min(100, Math.round(discScores![key])));
                 return (
                   <div key={key} className="text-center">
                     <div className="mx-auto flex h-24 items-end justify-center">
@@ -405,21 +371,18 @@ export function EdgeTestsRevolutSnapshot({
               })}
             </div>
             <p className="text-[13px] leading-relaxed text-white/50">
-              {buildDiscObservation(discScores)}
+              {buildDiscObservation(discScores!)}
             </p>
           </div>
-        ) : (
-          <TestExplainerCard explainer={TEST_EXPLAINERS.disc} />
-        )}
       </section>
+      ) : null}
 
-      {/* IDMC */}
+      {idmcSorted.length ? (
       <section className="rounded-[1.5rem] border border-white/[0.06] bg-white/[0.03] px-5 py-5 sm:px-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/35">
           Motivation
         </p>
         <h3 className="mt-1 text-[1.15rem] font-semibold text-white">IDMC — tous les axes</h3>
-        {idmcSorted.length ? (
           <div className="mt-5 space-y-3">
             <ul className="space-y-2.5">
               {idmcSorted.map((axis, index) => (
@@ -444,16 +407,14 @@ export function EdgeTestsRevolutSnapshot({
             </ul>
             {hasMeaningfulIdmcAxes(idmcAxes) ? (
               <p className="text-[13px] leading-relaxed text-white/50">
-                {buildIdmcObservation(idmcAxes)}
+                {buildIdmcObservation(idmcAxes!)}
               </p>
             ) : null}
           </div>
-        ) : (
-          <TestExplainerCard explainer={TEST_EXPLAINERS.idmc} />
-        )}
       </section>
+      ) : null}
 
-      {/* Soft skills */}
+      {hasSoftComplete ? (
       <section className="rounded-[1.5rem] border border-white/[0.06] bg-white/[0.03] px-5 py-5 sm:px-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/35">
           Compétences
@@ -461,7 +422,6 @@ export function EdgeTestsRevolutSnapshot({
         <h3 className="mt-1 text-[1.15rem] font-semibold text-white">
           Soft skills — classement complet
         </h3>
-        {softSorted.length >= EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT ? (
           <div className="mt-5 space-y-4">
             <SoftSkillsRankingList
               items={softSorted}
@@ -473,10 +433,8 @@ export function EdgeTestsRevolutSnapshot({
               {buildSoftSkillsObservation(softSorted, firstName)}
             </p>
           </div>
-        ) : (
-          <TestExplainerCard explainer={TEST_EXPLAINERS.soft} />
-        )}
       </section>
+      ) : null}
     </div>
   );
 }

@@ -33,6 +33,18 @@ import {
   sortSoftSkillsDescending,
 } from "@/lib/soft-skills/resolve-soft-skills-result";
 
+function hasCompleteEdgeDiagnostics(
+  discScores: DiscScores | null,
+  idmcAxes: Record<AxisKey, number> | null,
+  softSkillsRadar: Array<{ skill: string; score: number }>,
+): boolean {
+  return Boolean(
+    discScores &&
+      hasMeaningfulIdmcAxes(idmcAxes) &&
+      softSkillsRadar.length >= EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT,
+  );
+}
+
 const DISC_COLORS: Record<keyof DiscScores, string> = {
   D: "#EF4444",
   I: "#F59E0B",
@@ -209,13 +221,7 @@ export function EdgeTestsRevolutSnapshot({
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
 
-  const hasAny = Boolean(
-    discScores ||
-      hasMeaningfulIdmcAxes(idmcAxes) ||
-      softSkillsRadar.length ||
-      objectiveLabel ||
-      matching,
-  );
+  const diagnosticsComplete = hasCompleteEdgeDiagnostics(discScores, idmcAxes, softSkillsRadar);
   const careerMatchingPayload = useMemo(() => toCareerMatchingPayload(matching), [matching]);
   const testsSignature = useMemo(
     () =>
@@ -234,7 +240,11 @@ export function EdgeTestsRevolutSnapshot({
   );
 
   useEffect(() => {
-    if (!hasAny) return;
+    if (!diagnosticsComplete) {
+      setAnalysis(null);
+      setAnalysisLoading(false);
+      return;
+    }
     let cancelled = false;
     const timer = window.setTimeout(() => {
       void (async () => {
@@ -276,7 +286,7 @@ export function EdgeTestsRevolutSnapshot({
       window.clearTimeout(timer);
     };
   }, [
-    hasAny,
+    diagnosticsComplete,
     testsSignature,
     firstName,
     objectiveLabel,
@@ -287,6 +297,7 @@ export function EdgeTestsRevolutSnapshot({
   ]);
 
   const sections = useMemo(() => {
+    if (!diagnosticsComplete) return null;
     if (analysis) {
       const parsed = parseProfileAnalysisSections(analysis);
       if (
@@ -310,14 +321,15 @@ export function EdgeTestsRevolutSnapshot({
       objectiveLabel,
       matching,
     });
-  }, [analysis, discScores, idmcAxes, softSkillsRadar, objectiveLabel, matching]);
+  }, [analysis, diagnosticsComplete, discScores, idmcAxes, softSkillsRadar, objectiveLabel, matching]);
 
   const hasCrossContent = Boolean(
-    sections?.orientation ||
-      sections?.summary ||
-      sections?.strengths.length ||
-      sections?.improvements.length ||
-      analysisLoading,
+    diagnosticsComplete &&
+      (sections?.orientation ||
+        sections?.summary ||
+        sections?.strengths.length ||
+        sections?.improvements.length ||
+        analysisLoading),
   );
 
   const disc = discScores ? resolveDiscProfile(discScores) : null;
@@ -343,12 +355,14 @@ export function EdgeTestsRevolutSnapshot({
         Vos explorations comportementales
       </p>
 
-      <CrossReadingPanel
-        objectiveLabel={objectiveLabel}
-        sections={panelSections}
-        analysisLoading={analysisLoading}
-        hasCrossContent={hasCrossContent}
-      />
+      {diagnosticsComplete ? (
+        <CrossReadingPanel
+          objectiveLabel={objectiveLabel}
+          sections={panelSections}
+          analysisLoading={analysisLoading}
+          hasCrossContent={hasCrossContent}
+        />
+      ) : null}
 
       {/* DISC */}
       <section className="rounded-[1.5rem] border border-white/[0.06] bg-white/[0.03] px-5 py-5 sm:px-6">

@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PipelineBtobSubnav } from "@/components/super-admin/pipeline-btob-subnav";
+import { QualiopiRnqPanel } from "@/components/super-admin/qualiopi-rnq-panel";
 import {
   formatSignedAt,
   qualiopiKindLabel,
@@ -105,10 +106,10 @@ export default function CrmQualiopiPage() {
         <p className="text-xs font-medium uppercase tracking-wider text-gray-500">CRM / Qualiopi</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Administratif Qualiopi</h1>
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Qualiopi</h1>
             <p className="mt-1 max-w-2xl text-sm text-gray-600">
-              Coffre des pièces (convention, règlement intérieur, livret d’accueil). Elles partent automatiquement
-              quand un client passe en formation programmée, puis en formation en cours.
+              Référentiel RNQ (7 critères / 32 indicateurs), coffre administratif et preuves de session
+              (convention, émargement, satisfaction).
             </p>
           </div>
           <Button onClick={() => openAdd()} className="rounded-full bg-indigo-600 hover:bg-indigo-500">
@@ -117,6 +118,15 @@ export default function CrmQualiopiPage() {
           </Button>
         </div>
         <PipelineBtobSubnav />
+      </div>
+
+      <QualiopiRnqPanel />
+
+      <div className="space-y-1">
+        <h2 className="text-base font-semibold text-gray-900">Coffre administratif</h2>
+        <p className="text-sm text-gray-500">
+          Documents envoyés automatiquement quand une formation B2B est programmée ou démarrée.
+        </p>
       </div>
 
       {loading ? (

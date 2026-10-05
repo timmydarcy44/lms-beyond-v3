@@ -5,7 +5,7 @@ import { getServerClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 
 export async function requireEdgeAdmin(): Promise<{ ok: true; userId: string } | { ok: false }> {
-  const supabase = await getServerClient();
+  let supabase = await getServerClient();
   if (supabase) {
     const {
       data: { user },
@@ -22,7 +22,9 @@ export async function requireEdgeAdmin(): Promise<{ ok: true; userId: string } |
     return { ok: true, userId: session.id };
   }
 
-  const supabase = await getServerClient();
+  if (!supabase) {
+    supabase = await getServerClient();
+  }
   if (!supabase) return { ok: false };
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.id).maybeSingle();

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type Props = {
   skills: PublicSkillCardData[];
   onSelect: (skill: PublicSkillCardData) => void;
+  theme?: "light" | "dark";
 };
 
 function StatusCell({ skill }: { skill: PublicSkillCardData }) {
@@ -30,41 +31,76 @@ function StatusCell({ skill }: { skill: PublicSkillCardData }) {
   );
 }
 
-export function PublicSkillList({ skills, onSelect }: Props) {
+export function PublicSkillList({ skills, onSelect, theme = "light" }: Props) {
   if (!skills.length) return null;
 
+  const dark = theme === "dark";
+
   return (
-    <div className="overflow-hidden rounded-xl border border-black/[0.06] bg-white">
-      <div className="hidden border-b border-black/[0.06] bg-[#fafafa] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-black/35 md:grid md:grid-cols-[2fr_1fr_0.75fr_1.25fr] md:gap-4">
+    <div
+      className={cn(
+        "overflow-hidden rounded-xl border",
+        dark ? "border-white/[0.08] bg-white/[0.03]" : "border-black/[0.06] bg-white",
+      )}
+    >
+      <div
+        className={cn(
+          "hidden border-b px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] md:grid md:grid-cols-[2fr_1fr_0.75fr_1.25fr] md:gap-4",
+          dark
+            ? "border-white/[0.06] bg-white/[0.04] text-white/35"
+            : "border-black/[0.06] bg-[#fafafa] text-black/35",
+        )}
+      >
         <span>Compétence</span>
         <span>Catégorie</span>
         <span>Niveau</span>
-        <span>Statut EDGE</span>
+        <span>Statut Byound</span>
       </div>
 
-      <ul className="divide-y divide-black/[0.05]">
+      <ul className={cn("divide-y", dark ? "divide-white/[0.06]" : "divide-black/[0.05]")}>
         {skills.map((skill) => (
           <li key={skill.name}>
             <button
               type="button"
               onClick={() => onSelect(skill)}
-              className="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-[#fafafa] md:grid md:grid-cols-[2fr_1fr_0.75fr_1.25fr] md:gap-4"
+              className={cn(
+                "group flex w-full items-center gap-3 px-4 py-2.5 text-left transition md:grid md:grid-cols-[2fr_1fr_0.75fr_1.25fr] md:gap-4",
+                dark ? "hover:bg-white/[0.05]" : "hover:bg-[#fafafa]",
+              )}
             >
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-[#0a0a0a] group-hover:text-[#FF3B30] md:flex-none">
+              <span
+                className={cn(
+                  "min-w-0 flex-1 truncate text-sm font-medium md:flex-none",
+                  dark
+                    ? "text-white/90 group-hover:text-[#9EC0FF]"
+                    : "text-[#0a0a0a] group-hover:text-[#FF3B30]",
+                )}
+              >
                 {skill.name}
               </span>
-              <span className="hidden truncate text-xs text-black/45 md:block">{skill.category}</span>
-              <span className="hidden text-xs font-medium text-[#0a0a0a] md:block">{skill.estimatedLevel}</span>
+              <span className={cn("hidden truncate text-xs md:block", dark ? "text-white/40" : "text-black/45")}>
+                {skill.category}
+              </span>
+              <span
+                className={cn(
+                  "hidden text-xs font-medium md:block",
+                  dark ? "text-white/75" : "text-[#0a0a0a]",
+                )}
+              >
+                {skill.estimatedLevel}
+              </span>
               <span className="hidden md:block">
                 <StatusCell skill={skill} />
               </span>
               <span className="flex min-w-0 flex-1 flex-col items-end gap-0.5 md:hidden">
                 <StatusCell skill={skill} />
-                <span className="text-[11px] text-black/40">
+                <span className={cn("text-[11px]", dark ? "text-white/35" : "text-black/40")}>
                   {skill.category} · {skill.estimatedLevel}
                 </span>
               </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-black/20 md:hidden" />
+              <ChevronRight
+                className={cn("h-4 w-4 shrink-0 md:hidden", dark ? "text-white/25" : "text-black/20")}
+              />
             </button>
           </li>
         ))}

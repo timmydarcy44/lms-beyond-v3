@@ -5,7 +5,7 @@ import Link from "next/link";
 import { EdgePageAmbiance } from "@/components/apprenant/edge-page-ambiance";
 import {
   SkillsCapitalStrip,
-  SkillsCtaRow,
+  SkillsQuickActionCards,
   SkillsEmptyHint,
   SkillsProgressBar,
   SkillsSectionKicker,
@@ -45,11 +45,13 @@ export default function ApprenantSkillsHomePage() {
               Votre capital de compétences évolue avec vous.
             </p>
           </div>
-          <SkillsCtaRow
-            primaryHref="/dashboard/apprenant/skills/develop"
-            secondaryHref="/dashboard/apprenant/skills/prove"
-            exploreHref="/dashboard/apprenant/skills/competences"
-          />
+          <SkillsQuickActionCards />
+          <Link
+            href="/dashboard/apprenant/skills/develop"
+            className={`${CONNECT_BTN_PRIMARY} mt-2 inline-flex w-fit`}
+          >
+            Développer une compétence
+          </Link>
         </header>
 
         {/* Capital */}
@@ -139,6 +141,12 @@ export default function ApprenantSkillsHomePage() {
                     </span>
                   </div>
                   <SkillsProgressBar value={gap.percent} />
+                  {gap.tone === "gray" ? (
+                    <p className="text-[11px] text-white/35">
+                      Alignement estimé dès que le test soft skills (20 compétences) ou une preuve
+                      métier est disponible pour cette compétence.
+                    </p>
+                  ) : null}
                   <div className="flex justify-end">
                     <Link
                       href={`/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(gap.skill)}`}

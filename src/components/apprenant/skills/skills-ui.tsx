@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Dumbbell, Upload, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TrainingFocus } from "@/lib/apprenant/edge-skills-center";
 import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/connect-nav";
@@ -111,6 +112,51 @@ export function SkillsEmptyHint({ children }: { children: React.ReactNode }) {
   return <p className="text-[14px] leading-relaxed text-white/40">{children}</p>;
 }
 
+const SKILLS_QUICK_ACTIONS = [
+  {
+    title: "Déposer une preuve",
+    description: "Lien, document ou portfolio pour valider une compétence.",
+    href: "/dashboard/apprenant/skills/prove",
+    icon: Upload,
+  },
+  {
+    title: "Entraînement",
+    description: "Exercices guidés et mises en situation.",
+    href: "/dashboard/apprenant/skills/entrainement",
+    icon: Dumbbell,
+  },
+  {
+    title: "Wallet",
+    description: "Tous vos badges et certifications Byound.",
+    href: "/dashboard/apprenant/badges",
+    icon: Wallet,
+  },
+] as const;
+
+export function SkillsQuickActionCards({ className }: { className?: string }) {
+  return (
+    <div className={cn("grid gap-3 sm:grid-cols-3", className)}>
+      {SKILLS_QUICK_ACTIONS.map((action) => {
+        const Icon = action.icon;
+        return (
+          <Link
+            key={action.href}
+            href={action.href}
+            className="group rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 transition hover:border-[#3D7BFF]/35 hover:bg-white/[0.06]"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3D7BFF]/15 text-[#9EC0FF] transition group-hover:bg-[#3D7BFF]/25">
+              <Icon className="h-5 w-5" />
+            </span>
+            <p className="mt-3 text-[15px] font-semibold tracking-[-0.02em] text-white">{action.title}</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-white/45">{action.description}</p>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+/** @deprecated Préférer SkillsQuickActionCards + lien « Développer » séparé */
 export function SkillsCtaRow({
   primaryHref,
   secondaryHref,

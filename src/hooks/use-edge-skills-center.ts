@@ -98,7 +98,7 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
     }
     setUserId(uid);
 
-    const [profileRes, discRes] = await Promise.all([
+    const [profileRes, discRes, softRes, idmcRes, expRes, dipRes] = await Promise.all([
       supabase
         .from("profiles")
         .select(
@@ -107,6 +107,16 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
         .eq("id", uid)
         .maybeSingle(),
       supabase.from("disc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
+      supabase
+        .from("soft_skills_resultats")
+        .select("scores")
+        .eq("learner_id", uid)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
+      supabase.from("experiences_pro").select("*").eq("learner_id", uid),
+      supabase.from("diplomes").select("*").eq("learner_id", uid),
     ]);
 
     if (profileRes.error) {
@@ -141,6 +151,31 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
       "";
     setObjectiveLabel(label);
 
+    const softSkillsScores = (softRes.data?.scores as Record<string, number> | null) ?? null;
+    const hasIdmc = Boolean(idmcRes.data?.scores);
+    const experiences = (expRes.data ?? []).map((row) => ({
+      id: String(row.id),
+      employeur: row.employeur,
+      poste: row.poste ?? null,
+      type_contrat: row.type_contrat,
+      date_debut: row.date_debut,
+      date_fin: row.date_fin,
+      missions: row.missions,
+      competences_developpees: Array.isArray(row.competences_developpees)
+        ? row.competences_developpees.map(String)
+        : [],
+    }));
+    const diplomas = (dipRes.data ?? []).map((row) => ({
+      id: String(row.id),
+      intitule: row.intitule,
+      ecole: row.ecole,
+      annee_obtention: row.annee_obtention,
+      mode: row.mode,
+      diploma_type: row.diploma_type ?? null,
+      niveau: row.niveau ?? null,
+      description: row.description ?? null,
+    }));
+
     const slug = profile.target_career_slug ? String(profile.target_career_slug) : "";
     if (slug && disc) {
       const career = await loadCareer(slug);
@@ -150,12 +185,12 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
           analyzeCareerMatching({
             career,
             discScores: disc,
-            softSkillsScores: null,
+            softSkillsScores,
             hardSkills: hs,
             skillsMetadata: parsedMeta,
-            experiences: [],
-            diplomas: [],
-            hasIdmc: false,
+            experiences,
+            diplomas,
+            hasIdmc,
           }),
         );
       } else {

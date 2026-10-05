@@ -7,7 +7,10 @@ import {
   type StoredHardSkillMeta,
 } from "@/lib/hard-skills/hard-skills-portfolio";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
-import type { CareerMatchingResult } from "@/lib/career-profiles/career-profile-matching";
+import {
+  careerSkillMasteryPercent,
+  type CareerMatchingResult,
+} from "@/lib/career-profiles/career-profile-matching";
 
 export type SkillsCapital = {
   total: number;
@@ -136,14 +139,11 @@ export function buildTrainingFocusList(
 export function buildObjectiveGaps(matching: CareerMatchingResult | null): ObjectiveSkillGap[] {
   if (!matching?.skillTable?.length) return [];
   return matching.skillTable.slice(0, 6).map((row) => {
-    let percent = 40;
-    if (row.userLevel === "Excellent") percent = 95;
-    else if (row.userLevel === "Très bon") percent = 85;
-    else if (row.userLevel === "Bon") percent = 72;
-    else if (row.userLevel === "Moyen") percent = 55;
-    else if (row.userLevel === "À renforcer") percent = 35;
-    else percent = 20;
-    return { skill: row.skill, percent, tone: row.tone };
+    const measured = careerSkillMasteryPercent(row);
+    if (measured != null) {
+      return { skill: row.skill, percent: measured, tone: row.tone };
+    }
+    return { skill: row.skill, percent: 12, tone: "gray" as const };
   });
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -27,6 +28,12 @@ import {
   type DiscScores,
 } from "@/components/apprenant/apprenant-assessment-results";
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
+import { EDGE_LOGO_PATH } from "@/lib/edge-site/premium-constants";
+import { sortSoftSkillsDescending } from "@/lib/soft-skills/resolve-soft-skills-result";
+import { cn } from "@/lib/utils";
+
+const DARK_CARD =
+  "rounded-2xl border border-white/[0.08] bg-white/[0.04] shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-sm";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -38,7 +45,7 @@ const fadeUp = {
 const motionPrintSafe = "print:!opacity-100 print:!translate-y-0";
 
 const LINKEDIN_SHARE_INTRO =
-  "Bien plus qu'un CV, découvrez mon profil complet avec EDGE";
+  "Bien plus qu'un CV, découvrez mon profil certifié Byound";
 
 type Experience = {
   start: string;
@@ -148,6 +155,17 @@ export function EdgePublicProfileView({
       ? `${displayFirstName} ${displayLastName ? displayLastName.toUpperCase() : ""}`.trim()
       : displayName;
 
+  const topSoftSkills = useMemo(() => {
+    const sorted = sortSoftSkillsDescending(softSkillsRadar);
+    return sorted.slice(0, 3).map((row) => ({
+      ...row,
+      percent: Math.min(100, Math.round((row.score / 15) * 100)),
+    }));
+  }, [softSkillsRadar]);
+
+  const shareBtn =
+    "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-white/75 transition hover:border-[#3D7BFF]/40 hover:bg-white/[0.1] hover:text-white";
+
   const handleLinkedInShare = async () => {
     const shareText = `${LINKEDIN_SHARE_INTRO}\n\n${publicUrl}`;
     try {
@@ -169,7 +187,7 @@ export function EdgePublicProfileView({
 
   const competencesSection =
     stackTools.length === 0 && skillCards.length === 0 ? (
-      <p className="text-sm text-black/50">Aucune compétence renseignée.</p>
+      <p className="text-sm text-white/45">Aucune compétence renseignée.</p>
     ) : (
       <>
         {stackTools.length ? (
@@ -177,7 +195,7 @@ export function EdgePublicProfileView({
             {stackTools.map((tool) => (
               <span
                 key={tool}
-                className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-[#fafafa] px-3 py-1.5 text-xs font-medium"
+                className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-white/70"
               >
                 {toolLogoResolver(tool) ? (
                   <img src={toolLogoResolver(tool)!} alt="" className="h-4 w-4 object-contain" />
@@ -189,7 +207,7 @@ export function EdgePublicProfileView({
         ) : null}
         {skillCards.length ? (
           <div className={stackTools.length ? "mt-5" : ""}>
-            <PublicSkillList skills={skillCards} onSelect={setAnalysisSkill} />
+            <PublicSkillList skills={skillCards} onSelect={setAnalysisSkill} theme="dark" />
           </div>
         ) : null}
       </>
@@ -200,19 +218,19 @@ export function EdgePublicProfileView({
       {experiences.map((exp) => (
         <div
           key={`${exp.title}-${exp.company}`}
-          className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
+          className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4"
         >
-          <p className="text-xs text-black/45">
+          <p className="text-xs text-white/40">
             {exp.start} — {exp.end}
           </p>
-          <p className="mt-1 font-medium text-[#0a0a0a]">{exp.title}</p>
-          <p className="text-sm text-black/55">{exp.company}</p>
-          {exp.missions ? <p className="mt-2 text-sm text-black/60">{exp.missions}</p> : null}
+          <p className="mt-1 font-medium text-white">{exp.title}</p>
+          <p className="text-sm text-white/55">{exp.company}</p>
+          {exp.missions ? <p className="mt-2 text-sm text-white/50">{exp.missions}</p> : null}
         </div>
       ))}
     </div>
   ) : (
-    <p className="text-sm text-black/50">Aucune expérience renseignée.</p>
+    <p className="text-sm text-white/45">Aucune expérience renseignée.</p>
   );
 
   const diplomesSection = diplomas.length ? (
@@ -220,63 +238,54 @@ export function EdgePublicProfileView({
       {diplomas.map((dip) => (
         <div
           key={`${dip.title}-${dip.school}`}
-          className="rounded-xl border border-black/[0.06] bg-[#fafafa] p-4"
+          className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4"
         >
-          <p className="text-xs text-black/45">{dip.start}</p>
-          <p className="mt-1 font-medium text-[#0a0a0a]">{dip.title}</p>
-          <p className="text-sm text-black/55">{dip.school}</p>
+          <p className="text-xs text-white/40">{dip.start}</p>
+          <p className="mt-1 font-medium text-white">{dip.title}</p>
+          <p className="text-sm text-white/55">{dip.school}</p>
         </div>
       ))}
     </div>
   ) : (
-    <p className="text-sm text-black/50">Aucun diplôme renseigné.</p>
+    <p className="text-sm text-white/45">Aucun diplôme renseigné.</p>
   );
 
   return (
     <div
       id="public-profile-print-root"
-      className="min-h-screen bg-[#fafafa] font-['Inter',system-ui,sans-serif] text-[#0a0a0a] print:bg-white"
+      className="min-h-screen bg-[#060912] font-['Inter',system-ui,sans-serif] text-white print:bg-white print:text-[#0a0a0a]"
     >
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-48 bg-gradient-to-b from-[#FF3B30]/[0.07] to-transparent print:hidden" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(61,123,255,0.22),transparent)] print:hidden" />
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent print:hidden" />
 
       <div className="relative mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12 print:max-w-none print:px-6 print:py-4">
         <motion.header
           {...fadeUp}
           className="mb-8 flex flex-wrap items-center justify-between gap-4 print:hidden"
         >
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-[#FF3B30]">EDGE</p>
-            <p className="mt-0.5 text-xs text-black/45">Profil certifié EDGE</p>
+          <div className="flex items-center gap-3">
+            <Image src={EDGE_LOGO_PATH} alt="Byound" width={120} height={32} className="h-7 w-auto" />
+            <span className="rounded-full border border-[#3D7BFF]/30 bg-[#3D7BFF]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9EC0FF]">
+              Profil certifié
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onCopyLink}
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-medium text-black/70 shadow-sm hover:border-[#FF3B30]/30"
-            >
+            <button type="button" onClick={onCopyLink} className={shareBtn}>
               <Share2 className="h-3.5 w-3.5" />
               Copier le lien
             </button>
-            <button
-              type="button"
-              onClick={() => void handleLinkedInShare()}
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-medium text-black/70 shadow-sm hover:border-[#FF3B30]/30"
-            >
+            <button type="button" onClick={() => void handleLinkedInShare()} className={shareBtn}>
               <ExternalLink className="h-3.5 w-3.5" />
               LinkedIn
             </button>
             <a
-              href={`mailto:?subject=${encodeURIComponent("Profil EDGE")}&body=${encodeURIComponent(`${LINKEDIN_SHARE_INTRO}\n\n${publicUrl}`)}`}
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-medium text-black/70 shadow-sm hover:border-[#FF3B30]/30"
+              href={`mailto:?subject=${encodeURIComponent("Profil Byound")}&body=${encodeURIComponent(`${LINKEDIN_SHARE_INTRO}\n\n${publicUrl}`)}`}
+              className={shareBtn}
             >
               <Mail className="h-3.5 w-3.5" />
               Email
             </a>
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-medium text-black/70 shadow-sm hover:border-[#FF3B30]/30"
-            >
+            <button type="button" onClick={handleDownloadPdf} className={shareBtn}>
               <Download className="h-3.5 w-3.5" />
               PDF
             </button>
@@ -287,137 +296,131 @@ export function EdgePublicProfileView({
           <div className="space-y-6">
             <motion.section
               {...fadeUp}
-              className={`overflow-hidden rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8 ${motionPrintSafe}`}
+              className={cn(`overflow-hidden sm:p-8 p-6 ${motionPrintSafe}`, DARK_CARD, "print:border-black/10 print:bg-white")}
             >
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
                 {displayAvatar ? (
                   <img
                     src={displayAvatar}
                     alt={nameLine}
-                    className="h-24 w-24 shrink-0 rounded-2xl border border-black/[0.08] object-cover shadow-md"
+                    className="h-24 w-24 shrink-0 rounded-2xl border border-white/10 object-cover shadow-lg ring-2 ring-[#3D7BFF]/20"
                   />
                 ) : (
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-black/[0.08] bg-[#f5f5f3] text-black/35">
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white/35">
                     <User className="h-10 w-10" />
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl font-semibold tracking-tight text-[#0a0a0a] sm:text-3xl">
-                    {nameLine}
-                  </h1>
-                  <p className="mt-1 text-sm text-black/50">{displayTitle}</p>
-                  {edgeReliabilityIndex > 0 ? (
-                    <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#FF3B30]/20 bg-[#FF3B30]/5 px-3 py-1.5 text-xs font-semibold text-[#FF3B30]">
-                      Indice de fiabilité EDGE · {edgeReliabilityIndex} %
-                    </p>
-                  ) : null}
+                  <h1 className="text-2xl font-bold tracking-tight text-white sm:text-[32px]">{nameLine}</h1>
+                  <p className="mt-1 text-sm text-white/50">{displayTitle}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-200">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      Vérifié par Byound
+                    </span>
+                    {edgeReliabilityIndex > 0 ? (
+                      <span className="inline-flex items-center rounded-full border border-[#3D7BFF]/25 bg-[#3D7BFF]/10 px-3 py-1 text-[11px] font-semibold text-[#9EC0FF]">
+                        Fiabilité · {edgeReliabilityIndex} %
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
-              <ol className="mt-6 space-y-2.5 border-t border-black/[0.06] pt-6 text-sm">
+              <div className="mt-6 grid gap-2.5 border-t border-white/[0.06] pt-6 sm:grid-cols-2">
                 {phone ? (
-                  <li className="flex items-center gap-3 text-black/75">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FF3B30]/10 text-[11px] font-semibold text-[#FF3B30]">
-                      1
-                    </span>
-                    <Phone className="h-4 w-4 shrink-0 text-black/35" />
-                    <a href={`tel:${phone.replace(/\s/g, "")}`} className="hover:text-[#FF3B30]">
-                      {phone}
-                    </a>
-                  </li>
+                  <a
+                    href={`tel:${phone.replace(/\s/g, "")}`}
+                    className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-white/80 transition hover:border-[#3D7BFF]/30"
+                  >
+                    <Phone className="h-4 w-4 shrink-0 text-[#7BA7FF]" />
+                    <span className="truncate">{phone}</span>
+                  </a>
                 ) : null}
                 {email ? (
-                  <li className="flex items-center gap-3 text-black/75">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FF3B30]/10 text-[11px] font-semibold text-[#FF3B30]">
-                      {phone ? 2 : 1}
-                    </span>
-                    <Mail className="h-4 w-4 shrink-0 text-black/35" />
-                    <a href={`mailto:${email}`} className="hover:text-[#FF3B30]">
-                      {email}
-                    </a>
-                  </li>
+                  <a
+                    href={`mailto:${email}`}
+                    className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-white/80 transition hover:border-[#3D7BFF]/30"
+                  >
+                    <Mail className="h-4 w-4 shrink-0 text-[#7BA7FF]" />
+                    <span className="truncate">{email}</span>
+                  </a>
                 ) : null}
                 {birthDateLabel && birthDateLabel !== "—" ? (
-                  <li className="flex items-center gap-3 text-black/75">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FF3B30]/10 text-[11px] font-semibold text-[#FF3B30]">
-                      {(phone ? 1 : 0) + (email ? 1 : 0) + 1}
-                    </span>
-                    <span>Date de naissance · {birthDateLabel}</span>
-                  </li>
+                  <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-white/75">
+                    <span className="text-white/40">Naissance</span>
+                    <span>{birthDateLabel}</span>
+                  </div>
                 ) : null}
                 {displayTitle ? (
-                  <li className="flex items-center gap-3 text-black/75">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FF3B30]/10 text-[11px] font-semibold text-[#FF3B30]">
-                      {(phone ? 1 : 0) + (email ? 1 : 0) + (birthDateLabel && birthDateLabel !== "—" ? 1 : 0) + 1}
-                    </span>
-                    <span>Situation · {displayTitle}</span>
-                  </li>
+                  <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-white/75">
+                    <span className="text-white/40">Situation</span>
+                    <span>{displayTitle}</span>
+                  </div>
                 ) : null}
-              </ol>
+              </div>
             </motion.section>
 
             <motion.section
               {...fadeUp}
-              className={`rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8 ${motionPrintSafe}`}
+              className={cn(`p-6 sm:p-8 ${motionPrintSafe}`, DARK_CARD, "print:bg-white")}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#7BA7FF]/90">
                     Présentation
                   </p>
-                  <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Synthèse du profil</h2>
+                  <h2 className="mt-1 text-lg font-semibold text-white">Synthèse du profil</h2>
                 </div>
                 <button
                   type="button"
                   onClick={onRegeneratePresentation}
-                  className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-black/60 hover:border-[#FF3B30]/40 hover:text-[#FF3B30] print:hidden"
+                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/55 hover:border-[#3D7BFF]/40 hover:text-white print:hidden"
                 >
                   Régénérer
                 </button>
               </div>
               {isLoadingPresentation ? (
-                <p className="mt-4 text-sm text-black/50">Génération en cours…</p>
+                <p className="mt-4 text-sm text-white/45">Génération en cours…</p>
               ) : sanitizedPresentation ? (
-                <p className="mt-4 text-sm leading-relaxed text-black/70">{sanitizedPresentation}</p>
+                <p className="mt-4 text-sm leading-relaxed text-white/70">{sanitizedPresentation}</p>
               ) : (
-                <p className="mt-4 text-sm text-black/50">
-                  Présentation indisponible pour le moment.
-                </p>
+                <p className="mt-4 text-sm text-white/45">Présentation indisponible pour le moment.</p>
               )}
             </motion.section>
 
             {showBadges && earnedOpenBadges.length > 0 ? (
               <motion.section
                 {...fadeUp}
-                className={`rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8 ${motionPrintSafe}`}
+                className={cn(`p-6 sm:p-8 ${motionPrintSafe}`, DARK_CARD, "print:bg-white")}
               >
                 <div className="mb-4">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#7BA7FF]/90">
                     Certifications
                   </p>
-                  <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Open Badges obtenus</h2>
+                  <h2 className="mt-1 text-lg font-semibold text-white">Open Badges obtenus</h2>
                 </div>
-                <ul className="flex flex-wrap gap-3">
+                <ul className="flex flex-wrap gap-4">
                   {earnedOpenBadges.map((badge) => (
                     <li key={badge.id}>
                       <button
                         type="button"
                         onClick={() => setSelectedBadge(badge)}
-                        className="group flex flex-col items-center gap-2 rounded-xl border border-black/[0.08] bg-[#fafafa] p-3 transition hover:border-[#FF3B30]/35 hover:shadow-md"
+                        className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 transition hover:border-[#3D7BFF]/35 hover:bg-white/[0.06]"
                       >
                         {badge.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={badge.imageUrl}
                             alt=""
-                            className="h-16 w-16 rounded-lg object-cover ring-1 ring-black/10"
+                            className="h-24 w-24 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
                           />
                         ) : (
-                          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#FF3B30]/10">
-                            <Award className="h-7 w-7 text-[#FF3B30]" />
+                          <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-[#3D7BFF]/10">
+                            <Award className="h-9 w-9 text-[#9EC0FF]" />
                           </div>
                         )}
-                        <span className="max-w-[120px] truncate text-center text-xs font-medium text-black/75 group-hover:text-[#FF3B30]">
+                        <span className="max-w-[140px] text-center text-xs font-medium text-white/75 group-hover:text-[#9EC0FF]">
                           {badge.name}
                         </span>
                       </button>
@@ -427,16 +430,43 @@ export function EdgePublicProfileView({
               </motion.section>
             ) : null}
 
+            {topSoftSkills.length > 0 ? (
+              <motion.section {...fadeUp} className={cn(`p-6 sm:p-8 ${motionPrintSafe}`, DARK_CARD)}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#7BA7FF]/90">
+                  Soft skills
+                </p>
+                <h2 className="mt-1 text-lg font-semibold text-white">Top 3 — forces mesurées</h2>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  {topSoftSkills.map((row, index) => (
+                    <div
+                      key={row.skill}
+                      className={cn(
+                        "rounded-xl border p-4",
+                        index === 0
+                          ? "border-[#3D7BFF]/35 bg-gradient-to-br from-[#3D7BFF]/20 to-white/[0.04]"
+                          : "border-white/[0.08] bg-white/[0.03]",
+                      )}
+                    >
+                      <p className="text-[11px] font-semibold text-white/40">#{index + 1}</p>
+                      <p className="mt-1 text-[15px] font-semibold text-white">{row.skill}</p>
+                      <p className="mt-2 text-2xl font-bold tabular-nums text-[#9EC0FF]">{row.percent} %</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.section>
+            ) : null}
+
             <motion.section {...fadeUp} className={motionPrintSafe}>
               <div className="mb-4">
-                <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#FF3B30]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#7BA7FF]/90">
                   Bilans
                 </p>
-                <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">Tests & compétences</h2>
+                <h2 className="mt-1 text-lg font-semibold text-white">Tests & compétences</h2>
               </div>
               <ApprenantAssessmentResults
                 variant="compact"
                 publicMode
+                publicProfileDark
                 firstName={displayFirstName || displayName.split(" ")[0]}
                 discScores={discScores}
                 idmcAxes={idmcAxes}
@@ -451,11 +481,11 @@ export function EdgePublicProfileView({
               diplomas.length > 0) && (
               <motion.section
                 {...fadeUp}
-                className={`rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:p-8 ${motionPrintSafe}`}
+                className={cn(`p-6 sm:p-8 ${motionPrintSafe}`, DARK_CARD, "print:bg-white")}
               >
-                <h2 className="text-lg font-semibold text-[#0a0a0a]">Profil professionnel</h2>
+                <h2 className="text-lg font-semibold text-white">Profil professionnel</h2>
                 <ProfileSectionStack
-                  className="mt-5"
+                  className="mt-5 [&_button]:text-white/70 [&_button[data-state=active]]:text-white"
                   sections={[
                     { id: "competences", label: "Compétences", content: competencesSection },
                     { id: "experiences", label: "Expériences", content: experiencesSection },
@@ -470,28 +500,32 @@ export function EdgePublicProfileView({
             {...fadeUp}
             className="h-fit space-y-4 lg:sticky lg:top-8 print:hidden"
           >
-            <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_12px_48px_rgba(255,59,48,0.08)]">
+            <div className={cn("p-6", DARK_CARD)}>
               {edgeReliabilityIndex > 0 ? (
-                <EdgeReliabilityBadge score={edgeReliabilityIndex} className="mb-5 border-0 bg-transparent p-0 shadow-none" />
+                <EdgeReliabilityBadge
+                  score={edgeReliabilityIndex}
+                  theme="dark"
+                  className="mb-5 border-0 bg-transparent p-0 shadow-none"
+                />
               ) : null}
-              <h3 className="text-base font-semibold text-[#0a0a0a]">Je suis recruteur</h3>
-              <p className="mt-2 text-sm text-black/55">
-                Découvrez notre système de matching et contactez ce profil.
+              <h3 className="text-base font-semibold text-white">Vous recrutez ?</h3>
+              <p className="mt-2 text-sm text-white/50">
+                Découvrez le matching Byound et contactez ce profil en toute confiance.
               </p>
-              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#FF3B30]/20 bg-[#FF3B30]/5 px-3 py-2 text-xs font-medium text-[#FF3B30]">
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-200">
                 <BadgeCheck className="h-4 w-4" />
-                Profil vérifié par EDGE
+                Profil vérifié par Byound
               </div>
               <div className="mt-5 flex flex-col gap-2">
                 <Link
                   href="/entreprises/connexion"
-                  className="inline-flex w-full items-center justify-center rounded-full bg-[#FF3B30] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#3D7BFF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#356ee0]"
                 >
                   Créer un compte
                 </Link>
                 <Link
                   href="/entreprises/connexion"
-                  className="inline-flex w-full items-center justify-center rounded-full border border-black/12 px-4 py-2.5 text-sm font-semibold text-[#0a0a0a] hover:bg-black/[0.03]"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/85 hover:bg-white/[0.06]"
                 >
                   Me connecter
                 </Link>

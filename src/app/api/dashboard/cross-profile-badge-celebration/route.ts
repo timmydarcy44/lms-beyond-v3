@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { BYOUND_CONNAISSANCE_DE_SOI_BADGE_IMAGE_URL } from "@/lib/openbadges/byound-badge-assets";
 import { PROFIL_COMPORTEMENTAL_BADGE_NAME } from "@/lib/openbadges/diagnostic-commercial-badge";
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -47,6 +48,9 @@ export async function GET() {
       .eq("id", badgeId)
       .maybeSingle();
     badgeImageUrl = badgeRow?.image_url ? String(badgeRow.image_url) : null;
+  }
+  if (!badgeImageUrl) {
+    badgeImageUrl = BYOUND_CONNAISSANCE_DE_SOI_BADGE_IMAGE_URL;
   }
 
   const role = String(profile?.role ?? "").trim().toUpperCase();

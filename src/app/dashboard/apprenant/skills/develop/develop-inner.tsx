@@ -27,21 +27,37 @@ import {
   searchCatalogEntries,
   type HardSkillCatalogEntry,
 } from "@/lib/hard-skills/hard-skills-portfolio";
+import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import { cn } from "@/lib/utils";
 
-type Step = 1 | 2 | 3;
+type SkillFamily = "soft" | "hard";
+type Step = 1 | 2 | 3 | 4;
 
 export default function DevelopInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselect = searchParams.get("skill")?.trim() || "";
+  const preselectIsSoft = useMemo(
+    () =>
+      preselect.length > 0 &&
+      SOFT_SKILLS.some((s) => s.titre.toLowerCase() === preselect.toLowerCase()),
+    [preselect],
+  );
   const { records, meta, upsertSkill, loading } = useEdgeSkillsCenter();
 
-  const [step, setStep] = useState<Step>(preselect ? 2 : 1);
+  const [family, setFamily] = useState<SkillFamily | null>(
+    preselect ? (preselectIsSoft ? "soft" : "hard") : null,
+  );
+  const [step, setStep] = useState<Step>(preselect ? 3 : 1);
   const [query, setQuery] = useState(preselect);
   const [selected, setSelected] = useState<HardSkillCatalogEntry | null>(
-    preselect ? { name: preselect, category: "Autre" } : null,
+    preselect
+      ? {
+          name: preselect,
+          category: preselectIsSoft ? "Soft skills" : "Compétence métier",
+        }
+      : null,
   );
   const [currentLevel, setCurrentLevel] = useState<HardSkillLevel>("Intermédiaire");
   const [targetLevel, setTargetLevel] = useState<HardSkillLevel>("Confirmé");
@@ -73,8 +89,36 @@ export default function DevelopInner() {
     const level = rec?.level ?? "Intermédiaire";
     setCurrentLevel(level);
     setTargetLevel(meta[entry.name]?.trainingTargetLevel ?? nextHardSkillLevel(level));
+    setStep(3);
+  };
+
+  const chooseFamily = (next: SkillFamily) => {
+    setFamily(next);
+    setSelected(null);
+    setQuery("");
     setStep(2);
   };
+
+  const confirmHardSkillFreeText = () => {
+    const name = query.trim();
+    if (name.length < 2) {
+      setError("Indiquez le nom de la compétence métier.");
+      return;
+    }
+    setError(null);
+    pickSkill({ name, category: "Compétence métier" });
+  };
+
+  const softSkillEntries = useMemo(
+    () => SOFT_SKILLS.map((s) => ({ name: s.titre, category: "Soft skills" as const })),
+    [],
+  );
+
+  const filteredSoft = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return softSkillEntries;
+    return softSkillEntries.filter((e) => e.name.toLowerCase().includes(q));
+  }, [query, softSkillEntries]);
 
   const startPlan = async () => {
     if (!selected) return;
@@ -85,7 +129,7 @@ export default function DevelopInner() {
         targetLevel,
         source: "catalog",
       });
-      setStep(3);
+      setStep(4);
     } catch {
       setError("Impossible d’enregistrer le plan.");
     } finally {
@@ -93,15 +137,34 @@ export default function DevelopInner() {
     }
   };
 
+  const stepLabel =
+    step === 1
+      ? "Famille"
+      : step === 2
+        ? family === "soft"
+          ? "Soft skill"
+          : "Compétence métier"
+        : step === 3
+          ? "Niveaux"
+          : "Plan";
+  const stepTotal = 4;
+
   return (
     <div className={`${APPRENANT_PAGE_SHELL} max-w-2xl pb-24`}>
       <button
         type="button"
-        onClick={() =>
-          step === 1
-            ? router.push("/dashboard/apprenant/skills")
-            : setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
-        }
+        onClick={() => {
+          if (step === 1) {
+            router.push("/dashboard/apprenant/skills");
+            return;
+          }
+          if (step === 2) {
+            setFamily(null);
+            setStep(1);
+            return;
+          }
+          setStep((s) => (s > 1 ? ((s - 1) as Step) : s));
+        }}
         className="inline-flex items-center gap-2 text-[13px] text-white/40 transition hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -112,10 +175,14 @@ export default function DevelopInner() {
         <SkillsSectionKicker>Développer</SkillsSectionKicker>
         <h1 className="text-[28px] font-bold tracking-[-0.03em] text-white sm:text-[32px]">
           {step === 1 && "Que voulez-vous développer ?"}
-          {step === 2 && "Confirmez votre objectif"}
-          {step === 3 && "Votre plan de progression"}
+          {step === 2 && family === "soft" && "Choisissez un soft skill"}
+          {step === 2 && family === "hard" && "Quelle compétence métier ?"}
+          {step === 3 && "Confirmez votre objectif"}
+          {step === 4 && "Votre plan de progression"}
         </h1>
-        <p className="text-[13px] text-white/35">Étape {step} / 3</p>
+        <p className="text-[13px] text-white/35">
+          Étape {step} / {stepTotal} · {stepLabel}
+        </p>
       </header>
 
       {loading ? (
@@ -126,47 +193,111 @@ export default function DevelopInner() {
       ) : null}
 
       {step === 1 && (
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => chooseFamily("soft")}
+            className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 text-left transition hover:border-[#3D7BFF]/40 hover:bg-white/[0.06]"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7BA7FF]/90">
+              Soft skills
+            </p>
+            <p className="mt-2 text-[16px] font-semibold text-white">Comportement & relationnel</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-white/45">
+              Choisissez parmi les 20 compétences de votre test (communication, organisation…).
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => chooseFamily("hard")}
+            className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 text-left transition hover:border-[#3D7BFF]/40 hover:bg-white/[0.06]"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7BA7FF]/90">
+              Hard skills
+            </p>
+            <p className="mt-2 text-[16px] font-semibold text-white">Compétence métier</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-white/45">
+              Saisissez librement une compétence liée à votre métier ou projet.
+            </p>
+          </button>
+        </div>
+      )}
+
+      {step === 2 && family === "soft" && (
         <div className="mt-8 space-y-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher dans le référentiel EDGE…"
+              placeholder="Filtrer les soft skills…"
               className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-[14px] text-white outline-none placeholder:text-white/25 focus:border-[#3D7BFF]/40"
               autoFocus
             />
           </div>
-          <ul className="divide-y divide-white/[0.05] overflow-hidden rounded-2xl border border-white/[0.06]">
-            {results.map((entry) => (
-              <li key={`${entry.category}-${entry.name}`}>
+          <ul className="max-h-[420px] divide-y divide-white/[0.05] overflow-y-auto rounded-2xl border border-white/[0.06]">
+            {filteredSoft.map((entry) => (
+              <li key={entry.name}>
                 <button
                   type="button"
                   onClick={() => pickSkill(entry)}
                   className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-white/[0.04]"
                 >
-                  <span>
-                    <span className="block text-[14px] font-medium text-white">{entry.name}</span>
-                    {entry.subtitle ? (
-                      <span className="mt-0.5 block text-[12px] text-white/35">{entry.subtitle}</span>
-                    ) : (
-                      <span className="mt-0.5 block text-[12px] text-white/30">{entry.category}</span>
-                    )}
-                  </span>
+                  <span className="text-[14px] font-medium text-white">{entry.name}</span>
                   <ArrowRight className="h-4 w-4 shrink-0 text-white/25" />
                 </button>
               </li>
             ))}
-            {results.length === 0 && (
-              <li className="px-4 py-6">
-                <SkillsEmptyHint>Aucune compétence trouvée.</SkillsEmptyHint>
-              </li>
-            )}
           </ul>
         </div>
       )}
 
-      {step === 2 && selected && (
+      {step === 2 && family === "hard" && (
+        <div className="mt-8 space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="hard-skill-name" className="text-[12px] uppercase tracking-[0.14em] text-white/35">
+              Nom de la compétence
+            </label>
+            <input
+              id="hard-skill-name"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ex. Community management, Excel avancé, Soudure TIG…"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/25 focus:border-[#3D7BFF]/40"
+              autoFocus
+            />
+          </div>
+          {error ? <p className="text-[13px] text-rose-300">{error}</p> : null}
+          <button
+            type="button"
+            onClick={confirmHardSkillFreeText}
+            className={cn(CONNECT_BTN_PRIMARY, "w-full sm:w-auto")}
+          >
+            Continuer
+          </button>
+          {results.length > 0 && query.trim().length >= 2 ? (
+            <div className="space-y-2 border-t border-white/[0.06] pt-6">
+              <p className="text-[12px] text-white/40">Suggestions du référentiel</p>
+              <ul className="divide-y divide-white/[0.05] overflow-hidden rounded-2xl border border-white/[0.06]">
+                {results.slice(0, 6).map((entry) => (
+                  <li key={`${entry.category}-${entry.name}`}>
+                    <button
+                      type="button"
+                      onClick={() => pickSkill(entry)}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-white/[0.04]"
+                    >
+                      <span className="text-[14px] text-white/85">{entry.name}</span>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-white/25" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {step === 3 && selected && (
         <div className="mt-8 space-y-8">
           <div className="space-y-1">
             <p className="text-[22px] font-semibold tracking-[-0.02em] text-white">{selected.name}</p>
@@ -212,7 +343,7 @@ export default function DevelopInner() {
         </div>
       )}
 
-      {step === 3 && selected && (
+      {step === 4 && selected && (
         <div className="mt-8 space-y-8">
           <div className="space-y-2">
             <p className="text-[22px] font-semibold text-white">{selected.name}</p>

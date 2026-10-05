@@ -156,6 +156,8 @@ const TEST_PATHS: Record<
 type Props = {
   variant?: "compact" | "full";
   publicMode?: boolean;
+  /** Profil public Byound (cartes sombres). */
+  publicProfileDark?: boolean;
   testSurface?: AssessmentTestSurface;
   firstName?: string;
   discScores: DiscScores | null;
@@ -168,6 +170,7 @@ type Props = {
 export function ApprenantAssessmentResults({
   variant = "full",
   publicMode = false,
+  publicProfileDark = false,
   testSurface = "apprenant",
   firstName,
   discScores,
@@ -177,7 +180,7 @@ export function ApprenantAssessmentResults({
   idmcLevel,
 }: Props) {
   const compact = variant === "compact";
-  const cockpit = !publicMode;
+  const cockpit = !publicMode || publicProfileDark;
   const paths = TEST_PATHS[testSurface];
   const resultCard = cockpit ? APPRENANT_CARD_BODY : RESULT_CARD_LIGHT;
   const resultsSection = cockpit ? APPRENANT_CARD_BODY : RESULTS_SECTION_LIGHT;

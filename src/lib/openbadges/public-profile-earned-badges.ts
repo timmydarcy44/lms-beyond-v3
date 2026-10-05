@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getLearnerEarnedOpenBadges } from "@/lib/openbadges/learner-visible-badges";
+import { resolveByoundPublicBadgeImageUrl } from "@/lib/openbadges/byound-badge-assets";
 import { getBadgeCriteriaUrl, getPublicShareBaseUrl } from "@/lib/openbadges/urls";
 
 export type PublicProfileEarnedBadge = {
@@ -89,11 +90,18 @@ export async function loadPublicProfileEarnedBadges(
       parsed.level ??
       null;
 
+    const rawImage = badge.imageUrl ?? (row?.image_url ? String(row.image_url) : null);
+    const imageUrl = resolveByoundPublicBadgeImageUrl({
+      id: badge.id,
+      name: badge.name,
+      imageUrl: rawImage,
+    });
+
     return {
       id: badge.id,
       name: badge.name,
       description,
-      imageUrl: badge.imageUrl ?? (row?.image_url ? String(row.image_url) : null),
+      imageUrl,
       level,
       awardedAt: badge.awardedAt,
       shareUrl: badge.shareUrl,

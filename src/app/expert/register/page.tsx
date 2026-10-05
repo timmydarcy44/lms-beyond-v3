@@ -1,47 +1,94 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { BadgeCheck, BarChart3, ChevronLeft, ChevronRight, Loader2, Share2, UploadCloud } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  Check,
+  Loader2,
+  Mail,
+  Share2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
-import { ExpertSpecialtiesStep } from "@/components/expert/register/expert-specialties-step";
 import { ExpertProfilePreview } from "@/components/expert/register/expert-profile-preview";
+import { DomainCard, RevolutField, SelectChip } from "@/components/expert/register/expert-register-ui";
 import {
   buildSpecialtiesPayload,
   EMPTY_SPECIALTIES_PROFILE,
+  EXPERT_AUDIENCES,
+  EXPERT_AVAILABILITY_OPTIONS,
+  EXPERT_DOMAINS,
+  EXPERT_EXPERIENCE_OPTIONS,
+  EXPERT_GEOGRAPHIC_ZONES,
+  EXPERT_INTERVENTION_FORMATS,
+  EXPERT_LANGUAGE_OPTIONS,
+  getAggregatedSpecialtyGroups,
+  getDomainsByIds,
   isSpecialtiesStepComplete,
+  pruneSpecialtyKeys,
+  toggleDomainId,
   type ExpertSpecialtiesProfile,
 } from "@/lib/expert/specialties-referential";
 import { EXPERT_REGISTER_GENERIC_ERROR } from "@/lib/expert/register-errors";
 
-type StepKey = 1 | 2 | 3;
+const STEPS = [
+  "email",
+  "identity",
+  "headline",
+  "domains",
+  "specialties",
+  "formats",
+  "details",
+  "certification",
+  "review",
+] as const;
 
-function StepPill({ active, done, label }: { active: boolean; done: boolean; label: string }) {
+type StepId = (typeof STEPS)[number];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function toggleItem(arr: string[], item: string): string[] {
+  return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
+}
+
+function StepHeading({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em]",
-        done
-          ? "border-[#635BFF]/30 bg-[#635BFF]/12 text-white"
-          : active
-            ? "border-[#635BFF]/35 bg-[#635BFF]/12 text-white"
-            : "border-white/10 bg-white/5 text-white/50",
-      )}
-    >
-      <span
-        className={cn(
-          "h-2 w-2 rounded-full",
-          done ? "bg-[#635BFF]" : active ? "bg-[#635BFF]" : "bg-white/25",
-        )}
-      />
-      {label}
+    <div>
+      {eyebrow ? <p className="text-sm font-medium text-[#A9AEFF]">{eyebrow}</p> : null}
+      <h1 className="mt-2 text-[clamp(1.75rem,3.4vw,2.5rem)] font-semibold leading-[1.1] tracking-[-0.02em] text-white">
+        {title}
+      </h1>
+      {subtitle ? <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-white/55">{subtitle}</p> : null}
+    </div>
+  );
+}
+
+function ChipGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-3 text-[13px] font-medium text-white/50">{label}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+function Backdrop() {
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
+      <div className="absolute inset-0 bg-[#070b1f]" />
+      <div className="absolute -right-48 -top-48 h-[720px] w-[720px] rounded-full bg-[radial-gradient(circle_at_center,rgba(124,131,255,0.28),transparent_62%)] blur-3xl" />
+      <div className="absolute -bottom-72 -left-40 h-[720px] w-[720px] rounded-full bg-[radial-gradient(circle_at_center,rgba(56,120,255,0.16),transparent_62%)] blur-3xl" />
     </div>
   );
 }
 
 export default function ExpertRegisterPage() {
-  const [step, setStep] = useState<StepKey>(1);
+  const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -52,36 +99,70 @@ export default function ExpertRegisterPage() {
   const [headline, setHeadline] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
-
-  const [specialtiesProfile, setSpecialtiesProfile] =
-    useState<ExpertSpecialtiesProfile>(EMPTY_SPECIALTIES_PROFILE);
-
+  const [profile, setProfile] = useState<ExpertSpecialtiesProfile>(EMPTY_SPECIALTIES_PROFILE);
   const [wantsCertification, setWantsCertification] = useState(false);
 
-  const canNext = useMemo(() => {
-    if (step === 1) return email.trim().length > 0 && firstName.trim().length > 0 && lastName.trim().length > 0;
-    if (step === 2) return isSpecialtiesStepComplete(specialtiesProfile);
-    return true;
-  }, [email, firstName, lastName, specialtiesProfile, step]);
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const step: StepId = STEPS[stepIndex];
+  const progress = ((stepIndex + 1) / STEPS.length) * 100;
 
-  const goNext = () => setStep((s) => (s === 3 ? 3 : ((s + 1) as StepKey)));
-  const goBack = () => setStep((s) => (s === 1 ? 1 : ((s - 1) as StepKey)));
+  useEffect(() => {
+    firstInputRef.current?.focus();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [stepIndex]);
+
+  const setProfilePatch = (patch: Partial<ExpertSpecialtiesProfile>) => setProfile((p) => ({ ...p, ...patch }));
+
+  const toggleDomain = (domainId: string) => {
+    setProfile((p) => {
+      const domainIds = toggleDomainId(p.domainIds, domainId);
+      return { ...p, domainIds, specialtyKeys: pruneSpecialtyKeys(p.specialtyKeys, domainIds) };
+    });
+  };
+
+  const selectedDomains = getDomainsByIds(profile.domainIds);
+  const specialtyGroups = getAggregatedSpecialtyGroups(profile.domainIds);
+
+  const canContinue = useMemo(() => {
+    switch (step) {
+      case "email":
+        return EMAIL_RE.test(email.trim());
+      case "identity":
+        return firstName.trim().length > 0 && lastName.trim().length > 0;
+      case "domains":
+        return profile.domainIds.length > 0;
+      case "specialties":
+        return profile.specialtyKeys.length > 0;
+      case "formats":
+        return profile.formats.length > 0 && profile.audiences.length > 0;
+      default:
+        return true;
+    }
+  }, [step, email, firstName, lastName, profile]);
+
+  const goNext = () => {
+    if (!canContinue) return;
+    setSubmitError(null);
+    setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
+  };
+  const goBack = () => setStepIndex((i) => Math.max(i - 1, 0));
+  const goTo = (id: StepId) => setStepIndex(STEPS.indexOf(id));
 
   const handleSubmit = async () => {
     if (submitting) return;
     setSubmitError(null);
-    if (!email.trim() || !email.includes("@") || !firstName.trim() || !lastName.trim()) {
-      toast.error("Veuillez compléter votre profil.");
-      setStep(1);
+    if (!EMAIL_RE.test(email.trim()) || !firstName.trim() || !lastName.trim()) {
+      toast.error("Veuillez compléter votre identité.");
+      goTo(!EMAIL_RE.test(email.trim()) ? "email" : "identity");
       return;
     }
-    if (!isSpecialtiesStepComplete(specialtiesProfile)) {
-      toast.error("Veuillez compléter votre étape Spécialités.");
-      setStep(2);
+    if (!isSpecialtiesStepComplete(profile)) {
+      toast.error("Veuillez compléter vos spécialités.");
+      goTo(profile.domainIds.length === 0 ? "domains" : profile.specialtyKeys.length === 0 ? "specialties" : "formats");
       return;
     }
 
-    const payload = buildSpecialtiesPayload(specialtiesProfile);
+    const payload = buildSpecialtiesPayload(profile);
 
     setSubmitting(true);
     try {
@@ -112,9 +193,7 @@ export default function ExpertRegisterPage() {
       const out = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg =
-          typeof out?.error === "string" && out.error.length > 0
-            ? out.error
-            : EXPERT_REGISTER_GENERIC_ERROR;
+          typeof out?.error === "string" && out.error.length > 0 ? out.error : EXPERT_REGISTER_GENERIC_ERROR;
         setSubmitError(msg);
         throw new Error(msg);
       }
@@ -131,316 +210,530 @@ export default function ExpertRegisterPage() {
   };
 
   if (submitted) {
-    const workflowSteps = [
-      { label: "Profil créé", done: true },
-      { label: "Création du mot de passe", done: false },
-      { label: "Vérification de votre dossier", done: false },
-      { label: "Validation pédagogique", done: false },
-      { label: "Publication dans le réseau Byound", done: false },
-    ];
-
-    return (
-      <div className="min-h-screen bg-[#050505] text-white">
-        <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[#050505]" />
-          <div className="absolute -bottom-64 -left-64 h-[760px] w-[760px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,91,255,0.2),transparent_60%)] blur-3xl" />
-        </div>
-        <main className="relative mx-auto flex min-h-screen w-full max-w-3xl items-center px-6 py-16">
-          <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-10 backdrop-blur-2xl">
-            <div className="text-center">
-              <div className="text-xs font-medium uppercase tracking-[0.2em] text-[#a8a3ff]">
-                En attente de validation
-              </div>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">
-                Bienvenue dans le réseau Byound
-              </h1>
-              <p className="mx-auto mt-4 max-w-xl text-sm text-white/60">
-                Votre profil a bien été enregistré. Consultez votre boîte mail pour créer votre mot de passe et
-                accéder à votre espace formateur restreint.
-              </p>
-            </div>
-
-            <div className="mt-10 space-y-3">
-              {workflowSteps.map((step, i) => (
-                <div
-                  key={step.label}
-                  className={cn(
-                    "flex items-center gap-4 rounded-2xl border px-5 py-4",
-                    step.done
-                      ? "border-[#635BFF]/25 bg-[#635BFF]/8"
-                      : "border-white/8 bg-white/[0.02]",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                      step.done ? "bg-[#635BFF] text-white" : "bg-white/5 text-white/35",
-                    )}
-                  >
-                    {step.done ? "✓" : "○"}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-sm",
-                      step.done ? "font-medium text-white" : "text-white/50",
-                    )}
-                  >
-                    {step.label}
-                  </span>
-                  {i === 0 ? (
-                    <span className="ml-auto rounded-lg border border-[#635BFF]/25 bg-[#635BFF]/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#a8a3ff]">
-                      Terminé
-                    </span>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-
-            <p className="mt-8 text-center text-xs text-white/40">
-              Vérifiez vos emails (et vos spams). Notre équipe examine ensuite votre dossier avant publication.
-            </p>
-          </div>
-        </main>
-      </div>
-    );
+    return <RegisterSuccess email={email.trim()} firstName={firstName.trim()} />;
   }
 
+  const isLast = step === "review";
+  const isOptional = step === "headline" || step === "details";
+  const showPreview = stepIndex >= 2;
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[#050505]" />
-        <div className="absolute -bottom-64 -left-64 h-[760px] w-[760px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,91,255,0.18),transparent_60%)] blur-3xl" />
-        <div className="absolute -top-64 -right-64 h-[680px] w-[680px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,91,255,0.08),transparent_62%)] blur-3xl" />
+    <div className="min-h-screen text-white">
+      <Backdrop />
+
+      <div className="fixed inset-x-0 top-0 z-30 h-1 bg-white/[0.06]">
+        <div
+          className="h-full rounded-r-full bg-gradient-to-r from-[#7C83FF] to-[#9BD0FF] transition-[width] duration-500 ease-out"
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
-      <header className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-8">
-        <Link href="/" className="text-sm font-semibold tracking-[0.18em] text-white/80 hover:text-white">
-          Byound
-        </Link>
-        <div className="text-xs text-white/45">Réseau formateurs & experts</div>
+      <header className="relative z-20 mx-auto flex max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={stepIndex === 0 || submitting}
+            aria-label="Étape précédente"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white transition hover:bg-white/[0.12] disabled:pointer-events-none disabled:opacity-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <Link href="/" className="text-lg font-semibold tracking-tight text-white">
+            Byound
+          </Link>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="hidden text-xs font-medium tabular-nums text-white/40 sm:inline">
+            Étape {stepIndex + 1} sur {STEPS.length}
+          </span>
+          <Link
+            href="/formateurs-experts"
+            aria-label="Quitter l'inscription"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/70 transition hover:bg-white/[0.12] hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </Link>
+        </div>
       </header>
 
-      <main className="relative mx-auto w-full max-w-6xl px-6 pb-20">
-        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (step !== 3) {
-                goNext();
-                return;
-              }
-              handleSubmit();
-            }}
-            className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-[0_18px_70px_rgba(0,0,0,0.4)] backdrop-blur-2xl"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/45">
-                  Inscription expert
-                </div>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
-                  Rejoignez le réseau Byound
-                </h1>
-                <p className="mt-3 max-w-xl text-sm text-white/55">
-                  Trois étapes pour construire un profil professionnel à la hauteur de votre expertise.
+      <main className="relative z-10 mx-auto grid w-full max-w-6xl gap-12 px-5 pb-40 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:pt-12">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (isLast) handleSubmit();
+            else goNext();
+          }}
+          className="mx-auto w-full max-w-xl lg:mx-0"
+        >
+          <div key={step} className="animate-in fade-in slide-in-from-right-4 duration-300">
+            {step === "email" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  eyebrow="Devenir expert Byound"
+                  title="Commençons par votre e-mail"
+                  subtitle="C'est là que nous vous enverrons le lien pour créer votre mot de passe et suivre votre candidature."
+                />
+                <RevolutField
+                  ref={firstInputRef}
+                  label="Adresse e-mail"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <p className="text-sm text-white/45">
+                  Déjà inscrit ?{" "}
+                  <Link href="/login?next=/dashboard/expert" className="font-medium text-white hover:underline">
+                    Se connecter
+                  </Link>
                 </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <StepPill active={step === 1} done={step > 1} label="Identité" />
-                <StepPill active={step === 2} done={step > 2} label="Spécialités" />
-                <StepPill active={step === 3} done={false} label="Validation" />
-              </div>
-            </div>
-
-            {submitError ? (
-              <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100/90">
-                {submitError}
               </div>
             ) : null}
 
-            <div className="mt-8">
-              {step === 1 ? (
-                <div className="space-y-4">
-                  <input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                    type="email"
-                    inputMode="email"
-                    required
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#635BFF]/40"
-                    autoComplete="email"
+            {step === "identity" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  title="Comment vous appelez-vous ?"
+                  subtitle="Votre nom apparaîtra sur votre fiche expert, telle que la voient les entreprises."
+                />
+                <div className="space-y-3">
+                  <RevolutField
+                    ref={firstInputRef}
+                    label="Prénom"
+                    autoComplete="given-name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                   />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <input
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="Prénom"
-                      className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#635BFF]/40"
-                      autoComplete="given-name"
-                    />
-                    <input
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Nom"
-                      className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#635BFF]/40"
-                      autoComplete="family-name"
-                    />
-                  </div>
-                  <input
+                  <RevolutField
+                    label="Nom"
+                    autoComplete="family-name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {step === "headline" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  title={`Présentez-vous${firstName.trim() ? `, ${firstName.trim()}` : ""}`}
+                  subtitle="Une ligne suffit. Vous pourrez enrichir votre profil plus tard depuis votre espace."
+                />
+                <div className="space-y-3">
+                  <RevolutField
+                    ref={firstInputRef}
+                    label="Titre professionnel"
+                    hint="Ex. Formateur en management et leadership"
                     value={headline}
                     onChange={(e) => setHeadline(e.target.value)}
-                    placeholder="Titre professionnel (headline)"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#635BFF]/40"
                   />
-                  <input
+                  <RevolutField
+                    label="Profil LinkedIn (URL)"
+                    type="url"
+                    inputMode="url"
                     value={linkedinUrl}
                     onChange={(e) => setLinkedinUrl(e.target.value)}
-                    placeholder="LinkedIn (URL)"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#635BFF]/40"
                   />
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/40">
-                          Photo
+                  <RevolutField
+                    label="Photo professionnelle (URL)"
+                    type="url"
+                    inputMode="url"
+                    value={photoUrl}
+                    onChange={(e) => setPhotoUrl(e.target.value)}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {step === "domains" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  title="Quels sont vos domaines d'expertise ?"
+                  subtitle="Sélectionnez-en un ou plusieurs. Le premier choisi devient votre domaine principal."
+                />
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {EXPERT_DOMAINS.map((d) => {
+                    const index = profile.domainIds.indexOf(d.id);
+                    return (
+                      <DomainCard
+                        key={d.id}
+                        label={d.label}
+                        selected={index !== -1}
+                        isPrimary={index === 0}
+                        onSelect={() => toggleDomain(d.id)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {step === "specialties" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  title="Affinez vos spécialités"
+                  subtitle="Elles servent à vous proposer les missions qui vous correspondent vraiment."
+                />
+                <div className="space-y-7">
+                  {selectedDomains.map((domain) => (
+                    <ChipGroup key={domain.id} label={domain.label}>
+                      {specialtyGroups
+                        .filter((g) => g.domain.id === domain.id)
+                        .map(({ key, label }) => (
+                          <SelectChip
+                            key={key}
+                            label={label}
+                            selected={profile.specialtyKeys.includes(key)}
+                            onToggle={() => setProfilePatch({ specialtyKeys: toggleItem(profile.specialtyKeys, key) })}
+                          />
+                        ))}
+                    </ChipGroup>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {step === "formats" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  title="Comment et pour qui intervenez-vous ?"
+                  subtitle="Choisissez au moins un format et un public."
+                />
+                <div className="space-y-7">
+                  <ChipGroup label="Formats d'intervention">
+                    {EXPERT_INTERVENTION_FORMATS.map((f) => (
+                      <SelectChip
+                        key={f}
+                        label={f}
+                        selected={profile.formats.includes(f)}
+                        onToggle={() => setProfilePatch({ formats: toggleItem(profile.formats, f) })}
+                      />
+                    ))}
+                  </ChipGroup>
+                  <ChipGroup label="Public accompagné">
+                    {EXPERT_AUDIENCES.map((a) => (
+                      <SelectChip
+                        key={a}
+                        label={a}
+                        selected={profile.audiences.includes(a)}
+                        onToggle={() => setProfilePatch({ audiences: toggleItem(profile.audiences, a) })}
+                      />
+                    ))}
+                  </ChipGroup>
+                </div>
+              </div>
+            ) : null}
+
+            {step === "details" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  title="Quelques détails pour le matching"
+                  subtitle="Facultatif, mais les profils complets reçoivent des propositions plus pertinentes."
+                />
+                <div className="space-y-7">
+                  <ChipGroup label="Années d'expérience">
+                    {EXPERT_EXPERIENCE_OPTIONS.map((opt) => (
+                      <SelectChip
+                        key={opt}
+                        label={opt}
+                        selected={profile.yearsExperience === opt}
+                        onToggle={() =>
+                          setProfilePatch({ yearsExperience: profile.yearsExperience === opt ? "" : opt })
+                        }
+                      />
+                    ))}
+                  </ChipGroup>
+                  <ChipGroup label="Zones géographiques">
+                    {EXPERT_GEOGRAPHIC_ZONES.map((z) => (
+                      <SelectChip
+                        key={z}
+                        label={z}
+                        selected={profile.geographicZones.includes(z)}
+                        onToggle={() => setProfilePatch({ geographicZones: toggleItem(profile.geographicZones, z) })}
+                      />
+                    ))}
+                  </ChipGroup>
+                  <ChipGroup label="Langues parlées">
+                    {EXPERT_LANGUAGE_OPTIONS.map((lang) => (
+                      <SelectChip
+                        key={lang}
+                        label={lang}
+                        selected={profile.languages.includes(lang)}
+                        onToggle={() => setProfilePatch({ languages: toggleItem(profile.languages, lang) })}
+                      />
+                    ))}
+                  </ChipGroup>
+                  <ChipGroup label="Disponibilités">
+                    {EXPERT_AVAILABILITY_OPTIONS.map((opt) => (
+                      <SelectChip
+                        key={opt}
+                        label={opt}
+                        selected={profile.availabilities.includes(opt)}
+                        onToggle={() => setProfilePatch({ availabilities: toggleItem(profile.availabilities, opt) })}
+                      />
+                    ))}
+                  </ChipGroup>
+                </div>
+              </div>
+            ) : null}
+
+            {step === "certification" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  title="Boostez votre visibilité avec Byound Certified"
+                  subtitle="Un parcours optionnel pour faire reconnaître votre posture de formateur."
+                />
+                <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#7C83FF]/25 via-[#1a1f4d]/60 to-[#0f1533]/60 p-6">
+                  <div className="space-y-5">
+                    {[
+                      { icon: BadgeCheck, title: "Priorité dans le matching", body: "Apparaissez en tête des recherches entreprises." },
+                      { icon: BarChart3, title: "Outils de pilotage", body: "Suivez l'impact de vos interventions." },
+                      { icon: Share2, title: "Open Badge certifiant", body: "Valorisez votre expertise sur LinkedIn." },
+                    ].map(({ icon: Icon, title, body }) => (
+                      <div key={title} className="flex items-start gap-4">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
+                          <Icon className="h-[18px] w-[18px] text-white" />
+                        </span>
+                        <div>
+                          <p className="text-[15px] font-semibold text-white">{title}</p>
+                          <p className="mt-0.5 text-sm text-white/55">{body}</p>
                         </div>
-                        <div className="mt-2 text-sm text-white/50">URL de votre photo professionnelle</div>
                       </div>
-                      <UploadCloud className="h-5 w-5 text-white/30" aria-hidden />
-                    </div>
-                    <input
-                      value={photoUrl}
-                      onChange={(e) => setPhotoUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="mt-4 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#635BFF]/40"
-                    />
+                    ))}
                   </div>
                 </div>
-              ) : null}
 
-              {step === 2 ? (
-                <ExpertSpecialtiesStep value={specialtiesProfile} onChange={setSpecialtiesProfile} />
-              ) : null}
-
-              {step === 3 ? (
-                <div className="space-y-4">
-                  <div className="rounded-2xl border border-[#635BFF]/20 bg-[#635BFF]/8 p-6">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border border-[#635BFF]/25 bg-[#635BFF]/10">
-                        <BadgeCheck className="h-5 w-5 text-[#a8a3ff]" aria-hidden />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-white">
-                          Certification Byound — visibilité renforcée
-                        </div>
-                        <div className="mt-4 space-y-3 text-sm text-white/65">
-                          <div className="flex items-start gap-3">
-                            <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#635BFF]" />
-                            <div>
-                              <div className="font-medium text-white">Priorité dans le matching</div>
-                              <div className="text-white/50">Apparaissez en tête des recherches entreprises.</div>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-[#635BFF]" />
-                            <div>
-                              <div className="font-medium text-white">Outils de pilotage</div>
-                              <div className="text-white/50">Suivez l&apos;impact de vos interventions.</div>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Share2 className="mt-0.5 h-4 w-4 shrink-0 text-[#635BFF]" />
-                            <div>
-                              <div className="font-medium text-white">Open Badge certifiant</div>
-                              <div className="text-white/50">Valorisez votre expertise sur LinkedIn.</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:bg-white/[0.05]">
-                    <input
-                      type="checkbox"
-                      checked={wantsCertification}
-                      onChange={(e) => setWantsCertification(e.target.checked)}
-                      className="mt-1 h-4 w-4 accent-[#635BFF]"
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={wantsCertification}
+                  onClick={() => setWantsCertification((v) => !v)}
+                  className="flex w-full items-center justify-between gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.05] px-5 py-4 text-left transition hover:bg-white/[0.08]"
+                >
+                  <span>
+                    <span className="block text-[15px] font-medium text-white">Je veux suivre le parcours</span>
+                    <span className="mt-0.5 block text-sm text-white/45">Vous pourrez le démarrer après validation.</span>
+                  </span>
+                  <span
+                    className={cn(
+                      "relative h-7 w-12 shrink-0 rounded-full transition-colors",
+                      wantsCertification ? "bg-[#7C83FF]" : "bg-white/15",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all",
+                        wantsCertification ? "left-6" : "left-1",
+                      )}
                     />
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        Je souhaite suivre le parcours de certification Byound
-                      </div>
-                      <div className="mt-1 text-sm text-white/50">
-                        Optionnel — recommandé pour maximiser votre visibilité dans le réseau.
-                      </div>
-                    </div>
-                  </label>
+                  </span>
+                </button>
+              </div>
+            ) : null}
 
-                  <p className="text-xs text-white/35">
-                    En soumettant, vous acceptez que votre profil soit revu par l&apos;équipe Byound avant
-                    publication.
-                  </p>
+            {step === "review" ? (
+              <div className="space-y-8">
+                <StepHeading
+                  title="Tout est prêt ?"
+                  subtitle="Vérifiez vos informations avant d'envoyer votre candidature."
+                />
+                <div className="divide-y divide-white/[0.06] overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.04]">
+                  {[
+                    { id: "email" as const, label: "E-mail", value: email.trim() },
+                    { id: "identity" as const, label: "Nom", value: `${firstName} ${lastName}`.trim() },
+                    { id: "headline" as const, label: "Titre", value: headline.trim() || "Non renseigné" },
+                    {
+                      id: "domains" as const,
+                      label: "Domaines",
+                      value: selectedDomains.map((d) => d.label).join(", "),
+                    },
+                    {
+                      id: "specialties" as const,
+                      label: "Spécialités",
+                      value: `${profile.specialtyKeys.length} sélectionnée${profile.specialtyKeys.length > 1 ? "s" : ""}`,
+                    },
+                    {
+                      id: "formats" as const,
+                      label: "Formats & public",
+                      value: [...profile.formats, ...profile.audiences].join(", "),
+                    },
+                    {
+                      id: "certification" as const,
+                      label: "Byound Certified",
+                      value: wantsCertification ? "Oui, je suis intéressé" : "Pas pour l'instant",
+                    },
+                  ].map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => goTo(row.id)}
+                      className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-white/[0.04]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-xs text-white/40">{row.label}</span>
+                        <span className="mt-0.5 block truncate text-[15px] font-medium text-white">{row.value}</span>
+                      </span>
+                      <span className="shrink-0 text-xs font-medium text-[#A9AEFF]">Modifier</span>
+                    </button>
+                  ))}
                 </div>
-              ) : null}
-            </div>
 
-            <div className="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {submitError ? (
+                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-sm text-red-100">
+                    {submitError}
+                  </div>
+                ) : null}
+
+                <p className="text-xs leading-relaxed text-white/40">
+                  En envoyant votre candidature, vous acceptez que votre profil soit revu par l&apos;équipe Byound
+                  avant publication.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/[0.06] bg-[#070b1f]/85 backdrop-blur-xl lg:static lg:mt-12 lg:border-0 lg:bg-transparent lg:backdrop-blur-none">
+            <div className="mx-auto flex max-w-xl flex-col gap-2 px-5 py-4 sm:px-8 lg:mx-0 lg:px-0 lg:py-0">
               <button
-                type="button"
-                onClick={goBack}
-                disabled={step === 1 || submitting}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-xs font-medium uppercase tracking-[0.12em] text-white/70 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50"
+                type="submit"
+                disabled={!canContinue || submitting}
+                className={cn(
+                  "inline-flex h-14 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed",
+                  isLast
+                    ? "bg-[#7C83FF] text-white hover:bg-[#8D93FF] disabled:bg-[#7C83FF]/40"
+                    : "bg-white text-[#070b1f] hover:bg-white/90 disabled:bg-white/15 disabled:text-white/40",
+                )}
               >
-                <ChevronLeft className="h-4 w-4" aria-hidden />
-                Retour
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    Envoi en cours…
+                  </>
+                ) : isLast ? (
+                  "Envoyer ma candidature"
+                ) : (
+                  <>
+                    Continuer
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </>
+                )}
               </button>
-
-              {step < 3 ? (
+              {isOptional ? (
                 <button
                   type="button"
                   onClick={goNext}
-                  disabled={!canNext || submitting}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-11 w-full rounded-full text-sm font-medium text-white/55 transition hover:text-white"
                 >
-                  Continuer
-                  <ChevronRight className="h-4 w-4" aria-hidden />
+                  Passer cette étape
                 </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#635BFF] px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-[#7B74FF] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      Soumission...
-                    </>
-                  ) : (
-                    "Soumettre ma candidature"
-                  )}
-                </button>
-              )}
+              ) : null}
             </div>
-          </form>
+          </div>
+        </form>
 
-          <ExpertProfilePreview
-            identity={{ firstName, lastName, headline, photoUrl }}
-            profile={specialtiesProfile}
-            wantsCertification={wantsCertification}
-            className="hidden lg:block"
-          />
+        <aside className="hidden lg:block">
+          {showPreview ? (
+            <ExpertProfilePreview
+              identity={{ firstName, lastName, headline, photoUrl }}
+              profile={profile}
+              wantsCertification={wantsCertification}
+              className="animate-in fade-in duration-500"
+            />
+          ) : (
+            <div className="sticky top-8 space-y-3">
+              {[
+                { title: "Inscription en quelques minutes", body: "Un écran, une question. Vous pouvez revenir en arrière à tout moment." },
+                { title: "Validation par l'équipe Byound", body: "Chaque dossier est revu avant publication dans le réseau." },
+                { title: "Un espace expert dès aujourd'hui", body: "Accédez à votre cockpit pendant la validation." },
+              ].map((item, i) => (
+                <div key={item.title} className="flex gap-4 rounded-3xl border border-white/[0.08] bg-white/[0.04] p-5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-[#070b1f]">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{item.title}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-white/50">{item.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </aside>
+      </main>
+    </div>
+  );
+}
+
+function RegisterSuccess({ email, firstName }: { email: string; firstName: string }) {
+  const steps = [
+    { label: "Candidature envoyée", done: true },
+    { label: "Création de votre mot de passe", done: false, current: true },
+    { label: "Vérification de votre dossier", done: false },
+    { label: "Validation pédagogique", done: false },
+    { label: "Publication dans le réseau Byound", done: false },
+  ];
+
+  return (
+    <div className="min-h-screen text-white">
+      <Backdrop />
+      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center px-5 py-16">
+        <div className="animate-in fade-in zoom-in-95 duration-500 text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white text-[#070b1f] shadow-[0_0_80px_rgba(124,131,255,0.55)]">
+            <Check className="h-9 w-9" strokeWidth={3} />
+          </div>
+          <h1 className="mt-8 text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-[1.1] tracking-[-0.02em]">
+            {firstName ? `Merci ${firstName}, c'est envoyé !` : "Candidature envoyée !"}
+          </h1>
+          <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-white/55">
+            Nous venons d&apos;envoyer un lien à <span className="font-medium text-white">{email}</span> pour créer
+            votre mot de passe.
+          </p>
         </div>
 
-        <div className="mt-8 lg:hidden">
-          <ExpertProfilePreview
-            identity={{ firstName, lastName, headline, photoUrl }}
-            profile={specialtiesProfile}
-            wantsCertification={wantsCertification}
-          />
+        <ol className="mt-10 overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.04]">
+          {steps.map((s, i) => (
+            <li key={s.label} className="relative flex items-center gap-4 px-5 py-4">
+              {i < steps.length - 1 ? (
+                <span className="absolute left-[33px] top-[44px] h-[calc(100%-28px)] w-px bg-white/10" aria-hidden />
+              ) : null}
+              <span
+                className={cn(
+                  "relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                  s.done
+                    ? "bg-white text-[#070b1f]"
+                    : s.current
+                      ? "border-2 border-[#7C83FF] bg-[#7C83FF]/20"
+                      : "border border-white/15 bg-[#070b1f]",
+                )}
+              >
+                {s.done ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
+              </span>
+              <span className={cn("text-[15px]", s.done || s.current ? "font-medium text-white" : "text-white/45")}>
+                {s.label}
+              </span>
+              {s.current ? (
+                <span className="ml-auto rounded-full bg-[#7C83FF]/20 px-2.5 py-1 text-[11px] font-medium text-[#C9CCFF]">
+                  À faire
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-8 flex items-start gap-3 rounded-2xl bg-white/[0.04] px-5 py-4 text-sm text-white/55">
+          <Mail className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+          <p>Rien reçu d&apos;ici quelques minutes ? Pensez à vérifier vos spams.</p>
         </div>
+
+        <Link
+          href="/"
+          className="mt-6 inline-flex h-14 w-full items-center justify-center rounded-full bg-white text-[15px] font-semibold text-[#070b1f] transition hover:bg-white/90"
+        >
+          Retour à l&apos;accueil
+        </Link>
       </main>
     </div>
   );

@@ -31,34 +31,61 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose, light = false }: Pa
       role="menu"
     >
       <div className="px-8 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
-        <div>
-          <Link
-            href={data.headerHref}
-            className={cn(
-              "group inline-flex items-center gap-2 text-lg font-semibold tracking-[-0.02em] transition-colors",
-              light ? "text-neutral-950 hover:text-neutral-950" : "text-white hover:text-white",
-            )}
-            onClick={onClose}
-          >
-            {data.headerTitle}
-            <ArrowRight
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <Link
+              href={data.headerHref}
               className={cn(
-                "h-4 w-4 transition-transform group-hover:translate-x-0.5",
-                light
-                  ? "text-neutral-500 group-hover:text-neutral-950"
-                  : "text-white/70 group-hover:text-white",
+                "group inline-flex items-center gap-2 text-lg font-semibold tracking-[-0.02em] transition-colors",
+                light ? "text-neutral-950 hover:text-neutral-950" : "text-white hover:text-white",
               )}
-            />
-          </Link>
-          {"headerSubtitle" in data && data.headerSubtitle ? (
-            <p
-              className={cn(
-                "mt-2.5 max-w-2xl text-sm leading-relaxed",
-                light ? "text-neutral-500" : "text-white/42",
-              )}
+              onClick={onClose}
             >
-              {data.headerSubtitle}
-            </p>
+              {data.headerTitle}
+              <ArrowRight
+                className={cn(
+                  "h-4 w-4 transition-transform group-hover:translate-x-0.5",
+                  light
+                    ? "text-neutral-500 group-hover:text-neutral-950"
+                    : "text-white/70 group-hover:text-white",
+                )}
+              />
+            </Link>
+            {"headerSubtitle" in data && data.headerSubtitle ? (
+              <p
+                className={cn(
+                  "mt-2.5 max-w-2xl text-sm leading-relaxed",
+                  light ? "text-neutral-500" : "text-white/42",
+                )}
+              >
+                {data.headerSubtitle}
+              </p>
+            ) : null}
+          </div>
+
+          {"actions" in data && data.actions ? (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {data.actions.map((action) => (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  onClick={onClose}
+                  className={cn(
+                    "inline-flex min-h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition",
+                    action.primary
+                      ? light
+                        ? "bg-[#070b1f] text-white hover:bg-black"
+                        : "bg-white text-[#070b1f] hover:bg-white/90"
+                      : light
+                        ? "border border-black/10 bg-black/[0.03] text-neutral-900 hover:bg-black/[0.07]"
+                        : "border border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.11]",
+                  )}
+                  role="menuitem"
+                >
+                  {action.label}
+                </Link>
+              ))}
+            </div>
           ) : null}
         </div>
 

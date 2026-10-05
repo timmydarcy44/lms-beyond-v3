@@ -333,8 +333,8 @@ export function ExpertProfileEditor() {
             className={cn(
               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
               active
-                ? "border-[#635BFF]/30 bg-[#635BFF]/10 text-[#635BFF]"
-                : "border-[#050505]/10 bg-white text-[#050505]/60 hover:border-[#635BFF]/20",
+                ? "border-[#635BFF]/30 bg-[#635BFF]/10 text-[#A9AEFF]"
+                : "border-white/10 bg-white/[0.05] text-white/60 hover:border-[#635BFF]/20",
             )}
           >
             {opt}
@@ -345,21 +345,21 @@ export function ExpertProfileEditor() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F7F7F5] text-[#050505]">
+    <div className="min-h-screen bg-[#070b1f] text-white">
       <SidebarExpert restricted={!isApproved} />
-      <main className="min-h-screen pl-[260px]">
+      <main className="min-h-screen lg:pl-[260px]">
         <div className="mx-auto max-w-5xl px-6 py-10 pb-24">
           <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#635BFF]">Mon profil</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A9AEFF]">Mon profil</p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight">{name}</h1>
-              <p className="mt-2 text-sm text-[#050505]/55">Retrouvez et complétez les informations de votre candidature.</p>
+              <p className="mt-2 text-sm text-white/55">Retrouvez et complétez les informations de votre candidature.</p>
             </div>
             <button
               type="button"
               disabled={saving}
               onClick={handleSave}
-              className="inline-flex items-center justify-center rounded-2xl bg-[#635BFF] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#7B74FF] disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-2xl bg-[#635BFF] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#8D93FF] disabled:opacity-60"
             >
               {saving || saveState === "saving"
                 ? "Enregistrement…"
@@ -370,12 +370,12 @@ export function ExpertProfileEditor() {
           </header>
 
           {loading ? (
-            <div className="rounded-[28px] border border-[#050505]/8 bg-white p-10 text-center text-sm text-[#050505]/50">
+            <div className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-10 text-center text-sm text-white/50">
               Chargement…
             </div>
           ) : (
             <div className="space-y-6">
-              <section className="overflow-hidden rounded-[28px] border border-[#050505]/8 bg-white shadow-sm">
+              <section className="overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 shadow-sm">
                 <div className="h-28 bg-[linear-gradient(135deg,rgba(99,91,255,0.18),rgba(5,5,5,0.04))]" />
                 <div className="relative px-6 pb-6 sm:px-8">
                   <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -384,30 +384,30 @@ export function ExpertProfileEditor() {
                         {avatarUrl ? (
                           <Image src={avatarUrl} alt={name} fill className="object-cover" sizes="96px" unoptimized />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-[#635BFF]">
+                          <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-[#A9AEFF]">
                             {(firstName[0] ?? "E").toUpperCase()}
                           </div>
                         )}
                       </div>
                       <div className="pb-1">
                         <h2 className="text-2xl font-semibold tracking-tight">{name}</h2>
-                        <p className="mt-1 text-sm text-[#050505]/60">{headline || "Ajoutez votre accroche professionnelle"}</p>
+                        <p className="mt-1 text-sm text-white/60">{headline || "Ajoutez votre accroche professionnelle"}</p>
                       </div>
                     </div>
-                    <p className="text-xs text-[#050505]/40">Sauvegarde automatique activée</p>
+                    <p className="text-xs text-white/40">Sauvegarde automatique activée</p>
                   </div>
                 </div>
               </section>
-              <section className="rounded-[28px] border border-[#050505]/8 bg-white p-6 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Statut</p>
+              <section className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Statut</p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[#635BFF]/20 bg-[#635BFF]/8 px-3 py-1 text-xs font-medium text-[#635BFF]">
+                  <span className="rounded-full border border-[#635BFF]/20 bg-[#635BFF]/8 px-3 py-1 text-xs font-medium text-[#A9AEFF]">
                     {expertReviewStatusLabel(reviewStatus)}
                   </span>
-                  <span className="rounded-full border border-[#050505]/10 bg-[#F7F7F5] px-3 py-1 text-xs font-medium text-[#050505]/55">
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/55">
                     {isActive ? "Profil actif" : "Profil inactif"}
                   </span>
-                  <span className="rounded-full border border-[#050505]/10 bg-[#F7F7F5] px-3 py-1 text-xs font-medium text-[#050505]/55">
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/55">
                     {edgeCertificationLabel({
                       wants_certification: wantsCertification,
                       certification_status: certificationStatus,
@@ -416,9 +416,9 @@ export function ExpertProfileEditor() {
                   </span>
                 </div>
                 <div className="mt-4">
-                  <div className="flex justify-between text-xs text-[#050505]/45">
+                  <div className="flex justify-between text-xs text-white/45">
                     <span>Complétion du profil</span>
-                    <span className="text-[#635BFF]">{completionPct}%</span>
+                    <span className="text-[#A9AEFF]">{completionPct}%</span>
                   </div>
                   <div className="mt-2 h-2 rounded-full bg-[#050505]/6">
                     <div className="h-full rounded-full bg-[#635BFF]" style={{ width: `${completionPct}%` }} />
@@ -426,7 +426,7 @@ export function ExpertProfileEditor() {
                 </div>
               </section>
 
-              <section className="rounded-[28px] border border-[#050505]/8 bg-white p-6 shadow-sm sm:p-8">
+              <section className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
                 <h2 className="text-sm font-semibold">Identité</h2>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2 flex items-center gap-4">
@@ -434,7 +434,7 @@ export function ExpertProfileEditor() {
                       {avatarUrl ? (
                         <Image src={avatarUrl} alt={name} fill className="object-cover" sizes="80px" unoptimized />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#635BFF]">
+                        <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#A9AEFF]">
                           {(firstName[0] ?? "E").toUpperCase()}
                         </div>
                       )}
@@ -443,51 +443,51 @@ export function ExpertProfileEditor() {
                       value={avatarUrl}
                       onChange={(e) => setAvatarUrl(e.target.value)}
                       placeholder="URL de la photo"
-                      className="flex-1 rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40"
+                      className="flex-1 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
                     />
                   </div>
-                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
-                  <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
-                  <input value={email} readOnly className="sm:col-span-2 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] px-4 py-3 text-sm text-[#050505]/55" />
-                  <input value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Headline" className="sm:col-span-2 rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
-                  <input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn (URL)" className="sm:col-span-2 rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
-                  <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Site internet / portfolio" className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
-                  <input value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} placeholder="Tarif journalier (€)" className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40" />
+                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
+                  <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
+                  <input value={email} readOnly className="sm:col-span-2 rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3 text-sm text-white/55" />
+                  <input value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Headline" className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
+                  <input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn (URL)" className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
+                  <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Site internet / portfolio" className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
+                  <input value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} placeholder="Tarif journalier (€)" className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
                 </div>
               </section>
 
-              <section className="rounded-[28px] border border-[#050505]/8 bg-white p-6 shadow-sm sm:p-8">
+              <section className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
                 <h2 className="text-sm font-semibold">Spécialités</h2>
-                <p className="mt-1 text-xs text-[#050505]/45">Domaines et spécialités issus de votre inscription.</p>
+                <p className="mt-1 text-xs text-white/45">Domaines et spécialités issus de votre inscription.</p>
                 <div className="mt-5 space-y-5">
                   <div>
-                    <p className="text-xs font-medium text-[#050505]/45">Domaine principal</p>
+                    <p className="text-xs font-medium text-white/45">Domaine principal</p>
                     <input
                       value={primaryDomain}
                       onChange={(e) => setPrimaryDomain(e.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40"
+                      className="mt-2 w-full rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
                     />
                   </div>
                   <div>
-                    <p className="mb-2 text-xs font-medium text-[#050505]/45">Domaines</p>
+                    <p className="mb-2 text-xs font-medium text-white/45">Domaines</p>
                     <TagPicker options={domains.length ? domains : ["—"]} selected={domains} onChange={setDomains} />
                   </div>
                   <div>
-                    <p className="mb-2 text-xs font-medium text-[#050505]/45">Spécialités</p>
+                    <p className="mb-2 text-xs font-medium text-white/45">Spécialités</p>
                     <div className="flex flex-wrap gap-2">
                       {specialties.map((s) => (
-                        <span key={s} className="rounded-full border border-[#635BFF]/15 bg-[#635BFF]/8 px-3 py-1 text-xs text-[#635BFF]">
+                        <span key={s} className="rounded-full border border-[#635BFF]/15 bg-[#635BFF]/8 px-3 py-1 text-xs text-[#A9AEFF]">
                           {s}
                         </span>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <p className="mb-2 text-xs font-medium text-[#050505]/45">Formats d&apos;intervention</p>
+                    <p className="mb-2 text-xs font-medium text-white/45">Formats d&apos;intervention</p>
                     <TagPicker options={EXPERT_INTERVENTION_FORMATS} selected={formats} onChange={setFormats} />
                   </div>
                   <div>
-                    <p className="mb-2 flex items-center gap-1 text-xs font-medium text-[#050505]/45">
+                    <p className="mb-2 flex items-center gap-1 text-xs font-medium text-white/45">
                       <Users className="h-3.5 w-3.5" /> Publics accompagnés
                     </p>
                     <TagPicker options={EXPERT_AUDIENCES} selected={audiences} onChange={setAudiences} />
@@ -495,31 +495,31 @@ export function ExpertProfileEditor() {
                 </div>
               </section>
 
-              <section className="rounded-[28px] border border-[#050505]/8 bg-white p-6 shadow-sm sm:p-8">
+              <section className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
                 <h2 className="text-sm font-semibold">Zone & modalités</h2>
                 <div className="mt-5 space-y-5">
                   <div>
-                    <p className="mb-2 flex items-center gap-1 text-xs font-medium text-[#050505]/45">
+                    <p className="mb-2 flex items-center gap-1 text-xs font-medium text-white/45">
                       <MapPin className="h-3.5 w-3.5" /> Zones géographiques
                     </p>
                     <TagPicker options={EXPERT_GEOGRAPHIC_ZONES} selected={geographicZones} onChange={setGeographicZones} />
                   </div>
                   <div>
-                    <p className="mb-2 flex items-center gap-1 text-xs font-medium text-[#050505]/45">
+                    <p className="mb-2 flex items-center gap-1 text-xs font-medium text-white/45">
                       <Globe className="h-3.5 w-3.5" /> Langues
                     </p>
                     <TagPicker options={EXPERT_LANGUAGE_OPTIONS} selected={languages} onChange={setLanguages} />
                   </div>
                   <div>
-                    <p className="mb-2 text-xs font-medium text-[#050505]/45">Disponibilités</p>
+                    <p className="mb-2 text-xs font-medium text-white/45">Disponibilités</p>
                     <TagPicker options={EXPERT_AVAILABILITY_OPTIONS} selected={availabilities} onChange={setAvailabilities} />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-[#050505]/45">Expérience</p>
+                    <p className="text-xs font-medium text-white/45">Expérience</p>
                     <select
                       value={yearsExperience}
                       onChange={(e) => setYearsExperience(e.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-[#050505]/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40"
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
                     >
                       <option value="">—</option>
                       {EXPERT_EXPERIENCE_OPTIONS.map((opt) => (
@@ -532,7 +532,7 @@ export function ExpertProfileEditor() {
                 </div>
               </section>
 
-              <section className="rounded-[28px] border border-[#050505]/8 bg-white p-6 shadow-sm sm:p-8">
+              <section className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
                 <h2 className="text-sm font-semibold">Présentation</h2>
                 <div className="mt-5 space-y-4">
                   <textarea
@@ -540,14 +540,14 @@ export function ExpertProfileEditor() {
                     onChange={(e) => setBio(e.target.value)}
                     rows={4}
                     placeholder="Bio courte"
-                    className="w-full resize-none rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40"
+                    className="w-full resize-none rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
                   />
                   <textarea
                     value={bioLong}
                     onChange={(e) => setBioLong(e.target.value)}
                     rows={6}
                     placeholder="Approche pédagogique, expériences…"
-                    className="w-full resize-none rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40"
+                    className="w-full resize-none rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
                   />
                   {references.map((ref, i) => (
                     <div key={i} className="grid gap-2 sm:grid-cols-2">
@@ -557,7 +557,7 @@ export function ExpertProfileEditor() {
                           setReferences((prev) => prev.map((r, j) => (j === i ? { ...r, company: e.target.value } : r)))
                         }
                         placeholder="Entreprise"
-                        className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40"
+                        className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
                       />
                       <input
                         value={ref.project}
@@ -565,20 +565,20 @@ export function ExpertProfileEditor() {
                           setReferences((prev) => prev.map((r, j) => (j === i ? { ...r, project: e.target.value } : r)))
                         }
                         placeholder="Projet / mission"
-                        className="rounded-2xl border border-[#050505]/10 px-4 py-3 text-sm outline-none focus:border-[#635BFF]/40"
+                        className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
                       />
                     </div>
                   ))}
                   <button
                     type="button"
                     onClick={() => setReferences((prev) => [...prev, { company: "", project: "" }])}
-                    className="inline-flex items-center gap-2 text-sm font-medium text-[#635BFF]"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-[#A9AEFF]"
                   >
                     <Plus className="h-4 w-4" /> Ajouter une référence
                   </button>
                   <Link
                     href="/dashboard/expert/documents"
-                    className="mt-4 inline-flex text-sm font-medium text-[#635BFF] hover:underline"
+                    className="mt-4 inline-flex text-sm font-medium text-[#A9AEFF] hover:underline"
                   >
                     Ajouter CV / justificatifs →
                   </Link>
@@ -588,10 +588,10 @@ export function ExpertProfileEditor() {
               {wantsCertification ? (
                 <section className="rounded-[28px] border border-[#635BFF]/15 bg-[#635BFF]/6 p-6">
                   <div className="flex items-start gap-3">
-                    <Award className="h-5 w-5 text-[#635BFF]" aria-hidden />
+                    <Award className="h-5 w-5 text-[#A9AEFF]" aria-hidden />
                     <div>
                       <p className="text-sm font-semibold">Demande Byound Certified enregistrée</p>
-                      <p className="mt-1 text-sm text-[#050505]/55">Votre dossier sera examiné après validation de votre profil.</p>
+                      <p className="mt-1 text-sm text-white/55">Votre dossier sera examiné après validation de votre profil.</p>
                     </div>
                   </div>
                 </section>

@@ -149,6 +149,10 @@ export function getEdgePremiumConfig(host?: string | null) {
     megaApprenants: {
       headerTitle: "Byound School",
       headerHref: R.alternance,
+      actions: [
+        { label: "Créer un compte", href: "/particuliers#signup", primary: true },
+        { label: "Accéder à mon espace", href: "/particuliers/login", primary: false },
+      ],
       columns: [
         {
           title: "Parcours",

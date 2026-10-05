@@ -111,8 +111,8 @@ export function ExpertDocumentsManager() {
       subtitle="CV, diplômes, attestations, portfolio — centralisez tout votre dossier formateur."
     >
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <EdgeCard padding="sm" className="h-fit">
-          <p className="px-1 text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Catégories</p>
+        <EdgeCard padding="sm" className="h-fit border-white/[0.07] bg-[#10173a]/70 text-white shadow-none">
+          <p className="px-1 text-xs font-semibold uppercase tracking-wider text-white/40">Catégories</p>
           <div className="mt-3 space-y-1">
             {CATEGORIES.map((cat) => {
               const count = documents.filter((d) => d.category === cat.id).length;
@@ -124,8 +124,8 @@ export function ExpertDocumentsManager() {
                   className={cn(
                     "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition",
                     activeCategory === cat.id
-                      ? "bg-[#635BFF]/10 font-medium text-[#635BFF]"
-                      : "text-[#050505]/65 hover:bg-[#F7F7F5]",
+                      ? "bg-[#635BFF]/10 font-medium text-[#A9AEFF]"
+                      : "text-white/65 hover:bg-white/[0.04]",
                   )}
                 >
                   {cat.label}
@@ -141,7 +141,7 @@ export function ExpertDocumentsManager() {
         <div className="space-y-4">
           <div
             className={cn(
-              "rounded-[28px] border border-dashed border-[#050505]/12 bg-white p-8 shadow-[0_1px_2px_rgba(5,5,5,0.04),0_8px_32px_rgba(5,5,5,0.06)] transition",
+              "rounded-[28px] border border-dashed border-white/10 bg-[#10173a]/70 p-8 shadow-[0_1px_2px_rgba(5,5,5,0.04),0_8px_32px_rgba(5,5,5,0.06)] transition",
               dragOver && "border-[#635BFF]/40 bg-[#635BFF]/[0.04]",
             )}
             onDragOver={(e) => {
@@ -163,18 +163,18 @@ export function ExpertDocumentsManager() {
               onChange={(e) => e.target.files && void uploadFiles(e.target.files)}
             />
             <div className="flex flex-col items-center text-center sm:flex-row sm:text-left">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#635BFF]/10 text-[#635BFF]">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#635BFF]/10 text-[#A9AEFF]">
                 {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
               </div>
               <div className="mt-4 sm:ml-5 sm:mt-0 sm:flex-1">
                 <p className="text-sm font-semibold">Glissez-déposez vos fichiers ici</p>
-                <p className="mt-1 text-sm text-[#050505]/50">PDF, images, documents Office — 20 Mo max par fichier</p>
+                <p className="mt-1 text-sm text-white/50">PDF, images, documents Office — 20 Mo max par fichier</p>
               </div>
               <button
                 type="button"
                 disabled={uploading}
                 onClick={() => inputRef.current?.click()}
-                className="mt-4 rounded-2xl bg-[#635BFF] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#7B74FF] disabled:opacity-60 sm:mt-0"
+                className="mt-4 rounded-2xl bg-[#635BFF] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8D93FF] disabled:opacity-60 sm:mt-0"
               >
                 Parcourir
               </button>
@@ -182,19 +182,19 @@ export function ExpertDocumentsManager() {
           </div>
 
           {filtered.length === 0 ? (
-            <EdgeCard padding="md" className="text-center text-sm text-[#050505]/45">
+            <EdgeCard padding="md" className="border-white/[0.07] bg-[#10173a]/70 text-center text-sm text-white/45 shadow-none">
               Aucun document dans cette catégorie.
             </EdgeCard>
           ) : (
             <div className="grid gap-3">
               {filtered.map((doc) => (
-                <EdgeCard key={doc.id} padding="sm" className="flex items-center gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#635BFF]/8 text-[#635BFF]">
+                <EdgeCard key={doc.id} padding="sm" className="flex items-center gap-4 border-white/[0.07] bg-[#10173a]/70 text-white shadow-none">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#635BFF]/8 text-[#A9AEFF]">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{doc.name}</p>
-                    <p className="text-xs text-[#050505]/45">
+                    <p className="text-xs text-white/45">
                       {new Date(doc.uploaded_at).toLocaleDateString("fr-FR")}
                       {doc.size ? ` · ${Math.round(doc.size / 1024)} Ko` : ""}
                       {doc.version ? ` · v${doc.version}` : ""}
@@ -205,7 +205,7 @@ export function ExpertDocumentsManager() {
                       href={doc.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-xl p-2 text-[#050505]/45 transition hover:bg-[#F7F7F5] hover:text-[#635BFF]"
+                      className="rounded-xl p-2 text-white/45 transition hover:bg-white/[0.04] hover:text-[#A9AEFF]"
                       title="Prévisualiser"
                     >
                       <Eye className="h-4 w-4" />
@@ -213,7 +213,7 @@ export function ExpertDocumentsManager() {
                     <a
                       href={doc.url}
                       download={doc.name}
-                      className="rounded-xl p-2 text-[#050505]/45 transition hover:bg-[#F7F7F5] hover:text-[#635BFF]"
+                      className="rounded-xl p-2 text-white/45 transition hover:bg-white/[0.04] hover:text-[#A9AEFF]"
                       title="Télécharger"
                     >
                       <Download className="h-4 w-4" />
@@ -221,7 +221,7 @@ export function ExpertDocumentsManager() {
                     <button
                       type="button"
                       onClick={() => void removeDoc(doc.id)}
-                      className="rounded-xl p-2 text-[#050505]/45 transition hover:bg-[#F7F7F5] hover:text-[#E25555]"
+                      className="rounded-xl p-2 text-white/45 transition hover:bg-white/[0.04] hover:text-[#E25555]"
                       title="Supprimer"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -232,9 +232,9 @@ export function ExpertDocumentsManager() {
             </div>
           )}
 
-          <p className="text-xs text-[#050505]/40">
+          <p className="text-xs text-white/40">
             Besoin d'aide ?{" "}
-            <Link href="/dashboard/expert/support" className="font-medium text-[#635BFF] hover:underline">
+            <Link href="/dashboard/expert/support" className="font-medium text-[#A9AEFF] hover:underline">
               Contactez le support Byound
             </Link>
           </p>

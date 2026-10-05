@@ -35,7 +35,9 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
 
   return (
     <ExpertAccessProvider expert={expert} emailConfirmed={emailConfirmed}>
-      <ExpertRouteGuard>{children}</ExpertRouteGuard>
+      <div className="min-h-screen bg-[#070b1f] text-white [color-scheme:dark] [&_input]:bg-white/[0.05] [&_input]:text-white [&_input]:placeholder:text-white/35 [&_select]:bg-white/[0.05] [&_select]:text-white [&_textarea]:bg-white/[0.05] [&_textarea]:text-white [&_textarea]:placeholder:text-white/35">
+        <ExpertRouteGuard>{children}</ExpertRouteGuard>
+      </div>
     </ExpertAccessProvider>
   );
 }

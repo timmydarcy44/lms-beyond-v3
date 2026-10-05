@@ -112,18 +112,18 @@ export default function ExpertInterventionsPage() {
   const rows = useMemo(() => items, [items]);
 
   return (
-    <div className="min-h-screen bg-[#F7F7F5] text-[#050505]">
+    <div className="min-h-screen bg-[#070b1f] text-white">
       <SidebarExpert restricted={!isApproved} />
-      <main className="min-h-screen pl-[260px]">
+      <main className="min-h-screen lg:pl-[260px]">
         <div className="mx-auto max-w-6xl px-6 py-10 pb-24">
         <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#635BFF]">Missions</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A9AEFF]">Missions</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">Interventions</h1>
-            <p className="mt-3 text-sm text-[#050505]/55">Vos missions activées par les entreprises partenaires Byound.</p>
+            <p className="mt-3 text-sm text-white/55">Vos missions activées par les entreprises partenaires Byound.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#635BFF]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#A9AEFF]">
               <ShieldCheck className="h-4 w-4" aria-hidden />
               Réseau Byound
             </span>
@@ -136,21 +136,21 @@ export default function ExpertInterventionsPage() {
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[28px] border border-[#050505]/8 bg-white shadow-sm">
-          <div className="border-b border-[#050505]/8 px-6 py-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Liste</p>
-            <p className="mt-1 text-sm text-[#050505]/55">Dernières demandes et planifications.</p>
+        <section className="overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 shadow-sm">
+          <div className="border-b border-white/[0.07] px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Liste</p>
+            <p className="mt-1 text-sm text-white/55">Dernières demandes et planifications.</p>
           </div>
 
           <div className="p-6">
             {loading ? (
               <div className="space-y-4">
                 {[0, 1, 2].map((k) => (
-                  <div key={k} className="h-20 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5]" />
+                  <div key={k} className="h-20 rounded-2xl border border-white/[0.07] bg-white/[0.04]" />
                 ))}
               </div>
             ) : rows.length === 0 ? (
-              <div className="rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-6 text-sm text-[#050505]/55">
+              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] p-6 text-sm text-white/55">
                 Aucune intervention pour le moment.
               </div>
             ) : (
@@ -166,30 +166,30 @@ export default function ExpertInterventionsPage() {
                   return (
                     <div
                       key={it.id}
-                      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-5"
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-5"
                     >
                       <div className="flex min-w-0 items-center gap-4">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#635BFF]/20 bg-[#635BFF]/10 text-sm font-semibold text-[#635BFF]">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#635BFF]/20 bg-[#635BFF]/10 text-sm font-semibold text-[#A9AEFF]">
                           {logoLetter}
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold tracking-tight text-[#050505]">
+                          <div className="truncate text-sm font-semibold tracking-tight text-white">
                             {it.target_label ?? "Cible"}{" "}
-                            <span className="text-[#050505]/35">·</span>{" "}
-                            <span className="text-[#050505]/55">{clientName}</span>
+                            <span className="text-white/35">·</span>{" "}
+                            <span className="text-white/55">{clientName}</span>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#050505]/45">
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/45">
                             <span className="inline-flex items-center gap-2">
-                              <Sparkles className="h-3.5 w-3.5 text-[#635BFF]" aria-hidden />
+                              <Sparkles className="h-3.5 w-3.5 text-[#A9AEFF]" aria-hidden />
                               {formatLabel}
                             </span>
-                            <span className="text-[#050505]/25">•</span>
+                            <span className="text-white/25">•</span>
                             <span>{formatRelative(it.created_at)}</span>
                             {scheduledFor ? (
                               <>
-                                <span className="text-[#050505]/25">•</span>
+                                <span className="text-white/25">•</span>
                                 <span className="inline-flex items-center gap-2">
-                                  <CalendarDays className="h-3.5 w-3.5 text-[#635BFF]" aria-hidden />
+                                  <CalendarDays className="h-3.5 w-3.5 text-[#A9AEFF]" aria-hidden />
                                   {scheduledFor}
                                 </span>
                               </>
@@ -205,7 +205,7 @@ export default function ExpertInterventionsPage() {
                           onClick={() => router.push(`/dashboard/expert/interventions/${encodeURIComponent(it.id)}`)}
                           className={cn(
                             "rounded-2xl px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition",
-                            "bg-[#635BFF] text-white hover:bg-[#7B74FF]",
+                            "bg-[#7C83FF] text-white hover:bg-[#8D93FF]",
                           )}
                         >
                           Gérer l'intervention

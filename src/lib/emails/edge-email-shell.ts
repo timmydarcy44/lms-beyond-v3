@@ -1,7 +1,7 @@
 /** Design system email Byound — Apple × Revolut × Notion */
 
 export const EDGE_EMAIL_LOGO_URL =
-  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/EDGE_noir_sans_fond.png";
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_byound_blanc_sans_fond.png";
 
 export function escapeEdgeEmailHtml(value: string): string {
   return value
@@ -55,8 +55,10 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#FFFFFF;">
     <tr><td align="center" style="padding:64px 24px 80px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
-        <tr><td align="center" style="padding:0 0 56px;">
-          <img src="${EDGE_EMAIL_LOGO_URL}" alt="Byound" width="96" height="32" style="display:block;height:32px;width:auto;margin:0 auto;" />
+        <tr><td align="center" style="padding:28px 24px;background:#070B1F;border-radius:24px;">
+          <img src="${EDGE_EMAIL_LOGO_URL}" alt="Byound" width="112" style="display:block;width:112px;height:auto;margin:0 auto;" />
+        </td></tr>
+        <tr><td style="height:48px;line-height:48px;font-size:1px;">&nbsp;
         </td></tr>
         <tr><td align="center" style="padding:0;">
           <h1 style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.12;letter-spacing:-0.04em;color:#050505;text-align:center;">

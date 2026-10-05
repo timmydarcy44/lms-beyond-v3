@@ -281,7 +281,7 @@ export function ExpertCockpitDashboard({ restricted = false }: Props) {
 
       <SidebarExpert restricted={restricted} />
 
-      <main className="relative min-h-screen pl-[260px]">
+      <main className="relative min-h-screen lg:pl-[260px]">
         <div className="mx-auto max-w-[1160px] px-4 pb-20 pt-4 lg:pr-8">
           {/* Top bar */}
           <div className="flex items-center justify-between gap-4 py-2">

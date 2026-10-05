@@ -94,7 +94,7 @@ export function isProfessionalProjectComplete(
   project: ProfessionalProject,
   typeProfil?: string | null,
 ): boolean {
-  // Format EDGE v2 (profession / secteur / projet libre) — prioritaire
+  // Format Byound v2 (profession / secteur / projet libre) — prioritaire
   if (isEdgeProjectV2Complete(migrateLegacyProjectToV2(project))) return true;
 
   if (typeProfil) {
@@ -144,7 +144,7 @@ export function identityFilledCount(profile: {
 }
 
 /**
- * Complétion profil (hors hard skills — gérées dans EDGE Skills).
+ * Complétion profil (hors hard skills — gérées dans Byound Skills).
  * Poids : Identité 20 · Projet 20 · Tests 30 · Expériences 20 · Diplômes 10 = 100
  */
 export function computeProfilEdgeMaturity(input: {
@@ -201,7 +201,7 @@ export function computeProfilEdgeMaturity(input: {
     },
     {
       id: "tests",
-      label: "Tests EDGE",
+      label: "Tests Byound",
       weight: 30,
       percent: testsPercent,
       complete: testsCount === 3,

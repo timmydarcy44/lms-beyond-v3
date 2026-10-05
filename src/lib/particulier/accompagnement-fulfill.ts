@@ -31,7 +31,7 @@ export async function processAccompagnementPaidSession(session: Stripe.Checkout.
         offer,
         amountCents: reservation.amount_cents,
         selectedSlot: reservation.selected_slot,
-        coachName: reservation.coach_name || "Expert EDGE",
+        coachName: reservation.coach_name || "Expert Byound",
         durationLabel: reservation.duration_label,
         visioUrl: reservation.visio_url,
       }).catch((err) => console.error("[accompagnement/fulfill] email:", err));

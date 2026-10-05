@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const contactEmail = process.env.CONTACT_EMAIL?.trim() || "contact@edgebs.fr";
-    const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "EDGE <noreply@edgebs.fr>";
+    const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>";
     const resendKey = process.env.RESEND_API_KEY;
 
     if (resendKey) {
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
           from: fromAddress,
           to: contactEmail,
           reply_to: email,
-          subject: `[EDGE Entreprises] Demande — ${entreprise}`,
+          subject: `[Byound Entreprises] Demande — ${entreprise}`,
           html: buildEdgeEmailShell({
             title: "Nouvelle demande entreprise",
             preheader: `${nom} — ${entreprise}`,

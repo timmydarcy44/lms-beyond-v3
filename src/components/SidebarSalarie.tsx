@@ -35,7 +35,7 @@ export default function SidebarSalarie() {
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden h-screen w-[280px] shrink-0 flex-col border-r border-white/[0.08] bg-transparent backdrop-blur-[20px] lg:flex">
       <div className="border-b border-white/[0.06] px-5 py-6">
-        <OrgSidebarBrand logoUrl={branding.logoUrl} name={branding.name || "EDGE"} />
+        <OrgSidebarBrand logoUrl={branding.logoUrl} name={branding.name || "Byound"} />
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-3 py-6" aria-label="Navigation salarié">

@@ -8,17 +8,17 @@ export function getCrmUserPasswordInviteEmail(params: {
   const greeting = firstName || "Bonjour";
 
   const html = buildEdgeEmailShell({
-    title: "Bienvenue sur EDGE",
+    title: "Bienvenue sur Byound",
     preheader: "Créez votre mot de passe pour activer votre compte",
     bodyHtml: `<p>Bonjour ${greeting},</p>
-      <p>Un compte EDGE a été créé pour vous.</p>
+      <p>Un compte Byound a été créé pour vous.</p>
       <p>Pour y accéder, créez votre mot de passe via le bouton ci-dessous. Ce lien est personnel et valable 24&nbsp;h.</p>`,
     cta: { label: "Créer mon mot de passe", href: params.passwordSetupLink },
     footerNote: "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
   });
 
   return {
-    subject: "EDGE — Créez votre mot de passe",
+    subject: "Byound — Créez votre mot de passe",
     html,
   };
 }

@@ -46,7 +46,7 @@ function buildTrainersFromCourse(course: TrainingCourseRow) {
       .map((ins) => ({
         id: ins.expert_id,
         name: `${ins.first_name} ${ins.last_name}`.trim(),
-        specialty: ins.headline ?? "Formateur expert EDGE",
+        specialty: ins.headline ?? "Formateur expert Byound",
         photoUrl:
           ins.photo_url ??
           "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop",
@@ -59,7 +59,7 @@ function buildTrainersFromCourse(course: TrainingCourseRow) {
       {
         id: course.trainer_id ?? "lead",
         name: course.trainer_name,
-        specialty: course.trainer_headline ?? "Formateur expert EDGE",
+        specialty: course.trainer_headline ?? "Formateur expert Byound",
         photoUrl:
           course.trainer_photo_url ??
           "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop",
@@ -137,7 +137,7 @@ export function buildTrainingCourseDetail(
     maxIntraParticipants: course.max_intra_participants ?? 12,
     sessions,
     faq: course.faq ?? [],
-    badgeLabel: badgeMeta?.name ?? course.badge_name ?? "Open Badge EDGE",
+    badgeLabel: badgeMeta?.name ?? course.badge_name ?? "Open Badge Byound",
     badgeImageUrl: badgeMeta?.imageUrl ?? null,
   };
 }

@@ -109,7 +109,7 @@ export function OrgCatalogueEdgeView({
     return (
       <OrgFormationsEmpty
         variant={variant}
-        title="Catalogue EDGE indisponible"
+        title="Catalogue Byound indisponible"
         description="Aucune formation publiée n’a pu être chargée pour le moment."
       />
     );
@@ -119,7 +119,7 @@ export function OrgCatalogueEdgeView({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <p className={cn("max-w-2xl text-sm", isDark ? "text-white/55" : "text-black/55")}>
-          Formations du catalogue EDGE Online. Assignez-les à vos collaborateurs — vos formations
+          Formations du catalogue Byound Online. Assignez-les à vos collaborateurs — vos formations
           internes restent privées.
         </p>
         <Link
@@ -129,7 +129,7 @@ export function OrgCatalogueEdgeView({
             isDark ? "bg-white text-black" : "bg-[#007AFF] text-white",
           )}
         >
-          Ouvrir EDGE Online
+          Ouvrir Byound Online
           <ExternalLink className="h-4 w-4" />
         </Link>
       </div>
@@ -217,7 +217,7 @@ export function OrgCatalogueEdgeView({
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center px-4 text-center text-xs font-semibold uppercase tracking-wider text-white/35">
-                      {course.categoryName || "EDGE"}
+                      {course.categoryName || "Byound"}
                     </div>
                   )}
                 </div>
@@ -228,7 +228,7 @@ export function OrgCatalogueEdgeView({
                       isDark ? "text-white/40" : "text-black/40",
                     )}
                   >
-                    {course.categoryName || "EDGE"}
+                    {course.categoryName || "Byound"}
                   </p>
                   <h3
                     className={cn(

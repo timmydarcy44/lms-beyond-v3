@@ -139,7 +139,7 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Accompagnement personnalisé</p>
             <p className="mt-2 max-w-2xl text-sm text-white/55">
-              Chaque compétence identifiée peut être travaillée avec un expert EDGE — pas une simple liste de
+              Chaque compétence identifiée peut être travaillée avec un expert Byound — pas une simple liste de
               contenus.
             </p>
           </div>
@@ -149,12 +149,12 @@ export function ProfilEdgeMatchingSection({ careerTitle, matching, actionPlan }:
                 key={skill}
                 className="flex flex-col rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-transparent p-6"
               >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Progression EDGE</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Progression Byound</p>
                 <h3 className="mt-3 text-lg font-semibold tracking-tight text-white">{premiumSkillTitle(skill)}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-white/55">
                   Cette compétence limite actuellement votre compatibilité avec le métier visé.
                 </p>
-                <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Parcours EDGE</p>
+                <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Parcours Byound</p>
                 <ul className="mt-3 space-y-2">
                   {FUTURE_PROGRESSION_TYPES.map((type) => (
                     <li key={type} className="flex items-center gap-2.5 text-sm text-white/75">

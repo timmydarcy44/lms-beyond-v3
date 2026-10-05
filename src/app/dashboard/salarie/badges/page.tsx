@@ -47,7 +47,7 @@ export default function SalarieWalletPage() {
         <p className={SALARIE_PAGE_KICKER}>Wallet</p>
         <h1 className={SALARIE_PAGE_TITLE}>Mes Open Badges</h1>
         <p className={SALARIE_PAGE_LEAD}>
-          Retrouvez vos badges EDGE validés et découvrez ceux que vous pouvez obtenir.
+          Retrouvez vos badges Byound validés et découvrez ceux que vous pouvez obtenir.
         </p>
       </section>
 

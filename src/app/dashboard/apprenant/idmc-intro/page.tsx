@@ -90,7 +90,7 @@ export default function IdmcIntroPage() {
           animate={{ opacity: phase === "ready" ? 1 : 0 }}
           transition={{ delay: 0.28, duration: 0.5 }}
         >
-          Identifiez vos moteurs de motivation profonds pour aligner votre parcours EDGE.
+          Identifiez vos moteurs de motivation profonds pour aligner votre parcours Byound.
         </motion.p>
 
         <motion.p

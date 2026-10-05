@@ -54,7 +54,7 @@ export function SkillCard({ record, meta, onEdit, onProof, onEvaluate, onDelete 
           <dt className="text-white/40">Statut</dt>
           <dd className="mt-0.5 font-semibold text-white">
             {status === "validated"
-              ? "Validée EDGE"
+              ? "Validée Byound"
               : status === "evaluated"
                 ? "Évaluée"
                 : status === "proved"

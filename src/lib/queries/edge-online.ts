@@ -40,7 +40,7 @@ function isVisibleStatus(status: unknown): boolean {
 }
 
 /**
- * Cours publiés EDGE Lab pour la vitrine EDGE Online (service role, scope org uniquement).
+ * Cours publiés Byound Lab pour la vitrine Byound Online (service role, scope org uniquement).
  */
 export async function getEdgeOnlinePublishedCourses(): Promise<EdgeOnlineCourse[]> {
   const db = getServiceRoleClient();
@@ -147,7 +147,7 @@ function emptyEdgeOnlineDashboardShell(): ApprenantDashboardData {
     continueWatching: [],
     organizationSlug: "edgelab",
     organizationLogoUrl: EDGE_LAB_GALAXY_LOGO_URL,
-    organizationName: "EDGE",
+    organizationName: "Byound",
     thematicSectionOrder: [...EDGE_LAB_COURSE_CATEGORY_LABELS],
   };
 }
@@ -193,7 +193,7 @@ function withEdgeOnlineCleanUrls(data: ApprenantDashboardData): ApprenantDashboa
 }
 
 /**
- * Données « Mes formations » EDGE Lab pour la surface publique edgeonline.fr/formations :
+ * Données « Mes formations » Byound Lab pour la surface publique edgeonline.fr/formations :
  * même logique que `/g/edgelab/dashboard/student/learning/formations` si session ;
  * sinon catalogue publié (service role) avec liens propres `/formations/{slug}`.
  */

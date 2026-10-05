@@ -21,7 +21,7 @@ export default async function DashboardApprenantWalletPage() {
         <p className={APPRENANT_PAGE_KICKER}>Wallet</p>
         <h1 className={APPRENANT_PAGE_TITLE}>Mes Open Badges obtenus</h1>
         <p className={APPRENANT_PAGE_LEAD}>
-          Retrouve ici tes badges EDGE validés. Partage-les sur LinkedIn en un clic avec un message
+          Retrouve ici tes badges Byound validés. Partage-les sur LinkedIn en un clic avec un message
           pré-rédigé.
         </p>
       </section>

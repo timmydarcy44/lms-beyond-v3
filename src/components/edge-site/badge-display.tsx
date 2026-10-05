@@ -18,7 +18,7 @@ export function BadgeDisplay() {
           <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">Open Badge</p>
           <p className="mt-1 text-base font-medium tracking-[-0.02em] text-edge-black">IMS Global</p>
           <p className="mt-2 text-[13px] leading-relaxed text-black/40">
-            Métadonnées vérifiables · Émetteur EDGE Business School
+            Métadonnées vérifiables · Émetteur Byound Business School
           </p>
         </div>
       </div>

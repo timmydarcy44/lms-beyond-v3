@@ -27,7 +27,7 @@ export type OnboardingObjectiveConfig = {
 export const ONBOARDING_OBJECTIVE_CONFIG: Record<ParticulierObjectiveType, OnboardingObjectiveConfig> = {
   alternance: {
     title: "Construisons votre projet d'alternance",
-    subtitle: "Ces informations alimentent votre matching et votre Profil EDGE.",
+    subtitle: "Ces informations alimentent votre matching et votre Profil Byound.",
     fields: [
       { key: "formation_visee", label: "Formation visée", placeholder: "Ex. BTS NDRC", type: "text" },
       { key: "metier_recherche", label: "Métier recherché", placeholder: "Ex. Commercial", type: "text" },
@@ -38,7 +38,7 @@ export const ONBOARDING_OBJECTIVE_CONFIG: Record<ParticulierObjectiveType, Onboa
   },
   emploi: {
     title: "Construisons votre évolution professionnelle",
-    subtitle: "Précisez votre situation et votre objectif pour personnaliser EDGE.",
+    subtitle: "Précisez votre situation et votre objectif pour personnaliser Byound.",
     fields: [
       { key: "poste_actuel", label: "Poste actuel", placeholder: "Ex. Assistant commercial", type: "text" },
       { key: "metier_recherche", label: "Métier recherché", placeholder: "Ex. Chargé de clientèle", type: "text" },

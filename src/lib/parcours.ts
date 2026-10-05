@@ -151,7 +151,7 @@ export type EdgeExpert = {
   image: string;
 };
 
-/** Experts EDGE — section homepage « Nos experts » */
+/** Experts Byound — section homepage « Nos experts » */
 export const EDGE_EXPERTS: EdgeExpert[] = [
   {
     nom: "Philippe Corrot",
@@ -219,8 +219,8 @@ export const TEMOIGNAGES = [
 
 export const FAQ_EDGE_ONLINE = [
   {
-    q: "Quelle différence entre EDGE Online et un parcours certifiant ?",
-    a: "EDGE Online est l'accès libre aux micro-formations par thématique. Le parcours certifiant structure un programme avec livrables évalués et Open Badge IMS Global.",
+    q: "Quelle différence entre Byound Online et un parcours certifiant ?",
+    a: "Byound Online est l'accès libre aux micro-formations par thématique. Le parcours certifiant structure un programme avec livrables évalués et Open Badge IMS Global.",
   },
   {
     q: "Les badges thématiques sont-ils certifiants ?",
@@ -228,7 +228,7 @@ export const FAQ_EDGE_ONLINE = [
   },
   {
     q: "Puis-je passer au parcours certifiant ensuite ?",
-    a: "Oui. Votre progression est reconnue : un conseiller EDGE vous propose l'upgrade adapté à votre profil.",
+    a: "Oui. Votre progression est reconnue : un conseiller Byound vous propose l'upgrade adapté à votre profil.",
   },
   {
     q: "Comment résilier mon abonnement ?",

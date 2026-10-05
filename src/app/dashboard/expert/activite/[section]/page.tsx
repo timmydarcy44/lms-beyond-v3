@@ -17,7 +17,7 @@ const SECTIONS: Record<string, { title: string; description: string }> = {
   },
   facturation: {
     title: "Facturation",
-    description: "Suivi des factures et paiements EDGE.",
+    description: "Suivi des factures et paiements Byound.",
   },
 };
 

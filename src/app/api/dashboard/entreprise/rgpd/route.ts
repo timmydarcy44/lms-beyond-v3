@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     type,
     message:
       type === "erasure"
-        ? "Votre demande d’effacement a été enregistrée. EDGE vous recontacte sous 30 jours."
-        : "Votre demande RGPD a été enregistrée. EDGE vous recontacte sous 30 jours.",
+        ? "Votre demande d’effacement a été enregistrée. Byound vous recontacte sous 30 jours."
+        : "Votre demande RGPD a été enregistrée. Byound vous recontacte sous 30 jours.",
   });
 }

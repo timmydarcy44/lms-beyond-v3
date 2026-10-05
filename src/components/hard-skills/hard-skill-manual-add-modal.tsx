@@ -36,7 +36,7 @@ export function HardSkillManualAddModal({ open, existingSkills, saving, onClose,
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#121820] p-6 shadow-2xl">
         <p className="text-xs uppercase tracking-wider text-white/40">Ajout manuel</p>
         <h3 className="mt-2 text-lg font-semibold text-white">Nouvelle compétence</h3>
-        <p className="mt-2 text-sm text-white/55">Créez une compétence hors catalogue EDGE.</p>
+        <p className="mt-2 text-sm text-white/55">Créez une compétence hors catalogue Byound.</p>
 
         <label className="mt-5 block text-sm">
           <span className="mb-1 block text-white/70">Nom</span>

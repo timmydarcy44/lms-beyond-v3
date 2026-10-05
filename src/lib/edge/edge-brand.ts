@@ -1,4 +1,4 @@
-/** Tokens visuels EDGE — bleu Revolut, rouge accent uniquement */
+/** Tokens visuels Byound — bleu Revolut, rouge accent uniquement */
 export const EDGE_COLORS = {
   bgDeep: "#0a0a0d",
   bgShell: "#0a0a0f",

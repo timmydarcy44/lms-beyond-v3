@@ -1,4 +1,4 @@
-/** Types partagés client/serveur pour les Défis EDGE. */
+/** Types partagés client/serveur pour les Défis Byound. */
 
 export type ChallengeFormatId = "story" | "situation" | "proof" | "video" | "ai" | "quickchallenge";
 

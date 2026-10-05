@@ -23,7 +23,7 @@ export function EdgeAuthLinkErrorPanel({ variant, signupHref, signupLabel, initi
 
   const description =
     variant === "crm"
-      ? "Les liens de création de mot de passe sont valables 24 h. Demandez un nouvel email depuis le CRM EDGE."
+      ? "Les liens de création de mot de passe sont valables 24 h. Demandez un nouvel email depuis le CRM Byound."
       : variant === "invite"
       ? "Demandez une nouvelle invitation à votre responsable RH, ou contactez le support."
       : variant === "entreprise"

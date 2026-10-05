@@ -47,7 +47,7 @@ export function OpenBadgePresentationView({
         <div className="relative mx-auto grid max-w-6xl gap-6 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-10 lg:py-12">
           <div className="order-2 lg:order-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.5em] text-[#FF3B30]">
-              Open Badge EDGE
+              Open Badge Byound
               {badge.level != null ? ` · Niveau ${badge.level}` : ""}
             </p>
             <h1 className="mt-3 text-pretty text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1]">
@@ -167,7 +167,7 @@ export function OpenBadgePresentationView({
               <p className="mt-4 text-sm leading-relaxed text-white/70">
                 Obtenir ce badge atteste d&apos;une compétence mesurable et vérifiable auprès de votre
                 organisation. Une fois validé, votre Open Badge peut être partagé sur LinkedIn et
-                conservé dans votre EDGE Wallet — un lien public que vous pouvez transmettre à un
+                conservé dans votre Byound Wallet — un lien public que vous pouvez transmettre à un
                 recruteur ou un partenaire.
               </p>
               <div className="mt-5 flex flex-wrap gap-3">
@@ -177,7 +177,7 @@ export function OpenBadgePresentationView({
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/55">
                   <Wallet className="h-3.5 w-3.5" />
-                  EDGE Wallet
+                  Byound Wallet
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/55">
                   <Share2 className="h-3.5 w-3.5" />

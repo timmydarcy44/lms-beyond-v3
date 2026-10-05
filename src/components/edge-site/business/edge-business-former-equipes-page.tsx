@@ -82,7 +82,7 @@ function FormationCard({ course }: { course: TrainingCoursePublic }) {
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-1 rounded-full bg-edge-accent/8 px-2.5 py-1 text-[11px] font-medium text-edge-accent">
             <Award className="h-3 w-3" />
-            {course.badge_name ?? "Open Badge EDGE"}
+            {course.badge_name ?? "Open Badge Byound"}
           </span>
           <StarRating rating={course.rating} />
         </div>

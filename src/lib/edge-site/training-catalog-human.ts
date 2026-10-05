@@ -49,7 +49,7 @@ export const EDGE_SPECIALISTS: EdgeSpecialist[] = [
     missionsCount: 214,
     companiesCount: 148,
     rating: 5,
-    badges: ["Open Badge", "EDGE Certified"],
+    badges: ["Open Badge", "Byound Certified"],
   },
   {
     id: "timmy",
@@ -71,7 +71,7 @@ export const EDGE_SPECIALISTS: EdgeSpecialist[] = [
     missionsCount: 167,
     companiesCount: 121,
     rating: 5,
-    badges: ["EDGE Certified"],
+    badges: ["Byound Certified"],
   },
   {
     id: "karim",
@@ -90,7 +90,7 @@ export const EDGE_TESTIMONIALS: EdgeTestimonial[] = [
   {
     id: "1",
     quote:
-      "Nos managers ont enfin une méthode concrète pour accompagner leurs équipes. Les ateliers EDGE sont vivants, pas théoriques.",
+      "Nos managers ont enfin une méthode concrète pour accompagner leurs équipes. Les ateliers Byound sont vivants, pas théoriques.",
     author: "Sophie Martin",
     role: "DRH",
     company: "Groupe Atlantique",
@@ -100,7 +100,7 @@ export const EDGE_TESTIMONIALS: EdgeTestimonial[] = [
   {
     id: "2",
     quote:
-      "Le réseau de formateurs EDGE nous a permis de déployer l'IA sur 3 sites en 6 semaines. Résultats mesurables dès le premier mois.",
+      "Le réseau de formateurs Byound nous a permis de déployer l'IA sur 3 sites en 6 semaines. Résultats mesurables dès le premier mois.",
     author: "Thomas Renard",
     role: "Directeur formation",
     company: "TechMaritime",

@@ -172,7 +172,7 @@ function EdgeOnlineCardMeta({ course }: { course: SliderCard }) {
         ) : null}
         <span className="inline-flex items-center gap-0.5 rounded-full border border-[#FF3B30]/20 bg-[#FF3B30]/5 px-1.5 py-0.5 text-[9px] font-medium text-[#FF3B30]">
           <Award className="h-2.5 w-2.5" />
-          EDGE
+          Byound
         </span>
       </div>
     </div>

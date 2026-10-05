@@ -35,7 +35,7 @@ export const POSTULER_SOURCES = [
   "Bouche à oreille",
   "LinkedIn",
   "Google",
-  "Un expert EDGE",
+  "Un expert Byound",
   "Autre",
 ] as const;
 
@@ -78,7 +78,7 @@ export function validatePostulerStep1(data: PostulerFormData): string | null {
   }
   if (!data.telephone.trim()) return "Le téléphone est requis.";
   if (!data.situation) return "La situation actuelle est requise.";
-  if (!data.acceptContact) return "Tu dois accepter d'être recontacté par EDGE.";
+  if (!data.acceptContact) return "Tu dois accepter d'être recontacté par Byound.";
   return null;
 }
 

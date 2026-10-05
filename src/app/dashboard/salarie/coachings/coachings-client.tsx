@@ -56,7 +56,7 @@ export default function SalarieCoachingsPageClient() {
         <p className={SALARIE_PAGE_KICKER}>Accompagnement</p>
         <h1 className={SALARIE_PAGE_TITLE}>Mes coachings</h1>
         <p className={SALARIE_PAGE_LEAD}>
-          Trouvez un praticien certifié EDGE par spécialité — recommandations basées sur vos tests
+          Trouvez un praticien certifié Byound par spécialité — recommandations basées sur vos tests
           quand disponibles.
         </p>
       </section>

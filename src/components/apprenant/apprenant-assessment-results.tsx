@@ -408,7 +408,7 @@ export function ApprenantAssessmentResults({
       <ProfileAnalysisOverlay
         open={analysisOpen}
         onClose={() => setAnalysisOpen(false)}
-        title={firstName ? `Profil de ${firstName}` : "Votre profil EDGE"}
+        title={firstName ? `Profil de ${firstName}` : "Votre profil Byound"}
         subtitle="Synthèse croisée DISC, IDMC et soft skills"
       >
         <AnalysisBlocks content={correlatedAnalysis ?? ""} />

@@ -50,7 +50,7 @@ export default function ExpertSettingsPage() {
             </div>
 
             <div className="rounded-[28px] border border-[#050505]/8 bg-white p-6 shadow-sm">
-              <p className="text-sm font-medium">Support EDGE</p>
+              <p className="text-sm font-medium">Support Byound</p>
               <a
                 href="mailto:cockpit@edgebs.fr"
                 className="mt-2 inline-block text-sm text-[#635BFF] hover:underline"

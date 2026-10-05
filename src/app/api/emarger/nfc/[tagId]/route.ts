@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ tagId: string }> };
 
 /**
- * NFC : le tag identifie une SALLE. EDGE résout la session active dans cette salle.
+ * NFC : le tag identifie une SALLE. Byound résout la session active dans cette salle.
  */
 export async function GET(_req: Request, ctx: Ctx) {
   const { tagId } = await ctx.params;

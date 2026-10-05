@@ -32,7 +32,7 @@ export function marketingMetadata(content: MarketingPageContent): Metadata {
 }
 
 const DEFAULT_TAGLINE =
-  "EDGE développe les compétences qui font la différence, grâce à des parcours concrets, une pédagogie active et une technologie propriétaire.";
+  "Byound développe les compétences qui font la différence, grâce à des parcours concrets, une pédagogie active et une technologie propriétaire.";
 
 function page(
   partial: MarketingPageContent & { meta: { title: string; description: string } },
@@ -43,13 +43,13 @@ function page(
 export const MARKETING_PAGES = {
   apprenants: page({
     meta: {
-      title: "Apprenants — EDGE",
+      title: "Apprenants — Byound",
       description:
-        "Formations concrètes, alternance et accompagnement pour construire votre avenir professionnel avec EDGE.",
+        "Formations concrètes, alternance et accompagnement pour construire votre avenir professionnel avec Byound.",
     },
     label: "Apprenants",
     hero: {
-      title: "Construisez votre avenir avec EDGE.",
+      title: "Construisez votre avenir avec Byound.",
       subtitle:
         "Des formations concrètes, pensées avec les entreprises, pour apprendre un métier, développer vos compétences et préparer votre insertion professionnelle.",
       tone: "dark",
@@ -84,15 +84,15 @@ export const MARKETING_PAGES = {
 
   business: page({
     meta: {
-      title: "Business — EDGE",
+      title: "Business — Byound",
       description:
-        "Formez vos équipes, créez une académie interne et pilotez les compétences avec EDGE.",
+        "Formez vos équipes, créez une académie interne et pilotez les compétences avec Byound.",
     },
     label: "Business",
     hero: {
       title: "Développez les compétences qui feront grandir votre organisation.",
       subtitle:
-        "EDGE accompagne les entreprises dans la formation, la montée en compétences, le recrutement et le pilotage des talents.",
+        "Byound accompagne les entreprises dans la formation, la montée en compétences, le recrutement et le pilotage des talents.",
       tone: "dark",
     },
     sections: [
@@ -125,19 +125,19 @@ export const MARKETING_PAGES = {
 
   formateursExperts: page({
     meta: {
-      title: "Formateurs & Experts — EDGE",
-      description: "Rejoignez l'écosystème EDGE et intervenez sur des parcours structurés et orientés impact.",
+      title: "Formateurs & Experts — Byound",
+      description: "Rejoignez l'écosystème Byound et intervenez sur des parcours structurés et orientés impact.",
     },
     label: "Formateurs / Experts",
     hero: {
-      title: "Rejoignez l'écosystème EDGE.",
+      title: "Rejoignez l'écosystème Byound.",
       subtitle:
         "Vous êtes formateur, consultant ou expert métier ? Intervenez sur des parcours structurés, exigeants et orientés impact.",
       tone: "dark",
     },
     sections: [
       {
-        title: "Pourquoi rejoindre EDGE",
+        title: "Pourquoi rejoindre Byound",
         body: "Intégrez un réseau exigeant qui valorise l'expertise terrain, la pédagogie active et l'impact mesurable sur les apprenants et les organisations.",
       },
       {
@@ -154,14 +154,14 @@ export const MARKETING_PAGES = {
       },
       {
         title: "Créer son espace expert",
-        body: "Accédez à votre tableau de bord, gérez vos interventions, vos supports et votre certification interne EDGE.",
+        body: "Accédez à votre tableau de bord, gérez vos interventions, vos supports et votre certification interne Byound.",
       },
     ],
     ctas: [{ label: "Créer mon compte expert", href: P.expertSignup, variant: "primary" }],
   }),
 
   formations: page({
-    meta: { title: "Formations — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Formations — Byound", description: DEFAULT_TAGLINE },
     label: "Formations",
     hero: {
       title: "Des formations pensées pour les métiers d'avenir.",
@@ -172,7 +172,7 @@ export const MARKETING_PAGES = {
     sections: [
       {
         title: "Une offre complète",
-        body: "De la formation initiale à la formation continue, EDGE propose des parcours adaptés à chaque ambition et chaque niveau.",
+        body: "De la formation initiale à la formation continue, Byound propose des parcours adaptés à chaque ambition et chaque niveau.",
       },
       {
         title: "Pédagogie active",
@@ -183,7 +183,7 @@ export const MARKETING_PAGES = {
   }),
 
   formationsBts: page({
-    meta: { title: "BTS — EDGE", description: "Parcours BTS en alternance avec EDGE." },
+    meta: { title: "BTS — Byound", description: "Parcours BTS en alternance avec Byound." },
     label: "BTS",
     hero: {
       title: "BTS — apprenez un métier en alternance.",
@@ -198,7 +198,7 @@ export const MARKETING_PAGES = {
   }),
 
   formationsBachelor: page({
-    meta: { title: "Bachelor — EDGE", description: "Bachelor professionnalisant EDGE." },
+    meta: { title: "Bachelor — Byound", description: "Bachelor professionnalisant Byound." },
     label: "Bachelor",
     hero: {
       title: "Bachelor — construisez votre expertise métier.",
@@ -212,7 +212,7 @@ export const MARKETING_PAGES = {
   }),
 
   formationsMastere: page({
-    meta: { title: "Mastère — EDGE", description: "Mastère spécialisé EDGE." },
+    meta: { title: "Mastère — Byound", description: "Mastère spécialisé Byound." },
     label: "Mastère",
     hero: {
       title: "Mastère — devenez expert de votre domaine.",
@@ -258,10 +258,10 @@ export const MARKETING_PAGES = {
   }),
 
   admissions: page({
-    meta: { title: "Admissions — EDGE", description: "Processus d'admission EDGE." },
+    meta: { title: "Admissions — Byound", description: "Processus d'admission Byound." },
     label: "Admissions",
     hero: {
-      title: "Intégrez EDGE.",
+      title: "Intégrez Byound.",
       subtitle: "Un processus d'admission clair, humain et orienté projet pour trouver le parcours qui vous correspond.",
       tone: "dark",
     },
@@ -272,7 +272,7 @@ export const MARKETING_PAGES = {
   }),
 
   financement: page({
-    meta: { title: "Financement — EDGE", description: "Solutions de financement des études EDGE." },
+    meta: { title: "Financement — Byound", description: "Solutions de financement des études Byound." },
     label: "Financement",
     hero: {
       title: "Financez votre parcours.",
@@ -287,7 +287,7 @@ export const MARKETING_PAGES = {
   }),
 
   vieEtudiante: page({
-    meta: { title: "Vie étudiante — EDGE", description: "La vie étudiante chez EDGE." },
+    meta: { title: "Vie étudiante — Byound", description: "La vie étudiante chez Byound." },
     label: "Vie étudiante",
     hero: {
       title: "Une expérience étudiante exigeante et enrichissante.",
@@ -301,7 +301,7 @@ export const MARKETING_PAGES = {
   }),
 
   certifications: page({
-    meta: { title: "Certifications — EDGE", description: "Certifications et Open Badges EDGE." },
+    meta: { title: "Certifications — Byound", description: "Certifications et Open Badges Byound." },
     label: "Certifications",
     hero: {
       title: "Valorisez vos compétences.",
@@ -315,7 +315,7 @@ export const MARKETING_PAGES = {
   }),
 
   businessSolutions: page({
-    meta: { title: "Solutions entreprise — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Solutions entreprise — Byound", description: DEFAULT_TAGLINE },
     label: "Solutions",
     hero: { title: "Des solutions complètes pour vos enjeux RH et formation.", subtitle: DEFAULT_TAGLINE, tone: "dark" },
     sections: [{ title: "Sur mesure", body: "Formation, compétences, recrutement et pilotage — une approche intégrée." }],
@@ -323,7 +323,7 @@ export const MARKETING_PAGES = {
   }),
 
   businessFormations: page({
-    meta: { title: "Formations entreprise — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Formations entreprise — Byound", description: DEFAULT_TAGLINE },
     label: "Formations entreprise",
     hero: { title: "Formez vos équipes sur les compétences clés.", subtitle: "Management, vente, IA, communication, RH.", tone: "dark" },
     sections: [{ title: "Catalogue", body: "Parcours modulaires ou sur mesure, en présentiel ou distanciel." }],
@@ -331,7 +331,7 @@ export const MARKETING_PAGES = {
   }),
 
   businessAcademie: page({
-    meta: { title: "Académie interne — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Académie interne — Byound", description: DEFAULT_TAGLINE },
     label: "Académie interne",
     hero: { title: "Créez votre académie d'entreprise.", subtitle: "Structurez, déployez et pilotez la montée en compétences.", tone: "dark" },
     sections: [{ title: "Clé en main", body: "Contenus, parcours, certifications et tableaux de bord intégrés." }],
@@ -339,7 +339,7 @@ export const MARKETING_PAGES = {
   }),
 
   businessCompetences: page({
-    meta: { title: "Gestion des compétences — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Gestion des compétences — Byound", description: DEFAULT_TAGLINE },
     label: "Gestion des compétences",
     hero: { title: "Cartographiez et développez les compétences.", subtitle: "Identifiez les écarts, construisez les parcours, mesurez les progrès.", tone: "dark" },
     sections: [{ title: "Pilotage", body: "Une vision claire des compétences présentes et à développer." }],
@@ -347,7 +347,7 @@ export const MARKETING_PAGES = {
   }),
 
   businessRecrutement: page({
-    meta: { title: "Recrutement — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Recrutement — Byound", description: DEFAULT_TAGLINE },
     label: "Recrutement",
     hero: { title: "Recrutez par les compétences.", subtitle: "Évaluez le potentiel, pas seulement le CV.", tone: "dark" },
     sections: [{ title: "Talents", body: "Accédez à un vivier qualifié et des outils d'évaluation fiables." }],
@@ -355,23 +355,23 @@ export const MARKETING_PAGES = {
   }),
 
   businessCasClients: page({
-    meta: { title: "Cas clients — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Cas clients — Byound", description: DEFAULT_TAGLINE },
     label: "Cas clients",
-    hero: { title: "Ils nous font confiance.", subtitle: "Découvrez comment des organisations développent leurs talents avec EDGE.", tone: "dark" },
+    hero: { title: "Ils nous font confiance.", subtitle: "Découvrez comment des organisations développent leurs talents avec Byound.", tone: "dark" },
     sections: [{ title: "Impact", body: "Des résultats mesurables en formation, compétences et insertion." }],
     ctas: [{ label: "Demander une démo", href: P.businessDemo, variant: "primary" }],
   }),
 
   businessDemo: page({
-    meta: { title: "Demander une démo — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Demander une démo — Byound", description: DEFAULT_TAGLINE },
     label: "Démo",
-    hero: { title: "Découvrez EDGE en action.", subtitle: "Échangez avec un conseiller et explorez les solutions adaptées à votre organisation.", tone: "dark" },
+    hero: { title: "Découvrez Byound en action.", subtitle: "Échangez avec un conseiller et explorez les solutions adaptées à votre organisation.", tone: "dark" },
     sections: [{ title: "Sur mesure", body: "Une démonstration personnalisée selon vos enjeux et votre secteur." }],
     ctas: [{ label: "Nous contacter", href: P.contact, variant: "primary" }],
   }),
 
   online: page({
-    meta: { title: "EDGE Online", description: "Formations en ligne EDGE." },
+    meta: { title: "Byound Online", description: "Formations en ligne Byound." },
     label: "Online",
     hero: { title: "Apprenez où vous voulez, progressez à votre rythme.", subtitle: "Parcours en ligne exigeants, interactifs et orientés résultats.", tone: "dark" },
     sections: [{ title: "Flexibilité", body: "E-learning, bootcamps et certifications accessibles partout." }],
@@ -379,7 +379,7 @@ export const MARKETING_PAGES = {
   }),
 
   onlineFormations: page({
-    meta: { title: "Formations en ligne — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Formations en ligne — Byound", description: DEFAULT_TAGLINE },
     label: "Formations en ligne",
     hero: { title: "Des parcours en ligne qui transforment.", subtitle: "Contenus premium, exercices pratiques et suivi personnalisé.", tone: "dark" },
     sections: [{ title: "Qualité", body: "La même exigence pédagogique qu'en présentiel, dans un format flexible." }],
@@ -387,7 +387,7 @@ export const MARKETING_PAGES = {
   }),
 
   onlineBootcamps: page({
-    meta: { title: "Bootcamps — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Bootcamps — Byound", description: DEFAULT_TAGLINE },
     label: "Bootcamps",
     hero: { title: "Bootcamps intensifs, compétences concrètes.", subtitle: "Immersion rapide sur des métiers porteurs.", tone: "dark" },
     sections: [{ title: "Intensif", body: "Programmes courts et exigeants pour une montée en compétences accélérée." }],
@@ -395,7 +395,7 @@ export const MARKETING_PAGES = {
   }),
 
   onlineCertifications: page({
-    meta: { title: "Certifications en ligne — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Certifications en ligne — Byound", description: DEFAULT_TAGLINE },
     label: "Certifications en ligne",
     hero: { title: "Certifiez vos compétences en ligne.", subtitle: "Open Badges et certifications reconnues.", tone: "dark" },
     sections: [{ title: "Crédibilité", body: "Valorisez vos acquis auprès des employeurs." }],
@@ -403,28 +403,28 @@ export const MARKETING_PAGES = {
   }),
 
   aPropos: page({
-    meta: { title: "À propos — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "À propos — Byound", description: DEFAULT_TAGLINE },
     label: "À propos",
-    hero: { title: "EDGE, la formation qui développe les compétences qui comptent.", subtitle: DEFAULT_TAGLINE, tone: "dark" },
+    hero: { title: "Byound, la formation qui développe les compétences qui comptent.", subtitle: DEFAULT_TAGLINE, tone: "dark" },
     sections: [
-      { title: "Notre conviction", body: "Les entreprises recherchent des compétences, pas seulement des diplômes. EDGE forme aux deux." },
+      { title: "Notre conviction", body: "Les entreprises recherchent des compétences, pas seulement des diplômes. Byound forme aux deux." },
       { title: "Notre approche", body: "Parcours concrets, pédagogie active, technologie au service de l'apprentissage." },
     ],
     ctas: [{ label: "Notre mission", href: P.notreMission, variant: "primary" }],
   }),
 
   notreMission: page({
-    meta: { title: "Notre mission — EDGE", description: DEFAULT_TAGLINE },
+    meta: { title: "Notre mission — Byound", description: DEFAULT_TAGLINE },
     label: "Notre mission",
     hero: { title: "Développons les compétences qui feront la différence demain.", subtitle: DEFAULT_TAGLINE, tone: "dark" },
     sections: [
       { title: "Mission", body: "Accompagner apprenants et organisations vers l'excellence par les compétences." },
     ],
-    ctas: [{ label: "Découvrir EDGE", href: P.decouvrir, variant: "primary" }],
+    ctas: [{ label: "Découvrir Byound", href: P.decouvrir, variant: "primary" }],
   }),
 
   ressources: page({
-    meta: { title: "Ressources — EDGE", description: "Blog, guides et webinaires EDGE." },
+    meta: { title: "Ressources — Byound", description: "Blog, guides et webinaires Byound." },
     label: "Ressources",
     hero: { title: "Ressources pour apprendre et progresser.", subtitle: "Articles, guides pratiques et webinaires.", tone: "light" },
     sections: [
@@ -435,29 +435,29 @@ export const MARKETING_PAGES = {
   }),
 
   blog: page({
-    meta: { title: "Blog — EDGE", description: "Le blog EDGE." },
+    meta: { title: "Blog — Byound", description: "Le blog Byound." },
     label: "Blog",
-    hero: { title: "Blog EDGE", subtitle: "Compétences, formation et avenir du travail.", tone: "light" },
+    hero: { title: "Blog Byound", subtitle: "Compétences, formation et avenir du travail.", tone: "light" },
     sections: [{ title: "Bientôt", body: "Nos premiers articles arrivent prochainement." }],
   }),
 
   guides: page({
-    meta: { title: "Guides — EDGE", description: "Guides EDGE." },
+    meta: { title: "Guides — Byound", description: "Guides Byound." },
     label: "Guides",
     hero: { title: "Guides pratiques", subtitle: "Ressources pour réussir votre parcours.", tone: "light" },
     sections: [{ title: "Catalogue", body: "Guides alternance, financement, insertion et plus." }],
   }),
 
   webinaires: page({
-    meta: { title: "Webinaires — EDGE", description: "Webinaires EDGE." },
+    meta: { title: "Webinaires — Byound", description: "Webinaires Byound." },
     label: "Webinaires",
-    hero: { title: "Webinaires & événements", subtitle: "Sessions en ligne pour découvrir EDGE et échanger avec nos experts.", tone: "light" },
+    hero: { title: "Webinaires & événements", subtitle: "Sessions en ligne pour découvrir Byound et échanger avec nos experts.", tone: "light" },
     sections: [{ title: "Prochains événements", body: "Inscrivez-vous à nos prochains webinaires." }],
     ctas: [{ label: "Nous contacter", href: P.contact, variant: "primary" }],
   }),
 
   tarifs: page({
-    meta: { title: "Tarifs — EDGE", description: "Tarifs et financement EDGE." },
+    meta: { title: "Tarifs — Byound", description: "Tarifs et financement Byound." },
     label: "Tarifs",
     hero: { title: "Investissez dans vos compétences.", subtitle: "Des tarifs transparents et des solutions de financement adaptées.", tone: "light" },
     sections: [{ title: "Sur devis", body: "Contactez-nous pour un devis personnalisé selon votre parcours ou votre organisation." }],
@@ -465,7 +465,7 @@ export const MARKETING_PAGES = {
   }),
 
   contact: page({
-    meta: { title: "Contact — EDGE", description: "Contactez EDGE." },
+    meta: { title: "Contact — Byound", description: "Contactez Byound." },
     label: "Contact",
     hero: { title: "Parlons de votre projet.", subtitle: "Une question sur nos formations, nos solutions entreprise ou le réseau experts ? Écrivez-nous.", tone: "light" },
     sections: [

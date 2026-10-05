@@ -342,7 +342,7 @@ export function buildPsgApprenantDemoMissions() {
     {
       id: "psg-app-mission-1",
       title: "Diagnostic Soft Skills — finaliser",
-      description: "Compléter le 3ᵉ axe pour débloquer le badge Profil comportemental EDGE.",
+      description: "Compléter le 3ᵉ axe pour débloquer le badge Profil comportemental Byound.",
       due_date: dayIso(3),
       status: "in_progress",
       created_at: isoDaysAgo(5),
@@ -384,7 +384,7 @@ export function buildPsgApprenantDemoBadges() {
     earnedOpenBadges: [
       {
         id: "psg-badge-comportemental",
-        name: "Profil comportemental EDGE",
+        name: "Profil comportemental Byound",
         imageUrl: null,
         level: 1,
         awardedAt: new Date().toISOString(),

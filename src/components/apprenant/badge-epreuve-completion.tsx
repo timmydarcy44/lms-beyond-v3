@@ -102,7 +102,7 @@ export function BadgeEpreuveCompletion({
   const { result, badgeClass, remediation } = data;
   const displayName = badgeClass.name || badgeName;
   const levelLabel =
-    badgeClass.level != null ? `niveau ${badgeClass.level}` : "certification EDGE";
+    badgeClass.level != null ? `niveau ${badgeClass.level}` : "certification Byound";
   const imageUrl = badgeClass.imageUrl ?? result.badgeImageUrl;
 
   if (result.awarded) {
@@ -141,7 +141,7 @@ export function BadgeEpreuveCompletion({
             <span className="text-[#FF3B30]">{levelLabel}</span>.
           </p>
           <p className="mt-4 text-sm leading-relaxed text-white/60">
-            Vous pouvez désormais l&apos;utiliser sur LinkedIn et dans le wallet EDGE. Ce badge a
+            Vous pouvez désormais l&apos;utiliser sur LinkedIn et dans le wallet Byound. Ce badge a
             pour objectif de prouver votre compétence auprès des recruteurs, des écoles ou de vos
             clients.
           </p>
@@ -157,7 +157,7 @@ export function BadgeEpreuveCompletion({
               href="/dashboard/apprenant/badges"
               className="inline-flex rounded-full border border-white/20 px-6 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/5"
             >
-              Wallet EDGE
+              Wallet Byound
             </Link>
           </div>
 
@@ -180,7 +180,7 @@ export function BadgeEpreuveCompletion({
     <div className="min-h-screen bg-[#030303] px-6 py-16 text-white">
       <div className="mx-auto max-w-lg text-center">
         <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-[#FF3B30]/90">
-          EDGE
+          Byound
         </p>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">
           C&apos;est ici que commence l&apos;apprentissage
@@ -193,7 +193,7 @@ export function BadgeEpreuveCompletion({
 
         {remediation ? (
           <p className="mt-4 text-sm leading-relaxed text-white/55">
-            Pour vous permettre d&apos;obtenir votre badge, EDGE vous offre le parcours{" "}
+            Pour vous permettre d&apos;obtenir votre badge, Byound vous offre le parcours{" "}
             <span className="font-medium text-white">{remediation.courseName}</span>, vous
             permettant de repasser le badge quand vous le souhaitez.
           </p>

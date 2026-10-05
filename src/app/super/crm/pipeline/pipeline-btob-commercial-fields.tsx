@@ -355,7 +355,7 @@ export function PipelineBtobCommercialFields({
       <div className="space-y-2">
         <Label>Prochaine meilleure action</Label>
         <Input value={value.next_action} onChange={(e) => patch({ next_action: e.target.value })} />
-        <p className="text-xs text-gray-500">EDGE suggère une action en haut de la fiche — vous pouvez la personnaliser ici.</p>
+        <p className="text-xs text-gray-500">Byound suggère une action en haut de la fiche — vous pouvez la personnaliser ici.</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">

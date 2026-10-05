@@ -178,7 +178,7 @@ export const TRAINING_MODALITY_TYPES = [
   { id: "quiz", label: "Quiz" },
   { id: "roleplay", label: "Mise en situation" },
   { id: "feedback", label: "Feedback" },
-  { id: "learn_module", label: "Contenu EDGE Learn" },
+  { id: "learn_module", label: "Contenu Byound Learn" },
   { id: "human_validation", label: "Validation humaine" },
 ] as const;
 
@@ -186,7 +186,7 @@ export const PROOF_METHODS = [
   { id: "realization", label: "Déposer une réalisation", hint: "Lien portfolio / projet" },
   { id: "document", label: "Ajouter un document", hint: "PDF, image, fichier" },
   { id: "video", label: "Ajouter une vidéo", hint: "Lien ou fichier vidéo" },
-  { id: "edge_eval", label: "Passer une évaluation EDGE", hint: "Analyse guidée" },
+  { id: "edge_eval", label: "Passer une évaluation Byound", hint: "Analyse guidée" },
   { id: "roleplay", label: "Réaliser une mise en situation", hint: "Entretien / scénario" },
   { id: "ask_validation", label: "Demander une validation", hint: "Formateur ou manager" },
   { id: "certification", label: "Ajouter une certification", hint: "Preuve externe" },

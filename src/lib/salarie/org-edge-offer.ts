@@ -18,7 +18,7 @@ export function orgHasLearningPlusLibrary(offer: OrgEdgeOffer): boolean {
   return offer === "learning-plus";
 }
 
-/** Résout l’organisation du salarié puis son offre EDGE. */
+/** Résout l’organisation du salarié puis son offre Byound. */
 export async function resolveSalarieOrgEdgeOffer(
   userId: string,
   authClient?: SupabaseClient | null,

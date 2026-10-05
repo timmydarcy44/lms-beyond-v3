@@ -9,7 +9,7 @@ import type { LearnerCard } from "@/lib/queries/apprenant";
 const AUTRES = "Autres";
 
 /**
- * EDGE Lab : uniquement thématiques business. Les libellés « sport » (Playmakers) vont en « Autres ».
+ * Byound Lab : uniquement thématiques business. Les libellés « sport » (Playmakers) vont en « Autres ».
  */
 export function resolveEdgeLabLearnerThematicSectionTitle(
   course: LearnerCard,
@@ -40,7 +40,7 @@ export function resolveEdgeLabLearnerThematicSectionTitle(
 }
 
 /**
- * Playmakers : uniquement thématiques sport (liste canonique). Un libellé EDGE en base part en « Autres ».
+ * Playmakers : uniquement thématiques sport (liste canonique). Un libellé Byound en base part en « Autres ».
  */
 export function resolvePlaymakersLearnerThematicSectionTitle(
   course: LearnerCard,

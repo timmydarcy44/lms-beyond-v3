@@ -6,7 +6,7 @@ import { fetchPublicTrainingCourses } from "@/lib/training-courses/queries";
 import { getServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Former vos équipes | EDGE Business",
+  title: "Former vos équipes | Byound Business",
   description:
     "Catalogue de formations professionnelles : 12 domaines, 80+ modules, parcours intra et inter, présentiel, distanciel et blended. Open Badges et niveaux 1 à 5.",
 };

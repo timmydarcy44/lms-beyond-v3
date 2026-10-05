@@ -60,7 +60,7 @@ export const QUALIOPI_RNQ_CRITERIA: QualiopiCriterion[] = [
         id: 6,
         title: "Indicateur 6",
         summary: "Les prestations sont conçues en fonction des besoins identifiés.",
-        productHint: "Diagnostics EDGE / positionnement",
+        productHint: "Diagnostics Byound / positionnement",
       },
       {
         id: 7,

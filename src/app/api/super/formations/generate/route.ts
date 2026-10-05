@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     const systemPrompt =
-      "Tu es rédacteur formation professionnelle pour EDGE Business (France), style CEGOS/Orsys. Réponds UNIQUEMENT en JSON valide, en français, ton premium et concret. Prix en euros HT. intra_price = prix groupe, inter_price = prix par participant. program = arborescence publique (sections avec description, chapitres avec duration optionnelle, sous-chapitres en tableau de strings) — PAS de contenu LMS. slug = kebab-case sans accents. cover_prompt = description visuelle pour générer une image de couverture professionnelle. max_intra_participants = 12 par défaut si non précisé.";
+      "Tu es rédacteur formation professionnelle pour Byound Business (France), style CEGOS/Orsys. Réponds UNIQUEMENT en JSON valide, en français, ton premium et concret. Prix en euros HT. intra_price = prix groupe, inter_price = prix par participant. program = arborescence publique (sections avec description, chapitres avec duration optionnelle, sous-chapitres en tableau de strings) — PAS de contenu LMS. slug = kebab-case sans accents. cover_prompt = description visuelle pour générer une image de couverture professionnelle. max_intra_participants = 12 par défaut si non précisé.";
 
     const sharedFields = `title, slug, short_description, long_description, domain, cover_prompt, objectives (6-10), skills (8-12), benefits (4-6), why_choose (4-6), case_studies (3-5), deliverables (3-5), methodology (4-6), program (2-4 sections, 3-6 chapitres/section, sous-chapitres si pertinent), prerequisites, audience (3-5), badge_name, inter_price, intra_price, max_intra_participants, formats, duration, level, meta_description (150-160 car.), seo_tags (8-12), faq (4-6 avec q et a)`;
 
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
 
     const userPrompt =
       mode === "improve"
-        ? `Améliore et enrichis cette fiche formation EDGE.
+        ? `Améliore et enrichis cette fiche formation Byound.
 
 Titre: ${title}
 Domaine: ${domain || "—"}
@@ -188,7 +188,7 @@ ${JSON.stringify(existing, null, 2)}
 
 Retourne le JSON complet avec: ${sharedFields}.`
         : prompt
-          ? `Génère une fiche formation professionnelle complète pour le catalogue EDGE Business.
+          ? `Génère une fiche formation professionnelle complète pour le catalogue Byound Business.
 
 Brief admin :
 ${prompt}
@@ -196,7 +196,7 @@ ${prompt}
 ${constraints ? `Contraintes complémentaires :\n${constraints}` : ""}
 
 Retourne le JSON avec: ${sharedFields}.`
-          : `Génère une fiche formation professionnelle complète pour le catalogue EDGE Business.
+          : `Génère une fiche formation professionnelle complète pour le catalogue Byound Business.
 
 Titre: ${title}
 Domaine: ${domain || "Management & compétences"}

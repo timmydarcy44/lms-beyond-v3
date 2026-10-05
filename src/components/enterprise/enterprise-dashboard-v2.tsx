@@ -224,7 +224,7 @@ export function EnterpriseDashboardV2() {
     });
     fallback.push({
       id: "train",
-      title: "Demander une formation EDGE",
+      title: "Demander une formation Byound",
       detail: "Catalogue business pour vos équipes",
       href: "/dashboard/entreprise/formations/demander",
     });
@@ -267,7 +267,7 @@ export function EnterpriseDashboardV2() {
         ) : configurationRequired ? (
           <div className="space-y-8">
             <div className="rounded-2xl border border-violet-100 bg-white p-8 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900">Bienvenue sur EDGE Entreprise</h2>
+              <h2 className="text-xl font-bold text-gray-900">Bienvenue sur Byound Entreprise</h2>
               <p className="mt-2 max-w-lg text-sm text-gray-600">
                 Importez votre liste RH pour créer vos collaborateurs et lancer les diagnostics.
               </p>

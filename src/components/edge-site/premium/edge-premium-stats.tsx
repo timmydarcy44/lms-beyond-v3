@@ -31,7 +31,7 @@ export function EdgePremiumStats() {
             Elles recherchent des compétences.
           </h2>
           <p className="mt-6 max-w-md text-base leading-relaxed text-black/50">
-            EDGE forme aux compétences recherchées par le marché — en ligne et en entreprise —
+            Byound forme aux compétences recherchées par le marché — en ligne et en entreprise —
             pour des parcours concrets et des résultats mesurables.
           </p>
         </div>

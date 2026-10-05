@@ -15,7 +15,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   if (!(slug in BUSINESS_PLACEHOLDER_PAGES)) {
-    return { title: "EDGE Business" };
+    return { title: "Byound Business" };
   }
   return businessPlaceholderMetadata(slug as BusinessPlaceholderSlug);
 }

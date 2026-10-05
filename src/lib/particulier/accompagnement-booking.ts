@@ -1,4 +1,4 @@
-/** Tunnel réservation accompagnement EDGE — offres, créneaux, Stripe. */
+/** Tunnel réservation accompagnement Byound — offres, créneaux, Stripe. */
 
 import { publicAppUrl } from "@/lib/env";
 
@@ -50,13 +50,13 @@ export const EDGE_BOOKABLE_OFFERS: BookableEdgeOffer[] = [
     priceCents: 4900,
     duration: "60 min",
     description:
-      "Un échange individuel avec un expert EDGE pour analyser votre profil et structurer vos prochaines étapes.",
+      "Un échange individuel avec un expert Byound pour analyser votre profil et structurer vos prochaines étapes.",
     stripePriceIdEnv: "STRIPE_PRICE_ID_COACHING_PROGRESS",
     bookable: true,
   },
   {
     slug: "simulation-professionnelle",
-    title: "Simulation Professionnelle EDGE",
+    title: "Simulation Professionnelle Byound",
     priceLabel: "179 €",
     priceCents: 17900,
     duration: "60 à 90 min",

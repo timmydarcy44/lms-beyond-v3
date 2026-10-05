@@ -37,7 +37,7 @@ export function coachingGapDisplay(gapLabel: string): string {
   }
 }
 
-/** Statut EDGE affiché — orienté progression. */
+/** Statut Byound affiché — orienté progression. */
 export function coachingStatusDisplay(status: SkillGapStatus, isUnevaluated = false): string {
   if (isUnevaluated) return "À évaluer";
   switch (status) {
@@ -46,7 +46,7 @@ export function coachingStatusDisplay(status: SkillGapStatus, isUnevaluated = fa
     case "in_progress":
       return "En progression";
     case "priority":
-      return "Priorité EDGE";
+      return "Priorité Byound";
     case "badge_available":
       return "Badge disponible";
     case "to_develop":

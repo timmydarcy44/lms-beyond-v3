@@ -10,7 +10,7 @@ const DISC_STRENGTHS: Record<keyof DiscScores, string[]> = {
   C: ["rigueur", "organisation", "analyse", "méthode", "fiabilité administrative"],
 };
 
-/** Pont entre libellés métier (fiche) et compétences du test EDGE (20 soft skills). */
+/** Pont entre libellés métier (fiche) et compétences du test Byound (20 soft skills). */
 const CAREER_SOFT_TO_TEST: Record<string, string[]> = {
   "écoute active": ["Écoute active"],
   empathie: ["Empathie"],

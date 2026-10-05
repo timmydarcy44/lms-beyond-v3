@@ -21,7 +21,7 @@ export function SkillsSummaryCard({ hardSkills, skillsMetadata }: Props) {
 
   return (
     <section>
-      <HubSectionHeader title="Mes compétences" subtitle="Synthèse — le capital se construit dans EDGE Skills." />
+      <HubSectionHeader title="Mes compétences" subtitle="Synthèse — le capital se construit dans Byound Skills." />
       <HubSurface tone="violet" className="min-h-[280px] space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
@@ -62,7 +62,7 @@ export function SkillsSummaryCard({ hardSkills, skillsMetadata }: Props) {
 
         <Link href="/dashboard/apprenant/skills">
           <HubPillCta>
-            {stats.total > 0 ? "Ouvrir EDGE Skills" : "Développer une compétence"}
+            {stats.total > 0 ? "Ouvrir Byound Skills" : "Développer une compétence"}
             <ArrowRight className="h-4 w-4" />
           </HubPillCta>
         </Link>

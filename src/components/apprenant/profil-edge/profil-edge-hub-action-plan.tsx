@@ -22,7 +22,7 @@ export function ProfilEdgeHubActionPlan({ matching }: Props) {
   return (
     <ProfilEdgeHubSection
       title="Vos prochaines étapes"
-      subtitle="EDGE ordonne vos progressions — une compétence à la fois."
+      subtitle="Byound ordonne vos progressions — une compétence à la fois."
     >
       <div className="-mx-1 flex gap-4 overflow-x-auto pb-2 px-1 snap-x snap-mandatory">
         {priorities.map((skill, index) => (

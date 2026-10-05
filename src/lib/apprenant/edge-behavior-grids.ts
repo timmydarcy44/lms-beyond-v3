@@ -1,6 +1,6 @@
 /**
- * Grilles de comportements observables EDGE — base de la validation compétence.
- * EDGE n'évalue plus des réponses : il observe des comportements dans des situations.
+ * Grilles de comportements observables Byound — base de la validation compétence.
+ * Byound n'évalue plus des réponses : il observe des comportements dans des situations.
  */
 
 export type BehaviorDefinition = {

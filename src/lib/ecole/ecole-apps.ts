@@ -69,7 +69,7 @@ const PLANNING_NAV: EcoleNavItem[] = [
 const FORMATIONS_NAV: EcoleNavItem[] = [
   { type: "link", label: "Vue d'ensemble", href: "/dashboard/ecole/formations", icon: LayoutDashboard },
   { type: "link", label: "Cursus", href: "/dashboard/ecole/formations/cursus", icon: GraduationCap },
-  { type: "link", label: "EDGE Online", href: "/dashboard/ecole/formations/online", icon: MonitorPlay },
+  { type: "link", label: "Byound Online", href: "/dashboard/ecole/formations/online", icon: MonitorPlay },
 ];
 
 export const ECOLE_APPS: EcoleAppDefinition[] = [

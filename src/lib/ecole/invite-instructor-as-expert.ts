@@ -102,19 +102,19 @@ export async function inviteSchoolInstructorAsExpert(
   const passwordSetupLink =
     (await generatePasswordSetupLink(db, email, redirectTo)) || redirectTo;
 
-  const schoolLabel = params.schoolName?.trim() || "votre école EDGE";
+  const schoolLabel = params.schoolName?.trim() || "votre école Byound";
   const html = buildEdgeEmailShell({
-    title: "Activez votre espace EDGE Expert",
+    title: "Activez votre espace Byound Expert",
     preheader: "Créez votre mot de passe pour accéder à votre espace formateur",
     bodyHtml: `<p>Bonjour ${params.firstName || ""},</p>
-      <p>${schoolLabel} vous invite à rejoindre EDGE en tant qu'Expert / formateur.</p>
+      <p>${schoolLabel} vous invite à rejoindre Byound en tant qu'Expert / formateur.</p>
       <p>Activez votre espace, définissez votre mot de passe, puis accédez à votre dashboard Expert.</p>`,
     cta: { label: "Activer mon espace Expert", href: passwordSetupLink },
   });
 
   const mail = await sendEmail({
     to: email,
-    subject: "Activez votre espace EDGE Expert",
+    subject: "Activez votre espace Byound Expert",
     html,
     from: EDGE_COCKPIT_FROM,
   });

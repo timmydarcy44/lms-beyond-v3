@@ -142,7 +142,7 @@ export async function EdgeOpenBadgesPage() {
                 Prêt à lancer vos open badges ?
               </h3>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#050505]/55">
-                EDGE vous accompagne pour structurer vos critères, délivrer vos premiers badges et
+                Byound vous accompagne pour structurer vos critères, délivrer vos premiers badges et
                 mesurer leur impact.
               </p>
             </div>

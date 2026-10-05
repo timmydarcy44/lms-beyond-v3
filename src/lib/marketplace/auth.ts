@@ -65,7 +65,7 @@ export async function assertMarketplaceAccess(): Promise<{
       userId: user.id,
       organizationId: orgId,
       tier,
-      error: "Marketplace réservée à l'offre EDGE for Enterprise niveau 3",
+      error: "Marketplace réservée à l'offre Byound for Enterprise niveau 3",
     };
   }
 

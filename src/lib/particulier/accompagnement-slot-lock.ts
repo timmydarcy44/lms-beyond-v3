@@ -85,7 +85,7 @@ export async function fulfillAccompagnementCheckout(
   const offerSlug = session.metadata.offer_id;
   const selectedSlot = session.metadata.selected_slot;
   const email = session.metadata.email || session.customer_email || session.customer_details?.email;
-  const userName = session.metadata.user_name || email?.split("@")[0] || "Client EDGE";
+  const userName = session.metadata.user_name || email?.split("@")[0] || "Client Byound";
   const userPhone = session.metadata.user_phone || null;
 
   if (!userId || !offerSlug || !selectedSlot || !email) {
@@ -128,7 +128,7 @@ export async function fulfillAccompagnementCheckout(
       user_email: email,
       user_name: userName,
       user_phone: userPhone,
-      coach_name: "Expert EDGE",
+      coach_name: "Expert Byound",
       status: "confirmed",
       payment_status: "paid",
       paid_at: paidAt,

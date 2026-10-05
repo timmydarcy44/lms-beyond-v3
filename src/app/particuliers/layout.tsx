@@ -5,10 +5,10 @@ const EDGE_ICON = "/icons/edge/edge-icon-E.png?v=2";
 const EDGE_APPLE_ICON = "/icons/edge/apple-touch-icon-180.png?v=2";
 
 export const metadata: Metadata = {
-  title: "EDGE — Vous savez où vous voulez aller",
+  title: "Byound — Vous savez où vous voulez aller",
   description:
-    "La plupart des gens apprennent au hasard. EDGE construit le chemin le plus rapide pour atteindre votre objectif professionnel.",
-  applicationName: "EDGE",
+    "La plupart des gens apprennent au hasard. Byound construit le chemin le plus rapide pour atteindre votre objectif professionnel.",
+  applicationName: "Byound",
   manifest: "/manifest-edge.json",
   icons: {
     icon: [{ url: EDGE_ICON, type: "image/png", sizes: "1024x1024" }],
@@ -17,17 +17,17 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "EDGE",
+    title: "Byound",
   },
   other: {
-    "apple-mobile-web-app-title": "EDGE",
+    "apple-mobile-web-app-title": "Byound",
   },
   openGraph: {
     title: "Vous savez où vous voulez aller.",
     description:
-      "EDGE construit le chemin le plus rapide pour atteindre votre objectif professionnel.",
+      "Byound construit le chemin le plus rapide pour atteindre votre objectif professionnel.",
     url: "https://edgebs.fr/particuliers",
-    siteName: "EDGE",
+    siteName: "Byound",
   },
 };
 

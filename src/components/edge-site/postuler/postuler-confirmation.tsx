@@ -8,7 +8,7 @@ import { EDGE_HREFS } from "@/lib/edge-site/constants";
 
 const STEPS = [
   "Tu reçois un email de confirmation dans quelques minutes",
-  "Un membre de l'équipe EDGE te contacte pour un échange de 20 minutes",
+  "Un membre de l'équipe Byound te contacte pour un échange de 20 minutes",
   "On vérifie ensemble que le parcours est fait pour toi — sans pression",
 ] as const;
 

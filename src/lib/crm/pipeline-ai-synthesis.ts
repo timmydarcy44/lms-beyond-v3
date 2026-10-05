@@ -19,7 +19,7 @@ export async function synthesizeCallFromTranscript(input: {
   transcript: string;
   manualNotes?: string;
 }): Promise<string | null> {
-  const prompt = `Tu es l'assistant commercial EDGE (formation B2B). Synthétise cet appel téléphonique en français, ton professionnel et actionnable.
+  const prompt = `Tu es l'assistant commercial Byound (formation B2B). Synthétise cet appel téléphonique en français, ton professionnel et actionnable.
 
 Entreprise : ${input.companyName}
 Contact : ${input.contactName}
@@ -70,14 +70,14 @@ export async function synthesizeProspectOverview(input: {
           )
           .join("\n");
 
-  const prompt = `Tu es le coach commercial IA EDGE. Rédige une synthèse globale du prospect en français.
+  const prompt = `Tu es le coach commercial IA Byound. Rédige une synthèse globale du prospect en français.
 
 ## Entreprise
 ${input.deal.company_name} — contact : ${input.deal.contact_first_name}
 Étape pipeline : ${input.deal.stage_slug}
 ${input.deal.notes ? `Notes : ${input.deal.notes}` : ""}
 
-## Scores EDGE
+## Scores Byound
 Health Score : ${intel.healthScore}/100 — Probabilité signature : ${intel.signatureProbability}%
 Relationship Score : ${intel.relationshipScore}%
 Complétude dossier : ${intel.completenessScore}%
@@ -93,7 +93,7 @@ Rédige :
 2. **Ce qui a été fait** (puces)
 3. **Ce qu'il reste à faire** (puces priorisées)
 4. **Risques & opportunités**
-5. **Recommandation EDGE** (1 paragraphe)
+5. **Recommandation Byound** (1 paragraphe)
 
 Ton direct, utile pour Jérôme ou Timmy. Maximum 400 mots.`;
 

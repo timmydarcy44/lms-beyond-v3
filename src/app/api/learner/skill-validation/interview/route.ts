@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const prompt = `Tu es un expert EDGE en validation de compétences professionnelles.
+      const prompt = `Tu es un expert Byound en validation de compétences professionnelles.
 Génère exactement ${count} questions d'entretien expérientiel (PAS de QCM) pour évaluer la compétence "${skillName}" au niveau "${level}"${careerTitle ? ` pour le métier "${careerTitle}"` : ""}.
 
 Chaque question doit explorer une expérience concrète : projets, méthodes, outils, résultats, difficultés.
@@ -71,7 +71,7 @@ Réponds en JSON : { "questions": ["question 1", ...] }`;
       const answers = Array.isArray(body?.answers) ? body.answers.map(String) : [];
       const questions = Array.isArray(body?.questions) ? body.questions.map(String) : [];
 
-      const prompt = `Analyse cet entretien expérientiel EDGE pour la compétence "${skillName}" (niveau déclaré : ${level}).
+      const prompt = `Analyse cet entretien expérientiel Byound pour la compétence "${skillName}" (niveau déclaré : ${level}).
 
 Questions et réponses :
 ${questions.map((q: string, i: number) => `Q${i + 1}: ${q}\nR: ${answers[i] ?? "(vide)"}`).join("\n\n")}`;

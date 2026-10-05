@@ -60,7 +60,7 @@ export function ObjectiveDetailStepModal({ open, typeProfil, onSaved, onClose }:
   return (
     <div className="fixed inset-0 z-[10007] flex items-center justify-center bg-black/55 px-4">
       <div className="w-full max-w-lg rounded-2xl border border-black/[0.08] bg-white p-6 shadow-2xl">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#635BFF]">EDGE Particulier</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#635BFF]">Byound Particulier</p>
         <h2 className="mt-2 text-xl font-semibold tracking-tight text-[#0a0a0a]">Construisons votre objectif</h2>
         <p className="mt-2 text-sm leading-relaxed text-black/60">
           Pour personnaliser vos recommandations, précisez votre projet actuel.
@@ -96,7 +96,7 @@ export function ObjectiveDetailStepModal({ open, typeProfil, onSaved, onClose }:
             onClick={() => void handleSave()}
             className="inline-flex flex-1 items-center justify-center rounded-[10px] bg-[#050505] px-5 py-[11px] text-[13px] font-bold text-white disabled:opacity-50"
           >
-            {saving ? "Enregistrement…" : "Voir mon Profil EDGE"}
+            {saving ? "Enregistrement…" : "Voir mon Profil Byound"}
           </button>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { HelpCircle, Mail, MessageCircle } from "lucide-react";
 
 export default function ExpertSupportPage() {
   return (
-    <EdgeExpertPageShell title="Support" subtitle="Une équipe EDGE dédiée pour vous accompagner.">
+    <EdgeExpertPageShell title="Support" subtitle="Une équipe Byound dédiée pour vous accompagner.">
       <div className="grid gap-4 md:grid-cols-2">
         <EdgeCard padding="lg">
           <Mail className="h-6 w-6 text-[#635BFF]" />
@@ -18,7 +18,7 @@ export default function ExpertSupportPage() {
         <EdgeCard padding="lg">
           <MessageCircle className="h-6 w-6 text-[#635BFF]" />
           <p className="mt-3 text-sm font-semibold">Questions fréquentes</p>
-          <p className="mt-2 text-sm text-[#050505]/55">Validation de profil, EDGE Certified, missions entreprises.</p>
+          <p className="mt-2 text-sm text-[#050505]/55">Validation de profil, Byound Certified, missions entreprises.</p>
         </EdgeCard>
       </div>
       <EdgeCard padding="lg" className="mt-4 text-center">

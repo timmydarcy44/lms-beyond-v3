@@ -80,8 +80,8 @@ export function buildFallbackSkillAnalysis(params: {
 
   const summary =
     mode === "interview"
-      ? `Analyse EDGE basée sur votre entretien expérientiel pour « ${skillName} ». Les réponses fournies ${verdict === "validated" ? "démontrent une pratique concrète" : verdict === "pending" ? "méritent un complément de preuves" : "restent trop succinctes pour valider le niveau déclaré"}.`
-      : `Analyse EDGE de la preuve déposée pour « ${skillName} ». ${verdict === "insufficient" ? "La preuve nécessite davantage de contexte ou d'éléments vérifiables." : "La preuve sera examinée dans le cadre de votre profil EDGE."}`;
+      ? `Analyse Byound basée sur votre entretien expérientiel pour « ${skillName} ». Les réponses fournies ${verdict === "validated" ? "démontrent une pratique concrète" : verdict === "pending" ? "méritent un complément de preuves" : "restent trop succinctes pour valider le niveau déclaré"}.`
+      : `Analyse Byound de la preuve déposée pour « ${skillName} ». ${verdict === "insufficient" ? "La preuve nécessite davantage de contexte ou d'éléments vérifiables." : "La preuve sera examinée dans le cadre de votre profil Byound."}`;
 
   return {
     confidenceScore: confidence,
@@ -92,7 +92,7 @@ export function buildFallbackSkillAnalysis(params: {
     analysis: summary,
     strengths:
       verdict !== "insufficient"
-        ? [`Mobilisation de la compétence « ${skillName} » documentée dans votre démarche EDGE`]
+        ? [`Mobilisation de la compétence « ${skillName} » documentée dans votre démarche Byound`]
         : [],
     improvementAreas:
       verdict !== "validated"
@@ -125,7 +125,7 @@ export async function analyzeSkillValidation(params: {
   const aiResult = await generateJSON(
     `${params.prompt}\n\nRéponds UNIQUEMENT en JSON valide selon ce schéma :\n${SKILL_ANALYSIS_JSON_SHAPE}`,
     SKILL_ANALYSIS_JSON_SCHEMA,
-    "Tu es l'analyseur EDGE de compétences professionnelles. Sois factuel, bienveillant et exigeant.",
+    "Tu es l'analyseur Byound de compétences professionnelles. Sois factuel, bienveillant et exigeant.",
   );
 
   if (aiResult?.verdict) {

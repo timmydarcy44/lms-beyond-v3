@@ -16,8 +16,8 @@ export function ProfilEdgeTestsSection({ hasDisc, hasSoftSkills, hasIdmc }: Prop
 
   return (
     <ProfilEdgeSectionShell
-      title="Tests EDGE"
-      description="Les trois explorations alimentent votre Profil EDGE et débloquent le badge (10 % chacune)."
+      title="Tests Byound"
+      description="Les trois explorations alimentent votre Profil Byound et débloquent le badge (10 % chacune)."
     >
       <ul className="space-y-3">
         {explorations.map((exp) => (

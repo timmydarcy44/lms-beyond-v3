@@ -38,7 +38,7 @@ function SignupForm({
       id="signup"
       className="scroll-mt-28 mx-auto w-full max-w-md space-y-4 border-t border-black/10 pt-10"
     >
-      <p className="text-[13px] text-black/45">Créez votre compte apprenant pour accéder à EDGE.</p>
+      <p className="text-[13px] text-black/45">Créez votre compte apprenant pour accéder à Byound.</p>
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <input
@@ -287,7 +287,7 @@ export default function ParticuliersPage() {
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
           <Link href="/particuliers" className="text-[17px] font-semibold tracking-[-0.04em]">
-            EDGE
+            Byound
           </Link>
           <div className="flex items-center gap-3 sm:gap-4">
             <Link
@@ -326,7 +326,7 @@ export default function ParticuliersPage() {
           >
             La plupart des gens apprennent au hasard.
             <br />
-            <span className="text-white/85">EDGE construit le chemin le plus rapide pour atteindre votre objectif.</span>
+            <span className="text-white/85">Byound construit le chemin le plus rapide pour atteindre votre objectif.</span>
           </p>
           <div
             className="mt-12 flex flex-col items-start gap-3 opacity-0 sm:flex-row sm:items-center"
@@ -351,7 +351,7 @@ export default function ParticuliersPage() {
             className="mt-4 text-[13px] text-white/40 opacity-0"
             style={{ animation: "edgeHeroIn 0.9s ease 0.3s forwards" }}
           >
-            Gratuit · accès à votre espace apprenant EDGE
+            Gratuit · accès à votre espace apprenant Byound
           </p>
         </div>
       </section>
@@ -469,8 +469,8 @@ export default function ParticuliersPage() {
         <div className="mx-auto max-w-5xl px-5 py-28 sm:px-8 sm:py-36">
           <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
             <h2 className="max-w-2xl text-[clamp(2rem,4vw,3.2rem)] font-medium tracking-[-0.04em]">
-              EDGE ne vous vend rien.
-              <span className="mt-2 block text-black/40">EDGE aligne.</span>
+              Byound ne vous vend rien.
+              <span className="mt-2 block text-black/40">Byound aligne.</span>
             </h2>
             <ol className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
               {[
@@ -554,7 +554,7 @@ export default function ParticuliersPage() {
         <div className="mx-auto max-w-4xl px-5 py-28 sm:px-8 sm:py-36">
           <div data-reveal className="translate-y-10 opacity-0 transition duration-700 ease-out">
             <blockquote className="text-[clamp(1.5rem,3vw,2.2rem)] font-medium leading-[1.35] tracking-[-0.03em] text-edge-black">
-              « Je savais que je voulais passer chef de projet. EDGE m&apos;a montré l&apos;écart. Puis la semaine. Puis
+              « Je savais que je voulais passer chef de projet. Byound m&apos;a montré l&apos;écart. Puis la semaine. Puis
               aujourd&apos;hui. »
             </blockquote>
             <p className="mt-8 text-[14px] text-black/45">— Camille · objectif chef de projet</p>
@@ -590,7 +590,7 @@ export default function ParticuliersPage() {
 
       <footer className="border-t border-black/[0.06] py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 text-[13px] text-black/40 sm:flex-row sm:px-8">
-          <p>© EDGE {new Date().getFullYear()}</p>
+          <p>© Byound {new Date().getFullYear()}</p>
           <div className="flex gap-5">
             <Link href="/particuliers/login" className="transition hover:text-edge-black">
               Se connecter

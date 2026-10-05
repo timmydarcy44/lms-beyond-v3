@@ -1,4 +1,4 @@
-/** Formatage des erreurs API Mission EDGE (détail en dev). */
+/** Formatage des erreurs API Mission Byound (détail en dev). */
 
 export type MissionApiErrorPayload = {
   error: string;

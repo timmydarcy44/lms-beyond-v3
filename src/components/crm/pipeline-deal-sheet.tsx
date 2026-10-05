@@ -20,7 +20,7 @@ function SheetOverlay({
   );
 }
 
-/** Panneau droit — thème bleu EDGE cohérent. */
+/** Panneau droit — thème bleu Byound cohérent. */
 export function PipelineDealSheet({
   open,
   onOpenChange,

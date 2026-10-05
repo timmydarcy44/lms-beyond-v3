@@ -12,9 +12,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const career = await getCareerProfileBySlug(slug);
-  if (!career) return { title: "Métier — EDGE" };
+  if (!career) return { title: "Métier — Byound" };
   return {
-    title: `${career.title} — EDGE`,
+    title: `${career.title} — Byound`,
     description: career.description,
   };
 }
@@ -28,7 +28,7 @@ export default async function MetierPage({ params }: Props) {
     <div className="min-h-screen bg-[#F7F7F5] text-[#050505]">
       <div className="mx-auto max-w-3xl px-5 py-16 sm:px-8">
         <Link href="/particuliers" className="text-sm text-[#050505]/50 hover:text-[#050505]">
-          ← EDGE Particulier
+          ← Byound Particulier
         </Link>
         <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#635BFF]">
           {career.sector}
@@ -109,16 +109,16 @@ export default async function MetierPage({ params }: Props) {
           ) : null}
 
           <div className="rounded-2xl border border-[#635BFF]/15 bg-[#635BFF]/5 p-6">
-            <h2 className="text-lg font-semibold">Analyse avec le Profil EDGE</h2>
+            <h2 className="text-lg font-semibold">Analyse avec le Profil Byound</h2>
             <p className="mt-2 text-sm leading-relaxed text-[#050505]/65">
-              Passez les 3 explorations EDGE et sélectionnez ce métier dans votre Profil pour obtenir une estimation de
+              Passez les 3 explorations Byound et sélectionnez ce métier dans votre Profil pour obtenir une estimation de
               cohérence, vos forces et vos axes de progression — sans contenu fictif ni promesse commerciale.
             </p>
             <Link
               href="/particuliers"
               className="mt-4 inline-flex rounded-xl bg-[#050505] px-5 py-3 text-sm font-semibold text-white"
             >
-              Découvrir EDGE Particulier
+              Découvrir Byound Particulier
             </Link>
           </div>
         </section>

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Ambiance de page EDGE — peinte sur le MAIN shell (background continu),
+ * Ambiance de page Byound — peinte sur le MAIN shell (background continu),
  * JAMAIS comme une card / grand rectangle arrondi.
  */
 export type EdgeAmbiance = "profile" | "evolution" | "mission" | "neutral" | "care" | "skills";

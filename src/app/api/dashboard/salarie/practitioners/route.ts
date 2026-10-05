@@ -8,7 +8,7 @@ import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase
 
 export const dynamic = "force-dynamic";
 
-/** Praticiens EDGE visibles dans Mes coachings (salarié / apprenant). */
+/** Praticiens Byound visibles dans Mes coachings (salarié / apprenant). */
 export async function GET() {
   const authClient = await createSupabaseServerClient();
   if (!authClient) {

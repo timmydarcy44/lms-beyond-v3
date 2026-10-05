@@ -143,7 +143,7 @@ function PricingCards({
       {!compact ? (
         <div className="flex flex-col gap-2.5">
           <EdgePremiumButton href={demoHref} shape="revolut" className="w-full">
-            Commencer par un diagnostic EDGE
+            Commencer par un diagnostic Byound
           </EdgePremiumButton>
           <EdgePremiumButton href={conseillerHref} variant="secondary-light" shape="revolut" className="w-full">
             Réserver cette formation
@@ -306,7 +306,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <EdgePremiumButton href={links.demo} variant="white" shape="revolut">
-                  Commencer par un diagnostic EDGE
+                  Commencer par un diagnostic Byound
                 </EdgePremiumButton>
                 <EdgePremiumButton href={links.conseiller} variant="outline-white" shape="revolut">
                   Réserver cette formation
@@ -353,24 +353,24 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
           <section className="scroll-mt-40">
             <h2 className="text-2xl font-semibold tracking-[-0.03em]">Pourquoi cette formation ?</h2>
             <p className="mt-4 max-w-3xl text-base leading-relaxed text-[#050505]/65">
-              Cette formation répond à des besoins opérationnels identifiés grâce au diagnostic EDGE.
+              Cette formation répond à des besoins opérationnels identifiés grâce au diagnostic Byound.
               Elle vise à développer les compétences réellement nécessaires à la performance du
               collaborateur et de l&apos;entreprise.
             </p>
           </section>
 
-          {/* 3. DIAGNOSTIC EDGE — pièce maîtresse */}
+          {/* 3. DIAGNOSTIC Byound — pièce maîtresse */}
           <section id="diagnostic" className="scroll-mt-40">
             <div className="overflow-hidden rounded-[28px] border border-edge-accent/15 bg-gradient-to-br from-edge-accent/[0.07] via-white to-white p-7 shadow-[0_12px_48px_rgba(99,91,255,0.10)] sm:p-9">
               <div className="flex items-center gap-2 text-edge-accent">
                 <Sparkles className="h-4 w-4" />
-                <span className="text-xs font-semibold uppercase tracking-[0.18em]">Diagnostic EDGE</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.18em]">Diagnostic Byound</span>
               </div>
               <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] sm:text-[1.75rem]">
                 Chaque parcours débute par un diagnostic
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#050505]/60">
-                Contrairement aux catalogues traditionnels, EDGE identifie précisément les compétences à
+                Contrairement aux catalogues traditionnels, Byound identifie précisément les compétences à
                 développer avant toute inscription afin de proposer uniquement les formations réellement
                 utiles.
               </p>
@@ -379,7 +379,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
               </div>
               <div className="mt-8">
                 <EdgePremiumButton href={links.demo} shape="revolut">
-                  Commencer par un diagnostic EDGE
+                  Commencer par un diagnostic Byound
                 </EdgePremiumButton>
               </div>
             </div>
@@ -629,7 +629,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
                     <div>
                       <p className="font-semibold">{detail.badgeLabel}</p>
                       <p className="mt-1 text-xs text-[#050505]/55">
-                        Certification vérifiable, partageable sur LinkedIn et dans votre wallet EDGE.
+                        Certification vérifiable, partageable sur LinkedIn et dans votre wallet Byound.
                       </p>
                     </div>
                   </div>
@@ -778,7 +778,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
                 <div>
                   <h2 className="text-xl font-semibold tracking-[-0.02em]">Certification</h2>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#050505]/60">
-                    Cette formation permet l&apos;obtention d&apos;un Open Badge EDGE vérifiable en ligne
+                    Cette formation permet l&apos;obtention d&apos;un Open Badge Byound vérifiable en ligne
                     attestant des compétences acquises.
                   </p>
                 </div>
@@ -862,11 +862,11 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
             Prêt à développer les compétences de vos équipes ?
           </h2>
           <p className="mt-3 max-w-xl text-sm text-white/55">
-            Tout commence par un diagnostic EDGE — réponse sous 24 h.
+            Tout commence par un diagnostic Byound — réponse sous 24 h.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <EdgePremiumButton href={links.demo} variant="white" shape="revolut">
-              Commencer par un diagnostic EDGE
+              Commencer par un diagnostic Byound
             </EdgePremiumButton>
             <EdgePremiumButton href={links.conseiller} variant="outline-white" shape="revolut">
               Réserver cette formation

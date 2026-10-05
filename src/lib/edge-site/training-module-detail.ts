@@ -70,8 +70,8 @@ export function buildTrainingModuleDetail(module: TrainingModule): TrainingModul
 
   return {
     module,
-    domainTitle: domain?.title ?? "Formation EDGE",
-    badgeName: badge?.name ?? "Open Badge EDGE",
+    domainTitle: domain?.title ?? "Formation Byound",
+    badgeName: badge?.name ?? "Open Badge Byound",
     levelLabel: getLevelLabel(module.level),
     formatsLabel: formatTrainingFormats(module.formats),
     duration: card.duration,
@@ -110,7 +110,7 @@ export function buildTrainingModuleDetail(module: TrainingModule): TrainingModul
       },
       {
         q: "Quelle certification est délivrée ?",
-        a: `Open Badge « ${badge?.name ?? "EDGE"} » après validation des livrables et quiz final.`,
+        a: `Open Badge « ${badge?.name ?? "Byound"} » après validation des livrables et quiz final.`,
       },
       {
         q: "Peut-on organiser la formation en intra ?",
@@ -129,7 +129,7 @@ export function buildTrainingModuleDetail(module: TrainingModule): TrainingModul
     ],
     satisfaction: "96 %",
     whyFollow: [
-      "Des formateurs experts du réseau EDGE, identifiés et évalués",
+      "Des formateurs experts du réseau Byound, identifiés et évalués",
       "Des livrables concrets à ramener en entreprise dès le lendemain",
       "Une certification Open Badge reconnue et partageable sur LinkedIn",
       "Un suivi post-formation pour ancrer les acquis dans la durée",

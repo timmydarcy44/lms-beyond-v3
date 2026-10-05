@@ -44,7 +44,7 @@ export type StoredHardSkillMeta = {
   validated?: boolean;
   source?: "catalog" | "manual" | "badge";
   validation?: SkillValidationSession;
-  /** Objectif d'entraînement (EDGE Skills Training Center). */
+  /** Objectif d'entraînement (Byound Skills Training Center). */
   trainingTargetLevel?: HardSkillLevel;
   trainingStartedAt?: string;
 };
@@ -105,11 +105,11 @@ export const PROOF_LEVEL_CHIP: Record<
     className: "bg-amber-500/20 text-amber-100 border-amber-400/35",
   },
   evaluated: {
-    label: "Validée EDGE",
+    label: "Validée Byound",
     className: "bg-emerald-500/20 text-emerald-100 border-emerald-400/35",
   },
   certified: {
-    label: "Validée EDGE",
+    label: "Validée Byound",
     className: "bg-emerald-500/20 text-emerald-100 border-emerald-400/35",
   },
 };
@@ -134,7 +134,7 @@ export const SKILL_UX_STATUS: Record<
     className: "bg-amber-500/20 text-amber-100 border-amber-400/35",
   },
   validated: {
-    label: "Validée EDGE",
+    label: "Validée Byound",
     className: "bg-emerald-500/20 text-emerald-100 border-emerald-400/35",
   },
 };
@@ -144,7 +144,7 @@ export const SKILL_UX_STATUS: Record<
  * - manuelle / catalog sans preuve → Auto-déclarée
  * - preuve / analyse pending → Prouvée
  * - analyse IA terminée (non validée) → Évaluée
- * - verdict validated / certified → Validée EDGE
+ * - verdict validated / certified → Validée Byound
  * Ne rétrograde jamais une compétence déjà prouvée ou validée.
  */
 export function resolveSkillUxStatus(meta: StoredHardSkillMeta | undefined): SkillUxStatus {

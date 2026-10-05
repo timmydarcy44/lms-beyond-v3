@@ -110,7 +110,7 @@ export type ProfilEdgeHubData = {
 };
 
 /**
- * Hub Profil EDGE — lit les diagnostics via learner-snapshot (candidats multi-profil,
+ * Hub Profil Byound — lit les diagnostics via learner-snapshot (candidats multi-profil,
  * parseStoredDiscScores, soft skills apprenant+salarié) pour rester compatible legacy.
  */
 export function useProfilEdgeHubData(): ProfilEdgeHubData {

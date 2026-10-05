@@ -21,7 +21,7 @@ export function mapPractitionerRow(row: SalariePractitionerRow): SalariePractiti
   return {
     id: row.id,
     name: [row.prenom, row.nom].filter(Boolean).join(" ").trim(),
-    title: row.titre?.trim() || "Praticien certifié EDGE",
+    title: row.titre?.trim() || "Praticien certifié Byound",
     bio: row.biographie?.trim() || "",
     specialites: row.specialites ?? [],
     photoUrl: row.photo_url,
@@ -42,7 +42,7 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     id: "timmy-darcy",
     name: "Timmy Darcy",
     title: "Coach professionnel — performance",
-    bio: "Coach certifié EDGE, accompagnement des parcours professionnels et montée en compétences.",
+    bio: "Coach certifié Byound, accompagnement des parcours professionnels et montée en compétences.",
     specialites: ["Leadership", "Communication", "Orientation carrière", "Soft skills"],
     photoUrl: null,
   },

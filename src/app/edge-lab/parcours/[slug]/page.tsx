@@ -14,9 +14,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = getParcours(slug);
-  if (!p) return { title: "Parcours — EDGE" };
+  if (!p) return { title: "Parcours — Byound" };
   return {
-    title: `${p.titreMarketing ?? p.titre} — Parcours certifiant EDGE`,
+    title: `${p.titreMarketing ?? p.titre} — Parcours certifiant Byound`,
     description: `${p.duree} · ${p.familleLabel}. ${p.promesse ?? p.description}`,
   };
 }

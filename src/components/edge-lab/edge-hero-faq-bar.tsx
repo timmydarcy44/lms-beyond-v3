@@ -5,7 +5,7 @@ import { ArrowUp, ChevronRight, Sparkles } from "lucide-react";
 import { EdgeSalesAssistantDialog } from "@/components/edge-lab/edge-sales-assistant-dialog";
 
 const SUGGESTIONS = [
-  "Les parcours EDGE sont-ils reconnus ?",
+  "Les parcours Byound sont-ils reconnus ?",
   "Combien de temps par semaine en moyenne ?",
   "Puis-je financer via mon entreprise ?",
   "Qu’est-ce qu’un livrable concret ?",
@@ -50,7 +50,7 @@ export function EdgeHeroFaqBar({ variant = "dark" }: Props) {
       return "La validation se fait par la réalisation d’un livrable (ou d’une mise en situation). Vous montrez une compétence en action, puis elle est vérifiable — ce qui crée de la crédibilité et de la progression mesurable.";
     }
 
-    return "EDGE est conçu pour apprendre en faisant et prouver ses compétences. Dites-moi votre objectif (monter en compétences, évoluer, préparer un métier) et je vous recommande le format le plus adapté.";
+    return "Byound est conçu pour apprendre en faisant et prouver ses compétences. Dites-moi votre objectif (monter en compétences, évoluer, préparer un métier) et je vous recommande le format le plus adapté.";
   }, []);
 
   const sendQuestion = useCallback(

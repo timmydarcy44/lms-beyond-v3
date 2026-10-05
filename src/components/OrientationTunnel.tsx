@@ -302,7 +302,7 @@ function StepContact({
       </div>
       {error ? <p className="mt-4 text-[13px] text-edge-red">{error}</p> : null}
       <p className="mt-6 text-[12px] leading-relaxed text-black/35">
-        En continuant, vous acceptez d&apos;être recontacté par EDGE dans le cadre de votre orientation.
+        En continuant, vous acceptez d&apos;être recontacté par Byound dans le cadre de votre orientation.
       </p>
     </div>
   );

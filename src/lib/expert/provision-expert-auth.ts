@@ -50,7 +50,7 @@ export async function provisionExpertAuthUser(
     return { ok: true, userId: existingAuthUserId, isNewAuthUser: false, inviteSent: false };
   }
 
-  // createUser n'envoie pas d'email Supabase — l'email EDGE part via Resend + generateLink.
+  // createUser n'envoie pas d'email Supabase — l'email Byound part via Resend + generateLink.
   const { data: created, error: createError } = await supabase.auth.admin.createUser({
     email,
     email_confirm: false,

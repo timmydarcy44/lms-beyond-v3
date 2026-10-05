@@ -143,7 +143,7 @@ function statusLabel(status: SkillGapStatus): string {
     case "in_progress":
       return "En progression";
     case "priority":
-      return "Priorité EDGE";
+      return "Priorité Byound";
     case "badge_available":
       return "Badge disponible";
     default:
@@ -211,7 +211,7 @@ function buildResources(
 
   resources.push({
     type: "validation",
-    title: "Épreuve de validation EDGE",
+    title: "Épreuve de validation Byound",
     description: "Entretien expérientiel ou import de preuve",
     href: "/dashboard/apprenant/profil-comportemental/hard-skills",
   });
@@ -246,7 +246,7 @@ function buildNextStep(
       actionHref: getExpertParcoursHref(),
       estimatedMinutes: 2,
       expectedOutcome:
-        "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
+        "Un conseiller Byound analyse vos résultats et construit une proposition adaptée à votre situation.",
     };
   }
 
@@ -259,7 +259,7 @@ function buildNextStep(
       actionHref: getExpertParcoursHref(),
       estimatedMinutes: 2,
       expectedOutcome:
-        "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
+        "Un conseiller Byound analyse vos résultats et construit une proposition adaptée à votre situation.",
     };
   }
 
@@ -272,12 +272,12 @@ function buildNextStep(
       actionHref: getExpertParcoursHref(),
       estimatedMinutes: 2,
       expectedOutcome:
-        "Un conseiller EDGE analyse vos résultats et construit une proposition adaptée à votre situation.",
+        "Un conseiller Byound analyse vos résultats et construit une proposition adaptée à votre situation.",
     };
   }
 
   return {
-    skill: "Compléter votre profil EDGE",
+    skill: "Compléter votre profil Byound",
     why: "Vos tests et votre objectif professionnel permettent de calculer les écarts précis.",
     actionLabel: "Définir mon objectif",
     actionHref: "/dashboard/apprenant/profil-comportemental/projet",
@@ -303,7 +303,7 @@ function buildTimeline(params: {
 
   const steps: Array<{ id: string; label: string; done: boolean; current?: boolean }> = [
     { id: "tests", label: "Tests terminés", done: testsDone },
-    { id: "profile", label: "Profil EDGE généré", done: profileGenerated },
+    { id: "profile", label: "Profil Byound généré", done: profileGenerated },
     { id: "objective", label: "Objectif défini", done: objectiveDefined },
   ];
 
@@ -403,8 +403,8 @@ export function buildEdgeProgressionGps(params: {
   const gapsCount = Math.max(prioritySkillsRemaining, 0);
 
   const summarySentence = hasObjective
-    ? `Compatibilité estimée : ${compatibilityPercent} %. EDGE a identifié ${gapsCount} écart${gapsCount > 1 ? "s" : ""} de compétences à traiter pour rapprocher votre profil de cet objectif.`
-    : `Définissez votre objectif professionnel pour que EDGE identifie vos écarts et prépare une recommandation personnalisée.`;
+    ? `Compatibilité estimée : ${compatibilityPercent} %. Byound a identifié ${gapsCount} écart${gapsCount > 1 ? "s" : ""} de compétences à traiter pour rapprocher votre profil de cet objectif.`
+    : `Définissez votre objectif professionnel pour que Byound identifie vos écarts et prépare une recommandation personnalisée.`;
 
   const cards = buildPublicSkillCards(
     params.hardSkills.length ? params.hardSkills : Object.keys(params.skillsMetadata),
@@ -449,7 +449,7 @@ export function buildEdgeProgressionGps(params: {
           status,
           actionLabel: status === "validated" ? "Voir" : "Valider",
           actionHref: "/dashboard/apprenant/profil-comportemental/hard-skills",
-          whyImportant: `Compétence de votre portfolio EDGE.`,
+          whyImportant: `Compétence de votre portfolio Byound.`,
           currentResult: card.statusLabel,
           resources: buildResources(card.name, params.personalizedPlan, params.visibleBadges),
         }),

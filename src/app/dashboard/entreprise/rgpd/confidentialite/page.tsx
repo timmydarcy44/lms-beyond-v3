@@ -16,7 +16,7 @@ export default function EntreprisePrivacyPage() {
             Politique de confidentialité
           </h1>
           <p className="mt-3 text-sm text-gray-500">
-            Dernière mise à jour : 25 août 2026 — Espace entreprise EDGE
+            Dernière mise à jour : 25 août 2026 — Espace entreprise Byound
           </p>
 
           <div className="prose prose-sm mt-8 max-w-none space-y-6 text-gray-700">
@@ -32,7 +32,7 @@ export default function EntreprisePrivacyPage() {
               </p>
               <p className="mt-2 text-sm leading-6">
                 Pour les données des collaborateurs de votre organisation, le responsable de
-                traitement est en principe votre employeur (client EDGE) ; EDGE agit comme
+                traitement est en principe votre employeur (client Byound) ; Byound agit comme
                 sous-traitant (art. 28 RGPD) pour l’hébergement et le fonctionnement de la
                 plateforme.
               </p>

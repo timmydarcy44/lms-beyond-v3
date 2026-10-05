@@ -208,7 +208,7 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
       try {
         await load();
       } catch {
-        if (!cancelled) setError("Impossible de charger EDGE Skills.");
+        if (!cancelled) setError("Impossible de charger Byound Skills.");
       } finally {
         if (!cancelled) setLoading(false);
       }

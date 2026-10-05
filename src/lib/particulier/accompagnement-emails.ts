@@ -67,7 +67,7 @@ export async function sendAccompagnementConfirmationEmails(data: AccompagnementR
 
   const userConfirmationHtml = buildEdgeEmailShell({
     title: "Paiement confirmé",
-    preheader: `Votre réservation EDGE — ${date}`,
+    preheader: `Votre réservation Byound — ${date}`,
     bodyHtml: `<p>Bonjour ${escapeEdgeEmailHtml(data.userName)},</p>
       <p style="font-size:18px;font-weight:600;color:#050505;">✓ Votre réservation est enregistrée.</p>
       <table style="margin:28px auto 0;border-collapse:collapse;text-align:left;font-size:15px;">
@@ -77,13 +77,13 @@ export async function sendAccompagnementConfirmationEmails(data: AccompagnementR
         <tr><td style="padding:8px 16px 8px 0;color:#8A8A8A;">Coach</td><td style="padding:8px 0;font-weight:500;">${escapeEdgeEmailHtml(data.coachName)}</td></tr>
         <tr><td style="padding:8px 16px 8px 0;color:#8A8A8A;">Visio</td><td style="padding:8px 0;">${visioLine}</td></tr>
       </table>`,
-    cta: { label: "Retourner dans EDGE", href: coachingUrl },
+    cta: { label: "Retourner dans Byound", href: coachingUrl },
     footerNote: "Un fichier calendrier (.ics) est joint à cet email.",
   });
 
   await sendEmail({
     to: data.userEmail,
-    subject: "Votre réservation EDGE est confirmée",
+    subject: "Votre réservation Byound est confirmée",
     html: userConfirmationHtml,
     skipBcc: true,
     attachments: [{ filename: "reservation-edge.ics", content: ics }],
@@ -92,7 +92,7 @@ export async function sendAccompagnementConfirmationEmails(data: AccompagnementR
   const userRecapHtml = buildEdgeEmailShell({
     title: "Récapitulatif de votre séance",
     preheader: data.offer.title,
-    bodyHtml: `<p>Voici le récapitulatif de votre accompagnement EDGE :</p>
+    bodyHtml: `<p>Voici le récapitulatif de votre accompagnement Byound :</p>
       <ul style="margin:20px 0;padding-left:20px;text-align:left;line-height:1.8;">
         <li><strong>Référence :</strong> ${escapeEdgeEmailHtml(data.reservationId)}</li>
         <li><strong>Prestation :</strong> ${escapeEdgeEmailHtml(data.offer.title)}</li>
@@ -106,13 +106,13 @@ export async function sendAccompagnementConfirmationEmails(data: AccompagnementR
 
   await sendEmail({
     to: data.userEmail,
-    subject: "Récapitulatif — Accompagnement EDGE",
+    subject: "Récapitulatif — Accompagnement Byound",
     html: userRecapHtml,
     skipBcc: true,
   });
 
   const adminHtml = buildEdgeEmailShell({
-    title: "Nouvelle réservation accompagnement EDGE",
+    title: "Nouvelle réservation accompagnement Byound",
     preheader: `${data.userName} — ${data.offer.title}`,
     bodyHtml: `<ul style="margin:20px 0;padding-left:20px;text-align:left;line-height:1.8;">
         <li><strong>Nom :</strong> ${escapeEdgeEmailHtml(data.userName)}</li>
@@ -127,7 +127,7 @@ export async function sendAccompagnementConfirmationEmails(data: AccompagnementR
 
   await sendEmail({
     to: EDGE_ADMIN_EMAIL,
-    subject: `Nouveau rendez-vous EDGE — ${data.userName}`,
+    subject: `Nouveau rendez-vous Byound — ${data.userName}`,
     html: adminHtml,
     skipBcc: true,
   });
@@ -149,19 +149,19 @@ export async function sendPersonalizedPathRequestEmails(params: {
     title: "Demande reçue",
     preheader: "Construire mon parcours avec un expert",
     bodyHtml: `<p>Bonjour ${escapeEdgeEmailHtml(params.userName)},</p>
-      <p>Nous avons bien reçu votre demande. Un expert EDGE vous recontactera sous 48 h ouvrées.</p>`,
+      <p>Nous avons bien reçu votre demande. Un expert Byound vous recontactera sous 48 h ouvrées.</p>`,
     cta: { label: "Réserver un créneau", href: `${publicAppUrl()}/dashboard/accompagnement/reserver?offer=coaching-progression` },
   });
 
   await sendEmail({
     to: params.userEmail,
-    subject: "Votre demande EDGE est enregistrée",
+    subject: "Votre demande Byound est enregistrée",
     html: userHtml,
     skipBcc: true,
   });
 
   const adminHtml = buildEdgeEmailShell({
-    title: "Nouvelle demande parcours expert EDGE",
+    title: "Nouvelle demande parcours expert Byound",
     preheader: params.userEmail,
     bodyHtml: `<ul style="margin:20px 0;padding-left:20px;text-align:left;line-height:1.8;">
         <li><strong>Nom :</strong> ${escapeEdgeEmailHtml(params.userName)}</li>
@@ -199,14 +199,14 @@ export async function sendProgrammeRequestEmails(params: {
     preheader: "Création du parcours — sur devis",
     bodyHtml: `<p>Bonjour ${escapeEdgeEmailHtml(params.userName)},</p>
       <p>Nous avons bien reçu votre demande de programme personnalisé.</p>
-      <p style="font-size:15px;color:#4A4A4A;">Un expert EDGE vous recontactera sous 48 h ouvrées.</p>`,
+      <p style="font-size:15px;color:#4A4A4A;">Un expert Byound vous recontactera sous 48 h ouvrées.</p>`,
     cta: { label: "Retour à Mon accompagnement", href: `${publicAppUrl()}/dashboard/apprenant/coaching` },
   });
 
-  await sendEmail({ to: params.userEmail, subject: "Votre demande de programme EDGE est enregistrée", html: userHtml, skipBcc: true });
+  await sendEmail({ to: params.userEmail, subject: "Votre demande de programme Byound est enregistrée", html: userHtml, skipBcc: true });
 
   const adminHtml = buildEdgeEmailShell({
-    title: "Nouvelle demande programme EDGE",
+    title: "Nouvelle demande programme Byound",
     preheader: params.userEmail,
     bodyHtml: `<ul style="margin:20px 0;padding-left:20px;text-align:left;">
         <li><strong>Nom :</strong> ${escapeEdgeEmailHtml(params.userName)}</li>
@@ -219,7 +219,7 @@ export async function sendProgrammeRequestEmails(params: {
     cta: { label: "Voir le profil", href: accompagnementProfileAdminUrl(params.userId) },
   });
 
-  await sendEmail({ to: EDGE_ADMIN_EMAIL, subject: "Nouvelle demande programme EDGE", html: adminHtml, skipBcc: true });
+  await sendEmail({ to: EDGE_ADMIN_EMAIL, subject: "Nouvelle demande programme Byound", html: adminHtml, skipBcc: true });
 }
 
 export async function sendAccompagnementCancellationEmail(params: {
@@ -235,5 +235,5 @@ export async function sendAccompagnementCancellationEmail(params: {
       <p style="font-size:15px;color:#4A4A4A;">Vous pouvez réserver un nouveau créneau depuis Mon accompagnement.</p>`,
     cta: { label: "Mon accompagnement", href: `${publicAppUrl()}/dashboard/apprenant/coaching` },
   });
-  await sendEmail({ to: params.userEmail, subject: "Votre réservation EDGE a été annulée", html, skipBcc: true });
+  await sendEmail({ to: params.userEmail, subject: "Votre réservation Byound a été annulée", html, skipBcc: true });
 }

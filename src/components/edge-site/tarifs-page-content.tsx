@@ -46,11 +46,11 @@ const ENTREPRISE_PLANS = [
     popular: true,
     features: [
       "Tout l'Essentiel",
-      "Accès EDGE Online (80+ micro-formations)",
-      "Formations collectives EDGE certifiantes",
+      "Accès Byound Online (80+ micro-formations)",
+      "Formations collectives Byound certifiantes",
       "Certification Open Badge IMS Global",
       "Reporting RH avancé",
-      "Accès parcours experts EDGE",
+      "Accès parcours experts Byound",
       "Support dédié",
     ],
     cta: "Commencer",
@@ -75,7 +75,7 @@ const ENTREPRISE_PLANS = [
 const PARTICULIER_PLANS = [
   {
     id: "online" as const,
-    label: "EDGE ONLINE",
+    label: "Byound ONLINE",
     monthly: 19,
     annual: 149,
     sub: "Accès illimité au catalogue",
@@ -96,11 +96,11 @@ const PARTICULIER_PLANS = [
     annual: 390,
     popular: true,
     features: [
-      "Tout EDGE Online",
+      "Tout Byound Online",
       "1 parcours certifiant au choix",
       "Accompagnement formateur",
       "Certification Open Badge IMS Global",
-      "Accès communauté EDGE",
+      "Accès communauté Byound",
     ],
     cta: "Rejoindre la cohorte",
     href: EDGE_HREFS.candidater,
@@ -176,7 +176,7 @@ const FAQ = [
   },
   {
     q: "Est-ce éligible aux financements OPCO ?",
-    a: "Nos interventions EDGE sont éligibles au financement via votre OPCO. Contactez-nous pour un dossier.",
+    a: "Nos interventions Byound sont éligibles au financement via votre OPCO. Contactez-nous pour un dossier.",
   },
 ] as const;
 

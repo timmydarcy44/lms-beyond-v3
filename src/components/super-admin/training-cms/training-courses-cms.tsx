@@ -400,7 +400,7 @@ export function TrainingCoursesCms() {
         <div>
           <div className="flex items-center gap-2 text-[#635BFF]">
             <BookOpen className="h-5 w-5" />
-            <span className="text-xs font-semibold uppercase tracking-wider">CMS Formations EDGE</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">CMS Formations Byound</span>
           </div>
           <h1 className="mt-2 text-2xl font-semibold text-gray-900">Gestion des formations</h1>
           <p className="mt-1 text-sm text-gray-500">

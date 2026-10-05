@@ -98,7 +98,7 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
             <div className="sticky top-0 z-20 flex items-center justify-end gap-2 px-4 py-3 sm:px-6">
               <EdgeAppsLauncher
                 light
-                title="Applications EDGE École"
+                title="Applications Byound École"
                 apps={ECOLE_APPS}
                 activeAppId={activeAppId}
                 onAppChange={handleAppChange}

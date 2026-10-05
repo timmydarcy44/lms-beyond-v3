@@ -13,7 +13,7 @@ describe("buildOpenBadgeLinkedInShareMessage", () => {
     });
     expect(message).toContain("AI Prompting - Level 1");
     expect(message).toContain("de niveau 1");
-    expect(message).toContain("de la EDGE");
+    expect(message).toContain("de la Byound");
   });
 
   it("builds share URL with summary param", () => {

@@ -1,5 +1,5 @@
 /**
- * Configuration centralisée du moteur Skills Gap (échelle Soft Skills EDGE = /15).
+ * Configuration centralisée du moteur Skills Gap (échelle Soft Skills Byound = /15).
  * Modifier ici uniquement pour ajuster les seuils produit.
  */
 
@@ -104,5 +104,5 @@ export function collectiveScopeHint(scope: CollectiveScope): string {
 /** Minimum d'évalués pour publier une analyse collective comme représentative. */
 export const SKILLS_GAP_MIN_EVALUATED_FOR_COLLECTIVE = 5;
 
-/** Prix indicatif formation synchrone EDGE (€ / jour). */
+/** Prix indicatif formation synchrone Byound (€ / jour). */
 export const EDGE_EXPERT_TRAINING_DAY_PRICE_EUR = 2000;

@@ -12,7 +12,7 @@ export type EdgePlan = {
   promise: string;
   includes: readonly string[];
   popular?: boolean;
-  /** Dropdown formations (EDGE Learning & Learning+). */
+  /** Dropdown formations (Byound Learning & Learning+). */
   formationsPicker?: boolean;
 };
 
@@ -38,7 +38,7 @@ export const EDGE_FORMATIONATION_DAYS_BY_LEVEL: Record<TrainingLevel, number> = 
 export const EDGE_PLANS: readonly EdgePlan[] = [
   {
     id: "skills",
-    name: "EDGE Skills",
+    name: "Byound Skills",
     unitMonthly: 9,
     tagline: "Pour cartographier, suivre et piloter les compétences.",
     promise: "Comprendre les compétences de l’entreprise et piloter leur évolution.",
@@ -56,14 +56,14 @@ export const EDGE_PLANS: readonly EdgePlan[] = [
   },
   {
     id: "learning",
-    name: "EDGE Learning",
+    name: "Byound Learning",
     unitMonthly: 15,
-    tagline: "Tout EDGE Skills, avec en plus un véritable LMS.",
+    tagline: "Tout Byound Skills, avec en plus un véritable LMS.",
     promise: "Passer de l’identification des compétences au développement des compétences.",
     popular: true,
     formationsPicker: true,
     includes: [
-      "Toutes les fonctionnalités EDGE Skills",
+      "Toutes les fonctionnalités Byound Skills",
       "LMS intégré",
       "Création de formations",
       "Import de contenus existants",
@@ -77,19 +77,19 @@ export const EDGE_PLANS: readonly EdgePlan[] = [
   },
   {
     id: "learning-plus",
-    name: "EDGE Learning+",
+    name: "Byound Learning+",
     unitMonthly: 20,
-    tagline: "Tout EDGE Learning, avec la bibliothèque EDGE prête à l’emploi.",
+    tagline: "Tout Byound Learning, avec la bibliothèque Byound prête à l’emploi.",
     promise: "Diagnostiquer, recommander et former immédiatement, sans produire les contenus.",
     formationsPicker: true,
     includes: [
-      "Toutes les fonctionnalités EDGE Learning",
-      "Bibliothèque EDGE de microlearning",
+      "Toutes les fonctionnalités Byound Learning",
+      "Bibliothèque Byound de microlearning",
       "Accès illimité aux micro-formations incluses",
       "Contenus courts et opérationnels",
       "Recommandations de modules selon les diagnostics",
       "Parcours thématiques prêts à l’emploi",
-      "Mélange contenus entreprise + EDGE",
+      "Mélange contenus entreprise + Byound",
       "Nouveaux contenus ajoutés régulièrement",
     ],
   },

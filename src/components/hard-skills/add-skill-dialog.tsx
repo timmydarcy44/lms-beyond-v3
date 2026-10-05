@@ -274,7 +274,7 @@ export function AddSkillDialog({
                   Cette compétence sera ajoutée comme auto-déclarée.
                 </p>
                 <p className="mt-2">
-                  Vous pourrez ensuite la faire reconnaître dans EDGE en déposant une preuve, en
+                  Vous pourrez ensuite la faire reconnaître dans Byound en déposant une preuve, en
                   passant une évaluation ou en demandant une validation.
                 </p>
               </div>

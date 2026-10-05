@@ -122,7 +122,7 @@ function CourseMetadataFormContent() {
     };
   }, [selectedOrgId, updateGeneral, organizations]);
 
-  // EDGE Lab : normaliser l’ancienne casse / libellés → libellés canoniques + id de sélecteur
+  // Byound Lab : normaliser l’ancienne casse / libellés → libellés canoniques + id de sélecteur
   useEffect(() => {
     if (!thematics?.length) return;
     if (!thematicSourceSlug || !shouldUseEdgeLabThematicList(thematicSourceSlug)) return;
@@ -158,7 +158,7 @@ function CourseMetadataFormContent() {
     }
   }, [thematics, thematicSourceSlug, general.category, general.category_id, updateGeneral]);
 
-  // Cours existants : nom de thématique sans category_id → résoudre l’UUID (hors listes figées EDGE / Playmakers)
+  // Cours existants : nom de thématique sans category_id → résoudre l’UUID (hors listes figées Byound / Playmakers)
   useEffect(() => {
     if (!thematics?.length) return;
     if (

@@ -590,7 +590,7 @@ export function ExpertProfileEditor() {
                   <div className="flex items-start gap-3">
                     <Award className="h-5 w-5 text-[#635BFF]" aria-hidden />
                     <div>
-                      <p className="text-sm font-semibold">Demande EDGE Certified enregistrée</p>
+                      <p className="text-sm font-semibold">Demande Byound Certified enregistrée</p>
                       <p className="mt-1 text-sm text-[#050505]/55">Votre dossier sera examiné après validation de votre profil.</p>
                     </div>
                   </div>

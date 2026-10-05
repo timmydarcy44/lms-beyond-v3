@@ -5,7 +5,7 @@ import { EdgeMissionRunner } from "@/components/apprenant/profil-edge/edge-missi
 
 export default function EdgeMissionPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-white/50">Préparation de votre Mission EDGE…</p>}>
+    <Suspense fallback={<p className="text-sm text-white/50">Préparation de votre Mission Byound…</p>}>
       <EdgeMissionRunner />
     </Suspense>
   );

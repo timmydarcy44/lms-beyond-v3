@@ -62,7 +62,7 @@ const BASE_INCLUDES = [
   "Diagnostic comportemental DISC + compétences",
   "Dashboard RH temps réel",
   "Plan d'action IA personnalisé",
-  "Accès EDGE Online (80+ micro-formations)",
+  "Accès Byound Online (80+ micro-formations)",
 ] as const;
 
 const ADDONS = [
@@ -302,7 +302,7 @@ export function EntreprisesPageContent() {
         </div>
       </section>
 
-      {/* POURQUOI EDGE */}
+      {/* POURQUOI Byound */}
       <section className="bg-white px-5 py-[120px] sm:px-8">
         <div className="mx-auto max-w-6xl">
           <FadeSection>
@@ -313,7 +313,7 @@ export function EntreprisesPageContent() {
             >
               Un cabinet de formation vous forme.
               <br />
-              EDGE vous transforme.
+              Byound vous transforme.
             </h2>
             <p className="mt-6 max-w-[560px] text-lg leading-[1.7]" style={{ color: "#666666" }}>
               Chaque collaborateur reçoit un parcours unique, construit sur ses données réelles. Pas un programme
@@ -419,7 +419,7 @@ export function EntreprisesPageContent() {
           <div className="mt-24">
             <FadeSection>
               <h3 className="text-2xl font-bold tracking-tight" style={{ color: EDGE_BLACK }}>
-                Allez plus loin avec EDGE
+                Allez plus loin avec Byound
               </h3>
               <p className="mt-2 text-base text-black/45">
                 Activez ce dont vous avez besoin, quand vous en avez besoin.

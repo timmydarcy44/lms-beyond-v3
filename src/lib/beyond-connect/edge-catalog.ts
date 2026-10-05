@@ -1,5 +1,5 @@
 /**
- * Liens EDGE / Beyond Connect depuis le dashboard apprenant LMS.
+ * Liens Byound / Beyond Connect depuis le dashboard apprenant LMS.
  * Les URLs externes peuvent être surchargées en prod via variables NEXT_PUBLIC_*.
  */
 import { getBeyondConnectBaseUrl } from "@/lib/beyond-connect/utils";
@@ -15,7 +15,7 @@ export { EDGE_LAB_ONLINE_CATALOG_HREF };
 /** Hub CV / badges côté Beyond Connect (session dédiée). */
 export const EDGE_CONNECT_APP_BASE_HREF = `${beyondConnectOrigin()}/beyond-connect-app`;
 
-/** Parcours e-learning & suivi LMS (EDGE Lab galaxy). */
+/** Parcours e-learning & suivi LMS (Byound Lab galaxy). */
 export const EDGE_MY_PROGRESS_HREF =
   env("NEXT_PUBLIC_EDGE_MY_PROGRESS_URL") ?? EDGE_LAB_ONLINE_CATALOG_HREF;
 

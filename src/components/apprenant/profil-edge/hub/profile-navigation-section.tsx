@@ -164,7 +164,7 @@ export function ProfileNavigationSection(props: Props) {
               <p className="mt-2 text-[1.5rem] font-bold tracking-[-0.03em] text-white">Mes réussites</p>
               <p className="mt-1.5 text-[15px] text-white/75">
                 {props.badgeAwarded
-                  ? props.badgeName || "Badge EDGE débloqué"
+                  ? props.badgeName || "Badge Byound débloqué"
                   : "Badges, Open Badges et Wallet"}
               </p>
             </div>

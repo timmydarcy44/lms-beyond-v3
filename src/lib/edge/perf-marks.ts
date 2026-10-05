@@ -1,5 +1,5 @@
 /**
- * Marqueurs de perf EDGE — actifs en développement ou si
+ * Marqueurs de perf Byound — actifs en développement ou si
  * `localStorage.edgePerf = "1"`.
  */
 export function edgePerfEnabled(): boolean {

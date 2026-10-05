@@ -87,7 +87,7 @@ export default function EmargerPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#05060a] px-4 text-white">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
         <p className="text-sm font-semibold tracking-wide text-white/45">
-          <span className="font-extrabold text-white">EDGE</span> Émargement
+          <span className="font-extrabold text-white">Byound</span> Émargement
         </p>
         {error && error !== "AUTH_REQUIRED" ? (
           <p className="mt-6 text-amber-200">{error}</p>
@@ -126,7 +126,7 @@ export default function EmargerPage() {
             {!info?.authenticated || error === "AUTH_REQUIRED" ? (
               <div className="mt-6 space-y-3">
                 <p className="text-sm text-amber-200">
-                  Connectez-vous à votre compte EDGE pour valider l’émargement.
+                  Connectez-vous à votre compte Byound pour valider l’émargement.
                 </p>
                 <Link
                   href={`/login?next=${encodeURIComponent(`/emarger/${token}`)}`}

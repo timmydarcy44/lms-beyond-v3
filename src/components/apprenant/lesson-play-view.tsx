@@ -1139,7 +1139,7 @@ export function LessonPlayView({
             </p>
           ) : null}
           <p className={cn("text-[10px] tracking-[0.08em]", isJessica ? "text-slate-400" : "text-white/40")}>
-            Powered by EDGE
+            Powered by Byound
           </p>
         </div>
       ) : null}
@@ -2000,7 +2000,7 @@ export function LessonPlayView({
                   {badgeConfig?.label ? `Passer la certification · ${badgeConfig.label}` : "Passer la certification"}
                 </h3>
                 <p className="mt-1 text-sm text-white/70">
-                  Déposez votre preuve. Notre équipe (et EDGE AI) la vérifie avant attribution.
+                  Déposez votre preuve. Notre équipe (et Byound AI) la vérifie avant attribution.
                 </p>
               </div>
 
@@ -2011,7 +2011,7 @@ export function LessonPlayView({
                   </div>
                   <div className="text-lg font-semibold">Félicitations !</div>
                   <div className="mt-1 text-sm text-white/70">
-                    Votre preuve est en cours d&apos;analyse par EDGE AI.
+                    Votre preuve est en cours d&apos;analyse par Byound AI.
                   </div>
                 </div>
               ) : !badgeConfig ? (
@@ -2051,7 +2051,7 @@ export function LessonPlayView({
                         const analysis = String(json?.analysis ?? "").trim();
                         if (analysis) {
                           setCaseAiAnalysis(analysis);
-                          toast.success("Analyse EDGE AI prête");
+                          toast.success("Analyse Byound AI prête");
                         } else {
                           toast.error("Analyse vide");
                         }
@@ -2066,7 +2066,7 @@ export function LessonPlayView({
                   {caseAiAnalysis ? (
                     <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-left text-sm text-white/90 whitespace-pre-wrap">
                       <div className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
-                        EDGE AI — première analyse
+                        Byound AI — première analyse
                       </div>
                       <div className="mt-3">{caseAiAnalysis}</div>
                     </div>
@@ -2074,7 +2074,7 @@ export function LessonPlayView({
 
                   {caseAiLoading ? (
                     <div className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
-                      EDGE AI analyse…
+                      Byound AI analyse…
                     </div>
                   ) : null}
                 </div>

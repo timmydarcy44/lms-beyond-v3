@@ -83,7 +83,7 @@ export function buildExpertTimeline(expert: AdminExpertRow): ExpertTimelineEvent
     events.push({
       id: "certified",
       type: "certified",
-      label: "EDGE Certified",
+      label: "Byound Certified",
       at: expert.created_at ?? new Date().toISOString(),
     });
   }

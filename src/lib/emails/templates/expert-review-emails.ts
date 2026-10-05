@@ -13,13 +13,13 @@ export function getExpertApprovedEmail(params: { firstName: string; dashboardLin
   const greeting = firstName || "Bonjour";
   const html = buildEdgeEmailShell({
     title: "Votre profil a été validé",
-    preheader: "Accédez à votre espace formateur EDGE",
+    preheader: "Accédez à votre espace formateur Byound",
     bodyHtml: `<p>Bonjour ${greeting},</p>
      <p>Bonne nouvelle : votre profil a été validé par notre équipe.</p>
-     <p>Vous pouvez désormais accéder à votre espace formateur et être référencé dans le réseau EDGE.</p>`,
+     <p>Vous pouvez désormais accéder à votre espace formateur et être référencé dans le réseau Byound.</p>`,
     cta: { label: "Accéder à mon espace", href: params.dashboardLink },
   });
-  return { subject: "Votre profil EDGE a été validé", html };
+  return { subject: "Votre profil Byound a été validé", html };
 }
 
 export function getExpertRejectedEmail(params: { firstName: string; reason: string }) {
@@ -27,14 +27,14 @@ export function getExpertRejectedEmail(params: { firstName: string; reason: stri
   const reason = escapeHtml(params.reason.trim());
   const greeting = firstName || "Bonjour";
   const html = buildEdgeEmailShell({
-    title: "Votre candidature EDGE",
+    title: "Votre candidature Byound",
     bodyHtml: `<p>Bonjour ${greeting},</p>
-     <p>Nous vous remercions pour votre candidature au réseau EDGE.</p>
+     <p>Nous vous remercions pour votre candidature au réseau Byound.</p>
      <p>Après examen de votre dossier, nous ne sommes pas en mesure de valider votre profil pour le moment.</p>
      ${reason ? `<p><strong>Motif :</strong> ${reason}</p>` : ""}
      <p>Nous restons à votre disposition pour toute question.</p>`,
   });
-  return { subject: "Votre candidature EDGE", html };
+  return { subject: "Votre candidature Byound", html };
 }
 
 export function getExpertNeedsInfoEmail(params: { firstName: string; message: string }) {
@@ -48,5 +48,5 @@ export function getExpertNeedsInfoEmail(params: { firstName: string; message: st
      <p style="white-space:pre-wrap;">${message}</p>
      <p>Connectez-vous à votre espace formateur pour compléter votre profil.</p>`,
   });
-  return { subject: "Complétez votre dossier EDGE", html };
+  return { subject: "Complétez votre dossier Byound", html };
 }

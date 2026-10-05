@@ -30,7 +30,7 @@ export function buildIdmcObservation(axes: Record<AxisKey, number>): string {
   }
   const topLabel = AXES_LABELS[top[0]] ?? top[0];
   const lowLabel = low ? AXES_LABELS[low[0]] ?? "certains axes" : "d'autres axes";
-  return `Votre point fort IDMC est ${topLabel} (${top[1]} %). À renforcer : ${lowLabel} (${low?.[1] ?? 0} %). Ces scores guident vos priorités de progression EDGE.`;
+  return `Votre point fort IDMC est ${topLabel} (${top[1]} %). À renforcer : ${lowLabel} (${low?.[1] ?? 0} %). Ces scores guident vos priorités de progression Byound.`;
 }
 
 export function buildSoftSkillsObservation(

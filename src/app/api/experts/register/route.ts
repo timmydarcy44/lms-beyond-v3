@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
         review_status: "pending_review",
         isNewAuthUser,
         message:
-          "Profil créé, mais l'email d'accès n'a pas pu être envoyé. Contactez le support EDGE pour recevoir votre lien.",
+          "Profil créé, mais l'email d'accès n'a pas pu être envoyé. Contactez le support Byound pour recevoir votre lien.",
       });
     }
 
@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
         review_status: "pending_review",
         isNewAuthUser,
         message:
-          "Profil créé, mais l'email d'accès n'a pas pu être envoyé. Contactez le support EDGE pour recevoir votre lien.",
+          "Profil créé, mais l'email d'accès n'a pas pu être envoyé. Contactez le support Byound pour recevoir votre lien.",
       });
     }
 

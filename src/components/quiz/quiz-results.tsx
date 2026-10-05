@@ -106,7 +106,7 @@ export function QuizResults({
         if (!ignore) {
           setStrengths(["Tu as terminé l’ensemble du quiz.", "Tes réponses sont enregistrées pour le suivi pédagogique."]);
           setImprovements(["Relire les questions avec erreur et leurs explications.", "Cibler les thèmes les moins maîtrisés dans le radar."]);
-          setAnalysisComment("Analyse EDGE momentanément indisponible — voici une synthèse par défaut.");
+          setAnalysisComment("Analyse Byound momentanément indisponible — voici une synthèse par défaut.");
         }
       } finally {
         if (!ignore) setAnalysisLoading(false);
@@ -166,7 +166,7 @@ export function QuizResults({
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-lg font-bold text-[#ff00ff] drop-shadow-[0_0_12px_rgba(255,0,255,0.35)]">
                 <Eye className="h-5 w-5 text-[#ff00ff]" aria-hidden />
-                L&apos;œil d&apos;EDGE AI
+                L&apos;œil d&apos;Byound AI
               </CardTitle>
               <p className="text-sm font-normal text-white">
                 Synthèse basée sur ton score, tes thèmes et le détail de tes réponses (erreurs et réussites).

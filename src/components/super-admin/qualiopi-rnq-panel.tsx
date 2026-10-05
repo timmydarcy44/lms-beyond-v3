@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { ChevronDown, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { QualiopiComplianceSnapshot, QualiopiComplianceStatus } from "@/lib/qualiopi/qualiopi-compliance-audit";
 import { mergeComplianceIntoCriteria } from "@/lib/qualiopi/qualiopi-compliance-audit";
 import { QUALIOPI_INDICATOR_COUNT } from "@/lib/qualiopi/qualiopi-rnq-reference";
@@ -37,26 +39,59 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
   const [snapshot, setSnapshot] = useState<QualiopiComplianceSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [attestingId, setAttestingId] = useState<number | null>(null);
+
+  const loadCompliance = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/super-admin/crm/qualiopi/compliance");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Audit indisponible");
+      setSnapshot(json as QualiopiComplianceSnapshot);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    void (async () => {
-      try {
-        const res = await fetch("/api/super-admin/crm/qualiopi/compliance");
+    void loadCompliance();
+  }, [refreshKey, loadCompliance]);
+
+  const setAttestation = async (indicatorId: number, action: "validate" | "revoke") => {
+    setAttestingId(indicatorId);
+    try {
+      if (action === "validate") {
+        const note = window.prompt(
+          "Preuve ou référence (optionnel) — ex. registre papier, URL, date de comité qualité :",
+        );
+        if (note === null) return;
+        const res = await fetch("/api/super-admin/crm/qualiopi/compliance/attestations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ indicatorId, note: note.trim() || undefined }),
+        });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error || "Audit indisponible");
-        if (!cancelled) setSnapshot(json as QualiopiComplianceSnapshot);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Erreur");
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!res.ok) throw new Error(json.error || "Attestation impossible");
+        toast.success(`Indicateur ${indicatorId} marqué validé (attestation)`);
+      } else {
+        const res = await fetch(
+          `/api/super-admin/crm/qualiopi/compliance/attestations?indicatorId=${indicatorId}`,
+          { method: "DELETE" },
+        );
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Retrait impossible");
+        toast.success(`Attestation retirée — recalcul automatique`);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
+      await loadCompliance();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setAttestingId(null);
+    }
+  };
 
   const criteria = useMemo(
     () => (snapshot ? mergeComplianceIntoCriteria(snapshot) : null),
@@ -158,6 +193,9 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
             <span>{snapshot.runtime.sessionsTotal} sessions</span>
             <span>{snapshot.runtime.sessionsWithSignedAttendance} émargement complet</span>
             <span>{snapshot.runtime.satisfactionResponses} satisfaction</span>
+            {"attestationsCount" in snapshot.runtime && snapshot.runtime.attestationsCount > 0 ? (
+              <span>{snapshot.runtime.attestationsCount} attestation(s) manuelle(s)</span>
+            ) : null}
             <span className="inline-flex items-center gap-1.5 text-[#7BA7FF]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#3D7BFF]" />
               Données live
@@ -239,15 +277,45 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
                                 badge.className,
                               )}
                             >
-                              {badge.short}
+                              {st === "validated" && c?.validatedSource === "attestation"
+                                ? "validé · attestation"
+                                : badge.short}
                             </span>
                           </div>
                           {c?.reason ? (
                             <p className={cn("mt-2 text-xs leading-relaxed", QUALIOPI_MUTED)}>{c.reason}</p>
                           ) : null}
+                          {c?.attestationNote ? (
+                            <p className="mt-1 text-xs text-emerald-200/80">Preuve : {c.attestationNote}</p>
+                          ) : null}
                           {c?.nextStep ? (
                             <p className="mt-1 text-xs font-medium text-[#9EC0FF]">→ {c.nextStep}</p>
                           ) : null}
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {st !== "validated" ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={attestingId === ind.id}
+                                className="h-7 border-white/15 bg-transparent text-[11px] text-white/80 hover:bg-white/10"
+                                onClick={() => void setAttestation(ind.id, "validate")}
+                              >
+                                {attestingId === ind.id ? "…" : "Marquer validé (preuve hors Byound)"}
+                              </Button>
+                            ) : c?.validatedSource === "attestation" ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                disabled={attestingId === ind.id}
+                                className="h-7 text-[11px] text-white/45 hover:text-white/70"
+                                onClick={() => void setAttestation(ind.id, "revoke")}
+                              >
+                                Retirer l&apos;attestation
+                              </Button>
+                            ) : null}
+                          </div>
                         </li>
                       );
                     })}
@@ -259,10 +327,11 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
 
           <p className={cn("mt-6 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-xs leading-relaxed", QUALIOPI_MUTED)}>
             <span className="font-semibold text-white/70">Méthode — </span>
-            <strong className="text-white/60">Validé :</strong> fonctionnalité + preuves en base (ex. émargements
-            signés). <strong className="text-white/60">Partiel :</strong> brique produit ou contenu type, preuve audit
-            à compléter. <strong className="text-white/60">Non couvert :</strong> processus ou registre à créer, hors
-            ou dans Byound. L&apos;audit certificateur reste décisionnaire.
+            <strong className="text-white/60">Validé :</strong> preuves Byound (coffre, envoi pack, émargement complet,
+            satisfaction…) ou attestation manuelle avec note. <strong className="text-white/60">Partiel :</strong>{" "}
+            suivez la ligne « → » sous l&apos;indicateur pour passer en validé automatiquement.{" "}
+            <strong className="text-white/60">Non couvert :</strong> processus hors produit — attestation ou preuve
+            externe. L&apos;audit certificateur reste décisionnaire.
           </p>
         </>
       ) : null}

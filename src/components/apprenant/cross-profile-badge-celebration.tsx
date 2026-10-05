@@ -48,7 +48,7 @@ export function CrossProfileBadgeCelebration({
           <Check className="h-6 w-6 text-[#FF3B30]" strokeWidth={2.5} />
         </div>
 
-        <p className="text-[11px] font-semibold uppercase tracking-[0.4em] text-white/45">EDGE</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.4em] text-white/45">Byound</p>
         <h2 className="mt-3 text-2xl font-bold tracking-tight">Félicitations</h2>
         <p className="mt-4 text-base leading-relaxed text-white/85">
           Vous obtenez votre badge{" "}
@@ -62,7 +62,7 @@ export function CrossProfileBadgeCelebration({
             onClick={onDismiss}
             className="inline-flex items-center justify-center rounded-full bg-[#FF3B30] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white"
           >
-            Voir mon Profil EDGE
+            Voir mon Profil Byound
           </Link>
           <button
             type="button"

@@ -16,8 +16,18 @@ export function isEdgeCertificationInProgress(
 export function edgeCertificationLabel(
   expert: Pick<ExpertAccessRow, "certification_status" | "is_certified_beyond" | "wants_certification">,
 ): string {
-  if (isEdgeCertified(expert)) return "EDGE Certified";
+  if (isEdgeCertified(expert)) return "Byound Certified";
   if (isEdgeCertificationInProgress(expert)) return "Parcours en cours";
   if (expert.wants_certification === true) return "Demande enregistrée";
-  return "Non active";
+  return "Certified — non active";
+}
+
+/** Libellés cockpit expert Byound (UI publique). */
+export function byoundCertificationLabel(
+  expert: Pick<ExpertAccessRow, "certification_status" | "is_certified_beyond" | "wants_certification">,
+): string {
+  if (isEdgeCertified(expert)) return "Byound Certified";
+  if (isEdgeCertificationInProgress(expert)) return "Certification en cours";
+  if (expert.wants_certification === true) return "Certified — non active";
+  return "Certified — non active";
 }

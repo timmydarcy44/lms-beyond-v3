@@ -17,7 +17,7 @@ export function HardSkillProofChoiceModal({ open, skillName, onClose, onChooseIn
         <p className="text-xs uppercase tracking-[0.2em] text-white/40">Faire reconnaître</p>
         <h3 className="mt-2 text-xl font-semibold text-white">{skillName}</h3>
         <p className="mt-3 text-sm text-white/55">
-          Votre compétence est auto-déclarée. Choisissez comment la faire reconnaître dans EDGE.
+          Votre compétence est auto-déclarée. Choisissez comment la faire reconnaître dans Byound.
         </p>
 
         <div className="mt-6 space-y-3">
@@ -32,7 +32,7 @@ export function HardSkillProofChoiceModal({ open, skillName, onClose, onChooseIn
               </span>
               <span>
                 <span className="block text-sm font-semibold text-white">Passer une évaluation</span>
-                <span className="mt-0.5 block text-xs text-[#3D7BFF]/80">Entretien expérientiel EDGE</span>
+                <span className="mt-0.5 block text-xs text-[#3D7BFF]/80">Entretien expérientiel Byound</span>
               </span>
             </span>
           </button>

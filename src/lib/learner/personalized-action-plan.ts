@@ -75,34 +75,34 @@ const SOFT_SKILL_THRESHOLDS = 55;
 const SKILL_COACHING_MAP: Record<string, { coaching: string; parcoursTitle: string; slug?: string }> = {
   "Intelligence émotionnelle": {
     coaching: "Gestion des émotions et régulation",
-    parcoursTitle: "Parcours EDGE — Intelligence émotionnelle",
+    parcoursTitle: "Parcours Byound — Intelligence émotionnelle",
     slug: "gestion-emotions",
   },
   "Gestion du stress": {
     coaching: "Gestion du stress et charge mentale",
-    parcoursTitle: "Parcours EDGE — Coach & Facilitateur",
+    parcoursTitle: "Parcours Byound — Coach & Facilitateur",
     slug: "coach-facilitateur",
   },
   "Gestion des conflits": {
     coaching: "Médiation et communication assertive",
-    parcoursTitle: "Parcours EDGE — Gestion des tensions",
+    parcoursTitle: "Parcours Byound — Gestion des tensions",
   },
   Leadership: {
     coaching: "Leadership situationnel",
-    parcoursTitle: "Parcours EDGE — Leader de la Transformation",
+    parcoursTitle: "Parcours Byound — Leader de la Transformation",
     slug: "leader-transformation",
   },
   "Communication interpersonnelle": {
     coaching: "Communication claire et posture professionnelle",
-    parcoursTitle: "Parcours EDGE — Communication professionnelle",
+    parcoursTitle: "Parcours Byound — Communication professionnelle",
   },
   Empathie: {
     coaching: "Intelligence relationnelle",
-    parcoursTitle: "Parcours EDGE — Écoute et posture relationnelle",
+    parcoursTitle: "Parcours Byound — Écoute et posture relationnelle",
   },
   Adaptabilité: {
     coaching: "Agilité face au changement",
-    parcoursTitle: "Parcours EDGE — Agilité et adaptation",
+    parcoursTitle: "Parcours Byound — Agilité et adaptation",
   },
 };
 
@@ -158,7 +158,7 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
       title: parcours?.titre ?? mapping.parcoursTitle,
       description: parcours
         ? `${parcours.description.slice(0, 120)}… Progression actuelle : ${skill.score} %.`
-        : `Progression actuelle : ${skill.score} % — priorité identifiée via votre profil EDGE.`,
+        : `Progression actuelle : ${skill.score} % — priorité identifiée via votre profil Byound.`,
       href: parcoursHref,
       reason: `Axe à renforcer : ${skill.skill}`,
       priority: 100 - skill.score,
@@ -184,7 +184,7 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
       items.push({
         id: `idmc-${weakest[0]}`,
         kind: formation ? "formation" : "micro_formation",
-        title: formation?.title ?? "Parcours EDGE — consolidation IDMC",
+        title: formation?.title ?? "Parcours Byound — consolidation IDMC",
         description: formation
           ? `${formation.description} (axe ${weakest[0]} : ${weakest[1]} %).`
           : `${need} (axe ${weakest[0]} : ${weakest[1]} %).`,
@@ -250,8 +250,8 @@ export function buildPersonalizedActionPlan(input: BuildPlanInput): Personalized
   const primaryNeed = needs[0] ?? "consolider vos acquis professionnels";
   const headline = `${firstName}, vos résultats montrent un besoin en ${primaryNeed.toLowerCase()}`;
   const summary = jobTitle
-    ? `En tant que ${jobTitle}, voici l'accompagnement EDGE recommandé pour accélérer votre progression.`
-    : "Voici l'accompagnement EDGE recommandé pour accélérer votre progression.";
+    ? `En tant que ${jobTitle}, voici l'accompagnement Byound recommandé pour accélérer votre progression.`
+    : "Voici l'accompagnement Byound recommandé pour accélérer votre progression.";
 
   const parcoursSteps = items.slice(0, 5).map((item, index) => ({
     id: `step-${item.id}`,

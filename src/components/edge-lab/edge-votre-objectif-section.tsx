@@ -9,12 +9,12 @@ import { EDGE_MARKETING_HREFS } from "@/lib/edge-lab-marketing";
 const cards = [
   {
     id: "online",
-    label: "EDGE Online",
+    label: "Byound Online",
     title: "Se former rapidement sur des compétences ciblées",
     description: "Micro-formations, badges et progression autonome.",
     href: EDGE_MARKETING_HREFS.onlineFormations,
     imageSrc: "/edge-lab/objective-online-devices.png",
-    imageAlt: "EDGE Online sur ordinateur et iPad",
+    imageAlt: "Byound Online sur ordinateur et iPad",
     vignetteClass:
       "relative [background-image:radial-gradient(circle_at_50%_100%,rgba(14,165,233,0.12),transparent_62%),linear-gradient(to_bottom,#f8fafc,#ffffff)]",
   },
@@ -26,13 +26,13 @@ const cards = [
     href: "#entreprises",
     imageSrc:
       "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/EDGE%20Executive.png",
-    imageAlt: "Formation continue EDGE",
+    imageAlt: "Formation continue Byound",
     vignetteClass:
       "[background-image:radial-gradient(circle_at_50%_100%,rgba(5,150,105,0.1),transparent_60%),linear-gradient(to_bottom,#f0fdf9,#ffffff)]",
   },
   {
     id: "school",
-    label: "EDGE École",
+    label: "Byound École",
     title: "Se former à un métier et construire un parcours complet",
     description: "Alternance, accompagnement et montée en compétences.",
     href: "#ecole",
@@ -61,7 +61,7 @@ export function EdgeVotreObjectifSection() {
             Un écosystème complet pour apprendre, évoluer et se former.
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed tracking-[-0.01em] text-zinc-500 sm:text-[15px]">
-            Trois façons d&apos;accéder à EDGE selon votre objectif.
+            Trois façons d&apos;accéder à Byound selon votre objectif.
           </p>
         </motion.div>
 

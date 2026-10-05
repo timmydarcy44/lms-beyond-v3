@@ -16,7 +16,7 @@ export function EdgeComparisonSection() {
         >
           <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-zinc-400">Comparaison</p>
           <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-zinc-950 sm:text-4xl">
-            Formation classique vs EDGE
+            Formation classique vs Byound
           </h2>
         </motion.div>
         <EdgePremiumComparisonTable />

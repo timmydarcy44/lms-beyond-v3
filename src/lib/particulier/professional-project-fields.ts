@@ -18,7 +18,7 @@ export type ProfessionalProjectField = {
   key: string;
   label: string;
   placeholder: string;
-  /** Champ relié au référentiel métier EDGE (autocomplete + Autre) */
+  /** Champ relié au référentiel métier Byound (autocomplete + Autre) */
   isCareerTarget?: boolean;
   inputType?: "text" | "select";
   options?: Array<{ value: string; label: string }>;

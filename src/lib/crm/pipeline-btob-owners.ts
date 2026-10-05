@@ -36,7 +36,7 @@ export function resolveCatalogueFromEmail(ownerEmail: string | null | undefined)
 
 export function resolveCatalogueFromName(ownerEmail: string | null | undefined): string {
   const found = PIPELINE_BTOB_CONTACT_OWNERS.find((o) => o.email === ownerEmail);
-  return found?.catalogueFromName ?? "EDGE";
+  return found?.catalogueFromName ?? "Byound";
 }
 
 export const CONTACT_CIVILITY_OPTIONS = ["Monsieur", "Madame"] as const;
@@ -55,5 +55,5 @@ export function resolveCatalogueFromForCurrentUser(
   if (norm === TIMMY_EMAIL) {
     return { email: "contact@edgebs.fr", name: "Timmy Darcy" };
   }
-  return { email: "contact@edgebs.fr", name: "EDGE" };
+  return { email: "contact@edgebs.fr", name: "Byound" };
 }

@@ -213,7 +213,7 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                   {expert.is_certified_beyond || expert.certification_status === "certified" ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#635BFF]/10 px-2.5 py-1 text-xs font-semibold text-[#635BFF]">
                       <BadgeCheck className="h-3 w-3" />
-                      EDGE Certified
+                      Byound Certified
                     </span>
                   ) : null}
                 </div>
@@ -313,7 +313,7 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                 onClick={() => void runAction("set_certified", { certified: true })}
                 className="rounded-xl border border-[#635BFF]/25 bg-[#635BFF]/8 px-4 py-2.5 text-sm font-semibold text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-60"
               >
-                EDGE Certified
+                Byound Certified
               </button>
               <button
                 type="button"
@@ -464,14 +464,14 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
         </div>
 
         <aside className="space-y-6">
-          <CrmCard title="Badges EDGE" icon={Award}>
+          <CrmCard title="Badges Byound" icon={Award}>
             <div className="space-y-3">
               {expert.wants_certification ? (
                 <div className="flex items-center gap-3 rounded-xl bg-[#635BFF]/8 px-4 py-3">
                   <Award className="h-5 w-5 text-[#635BFF]" />
                   <div>
                     <p className="text-sm font-medium text-slate-800">Certification demandée</p>
-                    <p className="text-xs text-slate-500">Parcours EDGE Certified souhaité</p>
+                    <p className="text-xs text-slate-500">Parcours Byound Certified souhaité</p>
                   </div>
                 </div>
               ) : (
@@ -480,7 +480,7 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
               {expert.is_certified_beyond || expert.certification_status === "certified" ? (
                 <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                   <BadgeCheck className="h-5 w-5 text-emerald-600" />
-                  <p className="text-sm font-semibold text-emerald-800">EDGE Certified</p>
+                  <p className="text-sm font-semibold text-emerald-800">Byound Certified</p>
                 </div>
               ) : null}
             </div>
@@ -567,7 +567,7 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                   onClick={() => void runAction("set_certified", { certified: true })}
                   className="rounded-xl border border-[#635BFF]/25 bg-[#635BFF]/8 py-2.5 text-sm font-semibold text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-60"
                 >
-                  Marquer EDGE Certified
+                  Marquer Byound Certified
                 </button>
                 <button
                   type="button"

@@ -23,10 +23,10 @@ export async function generateMetadata({
   const { slug } = await params;
   const diagnostic = getDiagnosticBySlug(slug);
   if (!diagnostic) {
-    return { title: "Diagnostic introuvable — EDGE Business" };
+    return { title: "Diagnostic introuvable — Byound Business" };
   }
   return {
-    title: `${diagnostic.title} — Diagnostics EDGE`,
+    title: `${diagnostic.title} — Diagnostics Byound`,
     description: diagnostic.shortDescription,
   };
 }

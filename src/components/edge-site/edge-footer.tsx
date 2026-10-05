@@ -6,11 +6,11 @@ export function EdgeFooter() {
     <footer className="border-t border-white/[0.06] bg-edge-black px-5 py-8 sm:px-10">
       <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-2 sm:items-start">
         <div>
-          <p className="text-sm font-medium tracking-[0.12em] text-white">EDGE</p>
+          <p className="text-sm font-medium tracking-[0.12em] text-white">Byound</p>
           <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-white/30">
             École de formation professionnelle certifiante · Normandie
           </p>
-          <p className="mt-6 text-[11px] text-white/30">© {new Date().getFullYear()} EDGE Business School</p>
+          <p className="mt-6 text-[11px] text-white/30">© {new Date().getFullYear()} Byound Business School</p>
         </div>
         <nav
           className="flex flex-wrap gap-x-8 gap-y-2 text-[13px] text-white/30 sm:justify-end"
@@ -20,7 +20,7 @@ export function EdgeFooter() {
             Parcours
           </Link>
           <Link href={EDGE_HREFS.edgeOnline} className="transition-colors hover:text-white">
-            EDGE Online
+            Byound Online
           </Link>
           <Link href={EDGE_HREFS.entreprises} className="transition-colors hover:text-white">
             Entreprises

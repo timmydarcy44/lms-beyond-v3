@@ -266,7 +266,7 @@ export function EdgeMissionRunner() {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 py-16">
         <Loader2 className="h-8 w-8 animate-spin text-[#8BB4FF]" />
-        <p className="text-sm text-white/50">Le Coach EDGE prépare votre mission personnalisée…</p>
+        <p className="text-sm text-white/50">Le Coach Byound prépare votre mission personnalisée…</p>
       </div>
     );
   }
@@ -338,7 +338,7 @@ export function EdgeMissionRunner() {
           <p className="mt-3 text-sm text-white/55">
             <span className="font-medium text-white/70">Objectif :</span> {mission.missionGoal}
           </p>
-          <p className="mt-2 text-xs text-[#8BB4FF]">Le Coach EDGE jouera : {mission.coachRole}</p>
+          <p className="mt-2 text-xs text-[#8BB4FF]">Le Coach Byound jouera : {mission.coachRole}</p>
         </motion.section>
 
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
@@ -382,7 +382,7 @@ export function EdgeMissionRunner() {
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/80">Coach EDGE</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/80">Coach Byound</p>
               <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/85">
                 {debrief.celebrationMessage}
               </p>
@@ -568,7 +568,7 @@ export function EdgeMissionRunner() {
                 >
                   {m.role === "assistant" && m.kind !== "scene" ? (
                     <span className="mb-1 flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-[#8BB4FF]/70">
-                      <Sparkles className="h-2.5 w-2.5" /> Coach EDGE
+                      <Sparkles className="h-2.5 w-2.5" /> Coach Byound
                     </span>
                   ) : null}
                   {m.role === "assistant" && m.kind === "scene" ? (
@@ -590,7 +590,7 @@ export function EdgeMissionRunner() {
           </div>
         ) : null}
         {phase === "finishing" ? (
-          <p className="text-center text-sm text-white/45">Le Coach EDGE prépare votre débrief…</p>
+          <p className="text-center text-sm text-white/45">Le Coach Byound prépare votre débrief…</p>
         ) : null}
       </div>
 
@@ -648,7 +648,7 @@ export function EdgeMissionRunner() {
 function BackLink() {
   return (
     <Link href="/dashboard/apprenant/profil" className="inline-flex items-center gap-1.5 text-sm text-white/50 transition hover:text-white">
-      <ArrowLeft className="h-4 w-4" /> Retour au Profil EDGE
+      <ArrowLeft className="h-4 w-4" /> Retour au Profil Byound
     </Link>
   );
 }

@@ -8,7 +8,7 @@ export function MarketplaceUpgradeCta({ tier }: { tier: number }) {
       <h2 className="mt-4 text-xl font-semibold text-slate-900">Marketplace BCT — Niveau 3 requis</h2>
       <p className="mt-3 text-sm text-slate-600">
         L&apos;accès aux psychopédagogues certifiés Beyond est inclus dans l&apos;offre{" "}
-        <strong>EDGE for Enterprise niveau 3</strong>. Votre organisation est actuellement au niveau{" "}
+        <strong>Byound for Enterprise niveau 3</strong>. Votre organisation est actuellement au niveau{" "}
         {tier}.
       </p>
       <Button asChild className="mt-6 bg-violet-700 hover:bg-violet-600">

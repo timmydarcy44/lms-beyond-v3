@@ -47,7 +47,7 @@ export function ProfileResultsSummaryCard({
   return (
     <section>
       <HubSectionHeader
-        title="Mes résultats EDGE"
+        title="Mes résultats Byound"
         subtitle="Synthèse — le détail reste accessible en un tap."
       />
       <div className="grid gap-3 sm:grid-cols-3">

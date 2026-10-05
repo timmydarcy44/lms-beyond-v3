@@ -38,17 +38,17 @@ export function getParticulierAdminSignupNotificationEmail(params: {
     : "";
 
   const html = buildEdgeEmailShell({
-    title: "Nouvelle inscription particulier EDGE",
+    title: "Nouvelle inscription particulier Byound",
     preheader: `${params.firstName} ${params.lastName} — ${params.objectif || "objectif non précisé"}`,
-    bodyHtml: `<p>Une nouvelle inscription particulier vient d'être enregistrée sur EDGE.</p>
+    bodyHtml: `<p>Une nouvelle inscription particulier vient d'être enregistrée sur Byound.</p>
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:20px 0 0;width:100%;">${tableHtml}</table>
       ${profileLink}`,
-    footerNote: "Notification automatique — EDGE Particulier",
+    footerNote: "Notification automatique — Byound Particulier",
   });
 
   return {
     to: ADMIN_EMAIL,
-    subject: "Nouvelle inscription particulier EDGE",
+    subject: "Nouvelle inscription particulier Byound",
     html,
   };
 }

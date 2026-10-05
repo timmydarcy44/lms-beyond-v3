@@ -69,7 +69,7 @@ export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/exp
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Experts / Formateurs</h1>
-        <p className="mt-1 text-sm text-slate-600">Validation des candidatures formateurs et experts EDGE.</p>
+        <p className="mt-1 text-sm text-slate-600">Validation des candidatures formateurs et experts Byound.</p>
       </div>
 
       <div className="relative max-w-md">

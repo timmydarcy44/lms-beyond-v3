@@ -19,10 +19,10 @@ export function ProfilEdgeSectionShell({ title, description, children }: Props) 
         className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour au Profil EDGE
+        Retour au Profil Byound
       </Link>
       <header>
-        <p className={APPRENANT_CARD_KICKER}>Profil EDGE</p>
+        <p className={APPRENANT_CARD_KICKER}>Profil Byound</p>
         <h1 className="mt-2 text-2xl font-bold text-white">{title}</h1>
         {description ? <p className="mt-2 text-sm text-white/50">{description}</p> : null}
       </header>

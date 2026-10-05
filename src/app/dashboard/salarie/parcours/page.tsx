@@ -32,7 +32,7 @@ export default function SalarieParcoursPage() {
     <div className={SALARIE_PAGE_SHELL}>
       <section className="mb-8 space-y-2">
         <p className={SALARIE_PAGE_KICKER}>Parcours personnalisé</p>
-        <h1 className={SALARIE_PAGE_TITLE}>Mon parcours EDGE</h1>
+        <h1 className={SALARIE_PAGE_TITLE}>Mon parcours Byound</h1>
         <p className={SALARIE_PAGE_LEAD}>
           On diagnostique avant de former — votre parcours est construit à partir de vos résultats
           DISC, IDMC et Soft Skills, croisés avec votre poste.

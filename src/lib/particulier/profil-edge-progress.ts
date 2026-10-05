@@ -41,6 +41,6 @@ export function isProfilEdgeComplete(explorations: ProfilEdgeExploration[]): boo
 }
 
 export function profilEdgeProgressLabel(completed: number, total = 3): string {
-  if (completed >= total) return "Profil EDGE complet";
-  return `Profil EDGE en cours — ${completed}/${total} explorations complétées`;
+  if (completed >= total) return "Profil Byound complet";
+  return `Profil Byound en cours — ${completed}/${total} explorations complétées`;
 }

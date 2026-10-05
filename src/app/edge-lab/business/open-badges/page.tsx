@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { EdgeOpenBadgesPage } from "@/components/edge-site/business/edge-open-badges-page";
 
 export const metadata: Metadata = {
-  title: "Open Badges — EDGE Business",
+  title: "Open Badges — Byound Business",
   description:
     "Attribuez des badges certifiants pour rendre visibles les compétences acquises et partagées.",
 };

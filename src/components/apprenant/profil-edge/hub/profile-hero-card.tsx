@@ -87,7 +87,7 @@ export function ProfileHeroCard({ objectiveLabel, referentialTitle, matching, ha
           <p className="text-[16px] leading-relaxed text-white/75">
             {hasProject
               ? "Enregistrez votre projet pour activer l’analyse d’alignement métier."
-              : "Indiquez où vous voulez aller — EDGE construira le chemin."}
+              : "Indiquez où vous voulez aller — Byound construira le chemin."}
           </p>
           <Link href={PROFIL_EDGE_SECTION_HREFS.projet}>
             <HubPillCta>

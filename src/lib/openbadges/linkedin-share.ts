@@ -1,4 +1,4 @@
-/** Message LinkedIn pré-rempli pour un Open Badge EDGE obtenu. */
+/** Message LinkedIn pré-rempli pour un Open Badge Byound obtenu. */
 export function buildOpenBadgeLinkedInShareMessage(params: {
   badgeName: string;
   level?: number | null;
@@ -8,7 +8,7 @@ export function buildOpenBadgeLinkedInShareMessage(params: {
     typeof params.level === "number" && Number.isFinite(params.level)
       ? ` de niveau ${params.level}`
       : "";
-  return `Bonjour à tous,\nJe suis fièr(e) de vous annoncer que j'ai obtenu(e) l'open badge ${name}${level} de la EDGE.`;
+  return `Bonjour à tous,\nJe suis fièr(e) de vous annoncer que j'ai obtenu(e) l'open badge ${name}${level} de la Byound.`;
 }
 
 export function buildOpenBadgeLinkedInShareUrl(params: {

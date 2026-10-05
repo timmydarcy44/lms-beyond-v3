@@ -87,7 +87,7 @@ export function HardSkillInterviewModal({ open, skillName, level, careerTitle, o
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 px-4 py-8">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/10 bg-[#0D111A] p-6 shadow-2xl">
-        <p className="text-xs uppercase tracking-wider text-[#3D7BFF]">Entretien expérientiel EDGE</p>
+        <p className="text-xs uppercase tracking-wider text-[#3D7BFF]">Entretien expérientiel Byound</p>
         <h3 className="mt-2 text-xl font-semibold text-white">{skillName}</h3>
         <p className="mt-1 text-sm text-white/50">Niveau {level} · {questions.length} questions</p>
 
@@ -99,7 +99,7 @@ export function HardSkillInterviewModal({ open, skillName, level, careerTitle, o
         ) : result ? (
           <div className="mt-6 space-y-5">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <p className="text-xs uppercase tracking-wider text-white/40">Résultat EDGE</p>
+              <p className="text-xs uppercase tracking-wider text-white/40">Résultat Byound</p>
               <p className="mt-1 text-lg font-semibold text-white">{verdictLabel(result.verdict)}</p>
               <p className="mt-1 text-sm text-white/55">
                 {EDGE_CONFIDENCE_LABEL} : {result.confidenceScore} %
@@ -122,7 +122,7 @@ export function HardSkillInterviewModal({ open, skillName, level, careerTitle, o
             />
             {result.badgeSuggested && result.verdict === "validated" ? (
               <p className="text-sm text-emerald-300">
-                Vous pouvez créer le badge EDGE associé depuis votre Wallet.
+                Vous pouvez créer le badge Byound associé depuis votre Wallet.
               </p>
             ) : null}
             <button type="button" onClick={onClose} className={CONNECT_BTN_PRIMARY}>

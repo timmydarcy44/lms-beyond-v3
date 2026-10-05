@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-/** Pictogrammes verre / frost — style Performanse, monochrome EDGE. */
+/** Pictogrammes verre / frost — style Performanse, monochrome Byound. */
 export function SoftSkillsPicto({ className }: { className?: string }) {
   const id = useId().replace(/:/g, "");
   return (

@@ -235,7 +235,7 @@ export function ExpertDocumentsManager() {
           <p className="text-xs text-[#050505]/40">
             Besoin d'aide ?{" "}
             <Link href="/dashboard/expert/support" className="font-medium text-[#635BFF] hover:underline">
-              Contactez le support EDGE
+              Contactez le support Byound
             </Link>
           </p>
         </div>

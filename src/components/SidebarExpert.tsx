@@ -27,8 +27,8 @@ const NAV_ITEMS = [
   { label: "Mon agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, lockedWhenRestricted: true, external: false },
   { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, lockedWhenRestricted: true, external: false },
   { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, lockedWhenRestricted: false, external: false },
-  { label: "EDGE Certified", href: "/dashboard/expert/certification", icon: Award, lockedWhenRestricted: false, external: false },
-  { label: "EDGE Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap, lockedWhenRestricted: false, external: true },
+  { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award, lockedWhenRestricted: false, external: false },
+  { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap, lockedWhenRestricted: false, external: true },
   { label: "Notifications", href: "/dashboard/expert/notifications", icon: Bell, lockedWhenRestricted: false, external: false },
   { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings, lockedWhenRestricted: false, external: false },
   { label: "Support", href: "/dashboard/expert/support", icon: HelpCircle, lockedWhenRestricted: false, external: false },
@@ -42,15 +42,15 @@ export default function SidebarExpert({ restricted = false }: Props) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 flex h-full w-[260px] flex-col border-r border-white/10 bg-[#050505]">
+    <aside className="fixed inset-y-0 left-0 z-50 flex h-full w-[260px] flex-col border-r border-white/[0.08] bg-[#080a12]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -bottom-40 -left-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,91,255,0.2),transparent_62%)] blur-2xl" />
       </div>
 
       <div className="relative border-b border-white/10 px-6 pb-5 pt-8">
-        <div className="text-lg font-semibold tracking-tight text-white">EDGE</div>
+        <div className="text-lg font-semibold tracking-tight text-white">Byound</div>
         <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
-          {restricted ? "Espace restreint" : "Réseau formateurs"}
+          Espace expert
         </div>
       </div>
 
@@ -68,7 +68,7 @@ export default function SidebarExpert({ restricted = false }: Props) {
             const linkClass = cn(
               "flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium transition",
               "text-white/55 hover:bg-white/5 hover:text-white",
-              active && "border border-[#635BFF]/25 bg-[#635BFF]/12 text-white",
+              active && "border border-[#3D7BFF]/30 bg-[#3D7BFF]/12 text-white",
             );
 
             if (isLocked) {
@@ -115,7 +115,7 @@ export default function SidebarExpert({ restricted = false }: Props) {
       <div className="relative shrink-0 p-4">
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Espace</p>
-          <p className="mt-1 text-sm font-medium text-white">Formateur EDGE</p>
+          <p className="mt-1 text-sm font-medium text-white">Expert Byound</p>
           <p className="mt-2 text-xs leading-relaxed text-white/45">
             {restricted
               ? "Votre dossier est en cours de validation."

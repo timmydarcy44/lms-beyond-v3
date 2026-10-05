@@ -136,7 +136,7 @@ export default function ExpertRegisterPage() {
       { label: "Création du mot de passe", done: false },
       { label: "Vérification de votre dossier", done: false },
       { label: "Validation pédagogique", done: false },
-      { label: "Publication dans le réseau EDGE", done: false },
+      { label: "Publication dans le réseau Byound", done: false },
     ];
 
     return (
@@ -152,7 +152,7 @@ export default function ExpertRegisterPage() {
                 En attente de validation
               </div>
               <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">
-                Bienvenue dans le réseau EDGE
+                Bienvenue dans le réseau Byound
               </h1>
               <p className="mx-auto mt-4 max-w-xl text-sm text-white/60">
                 Votre profil a bien été enregistré. Consultez votre boîte mail pour créer votre mot de passe et
@@ -215,7 +215,7 @@ export default function ExpertRegisterPage() {
 
       <header className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-8">
         <Link href="/" className="text-sm font-semibold tracking-[0.18em] text-white/80 hover:text-white">
-          EDGE
+          Byound
         </Link>
         <div className="text-xs text-white/45">Réseau formateurs & experts</div>
       </header>
@@ -239,7 +239,7 @@ export default function ExpertRegisterPage() {
                   Inscription expert
                 </div>
                 <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
-                  Rejoignez le réseau EDGE
+                  Rejoignez le réseau Byound
                 </h1>
                 <p className="mt-3 max-w-xl text-sm text-white/55">
                   Trois étapes pour construire un profil professionnel à la hauteur de votre expertise.
@@ -332,7 +332,7 @@ export default function ExpertRegisterPage() {
                       </div>
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-white">
-                          Certification EDGE — visibilité renforcée
+                          Certification Byound — visibilité renforcée
                         </div>
                         <div className="mt-4 space-y-3 text-sm text-white/65">
                           <div className="flex items-start gap-3">
@@ -370,7 +370,7 @@ export default function ExpertRegisterPage() {
                     />
                     <div>
                       <div className="text-sm font-medium text-white">
-                        Je souhaite suivre le parcours de certification EDGE
+                        Je souhaite suivre le parcours de certification Byound
                       </div>
                       <div className="mt-1 text-sm text-white/50">
                         Optionnel — recommandé pour maximiser votre visibilité dans le réseau.
@@ -379,7 +379,7 @@ export default function ExpertRegisterPage() {
                   </label>
 
                   <p className="text-xs text-white/35">
-                    En soumettant, vous acceptez que votre profil soit revu par l&apos;équipe EDGE avant
+                    En soumettant, vous acceptez que votre profil soit revu par l&apos;équipe Byound avant
                     publication.
                   </p>
                 </div>

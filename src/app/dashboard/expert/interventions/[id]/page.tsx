@@ -91,7 +91,7 @@ export default function ExpertInterventionDetailPage() {
   const createdLabel = useMemo(() => formatLaunchDate(row?.created_at ?? null), [row]);
   const needLabel =
     (typeof row?.metadata?.need_label === "string" && row.metadata.need_label) ||
-    "Besoin identifié par l'analyse EDGE";
+    "Besoin identifié par l'analyse Byound";
 
   const scheduledDate = useMemo(() => {
     if (!row?.scheduled_at) return null;
@@ -183,7 +183,7 @@ export default function ExpertInterventionDetailPage() {
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#635BFF]">
               <ShieldCheck className="h-4 w-4" aria-hidden />
-              Réseau EDGE
+              Réseau Byound
             </span>
             <button
               type="button"

@@ -55,7 +55,7 @@ export default function QualiopiSatisfactionPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 text-white">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-8">
         <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-indigo-300">
-          Qualiopi · EDGE
+          Qualiopi · Byound
         </p>
         <h1 className="mt-3 text-center text-2xl font-bold">Questionnaire de satisfaction</h1>
         {status === "loading" ? <p className="mt-6 text-center text-white/60">Chargement…</p> : null}

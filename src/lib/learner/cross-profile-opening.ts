@@ -61,8 +61,8 @@ export async function generateCrossProfileOpeningParagraph(
       ? `${input.softSkillPhrases[0]}, ${input.softSkillPhrases[1]}`
       : input.softSkillPhrases[0] ?? "";
 
-  const prompt = `Tu rédiges UNE phrase d'ouverture pour un email de résultats de Profil comportemental EDGE,
-ton EDGE : direct, sobre, jamais ronflant ni "coach de vie".
+  const prompt = `Tu rédiges UNE phrase d'ouverture pour un email de résultats de Profil comportemental Byound,
+ton Byound : direct, sobre, jamais ronflant ni "coach de vie".
 
 Données fournies :
 - Archétype DISC : ${input.discArchetype}
@@ -85,7 +85,7 @@ Contraintes strictes :
       {
         role: "system",
         content:
-          "Tu rédiges des emails EDGE sobres et factuels. Respecte strictement les contraintes.",
+          "Tu rédiges des emails Byound sobres et factuels. Respecte strictement les contraintes.",
       },
       { role: "user", content: prompt },
     ],

@@ -13,8 +13,8 @@ export default async function EcoleFormationsCataloguePage() {
     <div className="px-4 py-8 sm:px-6 lg:px-10">
       <OrgFormationsShell
         basePath="/dashboard/ecole/formations"
-        title="Catalogue EDGE"
-        lead="Parcourez les formations EDGE Online. Vos formations organisationnelles restent privées."
+        title="Catalogue Byound"
+        lead="Parcourez les formations Byound Online. Vos formations organisationnelles restent privées."
         variant="light"
       >
         <OrgCatalogueEdgeView courses={courses} variant="light" />

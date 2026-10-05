@@ -252,7 +252,7 @@ export type ApprenantDashboardData = {
   thematicSectionOrder?: string[] | null;
   /** Open Badges actifs visibles sur le dashboard (pastille « Disponible pour vous »). */
   visibleOpenBadges?: LearnerVisibleOpenBadge[];
-  /** Open Badges obtenus (EDGE Wallet). */
+  /** Open Badges obtenus (Byound Wallet). */
   earnedOpenBadges?: LearnerEarnedOpenBadge[];
 };
 
@@ -655,7 +655,7 @@ export async function getApprenantDashboardData(
     }
 
     /**
-     * Ordre des sections : listes métiers (Playmakers / EDGE Lab) pour éviter
+     * Ordre des sections : listes métiers (Playmakers / Byound Lab) pour éviter
      * que des libellés historiques finissent tous en « Autres » ; sinon `course_categories`.
      */
     let thematicSectionOrder: string[] | null = null;
@@ -1063,7 +1063,7 @@ export async function getLearnerContentDetail(
   const normalizedSlug = decodeURIComponent(String(slug ?? "")).trim();
   console.log("[apprenant] getLearnerContentDetail enter", { category, slug: normalizedSlug });
 
-  // Service role d’abord (catalogue EDGE Online / galaxy) — évite 404 RLS après listing public.
+  // Service role d’abord (catalogue Byound Online / galaxy) — évite 404 RLS après listing public.
   let supabase = getServiceRoleClient();
   if (!supabase) {
     try {

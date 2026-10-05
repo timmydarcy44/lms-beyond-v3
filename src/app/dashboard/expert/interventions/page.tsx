@@ -120,12 +120,12 @@ export default function ExpertInterventionsPage() {
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#635BFF]">Missions</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">Interventions</h1>
-            <p className="mt-3 text-sm text-[#050505]/55">Vos missions activées par les entreprises partenaires EDGE.</p>
+            <p className="mt-3 text-sm text-[#050505]/55">Vos missions activées par les entreprises partenaires Byound.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-full border border-[#635BFF]/20 bg-[#635BFF]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#635BFF]">
               <ShieldCheck className="h-4 w-4" aria-hidden />
-              Réseau EDGE
+              Réseau Byound
             </span>
           </div>
         </header>

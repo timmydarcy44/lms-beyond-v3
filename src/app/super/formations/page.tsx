@@ -3,7 +3,7 @@ import { SuperTrainingCoursesManager } from "@/components/super-admin/super-trai
 
 export const metadata: Metadata = {
   title: "Gestion des formations | Super Admin",
-  description: "Administrer le catalogue formations EDGE Business.",
+  description: "Administrer le catalogue formations Byound Business.",
 };
 
 export const dynamic = "force-dynamic";

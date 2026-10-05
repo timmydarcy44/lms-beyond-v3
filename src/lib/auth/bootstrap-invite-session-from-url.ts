@@ -25,7 +25,7 @@ function clearUrlHash() {
 }
 
 /**
- * Bootstrap session depuis un lien email (invite / inscription EDGE).
+ * Bootstrap session depuis un lien email (invite / inscription Byound).
  * Ne déconnecte une session existante que si l'URL contient de nouveaux credentials
  * (évite la race avec detectSessionInUrl du client Supabase).
  */

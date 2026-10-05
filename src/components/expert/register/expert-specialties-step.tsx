@@ -53,7 +53,7 @@ export function ExpertSpecialtiesStep({ value, onChange }: Props) {
     <div className="space-y-12">
       <div>
         <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#635BFF]/80">
-          Construisez votre identité EDGE
+          Construisez votre identité Byound
         </p>
         <p className="mt-2 text-sm text-white/50">
           Sélectionnez vos domaines, spécialités et modalités d&apos;intervention. Le premier domaine

@@ -49,7 +49,7 @@ export function ParticulierLoginPage() {
       <header className="border-b border-black/[0.06]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
           <Link href="/particuliers" className="text-[15px] font-semibold tracking-[-0.02em] text-edge-black">
-            EDGE
+            Byound
           </Link>
           <Link href="/particuliers#signup" className="text-[12px] font-medium text-black/50 hover:text-edge-black">
             Créer un compte
@@ -60,7 +60,7 @@ export function ParticulierLoginPage() {
       <main className="mx-auto flex max-w-md flex-col justify-center px-5 py-16 sm:px-8 sm:py-24">
         <h1 className="text-[clamp(1.75rem,4vw,2.25rem)] font-medium tracking-[-0.02em]">Connexion</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-black/45">
-          Accédez à votre espace compétences EDGE avec l&apos;email et le mot de passe choisis lors de votre inscription.
+          Accédez à votre espace compétences Byound avec l&apos;email et le mot de passe choisis lors de votre inscription.
         </p>
 
         <form onSubmit={handleLogin} className="mt-10 space-y-3">

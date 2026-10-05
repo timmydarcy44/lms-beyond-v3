@@ -14,7 +14,7 @@ import {
 
 /**
  * Supabase renvoie parfois les tokens (#access_token) sur la home si redirect_to
- * n'est pas autorisé. Route vers set-password avec le bon flow EDGE (entreprise vs particulier).
+ * n'est pas autorisé. Route vers set-password avec le bon flow Byound (entreprise vs particulier).
  */
 export function AuthHashRedirect() {
   const pathname = usePathname();

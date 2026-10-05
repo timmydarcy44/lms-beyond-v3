@@ -832,7 +832,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
         >
           <div className="mb-6 space-y-1 text-left">
             <p className="apprenant-force-text text-sm font-light tracking-[0.15em]" style={{ fontFamily: "\"SF Pro Text\", \"SF Pro Display\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif" }}>
-              EDGE AI
+              Byound AI
             </p>
             <h3 className="apprenant-force-text text-xl font-semibold" style={{ fontFamily: "\"SF Pro Display\", \"SF Pro Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif" }}>
               Transformez et personnalisez le contenu de votre cours

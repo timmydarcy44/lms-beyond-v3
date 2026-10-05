@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   if (hostOnly === "edgebs.fr" && !isLocalhost) {
     return {
       metadataBase: new URL("https://edgebs.fr"),
-      title: "EDGE — Développons les compétences qui feront la différence demain",
+      title: "Byound — Développons les compétences qui feront la différence demain",
       description:
         "Parce que les organismes de formation doivent évoluer. Identifier, former et valoriser les compétences — avec des résultats mesurables.",
       alternates: {
@@ -82,7 +82,7 @@ export default async function Home() {
     return <BeyondAgencyHome />;
   }
 
-  /** EDGE Lab sur domaine dédié. */
+  /** Byound Lab sur domaine dédié. */
   if (!isLocalhost && hostOnly === "edgebs.fr") {
     const { default: EdgeLabLandingPage } = await import("@/app/edge-lab/page");
     return <EdgeLabLandingPage />;

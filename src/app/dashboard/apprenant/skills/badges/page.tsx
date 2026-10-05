@@ -24,7 +24,7 @@ export default function SkillsBadgesPage() {
             Vos réussites
           </h1>
           <p className="max-w-lg text-[14px] text-white/40">
-            Les badges obtenus dans l’écosystème EDGE enrichissent votre capital Skills et
+            Les badges obtenus dans l’écosystème Byound enrichissent votre capital Skills et
             apparaissent en synthèse dans Profil.
           </p>
         </header>

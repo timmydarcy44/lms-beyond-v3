@@ -8,7 +8,7 @@ import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 import { getEdgeOnlinePublishedCourses } from "@/lib/queries/edge-online";
 
 export const metadata: Metadata = {
-  title: "EDGE Online — Le Netflix de la compétence pro",
+  title: "Byound Online — Le Netflix de la compétence pro",
   description:
     "Micro-formations par thématique, test d’orientation et accès streaming. 19€/mois ou 149€/an.",
 };
@@ -22,7 +22,7 @@ export default async function EdgeOnlineMarketingPage() {
     <div className="bg-white">
       <section className="border-b border-black/[0.06] bg-white px-5 py-16 text-center sm:px-10 sm:py-24">
         <div className="mx-auto max-w-3xl">
-          <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-black/35">EDGE Online</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-black/35">Byound Online</p>
           <h1 className="mt-5 text-[clamp(2rem,4.5vw,3.25rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-[#1d1d1f]">
             Le Netflix de la compétence pro,
             <span className="text-edge-red"> pensé comme Apple.</span>

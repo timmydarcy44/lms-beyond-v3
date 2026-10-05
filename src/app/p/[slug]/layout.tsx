@@ -29,9 +29,9 @@ export async function generateMetadata({
       : (params as { slug: string });
 
   const slug = resolvedParams.slug;
-  const fallbackName = slugToDisplayName(slug) || "Profil EDGE";
+  const fallbackName = slugToDisplayName(slug) || "Profil Byound";
   let displayName = fallbackName;
-  let displayTitle = "Profil EDGE";
+  let displayTitle = "Profil Byound";
   let imageUrl = absoluteUrl(DEFAULT_COVER);
 
   const supabase = await getServiceRoleClientOrFallback();
@@ -73,7 +73,7 @@ export async function generateMetadata({
             reconversion: "Profil en reconversion",
           };
           const rawTypeLabel = String(profileData.type_profil ?? "").trim();
-          displayTitle = typeMap[rawType] || rawTypeLabel || "Profil EDGE";
+          displayTitle = typeMap[rawType] || rawTypeLabel || "Profil Byound";
           if (profileData.avatar_url) {
             const avatar = String(profileData.avatar_url).trim();
             imageUrl = avatar.startsWith("http") ? avatar : absoluteUrl(avatar);
@@ -85,9 +85,9 @@ export async function generateMetadata({
     }
   }
 
-  const title = `${displayName} | Profil EDGE`;
+  const title = `${displayName} | Profil Byound`;
   const description =
-    "Bien plus qu'un CV, découvrez mon profil complet avec EDGE — profil certifié, tests comportementaux et compétences.";
+    "Bien plus qu'un CV, découvrez mon profil complet avec Byound — profil certifié, tests comportementaux et compétences.";
   const canonicalPath = `/p/${slug}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
 
@@ -102,7 +102,7 @@ export async function generateMetadata({
       description,
       type: "profile",
       url: canonicalUrl,
-      siteName: "EDGE",
+      siteName: "Byound",
       images: [
         {
           url: imageUrl,

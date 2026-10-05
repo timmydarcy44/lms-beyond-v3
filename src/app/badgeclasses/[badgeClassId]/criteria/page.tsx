@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
   const { badgeClassId } = await resolveRouteParams(params);
   const badge = await loadPublicBadgeClass(badgeClassId);
   if (!badge) {
-    return { title: "Badge introuvable | EDGE" };
+    return { title: "Badge introuvable | Byound" };
   }
 
   const shareBase = getPublicShareBaseUrl();
@@ -35,12 +35,12 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
     `${shareBase}/favicon.ico`;
 
   return {
-    title: `${badge.name} | Open Badge EDGE`,
+    title: `${badge.name} | Open Badge Byound`,
     description,
     openGraph: {
       type: "website",
       url: pageUrl,
-      siteName: "EDGE",
+      siteName: "Byound",
       title: badge.name,
       description,
       locale: "fr_FR",
@@ -95,11 +95,11 @@ export default async function BadgeCriteriaPage({ params }: RouteParams) {
             </div>
           ) : (
             <div className="flex h-48 w-48 items-center justify-center rounded-2xl border border-[#FF3B30]/30 bg-[#FF3B30]/10 text-4xl font-bold text-[#FF3B30]">
-              EDGE
+              Byound
             </div>
           )}
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.35em] text-[#FF3B30]">Open Badge EDGE</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-[#FF3B30]">Open Badge Byound</p>
             <h1 className="text-3xl font-semibold sm:text-4xl">{badge.name}</h1>
             {badge.level != null ? (
               <p className="text-sm text-white/60">Niveau {badge.level}</p>

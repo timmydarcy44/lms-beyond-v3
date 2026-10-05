@@ -54,7 +54,7 @@ export type TrainingAiGeneratedContent = {
 
 const EXAMPLE_PROMPTS = [
   "Crée une formation de 2 jours pour des managers de proximité sur la gestion des conflits. Niveau initiation. Public : managers débutants. Format : présentiel et distanciel. Inclure des cas pratiques, un programme en 4 modules, un Open Badge, un prix inter et un prix intra.",
-  "Formation IA générative pour les équipes marketing : 1 jour, niveau intermédiaire, distanciel. Objectifs opérationnels, 6 compétences clés, cas pratiques ChatGPT et Midjourney, badge « IA Marketing EDGE ».",
+  "Formation IA générative pour les équipes marketing : 1 jour, niveau intermédiaire, distanciel. Objectifs opérationnels, 6 compétences clés, cas pratiques ChatGPT et Midjourney, badge « IA Marketing Byound ».",
   "Parcours leadership inclusif — 3 jours, niveau avancé, blended learning. Public : DRH et managers seniors. Programme en 5 modules, certification Open Badge, tarifs intra jusqu'à 12 participants.",
 ];
 
@@ -152,13 +152,13 @@ export function TrainingAiGenerateModal({ open, onOpenChange, onGenerated, defau
           <DialogHeader className="text-left">
             <div className="mb-2 flex items-center gap-2 text-[#635BFF]">
               <Sparkles className="h-5 w-5" />
-              <span className="text-xs font-semibold uppercase tracking-wider">EDGE IA</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Byound IA</span>
             </div>
             <DialogTitle className="text-2xl font-semibold tracking-tight text-gray-900">
               Créer une formation avec l&apos;IA
             </DialogTitle>
             <DialogDescription className="mt-2 text-sm leading-relaxed text-gray-600">
-              Décrivez précisément la formation souhaitée. EDGE générera automatiquement la fiche, le programme
+              Décrivez précisément la formation souhaitée. Byound générera automatiquement la fiche, le programme
               détaillé, les objectifs, les compétences, les tarifs et les éléments SEO.
             </DialogDescription>
           </DialogHeader>

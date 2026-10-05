@@ -188,9 +188,9 @@ function resolveFormationHref(
 }
 
 /**
- * EDGE Lab : carrousels = thématiques business uniquement + « Autres ».
+ * Byound Lab : carrousels = thématiques business uniquement + « Autres ».
  * Playmakers : thématiques sport (liste Playmakers) uniquement + « Autres »
- * (un libellé EDGE en base ne forme jamais un titre de section ici).
+ * (un libellé Byound en base ne forme jamais un titre de section ici).
  * Autres orgs : regroupement par `category` tel qu’en base, tri des clés.
  */
 function buildThematicSectionRows(
@@ -321,7 +321,7 @@ function EdgeOnlineFormationsNetflixMobile({
       <header className="fixed inset-x-0 top-0 z-[95] border-b border-white/5 bg-black pt-[env(safe-area-inset-top,0px)]">
         <div className="flex h-11 items-center justify-between px-3">
           <div className="flex min-w-0 items-center">
-            <span className="text-lg font-semibold tracking-[0.18em] text-white">EDGE</span>
+            <span className="text-lg font-semibold tracking-[0.18em] text-white">Byound</span>
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
             <Link

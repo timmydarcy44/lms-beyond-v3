@@ -27,7 +27,7 @@ export function EdgeExpertsSection() {
             Apprenez avec ceux qui l&apos;ont vraiment fait.
           </h2>
           <p className="mt-2 max-w-lg text-[13px] leading-snug text-white/45">
-            Chaque parcours EDGE est construit et validé par des professionnels en activité.
+            Chaque parcours Byound est construit et validé par des professionnels en activité.
           </p>
         </div>
         <div className="hidden shrink-0 gap-2 sm:flex">

@@ -97,10 +97,10 @@ export function HardSkillProofModal({ open, skillName, level, onClose, onComplet
         {result ? (
           <div className="mt-6 space-y-5">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <p className="text-xs uppercase tracking-wider text-white/40">Résultat EDGE</p>
+              <p className="text-xs uppercase tracking-wider text-white/40">Résultat Byound</p>
               <p className="mt-1 text-lg font-semibold text-white">{verdictLabel(result.verdict)}</p>
               <p className="mt-1 text-sm text-white/55">
-                Score de confiance EDGE : {result.confidenceScore} %
+                Score de confiance Byound : {result.confidenceScore} %
               </p>
             </div>
             <SkillEvaluationReportPanel

@@ -1,5 +1,5 @@
 /**
- * Registre des traitements EDGE Entreprise (art. 30 RGPD) — socle applicatif.
+ * Registre des traitements Byound Entreprise (art. 30 RGPD) — socle applicatif.
  * Document de référence pour transparence et exercice des droits.
  */
 
@@ -24,7 +24,7 @@ export type ProcessingRecord = {
 
 export const EDGE_DPO_CONTACT = {
   email: "contact@edgebs.fr",
-  organization: "EDGE Business Solutions",
+  organization: "Byound Business Solutions",
   address: "France",
 };
 
@@ -32,9 +32,9 @@ export const EDGE_PROCESSING_REGISTER: ProcessingRecord[] = [
   {
     id: "account-auth",
     name: "Compte et authentification",
-    purpose: "Créer et sécuriser l’accès au dashboard entreprise EDGE.",
+    purpose: "Créer et sécuriser l’accès au dashboard entreprise Byound.",
     categories: ["Identité", "Identifiants de connexion", "Logs de session"],
-    recipients: ["Équipe technique EDGE", "Sous-traitant hébergement (Supabase / Vercel)"],
+    recipients: ["Équipe technique Byound", "Sous-traitant hébergement (Supabase / Vercel)"],
     retention: "Durée du contrat + 3 ans après clôture du compte (sauf obligation légale).",
     legalBasis: "contract",
     legalBasisLabel: "Exécution du contrat (art. 6.1.b)",
@@ -46,7 +46,7 @@ export const EDGE_PROCESSING_REGISTER: ProcessingRecord[] = [
     name: "Annuaire collaborateurs",
     purpose: "Gérer les fiches salariés (identité, poste, département) pour le pilotage RH.",
     categories: ["Identité", "Coordonnées professionnelles", "Poste / métier"],
-    recipients: ["Responsables RH de l’organisation cliente", "Support EDGE (si assistance)"],
+    recipients: ["Responsables RH de l’organisation cliente", "Support Byound (si assistance)"],
     retention: "Durée de la relation de travail / contrat entreprise + 5 ans (archives RH).",
     legalBasis: "legitimate_interest",
     legalBasisLabel: "Intérêt légitime — gestion RH (art. 6.1.f)",
@@ -58,7 +58,7 @@ export const EDGE_PROCESSING_REGISTER: ProcessingRecord[] = [
     name: "Diagnostics compétences & comportement",
     purpose: "Cartographier soft skills, IDMC et profil comportemental pour recommandations.",
     categories: ["Résultats de tests", "Scores", "Recommandations"],
-    recipients: ["RH / managers autorisés de l’organisation", "Moteur d’analyse EDGE"],
+    recipients: ["RH / managers autorisés de l’organisation", "Moteur d’analyse Byound"],
     retention: "Durée du contrat + 2 ans, ou suppression sur demande / fin de consentement de partage.",
     legalBasis: "consent",
     legalBasisLabel: "Consentement de partage entreprise (art. 6.1.a) le cas échéant + intérêt légitime RH",
@@ -94,7 +94,7 @@ export const EDGE_PROCESSING_REGISTER: ProcessingRecord[] = [
     name: "Recrutement & offres",
     purpose: "Publier des offres et suivre les candidatures.",
     categories: ["Offres", "Candidatures", "Profils candidats"],
-    recipients: ["Équipe recrutement de l’organisation", "EDGE (support)"],
+    recipients: ["Équipe recrutement de l’organisation", "Byound (support)"],
     retention: "24 mois après clôture de l’offre / candidature (sauf consentement plus long).",
     legalBasis: "legitimate_interest",
     legalBasisLabel: "Intérêt légitime — recrutement (art. 6.1.f)",
@@ -104,21 +104,21 @@ export const EDGE_PROCESSING_REGISTER: ProcessingRecord[] = [
   {
     id: "training-requests",
     name: "Demandes de formation",
-    purpose: "Transmettre les besoins de formation à l’équipe EDGE.",
+    purpose: "Transmettre les besoins de formation à l’équipe Byound.",
     categories: ["Contact", "Entreprise", "Besoin formation", "Message"],
-    recipients: ["contact@edgebs.fr", "Équipe commerciale / pédagogique EDGE"],
+    recipients: ["contact@edgebs.fr", "Équipe commerciale / pédagogique Byound"],
     retention: "3 ans à compter de la demande.",
     legalBasis: "contract",
     legalBasisLabel: "Mesures précontractuelles / contrat (art. 6.1.b)",
     transfersOutsideEu: false,
-    securityMeasures: ["Email sécurisé", "Accès limité équipe EDGE"],
+    securityMeasures: ["Email sécurisé", "Accès limité équipe Byound"],
   },
   {
     id: "billing",
     name: "Abonnement & facturation",
-    purpose: "Gérer l’offre EDGE (Skills / Learning) et la relation commerciale.",
+    purpose: "Gérer l’offre Byound (Skills / Learning) et la relation commerciale.",
     categories: ["Identité contact", "Organisation", "Formule", "Échanges devis"],
-    recipients: ["EDGE", "Prestataire de paiement le cas échéant"],
+    recipients: ["Byound", "Prestataire de paiement le cas échéant"],
     retention: "10 ans (obligations comptables).",
     legalBasis: "legal_obligation",
     legalBasisLabel: "Obligation légale comptable + contrat (art. 6.1.c / 6.1.b)",
@@ -130,7 +130,7 @@ export const EDGE_PROCESSING_REGISTER: ProcessingRecord[] = [
     name: "Support & journalisation",
     purpose: "Assistance utilisateurs, sécurité et amélioration du service.",
     categories: ["Logs techniques", "Tickets support", "Adresse IP technique"],
-    recipients: ["Support EDGE", "Hébergeurs"],
+    recipients: ["Support Byound", "Hébergeurs"],
     retention: "12 mois pour les logs ; tickets support 3 ans.",
     legalBasis: "legitimate_interest",
     legalBasisLabel: "Intérêt légitime — sécurité et support (art. 6.1.f)",

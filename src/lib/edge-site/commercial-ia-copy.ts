@@ -152,7 +152,7 @@ export const COMMERCIAL_IA_FAQ = [
 
     q: "Comment se passe la candidature ?",
 
-    a: "Tu remplis le formulaire en moins de 3 minutes. Un membre de l'équipe EDGE te rappelle sous 48h pour un échange de 20 minutes — sans engagement de ta part.",
+    a: "Tu remplis le formulaire en moins de 3 minutes. Un membre de l'équipe Byound te rappelle sous 48h pour un échange de 20 minutes — sans engagement de ta part.",
 
   },
 

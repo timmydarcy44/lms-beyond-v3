@@ -117,7 +117,7 @@ export async function POST(req: Request) {
   });
 
   const { data: org } = await db.from("organizations").select("name").eq("id", schoolId).maybeSingle();
-  const schoolName = String((org as { name?: string } | null)?.name ?? "EDGE");
+  const schoolName = String((org as { name?: string } | null)?.name ?? "Byound");
 
   const expertInvite = await inviteSchoolInstructorAsExpert(db, {
     instructorId: String(instructorId),

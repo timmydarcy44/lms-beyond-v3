@@ -12,7 +12,7 @@ type Body = {
   learnerEmail?: string;
   /** Restrict targets to members of orgId / course.org_id */
   scopeOrgOnly?: boolean;
-  /** RH assigne une formation catalogue (ex. EDGE Online) à ses collaborateurs */
+  /** RH assigne une formation catalogue (ex. Byound Online) à ses collaborateurs */
   allowCatalogueAssign?: boolean;
 };
 
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     ? await userCanManageOrgFormations(readClient, user.id, requestOrgId)
     : false;
 
-  // Catalogue EDGE → RH peut assigner une formation publiée à SES collaborateurs
+  // Catalogue Byound → RH peut assigner une formation publiée à SES collaborateurs
   const catalogueOk = allowCatalogueAssign && canManageRequestOrg && isPublished;
 
   if (!isOwner && !canManageCourseOrg && !catalogueOk) {

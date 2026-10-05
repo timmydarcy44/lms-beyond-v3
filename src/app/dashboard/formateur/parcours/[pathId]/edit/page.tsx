@@ -118,7 +118,7 @@ export default async function FormateurPathEditPage({ params }: PageProps) {
       const role = String((m as any)?.role ?? "").toLowerCase().trim();
       isStaffInOrg = ["admin", "instructor", "formateur", "trainer", "owner", "staff"].includes(role);
     }
-    // Fallback EDGE Lab: profil rattaché à l'org (sans membership explicite)
+    // Fallback Byound Lab: profil rattaché à l'org (sans membership explicite)
     let profileMatchesOrg = false;
     if (orgId) {
       const { data: prof } = await supabase.from("profiles").select("org_id, role").eq("id", authData.user.id).maybeSingle();

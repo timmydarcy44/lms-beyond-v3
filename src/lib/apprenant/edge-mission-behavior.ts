@@ -1,5 +1,5 @@
 /**
- * Pont comportemental pour le moteur Mission EDGE.
+ * Pont comportemental pour le moteur Mission Byound.
  */
 
 import {
@@ -109,7 +109,7 @@ export function debriefSystemPromptWithBehaviors(ctx: MissionContext, proofMatri
     .filter((r) => r.observed)
     .map((r) => `- ${r.behaviorLabel} (${r.status})`)
     .join("\n");
-  return `Tu es le Coach EDGE. Tu n'évalues PAS des bonnes réponses — tu OBSERVES des comportements.
+  return `Tu es le Coach Byound. Tu n'évalues PAS des bonnes réponses — tu OBSERVES des comportements.
 
 Compétence : ${ctx.skillName}
 Grille : ${grid.behaviors.map((b) => b.label).join(", ")}

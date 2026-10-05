@@ -1,5 +1,5 @@
 /**
- * Référentiel national EDGE — domaines & spécialités.
+ * Référentiel national Byound — domaines & spécialités.
  * Structure extensible : ajouter un domaine ou des spécialités sans toucher l'UI.
  */
 
@@ -490,7 +490,7 @@ export type ExpertRegistrationPayload = {
   availabilities: string[];
 };
 
-/** Format envoyé à l'API — référentiel structuré pour matching EDGE. */
+/** Format envoyé à l'API — référentiel structuré pour matching Byound. */
 export function buildSpecialtiesPayload(p: ExpertSpecialtiesProfile): ExpertRegistrationPayload {
   const domains = getDomainsByIds(p.domainIds);
   const primary = domains[0]?.label ?? null;

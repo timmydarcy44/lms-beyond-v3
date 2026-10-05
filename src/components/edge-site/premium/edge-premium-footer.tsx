@@ -21,7 +21,7 @@ export function EdgePremiumFooter() {
       links: [
         { label: "Formations", href: R.formations },
         { label: "Certifications", href: R.certifications },
-        { label: "EDGE Online", href: R.particulierEdgeOnline },
+        { label: "Byound Online", href: R.particulierEdgeOnline },
         { label: "Financement", href: R.financement },
         { label: "Contact", href: R.contact },
       ],
@@ -51,7 +51,7 @@ export function EdgePremiumFooter() {
         { label: "Notre mission", href: R.notreMission },
         { label: "Qui sommes-nous ?", href: R.aPropos },
         { label: "Contact", href: R.contact },
-        { label: "Découvrir EDGE", href: R.decouvrir },
+        { label: "Découvrir Byound", href: R.decouvrir },
       ],
     },
   ] as const;
@@ -101,7 +101,7 @@ export function EdgePremiumFooter() {
         </div>
 
         <div className="mt-16 flex flex-col gap-4 border-t border-white/[0.06] pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-white/30">© {new Date().getFullYear()} EDGE. Tous droits réservés.</p>
+          <p className="text-xs text-white/30">© {new Date().getFullYear()} Byound. Tous droits réservés.</p>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/30" aria-label="Mentions légales">
             <Link href="#" className="transition-colors hover:text-white/50">
               Mentions légales

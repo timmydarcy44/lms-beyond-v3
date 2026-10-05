@@ -377,16 +377,16 @@ export function EdgeOnlineExperience({ initialCourses }: { initialCourses: EdgeO
       <div className="min-h-[calc(100vh-72px)] bg-black px-6 py-20 text-white">
         <div className="mx-auto max-w-lg text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/50">
-            EDGE Online
+            Byound Online
           </div>
           <h1 className="mt-6 text-2xl font-semibold tracking-tight sm:text-3xl">Catalogue en préparation</h1>
           <p className="mt-3 text-sm leading-relaxed text-white/50">
-            Les micro-formations publiées pour EDGE Lab apparaîtront ici. Vérifiez qu’une organisation avec le slug{" "}
+            Les micro-formations publiées pour Byound Lab apparaîtront ici. Vérifiez qu’une organisation avec le slug{" "}
             <span className="font-mono text-white/70">edgelab</span> existe et que des cours y sont publiés.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild variant="outline" className="rounded-full border-white/20 text-white hover:bg-white/10">
-              <Link href="/edge-lab">Retour à l’accueil EDGE</Link>
+              <Link href="/edge-lab">Retour à l’accueil Byound</Link>
             </Button>
             <Button asChild className="rounded-full bg-blue-600 font-semibold hover:bg-blue-500">
               <Link href={EDGE_MARKETING_HREFS.galaxyCatalog}>Catalogue membre</Link>
@@ -420,7 +420,7 @@ export function EdgeOnlineExperience({ initialCourses }: { initialCourses: EdgeO
           <div className="max-w-xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/50">
               <Sparkles className="h-3.5 w-3.5 text-lime-300/80" />
-              EDGE Online
+              Byound Online
             </div>
             <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-[2.75rem] lg:leading-[1.08]">
               Développez vos compétences, à votre rythme.
@@ -469,7 +469,7 @@ export function EdgeOnlineExperience({ initialCourses }: { initialCourses: EdgeO
               href="/edge-lab#programmes-edge"
               className="mt-4 inline-flex text-sm font-semibold text-white/80 transition hover:text-white"
             >
-              Voir les thématiques sur la page EDGE →
+              Voir les thématiques sur la page Byound →
             </Link>
           </div>
         </div>
@@ -514,7 +514,7 @@ export function EdgeOnlineExperience({ initialCourses }: { initialCourses: EdgeO
       <div className="border-t border-white/[0.08] px-5 py-10 sm:px-8">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-semibold text-white">Déjà inscrit sur EDGE ?</p>
+            <p className="text-sm font-semibold text-white">Déjà inscrit sur Byound ?</p>
             <p className="mt-1 text-sm text-white/45">Accédez au catalogue complet dans votre espace galaxie.</p>
           </div>
           <div className="flex flex-wrap gap-3">

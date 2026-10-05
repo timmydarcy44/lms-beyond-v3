@@ -55,7 +55,7 @@ export function EdgeAccompagnementProgrammeClient({ defaultName, defaultEmail }:
         <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400/80" />
         <h1 className="text-2xl font-semibold text-white">Demande envoyée</h1>
         <p className="text-sm leading-relaxed text-white/50">
-          Un expert EDGE vous recontactera sous 48 h ouvrées pour construire votre programme personnalisé.
+          Un expert Byound vous recontactera sous 48 h ouvrées pour construire votre programme personnalisé.
         </p>
         <Link href="/dashboard/apprenant/coaching" className={BTN_PRIMARY}>
           Retour à Mon accompagnement
@@ -80,7 +80,7 @@ export function EdgeAccompagnementProgrammeClient({ defaultName, defaultEmail }:
           Création du parcours & développement des compétences
         </h1>
         <p className="text-sm leading-relaxed text-white/50">
-          Décrivez votre objectif. Un expert EDGE vous proposera un accompagnement sur mesure — tarif établi
+          Décrivez votre objectif. Un expert Byound vous proposera un accompagnement sur mesure — tarif établi
           après échange.
         </p>
       </header>

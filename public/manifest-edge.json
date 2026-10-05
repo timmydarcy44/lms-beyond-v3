@@ -1,7 +1,7 @@
 {
-  "name": "EDGE",
-  "short_name": "EDGE",
-  "description": "Atteignez votre objectif professionnel. EDGE construit le chemin.",
+  "name": "Byound",
+  "short_name": "Byound",
+  "description": "Atteignez votre objectif professionnel. Byound construit le chemin.",
   "start_url": "/particuliers/login",
   "scope": "/",
   "id": "/edge-pwa",

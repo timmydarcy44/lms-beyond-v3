@@ -36,7 +36,7 @@ export function ParticuliersSignupOverlay({ email, firstName, onClose }: Particu
         <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
           <Mail className="h-6 w-6 text-white/80" aria-hidden />
         </div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">EDGE</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Byound</p>
         <h2 id="signup-overlay-title" className="mt-3 text-[26px] font-semibold leading-snug tracking-tight">
           {title}
         </h2>

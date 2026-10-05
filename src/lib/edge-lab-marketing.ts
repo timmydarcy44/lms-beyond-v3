@@ -8,7 +8,7 @@ export const EDGE_LAB_ACCENT_HEX = "#FF3B30";
 /** Image de fond hero par défaut (fichier dans `public/edge-lab/`, fournie par la DA). */
 export const EDGE_LAB_HERO_DEFAULT_IMAGE_PATH = "/edge-lab/hero-ambient.png";
 
-/** Liens marketing EDGE (landing `/edge-lab`). */
+/** Liens marketing Byound (landing `/edge-lab`). */
 export const EDGE_MARKETING_HREFS = {
   /** Vitrine type streaming — cours publiés, navigation par thèmes, test d’orientation. */
   onlineCatalog: "/edge-lab/edge-online",

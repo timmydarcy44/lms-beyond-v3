@@ -79,15 +79,15 @@ function SetPasswordForm() {
         if (error) console.error("[set-password] session bootstrap:", error);
         toast.error(
           isEdgeEntreprise
-            ? "Lien expiré ou invalide. Réinscrivez-vous sur la page entreprise EDGE pour recevoir un nouvel email."
+            ? "Lien expiré ou invalide. Réinscrivez-vous sur la page entreprise Byound pour recevoir un nouvel email."
             : isEdgeExpert
-              ? "Lien expiré ou invalide. Réinscrivez-vous sur la page formateur EDGE pour recevoir un nouvel email."
+              ? "Lien expiré ou invalide. Réinscrivez-vous sur la page formateur Byound pour recevoir un nouvel email."
             : isEdgeParticulier
-              ? "Lien expiré ou invalide. Réinscrivez-vous sur la page EDGE pour recevoir un nouvel email."
+              ? "Lien expiré ou invalide. Réinscrivez-vous sur la page Byound pour recevoir un nouvel email."
               : isInviteFlow
                 ? "Lien expiré ou invalide. Demandez une nouvelle invitation à votre responsable RH."
                 : isCrmInviteFlow
-                  ? "Lien expiré ou invalide. Demandez un nouvel email depuis le CRM EDGE."
+                  ? "Lien expiré ou invalide. Demandez un nouvel email depuis le CRM Byound."
                 : "Lien invalide ou expiré. Demandez une nouvelle invitation.",
         );
       } catch (error) {
@@ -182,15 +182,15 @@ function SetPasswordForm() {
       }
       toast.success(
         isEdgeEntreprise
-          ? "Mot de passe créé. Bienvenue sur votre espace entreprise EDGE !"
+          ? "Mot de passe créé. Bienvenue sur votre espace entreprise Byound !"
           : isEdgeExpert
-            ? "Mot de passe créé. Bienvenue sur votre espace formateur EDGE !"
+            ? "Mot de passe créé. Bienvenue sur votre espace formateur Byound !"
           : isEdgeParticulier
-            ? "Mot de passe créé. Bienvenue sur EDGE !"
+            ? "Mot de passe créé. Bienvenue sur Byound !"
             : isInviteFlow
               ? "Mot de passe créé. Bienvenue sur votre espace collaborateur !"
               : isCrmInviteFlow
-                ? "Mot de passe créé. Bienvenue sur EDGE !"
+                ? "Mot de passe créé. Bienvenue sur Byound !"
               : "Mot de passe créé. Bienvenue sur Beyond !",
       );
       window.location.assign(result.destination);
@@ -215,14 +215,14 @@ function SetPasswordForm() {
       }
       toast.success(
         isEdgeEntreprise
-          ? "Bienvenue — votre espace entreprise EDGE est prêt."
+          ? "Bienvenue — votre espace entreprise Byound est prêt."
           : isEdgeExpert
-            ? "Bienvenue — votre espace formateur EDGE est prêt."
+            ? "Bienvenue — votre espace formateur Byound est prêt."
           : isInviteFlow
             ? "Bienvenue — votre espace collaborateur est prêt."
             : isCrmInviteFlow
-              ? "Bienvenue sur EDGE — votre espace est prêt."
-            : "Bienvenue sur EDGE — votre cockpit est prêt.",
+              ? "Bienvenue sur Byound — votre espace est prêt."
+            : "Bienvenue sur Byound — votre cockpit est prêt.",
       );
       window.location.assign(result.destination);
     } catch (error) {

@@ -563,7 +563,7 @@ export function EvaluationMethodConfigDialog({
         ) : methodId === "playground" ? (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-slate-900">Consigne affichée à l&apos;apprenant (Playground EDGE)</Label>
+              <Label className="text-slate-900">Consigne affichée à l&apos;apprenant (Playground Byound)</Label>
               <Textarea
                 value={draft.playground?.learnerPrompt ?? ""}
                 onChange={(e) =>

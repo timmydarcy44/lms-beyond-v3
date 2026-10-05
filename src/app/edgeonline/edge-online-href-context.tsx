@@ -18,7 +18,7 @@ export function EdgeOnlineHrefPrefixProvider({
   );
 }
 
-/** Préfixe pour les URLs « canoniques » edgeonline.fr (/formations) → route interne sous dev. Vide hors surface EDGE Online. */
+/** Préfixe pour les URLs « canoniques » edgeonline.fr (/formations) → route interne sous dev. Vide hors surface Byound Online. */
 export function useOptionalEdgeOnlineHrefPrefix(): EdgeOnlineHrefPrefix {
   return useContext(EdgeOnlineHrefPrefixContext);
 }

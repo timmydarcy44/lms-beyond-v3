@@ -275,7 +275,7 @@ export function ApprenantConnectOverview({
               accent="red"
               icon={BookOpen}
               eyebrow="Parcours"
-              title="EDGE Online"
+              title="Byound Online"
               subtitle="Ouvrir le catalogue"
               href={catalogHref}
             />

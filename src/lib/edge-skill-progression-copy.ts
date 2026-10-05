@@ -1,23 +1,23 @@
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 
-/** CTA principaux — vocabulaire premium EDGE (approche concierge). */
+/** CTA principaux — vocabulaire premium Byound (approche concierge). */
 export const EDGE_CTA_START_PARCOURS = "Construire mon parcours avec un expert";
 export const EDGE_CTA_LAUNCH_PROGRESSION = "Demander une recommandation personnalisée";
 export const EDGE_CTA_IMPROVE_SKILL = "Préparer mon plan d'action";
 
-/** Éléments affichés sur les cartes Parcours EDGE (futurs modules). */
+/** Éléments affichés sur les cartes Parcours Byound (futurs modules). */
 export const PARCOURS_EDGE_INCLUDES = [
-  "Coaching guidé EDGE",
+  "Coaching guidé Byound",
   "Exercices",
-  "Missions EDGE",
-  "Validation EDGE",
+  "Missions Byound",
+  "Validation Byound",
   "Badge",
 ] as const;
 
 /** Recommandations génériques pour atteindre le niveau suivant. */
 export const EDGE_NEXT_LEVEL_STEPS = [
-  "suivre un parcours EDGE",
-  "réaliser une Mission EDGE",
+  "suivre un parcours Byound",
+  "réaliser une Mission Byound",
   "déposer une preuve terrain",
   "refaire une évaluation",
 ] as const;

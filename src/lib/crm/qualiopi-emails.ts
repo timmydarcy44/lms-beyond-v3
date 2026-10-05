@@ -56,7 +56,7 @@ export async function sendQualiopiConventionPack(params: {
           ? `<p style="color:#b45309">Document(s) à finaliser : ${escapeHtml(missing.join(", "))}.</p>`
           : ""
       }
-      <p>Cordialement,<br/>${escapeHtml(params.fromName || "EDGE")}</p>
+      <p>Cordialement,<br/>${escapeHtml(params.fromName || "Byound")}</p>
     </div>
   `;
   return sendEmail({
@@ -90,7 +90,7 @@ export async function sendQualiopiStartPack(params: {
         <p>Merci d'émarger en cliquant sur le lien ci-dessous. L'heure et le jour de signature sont enregistrés pour le dossier Qualiopi.</p>
         <p><a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none">Émarger maintenant</a></p>
         <p>Le livret d'accueil est joint à ce message.</p>
-        <p>Cordialement,<br/>${escapeHtml(params.fromName || "EDGE")}</p>
+        <p>Cordialement,<br/>${escapeHtml(params.fromName || "Byound")}</p>
       </div>
     `;
     const sent = await sendEmail({
@@ -124,7 +124,7 @@ export async function sendQualiopiSatisfactionPack(params: {
         </p>
         <p>Pour clôturer le dossier Qualiopi, merci de répondre au questionnaire de satisfaction :</p>
         <p><a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none">Questionnaire de satisfaction</a></p>
-        <p>Cordialement,<br/>${escapeHtml(params.fromName || "EDGE")}</p>
+        <p>Cordialement,<br/>${escapeHtml(params.fromName || "Byound")}</p>
       </div>
     `;
     const sent = await sendEmail({

@@ -151,7 +151,7 @@ export async function EdgeDiagnosticsPage() {
                 Un profil comportemental clair, en quelques minutes.
               </h2>
               <p className="mt-6 text-base leading-relaxed text-neutral-500 sm:text-lg">
-                Le test comportemental EDGE révèle les préférences d&apos;action, d&apos;influence, de
+                Le test comportemental Byound révèle les préférences d&apos;action, d&apos;influence, de
                 stabilité et de rigueur. Chaque réponse construit un profil actionnable pour manager,
                 recruter et collaborer plus efficacement.
               </p>
@@ -168,7 +168,7 @@ export async function EdgeDiagnosticsPage() {
             <div className="relative mx-auto w-full max-w-[340px]">
               <Image
                 src={EDGE_PREMIUM_IMAGES.diagComportemental}
-                alt="Aperçu du test comportemental EDGE sur mobile"
+                alt="Aperçu du test comportemental Byound sur mobile"
                 width={680}
                 height={1200}
                 className="h-auto w-full object-contain drop-shadow-[0_24px_48px_rgba(0,0,0,0.12)]"
@@ -186,7 +186,7 @@ export async function EdgeDiagnosticsPage() {
                 Différenciation
               </p>
               <h2 className="font-edge-display mt-4 text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.05] text-neutral-950">
-                Pourquoi EDGE ?
+                Pourquoi Byound ?
               </h2>
             </div>
 
@@ -210,7 +210,7 @@ export async function EdgeDiagnosticsPage() {
 
               <article className="rounded-2xl border border-neutral-950 bg-neutral-950 p-7 text-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                 <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">
-                  EDGE
+                  Byound
                 </p>
                 <ul className="mt-6 space-y-3">
                   {EDGE_PLATFORM.map((item) => (
@@ -274,7 +274,7 @@ export async function EdgeDiagnosticsPage() {
               </p>
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <EdgePremiumButton href={routes.business} showArrow shape="revolut">
-                  Découvrir EDGE
+                  Découvrir Byound
                 </EdgePremiumButton>
                 <EdgePremiumButton href={routes.businessDemo} variant="secondary-light" shape="revolut">
                   Demander une démonstration

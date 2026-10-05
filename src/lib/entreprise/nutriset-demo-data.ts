@@ -187,7 +187,7 @@ export function buildSalarieDemoSnapshot(email: string) {
       { skill: "Organisation", score: isEdgebsSalarie ? 71 : isPsgApprenant ? 79 : isJerome ? 77 : 68 },
     ],
     aiAnalysis: isEdgebsSalarie
-      ? "Profil commercial EDGE : influence et communication élevées, logique solide. Priorité : structurer le pipeline et accélérer Modern Prospecting + IA métier."
+      ? "Profil commercial Byound : influence et communication élevées, logique solide. Priorité : structurer le pipeline et accélérer Modern Prospecting + IA métier."
       : isPsgApprenant
         ? "Profil performance sport : conformité et logique élevées, forte organisation et collaboration. Priorité : communication media et leadership transverse staff Academy."
         : isJerome
@@ -208,7 +208,7 @@ export function buildSalarieDemoMissions(email: string) {
     {
       id: `demo-mission-${owner}-1`,
       title: "Compléter le diagnostic Soft Skills",
-      description: "Finaliser le 3ᵉ test pour débloquer le badge Profil comportemental EDGE.",
+      description: "Finaliser le 3ᵉ test pour débloquer le badge Profil comportemental Byound.",
       due_date: new Date(base + 3 * 86400000).toISOString().slice(0, 10),
       status: "in_progress",
       created_at: new Date(base - 5 * 86400000).toISOString(),
@@ -250,7 +250,7 @@ export function buildSalarieDemoBadges() {
     earnedOpenBadges: [
       {
         id: "a1000001-0000-4000-8000-000000000001",
-        name: "Profil comportemental EDGE",
+        name: "Profil comportemental Byound",
         imageUrl: null,
         level: 1,
         awardedAt: new Date().toISOString(),

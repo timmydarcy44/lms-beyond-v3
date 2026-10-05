@@ -46,7 +46,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
       id: "former",
       label: "Former",
       title: "FORMER",
-      subtitle: "Faire intervenir l'expertise EDGE.",
+      subtitle: "Faire intervenir l'expertise Byound.",
       primaryLinks: [
         {
           label: "Formations avec nos experts",
@@ -70,7 +70,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
         title: "Une formation, bien plus qu'une journée.",
         description:
           "Diagnostic des besoins, formation et pilotage des compétences dans un même environnement.",
-        ctaLabel: "Découvrir l'approche EDGE",
+        ctaLabel: "Découvrir l'approche Byound",
         ctaHref: R.businessFormerEquipes,
       },
     },
@@ -81,7 +81,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
       subtitle: "Faire progresser les compétences dans la durée.",
       primaryLinks: [
         {
-          label: "EDGE Online",
+          label: "Byound Online",
           href: EDGE_ONLINE_EXTERNAL_URL,
           description: "Micro-formations pour développer les compétences en continu.",
           icon: "book-open",
@@ -96,7 +96,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
         {
           label: "Parcours",
           href: R.businessSuiviParcours,
-          description: "Combinez contenus EDGE et formations internes en parcours personnalisés.",
+          description: "Combinez contenus Byound et formations internes en parcours personnalisés.",
           icon: "route",
         },
         {
@@ -111,7 +111,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
         label: "BEYOND",
         title: "Tout votre learning, au même endroit.",
         description:
-          "EDGE Online, formations internes et parcours réunis dans un seul environnement.",
+          "Byound Online, formations internes et parcours réunis dans un seul environnement.",
         ctaLabel: "Découvrir Beyond",
         ctaHref: R.business,
       },
@@ -149,10 +149,10 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
       ],
       secondaryLinks: [],
       editorial: {
-        label: "EDGE RECRUIT",
+        label: "Byound RECRUIT",
         title: "Recruter à partir des compétences.",
         description: "Passez du besoin identifié au profil recherché sans repartir de zéro.",
-        ctaLabel: "Découvrir EDGE Recruit",
+        ctaLabel: "Découvrir Byound Recruit",
         ctaHref: R.businessRecrutement,
       },
     },
@@ -198,7 +198,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
         title: "Transformez vos données RH en décisions.",
         description:
           "Identifiez les besoins, développez les compétences et choisissez les actions adaptées.",
-        ctaLabel: "Découvrir le pilotage EDGE",
+        ctaLabel: "Découvrir le pilotage Byound",
         ctaHref: R.businessTableauxDeBord,
       },
     },

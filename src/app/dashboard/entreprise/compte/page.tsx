@@ -123,7 +123,7 @@ export default function EntrepriseComptePage() {
 
   const requestErasure = async () => {
     const ok = window.confirm(
-      "Confirmer la demande d’effacement de vos données personnelles ? EDGE traitera la demande sous 30 jours.",
+      "Confirmer la demande d’effacement de vos données personnelles ? Byound traitera la demande sous 30 jours.",
     );
     if (!ok) return;
     setErasing(true);

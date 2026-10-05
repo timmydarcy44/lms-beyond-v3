@@ -35,7 +35,7 @@ export type EdgeAppDefinition = {
   id: EdgeAppId;
   /** Label court du switcher (Profil, Skills, …). */
   label: string;
-  /** Nom affiché pendant la transition de marque (EDGE Skills). */
+  /** Nom affiché pendant la transition de marque (Byound Skills). */
   transitionName: string;
   subtitle: string;
   icon: LucideIcon;

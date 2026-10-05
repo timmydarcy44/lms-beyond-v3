@@ -1,5 +1,5 @@
 /**
- * Générateur de Mission EDGE — brief scénarisé personnalisé par utilisateur.
+ * Générateur de Mission Byound — brief scénarisé personnalisé par utilisateur.
  * Chaque mission possède contexte, histoire, personnages et objectif pédagogique.
  */
 
@@ -124,7 +124,7 @@ export async function generateMissionBrief(input: MissionGenerateInput): Promise
 
   const behaviorGrid = behaviorGridBlockForPrompt(getBehaviorGrid(input.skillName));
 
-  const prompt = `Génère une Mission EDGE personnalisée pour développer la compétence « ${input.skillName} ».
+  const prompt = `Génère une Mission Byound personnalisée pour développer la compétence « ${input.skillName} ».
 
 Objectif professionnel de l'apprenant : ${input.objective || "non précisé"}
 Niveau actuel : ${level} — niveau visé : ${input.levelExpected || "supérieur"}
@@ -148,7 +148,7 @@ Le coach jouera un personnage (pas un examinateur). L'apprenant doit avoir l'imp
   const raw = await generateJSON(
     prompt,
     BRIEF_SCHEMA,
-    "Tu es un concepteur pédagogique EDGE. Tu renvoies UNIQUEMENT un JSON valide.",
+    "Tu es un concepteur pédagogique Byound. Tu renvoies UNIQUEMENT un JSON valide.",
   );
 
   if (!raw || typeof raw !== "object") {

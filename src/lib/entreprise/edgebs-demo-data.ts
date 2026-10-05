@@ -54,7 +54,7 @@ export const EDGEBS_DEMO_METIERS = [
   {
     id: "edgebs-metier-marketing",
     title: "Marketing & marque employeur",
-    description: "Renforcer la marque EDGE et les campagnes acquisition talents.",
+    description: "Renforcer la marque Byound et les campagnes acquisition talents.",
     hard_skills: ["Content", "Analytics", "SEO", "Automation"],
     soft_skills: ["Storytelling::13", "Créativité::13", "Curiosité::12", "Collaboration::12", "Communication::12"],
   },
@@ -64,9 +64,9 @@ export const EDGEBS_DEMO_METIERS = [
 export const EDGEBS_DEMO_JOB_OFFERS = [
   {
     id: "a1b2c3d4-e5f6-4789-a012-3456789abc01",
-    title: "Account Manager B2B — EDGE Business",
+    title: "Account Manager B2B — Byound Business",
     description:
-      "Développez un portefeuille PME/ETI sur l’offre Learning EDGE. Prospection, closing et suivi client.",
+      "Développez un portefeuille PME/ETI sur l’offre Learning Byound. Prospection, closing et suivi client.",
     city: "Le Havre / Remote",
     salary_range: "38-45k",
     contract_type: "CDI",
@@ -78,7 +78,7 @@ export const EDGEBS_DEMO_JOB_OFFERS = [
     id: "a1b2c3d4-e5f6-4789-a012-3456789abc02",
     title: "Talent Partner RH",
     description:
-      "Pilotez diagnostics, entretiens et parcours collaborateurs au sein d’EDGE Business Demo.",
+      "Pilotez diagnostics, entretiens et parcours collaborateurs au sein d’Byound Business Demo.",
     city: "Paris",
     salary_range: "42-50k",
     contract_type: "CDI",
@@ -202,7 +202,7 @@ export const EDGEBS_DEMO_FORMATIONS = {
   presentiel: [
     {
       id: "edgebs-sess-1",
-      title: "Leadership inter-équipes EDGE",
+      title: "Leadership inter-équipes Byound",
       formateur: "Claire Dupont",
       date: new Date().toISOString().slice(0, 10),
       time: "09:30",

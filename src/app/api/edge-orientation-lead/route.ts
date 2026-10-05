@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const resendKey = process.env.RESEND_API_KEY;
     const notifyTo = process.env.CONTACT_EMAIL?.trim() || "contact@edgebs.fr";
     if (resendKey && notifyTo) {
-      const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "EDGE <noreply@edgebs.fr>";
+      const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>";
       await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
           from: fromAddress,
           to: notifyTo,
           reply_to: contact.email,
-          subject: `[EDGE] Nouveau lead orientation — ${contact.firstName} ${contact.lastName}`,
+          subject: `[Byound] Nouveau lead orientation — ${contact.firstName} ${contact.lastName}`,
           html: `<p><strong>${contact.firstName} ${contact.lastName}</strong></p>
 <p>Email : ${contact.email}<br/>Tél. : ${contact.phone}<br/>Situation : ${statusLabel}</p>
 <p>Objectifs : ${objectifs.join(", ") || "—"}<br/>Profil : ${profil ?? "—"}<br/>Format : ${format ?? "—"}</p>`,

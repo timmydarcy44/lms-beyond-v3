@@ -1,4 +1,4 @@
-/** Accompagnement EDGE — contenus et tarifs (particulier). */
+/** Accompagnement Byound — contenus et tarifs (particulier). */
 
 import {
   getProgrammeRequestHref,
@@ -6,7 +6,7 @@ import {
   type EdgeAccompagnementOfferSlug,
 } from "@/lib/particulier/accompagnement-booking";
 
-/** CTA unique particulier — réservation avec un expert EDGE. */
+/** CTA unique particulier — réservation avec un expert Byound. */
 export const EDGE_EXPERT_PARCOURS_CTA = "Construire mon parcours avec un expert";
 
 export type EdgeAccompagnementOfferId = "membership" | "progression" | "simulation" | "programme";

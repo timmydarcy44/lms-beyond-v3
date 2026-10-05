@@ -100,7 +100,7 @@ export function EdgeSkillsGapTable({
     return (
       <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
         <p className="text-sm text-white/50">
-          Ajoutez des compétences à votre profil EDGE pour visualiser les écarts avec votre objectif.
+          Ajoutez des compétences à votre profil Byound pour visualiser les écarts avec votre objectif.
         </p>
         <Link
           href="/dashboard/apprenant/profil-comportemental/hard-skills"
@@ -169,7 +169,7 @@ export function EdgeSkillsGapTable({
           <span>Compétence</span>
           <span>Niveau estimé</span>
           <span>Écart</span>
-          <span>Statut EDGE</span>
+          <span>Statut Byound</span>
           <span className="text-right">Action</span>
         </div>
 
@@ -238,7 +238,7 @@ export function EdgeSkillsGapTable({
           <LegendDot className="bg-sky-500/80" label="Écart faible" />
           <LegendDot className="bg-amber-500/80" label="Écart moyen" />
           <LegendDot className="bg-rose-500/80" label="Écart fort" />
-          <LegendDot className="bg-[#3D7BFF]/80" label="Priorité EDGE" />
+          <LegendDot className="bg-[#3D7BFF]/80" label="Priorité Byound" />
           <LegendDot className="bg-white/30" label="À explorer" />
         </div>
       </section>

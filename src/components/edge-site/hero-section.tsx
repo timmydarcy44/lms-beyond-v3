@@ -8,7 +8,7 @@ export function HeroSection() {
     <section className="relative flex min-h-[min(100svh,920px)] flex-col overflow-hidden">
       <ImagePlaceholder
         src={EDGE_HERO_IMAGE_URL}
-        alt="Apprenante EDGE en formation, concentrée sur son ordinateur dans un espace de coworking"
+        alt="Apprenante Byound en formation, concentrée sur son ordinateur dans un espace de coworking"
         className="absolute inset-0 h-full w-full"
         fallbackClassName="bg-edge-photo"
         priority

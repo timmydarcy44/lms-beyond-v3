@@ -136,7 +136,7 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
                 Prêt à déployer ce diagnostic ?
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-500">
-                Intégrez-le dans votre écosystème EDGE : Open Badges, Skills Wallet, parcours IA et
+                Intégrez-le dans votre écosystème Byound : Open Badges, Skills Wallet, parcours IA et
                 suivi de progression.
               </p>
             </div>

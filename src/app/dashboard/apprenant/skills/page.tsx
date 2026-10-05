@@ -34,7 +34,7 @@ export default function ApprenantSkillsHomePage() {
       <div className={`${APPRENANT_PAGE_SHELL} max-w-4xl pb-24`}>
         {/* Hero — intégré au background, pas de card */}
         <header className="space-y-6 pt-2 md:pt-6">
-          <SkillsSectionKicker>EDGE Skills</SkillsSectionKicker>
+          <SkillsSectionKicker>Byound Skills</SkillsSectionKicker>
           <div className="space-y-3">
             <h1 className="max-w-xl text-[34px] font-bold leading-[1.08] tracking-[-0.04em] text-white sm:text-[44px]">
               Entraînez vos compétences.

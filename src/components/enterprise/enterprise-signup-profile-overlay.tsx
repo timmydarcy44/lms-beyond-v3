@@ -145,7 +145,7 @@ export function EnterpriseSignupProfileOverlay({
             <Building2 className="h-5 w-5" aria-hidden />
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">EDGE Entreprise</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">Byound Entreprise</p>
             <h2 className="mt-1 text-xl font-bold tracking-tight text-black">Complétez votre espace RH</h2>
             <p className="mt-1 text-sm text-black/55">
               Diagnostic offert et utilisation pendant 30 jours. Ces informations personnalisent votre dashboard.

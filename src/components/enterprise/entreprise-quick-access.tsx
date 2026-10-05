@@ -30,7 +30,7 @@ const CARDS = [
   {
     href: "/dashboard/entreprise/formations/demander",
     title: "Demander une formation",
-    description: "Catalogue EDGE",
+    description: "Catalogue Byound",
     image: "/edge-lab/programme-ia.png",
     imagePosition: "center",
   },

@@ -119,7 +119,7 @@ export function PipelineCatalogueEmailOverlay({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Mail className="h-5 w-5 text-indigo-300" />
-            Envoyer le catalogue EDGE
+            Envoyer le catalogue Byound
           </DialogTitle>
         </DialogHeader>
 

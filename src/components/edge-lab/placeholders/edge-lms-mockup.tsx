@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 type Props = { className?: string; label?: string };
 
 /** Mockup LMS stylisé (CSS uniquement). */
-export function EdgeLmsMockup({ className, label = "EDGE · Espace apprenant" }: Props) {
+export function EdgeLmsMockup({ className, label = "Byound · Espace apprenant" }: Props) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 24, scale: 0.98 }}

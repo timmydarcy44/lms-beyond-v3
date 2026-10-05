@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     companyName = String(org?.name ?? "").trim();
   }
   if (!companyName) {
-    companyName = "Entreprise EDGE";
+    companyName = "Entreprise Byound";
   }
 
   const viewerLabel = [access.viewer.prenom, access.viewer.nom].filter(Boolean).join(" ").trim();
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     preheader: `${companyName} — ${training.title}`,
     bodyHtml: `
       <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4A4A4A;">
-        Une entreprise a demandé une session via le dashboard EDGE.
+        Une entreprise a demandé une session via le dashboard Byound.
       </p>
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="text-align:left;">
         ${row("Formation", training.title)}
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     skipBcc: true,
     replyTo: contactEmail,
     from: EDGE_COCKPIT_FROM,
-    subject: `[EDGE Formations] ${companyName} — ${training.title}`,
+    subject: `[Byound Formations] ${companyName} — ${training.title}`,
     html,
     tags: {
       type: "entreprise-formation-request",

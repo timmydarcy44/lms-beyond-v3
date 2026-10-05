@@ -9,9 +9,9 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = getParcours(slug);
-  if (!p) return { title: "Postulation reçue — EDGE" };
+  if (!p) return { title: "Postulation reçue — Byound" };
   return {
-    title: `Postulation reçue — ${p.titre} | EDGE`,
+    title: `Postulation reçue — ${p.titre} | Byound`,
     robots: { index: false, follow: false },
   };
 }

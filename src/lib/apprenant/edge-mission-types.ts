@@ -1,5 +1,5 @@
 /**
- * Types Mission EDGE — unité centrale du coach IA.
+ * Types Mission Byound — unité centrale du coach IA.
  * (Les types Challenge* restent en alias pour compatibilité technique.)
  */
 
@@ -63,7 +63,7 @@ export type MissionOutcome = {
 export type MissionChatMessage = {
   role: "user" | "assistant";
   content: string;
-  /** coach = voix du Coach EDGE (hors scène) ; scene = personnage incarné */
+  /** coach = voix du Coach Byound (hors scène) ; scene = personnage incarné */
   kind?: "coach" | "scene";
   coachInsight?: CoachInsight;
   /** intro | hint = discret ; analysis = analyse détaillée repliée */

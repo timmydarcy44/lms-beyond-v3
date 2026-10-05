@@ -43,7 +43,7 @@ export function EdgeWhatNowModal({ open, onClose, gps, onViewSkills }: Props) {
         </p>
         <p className="mt-3 text-sm leading-relaxed text-white/65">
           Votre profil est analysé. La prochaine étape consiste à construire un plan d&apos;action avec un
-          expert EDGE.
+          expert Byound.
         </p>
 
         <div className="mt-5 space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">

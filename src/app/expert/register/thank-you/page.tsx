@@ -18,7 +18,7 @@ export default function ExpertRegisterThankYouPage() {
 
       <header className="relative mx-auto flex max-w-5xl items-center justify-between px-6 py-8">
         <Link href="/" className="text-sm font-black uppercase tracking-[0.22em] text-white/80 hover:text-white">
-          EDGE
+          Byound
         </Link>
         <div className="text-xs font-semibold text-white/60">Réseau formateurs</div>
       </header>

@@ -2,7 +2,7 @@ import { isEdgeLabOrganizationSlug } from "@/lib/galaxy-branding";
 import { normalizeThematicKey } from "@/lib/galaxy-thematic-helpers";
 
 /**
- * Thématiques canoniques (EDGE Lab) : libellés affichés et enregistrés tels quels
+ * Thématiques canoniques (Byound Lab) : libellés affichés et enregistrés tels quels
  * (pas de normalisation de casse côté builder — la valeur en base = le texte choisi).
  */
 export const EDGE_LAB_COURSE_CATEGORY_LABELS: readonly string[] = [

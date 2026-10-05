@@ -74,7 +74,7 @@ export function normalizeCareerProfileContent(
       : [],
     recommended_badges: Array.isArray(result.recommended_badges)
       ? result.recommended_badges.map(String).filter(Boolean)
-      : ["Profil comportemental EDGE"],
+      : ["Profil comportemental Byound"],
     recommended_formations: [],
   };
 }
@@ -93,15 +93,15 @@ export async function generateCareerProfileWithAi(params: {
   if (!title && !prompt) return null;
 
   const systemPrompt =
-    "Tu es expert RH et orientation professionnelle pour EDGE (France). Tu rédiges des fiches métiers pédagogiques en français. Réponds UNIQUEMENT en JSON valide. " +
+    "Tu es expert RH et orientation professionnelle pour Byound (France). Tu rédiges des fiches métiers pédagogiques en français. Réponds UNIQUEMENT en JSON valide. " +
     "key_skills = hard skills / compétences techniques et métier (6 à 10, courtes, en minuscules sauf noms propres). " +
-    "soft_skills = compétences comportementales (5 à 8) : privilégie des libellés proches du référentiel EDGE listé ci-dessous, ou des synonymes courts comparables. " +
+    "soft_skills = compétences comportementales (5 à 8) : privilégie des libellés proches du référentiel Byound listé ci-dessous, ou des synonymes courts comparables. " +
     "Pas de contenu médical ni psychologique clinique. Ton concret, professionnel, accessible.";
 
   const edgeSoftList = EDGE_SOFT_SKILL_LABELS.join(", ");
 
   const userPrompt = prompt
-    ? `Génère une fiche métier EDGE complète.
+    ? `Génère une fiche métier Byound complète.
 
 Brief :
 ${prompt}
@@ -109,26 +109,26 @@ ${prompt}
 ${title ? `Titre indicatif : ${title}` : ""}
 ${sector ? `Secteur indicatif : ${sector}` : ""}
 
-Référentiel soft skills EDGE (à rapprocher pour soft_skills) :
+Référentiel soft skills Byound (à rapprocher pour soft_skills) :
 ${edgeSoftList}
 
-Retourne le JSON avec : title, slug (kebab-case sans accents), sector, description (2-3 phrases), key_skills, soft_skills, behavioral_expectations (4-6), typical_challenges (4-6), success_factors (3-5), main_missions (4-6), useful_qualities (4-6), recommended_badges (1-3 badges EDGE génériques).`
-    : `Génère une fiche métier EDGE complète pour : ${title}
+Retourne le JSON avec : title, slug (kebab-case sans accents), sector, description (2-3 phrases), key_skills, soft_skills, behavioral_expectations (4-6), typical_challenges (4-6), success_factors (3-5), main_missions (4-6), useful_qualities (4-6), recommended_badges (1-3 badges Byound génériques).`
+    : `Génère une fiche métier Byound complète pour : ${title}
 Secteur : ${sector || "à préciser selon le métier"}
 
-Référentiel soft skills EDGE (à rapprocher pour soft_skills) :
+Référentiel soft skills Byound (à rapprocher pour soft_skills) :
 ${edgeSoftList}
 
 Retourne le JSON avec : title, slug (kebab-case sans accents), sector, description (2-3 phrases), key_skills, soft_skills, behavioral_expectations (4-6), typical_challenges (4-6), success_factors (3-5), main_missions (4-6), useful_qualities (4-6), recommended_badges (1-3).`;
 
   const improvePrompt =
     params.mode === "improve" && params.existing
-      ? `Améliore et enrichis cette fiche métier EDGE (hard skills + soft skills surtout).
+      ? `Améliore et enrichis cette fiche métier Byound (hard skills + soft skills surtout).
 
 Contenu actuel :
 ${JSON.stringify(params.existing, null, 2)}
 
-Référentiel soft skills EDGE :
+Référentiel soft skills Byound :
 ${edgeSoftList}
 
 Retourne le JSON complet mis à jour.`

@@ -49,7 +49,7 @@ export function EdgeValidatorsSection() {
           <p className="mt-4 text-base leading-relaxed text-white/55 sm:text-lg">
             Entrepreneurs, commerciaux, spécialistes…{" "}
             <span className="block text-white/45">
-              Des profils qui ont validé leurs compétences sur EDGE.
+              Des profils qui ont validé leurs compétences sur Byound.
             </span>
           </p>
         </motion.div>

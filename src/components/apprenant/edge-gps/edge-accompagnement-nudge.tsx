@@ -26,7 +26,7 @@ export function EdgeAccompagnementNudge({ highlighted }: Props) {
           <div>
             <p className="text-sm font-medium text-white">Besoin d&apos;être accompagné ?</p>
             <p className="mt-1 max-w-lg text-sm leading-relaxed text-white/50">
-              Un expert EDGE peut vous aider à valider votre objectif, comprendre vos écarts et construire un
+              Un expert Byound peut vous aider à valider votre objectif, comprendre vos écarts et construire un
               plan d&apos;action personnalisé.
             </p>
           </div>

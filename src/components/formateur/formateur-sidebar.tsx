@@ -86,7 +86,7 @@ export function FormateurSidebar({
       <div className={`flex shrink-0 items-center gap-2 px-2.5 h-[52px] ${theme.sidebarHeaderBorder}`}>
         {!collapsed ? (
           <div className="min-w-0 flex-1 leading-tight">
-            <div className="text-[11px] font-semibold tracking-[0.18em] text-white">EDGE</div>
+            <div className="text-[11px] font-semibold tracking-[0.18em] text-white">Byound</div>
             <p className="text-[9px] tracking-[0.1em] text-white/20">Espace Expert</p>
           </div>
         ) : (
@@ -114,7 +114,7 @@ export function FormateurSidebar({
             </div>
             <div className="min-w-0">
               <div className={theme.profileNameClass}>{displayName}</div>
-              <div className={theme.profileRoleClass}>Expert EDGE</div>
+              <div className={theme.profileRoleClass}>Expert Byound</div>
             </div>
           </div>
           <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/[0.04] bg-white/[0.03] px-3 py-2 text-sm text-white/50">

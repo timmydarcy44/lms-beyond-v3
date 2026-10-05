@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   { label: "Mes tests", icon: PenTool, href: "/admin/tests" },
   { label: "Mes ressources", icon: Library, href: "/admin/ressources" },
   { label: "Mes apprenants", icon: Users, href: "/admin/apprenants" },
-  { label: "Experts EDGE", icon: UserCog, href: "/admin/experts" },
+  { label: "Experts Byound", icon: UserCog, href: "/admin/experts" },
   { label: "Mes groupes", icon: Layers, href: "/admin/groupes" },
   { label: "To-Do List", icon: CheckSquare, href: "/admin/todo" },
   { label: "No School", icon: Store, href: "/admin/catalogue" },

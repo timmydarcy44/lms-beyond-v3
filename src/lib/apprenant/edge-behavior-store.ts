@@ -1,5 +1,5 @@
 /**
- * Persistance du dossier de preuves comportementales EDGE.
+ * Persistance du dossier de preuves comportementales Byound.
  */
 
 import type { PostgrestError } from "@supabase/supabase-js";

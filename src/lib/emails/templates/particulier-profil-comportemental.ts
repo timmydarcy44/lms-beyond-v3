@@ -16,20 +16,20 @@ export function getParticulierProfilComportementalEmail(params: {
   const greeting = firstName ? `Bonjour ${firstName}` : "Bonjour";
 
   const html = buildEdgeEmailShell({
-    title: "Votre Profil comportemental EDGE est disponible",
+    title: "Votre Profil comportemental Byound est disponible",
     preheader: "Consultez vos résultats et vos priorités de progression",
     bodyHtml: [
       edgeEmailParagraph(greeting + ","),
-      edgeEmailParagraph("Votre Profil comportemental EDGE est maintenant disponible."),
+      edgeEmailParagraph("Votre Profil comportemental Byound est maintenant disponible."),
       edgeEmailParagraph(
         "Consultez vos résultats, découvrez vos priorités de progression et accédez à vos recommandations personnalisées.",
       ),
     ].join(""),
-    cta: { label: "Voir mon Profil EDGE", href: params.profilHref },
+    cta: { label: "Voir mon Profil Byound", href: params.profilHref },
   });
 
   return {
-    subject: "Votre Profil comportemental EDGE est disponible",
+    subject: "Votre Profil comportemental Byound est disponible",
     html,
   };
 }

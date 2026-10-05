@@ -66,7 +66,7 @@ export function EdgeDailyMissionCard({ matching, objective }: Props) {
             <div className="h-5 w-48 animate-pulse rounded bg-white/10" />
           </div>
         </div>
-        <p className="text-sm text-white/40">Le Coach EDGE prépare votre mission du jour…</p>
+        <p className="text-sm text-white/40">Le Coach Byound prépare votre mission du jour…</p>
       </ProfilEdgeHubCard>
     );
   }
@@ -84,7 +84,7 @@ export function EdgeDailyMissionCard({ matching, objective }: Props) {
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#8BB4FF]">Coach EDGE</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#8BB4FF]">Coach Byound</p>
               <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-white/80">{preview.greeting}</p>
             </div>
           </div>

@@ -240,7 +240,7 @@ export const EDGE_TRAINING_MODULES: TrainingModule[] = [
   m("FORM-03", "formation-formateurs", "Animer avec impact", 2, ["Engager les apprenants", "Gérer la dynamique de groupe"], ["Scénario de session"], "trainer-expert"),
   m("FORM-04", "formation-formateurs", "Évaluer les acquis et certifier", 3, ["Concevoir des évaluations", "Délivrer des badges"], ["Grille d'évaluation"], "trainer-expert"),
   m("FORM-05", "formation-formateurs", "Produire des supports digitaux", 3, ["Créer des contenus clairs", "Utiliser le digital avec méthode"], ["Module e-learning"], "trainer-expert"),
-  m("FORM-06", "formation-formateurs", "Devenir formateur certifié EDGE", 4, ["Répondre aux standards EDGE", "Préparer sa certification"], ["Portfolio formateur"], "trainer-expert", ["blended", "presentiel"]),
+  m("FORM-06", "formation-formateurs", "Devenir formateur certifié Byound", 4, ["Répondre aux standards Byound", "Préparer sa certification"], ["Portfolio formateur"], "trainer-expert", ["blended", "presentiel"]),
 
   // Gestion de projet (6)
   m("PROJ-01", "gestion-projet", "Initier et cadrer un projet", 1, ["Définir le périmètre", "Identifier les parties prenantes"], ["Note de cadrage"], "project-expert"),

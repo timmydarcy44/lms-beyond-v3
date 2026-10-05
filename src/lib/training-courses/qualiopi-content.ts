@@ -1,5 +1,5 @@
 /**
- * Contenu Qualiopi & diagnostic EDGE pour la page formation B2B.
+ * Contenu Qualiopi & diagnostic Byound pour la page formation B2B.
  * Dérive un contenu premium à partir des données existantes, avec des
  * fallbacks conformes Qualiopi lorsque la donnée n'est pas encore saisie.
  */
@@ -32,7 +32,7 @@ export const DIAGNOSTIC_STEPS: DiagnosticStep[] = [
   },
   {
     title: "Recommandation automatique des formations",
-    description: "EDGE propose uniquement les formations réellement utiles.",
+    description: "Byound propose uniquement les formations réellement utiles.",
   },
   {
     title: "Parcours personnalisé",
@@ -44,7 +44,7 @@ export const DIAGNOSTIC_STEPS: DiagnosticStep[] = [
 export const AFTER_TRAINING_STEPS: DiagnosticStep[] = [
   { title: "Formation terminée", description: "Les acquis sont consolidés." },
   { title: "Open Badge", description: "Une preuve vérifiable des compétences." },
-  { title: "Suivi des compétences", description: "EDGE mesure la progression dans le temps." },
+  { title: "Suivi des compétences", description: "Byound mesure la progression dans le temps." },
   { title: "Recommandations IA", description: "De nouvelles priorités sont identifiées." },
   { title: "Nouvelles formations suggérées", description: "Le parcours évolue avec le collaborateur." },
   { title: "Coaching si nécessaire", description: "Un accompagnement humain reste disponible." },
@@ -71,7 +71,7 @@ const DEFAULT_PEDAGOGICAL_METHODS = [
   "Classe virtuelle",
   "Travaux collaboratifs",
   "Supports numériques",
-  "IA EDGE",
+  "IA Byound",
   "NEVO",
 ];
 
@@ -87,14 +87,14 @@ export function buildPedagogicalMethods(detail: TrainingCourseDetail): string[] 
 /** Modalités d'évaluation (obligatoire Qualiopi). */
 export function buildEvaluationModalities(): string[] {
   return [
-    "Positionnement initial EDGE",
+    "Positionnement initial Byound",
     "Quiz intermédiaires",
     "Cas pratiques",
     "Exercices",
     "Mise en situation",
     "Évaluation finale",
     "Validation des compétences",
-    "Attribution d'un Open Badge EDGE",
+    "Attribution d'un Open Badge Byound",
   ];
 }
 
@@ -119,7 +119,7 @@ export function buildSkillLevelRows(detail: TrainingCourseDetail): SkillLevelRow
     skill,
     level: index === 0 ? 5 : 4,
     evaluation: EVALUATION_MODES[index % EVALUATION_MODES.length],
-    certification: "Badge EDGE",
+    certification: "Badge Byound",
   }));
 }
 
@@ -168,7 +168,7 @@ export function buildQualiopiInfo(
       wide: true,
     },
     { label: "Délais d'accès", value: "Accès sous 2 à 4 semaines après validation du diagnostic." },
-    { label: "Contact référent", value: "Votre conseiller pédagogique EDGE." },
+    { label: "Contact référent", value: "Votre conseiller pédagogique Byound." },
     {
       label: "Référent handicap",
       value: "referent-handicap@edgebs.fr — étude personnalisée de chaque situation.",
@@ -235,11 +235,11 @@ export function enrichInstructors(
       name: trainer.name,
       role: trainer.role,
       photoUrl: trainer.photoUrl,
-      fonction: trainer.specialty || "Formateur expert EDGE",
+      fonction: trainer.specialty || "Formateur expert Byound",
       expertises: expertises.length ? expertises : ["Pédagogie", "Accompagnement professionnel"],
       years: "10+ ans d'expérience",
-      certifications: ["Formateur certifié EDGE"],
-      openBadges: ["Open Badge EDGE"],
+      certifications: ["Formateur certifié Byound"],
+      openBadges: ["Open Badge Byound"],
       domaines: domain ? [domain] : ["Développement des compétences"],
     };
   });

@@ -55,12 +55,12 @@ const NAV_ITEMS: NavItem[] = [
       {
         label: "Demander une formation",
         href: "/dashboard/entreprise/formations/demander",
-        section: "EDGE",
+        section: "Byound",
       },
       {
-        label: "EDGE Online",
+        label: "Byound Online",
         href: "/dashboard/entreprise/formations/catalogue",
-        section: "EDGE",
+        section: "Byound",
       },
       {
         label: "Créer une formation",
@@ -449,7 +449,7 @@ export function EnterpriseMobileNav() {
               <SheetTitle className="text-left text-white">{orgName}</SheetTitle>
             </SheetHeader>
             <div className="mt-2 text-[10px] font-medium tracking-[0.08em] text-white/40">
-              Powered by EDGE
+              Powered by Byound
             </div>
             <nav className="mt-6 flex flex-col gap-1" aria-label="Navigation entreprise mobile">
               <NavLinks
@@ -472,7 +472,7 @@ export function EnterpriseMobileNav() {
             <img src={orgLogo} alt="" className="h-8 w-8 rounded-lg object-contain" />
           ) : null}
           <div className="mt-1 truncate text-sm font-semibold text-white">{orgName}</div>
-          <div className="text-[9px] tracking-[0.08em] text-white/40">Powered by EDGE</div>
+          <div className="text-[9px] tracking-[0.08em] text-white/40">Powered by Byound</div>
         </div>
         <div className="w-10" />
       </div>

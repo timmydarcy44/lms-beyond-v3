@@ -90,7 +90,7 @@ const HARD_SKILL_LIBRARY = Array.from(
   ]),
 ).sort((a, b) => a.localeCompare(b, "fr"));
 
-/** Cible Soft Skill métier : échelle test EDGE /15. */
+/** Cible Soft Skill métier : échelle test Byound /15. */
 const DEFAULT_SOFT_TARGET_ON_15 = 11;
 
 const EMPTY_FORM: RoleFormState = {

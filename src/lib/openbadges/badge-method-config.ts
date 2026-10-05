@@ -28,7 +28,7 @@ export type BadgeMethodConfig = {
   methodId: BadgeEvaluationMethodId;
   /** Consigne d'évaluation IA / critères (hors QCM structuré). */
   evaluationPrompt: string;
-  /** Playground EDGE : consigne affichée + nombre d'essais. */
+  /** Playground Byound : consigne affichée + nombre d'essais. */
   playground?: {
     /** Consigne visible par l'apprenant en haut du chat. */
     learnerPrompt: string;

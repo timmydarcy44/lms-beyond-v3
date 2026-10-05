@@ -95,7 +95,7 @@ export function EdgeAccompagnementConfirmationClient({ sessionId }: Props) {
         </h1>
         <p className="text-sm text-white/50">{errorMsg ?? "Le paiement n'a pas été finalisé."}</p>
         <Link href="/dashboard/apprenant/coaching" className={BTN_PRIMARY}>
-          Retourner dans EDGE
+          Retourner dans Byound
         </Link>
       </div>
     );
@@ -116,7 +116,7 @@ export function EdgeAccompagnementConfirmationClient({ sessionId }: Props) {
           <DetailRow label="Date" value={reservation.dateLabel} />
           <DetailRow label="Heure" value={reservation.timeLabel} />
           <DetailRow label="Accompagnement" value={reservation.offer_name} />
-          <DetailRow label="Coach" value={reservation.coach_name || "Expert EDGE"} />
+          <DetailRow label="Coach" value={reservation.coach_name || "Expert Byound"} />
           <div className="flex gap-3 border-t border-white/[0.06] pt-5">
             <Video className="mt-0.5 h-4 w-4 shrink-0 text-white/35" />
             <div>
@@ -131,7 +131,7 @@ export function EdgeAccompagnementConfirmationClient({ sessionId }: Props) {
 
       <div className="text-center">
         <Link href="/dashboard/apprenant/coaching" className={BTN_PRIMARY}>
-          Retourner dans EDGE
+          Retourner dans Byound
         </Link>
         <p className="mt-4 text-xs text-white/30">Un email de confirmation et un fichier calendrier vous ont été envoyés.</p>
       </div>

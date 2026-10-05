@@ -10,7 +10,7 @@ type Props = {
   className?: string;
 };
 
-/** Validation animée type Apple Pay — cercle + check (palette EDGE). */
+/** Validation animée type Apple Pay — cercle + check (palette Byound). */
 export function AppleSuccessCheck({ size = 88, className }: Props) {
   return (
     <div className={className} style={{ width: size, height: size }} role="img" aria-label="Confirmation">

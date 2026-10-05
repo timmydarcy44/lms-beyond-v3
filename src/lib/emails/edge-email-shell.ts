@@ -1,4 +1,4 @@
-/** Design system email EDGE — Apple × Revolut × Notion */
+/** Design system email Byound — Apple × Revolut × Notion */
 
 export const EDGE_EMAIL_LOGO_URL =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/EDGE_noir_sans_fond.png";
@@ -56,7 +56,7 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
     <tr><td align="center" style="padding:64px 24px 80px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
         <tr><td align="center" style="padding:0 0 56px;">
-          <img src="${EDGE_EMAIL_LOGO_URL}" alt="EDGE" width="96" height="32" style="display:block;height:32px;width:auto;margin:0 auto;" />
+          <img src="${EDGE_EMAIL_LOGO_URL}" alt="Byound" width="96" height="32" style="display:block;height:32px;width:auto;margin:0 auto;" />
         </td></tr>
         <tr><td align="center" style="padding:0;">
           <h1 style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.12;letter-spacing:-0.04em;color:#050505;text-align:center;">
@@ -68,7 +68,7 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
           ${ctaBlock}
           ${footer}
           <p style="margin:64px 0 0;padding-top:40px;border-top:1px solid #EFEFEF;font-size:13px;line-height:1.65;color:#8A8A8A;text-align:center;">
-            L'équipe EDGE · <a href="https://edgebs.fr" style="color:#050505;text-decoration:none;font-weight:500;">edgebs.fr</a>
+            L'équipe Byound · <a href="https://edgebs.fr" style="color:#050505;text-decoration:none;font-weight:500;">edgebs.fr</a>
           </p>
         </td></tr>
       </table>
@@ -78,7 +78,7 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
 </html>`;
 }
 
-/** Paragraphe court centré pour les emails EDGE */
+/** Paragraphe court centré pour les emails Byound */
 export function edgeEmailParagraph(text: string): string {
   return `<p style="margin:0 0 20px;">${escapeEdgeEmailHtml(text)}</p>`;
 }

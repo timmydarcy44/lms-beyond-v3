@@ -3,14 +3,14 @@
 type OrgSidebarBrandProps = {
   logoUrl?: string | null;
   name?: string | null;
-  /** Sous-titre optionnel (ex. Enterprise · Admin) — remplacé par Powered by EDGE si non fourni */
+  /** Sous-titre optionnel (ex. Enterprise · Admin) — remplacé par Powered by Byound si non fourni */
   showPoweredBy?: boolean;
   /** Version réduite (sidebar repliée) : logo seul */
   compact?: boolean;
   className?: string;
 };
 
-/** Logo au-dessus du nom, puis « Powered by EDGE » en petit. */
+/** Logo au-dessus du nom, puis « Powered by Byound » en petit. */
 export function OrgSidebarBrand({
   logoUrl,
   name,
@@ -58,7 +58,7 @@ export function OrgSidebarBrand({
       </div>
       {showPoweredBy ? (
         <div className="mt-1 text-center text-[10px] font-medium tracking-[0.08em] text-white/40">
-          Powered by EDGE
+          Powered by Byound
         </div>
       ) : null}
     </div>

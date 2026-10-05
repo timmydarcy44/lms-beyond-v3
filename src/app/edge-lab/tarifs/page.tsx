@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Tarifs — EDGE",
+  title: "Tarifs — Byound",
   description:
-    "EDGE Skills, EDGE Learning et EDGE Learning+ : tarifs par collaborateur, facturation mensuelle ou annuelle.",
+    "Byound Skills, Byound Learning et Byound Learning+ : tarifs par collaborateur, facturation mensuelle ou annuelle.",
 };
 
 export default async function TarifsPage() {

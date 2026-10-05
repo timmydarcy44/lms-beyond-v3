@@ -139,7 +139,7 @@ export async function POST(req: Request) {
       firstName,
       lastName,
       expertise: parseStringList(body.expertise),
-      schoolName: String((org as { name?: string } | null)?.name ?? "EDGE"),
+      schoolName: String((org as { name?: string } | null)?.name ?? "Byound"),
     });
     expertInvite = result as unknown as Record<string, unknown>;
   }

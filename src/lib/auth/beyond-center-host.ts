@@ -1,4 +1,4 @@
-/** Hostname helpers for Beyond Center vs EDGE product surfaces. */
+/** Hostname helpers for Beyond Center vs Byound product surfaces. */
 
 export function normalizeRequestHost(host: string | null | undefined): string {
   return (host ?? "").split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
@@ -14,7 +14,7 @@ export function isLocalDevHostname(host: string | null | undefined): boolean {
   return h === "localhost" || h === "127.0.0.1";
 }
 
-/** EDGE product domains — club / partenaire dashboards must not be served here. */
+/** Byound product domains — club / partenaire dashboards must not be served here. */
 export function isEdgeProductHostname(host: string | null | undefined): boolean {
   const h = normalizeRequestHost(host);
   return h === "edgebs.fr" || h === "edgeonline.fr";

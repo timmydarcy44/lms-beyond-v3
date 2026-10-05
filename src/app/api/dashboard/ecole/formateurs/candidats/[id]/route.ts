@@ -123,7 +123,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         firstName: String(candidate.first_name ?? ""),
         lastName: String(candidate.last_name ?? ""),
         expertise: Array.isArray(candidate.expertise) ? candidate.expertise.map(String) : [],
-        schoolName: String((org as { name?: string } | null)?.name ?? "EDGE"),
+        schoolName: String((org as { name?: string } | null)?.name ?? "Byound"),
       });
     }
 

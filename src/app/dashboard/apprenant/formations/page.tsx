@@ -28,7 +28,7 @@ export default async function ApprenantMesFormationsPage() {
         <p className={APPRENANT_PAGE_KICKER}>Formations</p>
         <h1 className={APPRENANT_PAGE_TITLE}>Mes formations</h1>
         <p className={APPRENANT_PAGE_LEAD}>
-          Formations qui vous sont assignées par votre organisation, plus l’accès au catalogue EDGE
+          Formations qui vous sont assignées par votre organisation, plus l’accès au catalogue Byound
           Online.
         </p>
       </section>
@@ -44,7 +44,7 @@ export default async function ApprenantMesFormationsPage() {
             href={EDGE_ONLINE_APP_SURFACE_PATH}
             className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black"
           >
-            Catalogue EDGE Online
+            Catalogue Byound Online
             <ExternalLink className="h-4 w-4" />
           </Link>
         </div>

@@ -46,7 +46,7 @@ export default function NfcEmargerPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#05060a] px-4 text-white">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
         <p className="text-sm font-semibold text-white/45">
-          <span className="font-extrabold text-white">EDGE</span> NFC
+          <span className="font-extrabold text-white">Byound</span> NFC
         </p>
         <h1 className="mt-3 text-2xl font-bold">Émargement salle</h1>
         {info?.room ? (

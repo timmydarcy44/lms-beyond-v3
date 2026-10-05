@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Ancienne route Défi EDGE → Mission EDGE */
+/** Ancienne route Défi Byound → Mission Byound */
 export default async function DefiRedirectPage({
   searchParams,
 }: {

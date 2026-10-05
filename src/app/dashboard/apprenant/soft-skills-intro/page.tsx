@@ -112,7 +112,7 @@ export default function SoftSkillsIntroPage() {
         >
           <span>Certification Beyond</span>
           <span aria-hidden>·</span>
-          <span>Analyse EDGE</span>
+          <span>Analyse Byound</span>
           <span aria-hidden>·</span>
           <span>Top 5 compétences</span>
         </motion.div>

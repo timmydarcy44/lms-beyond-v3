@@ -106,7 +106,7 @@ export async function listSalarieAssignedFormations(
   return out.sort((a, b) => a.title.localeCompare(b.title, "fr"));
 }
 
-/** Fallback présentation démo EDGE Business si aucune inscription réelle. */
+/** Fallback présentation démo Byound Business si aucune inscription réelle. */
 export function edgebsDemoAssignedFormationsFallback(
   email: string | null | undefined,
 ): SalarieAssignedFormation[] {
@@ -118,7 +118,7 @@ export function edgebsDemoAssignedFormationsFallback(
       slug: "modern-prospecting",
       href: `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/modern-prospecting`,
       presentation: "Techniques de prospection B2B et pipeline commercial.",
-      meta: "Assignée par votre RH — compte démo EDGE Business",
+      meta: "Assignée par votre RH — compte démo Byound Business",
       progress: 32,
     },
     {
@@ -127,7 +127,7 @@ export function edgebsDemoAssignedFormationsFallback(
       slug: "communication-assertive",
       href: `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/communication-assertive`,
       presentation: "Renforcer impact relationnel et feedback en équipe.",
-      meta: "Assignée par votre RH — compte démo EDGE Business",
+      meta: "Assignée par votre RH — compte démo Byound Business",
       progress: 12,
     },
   ];

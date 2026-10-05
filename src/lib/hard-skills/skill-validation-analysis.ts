@@ -35,8 +35,8 @@ export const SKILL_ANALYSIS_JSON_SHAPE = `{
   "detailedAnalysis": "analyse détaillée complète expliquant la décision",
   "strengths": ["observation positive courte (ex: maîtrise du vocabulaire)", "force 2"],
   "improvementAreas": ["axe à renforcer court (ex: peu d'exemples terrain)", "axe 2"],
-  "evaluationMethods": ["Entretien expérientiel EDGE", "Analyse sémantique EDGE", "Cohérence avec le référentiel métier"],
-  "opinion": "avis EDGE",
+  "evaluationMethods": ["Entretien expérientiel Byound", "Analyse sémantique Byound", "Cohérence avec le référentiel métier"],
+  "opinion": "avis Byound",
   "badgeSuggested": true/false
 }`;
 
@@ -127,7 +127,7 @@ export function buildValidationSessionFromAnalysis(params: {
 
   const analysisEntry = buildHistoryEntry({
     type: "ia_validation",
-    title: "Analyse EDGE finalisée",
+    title: "Analyse Byound finalisée",
     confidenceScore: analysis.confidenceScore,
     statusLabel: verdictToHistoryStatusLabel(analysis.verdict),
     verdict: analysis.verdict,
@@ -192,7 +192,7 @@ export function publicStatusConfig(status: PublicSkillStatus): {
   switch (status) {
     case "expert_validated":
       return {
-        label: "EDGE Verified",
+        label: "Byound Verified",
         emoji: "🟣",
         className: "border-violet-200 bg-violet-50 text-violet-800",
       };
@@ -213,7 +213,7 @@ export function publicStatusConfig(status: PublicSkillStatus): {
 export function publicStatusCompactLabel(status: PublicSkillStatus): string {
   switch (status) {
     case "expert_validated":
-      return "EDGE Verified";
+      return "Byound Verified";
     case "validated":
       return "Compétence vérifiée";
     case "ia_analyzed":

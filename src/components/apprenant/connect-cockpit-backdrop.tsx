@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
 
-/** Fond global dashboard EDGE — halo bleu multi-couches (sous sidebar + contenu) */
+/** Fond global dashboard Byound — halo bleu multi-couches (sous sidebar + contenu) */
 export function ConnectCockpitBackdrop({ className }: { className?: string }) {
   return (
     <div

@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   const prompt = `Pour le metier "${title}", propose:
 - une description courte orientee RH / fiche metier
 - 6 a 10 hard skills concretes
-- 6 a 10 soft skills avec un score cible de 3 a 15 (meme echelle que le test Soft Skills EDGE : 3 questions × Likert 1-5)
+- 6 a 10 soft skills avec un score cible de 3 a 15 (meme echelle que le test Soft Skills Byound : 3 questions × Likert 1-5)
 
 Reponds en francais, concret, operationnel, sans jargon inutile.`;
 

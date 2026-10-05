@@ -40,7 +40,7 @@ function Sidebar() {
     <aside className="hidden w-[240px] shrink-0 flex-col border-r border-white/10 bg-[#0f1117] lg:flex">
       <div className="border-b border-white/10 px-5 py-6">
         <p className="text-xs font-bold tracking-[0.28em] text-violet-400">BEYOND</p>
-        <p className="mt-1 text-[10px] uppercase tracking-widest text-slate-500">EDGE · Praticien BCT</p>
+        <p className="mt-1 text-[10px] uppercase tracking-widest text-slate-500">Byound · Praticien BCT</p>
       </div>
       <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
         {praticien?.photo_url ? (

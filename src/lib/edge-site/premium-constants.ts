@@ -262,7 +262,7 @@ export function getEdgePremiumConfig(host?: string | null) {
           title: "Développer mes compétences",
           links: [
             { label: "Développer mes compétences", href: R.particulierDevelopper },
-            { label: "EDGE Online", href: EDGE_ONLINE_EXTERNAL_URL },
+            { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL },
             { label: "Micro-certifications", href: R.particulierMicroCertifications },
             { label: "Open Badges", href: R.particulierOpenBadges, featured: true },
           ],

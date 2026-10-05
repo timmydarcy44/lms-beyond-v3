@@ -8,7 +8,7 @@ import { EDGE_CTA_LABELS, EDGE_HREFS } from "@/lib/edge-site/constants";
 import { PARCOURS_BY_FAMILLE } from "@/lib/parcours";
 
 const NAV = [
-  { label: "EDGE Online", href: EDGE_HREFS.edgeOnline },
+  { label: "Byound Online", href: EDGE_HREFS.edgeOnline },
   { label: "Entreprises", href: EDGE_HREFS.entreprises },
   { label: "École", href: EDGE_HREFS.ecole },
   { label: "À propos", href: EDGE_HREFS.aPropos },
@@ -52,7 +52,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 h-12 border-b border-black/[0.08] bg-white">
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-6 px-5 sm:px-10">
         <Link href={EDGE_HREFS.home} className="shrink-0 text-sm font-medium tracking-[0.12em] text-edge-black">
-          EDGE
+          Byound
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Navigation principale">
@@ -145,7 +145,7 @@ export function Navbar() {
             variant="outline-red"
             href={EDGE_HREFS.edgeOnline}
             className="!px-5 !py-2"
-            ariaLabel="Essayer EDGE Online"
+            ariaLabel="Essayer Byound Online"
           >
             Essayer Online
           </EdgeButton>

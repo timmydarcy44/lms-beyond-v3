@@ -13,7 +13,7 @@ export function EdgeFirstStepsRelaunchCard() {
         <Sparkles className="h-5 w-5" />
       </span>
       <div>
-        <p className="text-sm font-semibold text-white">Premiers pas EDGE</p>
+        <p className="text-sm font-semibold text-white">Premiers pas Byound</p>
         <p className="mt-1 text-sm text-white/55">
           Relancez le parcours guidé pour confirmer votre objectif, comprendre vos écarts et construire
           votre plan avec un expert.

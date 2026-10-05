@@ -95,7 +95,7 @@ export default function FormateurInvitePage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#05060a] px-4 text-center text-white">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/40">EDGE</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/40">Byound</p>
           <h1 className="mt-3 text-3xl font-bold">Profil complété</h1>
           <p className="mt-3 text-white/50">Merci. L’école pourra désormais vous affecter aux cours.</p>
         </div>
@@ -107,7 +107,7 @@ export default function FormateurInvitePage() {
     <div className="min-h-screen bg-[#05060a] px-4 py-12 text-white">
       <div className="mx-auto max-w-xl">
         <p className="text-center text-sm font-semibold tracking-wide text-white/50">
-          <span className="font-extrabold text-white">EDGE</span> Formateurs
+          <span className="font-extrabold text-white">Byound</span> Formateurs
         </p>
         <h1 className="mt-3 text-center text-3xl font-bold">Compléter mon profil</h1>
         <p className="mt-2 text-center text-sm text-white/40">

@@ -76,7 +76,7 @@ export const EDGE_DIAGNOSTICS: EdgeDiagnostic[] = [
     shortDescription:
       "Évaluez les compétences comportementales qui font la différence au quotidien : coopération, communication, adaptabilité et leadership.",
     longDescription:
-      "Le diagnostic Soft Skills EDGE cartographie les compétences comportementales critiques pour la performance collective. Chaque résultat alimente un rapport détaillé, des Open Badges et des recommandations IA pour personnaliser les parcours de développement.",
+      "Le diagnostic Soft Skills Byound cartographie les compétences comportementales critiques pour la performance collective. Chaque résultat alimente un rapport détaillé, des Open Badges et des recommandations IA pour personnaliser les parcours de développement.",
     skills: ["Communication", "Collaboration", "Autonomie", "Créativité", "Résilience", "Leadership"],
   }),
   d({
@@ -102,7 +102,7 @@ export const EDGE_DIAGNOSTICS: EdgeDiagnostic[] = [
     shortDescription:
       "Identifiez le style comportemental dominant pour mieux communiquer, manager et collaborer.",
     longDescription:
-      "Le test comportemental EDGE révèle les préférences d'action, d'influence, de stabilité et de conformité. Il aide à comprendre les dynamiques d'équipe, à adapter le management et à fluidifier les interactions — avant d'engager un parcours de développement personnalisé.",
+      "Le test comportemental Byound révèle les préférences d'action, d'influence, de stabilité et de conformité. Il aide à comprendre les dynamiques d'équipe, à adapter le management et à fluidifier les interactions — avant d'engager un parcours de développement personnalisé.",
     skills: ["Action", "Influence", "Stabilité", "Rigueur", "Adaptation relationnelle"],
   }),
   d({

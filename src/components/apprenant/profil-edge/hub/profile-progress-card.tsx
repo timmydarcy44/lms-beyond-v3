@@ -24,7 +24,7 @@ function nextIncompleteHint(maturity: ProfilEdgeMaturity): { href: string; text:
   const hints: Record<string, string> = {
     identite: "Complétez votre identité pour personnaliser votre espace.",
     projet: "Précisez votre projet pour activer l’alignement métier.",
-    tests: "Terminez vos explorations EDGE pour débloquer le badge.",
+    tests: "Terminez vos explorations Byound pour débloquer le badge.",
     experiences: "Ajoutez vos expériences pour obtenir des recommandations plus précises.",
     diplomes: "Ajoutez vos diplômes pour renforcer votre profil.",
     hard_skills: "Déclarez vos hard skills pour affiner le matching.",

@@ -39,7 +39,7 @@ function avatarSrc(expert: ReturnType<typeof useExpertAccess>["expert"]): string
 
 function displayName(expert: ReturnType<typeof useExpertAccess>["expert"]): string {
   const joined = [expert.first_name, expert.last_name].filter(Boolean).join(" ").trim();
-  return joined || "Formateur EDGE";
+  return joined || "Expert Byound";
 }
 
 export function ExpertApprovedDashboard() {
@@ -135,11 +135,11 @@ export function ExpertApprovedDashboard() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#050505]/45">
-                    EDGE Certified
+                    Byound Certified
                   </p>
-                  <h3 className="mt-1 text-lg font-semibold">Devenir EDGE Certified</h3>
+                  <h3 className="mt-1 text-lg font-semibold">Devenir Byound Certified</h3>
                   <p className="mt-2 max-w-xl text-sm text-[#050505]/55">
-                    Un parcours qualité pour aligner vos interventions avec la méthode EDGE et accéder aux missions
+                    Un parcours qualité pour aligner vos interventions avec la méthode Byound et accéder aux missions
                     prioritaires.
                   </p>
                 </div>

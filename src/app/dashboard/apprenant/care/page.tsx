@@ -34,7 +34,7 @@ export default function ApprenantCarePage() {
       <div className={`${APPRENANT_PAGE_SHELL} max-w-3xl pb-24`}>
         <header className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-black/45">
-            EDGE Care
+            Byound Care
           </p>
           <h1 className="text-[1.85rem] font-bold tracking-[-0.03em] text-[#0a0a0a] sm:text-[2.1rem]">
             Vos experts Care

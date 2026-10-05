@@ -101,7 +101,7 @@ export const ECOLE_SIDEBAR_NAV: EcoleNavItem[] = [
   { type: "link", label: "Qualiopi", href: "/dashboard/ecole/qualiopi", icon: ShieldCheck },
   {
     type: "link",
-    label: "EDGE Online",
+    label: "Byound Online",
     href: EDGE_ONLINE_APP_SURFACE_PATH,
     icon: MonitorPlay,
     activePathPrefix: EDGE_ONLINE_APP_SURFACE_PATH,

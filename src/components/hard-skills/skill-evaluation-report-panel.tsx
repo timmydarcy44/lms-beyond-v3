@@ -55,11 +55,11 @@ export function SkillEvaluationReportPanel({
             <p className={metricValue}>{declaredLevel}</p>
           </div>
           <div className={metricCard}>
-            <p className={metricLabel}>Niveau estimé par EDGE</p>
+            <p className={metricLabel}>Niveau estimé par Byound</p>
             <p className={metricValue}>{estimatedLevel}</p>
           </div>
           <div className={metricCard}>
-            <p className={metricLabel}>Statut EDGE</p>
+            <p className={metricLabel}>Statut Byound</p>
             <p className={metricValue}>
               {statusEmoji ? `${statusEmoji} ` : ""}
               {statusLabel}
@@ -105,7 +105,7 @@ export function SkillEvaluationReportPanel({
         >
           <h3 className={sectionTitle}>Comment atteindre le niveau suivant ?</h3>
           <p className={`mt-3 ${bodyText}`}>
-            Pour atteindre le niveau <span className="font-semibold">{report.nextLevelLabel}</span>, EDGE recommande :
+            Pour atteindre le niveau <span className="font-semibold">{report.nextLevelLabel}</span>, Byound recommande :
           </p>
           <ul className={`mt-4 space-y-2 ${bodyText}`}>
             {report.nextLevelSteps.map((step) => (
@@ -120,7 +120,7 @@ export function SkillEvaluationReportPanel({
 
       {!compact ? (
         <p className={`text-xs ${isDark ? "text-white/35" : "text-black/40"}`}>
-          {EDGE_ANALYSIS_LABEL} — rapport généré selon le référentiel EDGE de validation des compétences.
+          {EDGE_ANALYSIS_LABEL} — rapport généré selon le référentiel Byound de validation des compétences.
         </p>
       ) : null}
     </div>

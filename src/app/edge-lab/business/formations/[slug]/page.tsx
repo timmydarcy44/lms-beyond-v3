@@ -27,9 +27,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await getServerClient();
   const course = await fetchTrainingCourseBySlug(supabase, slug);
-  if (!course) return { title: "Formation | EDGE Business" };
+  if (!course) return { title: "Formation | Byound Business" };
   return {
-    title: `${course.title} | EDGE Business`,
+    title: `${course.title} | Byound Business`,
     description: course.meta_description ?? course.short_description ?? undefined,
     keywords: course.seo_tags ?? undefined,
   };

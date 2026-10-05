@@ -8,7 +8,7 @@ type Props = {
   screenClassName?: string;
 };
 
-/** MacBook Pro — cadre marketing pour aperçus produit (EDGE × nevo, etc.). */
+/** MacBook Pro — cadre marketing pour aperçus produit (Byound × nevo, etc.). */
 export function EdgeMacbookMockup({ children, className, screenClassName }: Props) {
   return (
     <div className={cn("relative mx-auto w-full max-w-[920px]", className)}>

@@ -39,7 +39,7 @@ export function EdgeSalesAssistantDialog({ open, question, answer, onClose }: Pr
         <div className="pointer-events-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-[0_40px_120px_-52px_rgba(0,0,0,0.75)] ring-1 ring-black/10">
           <div className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 sm:px-6">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">Assistant EDGE</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">Assistant Byound</p>
               <h2 id={titleId} className="mt-1 truncate text-lg font-semibold tracking-tight text-zinc-950 sm:text-xl">
                 Réponse à votre question
               </h2>

@@ -115,7 +115,7 @@ export function EdgeParcoursRequestModal({
             <div className="space-y-4 py-4 text-center">
               <p className="text-lg font-semibold text-white">Votre demande a bien été envoyée.</p>
               <p className="text-sm leading-relaxed text-white/60">
-                Un conseiller EDGE va analyser votre profil afin de vous proposer un parcours réellement
+                Un conseiller Byound va analyser votre profil afin de vous proposer un parcours réellement
                 adapté.
               </p>
               <button
@@ -129,7 +129,7 @@ export function EdgeParcoursRequestModal({
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <p className="text-sm text-white/55">
-                Un conseiller EDGE construira une recommandation sur mesure à partir de vos résultats.
+                Un conseiller Byound construira une recommandation sur mesure à partir de vos résultats.
               </p>
 
               <label className="block space-y-1.5">

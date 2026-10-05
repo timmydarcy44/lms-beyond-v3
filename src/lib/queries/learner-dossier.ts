@@ -525,7 +525,7 @@ export async function getLearnerDossier(userId: string): Promise<LearnerDossier 
       coachingActivities.push({
         id: row.id,
         type: "edge_mission",
-        title: `Mission EDGE — ${row.skill_name ?? "Compétence"}`,
+        title: `Mission Byound — ${row.skill_name ?? "Compétence"}`,
         detail: row.summary ?? null,
         status: row.status ?? null,
         occurredAt: row.completed_at ?? row.created_at ?? new Date().toISOString(),

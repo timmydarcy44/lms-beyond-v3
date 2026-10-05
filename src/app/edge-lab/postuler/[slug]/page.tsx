@@ -9,9 +9,9 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = getParcours(slug);
-  if (!p) return { title: "Postuler — EDGE" };
+  if (!p) return { title: "Postuler — Byound" };
   return {
-    title: `Postuler — ${p.titre} | EDGE`,
+    title: `Postuler — ${p.titre} | Byound`,
     description: `Rejoins le parcours ${p.titre}. Réponse sous 48h, sans engagement.`,
   };
 }

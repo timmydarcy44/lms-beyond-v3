@@ -52,7 +52,7 @@ export function deriveCourseHeroMeta(card: LearnerCard | null | undefined): Cour
     sequences,
     hours: 4 + (hash % 10),
     level: String(card?.level ?? "").trim() || "Intermédiaire",
-    badge: "Badge EDGE",
+    badge: "Badge Byound",
   };
 }
 

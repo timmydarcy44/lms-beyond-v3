@@ -81,7 +81,7 @@ export function PublicSkillAnalysisModal({ skill, onClose }: Props) {
           {/* Métriques clés */}
           <div className="grid grid-cols-2 gap-2.5">
             <Metric label="Niveau déclaré" value={skill.declaredLevel} />
-            <Metric label="Niveau estimé EDGE" value={skill.estimatedLevel} />
+            <Metric label="Niveau estimé Byound" value={skill.estimatedLevel} />
             <Metric label={EDGE_STATUS_LABEL} value={`${statusCfg.emoji} ${statusLine}`} />
             {skill.confidenceScore != null ? (
               <Metric label={EDGE_CONFIDENCE_LABEL} value={`${skill.confidenceScore} %`} />
@@ -177,9 +177,9 @@ export function PublicSkillAnalysisModal({ skill, onClose }: Props) {
             </section>
           ) : null}
 
-          {/* Justification EDGE */}
+          {/* Justification Byound */}
           <section className="mt-8 border-t border-black/[0.06] pt-8">
-            <SectionTitle>Justification de la décision EDGE</SectionTitle>
+            <SectionTitle>Justification de la décision Byound</SectionTitle>
             {v?.opinion ? (
               <p className="mt-3 text-sm leading-relaxed text-black/65">{sanitizeEdgePublicCopy(v.opinion)}</p>
             ) : null}

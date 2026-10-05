@@ -86,7 +86,7 @@ const CANDIDATES: Candidate[] = [
     badges: [
       {
         title: "Communication d'Équipe",
-        issuer: "EDGE Academy",
+        issuer: "Byound Academy",
         date: "2024-01-08",
         skills: ["Collaboration", "Feedback", "Alignement"],
         image:
@@ -134,7 +134,7 @@ const CANDIDATES: Candidate[] = [
     badges: [
       {
         title: "Modern Prospecting",
-        issuer: "EDGE Academy",
+        issuer: "Byound Academy",
         date: "2024-03-12",
         skills: ["Prospection", "Pipeline", "Closing"],
         image:

@@ -33,7 +33,7 @@ const EMPTY_FORM: FormState = {
   success_factors: "",
   main_missions: "",
   useful_qualities: "",
-  recommended_badges: "Profil comportemental EDGE",
+  recommended_badges: "Profil comportemental Byound",
 };
 
 function linesToArray(value: string): string[] {
@@ -178,7 +178,7 @@ export function CareerProfilesCms() {
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-[#635BFF]">Super Admin</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">Référentiel métiers EDGE</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">Référentiel métiers Byound</h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-600">
             Alimentez les fiches métiers à la main. ChatGPT propose les hard skills et soft skills — vous validez puis
             enregistrez en base. Les fiches statiques (code) restent en secours tant qu&apos;elles ne sont pas recréées
@@ -328,7 +328,7 @@ export function CareerProfilesCms() {
                 placeholder={"écoute active\npersévérance\ncommunication"}
               />
               <p className="mt-1 text-xs text-gray-500">
-                ChatGPT rapproche les libellés du test EDGE (20 soft skills) pour le comparatif Profil EDGE.
+                ChatGPT rapproche les libellés du test Byound (20 soft skills) pour le comparatif Profil Byound.
               </p>
             </label>
 

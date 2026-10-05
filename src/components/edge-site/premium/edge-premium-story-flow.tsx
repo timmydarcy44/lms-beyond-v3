@@ -78,7 +78,7 @@ export function EdgePremiumStoryFlow() {
 
         <div className="mt-14 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           <EdgePremiumButton href={links.business} variant="white" shape="revolut">
-            Découvrir EDGE Business
+            Découvrir Byound Business
           </EdgePremiumButton>
           <EdgePremiumButton href={links.formations} variant="outline-white" shape="revolut">
             Voir les formations

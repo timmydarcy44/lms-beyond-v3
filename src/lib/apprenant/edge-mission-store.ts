@@ -1,5 +1,5 @@
 /**
- * Persistance des Missions EDGE (serveur).
+ * Persistance des Missions Byound (serveur).
  * Table technique : edge_challenge_runs (compatibilité).
  * Dégradation gracieuse si la migration mission_brief n'est pas encore appliquée.
  */
@@ -227,7 +227,7 @@ function buildFinishNotification(skill: string, badge: MissionBadgeState): {
   }
   return {
     emoji: "🎯",
-    message: `Votre compétence ${skill} vous attend : une nouvelle Mission EDGE est prête pour continuer votre progression.`,
+    message: `Votre compétence ${skill} vous attend : une nouvelle Mission Byound est prête pour continuer votre progression.`,
     tone: "challenge",
     href,
   };

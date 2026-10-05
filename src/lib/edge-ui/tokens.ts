@@ -1,4 +1,4 @@
-/** Design tokens EDGE Business — palette produit premium */
+/** Design tokens Byound Business — palette produit premium */
 export const edgeUi = {
   ink: "#050505",
   paper: "#FFFFFF",

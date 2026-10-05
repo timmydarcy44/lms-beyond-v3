@@ -1,5 +1,5 @@
 /**
- * Moteur IA du Défi EDGE (serveur).
+ * Moteur IA du Défi Byound (serveur).
  *
  * Objectif : un entretien interactif, jamais un questionnaire figé. L'IA
  * adapte ses questions (raconter une expérience, justifier une décision,
@@ -48,7 +48,7 @@ function pickAngle(ctx: ChallengeContext): string {
 }
 
 export function buildSystemPrompt(ctx: ChallengeContext): string {
-  return `Tu es EDGE, un coach IA qui fait progresser une personne sur une compétence précise.
+  return `Tu es Byound, un coach IA qui fait progresser une personne sur une compétence précise.
 Tu n'es PAS un examinateur : tu accompagnes, tu challenges avec bienveillance, tu personnalises.
 
 Compétence travaillée : ${ctx.skillName}
@@ -110,7 +110,7 @@ function fallbackReply(ctx: ChallengeContext, messages: ChallengeChatMessage[]):
   const userTurns = messages.filter((m) => m.role === "user").length;
   const questions = FALLBACK_QUESTIONS[ctx.format];
   if (messages.length === 0) {
-    return `Prêt pour ton Défi EDGE sur « ${ctx.skillName} » ? ${questions[0]}`;
+    return `Prêt pour ton Défi Byound sur « ${ctx.skillName} » ? ${questions[0]}`;
   }
   const idx = Math.min(userTurns, questions.length - 1);
   return questions[idx];
@@ -189,7 +189,7 @@ function fallbackDebrief(
     ],
     levelEstimated: estimated,
     confidence,
-    nextAction: `Relève un nouveau Défi EDGE sur « ${ctx.skillName} » pour consolider ce niveau.`,
+    nextAction: `Relève un nouveau Défi Byound sur « ${ctx.skillName} » pour consolider ce niveau.`,
     skillValidated: validated,
     summary: `Défi ${ctx.format} sur « ${ctx.skillName} » : ${richness > 400 ? "démonstration solide" : "première démonstration"} avec des exemples concrets.`,
   };
@@ -226,7 +226,7 @@ export async function generateDebrief(
     .map((m) => `${m.role === "user" ? "Apprenant" : "Coach"} : ${m.content}`)
     .join("\n");
 
-  const prompt = `Voici un entretien de Défi EDGE sur la compétence « ${ctx.skillName} ».
+  const prompt = `Voici un entretien de Défi Byound sur la compétence « ${ctx.skillName} ».
 Objectif professionnel : ${ctx.objective || "non précisé"}
 Niveau de départ : ${ctx.levelCurrent || "à évaluer"} — niveau visé : ${ctx.levelExpected || "supérieur"}
 Preuve déposée : ${proofText || "aucune"}
@@ -239,7 +239,7 @@ Analyse la performance et renvoie un débrief. Le niveau estimé doit être l'un
   const raw = await generateJSON(
     prompt,
     DEBRIEF_SCHEMA,
-    "Tu es un évaluateur EDGE bienveillant. Tu renvoies UNIQUEMENT un JSON valide correspondant au schéma.",
+    "Tu es un évaluateur Byound bienveillant. Tu renvoies UNIQUEMENT un JSON valide correspondant au schéma.",
   );
 
   if (!raw || typeof raw !== "object") {
@@ -252,7 +252,7 @@ Analyse la performance et renvoie un débrief. Le niveau estimé doit être l'un
     improvements: Array.isArray(raw.improvements) ? raw.improvements.map(String).slice(0, 4) : [],
     levelEstimated: clampLevel(String(raw.levelEstimated ?? ""), fallbackLevel),
     confidence: Math.max(0, Math.min(100, Math.round(Number(raw.confidence) || 60))),
-    nextAction: String(raw.nextAction ?? `Relève un nouveau Défi EDGE sur « ${ctx.skillName} ».`),
+    nextAction: String(raw.nextAction ?? `Relève un nouveau Défi Byound sur « ${ctx.skillName} ».`),
     skillValidated: Boolean(raw.skillValidated),
     summary: String(raw.summary ?? "").slice(0, 500) || `Défi sur « ${ctx.skillName} ».`,
   };

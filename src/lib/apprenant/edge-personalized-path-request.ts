@@ -1,4 +1,4 @@
-/** Demande de parcours personnalisé EDGE — approche concierge */
+/** Demande de parcours personnalisé Byound — approche concierge */
 
 /** @deprecated Remplacé par EDGE_FIRST_STEPS_KEY */
 export const EDGE_DASHBOARD_ONBOARDING_KEY = "edge_gps_onboarding_v1_seen";
@@ -96,4 +96,4 @@ export const SUPPORT_PREFERENCE_OPTIONS: Array<{ value: SupportPreferenceOption;
 ];
 
 export const PARCOURS_CONCIERGE_INTRO =
-  "EDGE identifie automatiquement vos écarts de compétences. Nos experts peuvent ensuite construire un parcours personnalisé pour vous aider à progresser de manière ciblée.";
+  "Byound identifie automatiquement vos écarts de compétences. Nos experts peuvent ensuite construire un parcours personnalisé pour vous aider à progresser de manière ciblée.";

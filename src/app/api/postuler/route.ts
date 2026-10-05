@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const financement = String(body.financement ?? "").trim();
     const motivation = String(body.motivation ?? "").trim();
     const parcours =
-      String(body.parcours ?? body.parcoursTitre ?? body.parcoursSlug ?? "").trim() || "Parcours EDGE";
+      String(body.parcours ?? body.parcoursTitre ?? body.parcoursSlug ?? "").trim() || "Parcours Byound";
     const cohorte = String(body.cohorte ?? EDGE_COHORTE_LABEL).trim();
     const parcoursPrix = Number(body.parcoursPrix) || 0;
     const addonsTotal = Number(body.addonsTotal) || 0;
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     }
 
     const contactEmail = process.env.CONTACT_EMAIL?.trim() || "contact@edgebs.fr";
-    const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "EDGE <noreply@edgebs.fr>";
+    const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>";
 
     const resendKey = process.env.RESEND_API_KEY;
 
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
         subject: `Nouvelle postulation — ${parcours} — ${prenom} ${nom}`,
         replyTo: email,
         html: buildEdgeEmailShell({
-          title: "Nouvelle postulation EDGE",
+          title: "Nouvelle postulation Byound",
           preheader: `${prenom} ${nom} — ${parcours}`,
           bodyHtml: `
           <p><strong>Parcours :</strong> ${safe.parcours}</p>
@@ -132,13 +132,13 @@ export async function POST(request: Request) {
       await sendResendEmail({
         from: fromAddress,
         to: email,
-        subject: `Ta postulation EDGE est bien reçue — ${parcours}`,
+        subject: `Ta postulation Byound est bien reçue — ${parcours}`,
         replyTo: contactEmail,
         html: buildEdgeEmailShell({
           title: `Bonjour ${safe.prenom}`,
           preheader: `Postulation reçue — ${parcours}`,
           bodyHtml: `<p>Ta postulation au parcours <strong>${safe.parcours}</strong> est bien reçue.</p>
-          <p>Un membre de l'équipe EDGE te contacte dans les 48 h pour un échange de 20 minutes.</p>
+          <p>Un membre de l'équipe Byound te contacte dans les 48 h pour un échange de 20 minutes.</p>
           ${
             selectedAddons.length > 0
               ? `<p>Modules qui t'intéressent : ${selectedAddons.map((a) => escapeHtml(String(a.titre))).join(", ")}.</p>`

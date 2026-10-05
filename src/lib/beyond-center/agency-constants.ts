@@ -55,7 +55,7 @@ export const PRESTATIONS = [
 
 export const CASE_STUDIES = [
   {
-    name: "EDGE",
+    name: "Byound",
     problem: "Optimisation de la performance commerciale et des parcours formation B2B.",
     tech: "CRM · Pipeline · IA · LMS",
     image:

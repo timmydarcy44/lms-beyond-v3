@@ -33,7 +33,7 @@ export default function EmargerCodePage() {
     <div className="flex min-h-screen items-center justify-center bg-[#05060a] px-4 text-white">
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/[0.03] p-6">
         <p className="text-center text-sm text-white/45">
-          <span className="font-extrabold text-white">EDGE</span> Code session
+          <span className="font-extrabold text-white">Byound</span> Code session
         </p>
         <h1 className="mt-3 text-center text-xl font-bold">Saisir le code</h1>
         <input

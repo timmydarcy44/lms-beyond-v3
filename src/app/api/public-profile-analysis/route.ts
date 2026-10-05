@@ -90,7 +90,7 @@ ${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: "Tu es un analyste EDGE. Tu écris en français, de façon factuelle et sobre, sans formules creuses ni emphase." },
+        { role: "system", content: "Tu es un analyste Byound. Tu écris en français, de façon factuelle et sobre, sans formules creuses ni emphase." },
         { role: "user", content: prompt },
       ],
       temperature: 0.4,

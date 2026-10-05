@@ -49,7 +49,7 @@ export function ExpertProfilePreview({ identity, profile, wantsCertification, cl
   return (
     <div className={cn("sticky top-8", className)}>
       <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">Aperçu en direct</p>
-      <p className="mt-1 text-xs text-white/35">Votre fiche publique EDGE</p>
+      <p className="mt-1 text-xs text-white/35">Votre fiche publique Byound</p>
 
       <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <div className="h-20 bg-gradient-to-r from-[#635BFF]/20 via-[#635BFF]/5 to-transparent" />
@@ -77,11 +77,11 @@ export function ExpertProfilePreview({ identity, profile, wantsCertification, cl
           {wantsCertification ? (
             <div className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-[#635BFF]/30 bg-[#635BFF]/10 px-3 py-1.5 text-[11px] font-medium text-[#a8a3ff]">
               <BadgeCheck className="h-3.5 w-3.5" />
-              Certification EDGE en cours
+              Certification Byound en cours
             </div>
           ) : (
             <div className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] text-white/40">
-              Réseau EDGE
+              Réseau Byound
             </div>
           )}
 
@@ -189,7 +189,7 @@ export function ExpertProfilePreview({ identity, profile, wantsCertification, cl
       </div>
 
       <p className="mt-4 text-xs leading-relaxed text-white/35">
-        Chaque profil est validé par EDGE avant publication dans le réseau.
+        Chaque profil est validé par Byound avant publication dans le réseau.
       </p>
     </div>
   );

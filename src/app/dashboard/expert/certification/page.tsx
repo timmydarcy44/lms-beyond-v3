@@ -16,9 +16,9 @@ import { cn } from "@/lib/utils";
 
 const BENEFITS = [
   "Référencement prioritaire",
-  "Badge EDGE Certified",
+  "Badge Byound Certified",
   "Accès aux missions qualifiées",
-  "Méthode pédagogique EDGE",
+  "Méthode pédagogique Byound",
   "Outils de suivi et d'impact",
   "Standard qualité commun",
 ];
@@ -87,9 +87,9 @@ export default function ExpertCertificationPage() {
         <div className="mx-auto max-w-4xl px-6 py-10 pb-24">
           <header className="mb-10">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#635BFF]">Certification</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Devenir EDGE Certified</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Devenir Byound Certified</h1>
             <p className="mt-3 max-w-2xl text-sm text-[#050505]/60">
-              Un parcours qualité pour aligner vos interventions avec la méthode EDGE, renforcer votre visibilité et
+              Un parcours qualité pour aligner vos interventions avec la méthode Byound, renforcer votre visibilité et
               accéder aux missions prioritaires.
             </p>
           </header>
@@ -97,7 +97,7 @@ export default function ExpertCertificationPage() {
           {showPaymentSuccess ? (
             <div className="mb-8 rounded-[28px] border border-[#635BFF]/20 bg-[#635BFF]/8 p-6">
               <p className="text-sm font-semibold text-[#635BFF]">Paiement confirmé</p>
-              <p className="mt-2 text-lg font-semibold">Bienvenue dans le parcours EDGE Certified.</p>
+              <p className="mt-2 text-lg font-semibold">Bienvenue dans le parcours Byound Certified.</p>
             </div>
           ) : null}
 
@@ -111,17 +111,17 @@ export default function ExpertCertificationPage() {
                 <p className="mt-1 text-xl font-semibold">{label}</p>
                 {expert.wants_certification && !certified && !inTraining ? (
                   <p className="mt-2 text-sm text-[#050505]/55">
-                    Votre demande EDGE Certified est bien enregistrée. Statut : en attente de validation.
+                    Votre demande Byound Certified est bien enregistrée. Statut : en attente de validation.
                   </p>
                 ) : null}
                 {!expert.wants_certification && !certified && !inTraining ? (
                   <p className="mt-2 text-sm text-[#050505]/55">
-                    Vous pourrez rejoindre le parcours EDGE Certified après validation de votre profil.
+                    Vous pourrez rejoindre le parcours Byound Certified après validation de votre profil.
                   </p>
                 ) : null}
                 {certified ? (
                   <p className="mt-2 text-sm text-[#050505]/55">
-                    Badge actif — visibilité renforcée dans le réseau EDGE.
+                    Badge actif — visibilité renforcée dans le réseau Byound.
                   </p>
                 ) : null}
                 {inTraining ? (
@@ -155,7 +155,7 @@ export default function ExpertCertificationPage() {
                 href="/dashboard/expert/certification?payment=success"
                 className="mt-8 inline-flex items-center justify-center rounded-2xl bg-[#635BFF] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#7B74FF]"
               >
-                Découvrir le parcours EDGE Certified
+                Découvrir le parcours Byound Certified
               </Link>
             ) : null}
           </section>

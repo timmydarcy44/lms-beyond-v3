@@ -30,7 +30,7 @@ export const PIPELINE_PRODUCT_CATALOG: Array<{
   {
     id: "licence_rh",
     label: "Licences RH",
-    hint: "9 € / collab. / mois (EDGE Skills)",
+    hint: "9 € / collab. / mois (Byound Skills)",
     defaultUnitCents: 900,
     allowQty: true,
   },

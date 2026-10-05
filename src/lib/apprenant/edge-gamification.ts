@@ -1,5 +1,5 @@
 /**
- * Gamification EDGE — XP d'engagement, niveaux, mission du jour, compétence du jour.
+ * Gamification Byound — XP d'engagement, niveaux, mission du jour, compétence du jour.
  * L'XP ne valide jamais une compétence : il récompense l'engagement (missions,
  * preuves, badges). La série (streak) est persistée côté serveur (edge_streaks).
  */
@@ -13,7 +13,7 @@ const LEVEL_TITLES = [
   "Praticien",
   "Stratège",
   "Expert",
-  "Maître EDGE",
+  "Maître Byound",
 ] as const;
 
 /** XP nécessaires pour finir chaque niveau (index = niveau - 1). */

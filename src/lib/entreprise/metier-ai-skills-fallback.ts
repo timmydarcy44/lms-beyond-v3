@@ -8,7 +8,7 @@ type MetierAiSkills = {
   soft_skills: SoftSkillTarget[];
 };
 
-/** Cibles Soft Skills métier — échelle test EDGE /15. */
+/** Cibles Soft Skills métier — échelle test Byound /15. */
 const DEFAULT_SOFT: SoftSkillTarget[] = [
   { label: "Communication", score: 12 },
   { label: "Collaboration", score: 11 },

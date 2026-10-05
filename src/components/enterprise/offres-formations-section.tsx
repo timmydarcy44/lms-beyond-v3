@@ -49,7 +49,7 @@ export function OffresFormationsSection() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-gray-500">Formations internes et catalogue EDGE</p>
+        <p className="text-sm text-gray-500">Formations internes et catalogue Byound</p>
         <Link
           href="/dashboard/formateur/parcours/new"
           className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-500"
@@ -63,7 +63,7 @@ export function OffresFormationsSection() {
         {(
           [
             { key: "internes" as const, label: "Formations internes" },
-            { key: "edge" as const, label: "Catalogue EDGE" },
+            { key: "edge" as const, label: "Catalogue Byound" },
           ] as const
         ).map((t) => (
           <button
@@ -140,7 +140,7 @@ export function OffresFormationsSection() {
                   rel="noopener noreferrer"
                   className="mt-4 inline-block text-sm font-semibold text-violet-600 hover:text-violet-500"
                 >
-                  Découvrir sur EDGE →
+                  Découvrir sur Byound →
                 </a>
               ) : (
                 <p className="mt-4 text-xs text-gray-400">

@@ -40,7 +40,7 @@ export function EdgePremiumTopBar({ solid = false, light = false }: Props) {
                 : "text-white/55 group-hover:text-white",
             )}
           >
-            Rejoignez EDGE
+            Rejoignez Byound
           </span>
           <ArrowRight className="h-3.5 w-3.5 opacity-60 transition-transform group-hover:translate-x-0.5 group-hover:opacity-100" />
         </Link>

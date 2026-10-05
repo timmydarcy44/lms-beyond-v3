@@ -24,7 +24,7 @@ export function EntrepriseContactForm({ variant = "light" }: Props) {
   if (sent) {
     return (
       <p className={cn("mt-8 text-[15px]", onRed ? "text-white/85" : "text-black/40")}>
-        Merci — un conseiller EDGE vous recontacte sous 48h ouvrées.
+        Merci — un conseiller Byound vous recontacte sous 48h ouvrées.
       </p>
     );
   }

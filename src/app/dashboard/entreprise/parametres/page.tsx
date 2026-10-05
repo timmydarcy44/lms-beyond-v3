@@ -36,7 +36,7 @@ export default function EntrepriseParametresPage() {
               href: "/dashboard/entreprise/rgpd/registre",
               icon: Scale,
               title: "Registre des traitements",
-              text: "Inventaire art. 30 RGPD des traitements EDGE Entreprise",
+              text: "Inventaire art. 30 RGPD des traitements Byound Entreprise",
             },
           ].map((item) => {
             const Icon = item.icon;

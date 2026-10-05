@@ -376,7 +376,7 @@ export default function DevelopInner() {
           <div className="rounded-2xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/[0.07] p-5">
             <p className="text-[13px] font-medium text-[#B8D0FF]">
               Pour progresser en {selected.name.toLowerCase()}, nous vous recommandons un module
-              EDGE Learn.
+              Byound Learn.
             </p>
             <Link
               href="/dashboard/apprenant/formations"

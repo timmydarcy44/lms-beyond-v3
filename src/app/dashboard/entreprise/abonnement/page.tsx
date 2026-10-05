@@ -28,7 +28,7 @@ export default function EntrepriseAbonnementPage() {
           </p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Tarifs & abonnement</h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-500">
-            Offres EDGE pour piloter compétences, diagnostics et formations — facturation par
+            Offres Byound pour piloter compétences, diagnostics et formations — facturation par
             collaborateur.
           </p>
         </header>

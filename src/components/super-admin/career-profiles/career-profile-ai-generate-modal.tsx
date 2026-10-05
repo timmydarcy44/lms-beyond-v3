@@ -125,13 +125,13 @@ export function CareerProfileAiGenerateModal({ open, onOpenChange, onGenerated, 
           <DialogHeader className="text-left">
             <div className="mb-2 flex items-center gap-2 text-[#635BFF]">
               <Sparkles className="h-5 w-5" />
-              <span className="text-xs font-semibold uppercase tracking-wider">EDGE IA · ChatGPT</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Byound IA · ChatGPT</span>
             </div>
             <DialogTitle className="text-2xl font-semibold tracking-tight text-gray-900">
               Générer hard skills & soft skills
             </DialogTitle>
             <DialogDescription className="mt-2 text-sm leading-relaxed text-gray-600">
-              ChatGPT rédige la fiche métier complète : compétences techniques, soft skills alignées au test EDGE,
+              ChatGPT rédige la fiche métier complète : compétences techniques, soft skills alignées au test Byound,
               missions et défis. Vous relisez et enregistrez manuellement.
             </DialogDescription>
           </DialogHeader>

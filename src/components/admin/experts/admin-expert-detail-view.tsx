@@ -126,12 +126,12 @@ export function AdminExpertDetailView({ expert, basePath = "/admin/experts" }: P
             Inscrit le {expert.created_at ? new Date(expert.created_at).toLocaleString("fr-FR") : "—"}
           </p>
           {expert.wants_certification ? (
-            <p className="text-xs font-medium text-[#635BFF]">Certification EDGE demandée</p>
+            <p className="text-xs font-medium text-[#635BFF]">Certification Byound demandée</p>
           ) : (
-            <p className="text-xs text-slate-500">Certification EDGE non demandée</p>
+            <p className="text-xs text-slate-500">Certification Byound non demandée</p>
           )}
           {expert.is_certified_beyond || expert.certification_status === "certified" ? (
-            <p className="text-xs font-medium text-emerald-700">EDGE Certified</p>
+            <p className="text-xs font-medium text-emerald-700">Byound Certified</p>
           ) : null}
         </section>
 
@@ -245,7 +245,7 @@ export function AdminExpertDetailView({ expert, basePath = "/admin/experts" }: P
             onClick={() => void runAction("set_certified", { certified: true })}
             className="rounded-xl border border-[#635BFF]/30 bg-[#635BFF]/8 px-4 py-2 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-60"
           >
-            Marquer EDGE Certified
+            Marquer Byound Certified
           </button>
         </div>
         <div className="mt-4">

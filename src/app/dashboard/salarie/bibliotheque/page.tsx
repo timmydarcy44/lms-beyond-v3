@@ -35,8 +35,8 @@ export default async function SalarieBibliothequePage() {
       <p className={SALARIE_PAGE_KICKER}>Bibliothèque</p>
       <h1 className={SALARIE_PAGE_TITLE}>Bibliothèque de formations</h1>
       <p className={SALARIE_PAGE_LEAD}>
-        Accédez aux micro-formations EDGE prêtes à l’emploi — disponibles avec l’offre{" "}
-        <span className="text-white/80">EDGE Learning+</span> de votre entreprise.
+        Accédez aux micro-formations Byound prêtes à l’emploi — disponibles avec l’offre{" "}
+        <span className="text-white/80">Byound Learning+</span> de votre entreprise.
       </p>
 
       <div className={`${SALARIE_CARD} mt-8 max-w-2xl`}>
@@ -46,14 +46,14 @@ export default async function SalarieBibliothequePage() {
         <h2 className="mt-5 text-lg font-semibold text-white">Accès non activé</h2>
         <p className="mt-2 text-sm leading-relaxed text-white/55">
           {offer
-            ? `Votre entreprise est actuellement sur l’offre EDGE ${
+            ? `Votre entreprise est actuellement sur l’offre Byound ${
                 offer === "learning-plus"
                   ? "Learning+"
                   : offer === "learning"
                     ? "Learning"
                     : "Skills"
-              }. La bibliothèque complète se débloque avec EDGE Learning+.`
-            : "Votre entreprise n’a pas encore activé EDGE Learning+. Demandez à votre RH d’évoluer vers cette offre pour débloquer la bibliothèque."}
+              }. La bibliothèque complète se débloque avec Byound Learning+.`
+            : "Votre entreprise n’a pas encore activé Byound Learning+. Demandez à votre RH d’évoluer vers cette offre pour débloquer la bibliothèque."}
         </p>
         <Link
           href="/dashboard/salarie/formations"

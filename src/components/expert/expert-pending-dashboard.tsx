@@ -24,7 +24,7 @@ export function ExpertPendingDashboard() {
     { label: "Email confirmé", done: emailConfirmed },
     { label: "Vérification du dossier", done: false },
     { label: "Validation pédagogique", done: false },
-    { label: "Publication dans le réseau EDGE", done: false },
+    { label: "Publication dans le réseau Byound", done: false },
     { label: "Accès complet à l'espace formateur", done: false },
   ];
 
@@ -39,7 +39,7 @@ export function ExpertPendingDashboard() {
               Votre profil est en cours de validation
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-[#050505]/60">
-              Bonjour {fullName} — notre équipe examine votre dossier avant publication dans le réseau EDGE.
+              Bonjour {fullName} — notre équipe examine votre dossier avant publication dans le réseau Byound.
             </p>
           </header>
 
@@ -76,18 +76,18 @@ export function ExpertPendingDashboard() {
             <div className="flex items-start gap-3">
               <Sparkles className="mt-0.5 h-5 w-5 text-[#635BFF]" aria-hidden />
               <div>
-                <p className="text-sm font-semibold">EDGE Certified</p>
+                <p className="text-sm font-semibold">Byound Certified</p>
                 <p className="mt-1 text-sm text-[#050505]/55">
                   {expert.wants_certification
-                    ? "Votre demande EDGE Certified est bien enregistrée. Statut : en attente de validation."
-                    : "Vous pourrez rejoindre le parcours EDGE Certified après validation de votre profil."}
+                    ? "Votre demande Byound Certified est bien enregistrée. Statut : en attente de validation."
+                    : "Vous pourrez rejoindre le parcours Byound Certified après validation de votre profil."}
                 </p>
                 <p className="mt-2 text-xs text-[#050505]/40">Statut actuel : {edgeCertificationLabel(expert)}</p>
                 <Link
                   href="/dashboard/expert/certification"
                   className="mt-3 inline-flex text-sm font-medium text-[#635BFF] hover:underline"
                 >
-                  Découvrir EDGE Certified →
+                  Découvrir Byound Certified →
                 </Link>
               </div>
             </div>
@@ -102,7 +102,7 @@ export function ExpertPendingDashboard() {
                   { href: "/dashboard/expert/profile", label: "Modifier mon profil" },
                   { href: "/dashboard/expert/profile", label: "Compléter mes informations" },
                   { href: "/dashboard/expert/documents", label: "Ajouter CV / justificatifs" },
-                  { href: "/dashboard/expert/certification", label: "Découvrir EDGE Certified" },
+                  { href: "/dashboard/expert/certification", label: "Découvrir Byound Certified" },
                 ].map((action) => (
                   <Link
                     key={action.label}
@@ -122,7 +122,7 @@ export function ExpertPendingDashboard() {
                   className="flex items-center gap-2 rounded-2xl border border-[#050505]/8 px-4 py-3 text-sm text-[#050505]/70 hover:bg-[#F7F7F5]"
                 >
                   <Mail className="h-4 w-4 text-[#635BFF]" />
-                  Contacter EDGE
+                  Contacter Byound
                 </a>
               </div>
             </div>

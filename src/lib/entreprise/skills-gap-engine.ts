@@ -209,7 +209,7 @@ export function buildNeedActions(
   if (isIndividual || isMixed) {
     actions.push({
       type: "edge_online",
-      label: "Formation EDGE Online",
+      label: "Formation Byound Online",
       href: `/dashboard/entreprise/formations/catalogue?q=${skillQ}`,
     });
     actions.push({
@@ -223,7 +223,7 @@ export function buildNeedActions(
   if (isMixed) {
     actions.push({
       type: "request_edge_training",
-      label: "Formation présentiel EDGE",
+      label: "Formation présentiel Byound",
       href: `/dashboard/entreprise/formations/demander?skill=${skillQ}&metier=${metierQ}&format=Présentiel`,
       price_note: `${EDGE_EXPERT_TRAINING_DAY_PRICE_EUR.toLocaleString("fr-FR")} € / jour`,
     });
@@ -233,7 +233,7 @@ export function buildNeedActions(
   if (isCollective) {
     actions.push({
       type: "request_edge_training",
-      label: "Formation présentiel EDGE (équipe)",
+      label: "Formation présentiel Byound (équipe)",
       href: `/dashboard/entreprise/formations/demander?skill=${skillQ}&metier=${metierQ}&format=Présentiel`,
       price_note: `${EDGE_EXPERT_TRAINING_DAY_PRICE_EUR.toLocaleString("fr-FR")} € / jour`,
     });

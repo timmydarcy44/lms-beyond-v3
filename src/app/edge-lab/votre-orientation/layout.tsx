@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { EDGE_HREFS } from "@/lib/edge-site/constants";
 
 export const metadata: Metadata = {
-  title: "Votre orientation — EDGE",
-  description: "Test d'orientation EDGE : trouvez le parcours ou le format adapté à votre profil en 2 minutes.",
+  title: "Votre orientation — Byound",
+  description: "Test d'orientation Byound : trouvez le parcours ou le format adapté à votre profil en 2 minutes.",
 };
 
 export default function VotreOrientationLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +12,7 @@ export default function VotreOrientationLayout({ children }: { children: React.R
     <div className="flex min-h-dvh flex-col bg-white font-sans text-edge-black antialiased">
       <header className="relative flex h-14 shrink-0 items-center justify-center border-b border-black/[0.08] px-5 sm:px-10">
         <Link href={EDGE_HREFS.home} className="text-sm font-medium tracking-[0.12em] text-edge-black">
-          EDGE
+          Byound
         </Link>
         <Link
           href={EDGE_HREFS.home}

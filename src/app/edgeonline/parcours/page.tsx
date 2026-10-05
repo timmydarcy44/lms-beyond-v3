@@ -68,7 +68,7 @@ export default async function EdgeOnlineParcoursIndexPage() {
 
             <div className="rounded-2xl border border-white/10 bg-black/35 p-5 backdrop-blur-xl">
               <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">
-                EDGE ONLINE
+                Byound ONLINE
               </div>
               <div className="mt-3 text-lg font-semibold tracking-tight text-white">Parcours</div>
               <p className="mt-2 text-sm leading-relaxed text-white/45">

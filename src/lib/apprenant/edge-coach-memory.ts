@@ -1,5 +1,5 @@
 /**
- * Mémoire du Coach EDGE — continuité entre les missions.
+ * Mémoire du Coach Byound — continuité entre les missions.
  * Permet au coach de saluer, se souvenir et personnaliser chaque échange.
  */
 
@@ -181,7 +181,7 @@ export function buildDailyMissionPreview(
     );
   }
   if (matching.nextPriority?.skill === skill) {
-    whyToday.push("cette compétence est votre priorité EDGE actuelle");
+    whyToday.push("cette compétence est votre priorité Byound actuelle");
   }
   if (memory.avoidedSkills.includes(skill)) {
     whyToday.push(`vous n'avez pas encore pratiqué ${skill} en mission — c'est le bon moment`);

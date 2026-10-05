@@ -22,7 +22,7 @@ describe("analyzeCareerFit", () => {
     expect(result.softSkillsTestDone).toBe(false);
   });
 
-  it("compare les soft skills avec les scores du test EDGE", () => {
+  it("compare les soft skills avec les scores du test Byound", () => {
     const career = getCareerProfileBySlug("commercial-immobilier");
     expect(career).toBeDefined();
 

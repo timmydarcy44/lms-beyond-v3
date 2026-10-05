@@ -3,7 +3,7 @@ import { CareerProfilesCms } from "@/components/super-admin/career-profiles/care
 
 export const metadata: Metadata = {
   title: "Référentiel métiers | Super Admin",
-  description: "Gérer les fiches métiers EDGE et générer les compétences avec ChatGPT.",
+  description: "Gérer les fiches métiers Byound et générer les compétences avec ChatGPT.",
 };
 
 export const dynamic = "force-dynamic";

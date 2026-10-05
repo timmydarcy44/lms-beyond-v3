@@ -1,5 +1,5 @@
 /**
- * Persistance des Défis EDGE (serveur, service role).
+ * Persistance des Défis Byound (serveur, service role).
  * Un défi terminé : met à jour la run, ajoute l'XP, la série, la progression
  * badge, et crée une notification coach personnalisée (statut pending).
  */
@@ -157,7 +157,7 @@ function buildFinishNotification(
   }
   return {
     emoji: "🎯",
-    message: `Votre compétence ${skill} progresse : un nouveau Défi EDGE est prêt pour continuer.`,
+    message: `Votre compétence ${skill} progresse : un nouveau Défi Byound est prêt pour continuer.`,
     tone: "challenge",
     href,
   };

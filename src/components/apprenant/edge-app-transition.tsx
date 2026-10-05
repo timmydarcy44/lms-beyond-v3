@@ -29,7 +29,7 @@ type AppTransitionProps = {
 function resolveAppLabel(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
-  return trimmed.replace(/^(Byound|EDGE)\s+/i, "").trim() || trimmed;
+  return trimmed.replace(/^(Byound|Byound)\s+/i, "").trim() || trimmed;
 }
 
 /**

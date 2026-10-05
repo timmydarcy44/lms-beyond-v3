@@ -15,8 +15,8 @@ export function EdgeSchoolSection() {
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-emerald-700">EDGE École</p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-zinc-950 sm:text-4xl">Rejoindre EDGE École.</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-emerald-700">Byound École</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-zinc-950 sm:text-4xl">Rejoindre Byound École.</h2>
             <p className="mt-6 text-lg leading-relaxed text-zinc-600">
               Parcours métier, alternance et accompagnement — pour celles et ceux qui visent l&apos;excellence opérationnelle.
             </p>

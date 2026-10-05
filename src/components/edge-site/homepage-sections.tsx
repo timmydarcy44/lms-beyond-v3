@@ -11,15 +11,15 @@ import { Check, X } from "lucide-react";
 const EDGE_EMPLOYABILITY_SLIDES = [
   {
     src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/tel%20home%202.png",
-    alt: "Aperçu mobile EDGE — résultats et tests",
+    alt: "Aperçu mobile Byound — résultats et tests",
   },
   {
     src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/Tel%20home.png",
-    alt: "Aperçu mobile EDGE — accueil et profil public",
+    alt: "Aperçu mobile Byound — accueil et profil public",
   },
   {
     src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/tel%20home%203%20(2).png",
-    alt: "Aperçu mobile EDGE — Open Badge EDGE",
+    alt: "Aperçu mobile Byound — Open Badge Byound",
   },
 ] as const;
 
@@ -42,7 +42,7 @@ export function OpenBadgeSection() {
             Un badge qui prouve ce que vous savez faire — pas juste que vous étiez là.
           </h2>
           <p className="mt-6 max-w-xl text-[15px] leading-[1.7] text-white/45">
-            Chaque parcours EDGE délivre un Open Badge IMS Global : certifié cryptographiquement, vérifiable en un clic,
+            Chaque parcours Byound délivre un Open Badge IMS Global : certifié cryptographiquement, vérifiable en un clic,
             portable sur LinkedIn et votre CV.
           </p>
 
@@ -64,7 +64,7 @@ export function OpenBadgeSection() {
             </div>
 
             <div className="rounded-2xl border-2 border-edge-red/30 bg-edge-red/[0.06] p-6 sm:p-8">
-              <p className="text-[13px] font-medium uppercase tracking-[0.12em] text-edge-red">Open Badge EDGE</p>
+              <p className="text-[13px] font-medium uppercase tracking-[0.12em] text-edge-red">Open Badge Byound</p>
               <ul className="mt-6 space-y-4">
                 {[
                   "Prouve ce que vous savez faire",
@@ -91,7 +91,7 @@ export function OpenBadgeSection() {
         <div className="relative mx-auto aspect-[3/4] w-full max-w-[320px] bg-black lg:mx-0 lg:max-w-none">
           <Image
             src={EDGE_OPEN_BADGE_IMAGE_PATH}
-            alt="Open Badge EDGE — Modern Prospecting Level 1, certification IMS Global vérifiable"
+            alt="Open Badge Byound — Modern Prospecting Level 1, certification IMS Global vérifiable"
             fill
             className="object-contain drop-shadow-[0_24px_60px_rgba(230,51,41,0.15)]"
             sizes="(max-width: 1024px) 320px, 360px"
@@ -103,7 +103,7 @@ export function OpenBadgeSection() {
   );
 }
 
-/** Section 2c — Partenariat EDGE × Beyond */
+/** Section 2c — Partenariat Byound × Beyond */
 export function EdgeBeyondPartnershipSection() {
   return (
     <section
@@ -117,7 +117,7 @@ export function EdgeBeyondPartnershipSection() {
             id="edge-beyond-title"
             className="font-sf-pro-bold whitespace-nowrap text-[clamp(1.75rem,5.5vw,4.25rem)] uppercase leading-none tracking-[-0.04em] text-edge-black"
           >
-            EDGE × Beyond
+            Byound × Beyond
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-[clamp(1rem,1.8vw,1.2rem)] leading-relaxed text-black/50">
             Un partenariat au service de votre développement
@@ -132,7 +132,7 @@ export function EdgeBeyondPartnershipSection() {
               <span className="text-black/25">Mesurée.</span>
             </p>
             <p className="mt-4 max-w-md text-[16px] leading-[1.75] text-black/40">
-              EDGE forme sur le terrain. Beyond diagnostique, mesure et prouve la montée en compétences — de
+              Byound forme sur le terrain. Beyond diagnostique, mesure et prouve la montée en compétences — de
               l&apos;orientation à la certification vérifiable.
             </p>
 
@@ -145,7 +145,7 @@ export function EdgeBeyondPartnershipSection() {
                 </p>
               </div>
               <div>
-                <p className="text-[14px] font-semibold uppercase tracking-[0.16em] text-edge-black">Formation EDGE</p>
+                <p className="text-[14px] font-semibold uppercase tracking-[0.16em] text-edge-black">Formation Byound</p>
                 <p className="mt-3 max-w-md text-[16px] leading-relaxed text-black/45">
                   Parcours certifiants, livrables concrets et experts terrain — le bon format au bon moment.
                 </p>
@@ -256,7 +256,7 @@ export function ParcoursPhareDarkSection() {
       <div className="relative min-h-[280px] border-l border-edge-black bg-[#0f0f0e] lg:min-h-[400px]">
         <ImagePlaceholder
           src={parcoursImageSrc(p, EDGE_HERO_IMAGE_URL)}
-          alt="Apprenants EDGE en formation Commercial IA, collaboration autour d'un ordinateur portable"
+          alt="Apprenants Byound en formation Commercial IA, collaboration autour d'un ordinateur portable"
           className="absolute inset-0 h-full w-full"
           fallbackClassName="bg-edge-photo"
           sizes="50vw"
@@ -274,7 +274,7 @@ export function ParcoursPhareLightSection() {
     <section className="grid min-h-[400px] bg-white lg:grid-cols-2" aria-labelledby="phare-product">
       <div className="relative order-2 min-h-[280px] bg-edge-grey lg:order-1 lg:min-h-[400px]">
         <ImagePlaceholder
-          alt="Cohorte EDGE lors d'un speed meeting avec recruteurs"
+          alt="Cohorte Byound lors d'un speed meeting avec recruteurs"
           className="absolute inset-0 h-full w-full"
           fallbackClassName="bg-edge-photo-light"
           sizes="50vw"
@@ -297,11 +297,11 @@ export function ParcoursPhareLightSection() {
   );
 }
 
-/** Section 5 — EDGE Online teaser */
+/** Section 5 — Byound Online teaser */
 export function EdgeOnlineTeaserSection() {
   return (
     <section className="bg-edge-grey px-5 py-20 text-center sm:px-10 sm:py-[80px]" aria-labelledby="online-teaser">
-      <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">EDGE Online</p>
+      <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-edge-red">Byound Online</p>
       <h2 id="online-teaser" className="mx-auto mt-4 max-w-lg text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-[-0.01em] text-edge-black">
         Apprendre vite. Appliquer immédiatement.
       </h2>
@@ -427,14 +427,14 @@ export function FinalCTASection() {
         Prêt à performer comme les meilleurs ?
       </h2>
       <p className="mx-auto mt-4 max-w-md text-[15px] text-white/70">
-        Rejoignez la prochaine cohorte en Normandie ou explorez EDGE Online dès aujourd&apos;hui.
+        Rejoignez la prochaine cohorte en Normandie ou explorez Byound Online dès aujourd&apos;hui.
       </p>
       <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <EdgeButton variant="inverted" href={EDGE_HREFS.candidater} ariaLabel={EDGE_CTA_LABELS.cohort}>
           {EDGE_CTA_LABELS.cohort}
         </EdgeButton>
-        <EdgeButton variant="secondary-dark" href={EDGE_HREFS.edgeOnline} ariaLabel="Essayer EDGE Online">
-          Essayer EDGE Online
+        <EdgeButton variant="secondary-dark" href={EDGE_HREFS.edgeOnline} ariaLabel="Essayer Byound Online">
+          Essayer Byound Online
         </EdgeButton>
       </div>
     </section>

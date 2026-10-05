@@ -28,7 +28,7 @@ const CAP_IMAGE =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/objectifs%20pro.png";
 
 /**
- * Cockpit Profil EDGE — première page après connexion.
+ * Cockpit Profil Byound — première page après connexion.
  */
 export function ProfilComportementalReport() {
   const data = useProfilEdgeHub();

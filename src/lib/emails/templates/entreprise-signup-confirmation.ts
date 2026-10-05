@@ -19,7 +19,7 @@ export function getEntrepriseSignupConfirmationEmail(params: {
 
   const html = buildEdgeEmailShell({
     title: `Bienvenue ${greeting}`,
-    preheader: "Activez votre essai EDGE Entreprise — 30 jours gratuits",
+    preheader: "Activez votre essai Byound Entreprise — 30 jours gratuits",
     bodyHtml: `<p>Votre essai gratuit de 30 jours${companyName ? ` pour <strong>${companyName}</strong>` : ""} est prêt.</p>
       <p>Confirmez votre email pour accéder au dashboard RH, inviter vos collaborateurs et lancer vos diagnostics Beyond.</p>`,
     cta: { label: "Activer mon espace entreprise", href: params.confirmationLink },
@@ -27,8 +27,8 @@ export function getEntrepriseSignupConfirmationEmail(params: {
   });
 
   const subject = firstName
-    ? `${params.firstName.trim()}, activez votre essai EDGE Entreprise`
-    : "Activez votre essai EDGE Entreprise";
+    ? `${params.firstName.trim()}, activez votre essai Byound Entreprise`
+    : "Activez votre essai Byound Entreprise";
 
   return { subject, html };
 }

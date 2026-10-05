@@ -32,16 +32,16 @@ export function AchievementsCard({ testsComplete, badgeAwarded, badgeName }: Pro
             {!testsComplete ? (
               <>
                 <p className="text-[1.35rem] font-bold tracking-[-0.02em] text-white">
-                  Profil EDGE en cours
+                  Profil Byound en cours
                 </p>
                 <p className="mt-2 text-[15px] leading-relaxed text-white/75">
-                  Badge délivré après les 3 tests EDGE.
+                  Badge délivré après les 3 tests Byound.
                 </p>
               </>
             ) : unlocked ? (
               <>
                 <p className="text-[1.35rem] font-bold tracking-[-0.02em] text-white">
-                  Votre profil comportemental EDGE est validé.
+                  Votre profil comportemental Byound est validé.
                 </p>
                 <p className="mt-2 text-[15px] text-white/75">{badgeName}</p>
               </>

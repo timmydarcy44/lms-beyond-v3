@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export type OrgFormationsTab = "catalogue" | "creer" | "gerer" | "parcours";
 
 const TABS: Array<{ id: OrgFormationsTab; label: string; segment: string; icon: typeof BookOpen }> = [
-  { id: "catalogue", label: "Catalogue EDGE", segment: "catalogue", icon: Library },
+  { id: "catalogue", label: "Catalogue Byound", segment: "catalogue", icon: Library },
   { id: "creer", label: "Créer une formation", segment: "creer", icon: FolderPlus },
   { id: "gerer", label: "Gérer mes formations", segment: "gerer", icon: Settings2 },
   { id: "parcours", label: "Créer un parcours", segment: "parcours", icon: Route },

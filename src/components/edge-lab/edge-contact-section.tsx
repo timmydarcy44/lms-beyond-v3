@@ -27,7 +27,7 @@ export function EdgeContactSection() {
               href={mailHref}
               className="mt-8 inline-flex min-h-[48px] items-center justify-center rounded-full bg-blue-600 px-8 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
             >
-              Écrire à EDGE
+              Écrire à Byound
             </a>
           ) : (
             <p className="mt-8 text-sm text-zinc-500">

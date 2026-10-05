@@ -1,4 +1,4 @@
-/** Enrichit le payload overview EDGE Business Demo. */
+/** Enrichit le payload overview Byound Business Demo. */
 
 import {
   EDGEBS_DEMO_FORMATIONS,
@@ -98,7 +98,7 @@ function buildFillerEmployee(index: number): Record<string, unknown> {
       diagnostic_done: diagnosticDone,
       diagnostic_started: diagnosticDone,
       formation_active: index % 3 !== 2,
-      demo_note: diagnosticDone ? "Profil enrichi démo EDGE" : "Diagnostic à compléter",
+      demo_note: diagnosticDone ? "Profil enrichi démo Byound" : "Diagnostic à compléter",
     },
     index,
   );
@@ -248,7 +248,7 @@ function buildDemoIdmcAxes(index: number): Record<AxisKey, number> {
   return axes;
 }
 
-/** Scores Soft Skills démo — échelle test EDGE /15. */
+/** Scores Soft Skills démo — échelle test Byound /15. */
 function buildDemoSoftSkills(index: number): Array<{ skill: string; score: number }> {
   return SOFT_SKILLS.map((skill, skillIndex) => {
     const pattern = (index + skillIndex) % 7;
@@ -363,7 +363,7 @@ export function buildEdgebsDemoEmployeeDetailPayload(id: string) {
           description:
             criticalGaps[0] != null
               ? `Écart de ${Math.abs(criticalGaps[0].gap ?? 0)} pts vs cible métier ${metier.title}.`
-              : String(employee.demo_note ?? "Action prioritaire démo EDGE"),
+              : String(employee.demo_note ?? "Action prioritaire démo Byound"),
         }
       : null,
     metier_match: {
@@ -513,7 +513,7 @@ export function enrichEdgebsDemoOverview(payload: OverviewPayload): OverviewPayl
   const equipeInsight = {
     week_end: new Date().toISOString().slice(0, 10),
     insight:
-      "EDGE Business Demo — organisation structurée. Priorités : IA métier, leadership managers, accélération Modern Prospecting.",
+      "Byound Business Demo — organisation structurée. Priorités : IA métier, leadership managers, accélération Modern Prospecting.",
     idmc: 69,
     stress: 54,
     cohesion: 74,
@@ -599,7 +599,7 @@ export function enrichEdgebsDemoOverview(payload: OverviewPayload): OverviewPayl
     demo_enriched: true,
     organisation: {
       ...((payload.organisation as Record<string, unknown>) ?? {}),
-      name: "EDGE Business Demo",
+      name: "Byound Business Demo",
     },
     kpis: {
       ...kpis,

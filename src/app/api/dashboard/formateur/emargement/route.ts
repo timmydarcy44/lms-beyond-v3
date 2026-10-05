@@ -434,7 +434,7 @@ export async function POST(req: Request) {
       }
       const sms = await sendSms({
         to: phone,
-        body: `EDGE émargement ${phase === "checkout" ? "sortie" : "entrée"} — code ${code} (valable ${SESSION_CODE_TTL_MINUTES} min)`,
+        body: `Byound émargement ${phase === "checkout" ? "sortie" : "entrée"} — code ${code} (valable ${SESSION_CODE_TTL_MINUTES} min)`,
         meta: { session_id: sessionId, learner_id: (p as { id: string }).id, method: "sms_code" },
       });
       await db.from("school_attendance_events").insert({

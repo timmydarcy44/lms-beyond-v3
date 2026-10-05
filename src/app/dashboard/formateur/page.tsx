@@ -145,7 +145,7 @@ export default function FormateurDashboardPage() {
         <h1 className="text-[28px] font-bold tracking-[-0.03em] text-white">
           Bonjour {firstName}
         </h1>
-        <p className="text-[14px] text-white/40">Votre espace Expert EDGE</p>
+        <p className="text-[14px] text-white/40">Votre espace Expert Byound</p>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

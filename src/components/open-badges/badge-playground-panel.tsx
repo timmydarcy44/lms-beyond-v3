@@ -272,7 +272,7 @@ export function BadgePlaygroundPanel({
             <Sparkles className="h-4 w-4 text-cyan-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Playground EDGE</p>
+            <p className="text-sm font-semibold text-white">Playground Byound</p>
             <p className="text-[11px] text-white/50">Prompt → réponse IA → reformulation</p>
           </div>
         </div>

@@ -32,7 +32,7 @@ const COACHING_TYPE_LABELS: Record<string, string> = {
   accompagnement_reservation: "Réservation coaching",
   programme_request: "Programme accompagnement",
   personalized_path: "Parcours personnalisé",
-  edge_mission: "Mission EDGE",
+  edge_mission: "Mission Byound",
   path_trigger: "Entretien parcours",
   ai_lesson: "Coaching IA (leçon)",
 };

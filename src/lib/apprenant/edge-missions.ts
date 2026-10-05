@@ -1,5 +1,5 @@
 /**
- * Missions EDGE — terminologie produit et mécanismes pédagogiques.
+ * Missions Byound — terminologie produit et mécanismes pédagogiques.
  */
 
 import type { MissionFormatId } from "@/lib/apprenant/edge-mission-types";

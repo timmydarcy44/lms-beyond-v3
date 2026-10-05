@@ -11,7 +11,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /**
- * Shell Formateur = même App Shell EDGE que l'apprenant :
+ * Shell Formateur = même App Shell Byound que l'apprenant :
  * ConnectCockpitBackdrop + sidebar intégrée + main transparent.
  * Pas de container de page autour du contenu — seules les cartes ont une surface.
  */
@@ -42,7 +42,7 @@ export function FormateurConnectShell({ children }: { children: React.ReactNode 
             >
               <Menu className="h-5 w-5" />
             </button>
-            <p className={theme.mobileTitleClass}>EDGE Expert</p>
+            <p className={theme.mobileTitleClass}>Byound Expert</p>
             <div className="w-10" />
           </div>
 

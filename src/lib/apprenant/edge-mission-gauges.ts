@@ -1,5 +1,5 @@
 /**
- * Jauges de mission EDGE — état dynamique de la situation (jeu de situation interne).
+ * Jauges de mission Byound — état dynamique de la situation (jeu de situation interne).
  */
 
 import type { MissionGauge, MissionGaugeDelta, MissionGaugeSnapshot, MissionOutcome } from "@/lib/apprenant/edge-mission-types";

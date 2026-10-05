@@ -30,7 +30,7 @@ function buildFallbackWhyLevel(
   const verdict = validation?.verdict;
 
   if (verdict === "validated" || status === "validated" || status === "expert_validated") {
-    return `EDGE estime le niveau ${estimatedLevel} car les éléments fournis démontrent une maîtrise cohérente de ${skillName} : expériences concrètes, vocabulaire métier et logique d'action alignés avec le référentiel EDGE.`;
+    return `Byound estime le niveau ${estimatedLevel} car les éléments fournis démontrent une maîtrise cohérente de ${skillName} : expériences concrètes, vocabulaire métier et logique d'action alignés avec le référentiel Byound.`;
   }
 
   if (estimatedLevel === "Débutant" || verdict === "insufficient") {
@@ -38,15 +38,15 @@ function buildFallbackWhyLevel(
   }
 
   if (declaredLevel !== estimatedLevel) {
-    return `EDGE positionne le niveau à ${estimatedLevel} (déclaré : ${declaredLevel}). L'analyse croise vos réponses, le référentiel métier et la cohérence de votre parcours pour affiner cette estimation.`;
+    return `Byound positionne le niveau à ${estimatedLevel} (déclaré : ${declaredLevel}). L'analyse croise vos réponses, le référentiel métier et la cohérence de votre parcours pour affiner cette estimation.`;
   }
 
   const next = nextHardSkillLevel(estimatedLevel);
   if (next) {
-    return `Le niveau ${estimatedLevel} est atteint sur les fondamentaux de ${skillName}. Pour viser ${next}, EDGE recommande de renforcer les preuves terrain et la précision des exemples partagés.`;
+    return `Le niveau ${estimatedLevel} est atteint sur les fondamentaux de ${skillName}. Pour viser ${next}, Byound recommande de renforcer les preuves terrain et la précision des exemples partagés.`;
   }
 
-  return `EDGE a analysé ${skillName} selon son référentiel de compétences. Le niveau ${estimatedLevel} reflète l'ensemble des éléments disponibles à ce stade de votre parcours.`;
+  return `Byound a analysé ${skillName} selon son référentiel de compétences. Le niveau ${estimatedLevel} reflète l'ensemble des éléments disponibles à ce stade de votre parcours.`;
 }
 
 function defaultObservations(
@@ -57,7 +57,7 @@ function defaultObservations(
 
   if (status === "validated" || status === "expert_validated") {
     return [
-      { type: "positive", text: "maîtrise alignée avec le référentiel EDGE" },
+      { type: "positive", text: "maîtrise alignée avec le référentiel Byound" },
       { type: "positive", text: "exemples et logique d'action cohérents" },
       { type: "positive", text: "niveau de détail suffisant pour valider la compétence" },
     ];
@@ -72,7 +72,7 @@ function defaultObservations(
   }
 
   return [
-    { type: "warning", text: "compétence déclarée — évaluation EDGE recommandée" },
+    { type: "warning", text: "compétence déclarée — évaluation Byound recommandée" },
     { type: "warning", text: "preuves et entretien expérientiel à compléter" },
   ];
 }

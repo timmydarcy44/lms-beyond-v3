@@ -99,7 +99,7 @@ export function EdgeFirstStepsGuide({
           </span>
           <h2 className="mt-5 text-xl font-semibold text-white">Premiers pas terminés.</h2>
           <p className="mt-3 text-sm leading-relaxed text-white/60">
-            Votre profil EDGE est prêt à être exploité.
+            Votre profil Byound est prêt à être exploité.
           </p>
           <button
             type="button"
@@ -138,7 +138,7 @@ export function EdgeFirstStepsGuide({
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8BB4FF]">
-                Premiers pas EDGE
+                Premiers pas Byound
               </p>
               <p className="mt-0.5 text-xs text-white/40">
                 Étape {stepIndex + 1} sur {STEP_ORDER.length - 1}
@@ -173,7 +173,7 @@ export function EdgeFirstStepsGuide({
               onConfirm={() => {
                 const value = objectiveDraft.trim() || gps.objectiveTitle;
                 onObjectiveConfirmed?.(value);
-                showToast("Objectif confirmé. EDGE peut maintenant analyser vos écarts.");
+                showToast("Objectif confirmé. Byound peut maintenant analyser vos écarts.");
                 window.setTimeout(() => onStepChange("gaps"), 900);
               }}
             />
@@ -299,7 +299,7 @@ function BuildStep({ onContinue }: { onContinue: () => void }) {
     <div>
       <h3 className="text-base font-semibold text-white">{EDGE_EXPERT_PARCOURS_CTA}</h3>
       <p className="mt-2 text-sm leading-relaxed text-white/55">
-        EDGE identifie vos écarts. Un expert peut ensuite construire un plan personnalisé adapté à votre
+        Byound identifie vos écarts. Un expert peut ensuite construire un plan personnalisé adapté à votre
         situation — pas un catalogue générique.
       </p>
       <button
@@ -318,7 +318,7 @@ function FormStep({ onSkip }: { onSkip: () => void }) {
     <div>
       <h3 className="text-base font-semibold text-white">{EDGE_EXPERT_PARCOURS_CTA}</h3>
       <p className="mt-2 text-sm text-white/55">
-        Réservez un créneau avec un expert EDGE pour construire votre plan d&apos;action.
+        Réservez un créneau avec un expert Byound pour construire votre plan d&apos;action.
       </p>
       <Link
         href={getExpertParcoursHref()}

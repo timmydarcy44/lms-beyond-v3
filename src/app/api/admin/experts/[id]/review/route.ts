@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireEdgeAdmin } from "@/lib/auth/require-edge-admin";
+import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { getServerClient } from "@/lib/supabase/server";
 import {
   getExpertApprovedEmail,
   getExpertNeedsInfoEmail,
@@ -18,7 +20,14 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireEdgeAdmin();
+  let auth = await requireEdgeAdmin();
+  if (!auth.ok) {
+    const client = await getServerClient();
+    const userId = client ? (await client.auth.getUser()).data.user?.id : undefined;
+    if (userId && (await isSuperAdmin())) {
+      auth = { ok: true, userId };
+    }
+  }
   if (!auth.ok) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }

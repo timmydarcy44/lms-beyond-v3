@@ -69,7 +69,7 @@ function mapSupabaseRow(row: Record<string, unknown>): PublicBadgeClassView | nu
     level: Number.isFinite(level) ? level : null,
     criteriaMarkdown: String(row.criteria ?? config.criteriaMarkdown ?? ""),
     structuredCriteria,
-    issuerName: "EDGE",
+    issuerName: "Byound",
     issuerUrl: getPublicShareBaseUrl(),
     organizationName: null,
   };
@@ -120,6 +120,6 @@ export function buildPublicBadgeShareDescription(badge: PublicBadgeClassView): s
   const intro = badge.description.trim();
   return (
     intro ||
-    `Open Badge EDGE : ${badge.name}${level}. Certification vérifiable et partageable.`
+    `Open Badge Byound : ${badge.name}${level}. Certification vérifiable et partageable.`
   );
 }

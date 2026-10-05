@@ -68,7 +68,7 @@ export function EdgePremiumComparisonTable() {
         <div className="bg-white p-6 sm:p-8">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-700/80">EDGE</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-700/80">Byound</div>
               <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-zinc-950">De la preuve, tout de suite.</div>
             </div>
             <span className="grid h-12 w-12 place-items-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700">

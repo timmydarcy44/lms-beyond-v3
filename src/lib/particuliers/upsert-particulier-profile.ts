@@ -9,7 +9,7 @@ export type ParticulierProfileInput = {
 };
 
 /**
- * Crée ou met à jour le profil d'un particulier EDGE.
+ * Crée ou met à jour le profil d'un particulier Byound.
  * L'objectif est aussi stocké dans auth.user_metadata (voir route signup).
  */
 export async function upsertParticulierProfile(
@@ -24,7 +24,7 @@ export async function upsertParticulierProfile(
     first_name: input.firstName,
     last_name: input.lastName,
     full_name: fullName,
-    /** Accès espace apprenant EDGE */
+    /** Accès espace apprenant Byound */
     role: "learner",
     role_type: "particulier",
   };

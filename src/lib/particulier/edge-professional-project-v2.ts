@@ -1,4 +1,4 @@
-/** Projet professionnel EDGE v2 — structure unifiée (tous profils). */
+/** Projet professionnel Byound v2 — structure unifiée (tous profils). */
 
 export const EDGE_PROJECT_KEYS = {
   profession: "edge_profession",
@@ -84,7 +84,7 @@ export function buildUserObjectiveDisplay(project: Record<string, string | undef
   return "";
 }
 
-/** Texte envoyé à l'IA pour identifier le métier EDGE le plus pertinent. */
+/** Texte envoyé à l'IA pour identifier le métier Byound le plus pertinent. */
 export function buildCareerResolvePrompt(project: Record<string, string | undefined>): string {
   const p = getEdgeProjectFromRecord(project);
   const profession =

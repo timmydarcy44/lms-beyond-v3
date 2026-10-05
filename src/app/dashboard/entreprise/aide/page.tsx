@@ -21,8 +21,8 @@ const FAQ = [
     a: "Sur la fiche collaborateur (écarts vs métier) et sur le dashboard (alertes). Les fiches métiers définissent les cibles soft / hard skills.",
   },
   {
-    q: "Comment demander une formation EDGE ?",
-    a: "Formations → Demander une formation. Filtrez par thématique, ouvrez le formulaire : l’équipe EDGE reçoit votre demande par email.",
+    q: "Comment demander une formation Byound ?",
+    a: "Formations → Demander une formation. Filtrez par thématique, ouvrez le formulaire : l’équipe Byound reçoit votre demande par email.",
   },
   {
     q: "À quoi sert Inclusion / accessibilité ?",
@@ -61,7 +61,7 @@ export default function EntrepriseAidePage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">Aide</p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Centre d’aide</h1>
           <p className="mt-2 text-sm text-gray-500">
-            FAQ pour utiliser le dashboard entreprise EDGE au quotidien.
+            FAQ pour utiliser le dashboard entreprise Byound au quotidien.
           </p>
         </header>
 

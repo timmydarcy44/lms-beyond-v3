@@ -1,14 +1,14 @@
 /**
- * Défis EDGE — chaque compétence devient un défi jouable.
+ * Défis Byound — chaque compétence devient un défi jouable.
  * L'IA choisit dynamiquement le format ; ici on expose les formats
  * disponibles (front) et la terminologie officielle (jamais « simulation »).
  */
 
 export const EDGE_CHALLENGE_TERMS = {
-  challenge: "Défi EDGE",
+  challenge: "Défi Byound",
   interactive: "Session interactive",
-  interview: "Entretien EDGE",
-  validation: "Validation EDGE",
+  interview: "Entretien Byound",
+  validation: "Validation Byound",
   aiChallenge: "Challenge IA",
 } as const;
 

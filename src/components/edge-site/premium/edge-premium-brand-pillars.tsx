@@ -14,7 +14,7 @@ const PILLARS = [
   {
     icon: Network,
     title: "Réseau de spécialistes",
-    description: "Formateurs et experts métier sélectionnés, évalués et certifiés par EDGE.",
+    description: "Formateurs et experts métier sélectionnés, évalués et certifiés par Byound.",
   },
   {
     icon: TrendingUp,

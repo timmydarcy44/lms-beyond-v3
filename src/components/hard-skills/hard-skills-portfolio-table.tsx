@@ -62,7 +62,7 @@ export function HardSkillsPortfolioTable({
       <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-14 text-center">
         <p className="text-sm font-medium text-white/70">Aucune compétence enregistrée</p>
         <p className="mt-2 text-sm text-white/40">
-          Ajoutez vos compétences depuis le catalogue EDGE ou manuellement.
+          Ajoutez vos compétences depuis le catalogue Byound ou manuellement.
         </p>
       </div>
     );

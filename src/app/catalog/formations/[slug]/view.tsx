@@ -878,7 +878,7 @@ export const FormationDetailView = ({
 
   useEffect(() => {
     // Préfère le logo de l'organisation de l'utilisateur connecté (PSG, etc.),
-    // y compris sur EDGE Online (orgSlug = edgelab pour le catalogue cours).
+    // y compris sur Byound Online (orgSlug = edgelab pour le catalogue cours).
     let cancel = false;
     (async () => {
       try {

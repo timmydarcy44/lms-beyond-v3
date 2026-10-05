@@ -111,7 +111,7 @@ export type BusinessPlaceholderSlug = keyof typeof BUSINESS_PLACEHOLDER_PAGES;
 export function businessPlaceholderMetadata(slug: BusinessPlaceholderSlug): Metadata {
   const page = BUSINESS_PLACEHOLDER_PAGES[slug];
   return {
-    title: `${page.title} — EDGE Business`,
+    title: `${page.title} — Byound Business`,
     description: page.description,
   };
 }

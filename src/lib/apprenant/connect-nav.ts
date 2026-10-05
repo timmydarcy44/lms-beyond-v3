@@ -76,7 +76,7 @@ const BASE: ApprenantNavItem[] = [
     action: "share-profile",
   },
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
-  { label: "EDGE Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
+  { label: "Byound Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
   { label: "Parcours", href: PARCOURS_HREF, icon: BookMarked },
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },

@@ -9,7 +9,7 @@ export default function EcoleFormationsOverviewPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Formations</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Vue d&apos;ensemble</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-500">
-            Deux univers distincts : les cursus présentiels / hybrides, et le catalogue digital EDGE Online.
+            Deux univers distincts : les cursus présentiels / hybrides, et le catalogue digital Byound Online.
           </p>
         </div>
         <Link
@@ -41,7 +41,7 @@ export default function EcoleFormationsOverviewPage() {
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
             <MonitorPlay className="h-5 w-5" />
           </span>
-          <h2 className="mt-4 text-lg font-bold text-slate-900">EDGE Online</h2>
+          <h2 className="mt-4 text-lg font-bold text-slate-900">Byound Online</h2>
           <p className="mt-2 text-sm text-slate-500">
             Formations numériques consommables en ligne — e-learning, vidéos, parcours autonomes.
           </p>

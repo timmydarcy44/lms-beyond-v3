@@ -42,7 +42,7 @@ type Props = {
 /** État vide incitatif — 3 cartes test avec CTA direct. */
 export function LearnerTestsUnlockSection({
   title = "Complétez vos tests pour débloquer votre parcours personnalisé",
-  lead = "EDGE diagnostique avant de former. Passez au moins un test pour recevoir des recommandations de coaching, formations et badges adaptés à votre profil.",
+  lead = "Byound diagnostique avant de former. Passez au moins un test pour recevoir des recommandations de coaching, formations et badges adaptés à votre profil.",
 }: Props) {
   return (
     <section className="space-y-6">

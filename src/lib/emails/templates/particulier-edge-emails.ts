@@ -10,16 +10,16 @@ export function getParticulierWelcomeEmail(params: { firstName: string; confirma
   const name = params.firstName.trim();
   const html = buildEdgeEmailShell({
     title: name ? `Bienvenue ${name}` : "Bienvenue",
-    preheader: "Votre espace EDGE est prêt",
+    preheader: "Votre espace Byound est prêt",
     bodyHtml: [
-      edgeEmailParagraph("Vous venez de créer votre espace EDGE."),
+      edgeEmailParagraph("Vous venez de créer votre espace Byound."),
       edgeEmailParagraph("Complétez votre test comportemental, votre test de personnalité et votre test des soft skills."),
     ].join(""),
-    cta: { label: "Ouvrir mon espace EDGE", href: params.confirmationLink },
+    cta: { label: "Ouvrir mon espace Byound", href: params.confirmationLink },
     footerNote: "Inscription gratuite · sans engagement · lien valable 24 h",
   });
   return {
-    subject: name ? `${name}, bienvenue sur EDGE` : "Bienvenue sur EDGE",
+    subject: name ? `${name}, bienvenue sur Byound` : "Bienvenue sur Byound",
     html,
   };
 }
@@ -33,7 +33,7 @@ export function getParticulierTestCompletedEmail(params: {
     title: "Test terminé",
     preheader: `${params.testName} — résultats disponibles`,
     bodyHtml: edgeEmailParagraph(
-      `${params.firstName.trim() || "Votre"} test « ${params.testName} » est terminé. Consultez vos résultats dans votre espace EDGE.`,
+      `${params.firstName.trim() || "Votre"} test « ${params.testName} » est terminé. Consultez vos résultats dans votre espace Byound.`,
     ),
     cta: { label: "Voir mes résultats", href: params.dashboardHref ?? `${APP_URL}/dashboard/apprenant` },
   });
@@ -50,7 +50,7 @@ export function getParticulierBadgeEarnedEmail(params: {
     preheader: params.badgeName,
     bodyHtml: [
       edgeEmailParagraph(`Félicitations ${params.firstName.trim() || ""}`.trim() + " !"),
-      edgeEmailHighlight("Badge EDGE", params.badgeName),
+      edgeEmailHighlight("Badge Byound", params.badgeName),
       edgeEmailParagraph("Votre badge est disponible dans votre Wallet."),
     ].join(""),
     cta: { label: "Voir mon Wallet", href: params.walletHref ?? `${APP_URL}/dashboard/apprenant/badges` },
@@ -82,7 +82,7 @@ export function getParticulierSkillAnalysisEmail(params: {
     preheader: `Compétence ${params.skillName}`,
     bodyHtml: [
       edgeEmailParagraph(
-        `Votre compétence « ${params.skillName} » a été analysée par EDGE.`,
+        `Votre compétence « ${params.skillName} » a été analysée par Byound.`,
       ),
       edgeEmailHighlight("Résultat", resultLabels[params.result]),
     ].join(""),
@@ -107,11 +107,11 @@ export function getParticulierSkillValidatedEmail(params: {
     title: "Compétence validée",
     preheader: params.skillName,
     bodyHtml: [
-      edgeEmailParagraph(`Votre compétence « ${params.skillName} » est validée par EDGE.`),
-      edgeEmailParagraph("Vous pouvez créer le badge EDGE associé à cette compétence."),
+      edgeEmailParagraph(`Votre compétence « ${params.skillName} » est validée par Byound.`),
+      edgeEmailParagraph("Vous pouvez créer le badge Byound associé à cette compétence."),
     ].join(""),
     cta: {
-      label: "Créer mon badge EDGE",
+      label: "Créer mon badge Byound",
       href: params.createBadgeHref ?? `${APP_URL}/dashboard/apprenant/badges`,
     },
   });
@@ -126,7 +126,7 @@ export function getParticulierNewProofReceivedEmail(params: {
     title: "Preuve reçue",
     preheader: params.skillName,
     bodyHtml: edgeEmailParagraph(
-      `Nous avons bien reçu votre preuve pour la compétence « ${params.skillName} ». L'analyse EDGE est en cours.`,
+      `Nous avons bien reçu votre preuve pour la compétence « ${params.skillName} ». L'analyse Byound est en cours.`,
     ),
     cta: {
       label: "Suivre mon analyse",

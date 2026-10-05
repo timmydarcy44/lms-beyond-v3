@@ -9,7 +9,7 @@ type Props = {
   label?: string;
 };
 
-export async function EdgeBusinessPlaceholderPage({ title, description, label = "EDGE Business" }: Props) {
+export async function EdgeBusinessPlaceholderPage({ title, description, label = "Byound Business" }: Props) {
   const host = (await headers()).get("host");
   const routes = getEdgeMarketingRoutes(host);
 

@@ -13,7 +13,7 @@ export function EdgePremiumExpertSection() {
           Vous êtes formateur ou expert métier ?
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-black/50">
-          Rejoignez l&apos;écosystème EDGE et intervenez sur des parcours conçus pour développer
+          Rejoignez l&apos;écosystème Byound et intervenez sur des parcours conçus pour développer
           les compétences qui font la différence.
         </p>
         <div className="mt-8">

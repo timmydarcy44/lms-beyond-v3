@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 type Props = {
   children: React.ReactNode;
   className?: string;
-  /** accent = rouge EDGE ; muted = gris sur fond clair ; muted-dark = gris sur fond noir */
+  /** accent = rouge Byound ; muted = gris sur fond clair ; muted-dark = gris sur fond noir */
   tone?: "accent" | "muted" | "muted-dark";
 };
 

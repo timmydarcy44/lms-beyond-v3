@@ -71,7 +71,7 @@ export function PublicProfileBadgeOverlay({
             )}
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-[#FF3B30]">
-                Open Badge EDGE
+                Open Badge Byound
                 {badge.level != null ? ` · Niveau ${badge.level}` : ""}
               </p>
               <h2 id="public-badge-overlay-title" className="mt-1 text-xl font-semibold text-[#0a0a0a]">

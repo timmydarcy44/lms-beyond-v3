@@ -16,7 +16,7 @@ export function getExpertRegistrationConfirmationEmail(params: {
   const greeting = firstName || "Bonjour";
 
   const html = buildEdgeEmailShell({
-    title: "Bienvenue dans le réseau EDGE",
+    title: "Bienvenue dans le réseau Byound",
     preheader: "Créez votre mot de passe pour accéder à votre espace formateur",
     bodyHtml: `<p>Bonjour ${greeting},</p>
       <p>Votre profil a bien été enregistré.</p>
@@ -27,7 +27,7 @@ export function getExpertRegistrationConfirmationEmail(params: {
   });
 
   return {
-    subject: "Bienvenue dans le réseau EDGE",
+    subject: "Bienvenue dans le réseau Byound",
     html,
   };
 }

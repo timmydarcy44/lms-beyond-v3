@@ -54,7 +54,7 @@ export function ProfilEdgeHubObjective({ project, referentialTitle }: Props) {
           </h2>
         ) : (
           <p className="mt-3 text-[15px] leading-relaxed text-white/50">
-            Définissez votre projet pour activer le chemin EDGE.
+            Définissez votre projet pour activer le chemin Byound.
           </p>
         )}
       </div>

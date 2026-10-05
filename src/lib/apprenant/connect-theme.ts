@@ -46,7 +46,7 @@ const EDGE_THEME: ConnectShellTheme = {
   shellAttr: "edge",
   rootClass: "relative min-h-screen",
   showBackdrop: true,
-  brandTitle: "EDGE",
+  brandTitle: "Byound",
   brandSubtitle: "Propulsé par Beyond",
   brandCollapsedLetter: "E",
   brandCollapsedClass: "mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-[#3D7BFF]/15 text-xs font-semibold text-[#3D7BFF]",
@@ -90,7 +90,7 @@ const EDGE_THEME: ConnectShellTheme = {
   shareToastBtnClass:
     "mt-4 rounded-full bg-[#6C5CE7] px-5 py-2 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(108,92,231,0.5)] hover:bg-[#7B6EF6]",
   signOutHref: "/particuliers",
-  mobileBrandFallback: "EDGE",
+  mobileBrandFallback: "Byound",
 };
 
 const JESSICA_THEME: ConnectShellTheme = {

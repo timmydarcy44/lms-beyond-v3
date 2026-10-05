@@ -126,10 +126,10 @@ export async function getEdgeOnlineCourseDetailBySlug(
     title: String(course.title ?? "Formation"),
     subtitle: null,
     backgroundImage: cover,
-    meta: ["EDGE Online"],
+    meta: ["Byound Online"],
     modules,
     description: String(course.description ?? ""),
-    tags: ["EDGE Online"],
+    tags: ["Byound Online"],
     trailerUrl: null,
   };
 

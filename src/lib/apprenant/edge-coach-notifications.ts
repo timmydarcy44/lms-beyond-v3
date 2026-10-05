@@ -1,5 +1,5 @@
 /**
- * Notifications coach EDGE — jamais génériques : chaque message est lié à une
+ * Notifications coach Byound — jamais génériques : chaque message est lié à une
  * compétence réelle et à la progression de l'utilisateur.
  */
 

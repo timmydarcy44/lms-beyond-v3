@@ -1,4 +1,4 @@
-/** Types CMS formations EDGE — structure publique uniquement (pas LMS). */
+/** Types CMS formations Byound — structure publique uniquement (pas LMS). */
 
 export type TrainingProgramSubchapter = {
   id: string;

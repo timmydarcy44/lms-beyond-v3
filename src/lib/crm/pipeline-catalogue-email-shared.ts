@@ -1,8 +1,8 @@
-export const DEFAULT_CATALOGUE_EMAIL_BODY = `Nous avons le plaisir de vous transmettre le catalogue de formation 2027 de EDGE.
+export const DEFAULT_CATALOGUE_EMAIL_BODY = `Nous avons le plaisir de vous transmettre le catalogue de formation 2027 de Byound.
 Nous restons à votre disposition pour échanger ensemble sur vos besoins en formation.
 Cordialement`;
 
-export const DEFAULT_CATALOGUE_EMAIL_SUBJECT = "Catalogue des formations EDGE 2027";
+export const DEFAULT_CATALOGUE_EMAIL_SUBJECT = "Catalogue des formations Byound 2027";
 
 type CatalogueGreetingInput = {
   contact_first_name?: string | null;

@@ -13,7 +13,7 @@ export default function EntrepriseRgpdRegisterPage() {
           </p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Registre des traitements</h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-500">
-            Inventaire des traitements opérés dans l’espace entreprise EDGE — finalité, base
+            Inventaire des traitements opérés dans l’espace entreprise Byound — finalité, base
             légale, catégories, destinataires et durée de conservation.
           </p>
           <p className="mt-2 text-xs text-gray-400">

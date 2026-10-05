@@ -6,13 +6,13 @@ export const EDGE_COHORTE_LABEL = "Rentrée septembre 2026";
 /** Badge hero homepage — sans répéter l’année en tête de page. */
 export const EDGE_COHORTE_HERO_BADGE = "Normandie · Rentrée septembre · inscriptions ouvertes";
 
-/** Hero homepage — lifestyle apprenante (Supabase EDGE Lab). */
+/** Hero homepage — lifestyle apprenante (Supabase Byound Lab). */
 export const EDGE_HERO_IMAGE_URL =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/product%20builder%20formation%20edge.jpeg";
 
-/** Assets marketing homepage EDGE. */
+/** Assets marketing homepage Byound. */
 export const EDGE_OPEN_BADGE_IMAGE_PATH = "/edge-lab/open-badge-modern-prospecting.png";
-/** MacBook Beyond — dashboard Mes résultats (PNG fond transparent, Supabase EDGE Lab). */
+/** MacBook Beyond — dashboard Mes résultats (PNG fond transparent, Supabase Byound Lab). */
 export const EDGE_BEYOND_LAPTOP_IMAGE_URL =
   "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/ordinateur%20home.png";
 
@@ -37,7 +37,7 @@ export const EDGE_HREFS = {
   aPropos: "#a-propos",
 } as const;
 
-/** Libellés CTA marketing EDGE */
+/** Libellés CTA marketing Byound */
 export const EDGE_CTA_LABELS = {
   nav: "Rejoindre",
   cohort: "Rejoindre la cohorte",

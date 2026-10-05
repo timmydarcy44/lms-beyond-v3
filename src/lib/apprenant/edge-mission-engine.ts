@@ -1,6 +1,6 @@
 /**
 
- * Moteur IA Mission EDGE — scène d'abord, coach discret, jauges dynamiques.
+ * Moteur IA Mission Byound — scène d'abord, coach discret, jauges dynamiques.
 
  */
 
@@ -111,7 +111,7 @@ export function buildMissionSystemPrompt(ctx: MissionContext): string {
 
   const name = ctx.coachMemory?.firstName ?? "l'apprenant";
 
-  return `Tu es le moteur d'une Mission EDGE pour ${name === "toi" ? "l'apprenant" : name}.
+  return `Tu es le moteur d'une Mission Byound pour ${name === "toi" ? "l'apprenant" : name}.
 
 
 
@@ -177,7 +177,7 @@ Ouverture uniquement :
 
 {
 
-  "coachIntro": "salutation courte du Coach EDGE",
+  "coachIntro": "salutation courte du Coach Byound",
 
   "sceneResponse": "première réplique in-character"
 
@@ -191,7 +191,7 @@ function buildOpeningUserPrompt(ctx: MissionContext): string {
 
   return `Ouvre la mission « ${ctx.mission.title} ».
 
-coachIntro : message bref du Coach EDGE.
+coachIntro : message bref du Coach Byound.
 
 sceneResponse : première réplique de ${ctx.mission.coachRole} — scène, émotions, première objection.
 
@@ -564,7 +564,7 @@ export async function getMissionCoachReply(
 
         const who =
 
-          m.role === "user" ? "Apprenant" : m.kind === "coach" ? "Coach EDGE" : ctx.mission.coachRole;
+          m.role === "user" ? "Apprenant" : m.kind === "coach" ? "Coach Byound" : ctx.mission.coachRole;
 
         return `${who} : ${m.content}`;
 
@@ -667,7 +667,7 @@ function fallbackDebrief(ctx: MissionContext, messages: MissionChatMessage[], pr
 
     confidence: Math.min(88, 55 + Math.floor(richness / 45)),
 
-    nextAction: `Nouvelle Mission EDGE sur « ${ctx.skillName} ».`,
+    nextAction: `Nouvelle Mission Byound sur « ${ctx.skillName} ».`,
 
     skillValidated: richness > 450,
 
@@ -789,7 +789,7 @@ export async function generateMissionDebrief(
 
       const who =
 
-        m.role === "user" ? "Apprenant" : m.kind === "coach" ? "Coach EDGE" : ctx.mission.coachRole;
+        m.role === "user" ? "Apprenant" : m.kind === "coach" ? "Coach Byound" : ctx.mission.coachRole;
 
       return `${who} : ${m.content}`;
 
@@ -805,13 +805,13 @@ export async function generateMissionDebrief(
 
     ? debriefSystemPromptWithBehaviors(ctx, options.proofMatrix)
 
-    : "Coach EDGE bienveillant. JSON uniquement.";
+    : "Coach Byound bienveillant. JSON uniquement.";
 
 
 
   const raw = await generateJSON(
 
-    `${behaviorPrompt}\n\nAnalyse cette Mission EDGE terminée.\n${missionBlock(ctx)}\n${gaugeInfo ? `Jauges finales :\n${gaugeInfo}` : ""}\nPreuve : ${proofText || "aucune"}\nTranscript :\n${transcript}`,
+    `${behaviorPrompt}\n\nAnalyse cette Mission Byound terminée.\n${missionBlock(ctx)}\n${gaugeInfo ? `Jauges finales :\n${gaugeInfo}` : ""}\nPreuve : ${proofText || "aucune"}\nTranscript :\n${transcript}`,
 
     DEBRIEF_SCHEMA,
 

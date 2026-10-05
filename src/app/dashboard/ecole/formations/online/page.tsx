@@ -5,7 +5,7 @@ import { requireEcoleOrgId } from "@/lib/org/require-dashboard-org";
 
 export const dynamic = "force-dynamic";
 
-/** Catalogue digital EDGE Online (formations e-learning existantes). */
+/** Catalogue digital Byound Online (formations e-learning existantes). */
 export default async function EcoleFormationsOnlinePage() {
   const { orgId } = await requireEcoleOrgId("/dashboard/ecole/formations/online");
   const [courses, learners] = await Promise.all([listOrgCourses(orgId), listOrgLearners(orgId)]);
@@ -14,7 +14,7 @@ export default async function EcoleFormationsOnlinePage() {
     <div className="mx-auto max-w-[1200px] space-y-6 px-4 py-8 sm:px-6">
       <header>
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Formations</p>
-        <h1 className="mt-1 text-3xl font-bold text-slate-900">EDGE Online</h1>
+        <h1 className="mt-1 text-3xl font-bold text-slate-900">Byound Online</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-500">
           Contenus numériques (e-learning, vidéos, parcours autonomes). Distincts des cursus présentiels.
         </p>

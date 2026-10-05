@@ -1,5 +1,5 @@
 /**
- * « Pourquoi EDGE pense cela ? » — justification comportementale d'une
+ * « Pourquoi Byound pense cela ? » — justification comportementale d'une
  * compétence + niveau de confiance de l'analyse. Objectif : ne jamais
  * afficher « Force identifiée » sans explication.
  */
@@ -41,7 +41,7 @@ export function getSkillEvidence(skill: string, status: SkillGapStatus): SkillEv
   return {
     title: isForce
       ? "Pourquoi cette compétence est identifiée comme une force ?"
-      : "Pourquoi EDGE vous propose de travailler cette compétence ?",
+      : "Pourquoi Byound vous propose de travailler cette compétence ?",
     intro: isForce
       ? "Notre IA a documenté plusieurs comportements observables compatibles avec cette compétence. Votre dossier de preuves montre notamment que vous :"
       : "Notre IA observe des signaux comportementaux à confirmer par des missions dans des contextes variés. Vos échanges montrent que vous :",

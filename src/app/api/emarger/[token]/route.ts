@@ -57,7 +57,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   });
 }
 
-/** Scan QR — exige authentification EDGE. */
+/** Scan QR — exige authentification Byound. */
 export async function POST(_req: Request, ctx: Ctx) {
   const session = await getSession();
   if (!session?.id) {

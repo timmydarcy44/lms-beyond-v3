@@ -1,4 +1,4 @@
-/** Helpers métier planning école EDGE */
+/** Helpers métier planning école Byound */
 
 export function hoursBetween(startsAt: string | Date, endsAt: string | Date): number {
   const a = new Date(startsAt).getTime();

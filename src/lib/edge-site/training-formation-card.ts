@@ -101,7 +101,7 @@ export function enrichFormationCard(module: TrainingModule): FormationCardData {
     duration: DURATION_BY_LEVEL[module.level] ?? "2 jours",
     levelLabel: getLevelLabel(module.level),
     formatsLabel: formatTrainingFormats(module.formats),
-    badgeName: badge?.name ?? "Open Badge EDGE",
+    badgeName: badge?.name ?? "Open Badge Byound",
     rating: Math.round(rating * 10) / 10,
     companiesCount,
     priceLabel: PRICE_BY_LEVEL[module.level] ?? "Sur devis",

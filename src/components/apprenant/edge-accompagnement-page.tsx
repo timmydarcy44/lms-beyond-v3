@@ -234,7 +234,7 @@ function SituationActuelle() {
             href={missionHref(s.nextAction.skill, { objective: s.objectiveLabel })}
             className="mt-5 inline-flex items-center justify-center rounded-lg bg-white px-5 py-2.5 text-[13px] font-medium text-[#191C1F] transition hover:bg-white/90"
           >
-            Lancer la Mission EDGE
+            Lancer la Mission Byound
           </Link>
         </div>
       ) : null}
@@ -251,7 +251,7 @@ function ProgressionTimeline({ nextSkill }: { nextSkill: string | null }) {
       when: "Aujourd'hui",
       items: [nextSkill ? `Faire l'exercice recommandé (${nextSkill})` : "Définir votre objectif professionnel"],
     },
-    { when: "Cette semaine", items: ["Réaliser une Mission EDGE", "Déposer une preuve"] },
+    { when: "Cette semaine", items: ["Réaliser une Mission Byound", "Déposer une preuve"] },
     { when: "Ce mois-ci", items: ["Suivre une formation courte", "Demander une validation", "Obtenir un badge"] },
   ];
 
@@ -335,7 +335,7 @@ export function EdgeAccompagnementPage() {
           Mon plan de progression
         </h1>
         <p className="text-[15px] leading-relaxed text-[#5C6370]">
-          EDGE vous propose les prochaines actions les plus utiles pour développer vos compétences et
+          Byound vous propose les prochaines actions les plus utiles pour développer vos compétences et
           atteindre votre objectif professionnel.
         </p>
       </motion.header>
@@ -389,7 +389,7 @@ export function EdgeAccompagnementPage() {
                 <tr className="border-b border-[#EEF0F2] text-[10px] font-medium uppercase tracking-wider text-[#8B919A]">
                   <th className="px-5 py-2.5 text-left font-medium">Inclus</th>
                   <th className="px-3 py-2.5 text-center font-medium">Expert 49 €</th>
-                  <th className="px-3 py-2.5 text-center font-medium">Mission EDGE</th>
+                  <th className="px-3 py-2.5 text-center font-medium">Mission Byound</th>
                   <th className="px-3 py-2.5 text-center font-medium">Sur devis</th>
                 </tr>
               </thead>

@@ -27,9 +27,9 @@ export default function ApprenantParcoursPage() {
     <div className={APPRENANT_PAGE_SHELL}>
       <section className="mb-8 space-y-2">
         <p className={APPRENANT_PAGE_KICKER}>Parcours personnalisé</p>
-        <h1 className={APPRENANT_PAGE_TITLE}>Mon parcours EDGE</h1>
+        <h1 className={APPRENANT_PAGE_TITLE}>Mon parcours Byound</h1>
         <p className={APPRENANT_PAGE_LEAD}>
-          Parcours EDGE, accompagnements, validations et Open Badges recommandés selon votre profil et
+          Parcours Byound, accompagnements, validations et Open Badges recommandés selon votre profil et
           vos objectifs professionnels.
         </p>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/55">{PARCOURS_CONCIERGE_INTRO}</p>

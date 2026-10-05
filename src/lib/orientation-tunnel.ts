@@ -29,7 +29,7 @@ export const ORIENTATION_PROFILS: { id: ProfilId; label: string; description: st
 
 export const ORIENTATION_FORMATS: { id: FormatId; label: string; description: string }[] = [
   { id: "bootcamp", label: "Parcours certifiant intensif", description: "Bootcamp, livrables, Open Badge IMS Global" },
-  { id: "rythme", label: "À mon rythme", description: "EDGE Online — micro-formations par thématique" },
+  { id: "rythme", label: "À mon rythme", description: "Byound Online — micro-formations par thématique" },
   { id: "entreprise", label: "Pour mon entreprise", description: "Diagnostic, intra, catalogue multi-accès" },
 ];
 
@@ -42,7 +42,7 @@ const BOOTCAMP_SLUGS: Record<ObjectifId, [string, string, string]> = {
   cognition: ["product-builder", "formateur-bct", "manager-ia"],
 };
 
-/** Thématique EDGE Online à mettre en avant selon le 1er objectif choisi. */
+/** Thématique Byound Online à mettre en avant selon le 1er objectif choisi. */
 export const OBJECTIF_THEME_LABEL: Record<ObjectifId, string> = {
   vente: "Négociation",
   management: "Leadership",

@@ -1,4 +1,4 @@
-/** Palette officielle EDGE — design system premium */
+/** Palette officielle Byound — design system premium */
 
 export const EDGE_COLORS = {
   navy: "#0A1628",

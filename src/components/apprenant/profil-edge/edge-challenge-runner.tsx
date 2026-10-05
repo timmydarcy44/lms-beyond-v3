@@ -128,10 +128,10 @@ export function EdgeChallengeRunner() {
       <div className="mx-auto max-w-2xl space-y-6">
         <BackLink />
         <section className="rounded-2xl border border-[#3D7BFF]/25 bg-gradient-to-br from-[#3D7BFF]/[0.12] to-transparent p-6">
-          <p className={APPRENANT_CARD_KICKER}>Défi EDGE</p>
+          <p className={APPRENANT_CARD_KICKER}>Défi Byound</p>
           <h1 className="mt-2 text-2xl font-bold text-white">{skill}</h1>
           <p className="mt-2 text-sm leading-relaxed text-white/60">
-            Un entretien interactif avec votre coach IA. Répondez naturellement : à la fin, EDGE vous
+            Un entretien interactif avec votre coach IA. Répondez naturellement : à la fin, Byound vous
             donne un débrief, un niveau estimé et des XP. Cette session construit une preuve de compétence.
           </p>
 
@@ -260,7 +260,7 @@ export function EdgeChallengeRunner() {
       <div className="flex items-center gap-2">
         <span className="text-lg">{meta.emoji}</span>
         <div>
-          <p className={APPRENANT_CARD_KICKER}>Défi EDGE · {skill}</p>
+          <p className={APPRENANT_CARD_KICKER}>Défi Byound · {skill}</p>
           <p className="text-xs text-white/45">{meta.label}</p>
         </div>
       </div>
@@ -283,7 +283,7 @@ export function EdgeChallengeRunner() {
             >
               {m.role === "assistant" ? (
                 <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#8BB4FF]">
-                  <Sparkles className="h-3 w-3" /> Coach EDGE
+                  <Sparkles className="h-3 w-3" /> Coach Byound
                 </span>
               ) : null}
               {m.content}
@@ -359,7 +359,7 @@ function BackLink() {
       href="/dashboard/apprenant/profil"
       className="inline-flex items-center gap-1.5 text-sm text-white/50 transition hover:text-white"
     >
-      <ArrowLeft className="h-4 w-4" /> Retour au Profil EDGE
+      <ArrowLeft className="h-4 w-4" /> Retour au Profil Byound
     </Link>
   );
 }

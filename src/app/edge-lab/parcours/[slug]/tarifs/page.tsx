@@ -16,9 +16,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = getParcours(slug);
-  if (!p) return { title: "Tarifs — EDGE" };
+  if (!p) return { title: "Tarifs — Byound" };
   return {
-    title: `Tarifs — ${p.titre} | EDGE`,
+    title: `Tarifs — ${p.titre} | Byound`,
     description: `Tarif du parcours ${p.titre}, options et modules complémentaires.`,
     robots: { index: true, follow: true },
   };

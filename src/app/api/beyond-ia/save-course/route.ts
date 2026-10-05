@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
       orgId = await resolveOrgIdBySlug(slugFromSnapshot);
     }
 
-    // Liaison EDGE Lab : si aucune org résolue mais le slug explicite pointe vers EDGE Lab, tenter les slugs canoniques.
+    // Liaison Byound Lab : si aucune org résolue mais le slug explicite pointe vers Byound Lab, tenter les slugs canoniques.
     if (!orgId) {
       const hint = `${bodyOrgSlug} ${slugFromSnapshot}`.toLowerCase();
       if (hint.includes("edge")) {

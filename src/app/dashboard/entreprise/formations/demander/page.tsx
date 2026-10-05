@@ -125,7 +125,7 @@ function RequestModal({
             </p>
             <h2 className="mt-3 text-2xl font-bold text-gray-950">Merci, c’est bien reçu</h2>
             <p className="mt-3 text-sm leading-6 text-gray-600">
-              Votre demande pour <strong>{item.title}</strong> a été transmise à l’équipe EDGE. Nous
+              Votre demande pour <strong>{item.title}</strong> a été transmise à l’équipe Byound. Nous
               vous recontactons rapidement.
             </p>
             <button
@@ -233,7 +233,7 @@ function RequestModal({
 
               <label className="grid gap-1.5 text-sm">
                 <span className="font-semibold text-gray-700">
-                  Précisions pour EDGE <span className="font-normal text-gray-400">(optionnel)</span>
+                  Précisions pour Byound <span className="font-normal text-gray-400">(optionnel)</span>
                 </span>
                 <textarea
                   rows={4}
@@ -388,14 +388,14 @@ export default function EntrepriseFormationRequestPage() {
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mx-auto mb-8 max-w-6xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-500">
-            Formations EDGE
+            Formations Byound
           </p>
           <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-gray-950">
             Demander une formation
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600">
-            Catalogue business EDGE ({BUSINESS_TRAINING_ITEMS.length} formations) — filtrer par
-            thématique puis envoyer une demande : l’équipe EDGE reçoit votre besoin par email.
+            Catalogue business Byound ({BUSINESS_TRAINING_ITEMS.length} formations) — filtrer par
+            thématique puis envoyer une demande : l’équipe Byound reçoit votre besoin par email.
           </p>
         </header>
 

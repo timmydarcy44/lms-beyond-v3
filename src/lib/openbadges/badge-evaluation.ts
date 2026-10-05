@@ -29,9 +29,9 @@ export function formatEvaluationMethodsSummary(methodIds: string[]): string {
     .join(", ");
 }
 
-/** Affichage org (ex. renommage EDGE Lab → EDGE). */
+/** Affichage org (ex. renommage Byound Lab → Byound). */
 export function formatOrganizationDisplayName(name: string): string {
   const trimmed = name.trim();
-  if (trimmed === "EDGE Lab") return "EDGE";
+  if (trimmed === "Byound Lab") return "Byound";
   return trimmed;
 }

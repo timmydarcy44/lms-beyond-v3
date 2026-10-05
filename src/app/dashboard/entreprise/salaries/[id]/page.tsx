@@ -91,7 +91,7 @@ function initials(first?: string | null, last?: string | null) {
 }
 
 function SkillLevelBar({ score }: { score: number }) {
-  // Soft Skills EDGE : 3–15
+  // Soft Skills Byound : 3–15
   const filled = score >= 12 ? 3 : score >= 9 ? 2 : 1;
   return (
     <div className="flex items-center gap-1" aria-hidden>
@@ -788,7 +788,7 @@ export default function SalarieDetailPage() {
                   Classement soft skills ({softSkills.length}/20)
                 </h2>
                 <p className="mt-1 text-sm text-gray-600">
-                  Référentiel EDGE complet : communication, leadership, stress, créativité, etc.
+                  Référentiel Byound complet : communication, leadership, stress, créativité, etc.
                 </p>
                 <div className="mt-5">
                   <SoftSkillsRanking skills={softSkills} />

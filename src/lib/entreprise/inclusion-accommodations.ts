@@ -46,7 +46,7 @@ const ACCOMMODATION_LIBRARY: Record<string, InclusionAccommodation> = {
   police_adaptee: {
     id: "police_adaptee",
     title: "Police et lecture adaptées",
-    description: "Documents en police dys-friendly, interligne large, mode lecture EDGE.",
+    description: "Documents en police dys-friendly, interligne large, mode lecture Byound.",
     category: "outils",
   },
   teletravail_partiel: {

@@ -24,7 +24,7 @@ export type ProfileAnalysisCareerMatching = {
 export type ProfileAnalysisInput = {
   firstName: string;
   jobTitle?: string | null;
-  /** Objectif professionnel affiché (cap EDGE). */
+  /** Objectif professionnel affiché (cap Byound). */
   objectiveLabel?: string | null;
   discScores: Record<string, number>;
   idmcScores: Record<string, number>;
@@ -141,7 +141,7 @@ function classifyAnalysisSectionTitle(title: string): keyof ParsedProfileAnalysi
   return null;
 }
 
-/** Extrait Orientation / Forces / Axes / Synthèse EDGE (markdown ## ou libellés **…**). */
+/** Extrait Orientation / Forces / Axes / Synthèse Byound (markdown ## ou libellés **…**). */
 export function parseProfileAnalysisSections(markdown: string): ParsedProfileAnalysisSections {
   const sections: Partial<Record<keyof ParsedProfileAnalysisSections, string>> = {};
   const normalized = markdown.replace(/\r\n/g, "\n").trim();

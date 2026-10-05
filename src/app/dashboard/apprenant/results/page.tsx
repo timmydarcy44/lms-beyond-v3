@@ -36,15 +36,15 @@ export default function DashboardApprenantResultsPage() {
           <span className={APPRENANT_CARD_MUTED}>Tests, CV et validations</span>
         </Link>
         <Link href="/dashboard/apprenant/profil" className={APPRENANT_CARD_INTERACTIVE}>
-          <p className={APPRENANT_CARD_KICKER}>Profil EDGE</p>
+          <p className={APPRENANT_CARD_KICKER}>Profil Byound</p>
           <p className={APPRENANT_CARD_TITLE}>Ma fiche & page publique</p>
           <span className={APPRENANT_CARD_MUTED}>Compléter et partager</span>
         </Link>
       </section>
 
       <section className={APPRENANT_CARD_NOTE}>
-        Les liens externes s’ouvrent sur Beyond Connect ou le catalogue EDGE selon ta configuration. En cas
-        d’anomalie, contacte ta direction ou le support EDGE.
+        Les liens externes s’ouvrent sur Beyond Connect ou le catalogue Byound selon ta configuration. En cas
+        d’anomalie, contacte ta direction ou le support Byound.
       </section>
     </div>
   );

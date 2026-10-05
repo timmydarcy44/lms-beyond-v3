@@ -71,7 +71,7 @@ export function ParcoursCatalogPage() {
         </nav>
 
         <h1 className="mt-10 text-[clamp(2.25rem,5vw,3.25rem)] font-medium tracking-[-0.02em] text-edge-black">
-          Tous les parcours EDGE
+          Tous les parcours Byound
         </h1>
         <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-black/45">
           {PARCOURS.length} parcours certifiants · livrables terrain · badges Open Badge IMS Global vérifiables.

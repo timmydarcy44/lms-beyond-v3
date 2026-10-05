@@ -116,13 +116,13 @@ export async function sendPipelineWeeklyRecapEmails(): Promise<
         </p>
         ${dealRowsHtml}
         <p style="margin-top:24px;font-size:13px;color:#6b7280;">
-          <a href="https://edgebs.fr/super/crm/pipeline">Ouvrir le pipeline EDGE</a>
+          <a href="https://edgebs.fr/super/crm/pipeline">Ouvrir le pipeline Byound</a>
         </p>
       </div>`;
 
     const result = await sendEmail({
       to: owner.email,
-      subject: `[EDGE CRM] Récap hebdo — ${activeDeals.length} dossier(s), ${actions.length} action(s)`,
+      subject: `[Byound CRM] Récap hebdo — ${activeDeals.length} dossier(s), ${actions.length} action(s)`,
       html,
       skipBcc: false,
     });

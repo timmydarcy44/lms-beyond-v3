@@ -20,10 +20,10 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       metadataBase: new URL("https://edgebs.fr"),
       title: {
-        default: "EDGE",
-        template: "%s · EDGE",
+        default: "Byound",
+        template: "%s · Byound",
       },
-      applicationName: "EDGE",
+      applicationName: "Byound",
       manifest: "/manifest-edge.json",
       icons: {
         icon: [
@@ -38,10 +38,10 @@ export async function generateMetadata(): Promise<Metadata> {
       appleWebApp: {
         capable: true,
         statusBarStyle: "black-translucent",
-        title: "EDGE",
+        title: "Byound",
       },
       other: {
-        "apple-mobile-web-app-title": "EDGE",
+        "apple-mobile-web-app-title": "Byound",
         "mobile-web-app-capable": "yes",
       },
     };

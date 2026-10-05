@@ -118,7 +118,7 @@ export async function sendBtobCatalogueEmail(
   }
 
   const bodyText = options.bodyText?.trim() || DEFAULT_CATALOGUE_EMAIL_BODY;
-  const fromName = options.fromName?.trim() || "EDGE";
+  const fromName = options.fromName?.trim() || "Byound";
   const html = buildCatalogueEmailHtml(bodyText, options);
 
   const filename =
@@ -157,15 +157,15 @@ export async function sendBtobCatalogueFollowupEmail(deal: CatalogueDealInput): 
       <p>${escapeHtml(greeting)}</p>
       ${companyLine}
       <p>Souhaitez-vous que l'on planifie un échange de 15 minutes pour voir si une formation correspond à vos besoins ?</p>
-      <p>Bien cordialement,<br />L'équipe EDGE</p>
+      <p>Bien cordialement,<br />L'équipe Byound</p>
     </div>
   `;
 
   return sendEmail({
     to: recipient,
-    subject: "Suite à l'envoi du catalogue EDGE",
+    subject: "Suite à l'envoi du catalogue Byound",
     html,
-    from: "EDGE <contact@edgebs.fr>",
+    from: "Byound <contact@edgebs.fr>",
     replyTo: "contact@edgebs.fr",
   });
 }

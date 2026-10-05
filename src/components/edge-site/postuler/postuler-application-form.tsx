@@ -460,7 +460,7 @@ export function PostulerApplicationForm({ parcoursSlug, parcoursTitre, parcoursP
 
                 <div>
                   <label className={labelClass} htmlFor="source">
-                    Comment as-tu entendu parler d&apos;EDGE ?
+                    Comment as-tu entendu parler d&apos;Byound ?
                   </label>
                   <select
                     id="source"
@@ -485,7 +485,7 @@ export function PostulerApplicationForm({ parcoursSlug, parcoursTitre, parcoursP
                     onChange={(e) => update("acceptContact", e.target.checked)}
                   />
                   <span className="text-[13px] leading-relaxed text-black/50">
-                    J&apos;accepte d&apos;être recontacté par EDGE pour cet échange — rien d&apos;autre.
+                    J&apos;accepte d&apos;être recontacté par Byound pour cet échange — rien d&apos;autre.
                   </span>
                 </label>
               </div>

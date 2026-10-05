@@ -74,7 +74,7 @@ async function simulatePlaygroundTargetAiResponse(params: {
       ? `Le prompt est VAGUE ou MINIMAL (ex. un seul mot). Produis la réponse qu'un vrai assistant donnerait face à ce prompt faible : résultat générique, incomplet ou hors-sujet — SANS expliquer comment mieux prompteur, SANS donner un « modèle de prompt » ni une itération conseillée.`
       : `Le prompt est exploitable. Réponds de façon professionnelle et utile à la demande.`;
 
-  const system = `Tu es un assistant IA en mode SIMULATION d'épreuve certifiante (Open Badges EDGE).
+  const system = `Tu es un assistant IA en mode SIMULATION d'épreuve certifiante (Open Badges Byound).
 Règles ABSOLUES :
 - Tu exécutes UNIQUEMENT le prompt de l'apprenant comme le ferait ChatGPT en conditions réelles.
 - INTERDIT : coaching, conseils au apprenant, « vous devriez reformuler », exemple de prompt idéal, section « itération pour améliorer », grille de notation, mention d'évaluation.

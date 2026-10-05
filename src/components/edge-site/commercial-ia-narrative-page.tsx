@@ -370,7 +370,7 @@ export function CommercialIaNarrativePage() {
             </ul>
           </div>
           <div className="px-6 py-6">
-            <p className="text-[10px] font-normal uppercase tracking-[0.15em] text-edge-red">Open Badge EDGE</p>
+            <p className="text-[10px] font-normal uppercase tracking-[0.15em] text-edge-red">Open Badge Byound</p>
             <ul className="mt-4 space-y-2 text-[12px] leading-relaxed text-white/70">
               <li>· Prouve ce que tu sais faire</li>
               <li>· Vérifiable en 1 clic sur LinkedIn</li>

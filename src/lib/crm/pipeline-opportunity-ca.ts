@@ -17,9 +17,9 @@ export const PIPELINE_OPPORTUNITY_TYPE_OPTIONS: Array<{
   value: PipelineOpportunityType;
   label: string;
 }> = [
-  { value: "formation_edge", label: "Formation EDGE" },
+  { value: "formation_edge", label: "Formation Byound" },
   { value: "beyond_learning", label: "Beyond / Learning" },
-  { value: "edge_recruit", label: "EDGE Recruit" },
+  { value: "edge_recruit", label: "Byound Recruit" },
   { value: "autre", label: "Autre" },
 ];
 

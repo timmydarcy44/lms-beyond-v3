@@ -92,7 +92,7 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
     setError(null);
     setStatusMessage(
       payload.title && !payload.slug
-        ? "Analyse du métier en cours avec l'IA EDGE…"
+        ? "Analyse du métier en cours avec l'IA Byound…"
         : "Chargement du référentiel métier…",
     );
 
@@ -164,7 +164,7 @@ export function CareerProfilePicker({ value, selectedTitle, disabled, onResolved
     <div ref={rootRef}>
       <label className="block text-sm font-medium text-white">Métier visé</label>
       <p className="mt-1 text-xs text-white/45">
-        Recherchez un métier du référentiel EDGE ou précisez le vôtre. Ce choix alimente l&apos;analyse de
+        Recherchez un métier du référentiel Byound ou précisez le vôtre. Ce choix alimente l&apos;analyse de
         compatibilité.
       </p>
 

@@ -29,7 +29,7 @@ import {
 } from "@/lib/hard-skills/hard-skills-portfolio";
 
 const VALIDATION_SOURCES = [
-  "Test EDGE",
+  "Test Byound",
   "Formation",
   "Simulation",
   "Preuve déposée",

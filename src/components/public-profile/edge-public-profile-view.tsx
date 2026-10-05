@@ -319,8 +319,11 @@ export function EdgePublicProfileView({
                       Vérifié par Byound
                     </span>
                     {edgeReliabilityIndex > 0 ? (
-                      <span className="inline-flex items-center rounded-full border border-[#3D7BFF]/25 bg-[#3D7BFF]/10 px-3 py-1 text-[11px] font-semibold text-[#9EC0FF]">
-                        Fiabilité · {edgeReliabilityIndex} %
+                      <span
+                        title="Crédibilité des compétences métiers pour un recruteur — distinct du taux de complétion du profil."
+                        className="inline-flex items-center rounded-full border border-[#3D7BFF]/25 bg-[#3D7BFF]/10 px-3 py-1 text-[11px] font-semibold text-[#9EC0FF]"
+                      >
+                        Fiabilité métier · {edgeReliabilityIndex} %
                       </span>
                     ) : null}
                   </div>

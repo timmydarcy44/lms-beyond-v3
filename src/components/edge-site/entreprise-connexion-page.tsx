@@ -1,11 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Building2, Loader2, Mail } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
-import { EDGE_GRADIENTS } from "@/lib/edge/edge-brand";
+import { EDGE_LOGO_PATH } from "@/lib/edge-site/premium-constants";
+
+const BYOUND_ACCENT = "#3D7BFF";
+const BYOUND_PAGE_BG =
+  "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(61,123,255,0.18), transparent), #060912";
 
 type Mode = "signup" | "login";
 
@@ -100,13 +105,15 @@ export function EntrepriseConnexionPage() {
     return (
       <div
         className="flex min-h-dvh items-center justify-center px-6 text-white"
-        style={{ background: EDGE_GRADIENTS.passwordBg }}
+        style={{ background: BYOUND_PAGE_BG }}
       >
         <div className="relative z-10 w-full max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
-            <Mail className="h-6 w-6 text-white/80" aria-hidden />
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3D7BFF]/15">
+            <Mail className="h-6 w-6 text-[#9EC0FF]" aria-hidden />
           </div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">EDGE Entreprise</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7BA7FF]/90">
+            Byound Business
+          </p>
           <h1 className="mt-3 text-[26px] font-semibold leading-snug tracking-tight">{title}</h1>
           <p className="mt-4 text-[15px] leading-relaxed text-white/55">
             Un email de confirmation vient de vous être envoyé à{" "}
@@ -129,11 +136,14 @@ export function EntrepriseConnexionPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#0a0a0a] text-white">
-      <header className="border-b border-white/10">
+    <div className="min-h-dvh text-white" style={{ background: BYOUND_PAGE_BG }}>
+      <header className="border-b border-white/[0.08]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link href="/entreprises" className="text-[15px] font-semibold tracking-[-0.02em] text-white">
-            EDGE Entreprise
+          <Link href="/entreprises" className="flex items-center gap-2">
+            <Image src={EDGE_LOGO_PATH} alt="Byound" width={112} height={28} className="h-7 w-auto" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+              Business
+            </span>
           </Link>
           <Link href="/entreprises" className="text-[12px] font-medium text-white/50 hover:text-white/80">
             Retour
@@ -143,7 +153,7 @@ export function EntrepriseConnexionPage() {
 
       <main className="mx-auto grid max-w-6xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_420px] lg:items-start lg:py-24">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#E63329]/40 bg-[#E63329]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b61]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#3D7BFF]/35 bg-[#3D7BFF]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9EC0FF]">
             <Building2 className="h-3.5 w-3.5" aria-hidden />
             Essai 30 jours
           </div>
@@ -151,13 +161,13 @@ export function EntrepriseConnexionPage() {
             Pilotez la montée en compétences de vos équipes.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-white/55 sm:text-lg">
-            Créez votre espace RH Beyond : diagnostics DISC & compétences, dashboard temps réel, plan d&apos;action IA.
-            Essai gratuit 30 jours, sans carte bancaire.
+            Créez votre espace RH Byound : diagnostics DISC & compétences, dashboard temps réel, plan d&apos;action
+            personnalisé. Essai gratuit 30 jours, sans carte bancaire.
           </p>
           <ul className="mt-8 space-y-3 text-sm text-white/60">
             <li>· 3 licences RH incluses pendant l&apos;essai</li>
             <li>· Invitations collaborateurs en quelques clics</li>
-            <li>· Accès EDGE Online (80+ micro-formations)</li>
+            <li>· Accès Byound Learn (micro-formations)</li>
           </ul>
         </div>
 
@@ -232,7 +242,8 @@ export function EntrepriseConnexionPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#E63329] px-6 py-3.5 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[14px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ backgroundColor: BYOUND_ACCENT }}
               >
                 {isLoading ? (
                   <>

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { getTenantFromHostname, isJessicaContentinMarketingHostname } from "@/lib/tenant/config";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { isClubOnlyAccount, canAccessClubDashboard } from "@/lib/auth/club-access";
 import { isPartenaireOnlyAccount, canAccessPartenaireDashboard } from "@/lib/auth/partenaire-access";
 import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
@@ -514,7 +515,8 @@ async function runMiddleware(request: NextRequest) {
     }
 
     if (isDashboardExpert) {
-      if (role !== "expert") {
+      const emailAllowlisted = isSuperAdminEmailAllowlisted(user.email);
+      if (role !== "expert" && !emailAllowlisted) {
         return NextResponse.redirect(new URL("/unauthorized", request.url));
       }
     }

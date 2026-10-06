@@ -19,7 +19,7 @@ export function EdgePremiumTopBar({ solid = false, light = false }: Props) {
         "relative hidden lg:block",
         light
           ? cn("border-b border-black/[0.06]", solid ? "bg-white" : "bg-transparent")
-          : cn("border-b border-white/[0.04]", solid ? "bg-edge-black-deep" : "bg-transparent"),
+          : cn("border-b border-white/[0.04]", solid ? "bg-[#070b1f]" : "bg-transparent"),
       )}
     >
       <div className="mx-auto flex h-9 max-w-7xl items-center justify-end px-5 sm:px-8 lg:px-10">

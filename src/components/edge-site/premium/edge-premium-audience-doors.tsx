@@ -1,79 +1,72 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Briefcase, GraduationCap, UserRound } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
+import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
 
 export function EdgePremiumAudienceDoors() {
   const { routes, links } = useEdgePremiumConfig();
 
-  const doors = [
+  const universes = [
     {
-      icon: GraduationCap,
-      title: "Je cherche une alternance",
-      description:
-        "Découvrez les parcours en alternance et suivez l’ouverture du CFA Byound — rentrée 2027.",
-      status: "À venir — CFA 2027",
-      cta: "Découvrir l'alternance",
+      eyebrow: "Byound School",
+      title: "Construisez votre avenir.",
+      description: "École, alternance et reconversion à Caen.",
+      cta: "Explorer School",
       href: routes.alternance,
+      image: EDGE_PREMIUM_IMAGES.apprenants,
+      imagePosition: "center",
     },
     {
-      icon: Briefcase,
-      title: "Je développe mon équipe",
-      description:
-        "Recrutez, formez et suivez les compétences dans votre entreprise avec Byound Business.",
-      status: "Disponible",
-      cta: "Découvrir Byound Business",
+      eyebrow: "Byound Business",
+      title: "Faites progresser vos équipes.",
+      description: "Formations, diagnostics et suivi des compétences.",
+      cta: "Explorer Business",
       href: links.business,
-    },
-    {
-      icon: UserRound,
-      title: "Je veux me former",
-      description:
-        "Bootcamps, formations courtes et futurs parcours en ligne pour votre prochain projet.",
-      status: "Partiellement disponible",
-      cta: "Espace particuliers",
-      href: links.particulier,
+      image: EDGE_PREMIUM_IMAGES.business,
+      imagePosition: "center 35%",
     },
   ] as const;
 
   return (
-    <section className="bg-edge-cream py-20 sm:py-28">
+    <section className="bg-[#f7f7f5] py-16 text-edge-black-deep sm:py-24">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-        <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-black/40">
-          Pour qui ?
-        </p>
-        <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3.5vw,2.75rem)] font-semibold leading-[1.15] tracking-[-0.02em] text-edge-black-deep">
-          Trois portes d’entrée. Une même ambition : vos compétences.
+        <h2 className="max-w-4xl text-[clamp(2.25rem,5vw,4.75rem)] font-semibold leading-[0.98] tracking-[-0.05em]">
+          Deux univers. Une même ambition.
         </h2>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-black/50">
-          Que vous soyez futur alternant, responsable d’équipe ou en reconversion, Byound vous
-          aide à apprendre, progresser et rendre vos acquis visibles.
-        </p>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {doors.map((door) => (
+        <div className="mt-12 grid gap-8 lg:grid-cols-2 lg:gap-4">
+          {universes.map((universe) => (
             <article
-              key={door.title}
-              className="group flex flex-col rounded-[24px] border border-black/[0.06] bg-white p-7 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(5,5,5,0.06)] sm:p-8"
+              key={universe.title}
+              className="group border-black/10 lg:first:border-r lg:first:pr-4 lg:last:pl-4"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.08] bg-black/[0.03] text-edge-black-deep">
-                <door.icon className="h-5 w-5" strokeWidth={1.5} />
+              <div className="flex min-h-[225px] flex-col px-1 pb-8 sm:min-h-[255px] sm:px-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-black/45">
+                  {universe.eyebrow}
+                </p>
+                <h3 className="mt-7 max-w-[30rem] text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[0.98] tracking-[-0.045em]">
+                  {universe.title}
+                </h3>
+                <p className="mt-4 text-base text-black/55">{universe.description}</p>
+                <Link
+                  href={universe.href}
+                  className="mt-auto inline-flex w-fit items-center gap-2 border-b border-black/30 pb-1 text-sm font-medium transition-opacity hover:opacity-60"
+                >
+                  {universe.cta}
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
               </div>
-              <p className="mt-5 text-[11px] font-medium uppercase tracking-[0.16em] text-black/40">
-                {door.status}
-              </p>
-              <h3 className="mt-2 text-xl font-semibold tracking-[-0.02em] text-edge-black-deep">
-                {door.title}
-              </h3>
-              <p className="mt-3 flex-1 text-sm leading-relaxed text-black/55">{door.description}</p>
-              <Link
-                href={door.href}
-                className="mt-7 inline-flex items-center gap-2 text-sm font-medium text-edge-black-deep transition-opacity hover:opacity-70"
-              >
-                {door.cta}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
+              <div
+                className="relative aspect-[4/3] overflow-hidden bg-[#070b1f] bg-cover transition-transform duration-500 group-hover:scale-[0.995]"
+                style={{
+                  backgroundImage: `linear-gradient(135deg, rgba(7,11,31,.1), rgba(43,34,145,.3)), url("${universe.image}")`,
+                  backgroundPosition: universe.imagePosition,
+                }}
+                role="img"
+                aria-label={universe.description}
+              />
             </article>
           ))}
         </div>

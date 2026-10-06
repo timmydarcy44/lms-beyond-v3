@@ -61,7 +61,7 @@ function NavDropdown({
               ? "border border-black/[0.08] bg-white/95"
               : cn(
                   "border border-white/10",
-                  scrolled ? "bg-edge-black-deep/95" : "bg-[#0a0c14]/90",
+                  scrolled ? "bg-[#070b1f]/95" : "bg-[#070b1f]/90",
                 ),
           )}
         >
@@ -179,8 +179,8 @@ export function EdgePremiumNavbar({
           : cn(
               overlay && !isSolid
                 ? "border-b border-transparent bg-transparent"
-                : "border-b border-white/[0.06] bg-edge-black-deep",
-              !overlay && "border-b border-white/[0.06] bg-edge-black-deep",
+                : "border-b border-white/[0.06] bg-[#070b1f]",
+              !overlay && "border-b border-white/[0.06] bg-[#070b1f]",
             ),
       )}
       onMouseLeave={scheduleMegaClose}

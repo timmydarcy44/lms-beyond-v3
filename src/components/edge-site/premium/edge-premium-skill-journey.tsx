@@ -31,8 +31,12 @@ export function EdgePremiumSkillJourney() {
   const { routes } = useEdgePremiumConfig();
 
   return (
-    <section className="bg-edge-black-deep py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+    <section className="relative overflow-hidden bg-[#070b1f] py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <div className="absolute -left-72 top-0 h-[620px] w-[620px] rounded-full bg-[radial-gradient(circle_at_center,rgba(91,80,255,0.22),transparent_62%)] blur-3xl" />
+        <div className="absolute -right-72 bottom-[-40%] h-[620px] w-[620px] rounded-full bg-[radial-gradient(circle_at_center,rgba(56,120,255,0.14),transparent_62%)] blur-3xl" />
+      </div>
+      <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
         <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-white/40">
           Le parcours Byound
         </p>

@@ -57,7 +57,7 @@ export function EdgePremiumFooter() {
   ] as const;
 
   return (
-    <footer id="contact" className="border-t border-white/[0.06] bg-edge-black-deep px-5 py-16 sm:px-8 lg:px-10">
+    <footer id="contact" className="border-t border-white/[0.06] bg-[#070b1f] px-5 py-16 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-12 lg:grid-cols-[1.2fr_2fr] lg:gap-16">
           <div>

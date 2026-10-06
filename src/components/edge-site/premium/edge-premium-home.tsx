@@ -12,7 +12,7 @@ import { EdgePremiumVideo } from "@/components/edge-site/premium/edge-premium-vi
 
 export function EdgePremiumHome() {
   return (
-    <EdgePremiumShell overlayNav>
+    <EdgePremiumShell overlayNav showTopBar={false}>
       <EdgePremiumHero />
       <EdgePremiumAudienceDoors />
       <EdgePremiumSkillJourney />

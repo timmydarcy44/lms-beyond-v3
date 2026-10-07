@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock3, GraduationCap, Loader2, Mail, RefreshCw } from "lucide-react";
+import { CalendarDays, Clock3, GraduationCap, Loader2, Mail, RefreshCw } from "lucide-react";
 
 import {
   CFA_CHALLENGE_QUESTIONS,
@@ -12,9 +12,16 @@ import {
   type CfaApplicationStatus,
 } from "@/lib/cfa-applications";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const columns: {
-  id: "application" | "interview" | "review" | "admitted" | "rejected";
+  id: "application" | "interview" | "review" | "administrative" | "admitted" | "rejected";
   label: string;
   statuses: CfaApplicationStatus[];
   accent: string;
@@ -27,9 +34,39 @@ const columns: {
   },
   { id: "interview", label: "Interview", statuses: ["interview"], accent: "bg-sky-500" },
   { id: "review", label: "Review", statuses: ["review"], accent: "bg-amber-500" },
+  {
+    id: "administrative",
+    label: "Éléments administratifs",
+    statuses: ["administrative"],
+    accent: "bg-violet-500",
+  },
   { id: "admitted", label: "Admitted", statuses: ["admitted"], accent: "bg-emerald-500" },
   { id: "rejected", label: "Non retenu", statuses: ["rejected"], accent: "bg-rose-400" },
 ];
+
+const CERFA_LABELS = [
+  ["lastName", "Nom"],
+  ["firstNames", "Prénom(s)"],
+  ["sex", "Sexe"],
+  ["birthDate", "Date de naissance"],
+  ["birthCity", "Commune de naissance"],
+  ["birthDepartment", "Département de naissance"],
+  ["nationality", "Nationalité"],
+  ["address", "Adresse"],
+  ["phone", "Téléphone"],
+  ["email", "E-mail"],
+  ["socialSecurityNumber", "N° de sécurité sociale"],
+  ["priorSituation", "Situation avant contrat"],
+  ["lastClass", "Dernière classe"],
+  ["highestDiploma", "Diplôme le plus élevé"],
+  ["specialStatus", "RQTH / sportif haut niveau"],
+] as const;
+
+const ADMIN_DOCUMENT_LABELS: Record<string, string> = {
+  identity: "Pièce d’identité",
+  social_security: "Attestation Sécurité sociale",
+  diploma: "Diplôme / relevé de notes",
+};
 
 export function CfaPipelineClient() {
   const [applications, setApplications] = useState<CfaApplication[]>([]);
@@ -37,6 +74,10 @@ export function CfaPipelineClient() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [migrationRequired, setMigrationRequired] = useState(false);
+  const [selected, setSelected] = useState<CfaApplication | null>(null);
+  const [interviewAt, setInterviewAt] = useState("");
+  const [interviewNotes, setInterviewNotes] = useState("");
+  const [appointmentMessage, setAppointmentMessage] = useState("");
 
   async function load() {
     setLoading(true);
@@ -84,8 +125,66 @@ export function CfaPipelineClient() {
       setApplications((current) =>
         current.map((item) => (item.id === application.id ? result.application : item)),
       );
+      if (status === "administrative" && result.emailSent === false) {
+        setError("Le statut est enregistré, mais l’email au candidat n’a pas pu être envoyé.");
+      }
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Mise à jour impossible");
+    } finally {
+      setUpdating(null);
+    }
+  }
+
+  function openApplication(application: CfaApplication) {
+    setSelected(application);
+    setInterviewAt(
+      application.interview_at
+        ? new Date(
+            new Date(application.interview_at).getTime() -
+              new Date(application.interview_at).getTimezoneOffset() * 60_000,
+          )
+            .toISOString()
+            .slice(0, 16)
+        : "",
+    );
+    setInterviewNotes(application.interview_notes ?? "");
+    setAppointmentMessage("");
+  }
+
+  async function scheduleInterview() {
+    if (!selected || !interviewAt) {
+      setAppointmentMessage("Choisis une date et une heure.");
+      return;
+    }
+    setUpdating(selected.id);
+    setAppointmentMessage("");
+    try {
+      const response = await fetch("/api/super-admin/crm/cfa", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selected.id,
+          status: "interview",
+          interviewAt: new Date(interviewAt).toISOString(),
+          interviewNotes,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Enregistrement impossible");
+      const updatedApplication = { ...selected, ...result.application };
+      setApplications((current) =>
+        current.map((item) => (item.id === selected.id ? updatedApplication : item)),
+      );
+      setSelected(updatedApplication);
+      setAppointmentMessage(
+        result.emailSent
+          ? "Rendez-vous enregistré et email envoyé au candidat."
+          : "Rendez-vous enregistré, mais l’email n’a pas pu être envoyé.",
+      );
+    } catch (scheduleError) {
+      setAppointmentMessage(
+        scheduleError instanceof Error ? scheduleError.message : "Enregistrement impossible",
+      );
     } finally {
       setUpdating(null);
     }
@@ -145,7 +244,7 @@ export function CfaPipelineClient() {
           <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
         </div>
       ) : (
-        <div className="grid min-w-0 gap-4 xl:grid-cols-5">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-3 2xl:grid-cols-6">
           {columns.map((column) => {
             const items = applications.filter((application) =>
               column.statuses.includes(application.status),
@@ -168,7 +267,8 @@ export function CfaPipelineClient() {
                   {items.map((application) => (
                     <article
                       key={application.id}
-                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+                      onClick={() => openApplication(application)}
+                      className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -184,6 +284,7 @@ export function CfaPipelineClient() {
                       <div className="mt-4 space-y-2 text-xs text-gray-500">
                         <a
                           href={`mailto:${application.email}`}
+                          onClick={(event) => event.stopPropagation()}
                           className="flex items-center gap-2 truncate hover:text-indigo-600"
                         >
                           <Mail className="h-3.5 w-3.5 shrink-0" />
@@ -194,69 +295,9 @@ export function CfaPipelineClient() {
                           {new Date(application.created_at).toLocaleDateString("fr-FR")}
                         </p>
                       </div>
-                      <details className="mt-4 border-t border-gray-100 pt-3">
-                        <summary className="cursor-pointer text-xs font-semibold text-indigo-600">
-                          Voir le dossier
-                        </summary>
-                        <div className="mt-3 space-y-3 text-xs leading-relaxed text-gray-600">
-                          <p>
-                            <strong>Âge :</strong> {application.age ?? "—"}
-                            <br />
-                            <strong>Niveau :</strong> {application.education_level ?? "—"}
-                            <br />
-                            <strong>Alternance :</strong>{" "}
-                            {application.alternance_status === "company_found"
-                              ? "Entreprise trouvée"
-                              : application.alternance_status === "searching"
-                                ? "En recherche"
-                                : "Non demandé à ce stade"}
-                          </p>
-                          {application.school_background ? (
-                            <p>
-                              <strong>Parcours :</strong> {application.school_background}
-                            </p>
-                          ) : null}
-                          {application.experiences ? (
-                            <p>
-                              <strong>Expériences :</strong> {application.experiences}
-                            </p>
-                          ) : null}
-                          {application.motivation_text ? (
-                            <p>
-                              <strong>Pourquoi Byound :</strong> {application.motivation_text}
-                            </p>
-                          ) : null}
-                          {application.motivation_media_signed_url ? (
-                            <a
-                              href={application.motivation_media_signed_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex font-semibold text-indigo-600 hover:underline"
-                            >
-                              Écouter / voir la motivation
-                            </a>
-                          ) : null}
-                          {CFA_CHALLENGE_QUESTIONS.map((question) => {
-                            const answer = application.challenge_answers?.[question.id];
-                            return answer ? (
-                              <div key={question.id} className="rounded-lg bg-gray-50 p-2.5">
-                                <p className="font-semibold text-gray-800">{question.eyebrow}</p>
-                                <p className="mt-1">{answer}</p>
-                              </div>
-                            ) : null;
-                          })}
-                          {application.cv_url ? (
-                            <a
-                              href={application.cv_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex font-semibold text-indigo-600 hover:underline"
-                            >
-                              Ouvrir le CV
-                            </a>
-                          ) : null}
-                        </div>
-                      </details>
+                      <p className="mt-4 border-t border-gray-100 pt-3 text-xs font-semibold text-indigo-600">
+                        Ouvrir la fiche complète
+                      </p>
                       <div className="mt-4 border-t border-gray-100 pt-3">
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                           Statut
@@ -270,6 +311,7 @@ export function CfaPipelineClient() {
                               event.target.value as CfaApplicationStatus,
                             )
                           }
+                          onClick={(event) => event.stopPropagation()}
                           className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-gray-700 outline-none focus:border-indigo-400"
                         >
                           {CFA_APPLICATION_STATUSES.map((status) => (
@@ -292,6 +334,97 @@ export function CfaPipelineClient() {
           })}
         </div>
       )}
+      <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto border-0 bg-white p-0 sm:max-w-3xl">
+          {selected ? (
+            <div>
+              <DialogHeader className="border-b border-gray-100 p-6 pr-14">
+                <DialogTitle className="text-2xl">
+                  {selected.first_name} {selected.last_name}
+                </DialogTitle>
+                <DialogDescription>
+                  {getCfaSpecializationLabel(selected.specialization)} · {selected.email}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6 p-6 text-sm text-gray-700">
+                <section className="grid gap-3 rounded-2xl bg-gray-50 p-4 sm:grid-cols-2">
+                  <p><strong>Âge :</strong> {selected.age ?? "—"}</p>
+                  <p><strong>Niveau :</strong> {selected.education_level ?? "—"}</p>
+                  <p><strong>Téléphone :</strong> {selected.phone ?? "—"}</p>
+                  <p><strong>Alternance :</strong> {selected.alternance_status === "company_found" ? "Entreprise trouvée" : selected.alternance_status === "searching" ? "En recherche" : "Non renseignée"}</p>
+                </section>
+                <section className="space-y-3">
+                  <h3 className="font-semibold text-gray-950">Dossier candidat</h3>
+                  <p><strong>Parcours :</strong><br />{selected.school_background ?? "—"}</p>
+                  <p><strong>Expériences :</strong><br />{selected.experiences ?? "—"}</p>
+                  <p><strong>Pourquoi Byound :</strong><br />{selected.motivation_text ?? "Motivation enregistrée en audio ou vidéo."}</p>
+                  <div className="flex flex-wrap gap-3">
+                    {selected.cv_url ? <a href={selected.cv_url} target="_blank" rel="noreferrer" className="font-semibold text-indigo-600">Ouvrir le CV</a> : null}
+                    {selected.motivation_media_signed_url ? <a href={selected.motivation_media_signed_url} target="_blank" rel="noreferrer" className="font-semibold text-indigo-600">Écouter / voir la motivation</a> : null}
+                  </div>
+                </section>
+                <section className="space-y-3">
+                  <h3 className="font-semibold text-gray-950">Byound Challenge</h3>
+                  {CFA_CHALLENGE_QUESTIONS.map((question) => (
+                    <div key={question.id} className="rounded-xl border border-gray-100 p-4">
+                      <p className="font-semibold text-gray-900">{question.eyebrow}</p>
+                      <p className="mt-1 text-xs text-gray-500">{question.question}</p>
+                      <p className="mt-3">{selected.challenge_answers?.[question.id] ?? "—"}</p>
+                    </div>
+                  ))}
+                </section>
+                {selected.status === "administrative" ||
+                selected.administrative_documents_submitted_at ? (
+                  <section className="space-y-3 rounded-2xl border border-violet-100 bg-violet-50/50 p-5">
+                    <h3 className="font-semibold text-violet-950">Éléments administratifs</h3>
+                    {selected.cerfa_data && Object.keys(selected.cerfa_data).length ? (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {CERFA_LABELS.map(([key, label]) => (
+                          <p key={key} className="text-xs">
+                            <strong>{label} :</strong><br />
+                            {selected.cerfa_data?.[key] || "—"}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">Informations CERFA en attente.</p>
+                    )}
+                    <div className="flex flex-wrap gap-3 text-xs font-semibold text-indigo-600">
+                      {Object.entries(selected.administrative_document_urls ?? {}).map(([kind, url]) =>
+                        url ? <a key={kind} href={url} target="_blank" rel="noreferrer">{ADMIN_DOCUMENT_LABELS[kind] ?? kind}</a> : null,
+                      )}
+                    </div>
+                    <p className={cn("text-xs font-semibold", selected.registration_fee_paid_at ? "text-emerald-700" : "text-amber-700")}>
+                      Frais d’inscription : {selected.registration_fee_paid_at ? "250 € payés" : "paiement en attente"}
+                    </p>
+                  </section>
+                ) : null}
+                <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5">
+                  <div className="flex items-center gap-2 font-semibold text-indigo-950">
+                    <CalendarDays className="h-4 w-4" />
+                    Planifier l’entretien
+                  </div>
+                  <div className="mt-4 grid gap-4">
+                    <label className="text-xs font-semibold text-gray-600">
+                      Date et heure
+                      <input type="datetime-local" value={interviewAt} onChange={(event) => setInterviewAt(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-indigo-100 bg-white px-3 text-sm outline-none focus:border-indigo-400" />
+                    </label>
+                    <label className="text-xs font-semibold text-gray-600">
+                      Mot à transmettre au candidat (optionnel)
+                      <textarea value={interviewNotes} onChange={(event) => setInterviewNotes(event.target.value)} rows={4} className="mt-1 w-full rounded-xl border border-indigo-100 bg-white p-3 text-sm outline-none focus:border-indigo-400" placeholder="Lien visio, adresse, consignes…" />
+                    </label>
+                    <button type="button" disabled={updating === selected.id} onClick={() => void scheduleInterview()} className="inline-flex h-11 items-center justify-center rounded-full bg-gray-950 px-5 text-sm font-semibold text-white disabled:opacity-50">
+                      {updating === selected.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Enregistrer et envoyer l’email
+                    </button>
+                    {appointmentMessage ? <p className={cn("text-xs", appointmentMessage.includes("envoyé au candidat") ? "text-emerald-700" : "text-rose-600")}>{appointmentMessage}</p> : null}
+                  </div>
+                </section>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

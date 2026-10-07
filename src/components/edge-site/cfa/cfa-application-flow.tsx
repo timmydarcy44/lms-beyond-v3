@@ -73,6 +73,24 @@ export function CfaApplicationFlow() {
     })();
   }, [resume]);
 
+  useEffect(() => {
+    const sessionId = params.get("session_id");
+    if (!token || params.get("payment") !== "success" || !sessionId) return;
+    void fetch("/api/cfa/registration-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, action: "confirm", sessionId }),
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        setApp(result.application);
+      })
+      .catch((cause) =>
+        setError(cause instanceof Error ? cause.message : "Paiement non confirmé."),
+      );
+  }, [params, token]);
+
   async function send(method: "POST" | "PATCH", payload: Record<string, unknown>) {
     setBusy(true);
     setError("");
@@ -98,7 +116,10 @@ export function CfaApplicationFlow() {
     }
   }
 
-  async function upload(file: File, kind: "cv" | "motivation") {
+  async function upload(
+    file: File,
+    kind: "cv" | "motivation" | "identity" | "social_security" | "diploma",
+  ) {
     setBusy(true);
     const body = new FormData();
     body.set("token", token);
@@ -166,7 +187,7 @@ export function CfaApplicationFlow() {
                 <Area label="Expériences (optionnel)" value={dossier.experiences} onChange={(value) => setDossier({ ...dossier, experiences: value })} required={false} />
                 <label className="block text-sm text-white/80">CV (optionnel)<span className="mt-2 flex min-h-14 cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-white/15 px-4 text-white/50"><Upload className="h-4 w-4" />{cvName || "Choisir un PDF ou une image"}<input type="file" className="sr-only" accept=".pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file, "cv"); }} /></span></label>
                 <Area label="Pourquoi Byound ? Écris, parle ou filme-toi." value={dossier.motivationText} onChange={(value) => setDossier({ ...dossier, motivationText: value })} required={false} />
-                <Recorder busy={busy} onFile={async (file) => { const path = await upload(file, "motivation"); if (path) setDossier((current) => ({ ...current, motivationMediaUrl: path })); }} />
+                <Recorder busy={busy} onFile={async (file) => { const path = await upload(file, "motivation"); if (!path) return false; setDossier((current) => ({ ...current, motivationMediaUrl: path })); return true; }} />
                 <p className="text-sm text-white/80">Situation vis-à-vis de l’alternance</p>
                 <div className="grid gap-3 sm:grid-cols-2">{[["company_found","J’ai déjà une entreprise"],["searching","Je recherche une entreprise"]].map(([value,label]) => <button key={value} type="button" onClick={() => setDossier({ ...dossier, alternanceStatus: value })} className={cn("min-h-14 rounded-2xl border text-sm font-semibold", dossier.alternanceStatus === value ? "border-[#7770ff] bg-[#7770ff]/20" : "border-white/10 text-white/50")}>{label}</button>)}</div>
               </div>
@@ -175,6 +196,16 @@ export function CfaApplicationFlow() {
           ) : null}
 
           {app && ["interview","review"].includes(app.status) ? <Waiting review={app.status === "review"} /> : null}
+          {app?.status === "administrative" ? (
+            <AdministrativeEnrollment
+              app={app}
+              token={token}
+              busy={busy}
+              error={error}
+              upload={upload}
+              save={(cerfaData) => void send("PATCH", { token, action: "administrative", cerfaData })}
+            />
+          ) : null}
           {app?.status === "admitted" ? <Admitted app={app} busy={busy} error={error} choose={(financingPath) => void send("PATCH", { token, action: "financing", financingPath })} /> : null}
         </main>
       </div>
@@ -183,7 +214,7 @@ export function CfaApplicationFlow() {
 }
 
 function Stepper({ status }: { status: string }) {
-  const labels = ["profile","challenge","dossier","interview","review","admitted"];
+  const labels = ["profile","challenge","dossier","interview","review","administrative","admitted"];
   const current = Math.max(labels.indexOf(status), 0);
   return <div className="mt-10 flex overflow-x-auto">{labels.map((item,index) => <div key={item} className="flex min-w-28 flex-1 items-center gap-2 text-xs"><span className={cn("flex h-7 w-7 items-center justify-center rounded-full border", index < current ? "border-[#7770ff] bg-[#7770ff]" : index === current ? "bg-white text-[#070b1f]" : "border-white/15 text-white/30")}>{index < current ? <Check className="h-3 w-3" /> : index + 1}</span><span className="capitalize text-white/50">{item}</span></div>)}</div>;
 }
@@ -204,7 +235,7 @@ function Submit({ busy, error, children }: { busy: boolean; error: string; child
   return <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-7"><p className="text-sm text-rose-300">{error}</p><button disabled={busy} className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-[#070b1f]">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{children}<ArrowRight className="h-4 w-4" /></button></div>;
 }
 
-function Recorder({ busy, onFile }: { busy: boolean; onFile: (file: File) => Promise<void> }) {
+function Recorder({ busy, onFile }: { busy: boolean; onFile: (file: File) => Promise<boolean> }) {
   const media = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -219,7 +250,12 @@ function Recorder({ busy, onFile }: { busy: boolean; onFile: (file: File) => Pro
       const source = await navigator.mediaDevices.getUserMedia(nextMode === "video" ? { video: true, audio: true } : { audio: true });
       stream.current = source;
       setMode(nextMode);
-      const recorder = new MediaRecorder(source);
+      const recorder = new MediaRecorder(
+        source,
+        nextMode === "video"
+          ? { videoBitsPerSecond: 500_000, audioBitsPerSecond: 64_000 }
+          : { audioBitsPerSecond: 64_000 },
+      );
       media.current = recorder;
       chunks.current = [];
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.current.push(event.data); };
@@ -228,10 +264,22 @@ function Recorder({ busy, onFile }: { busy: boolean; onFile: (file: File) => Pro
         setPreview(URL.createObjectURL(blob));
         source.getTracks().forEach((track) => track.stop());
         const file = new File([blob], `motivation-${Date.now()}.webm`, { type: blob.type });
-        void onFile(file).then(() => setMessage("Enregistrement ajouté au dossier."));
+        void onFile(file).then((saved) =>
+          setMessage(
+            saved
+              ? "Enregistrement ajouté au dossier."
+              : "L’enregistrement n’a pas pu être envoyé. Réessaie.",
+          ),
+        );
       };
       recorder.start();
       setRecording(true);
+      window.setTimeout(() => {
+        if (recorder.state === "recording") {
+          recorder.stop();
+          setRecording(false);
+        }
+      }, 45_000);
       setTimeout(() => { if (camera.current) camera.current.srcObject = source; }, 0);
     } catch { setMessage("Autorise l’accès à la caméra ou au micro."); }
   }
@@ -241,6 +289,128 @@ function Recorder({ busy, onFile }: { busy: boolean; onFile: (file: File) => Pro
 
 function Waiting({ review }: { review: boolean }) {
   return <div className="py-12 text-center"><h2 className="text-3xl font-semibold">{review ? "Your application is under review." : "Place à la rencontre."}</h2><p className="mx-auto mt-4 max-w-xl text-white/45">{review ? "Le comité étudie ton dossier." : "Un membre du comité de projet va te contacter dans les plus brefs délais."}</p></div>;
+}
+
+const CERFA_FIELDS = [
+  ["lastName", "Nom", "text"],
+  ["firstNames", "Prénom(s)", "text"],
+  ["sex", "Sexe", "text"],
+  ["birthDate", "Date de naissance", "date"],
+  ["birthCity", "Commune de naissance", "text"],
+  ["birthDepartment", "Département de naissance", "text"],
+  ["nationality", "Nationalité", "text"],
+  ["address", "Adresse complète", "text"],
+  ["phone", "Téléphone", "tel"],
+  ["email", "E-mail", "email"],
+  ["socialSecurityNumber", "Numéro de sécurité sociale", "text"],
+  ["priorSituation", "Situation avant le contrat", "text"],
+  ["lastClass", "Dernière classe suivie et spécialité du bac", "text"],
+  ["highestDiploma", "Diplôme le plus élevé obtenu", "text"],
+] as const;
+
+function AdministrativeEnrollment({
+  app,
+  token,
+  busy,
+  error,
+  upload,
+  save,
+}: {
+  app: CfaApplication;
+  token: string;
+  busy: boolean;
+  error: string;
+  upload: (
+    file: File,
+    kind: "identity" | "social_security" | "diploma",
+  ) => Promise<string | null>;
+  save: (data: Record<string, string>) => void;
+}) {
+  const [data, setData] = useState<Record<string, string>>({
+    lastName: app.last_name,
+    firstNames: app.first_name,
+    phone: app.phone ?? "",
+    email: app.email,
+    priorSituation: "Scolaire — élève de terminale",
+    ...(app.cerfa_data ?? {}),
+  });
+  const [documents, setDocuments] = useState<Record<string, string>>(
+    app.administrative_documents ?? {},
+  );
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+
+  async function addDocument(
+    file: File,
+    kind: "identity" | "social_security" | "diploma",
+  ) {
+    const path = await upload(file, kind);
+    if (path) setDocuments((current) => ({ ...current, [kind]: path }));
+  }
+
+  async function pay() {
+    setPaymentBusy(true);
+    setPaymentError("");
+    try {
+      const response = await fetch("/api/cfa/registration-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.url) throw new Error(result.error || "Paiement indisponible");
+      window.location.href = result.url;
+    } catch (cause) {
+      setPaymentError(cause instanceof Error ? cause.message : "Paiement indisponible");
+      setPaymentBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={(event) => { event.preventDefault(); save(data); }}>
+      <Title overline="Dernière étape · Éléments administratifs">Finalise ton inscription.</Title>
+      <p className="mt-3 text-sm text-white/45">Ces informations servent à préparer ton CERFA. Elles restent confidentielles.</p>
+      <div className="mt-8 grid gap-5 sm:grid-cols-2">
+        {CERFA_FIELDS.map(([name, label, type]) => (
+          <Input key={name} label={label} type={type} value={data[name] ?? ""} onChange={(value) => setData({ ...data, [name]: value })} />
+        ))}
+        <label className="text-sm text-white/80 sm:col-span-2">
+          RQTH ou sportif de haut niveau (uniquement si concerné)
+          <input className={cn(control, "mt-2")} value={data.specialStatus ?? ""} onChange={(event) => setData({ ...data, specialStatus: event.target.value })} placeholder="Non concerné, RQTH ou sportif de haut niveau" />
+        </label>
+      </div>
+      <div className="mt-10">
+        <h3 className="text-xl font-semibold">Pièces justificatives</h3>
+        <div className="mt-4 grid gap-3">
+          {[
+            ["identity", "Pièce d’identité"],
+            ["social_security", "Attestation de droits ou carte Vitale"],
+            ["diploma", "Relevé de notes, attestation de réussite ou diplôme"],
+          ].map(([kind, label]) => (
+            <label key={kind} className="flex min-h-16 cursor-pointer items-center justify-between rounded-2xl border border-white/10 px-4 text-sm">
+              <span>{documents[kind] ? <Check className="mr-2 inline h-4 w-4 text-emerald-300" /> : <Upload className="mr-2 inline h-4 w-4 text-white/40" />}{label}</span>
+              <span className="text-xs text-[#8c86ff]">{documents[kind] ? "Ajouté" : "Choisir"}</span>
+              <input type="file" accept=".pdf,image/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void addDocument(file, kind as "identity" | "social_security" | "diploma"); }} />
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="mt-10 rounded-3xl border border-[#7770ff]/30 bg-[#7770ff]/10 p-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-[#a9a4ff]">Frais d’inscription</p>
+        <p className="mt-2 text-3xl font-semibold">250 €</p>
+        <p className="mt-2 text-sm text-white/55">Remboursés à la signature du contrat d’alternance, après validation de la période d’essai.</p>
+        {app.registration_fee_paid_at ? (
+          <p className="mt-4 text-sm font-semibold text-emerald-300"><Check className="mr-2 inline h-4 w-4" />Paiement confirmé</p>
+        ) : (
+          <button type="button" disabled={paymentBusy} onClick={() => void pay()} className="mt-5 inline-flex min-h-11 items-center rounded-full bg-[#7770ff] px-5 text-sm font-semibold text-white">
+            {paymentBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Payer les frais d’inscription
+          </button>
+        )}
+        {paymentError ? <p className="mt-3 text-xs text-rose-300">{paymentError}</p> : null}
+      </div>
+      <Submit busy={busy} error={error}>Transmettre mes éléments</Submit>
+    </form>
+  );
 }
 
 function Admitted({ app, busy, error, choose }: { app: CfaApplication; busy: boolean; error: string; choose: (path: "alternance" | "byound_start") => void }) {

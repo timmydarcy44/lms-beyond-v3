@@ -12,6 +12,7 @@ export const CFA_APPLICATION_STATUSES = [
   "dossier",
   "interview",
   "review",
+  "administrative",
   "admitted",
   "rejected",
 ] as const;
@@ -24,6 +25,7 @@ export const CFA_STATUS_LABELS: Record<CfaApplicationStatus, string> = {
   dossier: "Dossier",
   interview: "Entretien",
   review: "Review",
+  administrative: "Éléments administratifs",
   admitted: "Admitted",
   rejected: "Non retenu",
 };
@@ -79,6 +81,12 @@ export type CfaApplication = {
   interview_notes?: string | null;
   interview_at?: string | null;
   admission_decision_notes?: string | null;
+  cerfa_data?: Record<string, string> | null;
+  administrative_documents?: Record<string, string> | null;
+  administrative_document_urls?: Record<string, string> | null;
+  administrative_documents_submitted_at?: string | null;
+  registration_fee_session_id?: string | null;
+  registration_fee_paid_at?: string | null;
   admitted_at?: string | null;
   financing_path: "alternance" | "byound_start" | null;
   career_center_activated_at: string | null;

@@ -9,6 +9,7 @@ import {
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CFA_ADMIN_EMAIL = "timmydarcy44@gmail.com";
 
 function clean(value: unknown, max = 4000): string {
   return String(value ?? "").trim().slice(0, max);
@@ -25,6 +26,29 @@ function escapeHtml(value: unknown): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+async function sendCfaEmail(payload: Record<string, unknown>): Promise<boolean> {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) return false;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>",
+        ...payload,
+      }),
+    });
+    if (!response.ok) {
+      console.error("[CFA email]", response.status, await response.text());
+    }
+    return response.ok;
+  } catch (error) {
+    console.error("[CFA email]", error);
+    return false;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -102,40 +126,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  const notifyTo = process.env.CONTACT_EMAIL?.trim();
-  const resendKey = process.env.RESEND_API_KEY;
   const publicUrl = (
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     "https://edgebs.fr"
   ).replace(/\/$/, "");
   const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
-  if (notifyTo && resendKey) {
-    void fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>",
-        to: notifyTo,
-        reply_to: email,
-        subject: `[CFA] Nouvelle candidature — ${firstName} ${lastName}`,
-        html: `<p><strong>${firstName} ${lastName}</strong> vient de créer son profil candidat.</p><p>Spécialisation : ${specialization}<br>Email : ${email}</p>`,
-      }),
-    }).catch(() => null);
-  }
-  if (resendKey) {
-    void fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>",
-        to: email,
-        bcc: "timmydarcy44@gmail.com",
-        subject: "Ton profil est créé",
-        html: `<div style="background:#070b1f;color:#fff;padding:40px;font-family:Arial,sans-serif"><p style="color:#8c86ff;text-transform:uppercase;letter-spacing:.16em">Byound School</p><h1>Ton profil est créé.</h1><p>Tu peux reprendre ton challenge et suivre ta candidature à tout moment avec ce lien personnel.</p><p><a href="${resumeUrl}" style="display:inline-block;margin-top:16px;background:#fff;color:#070b1f;padding:14px 22px;border-radius:999px;text-decoration:none;font-weight:700">Continuer ma candidature</a></p></div>`,
-      }),
-    }).catch(() => null);
-  }
+  await Promise.all([
+    sendCfaEmail({
+      to: email,
+      subject: "Ton profil est créé",
+      html: `<div style="background:#070b1f;color:#fff;padding:40px;font-family:Arial,sans-serif"><p style="color:#8c86ff;text-transform:uppercase;letter-spacing:.16em">Byound School</p><h1>Ton profil est créé.</h1><p>Tu peux reprendre ton challenge et suivre ta candidature à tout moment avec ce lien personnel.</p><p><a href="${resumeUrl}" style="display:inline-block;margin-top:16px;background:#fff;color:#070b1f;padding:14px 22px;border-radius:999px;text-decoration:none;font-weight:700">Continuer ma candidature</a></p></div>`,
+    }),
+    sendCfaEmail({
+      to: CFA_ADMIN_EMAIL,
+      reply_to: email,
+      subject: `[CFA] Nouveau profil — ${firstName} ${lastName}`,
+      html: `<p><strong>${escapeHtml(firstName)} ${escapeHtml(lastName)}</strong> vient de créer son profil candidat.</p><p>Spécialisation : ${escapeHtml(getCfaSpecializationLabel(specialization))}<br>Email : ${escapeHtml(email)}</p><p><a href="${publicUrl}/super/crm/cfa">Ouvrir le CRM CFA</a></p>`,
+    }),
+  ]);
 
   return NextResponse.json({ application: data }, { status: 201 });
 }
@@ -203,6 +212,42 @@ export async function PATCH(request: Request) {
     patch.motivation_media_url = motivationMediaUrl || null;
     patch.alternance_status = alternanceStatus;
     nextStatus = "interview";
+  } else if (action === "administrative" && current.status === "administrative") {
+    const rawCerfa =
+      body.cerfaData && typeof body.cerfaData === "object"
+        ? (body.cerfaData as Record<string, unknown>)
+        : {};
+    const requiredFields = [
+      "lastName",
+      "firstNames",
+      "sex",
+      "birthDate",
+      "birthCity",
+      "birthDepartment",
+      "nationality",
+      "address",
+      "phone",
+      "email",
+      "socialSecurityNumber",
+      "priorSituation",
+      "lastClass",
+      "highestDiploma",
+    ];
+    const cerfaData = Object.fromEntries(
+      [...requiredFields, "specialStatus"].map((field) => [field, clean(rawCerfa[field], 1000)]),
+    );
+    const documents = (current.administrative_documents ?? {}) as Record<string, string>;
+    if (
+      requiredFields.some((field) => !cerfaData[field]) ||
+      ["identity", "social_security", "diploma"].some((kind) => !documents[kind])
+    ) {
+      return NextResponse.json(
+        { error: "Complète les informations CERFA et ajoute les trois justificatifs." },
+        { status: 400 },
+      );
+    }
+    patch.cerfa_data = cerfaData;
+    patch.administrative_documents_submitted_at = new Date().toISOString();
   } else if (action === "financing" && current.status === "admitted") {
     const financingPath = clean(body.financingPath, 40);
     if (!["alternance", "byound_start"].includes(financingPath)) {
@@ -228,39 +273,25 @@ export async function PATCH(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  if (action === "dossier" && process.env.RESEND_API_KEY) {
-    const resendHeaders = {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    };
-    const from = process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>";
+  if (action === "dossier") {
     const challengeSummary = CFA_CHALLENGE_QUESTIONS.map((question) => {
       const answer = data.challenge_answers?.[question.id];
       return `<p><strong>${escapeHtml(question.eyebrow)} — ${escapeHtml(question.question)}</strong><br/>${escapeHtml(answer || "—")}</p>`;
     }).join("");
 
-    void fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: resendHeaders,
-      body: JSON.stringify({
-        from,
+    await Promise.all([
+      sendCfaEmail({
         to: String(data.email),
         subject: "Ton dossier Byound est complet",
         html: `<div style="background:#070b1f;color:#fff;padding:40px;font-family:Arial,sans-serif"><p style="color:#8c86ff;text-transform:uppercase;letter-spacing:.16em">Byound School</p><h1>Ton dossier est bien enregistré.</h1><p>Un membre du comité de projet va te contacter dans les plus brefs délais afin d’organiser ton entretien d’admission.</p><p>À très vite,<br/>L’équipe Byound</p></div>`,
       }),
-    }).catch(() => null);
-
-    void fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: resendHeaders,
-      body: JSON.stringify({
-        from,
-        to: "timmydarcy44@gmail.com",
+      sendCfaEmail({
+        to: CFA_ADMIN_EMAIL,
         reply_to: String(data.email),
         subject: `[CFA] Dossier complet — ${data.first_name} ${data.last_name}`,
         html: `<div style="font-family:Arial,sans-serif;color:#111"><h1>Nouveau dossier CFA complet</h1><p><strong>${escapeHtml(data.first_name)} ${escapeHtml(data.last_name)}</strong><br/>${escapeHtml(data.email)} · ${escapeHtml(data.phone || "Téléphone non renseigné")}<br/>Âge : ${escapeHtml(data.age)} · Niveau : ${escapeHtml(data.education_level)}<br/>Spécialisation : ${escapeHtml(getCfaSpecializationLabel(data.specialization))}<br/>Alternance : ${data.alternance_status === "company_found" ? "Entreprise trouvée" : "En recherche"}</p><h2>Parcours scolaire</h2><p>${escapeHtml(data.school_background)}</p><h2>Expériences</h2><p>${escapeHtml(data.experiences || "—")}</p><h2>Pourquoi Byound ?</h2><p>${escapeHtml(data.motivation_text || "Voir le média joint au dossier")}</p><h2>Byound Challenge</h2>${challengeSummary}<p><a href="${(process.env.NEXT_PUBLIC_APP_URL || "https://edgebs.fr").replace(/\/$/, "")}/super/crm/cfa">Ouvrir le dossier dans le CRM CFA</a></p></div>`,
       }),
-    }).catch(() => null);
+    ]);
   }
 
   return NextResponse.json({ application: data });

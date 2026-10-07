@@ -13,7 +13,7 @@ export function AlertsBadge() {
         const response = await fetch("/api/super-admin/crm/cfa", { cache: "no-store" });
         const result = await response.json();
         const count = (result.applications ?? []).filter((application: { status?: string }) =>
-          ["profile", "challenge", "dossier", "interview", "review"].includes(
+          ["profile", "challenge", "dossier", "interview", "review", "administrative"].includes(
             application.status ?? "",
           ),
         ).length;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Clock3, GraduationCap, Loader2, Mail, RefreshCw } from "lucide-react";
+import { CalendarDays, Clock3, GraduationCap, Loader2, Mail, Printer, RefreshCw } from "lucide-react";
 
 import {
   CFA_CHALLENGE_QUESTIONS,
@@ -63,6 +63,8 @@ const CERFA_LABELS = [
 ] as const;
 
 const ADMIN_DOCUMENT_LABELS: Record<string, string> = {
+  cv: "CV",
+  motivation: "Motivation audio / vidéo",
   identity: "Pièce d’identité",
   social_security: "Attestation Sécurité sociale",
   diploma: "Diplôme / relevé de notes",
@@ -191,7 +193,7 @@ export function CfaPipelineClient() {
   }
 
   return (
-    <div className="space-y-6 px-3 py-6 sm:px-6 sm:py-8">
+    <div className="space-y-6 px-3 py-6 text-white sm:px-6 sm:py-8">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-500">
@@ -221,7 +223,7 @@ export function CfaPipelineClient() {
           ["En review", counts.review],
           ["Admis", counts.admitted],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div key={label} className="super-glass-panel rounded-2xl border border-white/10 p-4 shadow-sm">
             <p className="text-xs font-medium text-gray-500">{label}</p>
             <p className="mt-2 text-2xl font-bold text-gray-950">{value}</p>
           </div>
@@ -252,7 +254,7 @@ export function CfaPipelineClient() {
             return (
               <section
                 key={column.id}
-                className="min-w-0 rounded-2xl border border-gray-200 bg-gray-50/80 p-3"
+                className="super-glass-panel min-w-0 rounded-2xl border border-white/10 p-3"
               >
                 <header className="flex items-center justify-between px-1 py-2">
                   <div className="flex items-center gap-2">
@@ -268,7 +270,7 @@ export function CfaPipelineClient() {
                     <article
                       key={application.id}
                       onClick={() => openApplication(application)}
-                      className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+                      className="cursor-pointer rounded-xl border border-white/10 bg-[#10284d]/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-400/50 hover:bg-[#153461] hover:shadow-xl"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -335,10 +337,18 @@ export function CfaPipelineClient() {
         </div>
       )}
       <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto border-0 bg-white p-0 sm:max-w-3xl">
+        <DialogContent className="cfa-revolut-sheet cfa-print-sheet max-h-[92vh] overflow-y-auto border-0 p-0 sm:max-w-3xl">
           {selected ? (
             <div>
               <DialogHeader className="border-b border-gray-100 p-6 pr-14">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="cfa-no-print absolute right-12 top-3.5 inline-flex h-9 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/15"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Imprimer
+                </button>
                 <DialogTitle className="text-2xl">
                   {selected.first_name} {selected.last_name}
                 </DialogTitle>
@@ -394,6 +404,30 @@ export function CfaPipelineClient() {
                         url ? <a key={kind} href={url} target="_blank" rel="noreferrer">{ADMIN_DOCUMENT_LABELS[kind] ?? kind}</a> : null,
                       )}
                     </div>
+                    {Object.keys(selected.private_files ?? {}).length ? (
+                      <div className="space-y-2 border-t border-white/10 pt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          Registre des pièces déposées
+                        </p>
+                        {Object.entries(selected.private_files ?? {}).map(([kind, file]) => (
+                          <div key={kind} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 px-3 py-2 text-xs">
+                            <div className="min-w-0">
+                              <p className="font-semibold">{ADMIN_DOCUMENT_LABELS[kind] ?? kind}</p>
+                              <p className="truncate text-gray-500">
+                                {file.original_name ?? file.path}
+                                {file.size_bytes ? ` · ${(file.size_bytes / 1024 / 1024).toFixed(2)} Mo` : ""}
+                                {file.uploaded_at ? ` · ${new Date(file.uploaded_at).toLocaleDateString("fr-FR")}` : ""}
+                              </p>
+                            </div>
+                            {file.signed_url ? (
+                              <a className="cfa-no-print shrink-0 font-semibold text-indigo-400" href={file.signed_url} target="_blank" rel="noreferrer">
+                                Ouvrir
+                              </a>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                     <p className={cn("text-xs font-semibold", selected.registration_fee_paid_at ? "text-emerald-700" : "text-amber-700")}>
                       Frais d’inscription : {selected.registration_fee_paid_at ? "250 € payés" : "paiement en attente"}
                     </p>

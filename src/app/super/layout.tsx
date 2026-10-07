@@ -11,6 +11,7 @@ import { FloatingCreateButton } from "@/components/jessica-contentin/floating-cr
 import { SuperJarvis } from "@/components/super-admin/super-jarvis";
 import { CrmAreaWrapper } from "@/components/super-admin/crm-area-wrapper";
 import { CfaEntryNotifier } from "@/components/super-admin/cfa-entry-notifier";
+import "./super-theme.css";
 
 export default async function SuperLayout({
   children,
@@ -39,7 +40,7 @@ export default async function SuperLayout({
 
   return (
     <BrandingProvider initialBranding={branding}>
-      <div className="min-h-screen bg-white">
+      <div className="super-theme min-h-screen">
         {!isContentin && <CfaEntryNotifier />}
         {isContentin ? <JessicaHeader /> : <SuperAdminHeaderApple />}
         <CrmAreaWrapper>

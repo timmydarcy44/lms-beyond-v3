@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSuperAdminStats, getTrends, getTopPerformers } from "@/lib/queries/super-admin";
 import { getTrainingSectorNews } from "@/lib/queries/news";
-import { Building2, Users, Activity, Plus, ChevronRight, ExternalLink, Newspaper, TrendingUp, Award, AlertTriangle, Target, Clock, CheckCircle2, Globe, BookOpen, Store, GraduationCap } from "lucide-react";
+import { Building2, Users, Activity, Plus, ChevronRight, ExternalLink, TrendingUp, Award, AlertTriangle, Target, Clock, CheckCircle2, Globe, BookOpen, Store, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
@@ -138,12 +138,13 @@ export default async function SuperDashboard() {
   const quickActions = isContentin ? contentinQuickActions : defaultQuickActions;
 
   return (
-    <div className="space-y-8">
+    <div className="super-cockpit space-y-8">
       {/* Header centré avec gradient */}
       <div className="flex flex-col gap-4 py-8 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col items-center justify-center space-y-2 md:items-start">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Dashboard
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-300">Executive cockpit</p>
+          <h1 className="bg-gradient-to-r from-white via-blue-100 to-indigo-300 bg-clip-text text-5xl font-bold text-transparent">
+            Piloter Byound
           </h1>
           <p className="text-sm text-gray-600 text-center md:text-left">
             {isContentin ? "Gestion de votre catalogue et de votre site" : "Vue d'ensemble du système"}
@@ -573,7 +574,7 @@ export default async function SuperDashboard() {
         <div className="flex items-center justify-between px-1">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">Organisations Récentes</h2>
-            <p className="text-sm text-gray-600 mt-1">Coup d'œil sur les dernières organisations créées</p>
+            <p className="text-sm text-gray-600 mt-1">Coup d&apos;œil sur les dernières organisations créées</p>
           </div>
           <Link href="/super/organisations" className="text-gray-600 hover:text-gray-900 transition">
             <span className="text-sm font-medium">Voir tout →</span>
@@ -699,7 +700,7 @@ export default async function SuperDashboard() {
                       })}
                     </span>
                     <span className="flex items-center gap-1 text-blue-600 group-hover:text-blue-800">
-                      Lire l'article <ExternalLink className="h-3 w-3" />
+                      Lire l&apos;article <ExternalLink className="h-3 w-3" />
                     </span>
                   </div>
                 </div>

@@ -153,7 +153,8 @@ export function CrmSidebar() {
   const [collapsed, setCollapsed] = useState<Partial<Record<SectionKey, boolean>>>({});
 
   useEffect(() => {
-    setCollapsed(readCollapsed());
+    const timer = window.setTimeout(() => setCollapsed(readCollapsed()), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -210,7 +211,7 @@ export function CrmSidebar() {
   };
 
   return (
-    <aside className="w-full shrink-0 border-b border-gray-200 bg-gray-50/90 lg:w-56 lg:border-b-0 lg:border-r lg:min-h-[calc(100vh-3rem)]">
+    <aside className="super-crm-sidebar w-full shrink-0 border-b border-white/10 bg-[#091a35]/70 lg:min-h-[calc(100vh-3rem)] lg:w-60 lg:border-b-0 lg:border-r">
       <div className="sticky top-12 p-2 lg:p-4">
         <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:block lg:space-y-3 lg:overflow-visible lg:px-0 lg:pb-0">
           {sections.map((section) => {
@@ -258,7 +259,7 @@ export function CrmSidebar() {
                           item.nested ? "ml-4 lg:ml-2 lg:border-l-2 lg:border-indigo-100 lg:pl-4" : "",
                           isActive
                             ? item.featured
-                              ? "border border-indigo-600 bg-indigo-600 text-white shadow-sm"
+                              ? "border border-indigo-400/50 bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-950/30"
                               : "border border-gray-200 bg-white text-gray-900 shadow-sm"
                             : item.featured
                               ? "border border-transparent text-indigo-700 hover:bg-indigo-50 hover:text-indigo-900"

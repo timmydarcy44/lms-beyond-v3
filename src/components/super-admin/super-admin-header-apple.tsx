@@ -3,22 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  DollarSign,
-  BarChart3,
   Settings,
   ChevronDown,
   MessageSquare,
   LogOut,
-  Bell,
-  Sparkles,
-  Store,
-  Gamepad2,
-  Crown,
-  Brain,
-  TrendingUp,
   Globe,
   Calendar,
 } from "lucide-react";
@@ -122,7 +110,7 @@ export function SuperAdminHeaderApple() {
       "sticky top-0 z-50 w-full border-b backdrop-blur-xl",
       isContentin 
         ? "border-[#D2B48C]/50 bg-[#F5F5DC]/80" 
-        : "border-gray-200/50 bg-white/80"
+        : "super-glass-header border-white/10 bg-[#071225]/80"
     )}>
       <nav className="mx-auto max-w-[1440px] px-6">
         <div className="flex h-12 items-center justify-between">
@@ -132,7 +120,7 @@ export function SuperAdminHeaderApple() {
               "text-[11px] font-medium tracking-tight",
               isContentin ? "text-[#8B4513]" : "text-gray-900"
             )} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
-              Beyond
+              BYOUND <span className="ml-1 text-[9px] font-semibold tracking-[0.18em] text-indigo-300">CONTROL</span>
             </span>
           </Link>
 

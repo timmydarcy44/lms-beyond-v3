@@ -6,6 +6,15 @@ export const CFA_SPECIALIZATIONS = [
 
 export type CfaSpecialization = (typeof CFA_SPECIALIZATIONS)[number]["value"];
 
+export type CfaPrivateFile = {
+  path: string;
+  original_name?: string;
+  mime_type?: string;
+  size_bytes?: number;
+  uploaded_at?: string;
+  signed_url?: string | null;
+};
+
 export const CFA_APPLICATION_STATUSES = [
   "profile",
   "challenge",
@@ -84,6 +93,7 @@ export type CfaApplication = {
   cerfa_data?: Record<string, string> | null;
   administrative_documents?: Record<string, string> | null;
   administrative_document_urls?: Record<string, string> | null;
+  private_files?: Record<string, CfaPrivateFile> | null;
   administrative_documents_submitted_at?: string | null;
   registration_fee_session_id?: string | null;
   registration_fee_paid_at?: string | null;

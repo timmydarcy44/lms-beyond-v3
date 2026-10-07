@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
   const { data: application } = await db
     .from("cfa_applications")
-    .select("id,status,administrative_documents")
+    .select("id,status,administrative_documents,private_files")
     .eq("resume_token", token)
     .maybeSingle();
 
@@ -64,24 +64,31 @@ export async function POST(request: Request) {
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 400 });
 
-  if (kind === "cv") {
-    const { error } = await db
-      .from("cfa_applications")
-      .update({ cv_path: path })
-      .eq("id", application.id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  }
+  const privateFiles = {
+    ...(application.private_files as Record<string, unknown> | null),
+    [kind]: {
+      path,
+      original_name: file.name.slice(0, 240),
+      mime_type: file.type,
+      size_bytes: file.size,
+      uploaded_at: new Date().toISOString(),
+    },
+  };
+  const patch: Record<string, unknown> = { private_files: privateFiles };
+  if (kind === "cv") patch.cv_path = path;
+  if (kind === "motivation") patch.motivation_media_url = path;
   if (documentKinds.includes(kind)) {
     const documents = {
       ...(application.administrative_documents as Record<string, string> | null),
       [kind]: path,
     };
-    const { error } = await db
-      .from("cfa_applications")
-      .update({ administrative_documents: documents })
-      .eq("id", application.id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    patch.administrative_documents = documents;
   }
+  const { error } = await db
+    .from("cfa_applications")
+    .update(patch)
+    .eq("id", application.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  return NextResponse.json({ path });
+  return NextResponse.json({ path, file: privateFiles[kind] });
 }

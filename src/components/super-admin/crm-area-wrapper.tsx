@@ -24,7 +24,7 @@ export function CrmAreaWrapper({ children }: { children: React.ReactNode }) {
   return (
     <AiAssistantProvider>
       <div className="flex w-full flex-col lg:flex-row">
-        <Suspense fallback={<aside className="w-full shrink-0 border-b border-gray-200 bg-gray-50 lg:w-56 lg:border-b-0 lg:border-r" />}>
+        <Suspense fallback={<aside className="super-crm-sidebar w-full shrink-0 border-b border-white/10 bg-[#091a35]/70 lg:w-60 lg:border-b-0 lg:border-r" />}>
           <CrmSidebar />
         </Suspense>
         <div className="min-w-0 flex-1">{children}</div>

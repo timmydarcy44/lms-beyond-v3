@@ -83,7 +83,7 @@ export function SuperJarvis() {
       </button>
 
       {open ? (
-        <div className="fixed bottom-24 right-6 z-[60] flex w-[min(100vw-2rem,400px)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+        <div className="super-glass-panel fixed bottom-24 right-6 z-[60] flex w-[min(100vw-2rem,400px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0b1c37]/90 text-white shadow-2xl backdrop-blur-2xl">
           <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-violet-600 to-indigo-700 px-4 py-3 text-white">
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5" />
@@ -99,7 +99,7 @@ export function SuperJarvis() {
                 key={i}
                 className={cn(
                   "rounded-lg px-3 py-2 text-sm leading-relaxed",
-                  m.role === "user" ? "ml-8 bg-violet-50 text-gray-900" : "mr-4 bg-gray-50 text-gray-800",
+                  m.role === "user" ? "ml-8 bg-indigo-500/20 text-white" : "mr-4 bg-white/10 text-blue-50",
                 )}
               >
                 {m.text}

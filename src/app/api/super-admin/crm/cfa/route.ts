@@ -57,7 +57,11 @@ export async function GET() {
   const applications = await Promise.all(
     (data ?? []).map(async (application) => {
       const documents = (application.administrative_documents ?? {}) as Record<string, string>;
-      const [cvSigned, motivationSigned, documentEntries] = await Promise.all([
+      const privateFiles = (application.private_files ?? {}) as Record<
+        string,
+        { path?: string; [key: string]: unknown }
+      >;
+      const [cvSigned, motivationSigned, documentEntries, privateFileEntries] = await Promise.all([
         application.cv_path
           ? db.storage
               .from("cfa-applications")
@@ -77,6 +81,19 @@ export async function GET() {
             return [kind, signed.data?.signedUrl ?? ""] as const;
           }),
         ),
+        Promise.all(
+          Object.entries(privateFiles).map(async ([kind, metadata]) => {
+            const signed = metadata.path
+              ? await db.storage
+                  .from("cfa-applications")
+                  .createSignedUrl(String(metadata.path), 3600)
+              : { data: null };
+            return [
+              kind,
+              { ...metadata, signed_url: signed.data?.signedUrl ?? null },
+            ] as const;
+          }),
+        ),
       ]);
       return {
         ...application,
@@ -84,6 +101,7 @@ export async function GET() {
         motivation_media_signed_url:
           motivationSigned.data?.signedUrl ?? application.motivation_media_url ?? null,
         administrative_document_urls: Object.fromEntries(documentEntries),
+        private_files: Object.fromEntries(privateFileEntries),
       };
     }),
   );

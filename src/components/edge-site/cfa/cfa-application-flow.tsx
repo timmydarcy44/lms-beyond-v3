@@ -1,0 +1,248 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Check, CircleStop, Loader2, Mic, Sparkles, Upload, Video } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import {
+  CFA_CHALLENGE_QUESTIONS,
+  CFA_SPECIALIZATIONS,
+  getCfaSpecializationLabel,
+  type CfaApplication,
+} from "@/lib/cfa-applications";
+import { cn } from "@/lib/utils";
+
+const TOKEN_KEY = "byound_cfa_application_token";
+const control =
+  "w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#7770ff]";
+
+export function CfaApplicationFlow() {
+  const params = useSearchParams();
+  const resume = params.get("resume");
+  const requested = params.get("specialization");
+  const [app, setApp] = useState<CfaApplication | null>(null);
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [cvName, setCvName] = useState("");
+  const [profile, setProfile] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    age: "",
+    educationLevel: "",
+    specialization: CFA_SPECIALIZATIONS.some((item) => item.value === requested)
+      ? requested!
+      : "ai_business",
+  });
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [dossier, setDossier] = useState({
+    schoolBackground: "",
+    experiences: "",
+    motivationText: "",
+    motivationMediaUrl: "",
+    alternanceStatus: "",
+  });
+
+  useEffect(() => {
+    void (async () => {
+      await Promise.resolve();
+      const saved = resume || localStorage.getItem(TOKEN_KEY);
+      if (!saved) return setLoading(false);
+      if (resume) localStorage.setItem(TOKEN_KEY, resume);
+      setToken(saved);
+      try {
+        const response = await fetch(`/api/cfa/applications?token=${encodeURIComponent(saved)}`);
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        setApp(data.application);
+        setAnswers(data.application.challenge_answers ?? {});
+        setDossier({
+          schoolBackground: data.application.school_background ?? "",
+          experiences: data.application.experiences ?? "",
+          motivationText: data.application.motivation_text ?? "",
+          motivationMediaUrl: data.application.motivation_media_url ?? "",
+          alternanceStatus: data.application.alternance_status ?? "",
+        });
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [resume]);
+
+  async function send(method: "POST" | "PATCH", payload: Record<string, unknown>) {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/cfa/applications", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      setApp(result.application);
+      if (result.application.resume_token) {
+        const next = String(result.application.resume_token);
+        setToken(next);
+        localStorage.setItem(TOKEN_KEY, next);
+      }
+      scrollTo({ top: 0, behavior: "smooth" });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Une erreur est survenue.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function upload(file: File, kind: "cv" | "motivation") {
+    setBusy(true);
+    const body = new FormData();
+    body.set("token", token);
+    body.set("kind", kind);
+    body.set("file", file);
+    try {
+      const response = await fetch("/api/cfa/applications/upload", { method: "POST", body });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      if (kind === "cv") setCvName(file.name);
+      return String(result.path);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Téléversement impossible.");
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="flex min-h-[70vh] items-center justify-center bg-[#070b1f]"><Loader2 className="h-7 w-7 animate-spin text-[#7770ff]" /></div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-[#070b1f] px-5 pb-24 pt-28 text-white sm:px-8">
+      <div className="mx-auto max-w-5xl">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8c86ff]">Byound School · Admissions</p>
+        <h1 className="mt-4 text-[clamp(2.7rem,6vw,5rem)] font-semibold leading-[.93] tracking-[-.055em]">Build what&apos;s next.</h1>
+        <p className="mt-4 text-white/50">Ton potentiel d’abord. L’entreprise et le financement viennent après l’admission.</p>
+        <Stepper status={app?.status ?? "profile"} />
+
+        <main className="mt-10 rounded-[32px] border border-white/10 bg-white/[.045] p-6 backdrop-blur-xl sm:p-10">
+          {!app ? (
+            <form onSubmit={(event) => { event.preventDefault(); void send("POST", profile); }}>
+              <Title overline="Étape 1 · 2 minutes">Crée ton profil Byound.</Title>
+              <p className="mt-3 text-sm text-white/45">Aucune entreprise n’est demandée à cette étape.</p>
+              <div className="mt-8 grid gap-5 sm:grid-cols-2">
+                <Input label="Prénom" value={profile.firstName} onChange={(value) => setProfile({ ...profile, firstName: value })} />
+                <Input label="Nom" value={profile.lastName} onChange={(value) => setProfile({ ...profile, lastName: value })} />
+                <Input label="Email" type="email" value={profile.email} onChange={(value) => setProfile({ ...profile, email: value })} />
+                <Input label="Téléphone (optionnel)" type="tel" value={profile.phone} onChange={(value) => setProfile({ ...profile, phone: value })} required={false} />
+                <Input label="Âge" type="number" value={profile.age} onChange={(value) => setProfile({ ...profile, age: value })} />
+                <label className="text-sm text-white/80">Niveau d’études<select className={cn(control, "mt-2")} value={profile.educationLevel} onChange={(event) => setProfile({ ...profile, educationLevel: event.target.value })} required><option value="" className="text-black">Sélectionner</option>{["Bac en cours","Bac obtenu","Bac+1","Bac+2","Bac+3 ou plus"].map((level) => <option key={level} className="text-black">{level}</option>)}</select></label>
+              </div>
+              <p className="mb-2 mt-6 text-sm text-white/80">Spécialisation visée</p>
+              <div className="grid gap-3 sm:grid-cols-3">{CFA_SPECIALIZATIONS.map((item) => <button key={item.value} type="button" onClick={() => setProfile({ ...profile, specialization: item.value })} className={cn("min-h-14 rounded-2xl border text-sm font-semibold", profile.specialization === item.value ? "border-[#7770ff] bg-[#7770ff]/20" : "border-white/10 text-white/50")}>{item.label}</button>)}</div>
+              <Submit busy={busy} error={error}>Commencer le challenge</Submit>
+            </form>
+          ) : null}
+
+          {app?.status === "challenge" ? (
+            <form onSubmit={(event) => { event.preventDefault(); void send("PATCH", { token, action: "challenge", answers }); }}>
+              <Title overline="Étape 2 · 10 à 15 minutes">Le Byound Challenge.</Title>
+              <p className="mt-3 text-sm text-white/45">Il n’y a pas une seule bonne réponse. Nous cherchons ta façon de raisonner.</p>
+              <div className="mt-8 space-y-7">{CFA_CHALLENGE_QUESTIONS.map((question, index) => <label key={question.id} className="block"><span className="text-xs font-semibold uppercase tracking-wider text-[#8c86ff]">{index + 1} · {question.eyebrow}</span><span className="my-3 block text-lg font-medium">{question.question}</span><textarea className={control} rows={5} value={answers[question.id] ?? ""} onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })} required /></label>)}</div>
+              <Submit busy={busy} error={error}>Valider mon challenge</Submit>
+            </form>
+          ) : null}
+
+          {app?.status === "dossier" ? (
+            <form onSubmit={(event) => { event.preventDefault(); void send("PATCH", { token, action: "dossier", ...dossier }); }}>
+              <Title overline="Étape 3 · Dossier candidat">Ton parcours, sans lettre formatée.</Title>
+              <div className="mt-8 space-y-6">
+                <Area label="Parcours scolaire" value={dossier.schoolBackground} onChange={(value) => setDossier({ ...dossier, schoolBackground: value })} />
+                <Area label="Expériences (optionnel)" value={dossier.experiences} onChange={(value) => setDossier({ ...dossier, experiences: value })} required={false} />
+                <label className="block text-sm text-white/80">CV (optionnel)<span className="mt-2 flex min-h-14 cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-white/15 px-4 text-white/50"><Upload className="h-4 w-4" />{cvName || "Choisir un PDF ou une image"}<input type="file" className="sr-only" accept=".pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file, "cv"); }} /></span></label>
+                <Area label="Pourquoi Byound ? Écris, parle ou filme-toi." value={dossier.motivationText} onChange={(value) => setDossier({ ...dossier, motivationText: value })} required={false} />
+                <Recorder busy={busy} onFile={async (file) => { const path = await upload(file, "motivation"); if (path) setDossier((current) => ({ ...current, motivationMediaUrl: path })); }} />
+                <p className="text-sm text-white/80">Situation vis-à-vis de l’alternance</p>
+                <div className="grid gap-3 sm:grid-cols-2">{[["company_found","J’ai déjà une entreprise"],["searching","Je recherche une entreprise"]].map(([value,label]) => <button key={value} type="button" onClick={() => setDossier({ ...dossier, alternanceStatus: value })} className={cn("min-h-14 rounded-2xl border text-sm font-semibold", dossier.alternanceStatus === value ? "border-[#7770ff] bg-[#7770ff]/20" : "border-white/10 text-white/50")}>{label}</button>)}</div>
+              </div>
+              <Submit busy={busy} error={error}>Envoyer mon dossier</Submit>
+            </form>
+          ) : null}
+
+          {app && ["interview","review"].includes(app.status) ? <Waiting review={app.status === "review"} /> : null}
+          {app?.status === "admitted" ? <Admitted app={app} busy={busy} error={error} choose={(financingPath) => void send("PATCH", { token, action: "financing", financingPath })} /> : null}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function Stepper({ status }: { status: string }) {
+  const labels = ["profile","challenge","dossier","interview","review","admitted"];
+  const current = Math.max(labels.indexOf(status), 0);
+  return <div className="mt-10 flex overflow-x-auto">{labels.map((item,index) => <div key={item} className="flex min-w-28 flex-1 items-center gap-2 text-xs"><span className={cn("flex h-7 w-7 items-center justify-center rounded-full border", index < current ? "border-[#7770ff] bg-[#7770ff]" : index === current ? "bg-white text-[#070b1f]" : "border-white/15 text-white/30")}>{index < current ? <Check className="h-3 w-3" /> : index + 1}</span><span className="capitalize text-white/50">{item}</span></div>)}</div>;
+}
+
+function Title({ overline, children }: { overline: string; children: React.ReactNode }) {
+  return <><p className="text-xs font-semibold uppercase tracking-[.2em] text-white/35">{overline}</p><h2 className="mt-3 text-3xl font-semibold tracking-[-.04em]">{children}</h2></>;
+}
+
+function Input({ label, value, onChange, type = "text", required = true }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
+  return <label className="text-sm text-white/80">{label}<input className={cn(control, "mt-2")} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} /></label>;
+}
+
+function Area({ label, value, onChange, required = true }: { label: string; value: string; onChange: (value: string) => void; required?: boolean }) {
+  return <label className="block text-sm text-white/80">{label}<textarea className={cn(control, "mt-2")} rows={5} value={value} onChange={(event) => onChange(event.target.value)} required={required} /></label>;
+}
+
+function Submit({ busy, error, children }: { busy: boolean; error: string; children: React.ReactNode }) {
+  return <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-7"><p className="text-sm text-rose-300">{error}</p><button disabled={busy} className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-[#070b1f]">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{children}<ArrowRight className="h-4 w-4" /></button></div>;
+}
+
+function Recorder({ busy, onFile }: { busy: boolean; onFile: (file: File) => Promise<void> }) {
+  const media = useRef<MediaRecorder | null>(null);
+  const stream = useRef<MediaStream | null>(null);
+  const chunks = useRef<Blob[]>([]);
+  const camera = useRef<HTMLVideoElement | null>(null);
+  const [mode, setMode] = useState<"audio" | "video" | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [preview, setPreview] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function start(nextMode: "audio" | "video") {
+    try {
+      const source = await navigator.mediaDevices.getUserMedia(nextMode === "video" ? { video: true, audio: true } : { audio: true });
+      stream.current = source;
+      setMode(nextMode);
+      const recorder = new MediaRecorder(source);
+      media.current = recorder;
+      chunks.current = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.current.push(event.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks.current, { type: recorder.mimeType || `${nextMode}/webm` });
+        setPreview(URL.createObjectURL(blob));
+        source.getTracks().forEach((track) => track.stop());
+        const file = new File([blob], `motivation-${Date.now()}.webm`, { type: blob.type });
+        void onFile(file).then(() => setMessage("Enregistrement ajouté au dossier."));
+      };
+      recorder.start();
+      setRecording(true);
+      setTimeout(() => { if (camera.current) camera.current.srcObject = source; }, 0);
+    } catch { setMessage("Autorise l’accès à la caméra ou au micro."); }
+  }
+
+  return <div className="rounded-2xl border border-white/10 p-4"><div className="flex flex-wrap gap-2"><button type="button" disabled={recording || busy} onClick={() => void start("audio")} className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs"><Mic className="h-4 w-4" />Parler dans le micro</button><button type="button" disabled={recording || busy} onClick={() => void start("video")} className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs"><Video className="h-4 w-4" />Allumer la caméra</button>{recording ? <button type="button" onClick={() => { media.current?.stop(); setRecording(false); }} className="flex items-center gap-2 rounded-full bg-rose-500 px-4 py-2 text-xs"><CircleStop className="h-4 w-4" />Terminer</button> : null}</div>{mode === "video" && recording ? <video ref={camera} autoPlay muted playsInline className="mt-4 aspect-video max-w-md rounded-xl bg-black" /> : null}{preview && mode === "video" ? <video controls src={preview} className="mt-4 max-w-md rounded-xl" /> : null}{preview && mode === "audio" ? <audio controls src={preview} className="mt-4 w-full max-w-md" /> : null}{message ? <p className="mt-3 text-xs text-emerald-300">{message}</p> : null}</div>;
+}
+
+function Waiting({ review }: { review: boolean }) {
+  return <div className="py-12 text-center"><h2 className="text-3xl font-semibold">{review ? "Your application is under review." : "Place à la rencontre."}</h2><p className="mx-auto mt-4 max-w-xl text-white/45">{review ? "Le comité étudie ton dossier." : "Un membre du comité de projet va te contacter dans les plus brefs délais."}</p></div>;
+}
+
+function Admitted({ app, busy, error, choose }: { app: CfaApplication; busy: boolean; error: string; choose: (path: "alternance" | "byound_start") => void }) {
+  return <div><div className="rounded-3xl bg-gradient-to-br from-[#6358ef] to-[#2668ff] p-8"><Sparkles /><p className="mt-8 text-sm">{getCfaSpecializationLabel(app.specialization)}</p><h2 className="mt-2 text-5xl font-semibold">Welcome to Byound.<br />You&apos;re in.</h2></div>{!app.financing_path ? <div className="mt-6 grid gap-3 sm:grid-cols-2"><button disabled={busy} onClick={() => choose("alternance")} className="rounded-2xl border border-white/10 p-6 text-left">J’ai une entreprise</button><button disabled={busy} onClick={() => choose("byound_start")} className="rounded-2xl border border-white/10 p-6 text-left">Je recherche une entreprise</button></div> : <p className="mt-6 text-emerald-300">Ton parcours et le Career Center sont activés.</p>}{error ? <p className="mt-3 text-rose-300">{error}</p> : null}</div>;
+}

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSuperAdminStats, getTrends, getTopPerformers } from "@/lib/queries/super-admin";
 import { getTrainingSectorNews } from "@/lib/queries/news";
-import { Building2, Users, Activity, Plus, ChevronRight, ExternalLink, Newspaper, TrendingUp, Award, AlertTriangle, Target, Clock, CheckCircle2, Globe, BookOpen, Store } from "lucide-react";
+import { Building2, Users, Activity, Plus, ChevronRight, ExternalLink, Newspaper, TrendingUp, Award, AlertTriangle, Target, Clock, CheckCircle2, Globe, BookOpen, Store, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
@@ -25,7 +25,7 @@ export default async function SuperDashboard() {
     redirect("/super/jessica-dashboard");
   }
 
-  const [stats, news, trends30d, topPerformers, pipelineSummary, catalogueCount] = await Promise.all([
+  const [stats, news, trends30d, topPerformers, pipelineSummary, catalogueCount, cfaSummary] = await Promise.all([
     getSuperAdminStats(),
     getTrainingSectorNews(),
     getTrends("30d"),
@@ -40,6 +40,20 @@ export default async function SuperDashboard() {
         .eq("pipeline_type", "btob")
         .eq("stage_slug", BTOB_CATALOGUE_STAGE_SLUG);
       return count ?? 0;
+    })(),
+    (async () => {
+      const service = getServiceRoleClient();
+      if (!service) return { total: 0, active: 0, review: 0 };
+      const { data, error } = await service
+        .from("cfa_applications")
+        .select("status");
+      if (error) return { total: 0, active: 0, review: 0 };
+      const rows = data ?? [];
+      return {
+        total: rows.length,
+        active: rows.filter((row) => ["profile", "challenge", "dossier", "interview"].includes(row.status)).length,
+        review: rows.filter((row) => row.status === "review").length,
+      };
     })(),
   ]);
 
@@ -137,7 +151,7 @@ export default async function SuperDashboard() {
         </div>
 
         {!isContentin && (
-          <div className="w-full md:w-[420px]">
+          <div className="grid w-full gap-3 md:w-[760px] md:grid-cols-2">
             <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-indigo-50/40 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -186,6 +200,38 @@ export default async function SuperDashboard() {
                 </div>
               ) : null}
             </div>
+            <Link
+              href="/super/crm/cfa"
+              className="group rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-600 to-blue-700 p-5 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                    Prospects CFA
+                  </p>
+                  <p className="mt-1 text-sm text-white/80">Admissions Byound School</p>
+                </div>
+                <GraduationCap className="h-5 w-5 text-white/70" />
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-white/10 px-3 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-white/55">Total</p>
+                  <p className="mt-1 text-2xl font-bold">{cfaSummary.total}</p>
+                </div>
+                <div className="rounded-xl bg-white/10 px-3 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-white/55">Actifs</p>
+                  <p className="mt-1 text-2xl font-bold">{cfaSummary.active}</p>
+                </div>
+                <div className="rounded-xl bg-white/10 px-3 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-white/55">Review</p>
+                  <p className="mt-1 text-2xl font-bold">{cfaSummary.review}</p>
+                </div>
+              </div>
+              <p className="mt-4 flex items-center justify-end gap-1 text-xs font-semibold text-white/75 group-hover:text-white">
+                Ouvrir le CRM CFA
+                <ChevronRight className="h-3.5 w-3.5" />
+              </p>
+            </Link>
           </div>
         )}
       </div>

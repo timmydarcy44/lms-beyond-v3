@@ -1,4 +1,4 @@
-import { edgeLinkBase, edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
+import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 
 /** Segments URL marketing (sans préfixe /edge-lab). */
 export const EDGE_MARKETING_PATHS = {
@@ -9,6 +9,8 @@ export const EDGE_MARKETING_PATHS = {
   formationsBts: "/formations/bts",
   formationsBachelor: "/formations/bachelor",
   formationsMastere: "/formations/mastere",
+  ecoleNtcAiBusiness: "/ecole/ntc/ai-business",
+  ecoleCandidater: "/ecole/candidater",
   alternance: "/alternance",
   admissions: "/admissions",
   financement: "/financement",
@@ -85,7 +87,6 @@ export type EdgeMarketingRoutes = {
 };
 
 export function getEdgeMarketingRoutes(host?: string | null): EdgeMarketingRoutes {
-  const base = edgeLinkBase(host);
   const mapPath = (path: string) => {
     if (!path.startsWith("/")) return path;
     if (path.includes("#")) {

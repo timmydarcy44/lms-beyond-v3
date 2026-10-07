@@ -12,6 +12,7 @@ export const EDGE_BS_LEGACY_PUBLIC_PREFIXES = [
   "/orientation",
   "/votre-orientation",
   "/postuler",
+  "/ecole",
 ] as const;
 
 export function isEdgeBsPublicHost(host: string | null | undefined): boolean {

@@ -14,11 +14,9 @@ type PanelProps = {
 export function EdgePremiumMegaColumnsPanel({ data, onClose, light = false }: PanelProps) {
   const columnCount = data.columns.length;
   const gridClass =
-    columnCount >= 5
-      ? "sm:grid-cols-2 lg:grid-cols-5"
-      : columnCount === 4
-        ? "sm:grid-cols-2 lg:grid-cols-4"
-        : "sm:grid-cols-2 lg:grid-cols-3";
+    columnCount >= 4
+      ? "sm:grid-cols-2 lg:grid-cols-4"
+      : "sm:grid-cols-2 lg:grid-cols-3";
 
   return (
     <div

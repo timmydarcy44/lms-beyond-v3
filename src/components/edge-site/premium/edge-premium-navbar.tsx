@@ -190,7 +190,7 @@ export function EdgePremiumNavbar({
 
         <nav className="hidden items-center lg:flex" aria-label="Navigation principale">
           <EdgePremiumMegaTrigger
-            label="Alternants"
+            label="École"
             open={openMega === "alternants"}
             onOpen={() => openMegaMenu("alternants")}
             light={light}

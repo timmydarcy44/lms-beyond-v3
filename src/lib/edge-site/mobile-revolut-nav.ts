@@ -29,7 +29,7 @@ export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTa
   return [
     {
       id: "alternants",
-      label: "Alternants",
+      label: "École",
       discoverHref: routes.alternance,
       discoverLabel: megaApprenants.headerTitle,
       sections: megaApprenants.columns.map((col) => ({

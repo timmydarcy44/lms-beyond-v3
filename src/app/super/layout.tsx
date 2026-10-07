@@ -10,6 +10,7 @@ import { getServerClient } from "@/lib/supabase/server";
 import { FloatingCreateButton } from "@/components/jessica-contentin/floating-create-button";
 import { SuperJarvis } from "@/components/super-admin/super-jarvis";
 import { CrmAreaWrapper } from "@/components/super-admin/crm-area-wrapper";
+import { CfaEntryNotifier } from "@/components/super-admin/cfa-entry-notifier";
 
 export default async function SuperLayout({
   children,
@@ -39,6 +40,7 @@ export default async function SuperLayout({
   return (
     <BrandingProvider initialBranding={branding}>
       <div className="min-h-screen bg-white">
+        {!isContentin && <CfaEntryNotifier />}
         {isContentin ? <JessicaHeader /> : <SuperAdminHeaderApple />}
         <CrmAreaWrapper>
           <Suspense fallback={null}>

@@ -8,14 +8,26 @@ export function AlertsBadge() {
   const [alertCount, setAlertCount] = useState<number | null>(null);
 
   useEffect(() => {
-    // Désactivé: route lente/non essentielle pour accélérer le boot.
-    setAlertCount(0);
+    void (async () => {
+      try {
+        const response = await fetch("/api/super-admin/crm/cfa", { cache: "no-store" });
+        const result = await response.json();
+        const count = (result.applications ?? []).filter((application: { status?: string }) =>
+          ["profile", "challenge", "dossier", "interview", "review"].includes(
+            application.status ?? "",
+          ),
+        ).length;
+        setAlertCount(count);
+      } catch {
+        setAlertCount(0);
+      }
+    })();
   }, []);
 
   if (alertCount === null) {
     return (
       <Link
-        href="/super/alertes"
+        href="/super/crm/cfa"
         className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors relative"
         title="Alertes"
       >
@@ -27,7 +39,7 @@ export function AlertsBadge() {
   if (alertCount === 0) {
     return (
       <Link
-        href="/super/alertes"
+        href="/super/crm/cfa"
         className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors relative"
         title="Alertes"
       >
@@ -38,7 +50,7 @@ export function AlertsBadge() {
 
   return (
     <Link
-      href="/super/alertes"
+      href="/super/crm/cfa"
       className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors relative"
       title={`${alertCount} alerte${alertCount > 1 ? "s" : ""}`}
     >

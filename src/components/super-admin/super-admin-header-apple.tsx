@@ -46,7 +46,14 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Open badge", href: "/super/open-badges/badgeclasses" },
     ],
   },
-  { label: "CRM", href: "/super/utilisateurs" },
+  {
+    label: "CRM",
+    href: "/super/crm/pipeline",
+    children: [
+      { label: "Business", href: "/super/crm/pipeline" },
+      { label: "CFA", href: "/super/crm/cfa" },
+    ],
+  },
   { label: "IA", href: "/super/ia" },
   { label: "Chiffre d'affaires", href: "/super/chiffre-affaires" },
   { label: "Statistiques", href: "/super/statistiques" },

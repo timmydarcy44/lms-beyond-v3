@@ -155,37 +155,50 @@ export function getEdgePremiumConfig(host?: string | null) {
       ],
       columns: [
         {
-          title: "Parcours",
+          title: "Business & Sales",
           links: [
-            { label: "Découvrir l'alternance", href: R.alternance, featured: true },
-            { label: "Titres professionnels (Bac+2)", href: R.formationsTitresPro },
-            { label: "Bachelor (Bac+3)", href: R.formationsBachelor },
-            { label: "Mastère (Bac+5)", href: R.formationsMastere },
+            { label: "AI Business", href: R.ecoleNtcAiBusiness },
+            { label: "Business Sport", href: `${R.alternance}#ntc-business-sport` },
+            { label: "Real Estate", href: `${R.alternance}#ntc-real-estate` },
           ],
         },
         {
-          title: "CFA Byound",
+          title: "Retail & Luxury",
           links: [
-            { label: "Ouverture prévue — rentrée 2027", href: R.alternance, featured: true },
-            { label: "Manifestez votre intérêt", href: R.contact },
-            { label: "Financement", href: R.financement },
-            { label: "Vie étudiante", href: R.vieEtudiante },
+            { label: "Retail Experience", href: `${R.alternance}#mem-retail-experience` },
+            { label: "Merchandising", href: `${R.alternance}#mem-merchandising` },
+            { label: "Luxury & Premium", href: `${R.alternance}#mem-luxury-premium` },
           ],
         },
         {
-          title: "Réussir",
+          title: "Management",
           links: [
-            { label: "Entreprises partenaires", href: R.entreprises },
-            { label: "Certifications", href: R.certifications },
-            { label: "Accompagnement", href: R.contact },
+            { label: "AI Management", href: `${R.alternance}#rem-ai-management` },
+            { label: "Business Performance", href: `${R.alternance}#rem-business-performance` },
+            { label: "Transition & Innovation", href: `${R.alternance}#rem-transition-innovation` },
           ],
         },
         {
-          title: "Aide",
+          title: "Business Development",
           links: [
-            { label: "Admissions", href: R.admissions },
+            { label: "Growth & Acquisition", href: `${R.alternance}#rdc-growth-acquisition` },
+            { label: "Entrepreneurship", href: `${R.alternance}#rdc-entrepreneurship` },
+            { label: "International Business", href: `${R.alternance}#rdc-international-business` },
+            { label: "Strategic Partnerships", href: `${R.alternance}#rdc-strategic-partnerships` },
+          ],
+        },
+        {
+          title: "Candidater",
+          links: [
+            { label: "Déposer ma candidature", href: R.ecoleCandidater },
             { label: "Prendre rendez-vous", href: R.contact },
-            { label: "Contact", href: R.contact },
+          ],
+        },
+        {
+          title: "Financement",
+          links: [
+            { label: "Financer ma formation", href: R.financement },
+            { label: "Découvrir les aides", href: R.financement },
           ],
         },
       ],
@@ -324,7 +337,7 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
   return [
     {
       id: "alternants",
-      label: "Alternants",
+      label: "École",
       links: config.megaApprenants.columns.flatMap((col) =>
         col.links.map((link) => ({ label: link.label, href: link.href })),
       ),
